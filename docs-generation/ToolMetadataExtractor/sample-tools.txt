@@ -1,0 +1,4 @@
+storage account list
+storage account get
+keyvault secret create
+keyvault secret list

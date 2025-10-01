@@ -1,0 +1,54 @@
+# Azure MCP CLI Commands
+
+**Generated:** {{formatDate generatedAt}}  
+**Version:** {{version}}
+
+This page contains the command syntax for all Azure MCP CLI commands.
+
+{{#each areas}}
+## {{@key}} Operations
+
+{{#each tools}}
+### {{command}}
+
+```bash
+azmcp {{command}}{{#each option}}{{#if required}} \
+                        --{{name}} <{{name}}>{{/if}}{{/each}}{{#each option}}{{#unless required}} \
+                        [--{{name}} <{{name}}>]{{/unless}}{{/each}}
+```
+
+{{#if description}}
+{{description}}
+{{/if}}
+
+{{#if option}}
+**Parameters:**
+
+{{#each option}}
+- `--{{name}}` ({{type}}){{#if required}} - **Required**{{/if}}{{#if description}} - {{description}}{{/if}}
+{{/each}}
+{{/if}}
+
+{{/each}}
+{{/each}}
+
+{{#if commonParameters}}
+## Common Parameters
+
+The following parameters are available across multiple commands:
+
+{{#each (groupBy commonParameters "Source")}}
+### {{@key}} Parameters
+
+| Parameter | Type | Required or optional | Description |
+|-----------|------|----------|-------------|
+{{#each this}}
+| `--{{Name}}` | {{Type}} | {{#if IsRequired}}Required{{else}}Optional{{/if}} | {{Description}} |
+{{/each}}
+
+{{/each}}
+{{/if}}
+
+---
+
+*This documentation is automatically generated from the Azure MCP Server source code.*

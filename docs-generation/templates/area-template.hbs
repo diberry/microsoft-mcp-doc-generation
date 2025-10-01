@@ -1,0 +1,96 @@
+{{#if generateAreaPage}}
+# {{areaName}} Tools
+
+**Area:** {{areaName}}  
+**Description:** {{areaData.description}}  
+**Tool Count:** {{areaData.toolCount}}  
+**Generated:** {{formatDate generatedAt}}  
+**Version:** {{version}}
+
+## Quick Navigation
+
+{{#each tools}}
+- [{{subToolFamily command}}: {{subOperation command}}](#{{kebabCase (concat (subToolFamily command) ": " (subOperation command))}})
+{{/each}}
+
+## Tools
+
+{{#each tools}}
+## {{subToolFamily command}}: {{subOperation command}}
+
+<!-- `{{command}}` -->
+
+{{description}}
+
+#### Parameters
+
+{{#if option}}
+| Parameter | Type | Required or optional | Description |
+|-----------|------|----------|-------------|
+{{#each option}}
+| **`{{name}}`** | {{type}} | {{Required}} | {{description}} |
+{{/each}}
+{{else}}
+No parameters
+{{/if}}
+
+#### Parameters with Natural Language Names
+
+{{#if option}}
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
+{{#each option}}
+| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
+{{/each}}
+{{else}}
+No parameters
+{{/if}}
+
+---
+
+{{/each}}
+
+Documentation generated from Azure MCP Server source code
+{{/if}}
+
+{{#if generateIndex}}
+# Azure MCP Tools Documentation
+
+**Generated:** {{formatDate generatedAt}}  
+**Version:** {{version}}  
+**Total Tools:** {{tools.length}}  
+**Total Areas:** {{getAreaCount areas}}
+
+## Tool Areas
+
+This documentation is organized by tool areas. Click on any area below to see the detailed documentation for tools in that area.
+
+| Area | Tools | Description |
+|------|-------|-------------|
+{{#each areas}}
+| [{{@key}}]({{@key}}.md) | {{toolCount}} | {{description}} |
+{{/each}}
+
+## Common Parameters
+
+Many Azure MCP tools share common parameters for authentication, targeting, and configuration.
+See the [Common Parameters](common-tools.md) documentation for details on shared parameters.
+
+## Quick Stats
+
+- **Total Documentation Pages:** {{add (getAreaCount areas) 1}} (including this index)
+- **Average Tools per Area:** {{round (divide tools.length (getAreaCount areas)) 1}}
+
+## All Areas
+
+{{#each areas}}
+### [{{@key}}]({{@key}}.md)
+
+{{description}}
+
+**Tools:** {{toolCount}}
+
+{{/each}}
+
+Documentation generated from Azure MCP Server source code
+{{/if}}

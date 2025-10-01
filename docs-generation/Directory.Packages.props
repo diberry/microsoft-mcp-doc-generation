@@ -1,0 +1,9 @@
+<Project>
+  <ItemGroup>
+    <PackageVersion Include="NUnit" Version="3.13.3" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="4.5.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.6.3" />
+    <PackageVersion Include="Handlebars.Net" Version="2.1.6" />
+    <!-- Replaced xunit with NUnit and NUnit3TestAdapter -->
+  </ItemGroup>
+</Project>

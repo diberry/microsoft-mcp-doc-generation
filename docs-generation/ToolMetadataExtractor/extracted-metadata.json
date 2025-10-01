@@ -1,0 +1,58 @@
+[
+  {
+    "ToolPath": "storage account list",
+    "SourceFile": "/workspaces/new-mcp/tools/Azure.Mcp.Tools.Cosmos/src/Commands/AccountListCommand.cs",
+    "Metadata": {
+      "Destructive": false,
+      "Idempotent": true,
+      "OpenWorld": false,
+      "ReadOnly": true,
+      "LocalRequired": false,
+      "Secret": false
+    },
+    "Title": "List Cosmos DB Accounts",
+    "Description": "List all Cosmos DB accounts in a subscription. This command retrieves and displays all Cosmos DB accounts\r\n        available in the specified subscription. Results include account names and are returned as a JSON array."
+  },
+  {
+    "ToolPath": "storage account get",
+    "SourceFile": "/workspaces/new-mcp/tools/Azure.Mcp.Tools.Storage/src/Commands/Account/AccountGetCommand.cs",
+    "Metadata": {
+      "Destructive": false,
+      "Idempotent": true,
+      "OpenWorld": false,
+      "ReadOnly": true,
+      "LocalRequired": false,
+      "Secret": false
+    },
+    "Title": "Get Storage Account Details",
+    "Description": "Gets detailed information about Azure Storage accounts, including account name, location, SKU, access settings,\n        and configuration details. If a specific account name is not provided, the command will return details for all\n        accounts in a subscription."
+  },
+  {
+    "ToolPath": "keyvault secret create",
+    "SourceFile": "/workspaces/new-mcp/tools/Azure.Mcp.Tools.KeyVault/src/Commands/Secret/SecretCreateCommand.cs",
+    "Metadata": {
+      "Destructive": true,
+      "Idempotent": false,
+      "OpenWorld": false,
+      "ReadOnly": false,
+      "LocalRequired": false,
+      "Secret": true
+    },
+    "Title": "Create Key Vault Secret",
+    "Description": "Creates a new secret in an Azure Key Vault. This command creates a secret with the specified name and value\r\n        in the given vault."
+  },
+  {
+    "ToolPath": "keyvault secret list",
+    "SourceFile": "/workspaces/new-mcp/tools/Azure.Mcp.Tools.KeyVault/src/Commands/Secret/SecretListCommand.cs",
+    "Metadata": {
+      "Destructive": false,
+      "Idempotent": true,
+      "OpenWorld": false,
+      "ReadOnly": true,
+      "LocalRequired": false,
+      "Secret": false
+    },
+    "Title": "_commandTitle",
+    "Description": "List all secrets in an Azure Key Vault. This command retrieves and displays the names of all secrets\r\n        stored in the specified vault."
+  }
+]

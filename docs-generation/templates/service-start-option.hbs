@@ -1,0 +1,26 @@
+# Azure MCP Server Start Options
+
+**Generated:** {{formatDate generatedAt}}  
+**Version:** {{version}}
+
+This page documents the options available when starting the Azure MCP Server.
+
+## Service Start Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+{{#each serviceOptions}}
+| **`--{{name}}`** | {{type}} | {{#if isRequired}}Yes{{else}}No{{/if}} | {{description}} |
+{{/each}}
+
+## Options with Natural Language Names
+
+| Option | Required or optional | Description |
+|--------|----------------------|-------------|
+{{#each serviceOptions}}
+| **{{nlName}}** | {{#if isRequired}}Required{{else}}Optional{{/if}} | {{description}} |
+{{/each}}
+
+---
+
+*This documentation is automatically generated from the Azure MCP Server source code.*

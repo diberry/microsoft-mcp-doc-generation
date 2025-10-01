@@ -1,0 +1,18 @@
+[
+  {
+    "Parameter": "auth-method",
+    "NaturalLanguage": "Authentication method"
+  },
+    {
+    "Parameter": "cluster-uri",
+    "NaturalLanguage": "Cluster URI"
+  },
+  {
+    "Parameter": "param",
+    "NaturalLanguage": "Parameter"
+  },
+  {
+    "Parameter": "nodepool",
+    "NaturalLanguage": "Node pool"
+  }
+]
