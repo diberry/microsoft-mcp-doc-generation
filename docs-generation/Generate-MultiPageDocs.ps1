@@ -93,6 +93,41 @@ try {
     $rawOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
     Write-Success "CLI output saved: $cliOutputFile"
     
+    # Generate namespace data using --namespaces option
+    Write-Progress "Generating namespace data..."
+    $namespaceOutput = & dotnet run -- tools list --namespaces
+    if ($LASTEXITCODE -ne 0) { 
+        throw "Failed to generate namespace data from CLI" 
+    }
+    
+    # Save namespace CLI output
+    $namespaceOutputFile = "../../../docs-generation/generated/cli-namespace.json"
+    $namespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
+    Write-Success "CLI namespace output saved: $namespaceOutputFile"
+    
+    # Generate namespaces CSV with alphabetically sorted names
+    Write-Progress "Generating namespaces CSV..."
+    try {
+        $namespaceData = $namespaceOutput | ConvertFrom-Json
+        if ($namespaceData.results) {
+            # Sort by name alphabetically and create CSV content with Name and Command columns
+            $sortedNamespaces = $namespaceData.results | Sort-Object name
+            $csvContent = "Name,Command`n"
+            foreach ($ns in $sortedNamespaces) {
+                $csvContent += "$($ns.name),               $($ns.command)`n"
+            }
+            
+            # Save CSV file
+            $csvOutputFile = "../../../docs-generation/generated/namespaces.csv"
+            $csvContent | Out-File -FilePath $csvOutputFile -Encoding UTF8 -NoNewline
+            Write-Success "Namespaces CSV saved: $csvOutputFile"
+        } else {
+            Write-Warning "No namespace results found in CLI output"
+        }
+    } catch {
+        Write-Warning "Failed to generate namespaces CSV: $($_.Exception.Message)"
+    }
+    
     Pop-Location
     
     # Step 2: Build C# generator if needed
@@ -121,10 +156,38 @@ try {
     if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
     
     Push-Location "CSharpGenerator"
-    & dotnet run --configuration Release -- $generatorArgs
+    $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to generate documentation with C# generator"
     }
+    
+    # Parse tool count information from generator output
+    $totalTools = 0
+    $totalAreas = 0
+    $toolCountsByArea = @{}
+    $captureToolList = $false
+    $toolListOutput = @()
+    
+    foreach ($line in $generatorOutput) {
+        if ($line -match "Total tools: (\d+)") {
+            $totalTools = [int]$matches[1]
+        }
+        elseif ($line -match "Total service areas: (\d+)") {
+            $totalAreas = [int]$matches[1]
+        }
+        elseif ($line -match "^\s*(\w+):\s*(\d+)\s*tools") {
+            $areaName = $matches[1]
+            $areaCount = [int]$matches[2]
+            $toolCountsByArea[$areaName] = $areaCount
+        }
+        elseif ($line -match "^Tool List by Service Area:") {
+            $captureToolList = $true
+        }
+        elseif ($captureToolList) {
+            $toolListOutput += $line
+        }
+    }
+    
     Pop-Location
     
     # Step 4: Generate additional data formats if requested
@@ -160,8 +223,47 @@ try {
         Write-Info "  📄 $actualCliOutputPath (${jsonSize}KB) - CLI output"
     }
     
+    $actualNamespaceOutputPath = "generated/cli-namespace.json"
+    if (Test-Path $actualNamespaceOutputPath) {
+        $namespaceSize = [math]::Round((Get-Item $actualNamespaceOutputPath).Length / 1KB, 1)
+        Write-Info "  📄 $actualNamespaceOutputPath (${namespaceSize}KB) - CLI namespace output"
+    }
+    
+    $actualCsvOutputPath = "generated/namespaces.csv"
+    if (Test-Path $actualCsvOutputPath) {
+        $csvSize = [math]::Round((Get-Item $actualCsvOutputPath).Length / 1KB, 1)
+        Write-Info "  📄 $actualCsvOutputPath (${csvSize}KB) - Alphabetically sorted namespaces CSV"
+    }
+    
     $totalPages = (Get-ChildItem $actualOutputDir -Name "*.md" | Measure-Object).Count
     Write-Success "Documentation generation complete: $totalPages pages created using C# generator with Handlebars templates"
+    
+    # Display tool count statistics
+    if ($totalTools -gt 0) {
+        Write-Info ""
+        Write-Info "Tool Statistics:"
+        Write-Info "  📊 Total tools: $totalTools"
+        Write-Info "  📊 Total service areas: $totalAreas"
+        
+        if ($toolCountsByArea.Count -gt 0) {
+            Write-Info "  📊 Tools by service area:"
+            foreach ($area in ($toolCountsByArea.Keys | Sort-Object)) {
+                $count = $toolCountsByArea[$area]
+                Write-Info "     • $area`: $count tools"
+            }
+        }
+        
+        # Display the complete tool list
+        if ($toolListOutput.Count -gt 0) {
+            Write-Info ""
+            Write-Info "Complete Tool List:"
+            foreach ($line in $toolListOutput) {
+                if ($line.Trim() -ne "") {
+                    Write-Info $line
+                }
+            }
+        }
+    }
 
 } catch {
     Write-Error "Documentation generation failed: $($_.Exception.Message)"
