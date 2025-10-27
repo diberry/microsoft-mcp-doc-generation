@@ -65,8 +65,10 @@ The version is centrally managed in `Directory.Packages.props`:
 
 ### Basic Generation
 
+Run in a PowerShell terminal.
+
 ```powershell
-./Generate-MultiPageDocs.ps1
+pwsh ./Generate-MultiPageDocs.ps1
 ```
 
 ### Advanced Options
