@@ -1,0 +1,474 @@
+name: Generate MCP Documentation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Free disk space
+      run: |
+        echo "Disk space before cleanup:"
+        df -h
+        echo ""
+        
+        # Remove unnecessary software to free up space
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker image prune --all --force
+        
+        echo ""
+        echo "Disk space after cleanup:"
+        df -h
+        
+    - name: Checkout this repository (main branch)
+      uses: actions/checkout@v5
+      with:
+        ref: main
+        path: docs-generation-repo
+
+    # - name: Checkout Microsoft/MCP repository (main branch)
+    #   uses: actions/checkout@v5
+    #   with:
+    #     repository: Microsoft/MCP
+    #     ref: main
+    #     path: MCP
+    #     sparse-checkout: |
+    #       core
+    #       eng
+    #       servers/Azure.Mcp.Server
+    #       tools/Azure.MCP.Tools.*
+    #       AzureMcp.sln
+    #       Directory.*
+    #       package.json
+    #       global.json
+    #       nuget.config
+    #       smithery.yaml
+    #     sparse-checkout-cone-mode: false
+
+    - name: Checkout Microsoft/MCP repository (main branch)
+      uses: actions/checkout@v5
+      with:
+        repository: Microsoft/MCP
+        ref: main
+        path: MCP
+        
+    - name: Copy docs-generation folder to MCP repository
+      run: |
+        echo "=== Copying docs-generation folder to MCP repo ==="
+        echo "Source: docs-generation-repo/docs-generation/"
+        echo "Destination: MCP/docs-generation/"
+        echo ""
+        
+        # Verify source exists
+        if [ ! -d "docs-generation-repo/docs-generation" ]; then
+          echo "❌ Source docs-generation folder not found!"
+          echo "Available directories in docs-generation-repo:"
+          ls -la docs-generation-repo/
+          exit 1
+        fi
+        
+        # Copy the docs-generation folder to MCP repo
+        cp -r docs-generation-repo/docs-generation MCP/
+        
+        echo "✅ Successfully copied docs-generation folder"
+        echo "Copied directory contents:"
+        ls -la MCP/docs-generation/
+        
+        # Clean up the source repo to save space
+        echo ""
+        echo "Removing source repo to free up space..."
+        rm -rf docs-generation-repo
+        
+        echo "Disk space after cleanup:"
+        df -h
+        echo "=== Copy operation completed ==="
+        
+    - name: Setup .NET (from devcontainer config)
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: |
+          9.0.x
+          10.0.100-preview.7.25380.108
+        dotnet-quality: 'preview'
+    
+    - name: Install .NET 9.0 Runtime
+      run: |
+        # Download and install .NET 9.0 runtime manually since stable 9.0.0 isn't available yet
+        # Use the RC runtime which should be compatible
+        echo "Checking available .NET runtimes..."
+        dotnet --list-runtimes
+        echo ""
+        echo "Note: Using .NET 9.0 RC runtime for execution"
+        
+    - name: Setup Node.js (from devcontainer config)
+      uses: actions/setup-node@v6
+      with:
+        node-version: '22'
+        
+    - name: Install PowerShell
+      run: |
+        # Install PowerShell on Ubuntu
+        sudo apt-get update
+        sudo apt-get install -y wget apt-transport-https software-properties-common
+        wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/packages-microsoft-prod.deb"
+        sudo dpkg -i packages-microsoft-prod.deb
+        sudo apt-get update
+        sudo apt-get install -y powershell
+        
+    - name: Verify toolchain versions
+      run: |
+        echo "=== Toolchain Versions ==="
+        echo "Operating System: $(uname -a)"
+        echo "Current directory: $(pwd)"
+        echo "Available disk space:"
+        df -h
+        echo ""
+        echo "Environment variables:"
+        env | grep -E "(DOTNET|NODE|NPM)" | sort
+        echo ""
+        echo "Tool versions:"
+        echo "  .NET: $(dotnet --version)" || echo "❌ dotnet not found"
+        echo "  Node.js: $(node --version)" || echo "❌ node not found"
+        echo "  npm: $(npm --version)" || echo "❌ npm not found"
+        echo "  PowerShell: $(pwsh --version)" || echo "❌ pwsh not found"
+        echo ""
+        echo "Workspace structure:"
+        ls -la
+        echo "=========================="
+        
+    - name: Build MCP root
+      working-directory: ./MCP
+      run: |
+        echo "=== Building MCP root ==="
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        echo ""
+        
+        # Check if there's a package.json or other build configuration
+        if [ -f "package.json" ]; then
+          echo "Found package.json, contents:"
+          cat package.json | head -20
+          echo ""
+          echo "Running npm install..."
+          npm install 2>&1 | tee npm-install.log
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "❌ npm install failed, log:"
+            cat npm-install.log
+            exit 1
+          fi
+          
+          echo "Checking for build script..."
+          if npm run build --if-present 2>&1 | tee npm-build.log; then
+            echo "✅ npm run build completed successfully"
+          else
+            echo "⚠️ npm run build failed or no build script found, log:"
+            cat npm-build.log
+            echo "Continuing anyway..."
+          fi
+        else
+          echo "No package.json found"
+        fi
+        
+        echo ""
+        echo "Checking for .NET projects..."
+        dotnet_projects=$(find . -name "*.sln" -o -name "*.csproj" | head -10)
+        if [ -n "$dotnet_projects" ]; then
+          echo "Found .NET project(s):"
+          echo "$dotnet_projects"
+          echo ""
+          echo "Running dotnet restore..."
+          dotnet restore 2>&1 | tee dotnet-restore.log
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "❌ dotnet restore failed, log:"
+            cat dotnet-restore.log
+            exit 1
+          fi
+          
+          echo "Running dotnet build..."
+          dotnet build --configuration Release 2>&1 | tee dotnet-build.log
+          if [ ${PIPESTATUS[0]} -ne 0 ]; then
+            echo "❌ dotnet build failed, log:"
+            cat dotnet-build.log
+            exit 1
+          fi
+          echo "✅ .NET build completed successfully"
+        else
+          echo "No .NET projects found to build"
+        fi
+        
+        echo ""
+        echo "Final directory structure after build:"
+        find . -maxdepth 3 -type d | sort
+        
+        # Clean up to save space
+        echo ""
+        echo "Cleaning up build artifacts and node_modules to save space..."
+        rm -rf node_modules
+        find . -name "obj" -type d -exec rm -rf {} + 2>/dev/null || true
+        
+        echo "Disk space after cleanup:"
+        df -h
+        echo "=== MCP root build completed ==="
+        
+    - name: Verify Azure MCP server CLI runs
+      working-directory: ./MCP/servers/Azure.Mcp.Server/src
+      run: |
+        echo "Running 'dotnet run -- tools list'..."
+        # Set environment variable to allow using RC runtime for net9.0 apps
+        export DOTNET_ROLL_FORWARD=Major
+        dotnet run -- tools list
+
+    - name: Build docs-generation solution
+      working-directory: ./MCP/docs-generation
+      run: |
+        echo "=== Building docs-generation solution ==="
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        echo ""
+        
+        if [ ! -f "docs-generation.sln" ]; then
+          echo "❌ docs-generation.sln not found!"
+          echo "Available files:"
+          find . -name "*.sln" -o -name "*.csproj"
+          exit 1
+        fi
+        
+        echo "Found docs-generation.sln, contents:"
+        head -10 docs-generation.sln
+        echo ""
+        
+        echo "Running dotnet restore..."
+        dotnet restore docs-generation.sln 2>&1 | tee docs-restore.log
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          echo "❌ dotnet restore failed, log:"
+          cat docs-restore.log
+          exit 1
+        fi
+        
+        echo "Running dotnet build..."
+        dotnet build docs-generation.sln --configuration Release 2>&1 | tee docs-build.log
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          echo "❌ dotnet build failed, log:"
+          cat docs-build.log
+          exit 1
+        fi
+        
+        echo "✅ docs-generation build completed successfully"
+        echo ""
+        echo "Built artifacts:"
+        find . -name "bin" -type d -exec echo "Directory: {}" \; -exec ls -la {} \;
+        echo "=== docs-generation build completed ==="
+        
+    - name: Run documentation generation
+      working-directory: ./MCP/docs-generation
+      run: |
+        echo "=== Running Generate-MultiPageDocs.ps1 ==="
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        echo ""
+        
+        # Check if the PowerShell script exists
+        if [ ! -f "Generate-MultiPageDocs.ps1" ]; then
+          echo "❌ Generate-MultiPageDocs.ps1 not found!"
+          echo "Available PowerShell scripts:"
+          find . -name "*.ps1"
+          exit 1
+        fi
+        
+        echo "Found Generate-MultiPageDocs.ps1, showing first 20 lines:"
+        head -20 Generate-MultiPageDocs.ps1
+        echo ""
+        
+        # Set environment variables
+        export MCP_ROOT_PATH=".."
+        export DOTNET_ROLL_FORWARD=Major
+        echo "Set MCP_ROOT_PATH to: $MCP_ROOT_PATH"
+        echo "Set DOTNET_ROLL_FORWARD to: $DOTNET_ROLL_FORWARD (allows RC runtime for net9.0)"
+        echo "Checking MCP path exists:"
+        ls -la "$MCP_ROOT_PATH" || echo "❌ MCP path not accessible"
+        echo ""
+        
+        # Check for required directories and files
+        echo "Checking for required server directory in MCP:"
+        find "$MCP_ROOT_PATH" -name "*server*" -type d | head -5
+        echo ""
+        
+        echo "Checking current working directory structure:"
+        find . -maxdepth 2 -type d | sort
+        echo ""
+        
+        # Run the PowerShell script with detailed logging
+        echo "Running PowerShell script..."
+        set -e  # Exit on any error
+        pwsh -File Generate-MultiPageDocs.ps1 2>&1 | tee generation.log
+        exit_code=${PIPESTATUS[0]}
+        
+        if [ $exit_code -ne 0 ]; then
+          echo "❌ PowerShell script failed with exit code: $exit_code"
+          echo "Script output log:"
+          cat generation.log
+          echo ""
+          echo "Current directory after failure:"
+          ls -la
+          exit $exit_code
+        fi
+        
+        echo "✅ PowerShell script completed successfully"
+        echo ""
+        echo "Generated directory structure:"
+        if [ -d "generated" ]; then
+          find generated -type f | head -20
+        else
+          echo "❌ No 'generated' directory found after script execution"
+          ls -la
+          exit 1
+        fi
+        echo "=== Documentation generation completed ==="
+        
+    - name: Upload generated documentation
+      uses: actions/upload-artifact@v4
+      if: always()  # Upload artifacts even if previous steps failed
+      with:
+        name: generated-docs-and-logs
+        path: |
+          MCP/docs-generation/generated/
+          MCP/docs-generation/*.log
+          MCP/docs-generation/generation.log
+          MCP/*.log
+          MCP/npm-*.log
+          MCP/dotnet-*.log
+        retention-days: 30
+        
+    - name: Display generation summary
+      working-directory: ./MCP/docs-generation
+      if: always()  # Run even if previous steps failed
+      run: |
+        echo "=== Generation Summary ==="
+        echo "Job status: ${{ job.status }}"
+        echo "Current directory: $(pwd)"
+        echo ""
+        
+        # Show generated files
+        if [ -d "generated/multi-page" ]; then
+          echo "✅ Generated documentation files:"
+          find generated/multi-page -name "*.md" -type f | sort | while read -r file; do
+            size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
+            size_kb=$((size / 1024))
+            echo "  📄 $(basename "$file") (${size_kb}KB)"
+          done
+        else
+          echo "⚠️  No multi-page documentation directory found"
+          echo "Available directories:"
+          ls -la
+        fi
+        
+        # Show data files
+        echo ""
+        echo "Data files:"
+        for file in generated/*.json generated/*.csv; do
+          if [ -f "$file" ]; then
+            size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
+            size_kb=$((size / 1024))
+            echo "  📄 $(basename "$file") (${size_kb}KB)"
+          fi
+        done
+        
+        # Show log files
+        echo ""
+        echo "Log files generated:"
+        for file in *.log; do
+          if [ -f "$file" ]; then
+            size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo "0")
+            size_kb=$((size / 1024))
+            echo "  📄 $file (${size_kb}KB)"
+          fi
+        done
+        
+        # Show summary if available
+        if [ -f "generated/generation-summary.md" ]; then
+          echo ""
+          echo "=== Summary from generation-summary.md ==="
+          head -20 generated/generation-summary.md
+          echo ""
+          echo "(Full summary available in artifacts)"
+        fi
+        
+        echo "=== End Summary ==="
+        
+    - name: Capture debug information on failure
+      if: failure()
+      run: |
+        echo "=== DEBUG INFORMATION FOR FAILURE ==="
+        echo "Job failed at: $(date)"
+        echo "Runner OS: $RUNNER_OS"
+        echo "Workspace: $GITHUB_WORKSPACE"
+        echo ""
+        
+        echo "=== Current working directory ==="
+        pwd
+        ls -la
+        echo ""
+        
+        echo "=== docs-generation-repo structure ==="
+        if [ -d "docs-generation-repo" ]; then
+          find docs-generation-repo -type f -name "*.log" -exec echo "Log file: {}" \; -exec tail -20 {} \;
+          echo ""
+          echo "docs-generation-repo directory structure:"
+          find docs-generation-repo -maxdepth 3 -type d | sort
+        else
+          echo "❌ docs-generation-repo directory not found"
+        fi
+        echo ""
+        
+        echo "=== MCP/docs-generation structure ==="
+        if [ -d "MCP/docs-generation" ]; then
+          find MCP/docs-generation -type f -name "*.log" -exec echo "Log file: {}" \; -exec tail -20 {} \;
+          echo ""
+          echo "MCP/docs-generation directory structure:"
+          find MCP/docs-generation -maxdepth 3 -type d | sort
+        else
+          echo "❌ MCP/docs-generation directory not found"
+        fi
+        echo ""
+        
+        echo "=== MCP directory structure ==="
+        if [ -d "MCP" ]; then
+          find MCP -type f -name "*.log" -exec echo "Log file: {}" \; -exec tail -20 {} \;
+          echo ""
+          echo "MCP directory structure:"
+          find MCP -maxdepth 3 -type d | sort
+        else
+          echo "❌ MCP directory not found"
+        fi
+        echo ""
+        
+        echo "=== System information ==="
+        uname -a
+        echo "Disk space:"
+        df -h
+        echo "Memory usage:"
+        free -h
+        echo "Process list:"
+        ps aux | head -20
+        echo ""
+        
+        echo "=== Environment variables ==="
+        env | sort
+        echo ""
+        
+        echo "=== Recent system logs (if accessible) ==="
+        journalctl --no-pager -n 50 2>/dev/null || echo "System logs not accessible"
+        
+        echo "=== END DEBUG INFORMATION ==="

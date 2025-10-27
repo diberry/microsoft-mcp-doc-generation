@@ -93,6 +93,41 @@ try {
     $rawOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
     Write-Success "CLI output saved: $cliOutputFile"
     
+    # Generate namespace data using --namespaces option
+    Write-Progress "Generating namespace data..."
+    $namespaceOutput = & dotnet run -- tools list --namespaces
+    if ($LASTEXITCODE -ne 0) { 
+        throw "Failed to generate namespace data from CLI" 
+    }
+    
+    # Save namespace CLI output
+    $namespaceOutputFile = "../../../docs-generation/generated/cli-namespace.json"
+    $namespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
+    Write-Success "CLI namespace output saved: $namespaceOutputFile"
+    
+    # Generate namespaces CSV with alphabetically sorted names
+    Write-Progress "Generating namespaces CSV..."
+    try {
+        $namespaceData = $namespaceOutput | ConvertFrom-Json
+        if ($namespaceData.results) {
+            # Sort by name alphabetically and create CSV content with Name and Command columns
+            $sortedNamespaces = $namespaceData.results | Sort-Object name
+            $csvContent = "Name,Command`n"
+            foreach ($ns in $sortedNamespaces) {
+                $csvContent += "$($ns.name),               $($ns.command)`n"
+            }
+            
+            # Save CSV file
+            $csvOutputFile = "../../../docs-generation/generated/namespaces.csv"
+            $csvContent | Out-File -FilePath $csvOutputFile -Encoding UTF8 -NoNewline
+            Write-Success "Namespaces CSV saved: $csvOutputFile"
+        } else {
+            Write-Warning "No namespace results found in CLI output"
+        }
+    } catch {
+        Write-Warning "Failed to generate namespaces CSV: $($_.Exception.Message)"
+    }
+    
     Pop-Location
     
     # Step 2: Build C# generator if needed
@@ -121,10 +156,38 @@ try {
     if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
     
     Push-Location "CSharpGenerator"
-    & dotnet run --configuration Release -- $generatorArgs
+    $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to generate documentation with C# generator"
     }
+    
+    # Parse tool count information from generator output
+    $totalTools = 0
+    $totalAreas = 0
+    $toolCountsByArea = @{}
+    $captureToolList = $false
+    $toolListOutput = @()
+    
+    foreach ($line in $generatorOutput) {
+        if ($line -match "Total tools: (\d+)") {
+            $totalTools = [int]$matches[1]
+        }
+        elseif ($line -match "Total service areas: (\d+)") {
+            $totalAreas = [int]$matches[1]
+        }
+        elseif ($line -match "^\s*(\w+):\s*(\d+)\s*tools") {
+            $areaName = $matches[1]
+            $areaCount = [int]$matches[2]
+            $toolCountsByArea[$areaName] = $areaCount
+        }
+        elseif ($line -match "^Tool List by Service Area:") {
+            $captureToolList = $true
+        }
+        elseif ($captureToolList) {
+            $toolListOutput += $line
+        }
+    }
+    
     Pop-Location
     
     # Step 4: Generate additional data formats if requested
@@ -136,6 +199,99 @@ try {
     
     # Step 5: Summary
     Write-Progress "Step 5: Generation Summary"
+    
+    # Step 5.1: Generate tools.json using ToolDescriptionEvaluator and compare tool counts
+    Write-Progress "Step 5.1: Generating tools.json for comparison..."
+    
+    $toolDescriptionEvaluatorScript = "..\eng\tools\ToolDescriptionEvaluator\Update-ToolsJson.ps1"
+    $toolDescriptionEvaluatorPath = "..\eng\tools\ToolDescriptionEvaluator\tools.json"
+    $localToolDescPath = "generated/ToolDescriptionEvaluator.json"
+    
+    try {
+        # Run the ToolDescriptionEvaluator script to generate tools.json
+        & $toolDescriptionEvaluatorScript -Force
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to run ToolDescriptionEvaluator Update-ToolsJson.ps1, continuing with CLI-only comparison"
+        } else {
+            Write-Success "ToolDescriptionEvaluator tools.json generated successfully"
+            
+            # Copy the generated tools.json to our generated folder for easy access
+            if (Test-Path $toolDescriptionEvaluatorPath) {
+                Copy-Item $toolDescriptionEvaluatorPath $localToolDescPath -Force
+                $localToolDescSize = [math]::Round((Get-Item $localToolDescPath).Length / 1KB, 1)
+                Write-Success "ToolDescriptionEvaluator output copied to: $localToolDescPath (${localToolDescSize}KB)"
+            }
+            
+            # Compare tool counts between CLI output and ToolDescriptionEvaluator output
+            Write-Progress "Comparing tool counts between CLI output and ToolDescriptionEvaluator..."
+            
+            try {
+                # Parse CLI output
+                $cliData = Get-Content $cliOutputFile -Raw | ConvertFrom-Json
+                $cliToolCount = if ($cliData.results) { $cliData.results.Count } else { 0 }
+                
+                # Parse ToolDescriptionEvaluator output
+                $toolDescData = Get-Content $toolDescriptionEvaluatorPath -Raw | ConvertFrom-Json
+                $toolDescToolCount = if ($toolDescData.results) { $toolDescData.results.Count } else { 0 }
+                
+                Write-Info ""
+                Write-Info "Tool Count Comparison:"
+                Write-Info "  📊 CLI tool count: $cliToolCount"
+                Write-Info "  📊 ToolDescriptionEvaluator tool count: $toolDescToolCount"
+                
+                if ($cliToolCount -eq $toolDescToolCount) {
+                    Write-Success "  ✓ Tool counts match! Both sources report $cliToolCount tools."
+                } else {
+                    Write-Warning "  ⚠ Tool count mismatch detected!"
+                    Write-Warning "    CLI output: $cliToolCount tools"
+                    Write-Warning "    ToolDescriptionEvaluator: $toolDescToolCount tools"
+                    Write-Warning "    Difference: $([Math]::Abs($cliToolCount - $toolDescToolCount)) tools"
+                    
+                    # Identify missing tools
+                    $cliToolNames = $cliData.results | ForEach-Object { "$($_.command)" } | Sort-Object
+                    $toolDescToolNames = $toolDescData.results | ForEach-Object { "$($_.command)" } | Sort-Object
+                    
+                    $missingInToolDesc = $cliToolNames | Where-Object { $_ -notin $toolDescToolNames }
+                    $missingInCli = $toolDescToolNames | Where-Object { $_ -notin $cliToolNames }
+                    
+                    if ($missingInToolDesc.Count -gt 0) {
+                        Write-Warning ""
+                        Write-Warning "  Tools present in CLI but missing in ToolDescriptionEvaluator:"
+                        foreach ($tool in $missingInToolDesc) {
+                            Write-Warning "    - $tool"
+                        }
+                    }
+                    
+                    if ($missingInCli.Count -gt 0) {
+                        Write-Warning ""
+                        Write-Warning "  Tools present in ToolDescriptionEvaluator but missing in CLI:"
+                        foreach ($tool in $missingInCli) {
+                            Write-Warning "    - $tool"
+                        }
+                    }
+                    
+                    # Save comparison report
+                    $comparisonReport = @{
+                        timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                        cliToolCount = $cliToolCount
+                        toolDescToolCount = $toolDescToolCount
+                        difference = [Math]::Abs($cliToolCount - $toolDescToolCount)
+                        missingInToolDesc = $missingInToolDesc
+                        missingInCli = $missingInCli
+                    }
+                    
+                    $comparisonReportPath = "generated/tool-count-comparison.json"
+                    $comparisonReport | ConvertTo-Json -Depth 3 | Out-File -FilePath $comparisonReportPath -Encoding UTF8
+                    Write-Info "    📄 Tool count comparison report saved: $comparisonReportPath"
+                }
+                
+            } catch {
+                Write-Warning "Failed to compare tool counts: $($_.Exception.Message)"
+            }
+        }
+    } catch {
+        Write-Warning "Error running ToolDescriptionEvaluator: $($_.Exception.Message)"
+    }
     
     Write-Success "Multi-page documentation generation completed successfully!"
     Write-Info ""
@@ -160,8 +316,178 @@ try {
         Write-Info "  📄 $actualCliOutputPath (${jsonSize}KB) - CLI output"
     }
     
+    $actualNamespaceOutputPath = "generated/cli-namespace.json"
+    if (Test-Path $actualNamespaceOutputPath) {
+        $namespaceSize = [math]::Round((Get-Item $actualNamespaceOutputPath).Length / 1KB, 1)
+        Write-Info "  📄 $actualNamespaceOutputPath (${namespaceSize}KB) - CLI namespace output"
+    }
+    
+    $actualCsvOutputPath = "generated/namespaces.csv"
+    if (Test-Path $actualCsvOutputPath) {
+        $csvSize = [math]::Round((Get-Item $actualCsvOutputPath).Length / 1KB, 1)
+        Write-Info "  📄 $actualCsvOutputPath (${csvSize}KB) - Alphabetically sorted namespaces CSV"
+    }
+    
+    $comparisonReportPath = "generated/tool-count-comparison.json"
+    if (Test-Path $comparisonReportPath) {
+        $reportSize = [math]::Round((Get-Item $comparisonReportPath).Length / 1KB, 1)
+        Write-Info "  📄 $comparisonReportPath (${reportSize}KB) - Tool count comparison report"
+    }
+    
+    $toolDescOutputPath = "..\eng\tools\ToolDescriptionEvaluator\tools.json"
+    if (Test-Path $toolDescOutputPath) {
+        $toolDescSize = [math]::Round((Get-Item $toolDescOutputPath).Length / 1KB, 1)
+        Write-Info "  📄 $toolDescOutputPath (${toolDescSize}KB) - ToolDescriptionEvaluator tools.json"
+    }
+    
+    $localToolDescPath = "generated/ToolDescriptionEvaluator.json"
+    if (Test-Path $localToolDescPath) {
+        $localToolDescSize = [math]::Round((Get-Item $localToolDescPath).Length / 1KB, 1)
+        Write-Info "  📄 $localToolDescPath (${localToolDescSize}KB) - ToolDescriptionEvaluator tools.json (local copy)"
+    }
+    
     $totalPages = (Get-ChildItem $actualOutputDir -Name "*.md" | Measure-Object).Count
     Write-Success "Documentation generation complete: $totalPages pages created using C# generator with Handlebars templates"
+    
+    # Build comprehensive summary for file output
+    $summaryLines = @()
+    $summaryLines += "# Azure MCP Documentation Generation Summary"
+    $summaryLines += ""
+    $summaryLines += "**Generated:** $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')"
+    $summaryLines += "**Generation Method:** C# generator with Handlebars templates"
+    $summaryLines += "**Total Pages Created:** $totalPages"
+    $summaryLines += ""
+    
+    # Generated files section
+    $summaryLines += "## Generated Documentation Files"
+    $summaryLines += ""
+    if (Test-Path $actualOutputDir) {
+        $files = Get-ChildItem $actualOutputDir -Name "*.md" | Sort-Object
+        foreach ($file in $files) {
+            $filePath = Join-Path $actualOutputDir $file
+            $sizeKB = [math]::Round((Get-Item $filePath).Length / 1KB, 1)
+            $summaryLines += "- 📄 $file (${sizeKB}KB)"
+        }
+    }
+    
+    # Data files section
+    $summaryLines += ""
+    $summaryLines += "## Data Files"
+    $summaryLines += ""
+    
+    if (Test-Path $actualCliOutputPath) {
+        $jsonSize = [math]::Round((Get-Item $actualCliOutputPath).Length / 1KB, 1)
+        $summaryLines += "- 📄 $actualCliOutputPath (${jsonSize}KB) - CLI output"
+    }
+    
+    if (Test-Path $actualNamespaceOutputPath) {
+        $namespaceSize = [math]::Round((Get-Item $actualNamespaceOutputPath).Length / 1KB, 1)
+        $summaryLines += "- 📄 $actualNamespaceOutputPath (${namespaceSize}KB) - CLI namespace output"
+    }
+    
+    if (Test-Path $actualCsvOutputPath) {
+        $csvSize = [math]::Round((Get-Item $actualCsvOutputPath).Length / 1KB, 1)
+        $summaryLines += "- 📄 $actualCsvOutputPath (${csvSize}KB) - Alphabetically sorted namespaces CSV"
+    }
+    
+    if (Test-Path $comparisonReportPath) {
+        $reportSize = [math]::Round((Get-Item $comparisonReportPath).Length / 1KB, 1)
+        $summaryLines += "- 📄 $comparisonReportPath (${reportSize}KB) - Tool count comparison report"
+    }
+    
+    if (Test-Path $toolDescOutputPath) {
+        $toolDescSize = [math]::Round((Get-Item $toolDescOutputPath).Length / 1KB, 1)
+        $summaryLines += "- 📄 $toolDescOutputPath (${toolDescSize}KB) - ToolDescriptionEvaluator tools.json"
+    }
+    
+    # Display tool count statistics
+    if ($totalTools -gt 0) {
+        $summaryLines += ""
+        $summaryLines += "## Tool Statistics"
+        $summaryLines += ""
+        $summaryLines += "- **Total tools:** $totalTools"
+        $summaryLines += "- **Total service areas:** $totalAreas"
+        
+        if ($toolCountsByArea.Count -gt 0) {
+            $summaryLines += ""
+            $summaryLines += "### Tools by Service Area"
+            $summaryLines += ""
+            foreach ($area in ($toolCountsByArea.Keys | Sort-Object)) {
+                $count = $toolCountsByArea[$area]
+                $summaryLines += "- **${area}:** $count tools"
+            }
+        }
+        
+        # Add the complete tool list
+        if ($toolListOutput.Count -gt 0) {
+            $summaryLines += ""
+            $summaryLines += "## Complete Tool List"
+            $summaryLines += ""
+            foreach ($line in $toolListOutput) {
+                if ($line.Trim() -ne "") {
+                    # Convert the console output format to markdown
+                    if ($line -match "^(.+) \((\d+) tools\):$") {
+                        $areaName = $matches[1]
+                        $toolCount = $matches[2]
+                        $summaryLines += "### $areaName ($toolCount tools)"
+                        $summaryLines += ""
+                    }
+                    elseif ($line -match "^[-]+$") {
+                        # Skip separator lines
+                        continue
+                    }
+                    elseif ($line -match "^\s*•\s*(.+)$") {
+                        $toolInfo = $matches[1]
+                        $summaryLines += "- $toolInfo"
+                    }
+                    else {
+                        $summaryLines += $line
+                    }
+                }
+            }
+        }
+    }
+    
+    # Save summary to file
+    $summaryFilePath = "generated/generation-summary.md"
+    try {
+        $summaryContent = $summaryLines -join "`n"
+        $summaryContent | Out-File -FilePath $summaryFilePath -Encoding UTF8
+        $summaryFileSize = [math]::Round((Get-Item $summaryFilePath).Length / 1KB, 1)
+        Write-Info "  📄 $summaryFilePath (${summaryFileSize}KB) - Generation summary"
+    }
+    catch {
+        Write-Warning "Failed to save generation summary to file: $($_.Exception.Message)"
+    }
+    
+    Write-Success "Documentation generation complete: $totalPages pages created using C# generator with Handlebars templates"
+    
+    # Display console summary (detailed summary saved to generation-summary.md)
+    if ($totalTools -gt 0) {
+        Write-Info ""
+        Write-Info "Tool Statistics:"
+        Write-Info "  📊 Total tools: $totalTools"
+        Write-Info "  📊 Total service areas: $totalAreas"
+        
+        if ($toolCountsByArea.Count -gt 0) {
+            Write-Info "  📊 Tools by service area:"
+            foreach ($area in ($toolCountsByArea.Keys | Sort-Object)) {
+                $count = $toolCountsByArea[$area]
+                Write-Info "     • ${area}: $count tools"
+            }
+        }
+        
+        # Display the complete tool list
+        if ($toolListOutput.Count -gt 0) {
+            Write-Info ""
+            Write-Info "Complete Tool List:"
+            foreach ($line in $toolListOutput) {
+                if ($line.Trim() -ne "") {
+                    Write-Info $line
+                }
+            }
+        }
+    }
 
 } catch {
     Write-Error "Documentation generation failed: $($_.Exception.Message)"

@@ -84,6 +84,35 @@ public static class DocumentationGenerator
             await GenerateServiceOptionsPageAsync(transformedData, outputDir, serviceOptionsTemplate);
         }
 
+        // Output summary statistics
+        var totalTools = transformedData.Tools.Count;
+        var totalAreas = transformedData.Areas.Count;
+        
+        Console.WriteLine($"Generation Summary:");
+        Console.WriteLine($"  Total tools: {totalTools}");
+        Console.WriteLine($"  Total service areas: {totalAreas}");
+        
+        foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
+        {
+            Console.WriteLine($"  {area.Key}: {area.Value.ToolCount} tools");
+        }
+        
+        Console.WriteLine();
+        Console.WriteLine("Tool List by Service Area:");
+        Console.WriteLine("=" + new string('=', 29));
+        
+        foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
+        {
+            Console.WriteLine();
+            Console.WriteLine($"{area.Key} ({area.Value.ToolCount} tools):");
+            Console.WriteLine(new string('-', area.Key.Length + $" ({area.Value.ToolCount} tools):".Length));
+            
+            foreach (var tool in area.Value.Tools.OrderBy(t => t.Command))
+            {
+                Console.WriteLine($"  • {tool.Command} - {tool.Name}");
+            }
+        }
+
         return 0;
     }
 
@@ -108,13 +137,13 @@ public static class DocumentationGenerator
                 var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                 Console.WriteLine($"Debug: Processing command: {tool.Command}, parts: {commandParts.Length}");
                 
-                if (commandParts.Length < 2)
+                if (commandParts.Length < 1)
                 {
-                    Console.WriteLine($"Warning: Command '{tool.Command}' has fewer than 2 parts, skipping.");
+                    Console.WriteLine($"Warning: Command '{tool.Command}' has no parts, skipping.");
                     continue;
                 }
                 
-                var area = commandParts[1]; // e.g., "azmcp storage blob ..." -> "storage"
+                var area = commandParts[0]; // e.g., "acr registry list" -> "acr", "storage account list" -> "storage"
                 
                 if (!areaGroups.ContainsKey(area))
                 {
@@ -404,11 +433,11 @@ public static class DocumentationGenerator
     /// </summary>
     public static (string toolFamily, string operation) ParseCommand(string command)
     {
-        // Expected format: "azmcp <area> [<subarea>] <operation>"
+        // Expected format: "<area> [<subarea>] <operation>"
         // Examples: 
-        // - "azmcp aks cluster get" -> ("aks cluster", "get")
-        // - "azmcp storage account list" -> ("storage account", "list") 
-        // - "azmcp subscription list" -> ("subscription", "list")
+        // - "aks cluster get" -> ("aks cluster", "get")
+        // - "storage account list" -> ("storage account", "list") 
+        // - "subscription list" -> ("subscription", "list")
         
         if (string.IsNullOrEmpty(command))
         {
@@ -419,29 +448,26 @@ public static class DocumentationGenerator
         var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         Console.WriteLine($"Debug: Command '{command}' split into {parts.Length} parts");
         
-        if (parts.Length < 3) // Need at least "azmcp area operation"
+        if (parts.Length < 2) // Need at least "area operation"
         {
-            Console.WriteLine($"Debug: Not enough parts in command '{command}', expected at least 3, got {parts.Length}");
+            Console.WriteLine($"Debug: Not enough parts in command '{command}', expected at least 2, got {parts.Length}");
             return ("", "");
         }
             
         try
         {
-            // Skip "azmcp" prefix
-            var relevantParts = parts.Skip(1).ToArray();
-            
-            if (relevantParts.Length == 2)
+            if (parts.Length == 2)
             {
-                // Format: "azmcp area operation"
-                Console.WriteLine($"Debug: Command '{command}' parsed as tool family '{relevantParts[0]}' and operation '{relevantParts[1]}'");
-                return (relevantParts[0], relevantParts[1]);
+                // Format: "area operation"
+                Console.WriteLine($"Debug: Command '{command}' parsed as tool family '{parts[0]}' and operation '{parts[1]}'");
+                return (parts[0], parts[1]);
             }
-            else if (relevantParts.Length >= 3)
+            else if (parts.Length >= 3)
             {
-                // Format: "azmcp area subarea operation" or longer
+                // Format: "area subarea operation" or longer
                 // Take everything except the last part as tool family
-                var operation = relevantParts.Last();
-                var toolFamily = string.Join(" ", relevantParts.Take(relevantParts.Length - 1));
+                var operation = parts.Last();
+                var toolFamily = string.Join(" ", parts.Take(parts.Length - 1));
                 Console.WriteLine($"Debug: Command '{command}' parsed as tool family '{toolFamily}' and operation '{operation}'");
                 return (toolFamily, operation);
             }

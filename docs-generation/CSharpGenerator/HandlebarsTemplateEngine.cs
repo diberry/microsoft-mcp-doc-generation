@@ -155,31 +155,66 @@ public static class HandlebarsTemplateEngine
             var command = arguments[0].ToString() ?? string.Empty;
             var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             
+            if (parts.Length < 4) // Need at least "azmcp area subtool operation" for sub-tool structure
+                return string.Empty;
+                
+            // For "azmcp storage blob batch set-tier" -> return "Blob"
+            // For "azmcp storage account list" -> return "Account"
+            string subTool = parts[2];
+            
+            // Split by dashes if present and format each part
+            if (subTool.Contains('-'))
+            {
+                var subToolParts = subTool.Split('-')
+                    .Where(p => !string.IsNullOrEmpty(p))
+                    .Select(part => char.ToUpper(part[0]) + part.Substring(1).ToLower());
+                
+                return string.Join(" ", subToolParts);
+            }
+            
+            // Simple capitalization for non-hyphenated terms
+            return char.ToUpper(subTool[0]) + subTool.Substring(1).ToLower();
+        });
+
+        // Check if command has sub-tool structure
+        handlebars.RegisterHelper("hasSubTool", (context, arguments) =>
+        {
+            if (arguments.Length == 0 || arguments[0] == null)
+                return false;
+
+            var command = arguments[0].ToString() ?? string.Empty;
+            var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            
+            // Has sub-tool if there are 4+ parts: "azmcp area subtool operation"
+            return parts.Length >= 4;
+        });
+
+        // Get operation name for commands without sub-tools
+        handlebars.RegisterHelper("operationName", (context, arguments) =>
+        {
+            if (arguments.Length == 0 || arguments[0] == null)
+                return string.Empty;
+
+            var command = arguments[0].ToString() ?? string.Empty;
+            var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            
             if (parts.Length < 3) // Need at least "azmcp area operation"
                 return string.Empty;
                 
-            // Skip "azmcp" and area name, get the first sub-component
-            if (parts.Length >= 3)
+            // For "azmcp kusto query" -> return "Query"
+            string operation = parts[2];
+            
+            // Handle hyphenated terms
+            if (operation.Contains('-'))
             {
-                // For "azmcp storage blob batch set-tier" -> return "blob"
-                // For "azmcp storage account list" -> return "account"
-                string subTool = parts[2];
-                
-                // Split by dashes if present and format each part
-                if (subTool.Contains('-'))
-                {
-                    var subToolParts = subTool.Split('-')
-                        .Where(p => !string.IsNullOrEmpty(p))
-                        .Select(part => char.ToUpper(part[0]) + part.Substring(1).ToLower());
-                    
-                    return string.Join(" ", subToolParts);
-                }
-                
-                // Simple capitalization for non-hyphenated terms
-                return char.ToUpper(subTool[0]) + subTool.Substring(1).ToLower();
+                var operationParts = operation.Split('-')
+                    .Where(p => !string.IsNullOrEmpty(p))
+                    .Select(part => char.ToUpper(part[0]) + part.Substring(1).ToLower());
+                return string.Join("-", operationParts);
             }
             
-            return string.Empty;
+            // Simple capitalization for non-hyphenated terms
+            return char.ToUpper(operation[0]) + operation.Substring(1).ToLower();
         });
 
         // Parse sub-operation (everything after the sub-tool family)
@@ -191,13 +226,24 @@ public static class HandlebarsTemplateEngine
             var command = arguments[0].ToString() ?? string.Empty;
             var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             
-            if (parts.Length < 4) // Need at least "azmcp area subtool operation"
+            if (parts.Length < 3) // Need at least "azmcp area operation"
                 return string.Empty;
-                
-            // For "azmcp storage blob batch set-tier" -> return "batch set-tier"
-            // Skip "azmcp", area name, and sub-tool family
-            var remainingParts = parts.Skip(3).ToArray();
-            string operation = string.Join(" ", remainingParts);
+            
+            string operation;
+            
+            if (parts.Length >= 4)
+            {
+                // For "azmcp storage blob batch set-tier" -> return "batch set-tier"
+                // Skip "azmcp", area name, and sub-tool family
+                var remainingParts = parts.Skip(3).ToArray();
+                operation = string.Join(" ", remainingParts);
+            }
+            else
+            {
+                // For "azmcp kusto query" -> return "query"
+                // Skip "azmcp" and area name, use the operation directly
+                operation = parts[2];
+            }
             
             // Handle multiple words with proper casing
             if (operation.Contains(' '))
@@ -378,6 +424,40 @@ public static class HandlebarsTemplateEngine
             }
             
             return grouped;
+        });
+
+        // Generate simple, clean tool names for H2 headers
+        handlebars.RegisterHelper("getSimpleToolName", (context, arguments) =>
+        {
+            if (arguments.Length == 0 || arguments[0] == null)
+                return "Unknown";
+
+            var command = arguments[0].ToString() ?? string.Empty;
+            var parts = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            
+            if (parts.Length < 2) // Need at least "area operation" 
+                return "Unknown";
+            
+            // Skip area name (first part), get remaining parts
+            var remainingParts = parts.Skip(1).ToArray();
+            
+            // Format each part with proper capitalization
+            var formattedParts = remainingParts.Select(part =>
+            {
+                // Handle hyphenated terms
+                if (part.Contains('-'))
+                {
+                    var hyphenParts = part.Split('-')
+                        .Where(hp => !string.IsNullOrEmpty(hp))
+                        .Select(hp => char.ToUpper(hp[0]) + hp.Substring(1).ToLower());
+                    return string.Join("-", hyphenParts);
+                }
+                
+                // Regular term - capitalize first letter
+                return char.ToUpper(part[0]) + part.Substring(1).ToLower();
+            });
+            
+            return string.Join(" ", formattedParts);
         });
     }
 }
