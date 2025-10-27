@@ -1,6 +1,9 @@
 name: Generate MCP Documentation
 
 on:
+  schedule:
+    # Run nightly at 2:00 AM UTC
+    - cron: '0 2 * * *'
   push:
     branches: [ main ]
   pull_request:
