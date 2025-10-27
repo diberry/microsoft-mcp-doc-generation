@@ -34,25 +34,32 @@ jobs:
       with:
         ref: main
         path: docs-generation-repo
-        
+
+    # - name: Checkout Microsoft/MCP repository (main branch)
+    #   uses: actions/checkout@v5
+    #   with:
+    #     repository: Microsoft/MCP
+    #     ref: main
+    #     path: MCP
+    #     sparse-checkout: |
+    #       core
+    #       eng
+    #       servers/Azure.Mcp.Server
+    #       tools/Azure.MCP.Tools.*
+    #       AzureMcp.sln
+    #       Directory.*
+    #       package.json
+    #       global.json
+    #       nuget.config
+    #       smithery.yaml
+    #     sparse-checkout-cone-mode: false
+
     - name: Checkout Microsoft/MCP repository (main branch)
       uses: actions/checkout@v5
       with:
         repository: Microsoft/MCP
         ref: main
         path: MCP
-        sparse-checkout: |
-          core
-          eng
-          servers/Azure.Mcp.Server
-          tools/Azure.MCP.Tools.*
-          AzureMcp.sln
-          Directory.*
-          package.json
-          global.json
-          nuget.config
-          smithery.yaml
-        sparse-checkout-cone-mode: false
         
     - name: Copy docs-generation folder to MCP repository
       run: |
