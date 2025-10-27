@@ -12,6 +12,23 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - name: Free disk space
+      run: |
+        echo "Disk space before cleanup:"
+        df -h
+        echo ""
+        
+        # Remove unnecessary software to free up space
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        sudo docker image prune --all --force
+        
+        echo ""
+        echo "Disk space after cleanup:"
+        df -h
+        
     - name: Checkout this repository (main branch)
       uses: actions/checkout@v5
       with:
@@ -24,6 +41,11 @@ jobs:
         repository: Microsoft/MCP
         ref: main
         path: MCP
+        sparse-checkout: |
+          servers/Azure.Mcp.Server
+          package.json
+          global.json
+        sparse-checkout-cone-mode: false
         
     - name: Copy docs-generation folder to MCP repository
       run: |
@@ -46,7 +68,14 @@ jobs:
         echo "✅ Successfully copied docs-generation folder"
         echo "Copied directory contents:"
         ls -la MCP/docs-generation/
+        
+        # Clean up the source repo to save space
         echo ""
+        echo "Removing source repo to free up space..."
+        rm -rf docs-generation-repo
+        
+        echo "Disk space after cleanup:"
+        df -h
         echo "=== Copy operation completed ==="
         
     - name: Setup .NET (from devcontainer config)
@@ -102,79 +131,88 @@ jobs:
         ls -la
         echo "=========================="
         
-    - name: Build MCP root
-      working-directory: ./MCP
-      run: |
-        echo "=== Building MCP root ==="
-        echo "Current directory: $(pwd)"
-        echo "Directory contents:"
-        ls -la
-        echo ""
+    # - name: Build MCP root
+    #   working-directory: ./MCP
+    #   run: |
+    #     echo "=== Building MCP root ==="
+    #     echo "Current directory: $(pwd)"
+    #     echo "Directory contents:"
+    #     ls -la
+    #     echo ""
         
-        # Check if there's a package.json or other build configuration
-        if [ -f "package.json" ]; then
-          echo "Found package.json, contents:"
-          cat package.json | head -20
-          echo ""
-          echo "Running npm install..."
-          npm install 2>&1 | tee npm-install.log
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "❌ npm install failed, log:"
-            cat npm-install.log
-            exit 1
-          fi
+    #     # Check if there's a package.json or other build configuration
+    #     if [ -f "package.json" ]; then
+    #       echo "Found package.json, contents:"
+    #       cat package.json | head -20
+    #       echo ""
+    #       echo "Running npm install..."
+    #       npm install 2>&1 | tee npm-install.log
+    #       if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    #         echo "❌ npm install failed, log:"
+    #         cat npm-install.log
+    #         exit 1
+    #       fi
           
-          echo "Checking for build script..."
-          if npm run build --if-present 2>&1 | tee npm-build.log; then
-            echo "✅ npm run build completed successfully"
-          else
-            echo "⚠️ npm run build failed or no build script found, log:"
-            cat npm-build.log
-            echo "Continuing anyway..."
-          fi
-        else
-          echo "No package.json found"
-        fi
+    #       echo "Checking for build script..."
+    #       if npm run build --if-present 2>&1 | tee npm-build.log; then
+    #         echo "✅ npm run build completed successfully"
+    #       else
+    #         echo "⚠️ npm run build failed or no build script found, log:"
+    #         cat npm-build.log
+    #         echo "Continuing anyway..."
+    #       fi
+    #     else
+    #       echo "No package.json found"
+    #     fi
         
-        echo ""
-        echo "Checking for .NET projects..."
-        dotnet_projects=$(find . -name "*.sln" -o -name "*.csproj" | head -10)
-        if [ -n "$dotnet_projects" ]; then
-          echo "Found .NET project(s):"
-          echo "$dotnet_projects"
-          echo ""
-          echo "Running dotnet restore..."
-          dotnet restore 2>&1 | tee dotnet-restore.log
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "❌ dotnet restore failed, log:"
-            cat dotnet-restore.log
-            exit 1
-          fi
+    #     echo ""
+    #     echo "Checking for .NET projects..."
+    #     dotnet_projects=$(find . -name "*.sln" -o -name "*.csproj" | head -10)
+    #     if [ -n "$dotnet_projects" ]; then
+    #       echo "Found .NET project(s):"
+    #       echo "$dotnet_projects"
+    #       echo ""
+    #       echo "Running dotnet restore..."
+    #       dotnet restore 2>&1 | tee dotnet-restore.log
+    #       if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    #         echo "❌ dotnet restore failed, log:"
+    #         cat dotnet-restore.log
+    #         exit 1
+    #       fi
           
-          echo "Running dotnet build..."
-          dotnet build --configuration Release 2>&1 | tee dotnet-build.log
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "❌ dotnet build failed, log:"
-            cat dotnet-build.log
-            exit 1
-          fi
-          echo "✅ .NET build completed successfully"
-        else
-          echo "No .NET projects found to build"
-        fi
+    #       echo "Running dotnet build..."
+    #       dotnet build --configuration Release 2>&1 | tee dotnet-build.log
+    #       if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    #         echo "❌ dotnet build failed, log:"
+    #         cat dotnet-build.log
+    #         exit 1
+    #       fi
+    #       echo "✅ .NET build completed successfully"
+    #     else
+    #       echo "No .NET projects found to build"
+    #     fi
         
-        echo ""
-        echo "Final directory structure after build:"
-        find . -maxdepth 3 -type d | sort
-        echo "=== MCP root build completed ==="
+    #     echo ""
+    #     echo "Final directory structure after build:"
+    #     find . -maxdepth 3 -type d | sort
         
-    - name: Verify Azure MCP server CLI runs
-      working-directory: ./MCP/servers/Azure.Mcp.Server/src
-      run: |
-        echo "Running 'dotnet run -- tools list'..."
-        # Set environment variable to allow using RC runtime for net9.0 apps
-        export DOTNET_ROLL_FORWARD=Major
-        dotnet run -- tools list
+    #     # Clean up to save space
+    #     echo ""
+    #     echo "Cleaning up build artifacts and node_modules to save space..."
+    #     rm -rf node_modules
+    #     find . -name "obj" -type d -exec rm -rf {} + 2>/dev/null || true
+        
+    #     echo "Disk space after cleanup:"
+    #     df -h
+    #     echo "=== MCP root build completed ==="
+        
+    # - name: Verify Azure MCP server CLI runs
+    #   working-directory: ./MCP/servers/Azure.Mcp.Server/src
+    #   run: |
+    #     echo "Running 'dotnet run -- tools list'..."
+    #     # Set environment variable to allow using RC runtime for net9.0 apps
+    #     export DOTNET_ROLL_FORWARD=Major
+    #     dotnet run -- tools list
 
     - name: Build docs-generation solution
       working-directory: ./MCP/docs-generation
