@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.IO;
 using Shared; 
 
@@ -25,7 +26,7 @@ internal class Program
              Console.Error.WriteLine("Usage: CSharpGenerator <mode> [arguments...]");
              Console.Error.WriteLine("Modes:");
              Console.Error.WriteLine("  template <template-file> <data-file> <output-file> [additional-context-json]");
-             Console.Error.WriteLine("  generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--no-service-options]");
+             Console.Error.WriteLine("  generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--no-service-options]");
              return 1;
          }
 
@@ -120,7 +121,7 @@ internal class Program
      {
          if (args.Length < 2)
          {
-             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--no-service-options]");
+             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--no-service-options]");
              return 1;
          }
 
@@ -129,6 +130,7 @@ internal class Program
          var generateIndex = args.Contains("--index");
          var generateCommon = args.Contains("--common");
          var generateCommands = args.Contains("--commands");
+         var generateAnnotations = args.Contains("--annotations");
          var generateServiceOptions = !args.Contains("--no-service-options");
 
          return await DocumentationGenerator.GenerateAsync(
@@ -137,7 +139,8 @@ internal class Program
              generateIndex,
              generateCommon,
              generateCommands,
-             generateServiceOptions);
+             generateServiceOptions,
+             generateAnnotations);
      }
 }
 
@@ -155,6 +158,38 @@ public class Tool
     public string? SourceFile { get; set; }
     public List<Option>? Option { get; set; }
     public string? Area { get; set; }
+    public ToolMetadata? Metadata { get; set; }
+    public string? AnnotationContent { get; set; } // Content from annotation file
+}
+
+public class ToolMetadata
+{
+    [JsonPropertyName("destructive")]
+    public MetadataValue? Destructive { get; set; }
+    
+    [JsonPropertyName("idempotent")]
+    public MetadataValue? Idempotent { get; set; }
+    
+    [JsonPropertyName("openWorld")]
+    public MetadataValue? OpenWorld { get; set; }
+    
+    [JsonPropertyName("readOnly")]
+    public MetadataValue? ReadOnly { get; set; }
+    
+    [JsonPropertyName("secret")]
+    public MetadataValue? Secret { get; set; }
+    
+    [JsonPropertyName("localRequired")]
+    public MetadataValue? LocalRequired { get; set; }
+}
+
+public class MetadataValue
+{
+    [JsonPropertyName("value")]
+    public bool Value { get; set; }
+    
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 }
 
 public class Option
