@@ -19,7 +19,8 @@ public static class DocumentationGenerator
         bool generateIndex = false,
         bool generateCommon = false,
         bool generateCommands = false,
-        bool generateServiceOptions = true)
+        bool generateServiceOptions = true,
+        bool generateAnnotations = false)
     {
         // Config.Load has been called in Program.Main and TextCleanup is initialized statically
 
@@ -48,8 +49,17 @@ public static class DocumentationGenerator
         // Ensure output directory exists
         Directory.CreateDirectory(outputDir);
 
-        // Generate area pages
+        // Setup templates directory
         var templatesDir = Path.Combine("..", "templates");
+        
+        // Generate individual annotation files for each tool first
+        // This way we can reference them in the area pages
+        var annotationsDir = Path.Combine(outputDir, "annotations");
+        Directory.CreateDirectory(annotationsDir);
+        var annotationTemplate = Path.Combine(templatesDir, "annotation-template.hbs");
+        await GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate);
+
+        // Generate area pages
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
 
         foreach (var area in transformedData.Areas)
@@ -84,6 +94,20 @@ public static class DocumentationGenerator
             await GenerateServiceOptionsPageAsync(transformedData, outputDir, serviceOptionsTemplate);
         }
 
+        // Generate tool annotations summary file if annotations are enabled
+        if (generateAnnotations)
+        {
+            var toolAnnotationsTemplate = Path.Combine(templatesDir, "tool-annotations-template.hbs");
+            var generatedDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+            await GenerateToolAnnotationsSummaryAsync(transformedData, generatedDir, toolAnnotationsTemplate, annotationsDir);
+        }
+
+        // Note: Annotations are always generated at the start, before area pages
+
+        // Generate security reports in the parent directory (generated folder)
+        var securityReportsDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+        await GenerateSecurityReportsAsync(transformedData, securityReportsDir);
+
         // Output summary statistics
         var totalTools = transformedData.Tools.Count;
         var totalAreas = transformedData.Areas.Count;
@@ -91,6 +115,13 @@ public static class DocumentationGenerator
         Console.WriteLine($"Generation Summary:");
         Console.WriteLine($"  Total tools: {totalTools}");
         Console.WriteLine($"  Total service areas: {totalAreas}");
+        
+        // Show security summary
+        var secretsCount = transformedData.Tools.Count(t => t.Metadata?.Secret?.Value == true);
+        var consentCount = transformedData.Tools.Count(t => t.Metadata?.LocalRequired?.Value == true);
+        Console.WriteLine($"  Security requirements:");
+        Console.WriteLine($"    Tools requiring secrets: {secretsCount}");
+        Console.WriteLine($"    Tools requiring local consent: {consentCount}");
         
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
@@ -193,7 +224,10 @@ public static class DocumentationGenerator
                 : ExtractCommonParameters(data.Tools);
             var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
 
-            // Filter out common parameters from tools for area pages
+            // Annotations directory path
+            var annotationsDir = Path.Combine(outputDir, "annotations");
+
+            // Filter out common parameters from tools for area pages and add annotation content
             var toolsWithFilteredParams = areaData.Tools.Select(tool => 
             {
                 var filteredTool = new Tool
@@ -202,8 +236,29 @@ public static class DocumentationGenerator
                     Command = tool.Command,
                     Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(tool.Description ?? "")),
                     SourceFile = tool.SourceFile,
-                    Area = tool.Area
+                    Area = tool.Area,
+                    Metadata = tool.Metadata // Include metadata from CLI output
                 };
+                
+                // Read annotation file content if it exists
+                if (!string.IsNullOrEmpty(tool.Command))
+                {
+                    var annotationFileName = $"{tool.Command.Replace(" ", "-").ToLowerInvariant()}-annotations.md";
+                    var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
+                    
+                    if (File.Exists(annotationFilePath))
+                    {
+                        try
+                        {
+                            filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
+                        }
+                        catch
+                        {
+                            // Silently ignore if annotation file can't be read
+                            filteredTool.AnnotationContent = "";
+                        }
+                    }
+                }
                 
                 if (tool.Option != null)
                 {
@@ -429,6 +484,61 @@ public static class DocumentationGenerator
     }
 
     /// <summary>
+    /// Generates a single file with all tool operations and their annotations.
+    /// </summary>
+    private static async Task GenerateToolAnnotationsSummaryAsync(TransformedData data, string outputDir, string templateFile, string annotationsDir)
+    {
+        try
+        {
+            // Collect all tools from all areas
+            var allTools = new List<object>();
+            
+            foreach (var area in data.Areas)
+            {
+                foreach (var tool in area.Value.Tools)
+                {
+                    // Read the annotation file for this tool
+                    var annotationFileName = $"{tool.Command?.Replace(" ", "-").ToLowerInvariant() ?? "unknown"}-annotations.md";
+                    var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
+                    
+                    string? annotationContent = null;
+                    if (File.Exists(annotationFilePath))
+                    {
+                        annotationContent = await File.ReadAllTextAsync(annotationFilePath);
+                    }
+                    
+                    allTools.Add(new
+                    {
+                        command = tool.Command ?? "Unknown",
+                        description = tool.Description,
+                        area = area.Key,
+                        annotationContent = annotationContent
+                    });
+                }
+            }
+
+            var pageData = new Dictionary<string, object>
+            {
+                ["version"] = data.Version,
+                ["generatedAt"] = data.GeneratedAt,
+                ["tools"] = allTools,
+                ["toolCount"] = allTools.Count
+            };
+
+            var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, pageData);
+
+            var outputFile = Path.Combine(outputDir, "tool-annotations.md");
+            await File.WriteAllTextAsync(outputFile, result);
+            Console.WriteLine($"Generated tool annotations summary: tool-annotations.md (in {outputDir})");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating tool annotations summary: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
+    }
+
+    /// <summary>
     /// Parses a command string to extract tool family and operation components.
     /// </summary>
     public static (string toolFamily, string operation) ParseCommand(string command)
@@ -479,6 +589,470 @@ public static class DocumentationGenerator
         {
             Console.WriteLine($"Error parsing command '{command}': {ex.Message}");
             return ("", "");
+        }
+    }
+
+    /// <summary>
+    /// Converts a camelCase property name to Title Case with spaces.
+    /// Example: "openWorld" -> "Open World", "readOnly" -> "Read Only"
+    /// </summary>
+    private static string ConvertCamelCaseToTitleCase(string propertyName)
+    {
+        if (string.IsNullOrEmpty(propertyName))
+            return propertyName;
+
+        var result = new System.Text.StringBuilder();
+        result.Append(char.ToUpper(propertyName[0]));
+
+        for (int i = 1; i < propertyName.Length; i++)
+        {
+            if (char.IsUpper(propertyName[i]))
+            {
+                result.Append(' ');
+            }
+            result.Append(propertyName[i]);
+        }
+
+        return result.ToString();
+    }
+
+    /// <summary>
+    /// Generates individual annotation files for each tool.
+    /// </summary>
+    private static async Task GenerateAnnotationFilesAsync(TransformedData data, string outputDir, string templateFile)
+    {
+        try
+        {
+            Console.WriteLine($"Generating annotation files for {data.Tools.Count} tools...");
+            
+            foreach (var tool in data.Tools)
+            {
+                if (string.IsNullOrEmpty(tool.Command))
+                    continue;
+
+                // Use the command directly to create the filename
+                // Format: {command-with-hyphens}-annotations.md
+                var fileName = $"{tool.Command.Replace(" ", "-")}-annotations.md";
+                fileName = fileName.ToLowerInvariant();
+                var outputFile = Path.Combine(outputDir, fileName);
+
+                // Format metadata with display names for each property
+                var formattedMetadata = new Dictionary<string, object>();
+                var metadata = tool.Metadata ?? new ToolMetadata();
+                
+                if (metadata.Destructive != null)
+                {
+                    formattedMetadata["destructive"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("destructive"),
+                        value = metadata.Destructive.Value,
+                        description = metadata.Destructive.Description
+                    };
+                }
+                
+                if (metadata.Idempotent != null)
+                {
+                    formattedMetadata["idempotent"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("idempotent"),
+                        value = metadata.Idempotent.Value,
+                        description = metadata.Idempotent.Description
+                    };
+                }
+                
+                if (metadata.OpenWorld != null)
+                {
+                    formattedMetadata["openWorld"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("openWorld"),
+                        value = metadata.OpenWorld.Value,
+                        description = metadata.OpenWorld.Description
+                    };
+                }
+                
+                if (metadata.ReadOnly != null)
+                {
+                    formattedMetadata["readOnly"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("readOnly"),
+                        value = metadata.ReadOnly.Value,
+                        description = metadata.ReadOnly.Description
+                    };
+                }
+                
+                if (metadata.Secret != null)
+                {
+                    formattedMetadata["secret"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("secret"),
+                        value = metadata.Secret.Value,
+                        description = metadata.Secret.Description
+                    };
+                }
+                
+                if (metadata.LocalRequired != null)
+                {
+                    formattedMetadata["localRequired"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("localRequired"),
+                        value = metadata.LocalRequired.Value,
+                        description = metadata.LocalRequired.Description
+                    };
+                }
+
+                var annotationData = new Dictionary<string, object>
+                {
+                    ["tool"] = tool,
+                    ["metadata"] = formattedMetadata,
+                    ["command"] = tool.Command ?? "",
+                    ["area"] = tool.Area ?? "",
+                    ["generateAnnotation"] = true
+                };
+
+                var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, annotationData);
+                await File.WriteAllTextAsync(outputFile, result);
+            }
+            
+            Console.WriteLine($"Generated {data.Tools.Count} annotation files in {outputDir}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating annotation files: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
+    }
+
+    /// <summary>
+    /// Generates a comprehensive metadata report covering all tool characteristics.
+    /// </summary>
+    private static async Task GenerateSecurityReportsAsync(TransformedData data, string outputDir)
+    {
+        try
+        {
+            // Find tools with various metadata characteristics
+            var secretsRequiredTools = data.Tools
+                .Where(t => t.Metadata?.Secret?.Value == true)
+                .OrderBy(t => t.Command)
+                .ToList();
+
+            var localConsentTools = data.Tools
+                .Where(t => t.Metadata?.LocalRequired?.Value == true)
+                .OrderBy(t => t.Command)
+                .ToList();
+
+            var destructiveTools = data.Tools
+                .Where(t => t.Metadata?.Destructive?.Value == true)
+                .OrderBy(t => t.Command)
+                .ToList();
+
+            var readOnlyTools = data.Tools
+                .Where(t => t.Metadata?.ReadOnly?.Value == true)
+                .OrderBy(t => t.Command)
+                .ToList();
+
+            var nonIdempotentTools = data.Tools
+                .Where(t => t.Metadata?.Idempotent?.Value == false)
+                .OrderBy(t => t.Command)
+                .ToList();
+
+            // Find tools that have both secrets and local consent requirements
+            var bothRequirementsTools = data.Tools
+                .Where(t => t.Metadata?.Secret?.Value == true && t.Metadata?.LocalRequired?.Value == true)
+                .OrderBy(t => t.Command)
+                .ToList();
+
+            // Generate comprehensive metadata report
+            var reportLines = new List<string>
+            {
+                "# Azure MCP Tools Metadata Report",
+                "",
+                $"**Generated:** {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC",
+                $"**Total Tools:** {data.Tools.Count}",
+                "",
+                "This comprehensive report provides detailed metadata analysis for all Azure MCP tools, including security requirements, operational characteristics, and safety considerations.",
+                "",
+                "## Executive Summary",
+                "",
+                "| Characteristic | Count | Percentage | Description |",
+                "|----------------|-------|------------|-------------|",
+                $"| Secrets Required | {secretsRequiredTools.Count} | {(secretsRequiredTools.Count * 100.0 / data.Tools.Count):F1}% | Tools that handle sensitive information |",
+                $"| Local Consent Required | {localConsentTools.Count} | {(localConsentTools.Count * 100.0 / data.Tools.Count):F1}% | Tools requiring explicit user consent |",
+                $"| Destructive Operations | {destructiveTools.Count} | {(destructiveTools.Count * 100.0 / data.Tools.Count):F1}% | Tools that can delete or modify resources |",
+                $"| Read-Only Operations | {readOnlyTools.Count} | {(readOnlyTools.Count * 100.0 / data.Tools.Count):F1}% | Tools that only read data without modifications |",
+                $"| Non-Idempotent | {nonIdempotentTools.Count} | {(nonIdempotentTools.Count * 100.0 / data.Tools.Count):F1}% | Tools where repeated calls may have different effects |",
+                $"| High-Risk (Secrets + Consent) | {bothRequirementsTools.Count} | {(bothRequirementsTools.Count * 100.0 / data.Tools.Count):F1}% | Tools requiring both secrets and user consent |",
+                ""
+            };
+
+            // Security Requirements Section
+            reportLines.AddRange(new[]
+            {
+                "## Security Requirements",
+                "",
+                "### Tools Requiring Secrets",
+                "",
+                $"**Count:** {secretsRequiredTools.Count} tools",
+                "",
+                "These tools handle sensitive information like passwords, keys, or tokens and require secure handling.",
+                ""
+            });
+
+            if (secretsRequiredTools.Any())
+            {
+                // Group by area for secrets
+                var secretsByArea = secretsRequiredTools
+                    .GroupBy(t => t.Command?.Split(' ')[0] ?? "unknown")
+                    .OrderBy(g => g.Key)
+                    .ToList();
+
+                reportLines.Add("**Summary by Service Area:**");
+                reportLines.Add("");
+                foreach (var areaGroup in secretsByArea)
+                {
+                    reportLines.Add($"- **{areaGroup.Key}:** {areaGroup.Count()} tools");
+                }
+
+                reportLines.AddRange(new[]
+                {
+                    "",
+                    "**Detailed List:**",
+                    "",
+                    "| Command | Area | Description |",
+                    "|---------|------|-------------|"
+                });
+
+                foreach (var tool in secretsRequiredTools)
+                {
+                    var area = tool.Command?.Split(' ')[0] ?? "unknown";
+                    var description = tool.Description?.Replace("|", "\\|").Replace("\n", " ").Replace("\r", "") ?? "";
+                    if (description.Length > 100)
+                    {
+                        description = description.Substring(0, 97) + "...";
+                    }
+                    reportLines.Add($"| `{tool.Command}` | {area} | {description} |");
+                }
+                reportLines.Add("");
+            }
+            else
+            {
+                reportLines.Add("*No tools require secrets handling.*");
+                reportLines.Add("");
+            }
+
+            // Local Consent Requirements Section
+            reportLines.AddRange(new[]
+            {
+                "### Tools Requiring Local User Consent",
+                "",
+                $"**Count:** {localConsentTools.Count} tools",
+                "",
+                "These tools require explicit local user consent or authentication before execution.",
+                ""
+            });
+
+            if (localConsentTools.Any())
+            {
+                // Group by area for local consent
+                var localConsentByArea = localConsentTools
+                    .GroupBy(t => t.Command?.Split(' ')[0] ?? "unknown")
+                    .OrderBy(g => g.Key)
+                    .ToList();
+
+                reportLines.Add("**Summary by Service Area:**");
+                reportLines.Add("");
+                foreach (var areaGroup in localConsentByArea)
+                {
+                    reportLines.Add($"- **{areaGroup.Key}:** {areaGroup.Count()} tools");
+                }
+
+                reportLines.AddRange(new[]
+                {
+                    "",
+                    "**Detailed List:**",
+                    "",
+                    "| Command | Area | Description |",
+                    "|---------|------|-------------|"
+                });
+
+                foreach (var tool in localConsentTools)
+                {
+                    var area = tool.Command?.Split(' ')[0] ?? "unknown";
+                    var description = tool.Description?.Replace("|", "\\|").Replace("\n", " ").Replace("\r", "") ?? "";
+                    if (description.Length > 100)
+                    {
+                        description = description.Substring(0, 97) + "...";
+                    }
+                    reportLines.Add($"| `{tool.Command}` | {area} | {description} |");
+                }
+                reportLines.Add("");
+            }
+            else
+            {
+                reportLines.Add("*No tools require local user consent.*");
+                reportLines.Add("");
+            }
+
+            // High-Risk Tools (Both Requirements)
+            if (bothRequirementsTools.Any())
+            {
+                reportLines.AddRange(new[]
+                {
+                    "### High-Risk Tools (Secrets + Consent Required)",
+                    "",
+                    $"**Count:** {bothRequirementsTools.Count} tools",
+                    "",
+                    "These tools require both secrets handling and local user consent, representing the highest security risk category.",
+                    "",
+                    "| Command | Area | Description |",
+                    "|---------|------|-------------|"
+                });
+
+                foreach (var tool in bothRequirementsTools)
+                {
+                    var area = tool.Command?.Split(' ')[0] ?? "unknown";
+                    var description = tool.Description?.Replace("|", "\\|").Replace("\n", " ").Replace("\r", "") ?? "";
+                    if (description.Length > 100)
+                    {
+                        description = description.Substring(0, 97) + "...";
+                    }
+                    reportLines.Add($"| `{tool.Command}` | {area} | {description} |");
+                }
+                reportLines.Add("");
+            }
+
+            // Operational Characteristics Section
+            reportLines.AddRange(new[]
+            {
+                "## Operational Characteristics",
+                "",
+                "### Destructive Operations",
+                "",
+                $"**Count:** {destructiveTools.Count} tools",
+                "",
+                "These tools can delete, modify, or irreversibly change Azure resources."
+            });
+
+            if (destructiveTools.Any())
+            {
+                reportLines.AddRange(new[]
+                {
+                    "",
+                    "| Command | Area | Description |",
+                    "|---------|------|-------------|"
+                });
+
+                foreach (var tool in destructiveTools.Take(10)) // Limit to first 10 to keep report manageable
+                {
+                    var area = tool.Command?.Split(' ')[0] ?? "unknown";
+                    var description = tool.Description?.Replace("|", "\\|").Replace("\n", " ").Replace("\r", "") ?? "";
+                    if (description.Length > 100)
+                    {
+                        description = description.Substring(0, 97) + "...";
+                    }
+                    reportLines.Add($"| `{tool.Command}` | {area} | {description} |");
+                }
+
+                if (destructiveTools.Count > 10)
+                {
+                    reportLines.Add($"| ... | ... | *{destructiveTools.Count - 10} additional destructive tools* |");
+                }
+            }
+
+            reportLines.AddRange(new[]
+            {
+                "",
+                "### Read-Only Operations",
+                "",
+                $"**Count:** {readOnlyTools.Count} tools",
+                "",
+                "These tools only read data and do not modify any Azure resources."
+            });
+
+            if (readOnlyTools.Any())
+            {
+                reportLines.AddRange(new[]
+                {
+                    "",
+                    "| Command | Area | Description |",
+                    "|---------|------|-------------|"
+                });
+
+                foreach (var tool in readOnlyTools.Take(15)) // Show first 15 read-only tools
+                {
+                    var area = tool.Command?.Split(' ')[0] ?? "unknown";
+                    var description = tool.Description?.Replace("|", "\\|").Replace("\n", " ").Replace("\r", "") ?? "";
+                    if (description.Length > 100)
+                    {
+                        description = description.Substring(0, 97) + "...";
+                    }
+                    reportLines.Add($"| `{tool.Command}` | {area} | {description} |");
+                }
+
+                if (readOnlyTools.Count > 15)
+                {
+                    reportLines.Add($"| ... | ... | *{readOnlyTools.Count - 15} additional read-only tools* |");
+                }
+            }
+
+            reportLines.AddRange(new[]
+            {
+                "",
+                "### Non-Idempotent Operations",
+                "",
+                $"**Count:** {nonIdempotentTools.Count} tools",
+                "",
+                "These tools may produce different results when called multiple times with the same parameters."
+            });
+
+            if (nonIdempotentTools.Any())
+            {
+                reportLines.AddRange(new[]
+                {
+                    "",
+                    "| Command | Area | Description |",
+                    "|---------|------|-------------|"
+                });
+
+                foreach (var tool in nonIdempotentTools.Take(15)) // Show first 15 non-idempotent tools
+                {
+                    var area = tool.Command?.Split(' ')[0] ?? "unknown";
+                    var description = tool.Description?.Replace("|", "\\|").Replace("\n", " ").Replace("\r", "") ?? "";
+                    if (description.Length > 100)
+                    {
+                        description = description.Substring(0, 97) + "...";
+                    }
+                    reportLines.Add($"| `{tool.Command}` | {area} | {description} |");
+                }
+
+                if (nonIdempotentTools.Count > 15)
+                {
+                    reportLines.Add($"| ... | ... | *{nonIdempotentTools.Count - 15} additional non-idempotent tools* |");
+                }
+            }
+
+            reportLines.AddRange(new[]
+            {
+                "",
+                "---",
+                "",
+                "*This report is automatically generated from Azure MCP Server source code metadata.*"
+            });
+
+            // Save the comprehensive report
+            var reportPath = Path.Combine(outputDir, "tools-metadata-report.md");
+            await File.WriteAllTextAsync(reportPath, string.Join("\n", reportLines));
+
+            Console.WriteLine($"Generated comprehensive metadata report:");
+            Console.WriteLine($"  - {Path.GetFileName(reportPath)} (covering {data.Tools.Count} tools)");
+            Console.WriteLine($"    • {secretsRequiredTools.Count} tools requiring secrets");
+            Console.WriteLine($"    • {localConsentTools.Count} tools requiring local consent");
+            Console.WriteLine($"    • {destructiveTools.Count} destructive operations");
+            Console.WriteLine($"    • {readOnlyTools.Count} read-only operations");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating metadata report: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
         }
     }
 }

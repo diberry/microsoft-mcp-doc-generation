@@ -1,0 +1,9 @@
+{{#if generateAnnotation}}
+{{!-- Annotation file for: {{command}} - Uses only CLI-provided metadata --}}
+
+{{#if metadata}}
+{{#if metadata.destructive}}{{metadata.destructive.name}}: {{#if metadata.destructive.value}}✅{{else}}❌{{/if}}{{!-- {{metadata.destructive.description}}--}}{{/if}}{{#if metadata.idempotent}}{{#if metadata.idempotent}} | {{/if}}{{metadata.idempotent.name}}: {{#if metadata.idempotent.value}}✅{{else}}❌{{/if}}{{!-- {{metadata.idempotent.description}}--}}{{/if}}{{#if metadata.openWorld}}{{#if metadata.openWorld}} | {{/if}}{{metadata.openWorld.name}}: {{#if metadata.openWorld.value}}✅{{else}}❌{{/if}}{{!-- {{metadata.openWorld.description}}--}}{{/if}}{{#if metadata.readOnly}}{{#if metadata.readOnly}} | {{/if}}{{metadata.readOnly.name}}: {{#if metadata.readOnly.value}}✅{{else}}❌{{/if}}{{!-- {{metadata.readOnly.description}}--}}{{/if}}{{#if metadata.secret}}{{#if metadata.secret}} | {{/if}}{{metadata.secret.name}}: {{#if metadata.secret.value}}✅{{else}}❌{{/if}}{{!-- {{metadata.secret.description}}--}}{{/if}}{{#if metadata.localRequired}}{{#if metadata.localRequired}} | {{/if}}{{metadata.localRequired.name}}: {{#if metadata.localRequired.value}}✅{{else}}❌{{/if}}{{!-- {{metadata.localRequired.description}}--}}{{/if}}
+{{else}}
+No metadata available
+{{/if}}
+{{/if}}

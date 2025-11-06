@@ -82,8 +82,15 @@ try {
     
     Push-Location "..\servers\Azure.Mcp.Server\src"
     
+    # Build the CLI first to avoid build output in JSON
+    Write-Progress "Building Azure MCP Server..."
+    & dotnet build --nologo --verbosity quiet
+    if ($LASTEXITCODE -ne 0) { 
+        throw "Failed to build Azure MCP Server" 
+    }
+    
     Write-Progress "Running CLI tools list command..."
-    $rawOutput = & dotnet run -- tools list
+    $rawOutput = & dotnet run --no-build -- tools list
     if ($LASTEXITCODE -ne 0) { 
         throw "Failed to generate JSON data from CLI" 
     }
@@ -95,7 +102,7 @@ try {
     
     # Generate namespace data using --namespaces option
     Write-Progress "Generating namespace data..."
-    $namespaceOutput = & dotnet run -- tools list --namespaces
+    $namespaceOutput = & dotnet run --no-build -- tools list --namespaces
     if ($LASTEXITCODE -ne 0) { 
         throw "Failed to generate namespace data from CLI" 
     }
@@ -134,7 +141,7 @@ try {
     Write-Progress "Step 2: Building C# generator..."
     Push-Location "CSharpGenerator"
     
-    & dotnet build --configuration Release
+    & dotnet build --configuration Release --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to build C# generator"
     }
@@ -153,11 +160,19 @@ try {
     if ($CreateIndex) { $generatorArgs += "--index" }
     if ($CreateCommon) { $generatorArgs += "--common" }
     if ($CreateCommands) { $generatorArgs += "--commands" }
+    $generatorArgs += "--annotations"  # Always generate annotation files
     if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
     
     Push-Location "CSharpGenerator"
-    $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
+    
+    # Echo the exact command being run for debugging
+    $commandString = "dotnet run --configuration Release --no-build -- " + ($generatorArgs -join " ")
+    Write-Info "Running: $commandString"
+    
+    $generatorOutput = & dotnet run --configuration Release --no-build -- $generatorArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
+        Write-Error "Command failed with exit code: $LASTEXITCODE"
+        Write-Error "Generator output: $($generatorOutput | Out-String)"
         throw "Failed to generate documentation with C# generator"
     }
     
