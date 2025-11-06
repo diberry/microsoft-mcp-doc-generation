@@ -86,19 +86,20 @@ try {
     Write-Progress "Building Azure MCP Server..."
     & dotnet build --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) { 
-        throw "Failed to build Azure MCP Server" 
+        throw "Failed to build Azure MCP Server (exit code: $LASTEXITCODE)" 
     }
     
     Write-Progress "Running CLI tools list help command..."
     & dotnet run --no-build -- tools list --help
-    if ($LASTEXITCODE -ne 0) { 
-        throw "Failed to print Azure MCP Server help" 
-    }
+    # https://github.com/microsoft/mcp/issues/1102
+    # if ($LASTEXITCODE -ne 0) { 
+    #     throw "Failed to print Azure MCP Server help (exit code: $LASTEXITCODE)" 
+    # }
 
     Write-Progress "Running CLI tools list command..."
     $rawOutput = & dotnet run --no-build -- tools list
     if ($LASTEXITCODE -ne 0) { 
-        throw "Failed to generate JSON data from CLI" 
+        throw "Failed to generate JSON data from CLI (exit code: $LASTEXITCODE)" 
     }
     
     # Save raw CLI output for the C# generator
@@ -110,7 +111,7 @@ try {
     Write-Progress "Generating namespace data..."
     $namespaceOutput = & dotnet run --no-build -- tools list --namespace-mode
     if ($LASTEXITCODE -ne 0) { 
-        throw "Failed to generate namespace data from CLI" 
+        throw "Failed to generate namespace data from CLI (exit code: $LASTEXITCODE)" 
     }
     
     # Save namespace CLI output
@@ -149,7 +150,7 @@ try {
     
     & dotnet build --configuration Release --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
-        throw "Failed to build C# generator"
+        throw "Failed to build C# generator (exit code: $LASTEXITCODE)"
     }
     Write-Success "C# generator built successfully"
     
