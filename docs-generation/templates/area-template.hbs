@@ -10,15 +10,22 @@
 ## Quick Navigation
 
 {{#each tools}}
-- [{{subToolFamily command}}: {{subOperation command}}](#{{kebabCase (concat (subToolFamily command) ": " (subOperation command))}})
+- [{{getSimpleToolName command}}](#{{kebabCase (getSimpleToolName command)}})
 {{/each}}
 
 ## Tools
 
 {{#each tools}}
-## {{subToolFamily command}}: {{subOperation command}}
+## {{getSimpleToolName command}}
 
 <!-- {{command}} -->
+
+{{#if annotationContent}}
+#### Tool Annotations
+
+{{annotationContent}}
+
+{{/if}}
 
 {{description}}
 
