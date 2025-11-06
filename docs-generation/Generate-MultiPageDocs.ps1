@@ -106,9 +106,9 @@ try {
     $rawOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
     Write-Success "CLI output saved: $cliOutputFile"
     
-    # Generate namespace data using --namespaces option
+    # Generate namespace data using --namespace-mode option
     Write-Progress "Generating namespace data..."
-    $namespaceOutput = & dotnet run --no-build -- tools list --namespaces
+    $namespaceOutput = & dotnet run --no-build -- tools list --namespace-mode
     if ($LASTEXITCODE -ne 0) { 
         throw "Failed to generate namespace data from CLI" 
     }
