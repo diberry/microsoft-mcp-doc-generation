@@ -89,6 +89,12 @@ try {
         throw "Failed to build Azure MCP Server" 
     }
     
+    Write-Progress "Running CLI tools list help command..."
+    & dotnet run --no-build -- tools list --help
+    if ($LASTEXITCODE -ne 0) { 
+        throw "Failed to print Azure MCP Server help" 
+    }
+
     Write-Progress "Running CLI tools list command..."
     $rawOutput = & dotnet run --no-build -- tools list
     if ($LASTEXITCODE -ne 0) { 
