@@ -28,12 +28,15 @@
 {{#each option}}
 | **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
 {{/each}}
+{{ else}}
+<!-- No parameters for this tool -->
 {{/if}}
 
 {{#if annotationContent}}
 Tool annotations hints: 
-
 {{annotationContent}}
+{{ else}}
+<!-- No tool annotations for this tool -->
 {{/if}}
 
 ---
