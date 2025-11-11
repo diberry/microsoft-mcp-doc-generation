@@ -20,28 +20,7 @@
 
 <!-- {{command}} -->
 
-{{#if annotationContent}}
-#### Tool Annotations
-
-{{annotationContent}}
-
-{{/if}}
-
 {{description}}
-
-#### Parameters
-
-{{#if option}}
-| Parameter | Type | Required or optional | Description |
-|-----------|------|----------|-------------|
-{{#each option}}
-| **`{{name}}`** | {{type}} | {{Required}} | {{description}} |
-{{/each}}
-{{else}}
-No parameters
-{{/if}}
-
-#### Parameters with Natural Language Names
 
 {{#if option}}
 | Parameter |  Required or optional | Description |
@@ -49,8 +28,12 @@ No parameters
 {{#each option}}
 | **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
 {{/each}}
-{{else}}
-No parameters
+{{/if}}
+
+{{#if annotationContent}}
+Tool annotations hints: 
+
+{{annotationContent}}
 {{/if}}
 
 ---
