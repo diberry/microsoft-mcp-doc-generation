@@ -160,6 +160,7 @@ public class Tool
     public string? Area { get; set; }
     public ToolMetadata? Metadata { get; set; }
     public string? AnnotationContent { get; set; } // Content from annotation file
+    public string? AnnotationFileName { get; set; } // Filename of the annotation file
 }
 
 public class ToolMetadata

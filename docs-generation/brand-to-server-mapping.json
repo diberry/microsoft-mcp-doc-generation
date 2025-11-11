@@ -1,0 +1,260 @@
+[
+  {
+    "brandName": "Azure Container Registry",
+    "mcpServerName": "acr",
+    "shortName": "ACR",
+    "fileName": "azure-container-registry"
+  },
+  {
+    "brandName": "Azure Kubernetes Service",
+    "mcpServerName": "aks",
+    "shortName": "AKS",
+    "fileName": "azure-kubernetes-service"
+  },
+  {
+    "brandName": "Azure App Configuration",
+    "mcpServerName": "appconfig",
+    "shortName": "App Config",
+    "fileName": "azure-app-configuration"
+  },
+  {
+    "brandName": "Azure AppLens",
+    "mcpServerName": "applens",
+    "shortName": "AppLens",
+    "fileName": "azure-applens"
+  },
+  {
+    "brandName": "Azure Application Insights",
+    "mcpServerName": "applicationinsights",
+    "shortName": "Application Insights",
+    "fileName": "azure-application-insights"
+  },
+  {
+    "brandName": "Azure App Service",
+    "mcpServerName": "appservice",
+    "shortName": "App Service",
+    "fileName": "azure-app-service"
+  },
+  {
+    "brandName": "Azure Terraform Best Practices",
+    "mcpServerName": "azureterraformbestpractices",
+    "shortName": "Terraform",
+    "fileName": "azure-terraform-best-practices"
+  },
+  {
+    "brandName": "Azure Bicep Schema",
+    "mcpServerName": "bicepschema",
+    "shortName": "Bicep",
+    "fileName": "azure-bicep-schema"
+  },
+  {
+    "brandName": "Azure Cloud Architect",
+    "mcpServerName": "cloudarchitect",
+    "shortName": "Cloud Architect",
+    "fileName": "azure-cloud-architect"
+  },
+  {
+    "brandName": "Azure Communication Services",
+    "mcpServerName": "communication",
+    "shortName": "Communication Services",
+    "fileName": "azure-communication-services"
+  },
+  {
+    "brandName": "Azure Confidential Ledger",
+    "mcpServerName": "confidentialledger",
+    "shortName": "Confidential Ledger",
+    "fileName": "azure-confidential-ledger"
+  },
+  {
+    "brandName": "Azure Cosmos DB",
+    "mcpServerName": "cosmos",
+    "shortName": "Cosmos DB",
+    "fileName": "azure-cosmos-db"
+  },
+  {
+    "brandName": "Azure Datadog",
+    "mcpServerName": "datadog",
+    "shortName": "Datadog",
+    "fileName": "azure-datadog"
+  },
+  {
+    "brandName": "Azure Deploy",
+    "mcpServerName": "deploy",
+    "shortName": "Deploy",
+    "fileName": "azure-deploy"
+  },
+  {
+    "brandName": "Azure Event Grid",
+    "mcpServerName": "eventgrid",
+    "shortName": "Event Grid",
+    "fileName": "azure-event-grid"
+  },
+  {
+    "brandName": "Azure Event Hubs",
+    "mcpServerName": "eventhubs",
+    "shortName": "Event Hubs",
+    "fileName": "azure-event-hubs"
+  },
+  {
+    "brandName": "Azure Extension",
+    "mcpServerName": "extension",
+    "shortName": "Extension",
+    "fileName": "azure-extension"
+  },
+  {
+    "brandName": "Azure AI Foundry",
+    "mcpServerName": "foundry",
+    "shortName": "AI Foundry",
+    "fileName": "azure-ai-foundry"
+  },
+  {
+    "brandName": "Azure Functions",
+    "mcpServerName": "functionapp",
+    "shortName": "Functions",
+    "fileName": "azure-functions"
+  },
+  {
+    "brandName": "Azure Get",
+    "mcpServerName": "get",
+    "shortName": "Get",
+    "fileName": "azure-get"
+  },
+  {
+    "brandName": "Azure Managed Grafana",
+    "mcpServerName": "grafana",
+    "shortName": "Grafana",
+    "fileName": "azure-managed-grafana"
+  },
+  {
+    "brandName": "Azure Resource Group",
+    "mcpServerName": "group",
+    "shortName": "Resource Group",
+    "fileName": "azure-resource-group"
+  },
+  {
+    "brandName": "Azure Key Vault",
+    "mcpServerName": "keyvault",
+    "shortName": "Key Vault",
+    "fileName": "azure-key-vault"
+  },
+  {
+    "brandName": "Azure Data Explorer",
+    "mcpServerName": "kusto",
+    "shortName": "Data Explorer (Kusto)",
+    "fileName": "azure-data-explorer"
+  },
+  {
+    "brandName": "Azure Load Testing",
+    "mcpServerName": "loadtesting",
+    "shortName": "Load Testing",
+    "fileName": "azure-load-testing"
+  },
+  {
+    "brandName": "Azure Managed Lustre",
+    "mcpServerName": "managedlustre",
+    "shortName": "Managed Lustre",
+    "fileName": "azure-managed-lustre"
+  },
+  {
+    "brandName": "Azure Marketplace",
+    "mcpServerName": "marketplace",
+    "shortName": "Marketplace",
+    "fileName": "azure-marketplace"
+  },
+  {
+    "brandName": "Azure Monitor",
+    "mcpServerName": "monitor",
+    "shortName": "Monitor",
+    "fileName": "azure-monitor"
+  },
+  {
+    "brandName": "Azure Database for MySQL",
+    "mcpServerName": "mysql",
+    "shortName": "MySQL",
+    "fileName": "azure-database-for-mysql"
+  },
+  {
+    "brandName": "Azure Database for PostgreSQL",
+    "mcpServerName": "postgres",
+    "shortName": "PostgreSQL",
+    "fileName": "azure-database-for-postgresql"
+  },
+  {
+    "brandName": "Azure Quota",
+    "mcpServerName": "quota",
+    "shortName": "Quota",
+    "fileName": "azure-quota"
+  },
+  {
+    "brandName": "Azure Managed Redis",
+    "mcpServerName": "redis",
+    "shortName": "Redis",
+    "fileName": "azure-managed-redis"
+  },
+  {
+    "brandName": "Azure Resource Health",
+    "mcpServerName": "resourcehealth",
+    "shortName": "Resource Health",
+    "fileName": "azure-resource-health"
+  },
+  {
+    "brandName": "Azure Role-Based Access Control",
+    "mcpServerName": "role",
+    "shortName": "RBAC",
+    "fileName": "azure-role-based-access-control"
+  },
+  {
+    "brandName": "Azure AI Search",
+    "mcpServerName": "search",
+    "shortName": "AI Search",
+    "fileName": "azure-ai-search"
+  },
+  {
+    "brandName": "Azure Service Bus",
+    "mcpServerName": "servicebus",
+    "shortName": "Service Bus",
+    "fileName": "azure-service-bus"
+  },
+  {
+    "brandName": "Azure SignalR Service",
+    "mcpServerName": "signalr",
+    "shortName": "SignalR",
+    "fileName": "azure-signalr-service"
+  },
+  {
+    "brandName": "Azure AI Services Speech",
+    "mcpServerName": "speech",
+    "shortName": "Speech",
+    "fileName": "azure-ai-services-speech"
+  },
+  {
+    "brandName": "Azure SQL Database",
+    "mcpServerName": "sql",
+    "shortName": "SQL",
+    "fileName": "azure-sql-database"
+  },
+  {
+    "brandName": "Azure Storage",
+    "mcpServerName": "storage",
+    "shortName": "Storage",
+    "fileName": "azure-storage"
+  },
+  {
+    "brandName": "Azure Subscription",
+    "mcpServerName": "subscription",
+    "shortName": "Subscription",
+    "fileName": "azure-subscription"
+  },
+  {
+    "brandName": "Azure Virtual Desktop",
+    "mcpServerName": "virtualdesktop",
+    "shortName": "Virtual Desktop",
+    "fileName": "azure-virtual-desktop"
+  },
+  {
+    "brandName": "Azure Workbooks",
+    "mcpServerName": "workbooks",
+    "shortName": "Workbooks",
+    "fileName": "azure-workbooks"
+  }
+]

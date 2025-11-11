@@ -102,9 +102,10 @@ try {
         throw "Failed to generate JSON data from CLI (exit code: $LASTEXITCODE)" 
     }
     
-    # Save raw CLI output for the C# generator
+    # Filter out non-JSON content (launch settings message) and save CLI output
     $cliOutputFile = "../../../docs-generation/generated/cli-output.json"
-    $rawOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
+    $jsonOutput = $rawOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
+    $jsonOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
     Write-Success "CLI output saved: $cliOutputFile"
     
     # Generate namespace data using --namespace-mode option
@@ -114,15 +115,16 @@ try {
         throw "Failed to generate namespace data from CLI (exit code: $LASTEXITCODE)" 
     }
     
-    # Save namespace CLI output
+    # Filter out non-JSON content (launch settings message) and save namespace CLI output
     $namespaceOutputFile = "../../../docs-generation/generated/cli-namespace.json"
-    $namespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
+    $jsonNamespaceOutput = $namespaceOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
+    $jsonNamespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
     Write-Success "CLI namespace output saved: $namespaceOutputFile"
     
     # Generate namespaces CSV with alphabetically sorted names
     Write-Progress "Generating namespaces CSV..."
     try {
-        $namespaceData = $namespaceOutput | ConvertFrom-Json
+        $namespaceData = ($jsonNamespaceOutput -join "`n") | ConvertFrom-Json
         if ($namespaceData.results) {
             # Sort by name alphabetically and create CSV content with Name and Command columns
             $sortedNamespaces = $namespaceData.results | Sort-Object name

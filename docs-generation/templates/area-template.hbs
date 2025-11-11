@@ -33,6 +33,9 @@
 {{/if}}
 
 {{#if annotationContent}}
+{{#if annotationFileName}}
+<!-- Annotation file: annotations/{{annotationFileName}} -->
+{{/if}}
 Tool annotations hints: 
 {{annotationContent}}
 {{ else}}
