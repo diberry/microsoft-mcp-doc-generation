@@ -10,6 +10,44 @@ using Shared;
 /// </summary>
 public static class DocumentationGenerator
 {
+    private static Dictionary<string, BrandMapping>? _brandMappings;
+
+    /// <summary>
+    /// Loads brand-to-server-name mappings from JSON file.
+    /// </summary>
+    private static async Task<Dictionary<string, BrandMapping>> LoadBrandMappingsAsync()
+    {
+        if (_brandMappings != null)
+            return _brandMappings;
+
+        try
+        {
+            var mappingFile = Path.Combine("..", "brand-to-server-mapping.json");
+            if (!File.Exists(mappingFile))
+            {
+                Console.WriteLine($"Warning: Brand mapping file not found at {mappingFile}, using default naming");
+                return new Dictionary<string, BrandMapping>();
+            }
+
+            var json = await File.ReadAllTextAsync(mappingFile);
+            var mappings = JsonSerializer.Deserialize<List<BrandMapping>>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            _brandMappings = mappings?.ToDictionary(m => m.McpServerName ?? "", m => m) 
+                ?? new Dictionary<string, BrandMapping>();
+            
+            Console.WriteLine($"Loaded {_brandMappings.Count} brand mappings");
+            return _brandMappings;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading brand mappings: {ex.Message}");
+            return new Dictionary<string, BrandMapping>();
+        }
+    }
+
     /// <summary>
     /// Generates comprehensive documentation from CLI output data.
     /// </summary>
@@ -226,6 +264,9 @@ public static class DocumentationGenerator
 
             // Annotations directory path
             var annotationsDir = Path.Combine(outputDir, "annotations");
+            
+            // Load brand mappings for annotation filename lookup
+            var brandMappings = await LoadBrandMappingsAsync();
 
             // Filter out common parameters from tools for area pages and add annotation content
             var toolsWithFilteredParams = areaData.Tools.Select(tool => 
@@ -243,19 +284,46 @@ public static class DocumentationGenerator
                 // Read annotation file content if it exists
                 if (!string.IsNullOrEmpty(tool.Command))
                 {
-                    var annotationFileName = $"{tool.Command.Replace(" ", "-").ToLowerInvariant()}-annotations.md";
-                    var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
-                    
-                    if (File.Exists(annotationFilePath))
+                    // Parse command to get brand-based filename
+                    var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    if (commandParts.Length > 0)
                     {
-                        try
+                        var area = commandParts[0];
+                        
+                        // Get brand-based filename from mapping
+                        string brandFileName;
+                        if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
                         {
-                            filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
+                            brandFileName = mapping.FileName;
                         }
-                        catch
+                        else
                         {
-                            // Silently ignore if annotation file can't be read
-                            filteredTool.AnnotationContent = "";
+                            brandFileName = area.ToLowerInvariant();
+                        }
+
+                        // Build remaining parts
+                        var remainingParts = commandParts.Length > 1 
+                            ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
+                            : "";
+
+                        var annotationFileName = !string.IsNullOrEmpty(remainingParts)
+                            ? $"{brandFileName}-{remainingParts}-annotations.md"
+                            : $"{brandFileName}-annotations.md";
+                        
+                        var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
+                        
+                        if (File.Exists(annotationFilePath))
+                        {
+                            try
+                            {
+                                filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
+                                filteredTool.AnnotationFileName = annotationFileName;
+                            }
+                            catch
+                            {
+                                // Silently ignore if annotation file can't be read
+                                filteredTool.AnnotationContent = "";
+                            }
                         }
                     }
                 }
@@ -512,7 +580,8 @@ public static class DocumentationGenerator
                         command = tool.Command ?? "Unknown",
                         description = tool.Description,
                         area = area.Key,
-                        annotationContent = annotationContent
+                        annotationContent = annotationContent,
+                        annotationFileName = annotationFileName
                     });
                 }
             }
@@ -625,15 +694,45 @@ public static class DocumentationGenerator
         {
             Console.WriteLine($"Generating annotation files for {data.Tools.Count} tools...");
             
+            // Load brand mappings
+            var brandMappings = await LoadBrandMappingsAsync();
+            
             foreach (var tool in data.Tools)
             {
                 if (string.IsNullOrEmpty(tool.Command))
                     continue;
 
-                // Use the command directly to create the filename
-                // Format: {command-with-hyphens}-annotations.md
-                var fileName = $"{tool.Command.Replace(" ", "-")}-annotations.md";
-                fileName = fileName.ToLowerInvariant();
+                // Parse command to extract area (first part)
+                var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (commandParts.Length == 0)
+                    continue;
+
+                var area = commandParts[0];
+                
+                // Get brand-based filename from mapping, or fall back to area name
+                string brandFileName;
+                if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
+                {
+                    brandFileName = mapping.FileName;
+                }
+                else
+                {
+                    // Fallback: use area name as-is
+                    brandFileName = area.ToLowerInvariant();
+                    Console.WriteLine($"Warning: No brand mapping found for area '{area}', using '{brandFileName}'");
+                }
+
+                // Build remaining parts of command (tool family and operation)
+                var remainingParts = commandParts.Length > 1 
+                    ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
+                    : "";
+
+                // Create filename: {brand-filename}-{tool-family}-{operation}-annotations.md
+                // Example: azure-container-registry-registry-list-annotations.md
+                var fileName = !string.IsNullOrEmpty(remainingParts)
+                    ? $"{brandFileName}-{remainingParts}-annotations.md"
+                    : $"{brandFileName}-annotations.md";
+                
                 var outputFile = Path.Combine(outputDir, fileName);
 
                 // Format metadata with display names for each property
