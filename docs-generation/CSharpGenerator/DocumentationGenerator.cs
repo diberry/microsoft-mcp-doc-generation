@@ -11,6 +11,37 @@ using Shared;
 public static class DocumentationGenerator
 {
     private static Dictionary<string, BrandMapping>? _brandMappings;
+    private static HashSet<string>? _stopWords;
+    private static Dictionary<string, string>? _compoundWords;
+
+    /// <summary>
+    /// Loads stop words from JSON file.
+    /// </summary>
+    private static async Task<HashSet<string>> LoadStopWordsAsync()
+    {
+        if (_stopWords != null)
+            return _stopWords;
+
+        var stopWordsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "stop-words.json");
+        var stopWordsJson = await File.ReadAllTextAsync(stopWordsFile);
+        var stopWordsList = JsonSerializer.Deserialize<List<string>>(stopWordsJson) ?? new List<string>();
+        _stopWords = new HashSet<string>(stopWordsList);
+        return _stopWords;
+    }
+
+    /// <summary>
+    /// Loads compound words mappings from JSON file.
+    /// </summary>
+    private static async Task<Dictionary<string, string>> LoadCompoundWordsAsync()
+    {
+        if (_compoundWords != null)
+            return _compoundWords;
+
+        var compoundWordsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "compound-words.json");
+        var compoundWordsJson = await File.ReadAllTextAsync(compoundWordsFile);
+        _compoundWords = JsonSerializer.Deserialize<Dictionary<string, string>>(compoundWordsJson) ?? new Dictionary<string, string>();
+        return _compoundWords;
+    }
 
     /// <summary>
     /// Loads brand-to-server-name mappings from JSON file.
@@ -281,7 +312,7 @@ public static class DocumentationGenerator
             var brandMappings = await LoadBrandMappingsAsync();
 
             // Filter out common parameters from tools for area pages and add annotation content
-            var toolsWithFilteredParams = areaData.Tools.Select(tool => 
+            var toolsWithFilteredParamsTasks = areaData.Tools.Select(async tool => 
             {
                 var filteredTool = new Tool
                 {
@@ -320,7 +351,7 @@ public static class DocumentationGenerator
 
                         // Clean the filename to match the annotation file generation
                         var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
-                            ? CleanFileName(remainingParts) 
+                            ? await CleanFileNameAsync(remainingParts) 
                             : "";
 
                         var annotationFileName = !string.IsNullOrEmpty(cleanedRemainingParts)
@@ -364,7 +395,9 @@ public static class DocumentationGenerator
                 }
                 
                 return filteredTool;
-            }).ToList();
+            });
+
+            var toolsWithFilteredParams = (await Task.WhenAll(toolsWithFilteredParamsTasks)).ToList();
 
             var areaPageData = new Dictionary<string, object>
             {
@@ -746,7 +779,7 @@ public static class DocumentationGenerator
 
                 // Clean the filename to remove stop words and separate smashed words
                 var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
-                    ? CleanFileName(remainingParts) 
+                    ? await CleanFileNameAsync(remainingParts) 
                     : "";
 
                 // Create filename: {brand-filename}-{tool-family}-{operation}-annotations.md
@@ -887,7 +920,7 @@ public static class DocumentationGenerator
 
                 // Clean the filename to remove stop words and separate smashed words
                 var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
-                    ? CleanFileName(remainingParts) 
+                    ? await CleanFileNameAsync(remainingParts) 
                     : "";
 
                 // Create filename: {brand-filename}-{tool-family}-{operation}-parameters.md
@@ -974,7 +1007,7 @@ public static class DocumentationGenerator
 
                 // Clean the filename to remove stop words and separate smashed words
                 var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
-                    ? CleanFileName(remainingParts) 
+                    ? await CleanFileNameAsync(remainingParts) 
                     : "";
 
                 // Create filename: {brand-filename}-{tool-family}-{operation}-param-annotation.md
@@ -1421,26 +1454,11 @@ public static class DocumentationGenerator
     /// <summary>
     /// Cleans a filename by removing stop words and separating smashed words.
     /// </summary>
-    private static string CleanFileName(string fileName)
+    private static async Task<string> CleanFileNameAsync(string fileName)
     {
-        // Define stop words to remove
-        var stopWords = new HashSet<string> { "a", "or", "and", "the", "in" };
-        
-        // Define known compound words that should be separated
-        var compoundWords = new Dictionary<string, string>
-        {
-            { "eventhub", "event-hub" },
-            { "consumergroup", "consumer-group" },
-            { "nodepool", "node-pool" },
-            { "testresource", "test-resource" },
-            { "testrun", "test-run" },
-            { "azqr", "az-qr" },
-            { "bestpractices", "best-practices" },
-            { "activitylog", "activity-log" },
-            { "healthmodels", "health-models" },
-            { "monitoredresources", "monitored-resources" },
-            { "subnetsize", "subnet-size" }
-        };
+        // Load stop words and compound words from JSON files
+        var stopWords = await LoadStopWordsAsync();
+        var compoundWords = await LoadCompoundWordsAsync();
         
         // Split by hyphens
         var parts = fileName.Split('-');
@@ -1479,3 +1497,4 @@ public static class DocumentationGenerator
         return string.Join("-", cleanedParts);
     }
 }
+
