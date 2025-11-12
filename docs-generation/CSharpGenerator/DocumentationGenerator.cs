@@ -318,8 +318,13 @@ public static class DocumentationGenerator
                             ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
                             : "";
 
-                        var annotationFileName = !string.IsNullOrEmpty(remainingParts)
-                            ? $"{brandFileName}-{remainingParts}-annotations.md"
+                        // Clean the filename to match the annotation file generation
+                        var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
+                            ? CleanFileName(remainingParts) 
+                            : "";
+
+                        var annotationFileName = !string.IsNullOrEmpty(cleanedRemainingParts)
+                            ? $"{brandFileName}-{cleanedRemainingParts}-annotations.md"
                             : $"{brandFileName}-annotations.md";
                         
                         var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
@@ -739,10 +744,15 @@ public static class DocumentationGenerator
                     ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
                     : "";
 
+                // Clean the filename to remove stop words and separate smashed words
+                var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
+                    ? CleanFileName(remainingParts) 
+                    : "";
+
                 // Create filename: {brand-filename}-{tool-family}-{operation}-annotations.md
                 // Example: azure-container-registry-registry-list-annotations.md
-                var fileName = !string.IsNullOrEmpty(remainingParts)
-                    ? $"{brandFileName}-{remainingParts}-annotations.md"
+                var fileName = !string.IsNullOrEmpty(cleanedRemainingParts)
+                    ? $"{brandFileName}-{cleanedRemainingParts}-annotations.md"
                     : $"{brandFileName}-annotations.md";
                 
                 var outputFile = Path.Combine(outputDir, fileName);
@@ -875,9 +885,14 @@ public static class DocumentationGenerator
                     ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
                     : "";
 
+                // Clean the filename to remove stop words and separate smashed words
+                var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
+                    ? CleanFileName(remainingParts) 
+                    : "";
+
                 // Create filename: {brand-filename}-{tool-family}-{operation}-parameters.md
-                var fileName = !string.IsNullOrEmpty(remainingParts)
-                    ? $"{brandFileName}-{remainingParts}-parameters.md"
+                var fileName = !string.IsNullOrEmpty(cleanedRemainingParts)
+                    ? $"{brandFileName}-{cleanedRemainingParts}-parameters.md"
                     : $"{brandFileName}-parameters.md";
                 
                 var outputFile = Path.Combine(outputDir, fileName);
@@ -957,9 +972,14 @@ public static class DocumentationGenerator
                     ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
                     : "";
 
+                // Clean the filename to remove stop words and separate smashed words
+                var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
+                    ? CleanFileName(remainingParts) 
+                    : "";
+
                 // Create filename: {brand-filename}-{tool-family}-{operation}-param-annotation.md
-                var fileName = !string.IsNullOrEmpty(remainingParts)
-                    ? $"{brandFileName}-{remainingParts}-param-annotation.md"
+                var fileName = !string.IsNullOrEmpty(cleanedRemainingParts)
+                    ? $"{brandFileName}-{cleanedRemainingParts}-param-annotation.md"
                     : $"{brandFileName}-param-annotation.md";
                 
                 var outputFile = Path.Combine(outputDir, fileName);
@@ -1396,5 +1416,66 @@ public static class DocumentationGenerator
             Console.WriteLine($"Error generating metadata report: {ex.Message}");
             Console.WriteLine(ex.StackTrace);
         }
+    }
+
+    /// <summary>
+    /// Cleans a filename by removing stop words and separating smashed words.
+    /// </summary>
+    private static string CleanFileName(string fileName)
+    {
+        // Define stop words to remove
+        var stopWords = new HashSet<string> { "a", "or", "and", "the", "in" };
+        
+        // Define known compound words that should be separated
+        var compoundWords = new Dictionary<string, string>
+        {
+            { "eventhub", "event-hub" },
+            { "consumergroup", "consumer-group" },
+            { "nodepool", "node-pool" },
+            { "testresource", "test-resource" },
+            { "testrun", "test-run" },
+            { "azqr", "az-qr" },
+            { "bestpractices", "best-practices" },
+            { "activitylog", "activity-log" },
+            { "healthmodels", "health-models" },
+            { "monitoredresources", "monitored-resources" },
+            { "subnetsize", "subnet-size" }
+        };
+        
+        // Split by hyphens
+        var parts = fileName.Split('-');
+        var cleanedParts = new List<string>();
+        
+        foreach (var part in parts)
+        {
+            // Skip empty parts
+            if (string.IsNullOrWhiteSpace(part))
+                continue;
+                
+            // Check if this is a compound word that needs separation
+            var lowerPart = part.ToLowerInvariant();
+            if (compoundWords.ContainsKey(lowerPart))
+            {
+                // Split the compound word and add each piece separately
+                var separated = compoundWords[lowerPart].Split('-');
+                foreach (var subPart in separated)
+                {
+                    if (!stopWords.Contains(subPart.ToLowerInvariant()))
+                    {
+                        cleanedParts.Add(subPart);
+                    }
+                }
+            }
+            else
+            {
+                // Remove stop words
+                if (!stopWords.Contains(lowerPart))
+                {
+                    cleanedParts.Add(part);
+                }
+            }
+        }
+        
+        return string.Join("-", cleanedParts);
     }
 }
