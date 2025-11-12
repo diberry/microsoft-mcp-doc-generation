@@ -97,6 +97,18 @@ public static class DocumentationGenerator
         var annotationTemplate = Path.Combine(templatesDir, "annotation-template.hbs");
         await GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate);
 
+        // Generate individual parameter files for each tool
+        var parametersDir = Path.Combine(outputDir, "parameters");
+        Directory.CreateDirectory(parametersDir);
+        var parameterTemplate = Path.Combine(templatesDir, "parameter-template.hbs");
+        await GenerateParameterFilesAsync(transformedData, parametersDir, parameterTemplate);
+
+        // Generate combined parameter and annotation files for each tool
+        var paramAnnotationDir = Path.Combine(outputDir, "param-and-annotation");
+        Directory.CreateDirectory(paramAnnotationDir);
+        var paramAnnotationTemplate = Path.Combine(templatesDir, "param-annotation-template.hbs");
+        await GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
+
         // Generate area pages
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
 
@@ -806,7 +818,8 @@ public static class DocumentationGenerator
                     ["command"] = tool.Command ?? "",
                     ["area"] = tool.Area ?? "",
                     ["generateAnnotation"] = true,
-                    ["generatedAt"] = data.GeneratedAt
+                    ["generatedAt"] = data.GeneratedAt,
+                    ["annotationFileName"] = fileName
                 };
 
                 var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, annotationData);
@@ -818,6 +831,235 @@ public static class DocumentationGenerator
         catch (Exception ex)
         {
             Console.WriteLine($"Error generating annotation files: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
+    }
+
+    /// <summary>
+    /// Generates individual parameter files for each tool.
+    /// </summary>
+    private static async Task GenerateParameterFilesAsync(TransformedData data, string outputDir, string templateFile)
+    {
+        try
+        {
+            Console.WriteLine($"Generating parameter files for {data.Tools.Count} tools...");
+            
+            // Load brand mappings
+            var brandMappings = await LoadBrandMappingsAsync();
+            
+            foreach (var tool in data.Tools)
+            {
+                if (string.IsNullOrEmpty(tool.Command))
+                    continue;
+
+                // Parse command to extract area (first part)
+                var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (commandParts.Length == 0)
+                    continue;
+
+                var area = commandParts[0];
+                
+                // Get brand-based filename from mapping, or fall back to area name
+                string brandFileName;
+                if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
+                {
+                    brandFileName = mapping.FileName;
+                }
+                else
+                {
+                    brandFileName = area.ToLowerInvariant();
+                }
+
+                // Build remaining parts of command (tool family and operation)
+                var remainingParts = commandParts.Length > 1 
+                    ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
+                    : "";
+
+                // Create filename: {brand-filename}-{tool-family}-{operation}-parameters.md
+                var fileName = !string.IsNullOrEmpty(remainingParts)
+                    ? $"{brandFileName}-{remainingParts}-parameters.md"
+                    : $"{brandFileName}-parameters.md";
+                
+                var outputFile = Path.Combine(outputDir, fileName);
+
+                // Transform options to include RequiredText
+                var transformedOptions = tool.Option?.Select(opt => new
+                {
+                    name = opt.Name,
+                    NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
+                    type = opt.Type,
+                    required = opt.Required,
+                    RequiredText = opt.Required == true ? "Required" : "Optional",
+                    description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
+                }).ToList();
+
+                var parameterData = new Dictionary<string, object>
+                {
+                    ["tool"] = tool,
+                    ["command"] = tool.Command ?? "",
+                    ["area"] = tool.Area ?? "",
+                    ["option"] = (object?)transformedOptions ?? new List<object>(),
+                    ["generateParameter"] = true,
+                    ["generatedAt"] = data.GeneratedAt,
+                    ["parameterFileName"] = fileName
+                };
+
+                var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, parameterData);
+                await File.WriteAllTextAsync(outputFile, result);
+            }
+            
+            Console.WriteLine($"Generated {data.Tools.Count} parameter files in {outputDir}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating parameter files: {ex.Message}");
+            Console.WriteLine(ex.StackTrace);
+        }
+    }
+
+    /// <summary>
+    /// Generates combined parameter and annotation files for each tool.
+    /// </summary>
+    private static async Task GenerateParamAnnotationFilesAsync(TransformedData data, string outputDir, string templateFile)
+    {
+        try
+        {
+            Console.WriteLine($"Generating parameter and annotation files for {data.Tools.Count} tools...");
+            
+            // Load brand mappings
+            var brandMappings = await LoadBrandMappingsAsync();
+            
+            foreach (var tool in data.Tools)
+            {
+                if (string.IsNullOrEmpty(tool.Command))
+                    continue;
+
+                // Parse command to extract area (first part)
+                var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (commandParts.Length == 0)
+                    continue;
+
+                var area = commandParts[0];
+                
+                // Get brand-based filename from mapping, or fall back to area name
+                string brandFileName;
+                if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
+                {
+                    brandFileName = mapping.FileName;
+                }
+                else
+                {
+                    brandFileName = area.ToLowerInvariant();
+                }
+
+                // Build remaining parts of command (tool family and operation)
+                var remainingParts = commandParts.Length > 1 
+                    ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
+                    : "";
+
+                // Create filename: {brand-filename}-{tool-family}-{operation}-param-annotation.md
+                var fileName = !string.IsNullOrEmpty(remainingParts)
+                    ? $"{brandFileName}-{remainingParts}-param-annotation.md"
+                    : $"{brandFileName}-param-annotation.md";
+                
+                var outputFile = Path.Combine(outputDir, fileName);
+
+                // Format metadata with display names for each property
+                var formattedMetadata = new Dictionary<string, object>();
+                var metadata = tool.Metadata ?? new ToolMetadata();
+                
+                if (metadata.Destructive != null)
+                {
+                    formattedMetadata["destructive"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("destructive"),
+                        value = metadata.Destructive.Value,
+                        description = metadata.Destructive.Description
+                    };
+                }
+                
+                if (metadata.Idempotent != null)
+                {
+                    formattedMetadata["idempotent"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("idempotent"),
+                        value = metadata.Idempotent.Value,
+                        description = metadata.Idempotent.Description
+                    };
+                }
+                
+                if (metadata.OpenWorld != null)
+                {
+                    formattedMetadata["openWorld"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("openWorld"),
+                        value = metadata.OpenWorld.Value,
+                        description = metadata.OpenWorld.Description
+                    };
+                }
+                
+                if (metadata.ReadOnly != null)
+                {
+                    formattedMetadata["readOnly"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("readOnly"),
+                        value = metadata.ReadOnly.Value,
+                        description = metadata.ReadOnly.Description
+                    };
+                }
+                
+                if (metadata.Secret != null)
+                {
+                    formattedMetadata["secret"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("secret"),
+                        value = metadata.Secret.Value,
+                        description = metadata.Secret.Description
+                    };
+                }
+                
+                if (metadata.LocalRequired != null)
+                {
+                    formattedMetadata["localRequired"] = new 
+                    {
+                        name = ConvertCamelCaseToTitleCase("localRequired"),
+                        value = metadata.LocalRequired.Value,
+                        description = metadata.LocalRequired.Description
+                    };
+                }
+
+                // Transform options to include RequiredText
+                var transformedOptions = tool.Option?.Select(opt => new
+                {
+                    name = opt.Name,
+                    NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
+                    type = opt.Type,
+                    required = opt.Required,
+                    RequiredText = opt.Required == true ? "Required" : "Optional",
+                    description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
+                }).ToList();
+
+                var paramAnnotationData = new Dictionary<string, object>
+                {
+                    ["tool"] = tool,
+                    ["metadata"] = formattedMetadata,
+                    ["command"] = tool.Command ?? "",
+                    ["area"] = tool.Area ?? "",
+                    ["option"] = (object?)transformedOptions ?? new List<object>(),
+                    ["generateParamAnnotation"] = true,
+                    ["generatedAt"] = data.GeneratedAt,
+                    ["paramAnnotationFileName"] = fileName
+                };
+
+                var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, paramAnnotationData);
+                await File.WriteAllTextAsync(outputFile, result);
+            }
+            
+            Console.WriteLine($"Generated {data.Tools.Count} parameter and annotation files in {outputDir}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating parameter and annotation files: {ex.Message}");
             Console.WriteLine(ex.StackTrace);
         }
     }
