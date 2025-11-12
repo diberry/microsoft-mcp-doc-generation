@@ -805,7 +805,8 @@ public static class DocumentationGenerator
                     ["metadata"] = formattedMetadata,
                     ["command"] = tool.Command ?? "",
                     ["area"] = tool.Area ?? "",
-                    ["generateAnnotation"] = true
+                    ["generateAnnotation"] = true,
+                    ["generatedAt"] = data.GeneratedAt
                 };
 
                 var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, annotationData);
