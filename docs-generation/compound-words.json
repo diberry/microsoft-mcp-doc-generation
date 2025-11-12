@@ -1,5 +1,6 @@
 {
   "activitylog": "activity-log",
+  "app-lens": "app-lens",
   "azqr": "compliance-review",
   "azureaibestpractices": "azure-ai-best-practices",
   "bestpractices": "best-practices",
@@ -8,6 +9,7 @@
   "fs": "file-system",
   "healthmodels": "health-models",
   "hostpool": "host-pool",
+  "iac": "infrastructure-as-code",
   "kv": "key-value",
   "monitoredresources": "monitored-resources",
   "nodepool": "node-pool",
