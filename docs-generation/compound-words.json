@@ -1,0 +1,21 @@
+{
+  "stt": "operation-speech-text",
+  "tts": "operation-text-speech",
+  "eventhub": "event-hub",
+  "consumergroup": "consumer-group",
+  "nodepool": "node-pool",
+  "testresource": "test-resource",
+  "testrun": "test-run",
+  "azqr": "compliance-review",
+  "bestpractices": "best-practices",
+  "activitylog": "activity-log",
+  "healthmodels": "health-models",
+  "monitoredresources": "monitored-resources",
+  "subnetsize": "subnet-size",
+  "fs": "file-system",
+  "azureaibestpractices": "azure-ai-best-practices",
+  "hostpool": "host-pool",
+  "runtime": "run-time",
+  "kv": "key-value"
+}
+

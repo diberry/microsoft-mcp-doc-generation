@@ -15,6 +15,9 @@ The documentation generation system consists of:
 ```
 docs-generation/
 ├── Generate-MultiPageDocs.ps1     # Main orchestration script
+├── stop-words.json                # Stop words removed from include filenames
+├── compound-words.json            # Compound word mappings for include filenames
+├── brand-to-server-mapping.json   # Brand name to filename mappings
 ├── CSharpGenerator/               # C# console application
 │   ├── CSharpGenerator.csproj    # Project file with Handlebars.Net dependency
 │   └── Program.cs                # Main generator logic
@@ -26,6 +29,61 @@ docs-generation/
     ├── area-template.hbs         # Template for area-specific documentation
     └── common-tools.hbs          # Template for common tools documentation
 ```
+
+## Configuration Files
+
+### stop-words.json
+
+Contains a list of common stop words that are removed from **include filenames only** during generation. This helps create cleaner, more concise filenames for the include files (annotations, parameters, and param-annotation files).
+
+**Note**: Stop words are **NOT** removed from main area tool filenames (e.g., `acr.md`, `storage.md`).
+
+Example:
+```json
+["a", "or", "and", "the", "in"]
+```
+
+**Usage**: Words like "a", "or", "and" are filtered out from include filenames such as:
+- `annotations/azure-storage-account-get-annotations.md`
+- `parameters/azure-storage-account-get-parameters.md`
+- `param-and-annotation/azure-storage-account-get-param-annotation.md`
+
+### compound-words.json
+
+Contains mappings of compound words (smashed words) to their hyphenated equivalents for **include filenames only**. This ensures that compound words are properly separated with hyphens to pass filename validation rules.
+
+**Note**: Compound word mappings are **NOT** applied to main area tool filenames (e.g., `acr.md`, `storage.md`).
+
+Example:
+```json
+{
+  "eventhub": "event-hub",
+  "consumergroup": "consumer-group",
+  "nodepool": "node-pool",
+  "bestpractices": "best-practices",
+  "activitylog": "activity-log"
+}
+```
+
+**Usage**: Transforms include filenames to meet documentation standards:
+- Before: `azure-event-hubs-eventhub-consumergroup-get-annotations.md`
+- After: `azure-event-hubs-event-hub-consumer-group-get-annotations.md`
+
+### Why Only Include Files?
+
+The filename cleaning process (stop word removal and compound word separation) is applied exclusively to include files to:
+
+1. **Pass validation rules**: Include files are validated against strict filename standards that prohibit stop words and require proper word separation
+2. **Maintain stability**: Main area tool filenames (like `acr.md`, `storage.md`) remain unchanged to preserve existing documentation structure and links
+3. **Improve readability**: Include filenames become more descriptive and easier to understand when cleaned
+
+**Include file types affected**:
+- `generated/multi-page/annotations/*.md` - Tool annotation files
+- `generated/multi-page/parameters/*.md` - Tool parameter files  
+- `generated/multi-page/param-and-annotation/*.md` - Combined parameter and annotation files
+
+**Main tool files NOT affected**:
+- `generated/multi-page/*.md` - Area-specific tool documentation (e.g., `acr.md`, `storage.md`, `keyvault.md`)
 
 ## Process Flow
 
