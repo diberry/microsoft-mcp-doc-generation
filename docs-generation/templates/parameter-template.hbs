@@ -1,0 +1,18 @@
+{{#if generateParameter}}
+---
+ms.topic: include
+ms.date: {{formatDateShort generatedAt}}
+# [!INCLUDE [{{command}}](../includes/tools/parameters/{{parameterFileName}})]
+<!-- azmcp {{command}} -->
+---
+
+{{#if option}}
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
+{{#each option}}
+| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
+{{/each}}
+{{else}}
+<!-- No parameters for this tool -->
+{{/if}}
+{{/if}}

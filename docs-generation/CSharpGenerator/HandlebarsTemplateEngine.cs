@@ -63,6 +63,21 @@ public static class HandlebarsTemplateEngine
             return arguments[0].ToString();
         });
 
+        // Format date short helper (for metadata headers)
+        handlebars.RegisterHelper("formatDateShort", (context, arguments) =>
+        {
+            if (arguments.Length == 0 || arguments[0] == null)
+                return DateTime.UtcNow.ToString("MM/dd/yyyy");
+
+            if (arguments[0] is DateTime dateTime)
+                return dateTime.ToString("MM/dd/yyyy");
+
+            if (DateTime.TryParse(arguments[0].ToString(), out var parsedDate))
+                return parsedDate.ToString("MM/dd/yyyy");
+
+            return arguments[0].ToString();
+        });
+
         // Kebab case helper
         handlebars.RegisterHelper("kebabCase", (context, arguments) =>
         {
