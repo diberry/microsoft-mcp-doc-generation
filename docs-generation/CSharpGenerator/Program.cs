@@ -121,7 +121,7 @@ internal class Program
      {
          if (args.Length < 2)
          {
-             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--no-service-options]");
+             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--no-service-options] [--version <version>]");
              return 1;
          }
 
@@ -132,6 +132,14 @@ internal class Program
          var generateCommands = args.Contains("--commands");
          var generateAnnotations = args.Contains("--annotations");
          var generateServiceOptions = !args.Contains("--no-service-options");
+         
+         // Extract version if provided
+         string? cliVersion = null;
+         var versionIndex = Array.IndexOf(args, "--version");
+         if (versionIndex >= 0 && versionIndex + 1 < args.Length)
+         {
+             cliVersion = args[versionIndex + 1];
+         }
 
          return await DocumentationGenerator.GenerateAsync(
              cliOutputFile,
@@ -140,7 +148,8 @@ internal class Program
              generateCommon,
              generateCommands,
              generateServiceOptions,
-             generateAnnotations);
+             generateAnnotations,
+             cliVersion);
      }
 }
 

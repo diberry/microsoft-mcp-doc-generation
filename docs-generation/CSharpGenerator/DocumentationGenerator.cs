@@ -89,7 +89,8 @@ public static class DocumentationGenerator
         bool generateCommon = false,
         bool generateCommands = false,
         bool generateServiceOptions = true,
-        bool generateAnnotations = false)
+        bool generateAnnotations = false,
+        string? cliVersion = null)
     {
         // Config.Load has been called in Program.Main and TextCleanup is initialized statically
 
@@ -108,6 +109,13 @@ public static class DocumentationGenerator
 
         // Transform CLI output to expected format
         var transformedData = TransformCliOutput(cliOutput);
+        
+        // Set version if provided
+        if (!string.IsNullOrWhiteSpace(cliVersion))
+        {
+            transformedData.Version = cliVersion;
+            Console.WriteLine($"Using CLI version: {cliVersion}");
+        }
 
         // Add source code discovered common parameters
         var sourceCommonParams = await OptionsDiscovery.DiscoverCommonParametersFromSource();
@@ -878,6 +886,7 @@ public static class DocumentationGenerator
                     ["area"] = tool.Area ?? "",
                     ["generateAnnotation"] = true,
                     ["generatedAt"] = data.GeneratedAt,
+                    ["version"] = data.Version ?? "unknown",
                     ["annotationFileName"] = fileName
                 };
 
@@ -977,6 +986,7 @@ public static class DocumentationGenerator
                     ["option"] = (object?)transformedOptions ?? new List<object>(),
                     ["generateParameter"] = true,
                     ["generatedAt"] = data.GeneratedAt,
+                    ["version"] = data.Version ?? "unknown",
                     ["parameterFileName"] = fileName
                 };
 
@@ -1141,6 +1151,7 @@ public static class DocumentationGenerator
                     ["option"] = (object?)transformedOptions ?? new List<object>(),
                     ["generateParamAnnotation"] = true,
                     ["generatedAt"] = data.GeneratedAt,
+                    ["version"] = data.Version ?? "unknown",
                     ["paramAnnotationFileName"] = fileName
                 };
 

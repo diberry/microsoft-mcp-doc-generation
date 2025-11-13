@@ -76,11 +76,11 @@ VOLUME ["/output"]
 # Default command: Generate documentation and copy to /output
 CMD ["pwsh", "-Command", "\
     Write-Host '=== Azure MCP Documentation Generator ===' -ForegroundColor Cyan; \
-    Write-Host 'MCP Server Path: $env:MCP_SERVER_PATH' -ForegroundColor Yellow; \
+    Write-Host \"MCP Server Path: $env:MCP_SERVER_PATH\" -ForegroundColor Yellow; \
     Write-Host 'Output Path: /output' -ForegroundColor Yellow; \
     Write-Host ''; \
     Write-Host 'Starting documentation generation...' -ForegroundColor Green; \
-    Push-Location '$env:MCP_SERVER_PATH'; \
+    Push-Location \"$env:MCP_SERVER_PATH\"; \
     dotnet build --configuration Release --nologo --verbosity quiet; \
     Pop-Location; \
     ./Generate-MultiPageDocs.ps1; \

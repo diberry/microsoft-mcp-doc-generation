@@ -39,6 +39,25 @@ services:
     # Comment out if you want to inspect the container after it runs
     # remove: true
     
+  # Lightweight Azure MCP CLI (no documentation generation)
+  # Use this for quick MCP server CLI commands
+  mcp-cli:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+      args:
+        MCP_BRANCH: main
+    image: azure-mcp-cli:latest
+    container_name: azure-mcp-cli
+    
+    # Override to run specific commands
+    # Example: docker-compose run --rm mcp-cli tools list
+    command: []
+    
+    # Don't start this service by default
+    profiles:
+      - cli
+  
   # Alternative service for interactive debugging
   docgen-interactive:
     build:

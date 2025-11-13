@@ -109,6 +109,20 @@ try {
     #     throw "Failed to print Azure MCP Server help (exit code: $LASTEXITCODE)" 
     # }
 
+    Write-Progress "Capturing CLI version..."
+    $versionOutput = & dotnet run --no-build -- --version 2>&1
+    if ($LASTEXITCODE -ne 0) { 
+        Write-Warning "Failed to capture CLI version, continuing without it"
+        $cliVersion = "unknown"
+    } else {
+        # Filter out launch settings and build messages, get just the version number
+        $cliVersion = ($versionOutput | Where-Object { $_ -match '^\d+\.\d+\.\d+' } | Select-Object -First 1).Trim()
+        if ([string]::IsNullOrWhiteSpace($cliVersion)) {
+            $cliVersion = "unknown"
+        }
+        Write-Info "CLI Version: $cliVersion"
+    }
+
     Write-Progress "Running CLI tools list command..."
     $rawOutput = & dotnet run --no-build -- tools list
     if ($LASTEXITCODE -ne 0) { 
@@ -187,6 +201,10 @@ try {
     if ($CreateCommands) { $generatorArgs += "--commands" }
     $generatorArgs += "--annotations"  # Always generate annotation files
     if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
+    if ($cliVersion -and $cliVersion -ne "unknown") { 
+        $generatorArgs += "--version"
+        $generatorArgs += $cliVersion
+    }
     
     Push-Location "CSharpGenerator"
     
