@@ -212,6 +212,12 @@ public static class DocumentationGenerator
         Console.WriteLine($"    Tools requiring secrets: {secretsCount}");
         Console.WriteLine($"    Tools requiring local consent: {consentCount}");
         
+        // Get common parameter names for filtering
+        var commonParameters = transformedData.SourceDiscoveredCommonParams.Any() 
+            ? transformedData.SourceDiscoveredCommonParams 
+            : ExtractCommonParameters(transformedData.Tools);
+        var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
+        
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
             var totalParams = area.Value.Tools.Sum(t => t.Option?.Count ?? 0);
@@ -230,8 +236,10 @@ public static class DocumentationGenerator
             
             foreach (var tool in area.Value.Tools.OrderBy(t => t.Command))
             {
-                var paramCount = tool.Option?.Count ?? 0;
-                Console.WriteLine($"  • {tool.Command,-50} - {tool.Name,-20} [{paramCount,2} params]");
+                // Calculate non-common parameter count (matches what's shown in parameter tables)
+                var nonCommonParamCount = tool.Option?
+                    .Count(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name)) ?? 0;
+                Console.WriteLine($"  • {tool.Command,-50} - {tool.Name,-20} [{nonCommonParamCount,2} params]");
             }
         }
 
