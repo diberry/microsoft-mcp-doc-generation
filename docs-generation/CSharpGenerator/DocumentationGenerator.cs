@@ -206,7 +206,8 @@ public static class DocumentationGenerator
         
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
-            Console.WriteLine($"  {area.Key}: {area.Value.ToolCount} tools");
+            var totalParams = area.Value.Tools.Sum(t => t.Option?.Count ?? 0);
+            Console.WriteLine($"  {area.Key}: {area.Value.ToolCount} tools ({totalParams} parameters)");
         }
         
         Console.WriteLine();
@@ -221,7 +222,8 @@ public static class DocumentationGenerator
             
             foreach (var tool in area.Value.Tools.OrderBy(t => t.Command))
             {
-                Console.WriteLine($"  • {tool.Command} - {tool.Name}");
+                var paramCount = tool.Option?.Count ?? 0;
+                Console.WriteLine($"  • {tool.Command,-50} - {tool.Name,-20} [{paramCount,2} params]");
             }
         }
 
@@ -393,6 +395,9 @@ public static class DocumentationGenerator
                         })
                         .ToList();
                 }
+                
+                // Add parameter count for template use
+                filteredTool.ParameterCount = filteredTool.Option?.Count ?? 0;
                 
                 return filteredTool;
             });
@@ -759,6 +764,9 @@ public static class DocumentationGenerator
 
                 var area = commandParts[0];
                 
+                // Load compound words for area name transformation
+                var compoundWords = await LoadCompoundWordsAsync();
+                
                 // Get brand-based filename from mapping, or fall back to area name
                 string brandFileName;
                 if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
@@ -767,9 +775,18 @@ public static class DocumentationGenerator
                 }
                 else
                 {
-                    // Fallback: use area name as-is
-                    brandFileName = area.ToLowerInvariant();
-                    Console.WriteLine($"Warning: No brand mapping found for area '{area}', using '{brandFileName}'");
+                    // Fallback: use area name, but check compound words first
+                    var areaLower = area.ToLowerInvariant();
+                    if (compoundWords.TryGetValue(areaLower, out var compoundReplacement))
+                    {
+                        brandFileName = compoundReplacement;
+                        Console.WriteLine($"Applied compound word transformation for '{area}': '{areaLower}' -> '{brandFileName}'");
+                    }
+                    else
+                    {
+                        brandFileName = areaLower;
+                        Console.WriteLine($"Warning: No brand mapping or compound word found for area '{area}', using '{brandFileName}'");
+                    }
                 }
 
                 // Build remaining parts of command (tool family and operation)
@@ -902,6 +919,9 @@ public static class DocumentationGenerator
 
                 var area = commandParts[0];
                 
+                // Load compound words for area name transformation
+                var compoundWords = await LoadCompoundWordsAsync();
+                
                 // Get brand-based filename from mapping, or fall back to area name
                 string brandFileName;
                 if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
@@ -910,7 +930,16 @@ public static class DocumentationGenerator
                 }
                 else
                 {
-                    brandFileName = area.ToLowerInvariant();
+                    // Fallback: use area name, but check compound words first
+                    var areaLower = area.ToLowerInvariant();
+                    if (compoundWords.TryGetValue(areaLower, out var compoundReplacement))
+                    {
+                        brandFileName = compoundReplacement;
+                    }
+                    else
+                    {
+                        brandFileName = areaLower;
+                    }
                 }
 
                 // Build remaining parts of command (tool family and operation)
@@ -989,6 +1018,9 @@ public static class DocumentationGenerator
 
                 var area = commandParts[0];
                 
+                // Load compound words for area name transformation
+                var compoundWords = await LoadCompoundWordsAsync();
+                
                 // Get brand-based filename from mapping, or fall back to area name
                 string brandFileName;
                 if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
@@ -997,7 +1029,16 @@ public static class DocumentationGenerator
                 }
                 else
                 {
-                    brandFileName = area.ToLowerInvariant();
+                    // Fallback: use area name, but check compound words first
+                    var areaLower = area.ToLowerInvariant();
+                    if (compoundWords.TryGetValue(areaLower, out var compoundReplacement))
+                    {
+                        brandFileName = compoundReplacement;
+                    }
+                    else
+                    {
+                        brandFileName = areaLower;
+                    }
                 }
 
                 // Build remaining parts of command (tool family and operation)

@@ -85,6 +85,153 @@ The filename cleaning process (stop word removal and compound word separation) i
 **Main tool files NOT affected**:
 - `generated/multi-page/*.md` - Area-specific tool documentation (e.g., `acr.md`, `storage.md`, `keyvault.md`)
 
+### brand-to-server-mapping.json
+
+Contains mappings of MCP server area names to their preferred brand-based filenames. This is the **primary** method for determining include filenames and takes precedence over other naming strategies.
+
+Example:
+```json
+[
+  {
+    "mcpServerName": "acr",
+    "brandName": "Azure Container Registry",
+    "fileName": "azure-container-registry"
+  },
+  {
+    "mcpServerName": "storage",
+    "brandName": "Azure Storage",
+    "fileName": "azure-storage"
+  }
+]
+```
+
+**Usage**: Controls the base filename for all include files in that area:
+- `azure-container-registry-registry-list-annotations.md`
+- `azure-storage-account-get-parameters.md`
+
+## Filename Generation Logic
+
+The documentation generator uses a **three-tier resolution system** to determine filenames for include files (annotations, parameters, and param-annotation files). This ensures consistent, readable, and validation-compliant filenames.
+
+### Three-Tier Filename Resolution
+
+When generating include filenames, the system follows this priority order:
+
+```
+1. Brand Mapping (brand-to-server-mapping.json)
+   ↓ if not found
+2. Compound Words (compound-words.json)
+   ↓ if not found
+3. Original Area Name (lowercase)
+```
+
+### How It Works
+
+For a tool command like `azureaibestpractices get`:
+
+**Step 1: Check Brand Mapping**
+```
+Area: "azureaibestpractices"
+Check: brand-to-server-mapping.json
+Result: No mapping found → Continue to Step 2
+```
+
+**Step 2: Check Compound Words**
+```
+Area: "azureaibestpractices"
+Check: compound-words.json
+Match: "azureaibestpractices" → "azure-ai-best-practices"
+Result: Use "azure-ai-best-practices" as base filename
+```
+
+**Step 3: Fallback to Original**
+```
+If no match in Steps 1 or 2:
+Result: Use lowercase area name (e.g., "azureaibestpractices")
+```
+
+### Example Filename Generation
+
+Given tool command: `azureaibestpractices get`
+
+1. **Parse command**: Extract area ("azureaibestpractices") and operation ("get")
+2. **Apply three-tier resolution**: Find "azure-ai-best-practices" in compound-words.json
+3. **Clean operation parts**: Remove stop words, separate compound words
+4. **Build filename**: `azure-ai-best-practices-get-annotations.md`
+
+### Complete Filename Structure
+
+Include filenames follow this pattern:
+```
+{base-filename}-{operation-parts}-{file-type}.md
+```
+
+Where:
+- `{base-filename}`: Result from three-tier resolution (brand → compound → original)
+- `{operation-parts}`: Remaining command parts after area, cleaned (stop words removed, compound words separated)
+- `{file-type}`: One of `annotations`, `parameters`, or `param-annotation`
+
+### Real-World Examples
+
+| Tool Command | Area | Resolution Method | Generated Filename |
+|-------------|------|-------------------|-------------------|
+| `acr registry list` | acr | Brand mapping | `azure-container-registry-registry-list-annotations.md` |
+| `storage account get` | storage | Brand mapping | `azure-storage-account-get-parameters.md` |
+| `azureaibestpractices get` | azureaibestpractices | Compound words | `azure-ai-best-practices-get-annotations.md` |
+| `eventhub consumergroup list` | eventhub | Compound words | `event-hub-consumer-group-list-param-annotation.md` |
+| `customarea operation` | customarea | Original (fallback) | `customarea-operation-annotations.md` |
+
+### When to Update Configuration Files
+
+**Update brand-to-server-mapping.json when:**
+- Adding a new service area that should use a specific brand name (e.g., "Azure Container Registry" for "acr")
+- Changing the preferred filename for an existing service area
+- Brand names should reflect official Microsoft product names
+
+**Update compound-words.json when:**
+- Discovering smashed/compound words in area names (e.g., "azureaibestpractices")
+- New service areas use concatenated words without hyphens
+- Filenames fail validation due to unrecognized compound words
+
+**Priority matters:** Brand mappings always win over compound words. If both exist for the same area, the brand mapping filename will be used.
+
+### Debugging Filename Generation
+
+The generator outputs console messages during filename resolution:
+
+```
+Applied compound word transformation for 'azureaibestpractices': 'azureaibestpractices' -> 'azure-ai-best-practices'
+```
+
+```
+Warning: No brand mapping or compound word found for area 'customarea', using 'customarea'
+```
+
+Use these messages to verify which resolution method was applied for each area.
+
+### Impact of Filename Changes
+
+When updating `brand-to-server-mapping.json` or `compound-words.json`:
+
+1. **Old files remain**: Existing include files are not automatically deleted
+2. **New files created**: Regeneration creates files with new names
+3. **Area pages update**: Main area pages reference new filenames
+4. **Broken links**: Old filenames no longer referenced may cause 404s
+
+**Recommended workflow:**
+1. Delete old include files before regeneration:
+   ```powershell
+   rm -rf generated/multi-page/annotations/*
+   rm -rf generated/multi-page/parameters/*
+   rm -rf generated/multi-page/param-and-annotation/*
+   ```
+2. Regenerate documentation:
+   ```powershell
+   pwsh ./Generate-MultiPageDocs.ps1
+   ```
+3. Verify new filenames match expected patterns
+4. Commit changes with descriptive message explaining filename updates
+
 ## Process Flow
 
 1. **Data Extraction**: The PowerShell script calls the Azure MCP CLI (`dotnet run -- tools list`) to extract tool information
@@ -374,4 +521,3 @@ If you prefer not to use the debug script, you can manually start debugging by:
 1. Building the CSharpGenerator in Debug mode
 2. Ensuring CLI output exists at `generated/cli-output.json`
 3. Starting the "Debug Generate Docs" launch configuration in VS Code
-```
