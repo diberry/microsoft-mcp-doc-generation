@@ -106,22 +106,6 @@ jobs:
         path: |
           generated/
         retention-days: 30
-        
-    - name: Create documentation archive
-      if: success()
-      run: |
-        cd generated
-        zip -r ../azure-mcp-docs.zip .
-        cd ..
-        echo "📦 Created azure-mcp-docs.zip ($(du -h azure-mcp-docs.zip | cut -f1))"
-        
-    - name: Upload documentation archive
-      uses: actions/upload-artifact@v4
-      if: success()
-      with:
-        name: azure-mcp-docs-archive
-        path: azure-mcp-docs.zip
-        retention-days: 30
 
     # Optional: Push to GitHub Container Registry
     # Uncomment if you want to publish the image
