@@ -47,11 +47,22 @@ Documentation will be generated in `./generated/multi-page/` directory.
 
 ## 📚 Documentation
 
+### For Users
 - **[Quick Start Guide](docs/QUICK-START.md)** - Get started in 5 minutes
 - **[Docker README](docs/DOCKER-README.md)** - Comprehensive Docker guide
 - **[Workflow Comparison](docs/WORKFLOW-COMPARISON.md)** - Old vs new approach
+
+### For Developers
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - System architecture and design
 - **[Implementation Summary](docs/IMPLEMENTATION-SUMMARY.md)** - Technical details
 - **[Fixes Applied](docs/FIXES-APPLIED.md)** - Build issues and solutions
+- **[Generator README](docs-generation/README.md)** - Generator internals
+
+### For LLMs (AI Assistants)
+- **[.contextdocs](.contextdocs)** - Comprehensive codebase context for AI
+  - Use this file when asking LLMs about the project
+  - Contains architecture, workflows, and troubleshooting
+  - Example: "Based on .contextdocs, explain the filename resolution system"
 
 ## 🏗️ Architecture
 
