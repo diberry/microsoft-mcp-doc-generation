@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # Azure MCP Documentation Generator
+  docgen:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Specify which branch of Microsoft/MCP to use
+        MCP_BRANCH: main
+    image: azure-mcp-docgen:latest
+    container_name: azure-mcp-docgen
+    
+    # Mount local directory for output
+    volumes:
+      - ./generated:/output
+      # Optional: Mount custom config files if you want to override defaults
+      # - ./custom-config.json:/docs-generation/config.json:ro
+      # - ./custom-brand-mapping.json:/docs-generation/brand-to-server-mapping.json:ro
+    
+    environment:
+      # Allow using preview .NET runtime
+      - DOTNET_ROLL_FORWARD=Major
+      # Optional: Customize MCP server path if needed
+      # - MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+    
+    # Automatically remove container after completion
+    # Comment out if you want to inspect the container after it runs
+    # remove: true
+    
+  # Alternative service for interactive debugging
+  docgen-interactive:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MCP_BRANCH: main
+    image: azure-mcp-docgen:latest
+    container_name: azure-mcp-docgen-debug
+    
+    volumes:
+      - ./generated:/output
+      # Mount the entire docs-generation folder for live editing during debug
+      - ./docs-generation:/docs-generation
+    
+    environment:
+      - DOTNET_ROLL_FORWARD=Major
+    
+    # Override entrypoint for interactive shell
+    entrypoint: ["/bin/bash"]
+    command: []
+    
+    # Keep container running for debugging
+    stdin_open: true
+    tty: true
+    
+    # Don't start this service by default
+    profiles:
+      - debug

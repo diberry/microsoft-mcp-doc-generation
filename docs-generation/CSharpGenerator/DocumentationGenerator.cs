@@ -392,17 +392,16 @@ public static class DocumentationGenerator
                             Required = opt.Required,
                             RequiredText = opt.Required == true ? "Required" : "Optional",
                             Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")),
-                        })
-                        .ToList();
-                }
-                
-                // Add parameter count for template use
-                filteredTool.ParameterCount = filteredTool.Option?.Count ?? 0;
-                
-                return filteredTool;
-            });
-
-            var toolsWithFilteredParams = (await Task.WhenAll(toolsWithFilteredParamsTasks)).ToList();
+                    })
+                    .ToList();
+            }
+            
+            // Add parameter count for template use
+            // TODO: This property doesn't exist on Tool class, needs to be added or removed
+            // filteredTool.ParameterCount = filteredTool.Option?.Count ?? 0;
+            
+            return filteredTool;
+        });            var toolsWithFilteredParams = (await Task.WhenAll(toolsWithFilteredParamsTasks)).ToList();
 
             var areaPageData = new Dictionary<string, object>
             {
