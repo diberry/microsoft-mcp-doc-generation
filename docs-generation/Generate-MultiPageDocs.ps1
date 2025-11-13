@@ -80,7 +80,20 @@ try {
     # Step 1: Generate JSON data from MCP CLI
     Write-Progress "Step 1: Generating MCP tools data from CLI..."
     
-    Push-Location "..\servers\Azure.Mcp.Server\src"
+    # Determine MCP server path (container vs local)
+    $mcpServerPath = if ($env:MCP_SERVER_PATH) { 
+        $env:MCP_SERVER_PATH 
+    } else { 
+        "..\servers\Azure.Mcp.Server\src" 
+    }
+    
+    Write-Info "Using MCP server path: $mcpServerPath"
+    
+    if (-not (Test-Path $mcpServerPath)) {
+        throw "MCP server path not found: $mcpServerPath"
+    }
+    
+    Push-Location $mcpServerPath
     
     # Build the CLI first to avoid build output in JSON
     Write-Progress "Building Azure MCP Server..."
@@ -102,21 +115,26 @@ try {
         throw "Failed to generate JSON data from CLI (exit code: $LASTEXITCODE)" 
     }
     
+    # Return to docs-generation directory
+    Pop-Location
+    
     # Filter out non-JSON content (launch settings message) and save CLI output
-    $cliOutputFile = "../../../docs-generation/generated/cli-output.json"
+    $cliOutputFile = "generated/cli-output.json"
     $jsonOutput = $rawOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
     $jsonOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
     Write-Success "CLI output saved: $cliOutputFile"
     
     # Generate namespace data using --namespace-mode option
     Write-Progress "Generating namespace data..."
+    Push-Location $mcpServerPath
     $namespaceOutput = & dotnet run --no-build -- tools list --namespace-mode
     if ($LASTEXITCODE -ne 0) { 
         throw "Failed to generate namespace data from CLI (exit code: $LASTEXITCODE)" 
     }
+    Pop-Location
     
     # Filter out non-JSON content (launch settings message) and save namespace CLI output
-    $namespaceOutputFile = "../../../docs-generation/generated/cli-namespace.json"
+    $namespaceOutputFile = "generated/cli-namespace.json"
     $jsonNamespaceOutput = $namespaceOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
     $jsonNamespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
     Write-Success "CLI namespace output saved: $namespaceOutputFile"
@@ -134,7 +152,7 @@ try {
             }
             
             # Save CSV file
-            $csvOutputFile = "../../../docs-generation/generated/namespaces.csv"
+            $csvOutputFile = "generated/namespaces.csv"
             $csvContent | Out-File -FilePath $csvOutputFile -Encoding UTF8 -NoNewline
             Write-Success "Namespaces CSV saved: $csvOutputFile"
         } else {
@@ -143,8 +161,6 @@ try {
     } catch {
         Write-Warning "Failed to generate namespaces CSV: $($_.Exception.Message)"
     }
-    
-    Pop-Location
     
     # Step 2: Build C# generator if needed
     Write-Progress "Step 2: Building C# generator..."
