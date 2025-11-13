@@ -2,7 +2,6 @@
   "activitylog": "activity-log",
   "app-lens": "app-lens",
   "azqr": "compliance-review",
-  "azureaibestpractices": "azure-ai-best-practices",
   "bestpractices": "best-practices",
   "consumergroup": "consumer-group",
   "eventhub": "event-hub",
@@ -19,6 +18,7 @@
   "testresource": "test-resource",
   "testrun": "test-run",
   "tts": "operation-text-speech",
-  "webtests": "web-tests"
+  "webtests": "web-tests",
+  "azureaibestpractices": "azure-ai-best-practices"
 }
 
