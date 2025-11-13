@@ -20,7 +20,10 @@ Generates comprehensive markdown documentation for all Azure MCP server tools, i
 - 8GB RAM available
 - ~10GB free disk space
 
-### Run It
+### Two Container Options
+
+#### 1. Full Documentation Generator (Recommended)
+Generates all 590+ documentation files:
 
 **Linux/macOS:**
 ```bash
@@ -41,15 +44,36 @@ cd microsoft-mcp-doc-generation
 docker-compose up
 ```
 
-### Get Your Docs
-
 Documentation will be generated in `./generated/multi-page/` directory.
+
+#### 2. Lightweight CLI Container (For Quick Commands)
+Just need to run MCP CLI commands? Use the lightweight container:
+
+**Linux/macOS:**
+```bash
+./run-mcp-cli.sh tools list
+./run-mcp-cli.sh --help
+```
+
+**Windows PowerShell:**
+```powershell
+.\run-mcp-cli.ps1 tools list
+.\run-mcp-cli.ps1 -Help
+```
+
+**Docker Compose:**
+```bash
+docker-compose --profile cli run --rm mcp-cli tools list
+```
+
+See [CLI Container Guide](docs/CLI-CONTAINER.md) for details.
 
 ## 📚 Documentation
 
 ### For Users
 - **[Quick Start Guide](docs/QUICK-START.md)** - Get started in 5 minutes
-- **[Docker README](docs/DOCKER-README.md)** - Comprehensive Docker guide
+- **[Docker README](docs/DOCKER-README.md)** - Full generator container guide
+- **[CLI Container Guide](docs/CLI-CONTAINER.md)** - Lightweight MCP CLI container
 - **[Workflow Comparison](docs/WORKFLOW-COMPARISON.md)** - Old vs new approach
 
 ### For Developers
@@ -57,6 +81,7 @@ Documentation will be generated in `./generated/multi-page/` directory.
 - **[Implementation Summary](docs/IMPLEMENTATION-SUMMARY.md)** - Technical details
 - **[Fixes Applied](docs/FIXES-APPLIED.md)** - Build issues and solutions
 - **[Generator README](docs-generation/README.md)** - Generator internals
+- **[Version Capture](docs/VERSION-CAPTURE.md)** - CLI version tracking in generated docs
 
 ### For LLMs (AI Assistants)
 - **[.contextdocs](.contextdocs)** - Comprehensive codebase context for AI
@@ -66,11 +91,12 @@ Documentation will be generated in `./generated/multi-page/` directory.
 
 ## 🏗️ Architecture
 
-This project uses a **fully containerized Docker solution**:
+This project provides **two containerized solutions**:
 
+### Full Documentation Generator (2.36GB)
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Docker Container                      │
+│          Docker Container (3-Stage Build)               │
 ├─────────────────────────────────────────────────────────┤
 │  1. Clone Microsoft/MCP repository                      │
 │  2. Build Azure MCP Server (.NET 10)                    │
@@ -87,6 +113,19 @@ This project uses a **fully containerized Docker solution**:
     └── ... (590+ files)
 ```
 
+### Lightweight CLI Container (~1-2GB)
+```
+┌─────────────────────────────────────────────────────────┐
+│          Docker Container (Single-Stage)                │
+├─────────────────────────────────────────────────────────┤
+│  1. Clone Microsoft/MCP repository                      │
+│  2. Build Azure MCP Server (.NET 10)                    │
+│  3. Provide CLI wrapper for direct command access       │
+└─────────────────────────────────────────────────────────┘
+         ↓
+  Direct CLI access: tools list, --help, etc.
+```
+
 ### Key Features
 
 ✅ **No manual setup** - Everything in Docker container  
@@ -94,6 +133,7 @@ This project uses a **fully containerized Docker solution**:
 ✅ **Fast** - Docker caching speeds up builds  
 ✅ **Simple** - One command to run  
 ✅ **Portable** - Works on Windows, macOS, Linux  
+✅ **Flexible** - Full generator or lightweight CLI  
 
 ## 🎮 Usage Examples
 
