@@ -481,14 +481,21 @@ try {
             $summaryLines += ""
             $summaryLines += "## Complete Tool List"
             $summaryLines += ""
+            $inToolGroup = $false
             foreach ($line in $toolListOutput) {
                 if ($line.Trim() -ne "") {
                     # Convert the console output format to markdown
                     if ($line -match "^(.+) \((\d+) tools\):$") {
+                        # Add 2 empty lines before next group (except first group)
+                        if ($inToolGroup) {
+                            $summaryLines += ""
+                            $summaryLines += ""
+                        }
                         $areaName = $matches[1]
                         $toolCount = $matches[2]
                         $summaryLines += "### $areaName ($toolCount tools)"
                         $summaryLines += ""
+                        $inToolGroup = $true
                     }
                     elseif ($line -match "^[-]+$") {
                         # Skip separator lines

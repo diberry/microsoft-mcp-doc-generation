@@ -45,7 +45,8 @@ $mcpServerPath = if ($env:MCP_SERVER_PATH) {
 
 Key files:
 - `Program.cs` - Entry point
-- `DocumentationGenerator.cs` - Core logic (line 400 has TODO for ParameterCount)
+- `DocumentationGenerator.cs` - Core logic
+  - **Parameter Count**: The parameter count displayed in console output and `generation-summary.md` represents the count of **non-common parameters only** (those shown in the parameter tables). Common parameters (like `--subscription-id`, `--resource-group`) are filtered out to match what users see in the documentation.
 - `HandlebarsTemplateEngine.cs` - Template processing
 - `Config.cs` - Configuration loader
 
@@ -74,6 +75,14 @@ Other configs:
 - Working dir: `/docs-generation`
 
 ## Important Patterns
+
+### Parameter Counting Logic
+**Critical**: The parameter count shown in console output and `generation-summary.md` reflects only **non-common parameters** that appear in the documentation parameter tables.
+
+- **Common parameters** (e.g., `--subscription-id`, `--resource-group`, `--output`) are filtered out
+- The count matches what users see in the parameter tables in the generated `.md` files
+- This is calculated in `DocumentationGenerator.cs` around line 234
+- Example: If a tool has 9 total parameters but 7 are common, the count shows "2 params"
 
 ### Adding New Service Area
 1. Add to `brand-to-server-mapping.json` if needs brand name
