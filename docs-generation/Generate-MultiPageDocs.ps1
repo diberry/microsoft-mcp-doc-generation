@@ -66,7 +66,7 @@ function Clear-PreviousOutput {
     }
     
     New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
-    New-Item -ItemType Directory -Path "generated/multi-page" -Force | Out-Null
+    New-Item -ItemType Directory -Path "generated/tools" -Force | Out-Null
     Write-Info "Created output directories"
 }
 
@@ -192,7 +192,7 @@ try {
     Write-Progress "Step 3: Generating documentation using C# generator..."
     
     $cliOutputPath = "../generated/cli-output.json"  # Relative to CSharpGenerator directory
-    $outputDir = "../generated/multi-page"           # Relative to CSharpGenerator directory
+    $outputDir = "../generated/tools"                # Relative to CSharpGenerator directory
     
     # Build arguments for C# generator
     $generatorArgs = @("generate-docs", $cliOutputPath, $outputDir)
@@ -353,10 +353,10 @@ try {
     
     Write-Success "Multi-page documentation generation completed successfully!"
     Write-Info ""
-    Write-Info "Generated files in 'generated/multi-page':"
+    Write-Info "Generated files in 'generated/tools':"
     
     # List generated files
-    $actualOutputDir = "generated/multi-page"
+    $actualOutputDir = "generated/tools"
     if (Test-Path $actualOutputDir) {
         $files = Get-ChildItem $actualOutputDir -Name "*.md" | Sort-Object
         foreach ($file in $files) {

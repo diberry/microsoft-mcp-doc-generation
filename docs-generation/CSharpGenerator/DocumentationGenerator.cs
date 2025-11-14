@@ -125,25 +125,32 @@ public static class DocumentationGenerator
 
         // Ensure output directory exists
         Directory.CreateDirectory(outputDir);
+        
+        // Get parent directory for sibling folders
+        var parentDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+        
+        // Create common-general directory for general documentation files
+        var commonGeneralDir = Path.Combine(parentDir, "common-general");
+        Directory.CreateDirectory(commonGeneralDir);
 
         // Setup templates directory
         var templatesDir = Path.Combine("..", "templates");
         
-        // Generate individual annotation files for each tool first
+        // Generate individual annotation files for each tool first (at parent level)
         // This way we can reference them in the area pages
-        var annotationsDir = Path.Combine(outputDir, "annotations");
+        var annotationsDir = Path.Combine(parentDir, "annotations");
         Directory.CreateDirectory(annotationsDir);
         var annotationTemplate = Path.Combine(templatesDir, "annotation-template.hbs");
         await GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate);
 
-        // Generate individual parameter files for each tool
-        var parametersDir = Path.Combine(outputDir, "parameters");
+        // Generate individual parameter files for each tool (at parent level)
+        var parametersDir = Path.Combine(parentDir, "parameters");
         Directory.CreateDirectory(parametersDir);
         var parameterTemplate = Path.Combine(templatesDir, "parameter-template.hbs");
         await GenerateParameterFilesAsync(transformedData, parametersDir, parameterTemplate);
 
-        // Generate combined parameter and annotation files for each tool
-        var paramAnnotationDir = Path.Combine(outputDir, "param-and-annotation");
+        // Generate combined parameter and annotation files for each tool (at parent level)
+        var paramAnnotationDir = Path.Combine(parentDir, "param-and-annotation");
         Directory.CreateDirectory(paramAnnotationDir);
         var paramAnnotationTemplate = Path.Combine(templatesDir, "param-annotation-template.hbs");
         await GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
@@ -323,8 +330,9 @@ public static class DocumentationGenerator
                 : ExtractCommonParameters(data.Tools);
             var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
 
-            // Annotations directory path
-            var annotationsDir = Path.Combine(outputDir, "annotations");
+            // Annotations directory path (at parent level)
+            var parentDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+            var annotationsDir = Path.Combine(parentDir, "annotations");
             
             // Load brand mappings for annotation filename lookup
             var brandMappings = await LoadBrandMappingsAsync();
@@ -460,9 +468,11 @@ public static class DocumentationGenerator
 
         var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, commonPageData);
 
-        var outputFile = Path.Combine(outputDir, "common-tools.md");
+        // Generate in common-general directory
+        var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
+        var outputFile = Path.Combine(commonGeneralDir, "common-tools.md");
         await File.WriteAllTextAsync(outputFile, result);
-        Console.WriteLine($"Generated common tools page: common-tools.md");
+        Console.WriteLine($"Generated common tools page: common-general/common-tools.md");
     }
 
     /// <summary>
@@ -481,9 +491,11 @@ public static class DocumentationGenerator
 
         var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, indexPageData);
 
-        var outputFile = Path.Combine(outputDir, "index.md");
+        // Generate in common-general directory
+        var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
+        var outputFile = Path.Combine(commonGeneralDir, "index.md");
         await File.WriteAllTextAsync(outputFile, result);
-        Console.WriteLine($"Generated index page: index.md");
+        Console.WriteLine($"Generated index page: common-general/index.md");
     }
 
     /// <summary>
@@ -507,9 +519,11 @@ public static class DocumentationGenerator
 
         var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, commandsPageData);
 
-        var outputFile = Path.Combine(outputDir, "azmcp-commands.md");
+        // Generate in common-general directory
+        var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
+        var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
         await File.WriteAllTextAsync(outputFile, result);
-        Console.WriteLine($"Generated commands page: azmcp-commands.md");
+        Console.WriteLine($"Generated commands page: common-general/azmcp-commands.md");
     }
 
     /// <summary>
@@ -610,9 +624,11 @@ public static class DocumentationGenerator
 
             var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, serviceOptionsPageData);
 
-            var outputFile = Path.Combine(outputDir, "service-start-option.md");
+            // Generate in common-general directory
+            var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
+            var outputFile = Path.Combine(commonGeneralDir, "service-start-option.md");
             await File.WriteAllTextAsync(outputFile, result);
-            Console.WriteLine($"Generated service options page: service-start-option.md");
+            Console.WriteLine($"Generated service options page: common-general/service-start-option.md");
         }
         catch (Exception ex)
         {
