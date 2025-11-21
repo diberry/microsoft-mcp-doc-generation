@@ -15,9 +15,9 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../NaturalLanguageGenerator/NaturalLanguageGenerator.csproj" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ExamplePrompts\ExamplePrompts.csproj" />
-  </ItemGroup>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Handlebars.Net" Version="2.1.6" />
