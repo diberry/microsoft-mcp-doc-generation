@@ -1,91 +1,45 @@
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
+using Azure;
+using Azure.AI.OpenAI;
 
 namespace ExamplePrompts;
 
 public class ExamplePromptsClient
 {
-    private readonly HttpClient _http;
+    private readonly OpenAIClient _client;
     private readonly ExamplePromptsOptions _options;
 
-    public ExamplePromptsClient(ExamplePromptsOptions? options = null, HttpClient? httpClient = null)
+    public ExamplePromptsClient(ExamplePromptsOptions? options = null)
     {
         _options = options ?? ExamplePromptsOptions.LoadFromEnvironmentOrDotEnv();
-        _http = httpClient ?? new HttpClient();
-        if (!string.IsNullOrEmpty(_options.ApiKey))
+        if (string.IsNullOrEmpty(_options.ApiKey) || string.IsNullOrEmpty(_options.Endpoint))
         {
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
+            throw new InvalidOperationException("FOUNDRY_API_KEY and FOUNDRY_ENDPOINT must be configured");
         }
+
+        var credential = new AzureKeyCredential(_options.ApiKey);
+        _client = new OpenAIClient(new Uri(_options.Endpoint!), credential);
     }
 
     public async Task<string> GenerateAsync(string systemPromptFile, string userPromptFile, CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(_options.Endpoint)) throw new InvalidOperationException("FOUNDRY_ENDPOINT is not configured.");
-        if (string.IsNullOrEmpty(_options.Model)) throw new InvalidOperationException("FOUNDRY_MODEL is not configured.");
-
         var systemText = File.Exists(systemPromptFile) ? await File.ReadAllTextAsync(systemPromptFile, ct) : string.Empty;
         var userText = File.Exists(userPromptFile) ? await File.ReadAllTextAsync(userPromptFile, ct) : string.Empty;
 
-        var payload = new Dictionary<string, object?>
+        var messages = new List<ChatMessage>
         {
-            ["instance"] = _options.Instance,
-            ["model"] = _options.Model,
-            ["modelApiVersion"] = _options.ModelApiVersion,
-            ["input"] = new[]
-            {
-                new { role = "system", content = systemText },
-                new { role = "user", content = userText }
-            }
+            new ChatMessage(ChatRole.System, systemText),
+            new ChatMessage(ChatRole.User, userText)
         };
 
-        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        var options = new ChatCompletionsOptions();
+        foreach (var m in messages) options.Messages.Add(m);
+        options.MaxTokens = 1024;
 
-        var resp = await _http.PostAsync(_options.Endpoint!, content, ct);
-        var body = await resp.Content.ReadAsStringAsync(ct);
+        var deploymentOrModel = _options.Instance ?? _options.Model ?? throw new InvalidOperationException("No model/deployment configured");
 
-        if (!resp.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException($"Request failed ({(int)resp.StatusCode}): {body}");
-        }
-
-        try
-        {
-            using var doc = JsonDocument.Parse(body);
-            if (doc.RootElement.TryGetProperty("output", out var outputEl) && outputEl.ValueKind == JsonValueKind.Array && outputEl.GetArrayLength() > 0)
-            {
-                var first = outputEl[0];
-                if (first.TryGetProperty("content", out var contentEl) && contentEl.ValueKind == JsonValueKind.Array && contentEl.GetArrayLength() > 0)
-                {
-                    var c0 = contentEl[0];
-                    if (c0.TryGetProperty("text", out var textEl) && textEl.ValueKind == JsonValueKind.String)
-                    {
-                        return textEl.GetString() ?? body;
-                    }
-                }
-            }
-
-            if (doc.RootElement.TryGetProperty("choices", out var choices) && choices.ValueKind == JsonValueKind.Array && choices.GetArrayLength() > 0)
-            {
-                var firstChoice = choices[0];
-                if (firstChoice.TryGetProperty("message", out var message))
-                {
-                    if (message.TryGetProperty("content", out var contentMessage) && contentMessage.ValueKind == JsonValueKind.String)
-                    {
-                        return contentMessage.GetString() ?? body;
-                    }
-                }
-                if (firstChoice.TryGetProperty("text", out var text))
-                {
-                    return text.GetString() ?? body;
-                }
-            }
-        }
-        catch
-        {
-        }
-
-        return body;
+        Response<ChatCompletions> response = await _client.GetChatCompletionsAsync(deploymentOrModel, options, ct: ct);
+        var first = response.Value.Choices.FirstOrDefault();
+        if (first == null) return string.Empty;
+        return first.Message.Content.ToString() ?? string.Empty;
     }
 }
