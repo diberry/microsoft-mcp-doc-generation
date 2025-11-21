@@ -26,45 +26,66 @@ function Write-ColorOutput {
 }
 
 function Show-Usage {
-    Write-ColorOutput "`nAzure MCP CLI Container Helper`n" -Color Cyan
+    Write-Host ""
+    Write-ColorOutput "═══════════════════════════════════════════════════════════" -Color Cyan
+    Write-ColorOutput "  Azure MCP CLI Container Helper - WRAPPER SCRIPT HELP" -Color Cyan
+    Write-ColorOutput "═══════════════════════════════════════════════════════════" -Color Cyan
+    Write-Host ""
     
     Write-ColorOutput "Usage:" -Color Yellow
-    Write-Host "  .\run-mcp-cli.ps1 [OPTIONS] [COMMAND] [ARGS...]`n"
+    Write-Host "  .\run-mcp-cli.ps1 [WRAPPER_OPTIONS] [--] [MCP_COMMAND] [MCP_ARGS...]`n"
     
-    Write-ColorOutput "Options:" -Color Yellow
+    Write-ColorOutput "Wrapper Options (for this script only):" -Color Yellow
     Write-Host "  -Build              Build the Docker image first"
     Write-Host "  -NoCache            Build without using cache"
     Write-Host "  -Branch <name>      Use specific MCP branch (default: main)"
     Write-Host "  -Shell              Open interactive shell in container"
-    Write-Host "  -Help               Show this help message`n"
+    Write-Host "  -Help               Show this wrapper script help`n"
+    
+    Write-ColorOutput "Separator:" -Color Yellow
+    Write-Host "  --                  Pass all remaining arguments directly to MCP CLI`n"
     
     Write-ColorOutput "Examples:" -Color Yellow
-    Write-ColorOutput "  # Show MCP CLI help" -Color Green
-    Write-Host "  .\run-mcp-cli.ps1 --help`n"
+    Write-ColorOutput "  # Show this wrapper script help (wrapper only)" -Color Green
+    Write-Host "  .\run-mcp-cli.ps1 -Help`n"
     
-    Write-ColorOutput "  # List all available tools" -Color Green
+    Write-ColorOutput "  # Show MCP CLI help (calls MCP CLI in Docker)" -Color Green
+    Write-Host "  .\run-mcp-cli.ps1 -- --help`n"
+    
+    Write-ColorOutput "  # List all MCP tools (calls: azmcp tools list)" -Color Green
     Write-Host "  .\run-mcp-cli.ps1 tools list`n"
     
-    Write-ColorOutput "  # List tools with JSON output" -Color Green
-    Write-Host "  .\run-mcp-cli.ps1 tools list --output tools.json`n"
+    Write-ColorOutput "  # List just tool names (calls: azmcp tools list --name-only)" -Color Green
+    Write-Host "  .\run-mcp-cli.ps1 tools list --name-only`n"
     
-    Write-ColorOutput "  # List namespaces" -Color Green
-    Write-Host "  .\run-mcp-cli.ps1 tools list-namespaces`n"
+    Write-ColorOutput "  # List tool namespaces (calls: azmcp tools list --namespace-mode)" -Color Green
+    Write-Host "  .\run-mcp-cli.ps1 tools list --namespace-mode`n"
     
-    Write-ColorOutput "  # Build image first, then run command" -Color Green
-    Write-Host "  .\run-mcp-cli.ps1 -Build tools list`n"
+    Write-ColorOutput "  # Get MCP CLI version (calls: azmcp --version)" -Color Green
+    Write-Host "  .\run-mcp-cli.ps1 -- --version`n"
     
-    Write-ColorOutput "  # Use different MCP branch" -Color Green
-    Write-Host "  .\run-mcp-cli.ps1 -Branch feature-branch tools list`n"
+    Write-ColorOutput "  # Wrapper option + MCP command: build image, then list tools" -Color Green
+    Write-Host "  .\run-mcp-cli.ps1 -Build -- tools list`n"
     
-    Write-ColorOutput "  # Open interactive shell for debugging" -Color Green
+    Write-ColorOutput "  # Wrapper option: use different MCP git branch" -Color Green
+    Write-Host "  .\run-mcp-cli.ps1 -Branch feature-branch -- tools list`n"
+    
+    Write-ColorOutput "  # Wrapper option: open shell inside container (no MCP command)" -Color Green
     Write-Host "  .\run-mcp-cli.ps1 -Shell`n"
     
-    Write-ColorOutput "Common Commands:" -Color Yellow
-    Write-Host "  tools list              List all available MCP tools"
-    Write-Host "  tools list-namespaces   List all tool namespaces"
-    Write-Host "  --help                  Show MCP CLI help"
-    Write-Host "  --version               Show MCP CLI version`n"
+    Write-ColorOutput "Common MCP CLI Commands (all run inside Docker):" -Color Yellow
+    Write-Host "  tools list                      List all MCP tools (full JSON)"
+    Write-Host "  tools list --name-only          List just tool names (concise)"
+    Write-Host "  tools list --namespace-mode     List service namespaces"
+    Write-Host "  --help                          Show MCP CLI help"
+    Write-Host "  --version                       Show MCP CLI version`n"
+    
+    Write-ColorOutput "What Runs Where?" -Color Yellow
+    Write-Host "  Wrapper only:     -Help, -Build, -NoCache, -Branch, -Shell"
+    Write-Host "  Inside Docker:    Everything else (passed to: azmcp [command])`n"
+    
+    Write-ColorOutput "Tip:" -Color Yellow
+    Write-Host "  Use -- to clearly separate wrapper options from MCP CLI arguments`n"
 }
 
 function Build-Image {
@@ -115,6 +136,11 @@ function Invoke-Command {
         Write-ColorOutput "Image not found. Building..." -Color Yellow
         Build-Image
     }
+    
+    # Show header for MCP CLI output
+    Write-ColorOutput "═══════════════════════════════════════════════════════════" -Color Cyan
+    Write-ColorOutput "  MCP CLI OUTPUT" -Color Cyan
+    Write-ColorOutput "═══════════════════════════════════════════════════════════`n" -Color Cyan
     
     # Run the MCP CLI with provided arguments
     docker run `

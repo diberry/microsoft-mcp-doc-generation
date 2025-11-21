@@ -334,8 +334,9 @@ public static class DocumentationGenerator
             var parentDir = Path.GetDirectoryName(outputDir) ?? outputDir;
             var annotationsDir = Path.Combine(parentDir, "annotations");
             
-            // Load brand mappings for annotation filename lookup
+            // Load brand mappings and compound words for annotation filename lookup
             var brandMappings = await LoadBrandMappingsAsync();
+            var compoundWords = await LoadCompoundWordsAsync();
 
             // Filter out common parameters from tools for area pages and add annotation content
             var toolsWithFilteredParamsTasks = areaData.Tools.Select(async tool => 
@@ -359,7 +360,7 @@ public static class DocumentationGenerator
                     {
                         var area = commandParts[0];
                         
-                        // Get brand-based filename from mapping
+                        // Get brand-based filename from mapping, or fall back to area name
                         string brandFileName;
                         if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
                         {
@@ -367,7 +368,16 @@ public static class DocumentationGenerator
                         }
                         else
                         {
-                            brandFileName = area.ToLowerInvariant();
+                            // Fallback: use area name, but check compound words first
+                            var areaLower = area.ToLowerInvariant();
+                            if (compoundWords.TryGetValue(areaLower, out var compoundReplacement))
+                            {
+                                brandFileName = compoundReplacement;
+                            }
+                            else
+                            {
+                                brandFileName = areaLower;
+                            }
                         }
 
                         // Build remaining parts
@@ -417,6 +427,8 @@ public static class DocumentationGenerator
                             RequiredText = opt.Required == true ? "Required" : "Optional",
                             Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")),
                     })
+                    .OrderByDescending(opt => opt.Required) // Required first
+                    .ThenBy(opt => opt.NL_Name ?? opt.Name) // Then alphabetically by natural language name
                     .ToList();
             }
             
