@@ -71,6 +71,7 @@ function Clear-PreviousOutput {
     }
     
     New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
+    New-Item -ItemType Directory -Path "generated/cli" -Force | Out-Null
     New-Item -ItemType Directory -Path "generated/tools" -Force | Out-Null
     if ($ExamplePrompts) {
         New-Item -ItemType Directory -Path "generated/example-prompts" -Force | Out-Null
@@ -141,7 +142,7 @@ try {
     Pop-Location
     
     # Filter out non-JSON content (launch settings message) and save CLI output
-    $cliOutputFile = "generated/cli-output.json"
+    $cliOutputFile = "generated/cli/cli-output.json"
     $jsonOutput = $rawOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
     $jsonOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
     Write-Success "CLI output saved: $cliOutputFile"
@@ -156,7 +157,7 @@ try {
     Pop-Location
     
     # Filter out non-JSON content (launch settings message) and save namespace CLI output
-    $namespaceOutputFile = "generated/cli-namespace.json"
+    $namespaceOutputFile = "generated/cli/cli-namespace.json"
     $jsonNamespaceOutput = $namespaceOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
     $jsonNamespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
     Write-Success "CLI namespace output saved: $namespaceOutputFile"
@@ -196,7 +197,7 @@ try {
     # Step 3: Run C# generator to create documentation
     Write-Progress "Step 3: Generating documentation using C# generator..."
     
-    $cliOutputPath = "../generated/cli-output.json"  # Relative to CSharpGenerator directory
+    $cliOutputPath = "../generated/cli/cli-output.json"  # Relative to CSharpGenerator directory
     $outputDir = "../generated/tools"                # Relative to CSharpGenerator directory
     
     # Build arguments for C# generator
@@ -374,13 +375,13 @@ try {
     
     Write-Info ""
     Write-Info "Data files:"
-    $actualCliOutputPath = "generated/cli-output.json"
+    $actualCliOutputPath = "generated/cli/cli-output.json"
     if (Test-Path $actualCliOutputPath) {
         $jsonSize = [math]::Round((Get-Item $actualCliOutputPath).Length / 1KB, 1)
         Write-Info "  📄 $actualCliOutputPath (${jsonSize}KB) - CLI output"
     }
     
-    $actualNamespaceOutputPath = "generated/cli-namespace.json"
+    $actualNamespaceOutputPath = "generated/cli/cli-namespace.json"
     if (Test-Path $actualNamespaceOutputPath) {
         $namespaceSize = [math]::Round((Get-Item $actualNamespaceOutputPath).Length / 1KB, 1)
         Write-Info "  📄 $actualNamespaceOutputPath (${namespaceSize}KB) - CLI namespace output"

@@ -182,8 +182,9 @@ generated/
 │   ├── keyvault.md                # Key Vault
 │   └── ... (590+ total files)
 │
-├── cli-output.json                # Raw tool data
-├── cli-namespace.json             # Namespace data
+├── cli/
+│   ├── cli-output.json            # Raw tool data
+│   └── cli-namespace.json         # Namespace data
 ├── namespaces.csv                 # CSV export
 └── generation-summary.md          # Statistics
 ```

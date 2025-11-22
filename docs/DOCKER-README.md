@@ -58,8 +58,9 @@ generated/
 │   ├── acr.md              # Azure Container Registry docs
 │   ├── storage.md          # Azure Storage docs
 │   └── ...                 # All other service area docs
-├── cli-output.json         # Raw CLI output data
-├── cli-namespace.json      # Namespace information
+├── cli/
+│   ├── cli-output.json     # Raw CLI output data
+│   └── cli-namespace.json  # Namespace information
 ├── namespaces.csv          # Alphabetically sorted namespaces
 └── generation-summary.md   # Generation statistics
 ```

@@ -295,7 +295,9 @@ The script generates documentation in the `generated/` directory:
 
 ```
 generated/
-├── cli-output.json              # Raw CLI output data
+├── cli/
+│   ├── cli-output.json          # Raw CLI output data
+│   └── cli-namespace.json       # Namespace data
 └── multi-page/                 # Generated Markdown documentation
     ├── index.md                # Main index page (if enabled)
     ├── common-tools.md          # Common tools documentation (if enabled)
@@ -460,7 +462,7 @@ The project includes debugging support for VS Code to help you debug the documen
        "program": "${workspaceFolder}/docs-generation/CSharpGenerator/bin/Debug/net9.0/CSharpGenerator.dll",
        "args": [
            "generate-docs",
-           "../generated/cli-output.json",
+           "../generated/cli/cli-output.json",
            "../generated/multi-page",
            "--index",
            "--common",
@@ -519,5 +521,5 @@ The project includes debugging support for VS Code to help you debug the documen
 If you prefer not to use the debug script, you can manually start debugging by:
 
 1. Building the CSharpGenerator in Debug mode
-2. Ensuring CLI output exists at `generated/cli-output.json`
+2. Ensuring CLI output exists at `generated/cli/cli-output.json`
 3. Starting the "Debug Generate Docs" launch configuration in VS Code

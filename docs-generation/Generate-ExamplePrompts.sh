@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 # === CONFIGURATION - Update paths here if needed ===
-CLI_OUTPUT="$SCRIPT_DIR/../generated/cli-output.json"
+CLI_OUTPUT="$SCRIPT_DIR/../generated/cli/cli-output.json"
 TOOLS_DIR="$SCRIPT_DIR/../generated/tools"
 OUTPUT_DIR="$SCRIPT_DIR/../generated/example-prompts"
 PROJECT_PATH="$SCRIPT_DIR/CSharpGenerator/CSharpGenerator.csproj"
