@@ -16,19 +16,21 @@ public class AzureOpenAIOptions
         var opts = new AzureOpenAIOptions();
         opts.ApiKey = Environment.GetEnvironmentVariable("FOUNDRY_API_KEY");
         opts.Endpoint = Environment.GetEnvironmentVariable("FOUNDRY_ENDPOINT");
-        opts.Deployment = Environment.GetEnvironmentVariable("FOUNDRY_INSTANCE") ?? Environment.GetEnvironmentVariable("FOUNDRY_MODEL");
+        opts.Deployment = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_NAME") ?? Environment.GetEnvironmentVariable("FOUNDRY_MODEL") ?? Environment.GetEnvironmentVariable("FOUNDRY_INSTANCE");
         opts.ApiVersion = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_API_VERSION");
 
         if (string.IsNullOrEmpty(opts.ApiKey) || string.IsNullOrEmpty(opts.Endpoint) || string.IsNullOrEmpty(opts.Deployment))
         {
-            var path = basePath ?? Directory.GetCurrentDirectory();
-            var envPath = Path.Combine(path, DotEnvFileName);
+            // Look for .env in docs-generation directory
+            // From bin/Debug/net9.0 -> go up to docs-generation
+            var path = basePath ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..");
+            var envPath = Path.GetFullPath(Path.Combine(path, DotEnvFileName));
             if (File.Exists(envPath))
             {
                 var kv = ParseDotEnv(File.ReadAllText(envPath));
                 opts.ApiKey ??= TryGet(kv, "FOUNDRY_API_KEY");
                 opts.Endpoint ??= TryGet(kv, "FOUNDRY_ENDPOINT");
-                opts.Deployment ??= TryGet(kv, "FOUNDRY_INSTANCE") ?? TryGet(kv, "FOUNDRY_MODEL");
+                opts.Deployment ??= TryGet(kv, "FOUNDRY_MODEL_NAME") ?? TryGet(kv, "FOUNDRY_MODEL") ?? TryGet(kv, "FOUNDRY_INSTANCE");
                 opts.ApiVersion ??= TryGet(kv, "FOUNDRY_MODEL_API_VERSION");
             }
         }
