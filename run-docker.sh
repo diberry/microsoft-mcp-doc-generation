@@ -149,8 +149,8 @@ if docker run --rm \
     echo ""
     
     # Show summary of generated files
-    if [ -d "generated/multi-page" ]; then
-        FILE_COUNT=$(find generated/multi-page -name "*.md" -type f | wc -l)
+    if [ -d "generated/tools" ]; then
+        FILE_COUNT=$(find generated/tools -name "*.md" -type f | wc -l)
         echo -e "${CYAN}📄 Generated ${FILE_COUNT} markdown files${NC}"
         echo ""
         echo -e "${CYAN}Output location:${NC}"
@@ -159,7 +159,7 @@ if docker run --rm \
         
         # Show first few files
         echo -e "${CYAN}Sample files:${NC}"
-        find generated/multi-page -name "*.md" -type f | sort | head -5 | while read file; do
+        find generated/tools -name "*.md" -type f | sort | head -5 | while read file; do
             SIZE=$(du -h "$file" | cut -f1)
             echo "  • $(basename "$file") (${SIZE})"
         done
@@ -171,7 +171,7 @@ if docker run --rm \
         echo ""
         echo -e "${GREEN}🎉 Ready to use!${NC}"
     else
-        echo -e "${YELLOW}⚠️  No multi-page directory found${NC}"
+        echo -e "${YELLOW}⚠️  No tools directory found${NC}"
         echo "Generated files:"
         ls -lh generated/ 2>/dev/null || echo "  (empty)"
     fi

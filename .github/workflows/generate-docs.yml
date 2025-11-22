@@ -49,9 +49,9 @@ jobs:
           azure-mcp-docgen:latest
         
         echo "=== Verifying Generated Output ==="
-        if [ -d "generated/multi-page" ]; then
+        if [ -d "generated/tools" ] && [ "$(ls -A generated/tools)" ]; then
           echo "✅ Documentation generated successfully"
-          file_count=$(find generated/multi-page -name "*.md" -type f | wc -l)
+          file_count=$(find generated/tools -name "*.md" -type f | wc -l)
           echo "📄 ${file_count} markdown files created"
         else
           echo "❌ Documentation generation failed"
@@ -67,15 +67,15 @@ jobs:
         echo ""
         
         # Show generated files
-        if [ -d "generated/multi-page" ]; then
+        if [ -d "generated/tools" ]; then
           echo "✅ Generated documentation files:"
-          find generated/multi-page -name "*.md" -type f | sort | while read -r file; do
+          find generated/tools -name "*.md" -type f | sort | while read -r file; do
             size=$(stat -c%s "$file" 2>/dev/null || echo "0")
             size_kb=$((size / 1024))
             echo "  📄 $(basename "$file") (${size_kb}KB)"
           done
         else
-          echo "⚠️  No multi-page documentation directory found"
+          echo "⚠️  No tools documentation directory found"
         fi
         
         # Show data files

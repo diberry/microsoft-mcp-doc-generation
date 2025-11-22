@@ -162,7 +162,7 @@ if ($LASTEXITCODE -eq 0) {
         
         # Show first few files
         Write-Header "Sample files:"
-        Get-ChildItem "generated/multi-page" -Filter "*.md" -File | 
+        Get-ChildItem "generated/tools" -Filter "*.md" -File | 
             Sort-Object Name | 
             Select-Object -First 5 | 
             ForEach-Object {
@@ -177,7 +177,7 @@ if ($LASTEXITCODE -eq 0) {
         Write-Host ""
         Write-Success "🎉 Ready to use!"
     } else {
-        Write-Warning "⚠️  No multi-page directory found"
+        Write-Warning "⚠️  No tools directory found"
         Write-Host "Generated files:"
         Get-ChildItem "generated" -ErrorAction SilentlyContinue | Format-Table -AutoSize
     }
