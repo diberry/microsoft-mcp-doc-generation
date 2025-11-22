@@ -83,89 +83,118 @@ function Clear-PreviousOutput {
 try {
     Write-Progress "Starting Azure MCP Multi-Page Documentation Generation..."
     
-    # Step 0: Clean up previous output
-    Clear-PreviousOutput
+    # Step 0: Clean up previous output (except CLI files)
+    Write-Progress "Cleaning up previous output..."
     
-    # Step 1: Generate JSON data from MCP CLI
-    Write-Progress "Step 1: Generating MCP tools data from CLI..."
-    
-    # Determine MCP server path (container vs local)
-    $mcpServerPath = if ($env:MCP_SERVER_PATH) { 
-        $env:MCP_SERVER_PATH 
-    } else { 
-        "..\servers\Azure.Mcp.Server\src" 
-    }
-    
-    Write-Info "Using MCP server path: $mcpServerPath"
-    
-    if (-not (Test-Path $mcpServerPath)) {
-        throw "MCP server path not found: $mcpServerPath"
-    }
-    
-    Push-Location $mcpServerPath
-    
-    # Build the CLI first to avoid build output in JSON
-    Write-Progress "Building Azure MCP Server..."
-    & dotnet build --nologo --verbosity quiet
-    if ($LASTEXITCODE -ne 0) { 
-        throw "Failed to build Azure MCP Server (exit code: $LASTEXITCODE)" 
-    }
-    
-    Write-Progress "Running CLI tools list help command..."
-    & dotnet run --no-build -- tools list --help
-    # https://github.com/microsoft/mcp/issues/1102
-    # if ($LASTEXITCODE -ne 0) { 
-    #     throw "Failed to print Azure MCP Server help (exit code: $LASTEXITCODE)" 
-    # }
-
-    Write-Progress "Capturing CLI version..."
-    $versionOutput = & dotnet run --no-build -- --version 2>&1
-    if ($LASTEXITCODE -ne 0) { 
-        Write-Warning "Failed to capture CLI version, continuing without it"
-        $cliVersion = "unknown"
-    } else {
-        # Filter out launch settings and build messages, get just the version number
-        $cliVersion = ($versionOutput | Where-Object { $_ -match '^\d+\.\d+\.\d+' } | Select-Object -First 1).Trim()
-        if ([string]::IsNullOrWhiteSpace($cliVersion)) {
-            $cliVersion = "unknown"
+    # Remove previous data files (but preserve CLI output)
+    $dataFiles = @("generated/mcp-tools.json", "generated/mcp-tools.yaml", "mcp-tools.json", "mcp-tools.yaml")
+    foreach ($file in $dataFiles) {
+        if (Test-Path $file) {
+            Remove-Item $file -Force
+            Write-Info "Removed: $file"
         }
-        Write-Info "CLI Version: $cliVersion"
-    }
-
-    Write-Progress "Running CLI tools list command..."
-    $rawOutput = & dotnet run --no-build -- tools list
-    if ($LASTEXITCODE -ne 0) { 
-        throw "Failed to generate JSON data from CLI (exit code: $LASTEXITCODE)" 
     }
     
-    # Return to docs-generation directory
-    Pop-Location
-    
-    # Filter out non-JSON content (launch settings message) and save CLI output
-    $cliOutputFile = "generated/cli/cli-output.json"
-    $jsonOutput = $rawOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
-    $jsonOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
-    Write-Success "CLI output saved: $cliOutputFile"
-    
-    # Generate namespace data using --namespace-mode option
-    Write-Progress "Generating namespace data..."
-    Push-Location $mcpServerPath
-    $namespaceOutput = & dotnet run --no-build -- tools list --namespace-mode
-    if ($LASTEXITCODE -ne 0) { 
-        throw "Failed to generate namespace data from CLI (exit code: $LASTEXITCODE)" 
+    # Remove previous output directory (except CLI subdirectory)
+    $parentDir = "generated"
+    if (Test-Path $parentDir) {
+        Get-ChildItem $parentDir -Exclude "cli" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Info "Removed previous generated files (preserved CLI output)"
     }
-    Pop-Location
     
-    # Filter out non-JSON content (launch settings message) and save namespace CLI output
-    $namespaceOutputFile = "generated/cli/cli-namespace.json"
-    $jsonNamespaceOutput = $namespaceOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
-    $jsonNamespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
-    Write-Success "CLI namespace output saved: $namespaceOutputFile"
+    New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
+    New-Item -ItemType Directory -Path "generated/tools" -Force | Out-Null
+    if ($ExamplePrompts) {
+        New-Item -ItemType Directory -Path "generated/example-prompts" -Force | Out-Null
+    }
+    Write-Info "Created output directories"
+    
+    # Step 1: Validate CLI output files
+    Write-Progress "Step 1: Validating CLI output files..."
+    
+    # Determine CLI output path (container vs local)
+    $cliOutputPath = if ($env:MCP_SERVER_PATH) { 
+        "/output/cli"  # Container path
+    } else { 
+        "generated/cli"  # Local path
+    }
+    
+    $cliOutputFile = Join-Path $cliOutputPath "cli-output.json"
+    $namespaceOutputFile = Join-Path $cliOutputPath "cli-namespace.json"
+    $versionOutputFile = Join-Path $cliOutputPath "cli-version.json"
+    
+    Write-Info "CLI output path: $cliOutputPath"
+    
+    # Validate all three files exist and are valid
+    $filesValid = $true
+    $missingFiles = @()
+    
+    foreach ($file in @($cliOutputFile, $namespaceOutputFile, $versionOutputFile)) {
+        if (-not (Test-Path $file)) {
+            $filesValid = $false
+            $missingFiles += $file
+            Write-Warning "Missing: $file"
+        } else {
+            $fileSize = (Get-Item $file).Length
+            if ($fileSize -eq 0) {
+                $filesValid = $false
+                Write-Warning "Empty file: $file"
+            } else {
+                try {
+                    $content = Get-Content $file -Raw | ConvertFrom-Json
+                    # Validate structure for CLI output files
+                    if ($file -like "*cli-output.json" -or $file -like "*cli-namespace.json") {
+                        if (-not $content.status -or -not $content.results) {
+                            $filesValid = $false
+                            Write-Warning "Invalid structure in: $file"
+                        }
+                    }
+                    # Validate structure for version file
+                    if ($file -like "*cli-version.json") {
+                        if (-not $content.version) {
+                            $filesValid = $false
+                            Write-Warning "Invalid version file: $file"
+                        }
+                    }
+                } catch {
+                    $filesValid = $false
+                    Write-Warning "Invalid JSON in: $file - $($_.Exception.Message)"
+                }
+            }
+        }
+    }
+    
+    if (-not $filesValid) {
+        Write-Error "CLI output files are missing or invalid"
+        Write-Error ""
+        Write-Error "Required files:"
+        Write-Error "  • $cliOutputFile"
+        Write-Error "  • $namespaceOutputFile"
+        Write-Error "  • $versionOutputFile"
+        Write-Error ""
+        Write-Error "Run the following to generate CLI output files:"
+        Write-Error "  ./run-mcp-cli-output.sh"
+        Write-Error "Or:"
+        Write-Error "  pwsh ./docs-generation/Get-McpCliOutput.ps1"
+        throw "CLI output files validation failed"
+    }
+    
+    Write-Success "CLI output files validated successfully"
+    
+    # Load version information from cli-version.json
+    $versionData = Get-Content $versionOutputFile -Raw | ConvertFrom-Json
+    $cliVersion = $versionData.version
+    Write-Info "CLI Version: $cliVersion"
+    Write-Info "MCP Branch: $($versionData.mcpBranch)"
+    Write-Info "Generated: $($versionData.timestamp)"
+    
+    # Read namespace data for CSV generation
+    $jsonNamespaceOutput = Get-Content $namespaceOutputFile -Raw
     
     # Generate namespaces CSV with alphabetically sorted names
     Write-Progress "Generating namespaces CSV..."
     try {
-        $namespaceData = ($jsonNamespaceOutput -join "`n") | ConvertFrom-Json
+        $namespaceData = $jsonNamespaceOutput | ConvertFrom-Json
         if ($namespaceData.results) {
             # Sort by name alphabetically and create CSV content with Name and Command columns
             $sortedNamespaces = $namespaceData.results | Sort-Object name
@@ -197,11 +226,20 @@ try {
     # Step 3: Run C# generator to create documentation
     Write-Progress "Step 3: Generating documentation using C# generator..."
     
-    $cliOutputPath = "../generated/cli/cli-output.json"  # Relative to CSharpGenerator directory
-    $outputDir = "../generated/tools"                # Relative to CSharpGenerator directory
+    # Determine CLI output path relative to CSharpGenerator directory
+    $cliInputPath = if ($env:MCP_SERVER_PATH) {
+        "/output/cli/cli-output.json"  # Container path
+    } else {
+        "../generated/cli/cli-output.json"  # Local path
+    }
+    $outputDir = if ($env:MCP_SERVER_PATH) {
+        "/output/tools"  # Container path
+    } else {
+        "../generated/tools"  # Local path
+    }
     
     # Build arguments for C# generator
-    $generatorArgs = @("generate-docs", $cliOutputPath, $outputDir)
+    $generatorArgs = @("generate-docs", $cliInputPath, $outputDir)
     if ($CreateIndex) { $generatorArgs += "--index" }
     if ($CreateCommon) { $generatorArgs += "--common" }
     if ($CreateCommands) { $generatorArgs += "--commands" }

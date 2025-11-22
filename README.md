@@ -20,10 +20,9 @@ Generates comprehensive markdown documentation for all Azure MCP server tools, i
 - 8GB RAM available
 - ~10GB free disk space
 
-### Two Container Options
+### All-in-One Workflow (Recommended)
 
-#### 1. Full Documentation Generator (Recommended)
-Generates all 590+ documentation files:
+Automatically generates CLI output + documentation:
 
 **Linux/macOS:**
 ```bash
@@ -39,15 +38,32 @@ cd microsoft-mcp-doc-generation
 .\run-docker.ps1
 ```
 
-**Docker Compose:**
+Documentation will be generated in `./generated/tools/` directory.
+
+### Two-Step Workflow (For Development)
+
+For iterative development or when you want to run steps independently:
+
+**Step 1: Generate MCP CLI Output** (only needed once, or when MCP changes)
 ```bash
-docker-compose up
+./run-mcp-cli-output.sh
 ```
 
-Documentation will be generated in `./generated/multi-page/` directory.
+**Step 2: Generate Documentation** (can be run repeatedly)
+```bash
+./run-content-generation-output.sh
+```
 
-#### 2. Lightweight CLI Container (For Quick Commands)
-Just need to run MCP CLI commands? Use the lightweight container:
+**Output:**
+- Step 1: `generated/cli/` - CLI output files (cli-output.json, cli-namespace.json, cli-version.json)
+- Step 2: `generated/tools/` - 590+ documentation markdown files
+
+See **[USAGE.md](USAGE.md)** for detailed usage guide and troubleshooting.
+
+### Additional Tools
+
+#### Lightweight CLI Container (For Interactive MCP Commands)
+Need to run raw MCP CLI commands interactively? Use the lightweight container:
 
 **Linux/macOS:**
 ```bash
@@ -71,6 +87,7 @@ See [CLI Container Guide](docs/CLI-CONTAINER.md) for details.
 ## 📚 Documentation
 
 ### For Users
+- **[USAGE.md](USAGE.md)** - Complete usage guide with two-step workflow ⭐ **START HERE**
 - **[Quick Start Guide](docs/QUICK-START.md)** - Get started in 5 minutes
 - **[Docker README](docs/DOCKER-README.md)** - Full generator container guide
 - **[CLI Container Guide](docs/CLI-CONTAINER.md)** - Lightweight MCP CLI container

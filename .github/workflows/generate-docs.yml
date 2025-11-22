@@ -21,6 +21,52 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
+    - name: Build MCP CLI output generator image
+      run: |
+        echo "=== Building Azure MCP CLI Output Generator ==="
+        docker build \
+          --tag azure-mcp-cli-output:latest \
+          --build-arg MCP_BRANCH=main \
+          --progress=plain \
+          -f Dockerfile.mcp-cli-output \
+          .
+        
+        echo "✅ CLI output generator image built successfully"
+        docker images azure-mcp-cli-output:latest
+    
+    - name: Generate MCP CLI output files
+      run: |
+        echo "=== Generating MCP CLI Output Files ==="
+        
+        # Create output directory
+        mkdir -p generated/cli
+        
+        # Run CLI output generator
+        docker run \
+          --rm \
+          --volume "$(pwd)/generated/cli:/output/cli" \
+          azure-mcp-cli-output:latest
+        
+        echo "=== Verifying CLI Output ==="
+        if [ -f "generated/cli/cli-output.json" ] && \
+           [ -f "generated/cli/cli-namespace.json" ] && \
+           [ -f "generated/cli/cli-version.json" ]; then
+          echo "✅ CLI output files generated successfully"
+          ls -lh generated/cli/
+        else
+          echo "❌ CLI output generation failed"
+          exit 1
+        fi
+    
+    - name: Upload CLI output artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mcp-cli-output
+        path: |
+          generated/cli/
+        retention-days: 30
+      
     - name: Build documentation generator image
       run: |
         echo "=== Building Azure MCP Documentation Generator ==="
@@ -37,15 +83,14 @@ jobs:
       run: |
         echo "=== Running Documentation Generation ==="
         
-        # Create output directory
-        mkdir -p generated
-        
-        # Run the container
+        # CLI output files are already in generated/cli from previous step
+        # Run the container with SKIP_CLI_GENERATION=true
         docker run \
           --rm \
           --volume "$(pwd)/generated:/output" \
           --env DOTNET_ROLL_FORWARD=Major \
           --env MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src \
+          --env SKIP_CLI_GENERATION=true \
           --env FOUNDRY_API_KEY="${{ secrets.FOUNDRY_API_KEY }}" \
           --env FOUNDRY_ENDPOINT="${{ secrets.FOUNDRY_ENDPOINT }}" \
           --env FOUNDRY_MODEL_NAME="${{ secrets.FOUNDRY_MODEL_NAME }}" \
