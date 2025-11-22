@@ -34,7 +34,7 @@ public static class ServiceOptionsDiscovery
 
         if (serviceOptionDefinitionsPath == null)
         {
-            Console.WriteLine("Warning: ServiceOptionDefinitions.cs not found in any of the expected locations.");
+            Console.WriteLine("  ⚠️  ServiceOptionDefinitions.cs not found in expected locations");
             return serviceOptions;
         }
 

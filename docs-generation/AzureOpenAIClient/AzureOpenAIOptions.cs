@@ -22,16 +22,27 @@ public class AzureOpenAIOptions
         if (string.IsNullOrEmpty(opts.ApiKey) || string.IsNullOrEmpty(opts.Endpoint) || string.IsNullOrEmpty(opts.Deployment))
         {
             // Look for .env in docs-generation directory
-            // From bin/Debug/net9.0 -> go up to docs-generation
-            var path = basePath ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..");
-            var envPath = Path.GetFullPath(Path.Combine(path, DotEnvFileName));
-            if (File.Exists(envPath))
+            // Try multiple paths: from bin/Release/net9.0, from project dir, from working dir
+            var searchPaths = new[]
             {
-                var kv = ParseDotEnv(File.ReadAllText(envPath));
-                opts.ApiKey ??= TryGet(kv, "FOUNDRY_API_KEY");
-                opts.Endpoint ??= TryGet(kv, "FOUNDRY_ENDPOINT");
-                opts.Deployment ??= TryGet(kv, "FOUNDRY_MODEL_NAME") ?? TryGet(kv, "FOUNDRY_MODEL") ?? TryGet(kv, "FOUNDRY_INSTANCE");
-                opts.ApiVersion ??= TryGet(kv, "FOUNDRY_MODEL_API_VERSION");
+                basePath ?? Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", ".."), // From bin/Release/net9.0
+                basePath ?? Path.Combine(Directory.GetCurrentDirectory(), ".."),                   // From CSharpGenerator to docs-generation
+                basePath ?? Directory.GetCurrentDirectory(),                                       // From docs-generation
+                basePath ?? Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")        // From bin/Release/net9.0 via AppContext
+            };
+
+            foreach (var path in searchPaths)
+            {
+                var envPath = Path.GetFullPath(Path.Combine(path, DotEnvFileName));
+                if (File.Exists(envPath))
+                {
+                    var kv = ParseDotEnv(File.ReadAllText(envPath));
+                    opts.ApiKey ??= TryGet(kv, "FOUNDRY_API_KEY");
+                    opts.Endpoint ??= TryGet(kv, "FOUNDRY_ENDPOINT");
+                    opts.Deployment ??= TryGet(kv, "FOUNDRY_MODEL_NAME") ?? TryGet(kv, "FOUNDRY_MODEL") ?? TryGet(kv, "FOUNDRY_INSTANCE");
+                    opts.ApiVersion ??= TryGet(kv, "FOUNDRY_MODEL_API_VERSION");
+                    break; // Found the file, stop searching
+                }
             }
         }
         return opts;

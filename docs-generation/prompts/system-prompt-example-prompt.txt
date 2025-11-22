@@ -5,9 +5,11 @@ Your goal is to create exactly 5 diverse example prompts that:
 1. **Sound authentic**: Write prompts as real developers would naturally phrase them in conversation or when typing commands
 2. **Use realistic values**: Follow Azure naming conventions (lowercase for storage accounts, kebab-case for resource groups, PascalCase for some resources)
 3. **Vary significantly**: Use different sentence structures, synonyms, formality levels, and grammatical approaches across all 5 prompts
-4. **Include required parameters**: Naturally incorporate all required parameters with realistic example values
+4. **Focus on business parameters only**: Include only the core required parameters that identify what resource or data to act on (resource names, item IDs, filter criteria). Omit infrastructure parameters like subscription, tenant, resource-group, retry settings, auth methods, and timeouts.
 5. **Match the action category**: Use appropriate category labels that align with the tool's primary action (list, create, get, update, delete, etc.)
-6. **Follow the exact format**: Each prompt must be formatted as: `- **Category label**: "The example prompt text"`
+6. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
+7. **Follow the exact format**: Each prompt must be formatted as: `- **Category label**: "The example prompt text"`
+
 
 Important guidelines:
 - Mix different prompt styles: direct commands, questions, requests, imperatives

@@ -1,5 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
+using System.Text;
 using System.Text.Json;
 using NaturalLanguageGenerator;
 using Shared;
@@ -97,6 +98,27 @@ public static class DocumentationGenerator
     {
         // Config.Load has been called in Program.Main and TextCleanup is initialized statically
 
+        // Validate input files exist
+        if (!File.Exists(cliOutputFile))
+        {
+            Console.Error.WriteLine($"Error: CLI output file not found: {cliOutputFile}");
+            return 1;
+        }
+
+        // Validate output directory exists or can be created
+        if (!Directory.Exists(outputDir))
+        {
+            try
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error: Cannot create output directory '{outputDir}': {ex.Message}");
+                return 1;
+            }
+        }
+
         // Read CLI output
         var cliOutputJson = await File.ReadAllTextAsync(cliOutputFile);
         var cliOutput = JsonSerializer.Deserialize<CliOutput>(cliOutputJson, new JsonSerializerOptions
@@ -136,8 +158,8 @@ public static class DocumentationGenerator
         var commonGeneralDir = Path.Combine(parentDir, "common-general");
         Directory.CreateDirectory(commonGeneralDir);
 
-        // Setup templates directory
-        var templatesDir = Path.Combine("..", "templates");
+        // Setup templates directory (relative to the project directory)
+        var templatesDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "templates");
         
         // Generate individual annotation files for each tool first (at parent level)
         // This way we can reference them in the area pages
@@ -150,9 +172,20 @@ public static class DocumentationGenerator
         string? examplePromptsDir = null;
         if (generateExamplePrompts)
         {
+            Console.WriteLine("\n=== Example Prompts Generation Requested ===");
             examplePromptsDir = Path.Combine(parentDir, "example-prompts");
             Directory.CreateDirectory(examplePromptsDir);
+            Console.WriteLine($"Example prompts directory: {examplePromptsDir}");
             examplePromptGenerator = new ExamplePromptGenerator();
+            if (examplePromptGenerator == null)
+            {
+                Console.WriteLine("❌ Failed to initialize ExamplePromptGenerator");
+            }
+            else
+            {
+                Console.WriteLine("✅ ExamplePromptGenerator initialized successfully");
+            }
+            Console.WriteLine("=== Starting Annotation Generation (with example prompts) ===\n");
         }
         
         await GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate, examplePromptGenerator, examplePromptsDir);
@@ -169,12 +202,16 @@ public static class DocumentationGenerator
         var paramAnnotationTemplate = Path.Combine(templatesDir, "param-annotation-template.hbs");
         await GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
 
-        // Generate area pages
+        // Setup area template (needed for index page too)
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
 
-        foreach (var area in transformedData.Areas)
+        // Generate area pages (skip if only generating annotations)
+        if (!generateAnnotations || generateCommands || generateIndex || generateCommon)
         {
-            await GenerateAreaPageAsync(area.Key, area.Value, transformedData, outputDir, areaTemplate);
+            foreach (var area in transformedData.Areas)
+            {
+                await GenerateAreaPageAsync(area.Key, area.Value, transformedData, outputDir, areaTemplate);
+            }
         }
 
         // Generate common tools page if requested
@@ -204,8 +241,8 @@ public static class DocumentationGenerator
             await GenerateServiceOptionsPageAsync(transformedData, outputDir, serviceOptionsTemplate);
         }
 
-        // Generate tool annotations summary file if annotations are enabled
-        if (generateAnnotations)
+        // Generate tool annotations summary file if annotations are enabled (but not in annotations-only mode)
+        if (generateAnnotations && (generateCommands || generateIndex || generateCommon))
         {
             var toolAnnotationsTemplate = Path.Combine(templatesDir, "tool-annotations-template.hbs");
             var generatedDir = Path.GetDirectoryName(outputDir) ?? outputDir;
@@ -214,9 +251,12 @@ public static class DocumentationGenerator
 
         // Note: Annotations are always generated at the start, before area pages
 
-        // Generate security reports in the parent directory (generated folder)
-        var securityReportsDir = Path.GetDirectoryName(outputDir) ?? outputDir;
-        await GenerateSecurityReportsAsync(transformedData, securityReportsDir);
+        // Generate security reports in the parent directory (generated folder) (skip if only generating annotations)
+        if (!generateAnnotations || generateCommands || generateIndex || generateCommon)
+        {
+            var securityReportsDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+            await GenerateSecurityReportsAsync(transformedData, securityReportsDir);
+        }
 
         // Output summary statistics
         var totalTools = transformedData.Tools.Count;
@@ -797,6 +837,9 @@ public static class DocumentationGenerator
             int examplePromptsGenerated = 0;
             int examplePromptsFailed = 0;
             
+            // Track missing brand mappings/compound words
+            var missingMappings = new Dictionary<string, List<string>>(); // area -> list of tool commands
+            
             // Load brand mappings
             var brandMappings = await LoadBrandMappingsAsync();
             
@@ -834,6 +877,13 @@ public static class DocumentationGenerator
                     {
                         brandFileName = areaLower;
                         Console.WriteLine($"Warning: No brand mapping or compound word found for area '{area}', using '{brandFileName}'");
+                        
+                        // Track missing mapping
+                        if (!missingMappings.ContainsKey(area))
+                        {
+                            missingMappings[area] = new List<string>();
+                        }
+                        missingMappings[area].Add(tool.Command ?? "unknown");
                     }
                 }
 
@@ -947,18 +997,21 @@ public static class DocumentationGenerator
                             var exampleOutputFile = Path.Combine(examplePromptsDir, exampleFileName);
                             await File.WriteAllTextAsync(exampleOutputFile, examplePrompts);
                             examplePromptsGenerated++;
-                            Console.WriteLine($"Generated example prompts: {exampleFileName}");
+                            var displayCommand = tool.Command ?? tool.Name ?? "unknown";
+                            Console.WriteLine($"  ✅ {displayCommand,-50} → {exampleFileName}");
                         }
                         else
                         {
                             examplePromptsFailed++;
-                            Console.WriteLine($"Warning: Failed to generate example prompts for tool '{tool.Name}'");
+                            var displayCommand = tool.Command ?? tool.Name ?? "unknown";
+                            Console.WriteLine($"  ❌ {displayCommand,-50} (generation returned empty)");
                         }
                     }
                     catch (Exception exampleEx)
                     {
                         examplePromptsFailed++;
-                        Console.WriteLine($"Warning: Error generating example prompts for '{tool.Name}': {exampleEx.Message}");
+                        var displayCommand = tool.Command ?? tool.Name ?? "unknown";
+                        Console.WriteLine($"  ❌ {displayCommand,-50} (error: {exampleEx.Message})");
                     }
                 }
             }
@@ -968,6 +1021,12 @@ public static class DocumentationGenerator
             if (examplePromptGenerator != null)
             {
                 Console.WriteLine($"Example prompts: {examplePromptsGenerated} generated, {examplePromptsFailed} failed");
+            }
+            
+            // Generate missing mappings report
+            if (missingMappings.Any())
+            {
+                await GenerateMissingMappingsReportAsync(missingMappings, outputDir);
             }
         }
         catch (Exception ex)
@@ -1620,6 +1679,89 @@ public static class DocumentationGenerator
         }
         
         return string.Join("-", cleanedParts);
+    }
+
+    /// <summary>
+    /// Generates a report of areas that don't have brand mappings or compound word definitions.
+    /// </summary>
+    private static async Task GenerateMissingMappingsReportAsync(Dictionary<string, List<string>> missingMappings, string outputDir)
+    {
+        var parentDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+        var reportPath = Path.Combine(parentDir, "missing-word-choice.md");
+        
+        var report = new StringBuilder();
+        report.AppendLine("# Missing Brand Mappings and Compound Words");
+        report.AppendLine();
+        report.AppendLine("This report lists MCP server areas that don't have entries in `brand-to-server-mapping.json` or `compound-words.json`.");
+        report.AppendLine();
+        report.AppendLine($"Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+        report.AppendLine();
+        
+        // Section 1: Unique missing areas
+        report.AppendLine("## Missing Areas");
+        report.AppendLine();
+        report.AppendLine("These areas need to be added to either:");
+        report.AppendLine("- `brand-to-server-mapping.json` - for proper brand names and filenames");
+        report.AppendLine("- `compound-words.json` - for word separation (e.g., `nodepool` → `node-pool`)");
+        report.AppendLine();
+        
+        var sortedAreas = missingMappings.Keys.OrderBy(k => k).ToList();
+        foreach (var area in sortedAreas)
+        {
+            var toolCount = missingMappings[area].Count;
+            report.AppendLine($"- **{area}** ({toolCount} tool{(toolCount > 1 ? "s" : "")})");
+        }
+        
+        report.AppendLine();
+        report.AppendLine("## Tools by Missing Area");
+        report.AppendLine();
+        report.AppendLine("Complete list of tools affected by each missing area:");
+        report.AppendLine();
+        
+        // Section 2: Tools grouped by area
+        foreach (var area in sortedAreas)
+        {
+            report.AppendLine($"### {area}");
+            report.AppendLine();
+            
+            var tools = missingMappings[area].OrderBy(t => t).ToList();
+            foreach (var tool in tools)
+            {
+                report.AppendLine($"- `{tool}`");
+            }
+            
+            report.AppendLine();
+        }
+        
+        // Section 3: Recommendations
+        report.AppendLine("## Recommendations");
+        report.AppendLine();
+        report.AppendLine("### For brand-to-server-mapping.json");
+        report.AppendLine();
+        report.AppendLine("Add entries like this:");
+        report.AppendLine("```json");
+        report.AppendLine("{");
+        report.AppendLine("  \"brandName\": \"Azure <Service Name>\",");
+        report.AppendLine("  \"mcpServerName\": \"<area>\",");
+        report.AppendLine("  \"shortName\": \"<Short Name>\",");
+        report.AppendLine("  \"fileName\": \"azure-<service-name>\"");
+        report.AppendLine("}");
+        report.AppendLine("```");
+        report.AppendLine();
+        
+        report.AppendLine("### For compound-words.json");
+        report.AppendLine();
+        report.AppendLine("Add entries like this:");
+        report.AppendLine("```json");
+        report.AppendLine("{");
+        report.AppendLine("  \"nodepool\": \"node-pool\",");
+        report.AppendLine("  \"activitylog\": \"activity-log\"");
+        report.AppendLine("}");
+        report.AppendLine("```");
+        
+        await File.WriteAllTextAsync(reportPath, report.ToString());
+        Console.WriteLine($"\\n📋 Generated missing mappings report: {reportPath}");
+        Console.WriteLine($"   Found {missingMappings.Count} area(s) without brand mapping or compound word definition");
     }
 }
 

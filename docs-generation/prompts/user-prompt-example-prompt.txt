@@ -14,7 +14,13 @@ Requirements:
 1. Create exactly 5 example prompts
 2. Each prompt should be conversational and natural, as a developer would ask
 3. Vary the phrasing significantly between prompts (use different sentence structures, synonyms, and approaches)
-4. For required parameters, use realistic example values in quotes (e.g., 'mystorageaccount', 'my-resource-group', 'eastus')
+4. Include ONLY core business logic parameters that identify WHAT to act on:
+   - Resource names (storage account, container registry, key vault, etc.)
+   - Item identifiers (key names, blob names, database names)
+   - Filter criteria (tags, labels, queries)
+   - EXCLUDE: subscription, tenant, resource-group (unless absolutely required for the operation)
+   - EXCLUDE: All retry-*, auth-method, timeout, connection-string parameters
+   Use realistic example values in quotes (e.g., 'mystorageaccount', 'mycontainer', 'app-settings-key')
 5. Mix formal and informal language styles
 6. Include variations like:
    - Direct commands ("Show me...", "List...", "Get...")

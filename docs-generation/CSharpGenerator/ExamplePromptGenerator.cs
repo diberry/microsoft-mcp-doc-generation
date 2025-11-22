@@ -18,32 +18,34 @@ public class ExamplePromptGenerator
 
     public ExamplePromptGenerator()
     {
-        Console.WriteLine("Initializing ExamplePromptGenerator...");
+        Console.WriteLine("\n┌─────────────────────────────────────────────┐");
+        Console.WriteLine("│  Initializing Example Prompt Generator     │");
+        Console.WriteLine("└─────────────────────────────────────────────┘");
         try
         {
             // Try to initialize OpenAI client - may fail if credentials not configured
-            Console.WriteLine("Creating AzureOpenAIClient...");
+            Console.Write("  Azure OpenAI Client: ");
             _openAIClient = new AzureOpenAIClient.AzureOpenAIClient();
-            Console.WriteLine("AzureOpenAIClient created successfully");
+            Console.WriteLine("✅ Connected");
             
             // Load prompt templates
             var promptsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "prompts");
             var systemPromptPath = Path.Combine(promptsDir, "system-prompt-example-prompt.txt");
             var userPromptPath = Path.Combine(promptsDir, "user-prompt-example-prompt.txt");
             
-            Console.WriteLine($"Looking for prompt templates in: {Path.GetFullPath(promptsDir)}");
-            Console.WriteLine($"System prompt exists: {File.Exists(systemPromptPath)}");
-            Console.WriteLine($"User prompt exists: {File.Exists(userPromptPath)}");
+            Console.WriteLine($"  Prompt templates dir: {Path.GetFullPath(promptsDir)}");
+            Console.WriteLine($"    System prompt: {(File.Exists(systemPromptPath) ? "✅ Found" : "❌ Missing")}");
+            Console.WriteLine($"    User prompt:   {(File.Exists(userPromptPath) ? "✅ Found" : "❌ Missing")}");
 
             if (File.Exists(systemPromptPath) && File.Exists(userPromptPath))
             {
                 _systemPrompt = File.ReadAllText(systemPromptPath);
                 _userPromptTemplate = File.ReadAllText(userPromptPath);
-                Console.WriteLine($"Loaded prompt templates (system: {_systemPrompt.Length} chars, user: {_userPromptTemplate.Length} chars)");
+                Console.WriteLine($"  ✅ Templates loaded (system: {_systemPrompt.Length} chars, user: {_userPromptTemplate.Length} chars)");
             }
             else
             {
-                Console.WriteLine($"Warning: Prompt template files not found at {promptsDir}");
+                Console.WriteLine($"  ❌ Template files not found at {promptsDir}");
                 _openAIClient = null;
                 _systemPrompt = string.Empty;
                 _userPromptTemplate = string.Empty;
@@ -51,12 +53,12 @@ public class ExamplePromptGenerator
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Warning: Failed to initialize ExamplePromptGenerator: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            Console.WriteLine($"  ❌ Initialization failed: {ex.Message}");
             _openAIClient = null;
             _systemPrompt = string.Empty;
             _userPromptTemplate = string.Empty;
         }
+        Console.WriteLine();
     }
 
     /// <summary>
