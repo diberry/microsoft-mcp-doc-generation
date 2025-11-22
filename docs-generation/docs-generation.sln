@@ -6,7 +6,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NaturalLanguageGenerator", "NaturalLanguageGenerator\NaturalLanguageGenerator.csproj", "{8A48E572-7742-52FF-2D3F-BBC661C087E2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureOpenAIClient", "AzureOpenAIClient\AzureOpenAIClient.csproj", "{D558B3A3-1C0E-414D-BC62-97478084F5B3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenerativeAI", "GenerativeAI\GenerativeAI.csproj", "{D558B3A3-1C0E-414D-BC62-97478084F5B3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSharpGenerator", "CSharpGenerator\CSharpGenerator.csproj", "{A1B2C3D4-E5F6-7890-1234-56789ABCDEF0}"
 ProjectSection(ProjectDependencies) = postProject
@@ -17,8 +17,8 @@ EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToolMetadataExtractor", "ToolMetadataExtractor\ToolMetadataExtractor.csproj", "{03A4D917-8E87-4B0B-9B0C-2E0AFC206647}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureOpenAIClient.Tests", "AzureOpenAIClient.Tests\AzureOpenAIClient.Tests.csproj", "{49FB4A19-F77A-446B-B454-FB0CE08DB187}"
-ProjectSection(ProjectDependencies) = postProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GenerativeAI.Tests", "GenerativeAI.Tests\GenerativeAI.Tests.csproj", "{49FB4A19-F77A-446B-B454-FB0CE08DB187}"
+	ProjectSection(ProjectDependencies) = postProject
 {D558B3A3-1C0E-414D-BC62-97478084F5B3} = {D558B3A3-1C0E-414D-BC62-97478084F5B3}
 EndProjectSection
 EndProject

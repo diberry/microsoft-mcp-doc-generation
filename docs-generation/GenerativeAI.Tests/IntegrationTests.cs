@@ -4,9 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
-using Client = AzureOpenAIClient.AzureOpenAIClient;
+using Client = GenerativeAI.GenerativeAIClient;
 
-namespace AzureOpenAIClient.Tests;
+namespace GenerativeAI.Tests;
 
 public class IntegrationTests
 {
@@ -20,7 +20,7 @@ public class IntegrationTests
     [Fact]
     public async Task GetChatCompletion_WithPromptFiles_ReturnsText()
     {
-        var opts = AzureOpenAIOptions.LoadFromEnvironmentOrDotEnv();
+        var opts = GenerativeAIOptions.LoadFromEnvironmentOrDotEnv();
         
         _output.WriteLine($"Debug - ApiKey: {(string.IsNullOrEmpty(opts.ApiKey) ? "MISSING" : "SET")}");
         _output.WriteLine($"Debug - Endpoint: {opts.Endpoint ?? "MISSING"}");

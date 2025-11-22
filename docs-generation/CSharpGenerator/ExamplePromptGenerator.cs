@@ -12,7 +12,7 @@ namespace CSharpGenerator;
 /// </summary>
 public class ExamplePromptGenerator
 {
-    private readonly AzureOpenAIClient.AzureOpenAIClient? _openAIClient;
+    private readonly GenerativeAI.GenerativeAIClient? _openAIClient;
     private readonly string _systemPrompt;
     private readonly string _userPromptTemplate;
 
@@ -25,7 +25,7 @@ public class ExamplePromptGenerator
         {
             // Try to initialize OpenAI client - may fail if credentials not configured
             Console.Write("  Azure OpenAI Client: ");
-            _openAIClient = new AzureOpenAIClient.AzureOpenAIClient();
+            _openAIClient = new GenerativeAI.GenerativeAIClient();
             Console.WriteLine("✅ Connected");
             
             // Load prompt templates

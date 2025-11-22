@@ -6,7 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AzureOpenAIClient\AzureOpenAIClient.csproj" />
+    <ProjectReference Include="../GenerativeAI/GenerativeAI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

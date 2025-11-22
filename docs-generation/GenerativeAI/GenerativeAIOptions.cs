@@ -1,8 +1,8 @@
 using System.Text.RegularExpressions;
 
-namespace AzureOpenAIClient;
+namespace GenerativeAI;
 
-public class AzureOpenAIOptions
+public class GenerativeAIOptions
 {
     public string? ApiKey { get; set; }
     public string? Endpoint { get; set; }
@@ -11,9 +11,9 @@ public class AzureOpenAIOptions
 
     private const string DotEnvFileName = ".env";
 
-    public static AzureOpenAIOptions LoadFromEnvironmentOrDotEnv(string? basePath = null)
+    public static GenerativeAIOptions LoadFromEnvironmentOrDotEnv(string? basePath = null)
     {
-        var opts = new AzureOpenAIOptions();
+        var opts = new GenerativeAIOptions();
         opts.ApiKey = Environment.GetEnvironmentVariable("FOUNDRY_API_KEY");
         opts.Endpoint = Environment.GetEnvironmentVariable("FOUNDRY_ENDPOINT");
         opts.Deployment = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_NAME") ?? Environment.GetEnvironmentVariable("FOUNDRY_MODEL") ?? Environment.GetEnvironmentVariable("FOUNDRY_INSTANCE");

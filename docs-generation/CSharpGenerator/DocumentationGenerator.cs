@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 using System.Text;
 using System.Text.Json;
-using AzureOpenAIClient;
+using GenerativeAI;
 using NaturalLanguageGenerator;
 using Shared;
 
@@ -209,6 +209,12 @@ public static class DocumentationGenerator
             }
             
             Console.WriteLine("=== Starting Annotation Generation (with example prompts) ===\n");
+        }
+        else
+        {
+            Console.WriteLine("\n=== Example Prompts Generation NOT Requested ===");
+            Console.WriteLine("To enable example prompts generation, use the --example-prompts flag");
+            Console.WriteLine("Example: dotnet run --example-prompts\n");
         }
         
         await GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate, examplePromptGenerator, examplePromptsDir);

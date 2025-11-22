@@ -2,17 +2,17 @@ using Azure.AI.OpenAI;
 using OpenAI.Chat;
 using System.ClientModel;
 
-namespace AzureOpenAIClient;
+namespace GenerativeAI;
 
-public class AzureOpenAIClient
+public class GenerativeAIClient
 {
     private readonly Azure.AI.OpenAI.AzureOpenAIClient _azureClient;
     private readonly ChatClient _chatClient;
-    private readonly AzureOpenAIOptions _opts;
+    private readonly GenerativeAIOptions _opts;
 
-    public AzureOpenAIClient(AzureOpenAIOptions? opts = null)
+    public GenerativeAIClient(GenerativeAIOptions? opts = null)
     {
-        _opts = opts ?? AzureOpenAIOptions.LoadFromEnvironmentOrDotEnv();
+        _opts = opts ?? GenerativeAIOptions.LoadFromEnvironmentOrDotEnv();
         if (string.IsNullOrEmpty(_opts.ApiKey) || string.IsNullOrEmpty(_opts.Endpoint) || string.IsNullOrEmpty(_opts.Deployment))
             throw new InvalidOperationException("Azure OpenAI configuration incomplete");
 

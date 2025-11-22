@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace AzureOpenAIClient.Tests;
+namespace GenerativeAI.Tests;
 
 public class ExamplePromptGenerationTests
 {
@@ -38,7 +38,7 @@ public class ExamplePromptGenerationTests
 - sku (Optional): Storage account SKU (Standard_LRS, Standard_GRS, Premium_LRS)
 - kind (Optional): Storage account kind (StorageV2, BlobStorage, FileStorage)");
 
-        var client = new AzureOpenAIClient();
+        var client = new GenerativeAI.GenerativeAIClient();
 
         _output.WriteLine("========================================");
         _output.WriteLine("SYSTEM PROMPT:");
