@@ -83,7 +83,7 @@ CMD ["pwsh", "-Command", "\
     Push-Location \"$env:MCP_SERVER_PATH\"; \
     dotnet build --configuration Release --nologo --verbosity quiet; \
     Pop-Location; \
-    ./Generate-MultiPageDocs.ps1; \
+    ./Generate-MultiPageDocs.ps1 -ExamplePrompts 1; \
     Write-Host ''; \
     Write-Host 'Copying generated documentation to /output...' -ForegroundColor Green; \
     if (Test-Path 'generated') { \

@@ -22,12 +22,16 @@
 .PARAMETER CreateServiceOptions
     Whether to create a service start options page (default: true)
     
+.PARAMETER ExamplePrompts
+    Whether to generate example prompts using Azure OpenAI (default: false)
+    
 .EXAMPLE
     ./Generate-MultiPageDocs.ps1
     ./Generate-MultiPageDocs.ps1 -Format json
     ./Generate-MultiPageDocs.ps1 -CreateIndex $false
     ./Generate-MultiPageDocs.ps1 -CreateCommands $false
     ./Generate-MultiPageDocs.ps1 -CreateServiceOptions $false
+    ./Generate-MultiPageDocs.ps1 -ExamplePrompts $true
 #>
 
 param(
@@ -36,7 +40,8 @@ param(
     [bool]$CreateIndex = $true,
     [bool]$CreateCommon = $true,
     [bool]$CreateCommands = $true,
-    [bool]$CreateServiceOptions = $true
+    [bool]$CreateServiceOptions = $true,
+    [bool]$ExamplePrompts = $false
 )
 
 # Helper functions for colored output
@@ -67,6 +72,9 @@ function Clear-PreviousOutput {
     
     New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
     New-Item -ItemType Directory -Path "generated/tools" -Force | Out-Null
+    if ($ExamplePrompts) {
+        New-Item -ItemType Directory -Path "generated/example-prompts" -Force | Out-Null
+    }
     Write-Info "Created output directories"
 }
 
@@ -200,6 +208,7 @@ try {
     if ($CreateCommon) { $generatorArgs += "--common" }
     if ($CreateCommands) { $generatorArgs += "--commands" }
     $generatorArgs += "--annotations"  # Always generate annotation files
+    if ($ExamplePrompts) { $generatorArgs += "--example-prompts" }  # Generate example prompts using Azure OpenAI
     if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
     if ($cliVersion -and $cliVersion -ne "unknown") { 
         $generatorArgs += "--version"

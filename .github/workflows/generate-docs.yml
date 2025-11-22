@@ -46,6 +46,10 @@ jobs:
           --volume "$(pwd)/generated:/output" \
           --env DOTNET_ROLL_FORWARD=Major \
           --env MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src \
+          --env FOUNDRY_API_KEY="${{ secrets.FOUNDRY_API_KEY }}" \
+          --env FOUNDRY_ENDPOINT="${{ secrets.FOUNDRY_ENDPOINT }}" \
+          --env FOUNDRY_MODEL_NAME="${{ secrets.FOUNDRY_MODEL_NAME }}" \
+          --env FOUNDRY_MODEL_API_VERSION="${{ secrets.FOUNDRY_MODEL_API_VERSION }}" \
           azure-mcp-docgen:latest
         
         echo "=== Verifying Generated Output ==="

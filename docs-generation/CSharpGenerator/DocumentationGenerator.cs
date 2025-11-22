@@ -4,6 +4,8 @@ using System.Text.Json;
 using NaturalLanguageGenerator;
 using Shared;
 
+namespace CSharpGenerator;
+
 /// <summary>
 /// Handles all documentation generation logic, including data transformation,
 /// page generation, and common parameter analysis.
@@ -90,7 +92,8 @@ public static class DocumentationGenerator
         bool generateCommands = false,
         bool generateServiceOptions = true,
         bool generateAnnotations = false,
-        string? cliVersion = null)
+        string? cliVersion = null,
+        bool generateExamplePrompts = false)
     {
         // Config.Load has been called in Program.Main and TextCleanup is initialized statically
 
@@ -141,7 +144,18 @@ public static class DocumentationGenerator
         var annotationsDir = Path.Combine(parentDir, "annotations");
         Directory.CreateDirectory(annotationsDir);
         var annotationTemplate = Path.Combine(templatesDir, "annotation-template.hbs");
-        await GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate);
+        
+        // Setup example prompts generation if requested
+        ExamplePromptGenerator? examplePromptGenerator = null;
+        string? examplePromptsDir = null;
+        if (generateExamplePrompts)
+        {
+            examplePromptsDir = Path.Combine(parentDir, "example-prompts");
+            Directory.CreateDirectory(examplePromptsDir);
+            examplePromptGenerator = new ExamplePromptGenerator();
+        }
+        
+        await GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate, examplePromptGenerator, examplePromptsDir);
 
         // Generate individual parameter files for each tool (at parent level)
         var parametersDir = Path.Combine(parentDir, "parameters");
@@ -774,11 +788,14 @@ public static class DocumentationGenerator
     /// <summary>
     /// Generates individual annotation files for each tool.
     /// </summary>
-    private static async Task GenerateAnnotationFilesAsync(TransformedData data, string outputDir, string templateFile)
+    private static async Task GenerateAnnotationFilesAsync(TransformedData data, string outputDir, string templateFile, ExamplePromptGenerator? examplePromptGenerator = null, string? examplePromptsDir = null)
     {
         try
         {
             Console.WriteLine($"Generating annotation files for {data.Tools.Count} tools...");
+            
+            int examplePromptsGenerated = 0;
+            int examplePromptsFailed = 0;
             
             // Load brand mappings
             var brandMappings = await LoadBrandMappingsAsync();
@@ -916,9 +933,42 @@ public static class DocumentationGenerator
 
                 var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, annotationData);
                 await File.WriteAllTextAsync(outputFile, result);
+                
+                // Generate example prompts if requested
+                if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
+                {
+                    try
+                    {
+                        var examplePrompts = await examplePromptGenerator.GenerateAsync(tool);
+                        if (!string.IsNullOrEmpty(examplePrompts))
+                        {
+                            // Use same filename pattern as annotations: {brand-filename}-{tool-family}-{operation}-examples.md
+                            var exampleFileName = fileName.Replace("-annotations.md", "-examples.md");
+                            var exampleOutputFile = Path.Combine(examplePromptsDir, exampleFileName);
+                            await File.WriteAllTextAsync(exampleOutputFile, examplePrompts);
+                            examplePromptsGenerated++;
+                            Console.WriteLine($"Generated example prompts: {exampleFileName}");
+                        }
+                        else
+                        {
+                            examplePromptsFailed++;
+                            Console.WriteLine($"Warning: Failed to generate example prompts for tool '{tool.Name}'");
+                        }
+                    }
+                    catch (Exception exampleEx)
+                    {
+                        examplePromptsFailed++;
+                        Console.WriteLine($"Warning: Error generating example prompts for '{tool.Name}': {exampleEx.Message}");
+                    }
+                }
             }
             
             Console.WriteLine($"Generated {data.Tools.Count} annotation files in {outputDir}");
+            
+            if (examplePromptGenerator != null)
+            {
+                Console.WriteLine($"Example prompts: {examplePromptsGenerated} generated, {examplePromptsFailed} failed");
+            }
         }
         catch (Exception ex)
         {

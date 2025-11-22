@@ -3,7 +3,9 @@
 
 using System.Text.RegularExpressions;
 using NaturalLanguageGenerator;
-using Shared; 
+using Shared;
+
+namespace CSharpGenerator;
 
 public static class OptionsDiscovery
 {

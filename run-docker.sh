@@ -132,6 +132,26 @@ if [ "$INTERACTIVE" = true ]; then
     exit 0
 fi
 
+# Load .env file if it exists
+ENV_FILE="docs-generation/.env"
+ENV_ARGS=""
+if [ -f "$ENV_FILE" ]; then
+    echo -e "${CYAN}📄 Loading credentials from $ENV_FILE${NC}"
+    # Export variables from .env file
+    while IFS='=' read -r key value; do
+        # Skip comments and empty lines
+        [[ $key =~ ^#.*$ ]] && continue
+        [[ -z $key ]] && continue
+        # Remove quotes and whitespace
+        value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+        ENV_ARGS="$ENV_ARGS --env $key=$value"
+    done < "$ENV_FILE"
+    echo -e "${GREEN}✅ Credentials loaded${NC}"
+else
+    echo -e "${YELLOW}⚠️  No .env file found at $ENV_FILE${NC}"
+    echo -e "${YELLOW}   Example prompts will not be generated${NC}"
+fi
+
 # Run the documentation generator
 echo ""
 echo -e "${BLUE}📝 Running documentation generator...${NC}"
@@ -140,6 +160,7 @@ echo ""
 
 if docker run --rm \
     -v "$(pwd)/generated:/output" \
+    $ENV_ARGS \
     azure-mcp-docgen:latest; then
     
     echo ""

@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using NaturalLanguageGenerator;
 using Shared;
 
+namespace CSharpGenerator;
+
 public static class ServiceOptionsDiscovery
 {
     public static async Task<List<ServiceOption>> DiscoverServiceStartOptionsFromSource()
