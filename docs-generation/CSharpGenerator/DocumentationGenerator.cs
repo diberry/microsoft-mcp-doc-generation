@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 using System.Text;
 using System.Text.Json;
+using AzureOpenAIClient;
 using NaturalLanguageGenerator;
 using Shared;
 
@@ -173,18 +174,40 @@ public static class DocumentationGenerator
         if (generateExamplePrompts)
         {
             Console.WriteLine("\n=== Example Prompts Generation Requested ===");
+            
+            // Debug: Check environment variables
+            Console.WriteLine("DEBUG: Checking Azure OpenAI environment variables:");
+            Console.WriteLine($"  FOUNDRY_API_KEY: {(string.IsNullOrEmpty(Environment.GetEnvironmentVariable("FOUNDRY_API_KEY")) ? "NOT SET" : "SET (length: " + Environment.GetEnvironmentVariable("FOUNDRY_API_KEY")?.Length + ")")}");
+            Console.WriteLine($"  FOUNDRY_ENDPOINT: {Environment.GetEnvironmentVariable("FOUNDRY_ENDPOINT") ?? "NOT SET"}");
+            Console.WriteLine($"  FOUNDRY_MODEL_NAME: {Environment.GetEnvironmentVariable("FOUNDRY_MODEL_NAME") ?? "NOT SET"}");
+            
             examplePromptsDir = Path.Combine(parentDir, "example-prompts");
             Directory.CreateDirectory(examplePromptsDir);
             Console.WriteLine($"Example prompts directory: {examplePromptsDir}");
-            examplePromptGenerator = new ExamplePromptGenerator();
-            if (examplePromptGenerator == null)
+            
+            try
             {
-                Console.WriteLine("❌ Failed to initialize ExamplePromptGenerator");
+                examplePromptGenerator = new ExamplePromptGenerator();
+                
+                // Verify the generator is functional by checking if OpenAI client is initialized
+                if (!examplePromptGenerator.IsInitialized())
+                {
+                    throw new InvalidOperationException(
+                        "ExamplePromptGenerator failed to initialize. " +
+                        "Ensure Azure OpenAI credentials are set via environment variables or .env file. " +
+                        "Required: FOUNDRY_API_KEY, FOUNDRY_ENDPOINT, FOUNDRY_MODEL_NAME");
+                }
+                
+                Console.WriteLine("✅ ExamplePromptGenerator initialized and verified");
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("✅ ExamplePromptGenerator initialized successfully");
+                Console.WriteLine($"❌ Failed to initialize ExamplePromptGenerator: {ex.Message}");
+                throw new InvalidOperationException(
+                    "Cannot generate example prompts - initialization failed. " +
+                    "Check Azure OpenAI credentials and configuration.", ex);
             }
+            
             Console.WriteLine("=== Starting Annotation Generation (with example prompts) ===\n");
         }
         
@@ -285,9 +308,13 @@ public static class DocumentationGenerator
             Console.WriteLine($"  {area.Key}: {area.Value.ToolCount} tools ({totalParams} parameters)");
         }
         
+        // Print tool list at the end after all files have been generated
         Console.WriteLine();
         Console.WriteLine("Tool List by Service Area:");
         Console.WriteLine("=" + new string('=', 29));
+        Console.WriteLine();
+        Console.WriteLine("Legend: [A] = Annotation file, [P] = Parameter file, [E] = Example prompts file");
+        Console.WriteLine();
         
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
@@ -300,7 +327,15 @@ public static class DocumentationGenerator
                 // Calculate non-common parameter count (matches what's shown in parameter tables)
                 var nonCommonParamCount = tool.Option?
                     .Count(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name)) ?? 0;
-                Console.WriteLine($"  • {tool.Command,-50} - {tool.Name,-20} [{nonCommonParamCount,2} params]");
+                
+                // Build indicators for generated files
+                var indicators = new List<string>();
+                if (tool.HasAnnotation) indicators.Add("A");
+                if (tool.HasParameters) indicators.Add("P");
+                if (tool.HasExamplePrompts) indicators.Add("E");
+                var indicatorStr = indicators.Count > 0 ? $" [{string.Join(",", indicators)}]" : "";
+                
+                Console.WriteLine($"  • {tool.Command,-50} - {tool.Name,-20} [{nonCommonParamCount,2} params]{indicatorStr}");
             }
         }
 
@@ -837,6 +872,18 @@ public static class DocumentationGenerator
             int examplePromptsGenerated = 0;
             int examplePromptsFailed = 0;
             
+            // Log example prompts configuration
+            Console.WriteLine($"DEBUG: examplePromptGenerator is {(examplePromptGenerator == null ? "NULL" : "initialized")}");
+            Console.WriteLine($"DEBUG: examplePromptsDir = '{examplePromptsDir ?? "NULL"}'");
+            if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
+            {
+                Console.WriteLine($"DEBUG: Example prompts WILL be generated for each tool");
+            }
+            else
+            {
+                Console.WriteLine($"DEBUG: Example prompts WILL NOT be generated (missing generator or directory)");
+            }
+            
             // Track missing brand mappings/compound words
             var missingMappings = new Dictionary<string, List<string>>(); // area -> list of tool commands
             
@@ -983,19 +1030,36 @@ public static class DocumentationGenerator
 
                 var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, annotationData);
                 await File.WriteAllTextAsync(outputFile, result);
+                tool.HasAnnotation = true;
                 
                 // Generate example prompts if requested
                 if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
                 {
+                    Console.WriteLine($"DEBUG: Generating example prompt for {tool.Command ?? tool.Name}");
                     try
                     {
                         var examplePrompts = await examplePromptGenerator.GenerateAsync(tool);
+                        Console.WriteLine($"DEBUG: Generated {examplePrompts?.Length ?? 0} characters for {tool.Command ?? tool.Name}");
                         if (!string.IsNullOrEmpty(examplePrompts))
                         {
                             // Use same filename pattern as annotations: {brand-filename}-{tool-family}-{operation}-example-prompts.md
                             var exampleFileName = fileName.Replace("-annotations.md", "-example-prompts.md");
                             var exampleOutputFile = Path.Combine(examplePromptsDir, exampleFileName);
-                            await File.WriteAllTextAsync(exampleOutputFile, examplePrompts);
+                            
+                            // Add metadata frontmatter to example prompts
+                            var frontmatter = $@"---
+ms.topic: include
+ms.date: {DateTime.UtcNow:yyyy-MM-dd}
+mcp-cli.version: {data.Version ?? "unknown"}
+generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
+# [!INCLUDE [{tool.Command}](../includes/tools/example-prompts/{exampleFileName})]
+<!-- azmcp {tool.Command} -->
+---
+
+";
+                            var contentWithMetadata = frontmatter + examplePrompts;
+                            await File.WriteAllTextAsync(exampleOutputFile, contentWithMetadata);
+                            tool.HasExamplePrompts = true;
                             examplePromptsGenerated++;
                             var displayCommand = tool.Command ?? tool.Name ?? "unknown";
                             Console.WriteLine($"  ✅ {displayCommand,-50} → {exampleFileName}");
@@ -1020,7 +1084,11 @@ public static class DocumentationGenerator
             
             if (examplePromptGenerator != null)
             {
-                Console.WriteLine($"Example prompts: {examplePromptsGenerated} generated, {examplePromptsFailed} failed");
+                Console.WriteLine($"\n=== Example Prompts Summary ===");
+                Console.WriteLine($"  Total tools processed: {data.Tools.Count}");
+                Console.WriteLine($"  Successfully generated: {examplePromptsGenerated}");
+                Console.WriteLine($"  Failed: {examplePromptsFailed}");
+                Console.WriteLine($"  Output directory: {examplePromptsDir}");
             }
             
             // Generate missing mappings report
@@ -1125,6 +1193,7 @@ public static class DocumentationGenerator
 
                 var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, parameterData);
                 await File.WriteAllTextAsync(outputFile, result);
+                tool.HasParameters = true;
             }
             
             Console.WriteLine($"Generated {data.Tools.Count} parameter files in {outputDir}");

@@ -41,7 +41,7 @@ param(
     [bool]$CreateCommon = $true,
     [bool]$CreateCommands = $true,
     [bool]$CreateServiceOptions = $true,
-    [bool]$ExamplePrompts = $false
+    [bool]$ExamplePrompts = $true
 )
 
 # Helper functions for colored output
@@ -184,17 +184,14 @@ try {
         Write-Warning "Failed to generate namespaces CSV: $($_.Exception.Message)"
     }
     
-    # Step 2: Build C# generator if needed
-    Write-Progress "Step 2: Building C# generator..."
-    Push-Location "CSharpGenerator"
+    # Step 2: Build C# generator and all dependencies via solution file
+    Write-Progress "Step 2: Building C# generator and dependencies..."
     
-    & dotnet build --configuration Release --nologo --verbosity quiet
+    & dotnet build docs-generation.sln --configuration Release --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
-        throw "Failed to build C# generator (exit code: $LASTEXITCODE)"
+        throw "Failed to build documentation solution (exit code: $LASTEXITCODE)"
     }
-    Write-Success "C# generator built successfully"
-    
-    Pop-Location
+    Write-Success "C# generator and dependencies built successfully"
     
     # Step 3: Run C# generator to create documentation
     Write-Progress "Step 3: Generating documentation using C# generator..."

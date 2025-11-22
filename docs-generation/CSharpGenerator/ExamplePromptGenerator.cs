@@ -62,6 +62,16 @@ public class ExamplePromptGenerator
     }
 
     /// <summary>
+    /// Checks if the generator is properly initialized and ready to generate prompts
+    /// </summary>
+    public bool IsInitialized()
+    {
+        return _openAIClient != null && 
+               !string.IsNullOrEmpty(_systemPrompt) && 
+               !string.IsNullOrEmpty(_userPromptTemplate);
+    }
+
+    /// <summary>
     /// Generates example prompts for a given tool
     /// </summary>
     /// <param name="tool">The tool to generate example prompts for</param>

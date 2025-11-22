@@ -90,6 +90,15 @@ echo -e "${BLUE}📦 Building Docker image...${NC}"
 echo -e "${YELLOW}MCP Branch: ${MCP_BRANCH}${NC}"
 echo ""
 
+# Remove existing image and build cache if --no-cache is specified
+if [ "$NO_CACHE" = true ]; then
+    echo -e "${YELLOW}🗑️  Removing existing Docker image and build cache...${NC}"
+    docker rmi azure-mcp-docgen:latest 2>/dev/null || echo -e "${CYAN}   (No existing image to remove)${NC}"
+    docker builder prune -f --filter "label!=keep-cache" 2>/dev/null || true
+    echo -e "${GREEN}✅ Cache cleared${NC}"
+    echo ""
+fi
+
 BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH}"
 if [ "$NO_CACHE" = true ]; then
     BUILD_ARGS="${BUILD_ARGS} --no-cache"
@@ -115,8 +124,12 @@ if [ "$BUILD_ONLY" = true ]; then
     exit 0
 fi
 
-# Create output directory
+# Clean and create output directory
+echo ""
+echo -e "${YELLOW}🗑️  Cleaning previous output...${NC}"
+rm -rf generated
 mkdir -p generated
+echo -e "${GREEN}✅ Output directory ready${NC}"
 
 # Interactive mode
 if [ "$INTERACTIVE" = true ]; then
