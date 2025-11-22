@@ -1,4 +1,4 @@
-Generate 5 diverse, natural language example prompts for an Azure MCP Server tool with the following characteristics:
+Generate 5 diverse example prompts for the following Azure MCP Server tool:
 
 Tool Name: {TOOL_NAME}
 Tool Command: {TOOL_COMMAND}
@@ -10,40 +10,15 @@ Parameters:
 - {{name}} ({{#if required}}Required{{else}}Optional{{/if}}): {{description}}
 {{/each}}
 
-Requirements:
-1. Create exactly 5 example prompts
-2. Each prompt should be conversational and natural, as a developer would ask
-3. Vary the phrasing significantly between prompts (use different sentence structures, synonyms, and approaches)
-4. Include ONLY core business logic parameters that identify WHAT to act on:
-   - Resource names (storage account, container registry, key vault, etc.)
-   - Item identifiers (key names, blob names, database names)
-   - Filter criteria (tags, labels, queries)
-   - EXCLUDE: subscription, tenant, resource-group (unless absolutely required for the operation)
-   - EXCLUDE: All retry-*, auth-method, timeout, connection-string parameters
-   Use realistic example values in quotes (e.g., 'mystorageaccount', 'mycontainer', 'app-settings-key')
-5. Mix formal and informal language styles
-6. Include variations like:
-   - Direct commands ("Show me...", "List...", "Get...")
-   - Question format ("What...?", "How many...?")
-   - Request format ("I need to...", "Can you...")
-   - Imperative format ("Create...", "Add...", "Upload...")
-7. When multiple required parameters exist, demonstrate different ordering and natural ways to express them
-8. Make values realistic to Azure naming conventions (lowercase for storage accounts, kebab-case for resource groups, etc.)
-9. Each prompt should be a complete, standalone instruction that includes all required parameters
-10. Format as a bulleted list with a bolded category label followed by a colon, then the prompt in quotes
-
-Example format:
-- **Category label**: "The example prompt text"
-
-Categories to use (choose the appropriate category based on the tool's action and vary labels naturally within that category):
-- For list/query operations: "List [resource]", "Show [resource]", "Find [resource]", "Query [resource]", "Check [resource]"
-- For create operations: "Create [resource]", "New [resource]", "Set up [resource]", "Add [resource]", "Make [resource]"
-- For get/retrieve operations: "Get [resource] details", "View [resource] info", "Retrieve [resource]", "Check [resource]", "Find [resource]"
-- For update operations: "Update [resource]", "Modify [resource]", "Change [resource]", "Edit [resource]", "Configure [resource]"
-- For delete operations: "Delete [resource]", "Remove [resource]", "Clean up [resource]"
-- For upload/download: "Upload [file/data]", "Download [file/data]", "Transfer [resource]"
-- For query/search: "Query [resource]", "Search [resource]", "Find [items]"
-
-Note: Use only the category that matches the tool's ACTION_VERB. All 5 prompts should use varied labels from that same category.
+Return your response as a JSON object with this exact structure:
+{
+  "{TOOL_COMMAND}": [
+    "prompt 1 text here",
+    "prompt 2 text here",
+    "prompt 3 text here",
+    "prompt 4 text here",
+    "prompt 5 text here"
+  ]
+}
 
 Generate the prompts now.
