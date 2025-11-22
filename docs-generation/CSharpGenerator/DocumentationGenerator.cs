@@ -992,8 +992,8 @@ public static class DocumentationGenerator
                         var examplePrompts = await examplePromptGenerator.GenerateAsync(tool);
                         if (!string.IsNullOrEmpty(examplePrompts))
                         {
-                            // Use same filename pattern as annotations: {brand-filename}-{tool-family}-{operation}-examples.md
-                            var exampleFileName = fileName.Replace("-annotations.md", "-examples.md");
+                            // Use same filename pattern as annotations: {brand-filename}-{tool-family}-{operation}-example-prompts.md
+                            var exampleFileName = fileName.Replace("-annotations.md", "-example-prompts.md");
                             var exampleOutputFile = Path.Combine(examplePromptsDir, exampleFileName);
                             await File.WriteAllTextAsync(exampleOutputFile, examplePrompts);
                             examplePromptsGenerated++;
