@@ -29,10 +29,10 @@ mcp-cli.version: {{version}}
 {{description}}
 
 {{#if option}}
-| Parameter |  Required or optional | Description |
-|-----------------------|----------------------|-------------|
+| Parameter | Required or optional | Description |
+|-----------|----------------------|-------------|
 {{#each option}}
-| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
+| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** | {{RequiredText}} | {{description}} |
 {{/each}}
 {{ else}}
 <!-- No parameters for this tool -->

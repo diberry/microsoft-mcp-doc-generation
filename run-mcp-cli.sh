@@ -32,46 +32,64 @@ setup_colors() {
 
 print_usage() {
     cat << EOF
-${CYAN}Azure MCP CLI Container Helper${NC}
+${CYAN}${BOLD}════════════════════════════════════════════════════════════${NC}
+${CYAN}${BOLD}  Azure MCP CLI Container Helper - WRAPPER SCRIPT HELP${NC}
+${CYAN}${BOLD}════════════════════════════════════════════════════════════${NC}
 
 ${YELLOW}Usage:${NC}
-  ./run-mcp-cli.sh [OPTIONS] [COMMAND] [ARGS...]
+  ./run-mcp-cli.sh [WRAPPER_OPTIONS] [--] [MCP_COMMAND] [MCP_ARGS...]
 
-${YELLOW}Options:${NC}
+${YELLOW}Wrapper Options (for this script only):${NC}
   --build              Build the Docker image first
   --no-cache           Build without using cache
   --branch <name>      Use specific MCP branch (default: main)
   --shell              Open interactive shell in container
   --no-color           Disable colored output
-  --help               Show this help message
+  --help               Show ${BOLD}this wrapper script help${NC}
+
+${YELLOW}Separator:${NC}
+  --                   Pass all remaining arguments directly to MCP CLI
 
 ${YELLOW}Examples:${NC}
-  ${GREEN}# Show MCP CLI help${NC}
+  ${GREEN}# Show this wrapper script help (wrapper only)${NC}
   ./run-mcp-cli.sh --help
 
-  ${GREEN}# List all available tools${NC}
+  ${GREEN}# Show MCP CLI help (calls MCP CLI in Docker)${NC}
+  ./run-mcp-cli.sh -- --help
+
+  ${GREEN}# List all MCP tools (calls: azmcp tools list)${NC}
   ./run-mcp-cli.sh tools list
 
-  ${GREEN}# List tools with JSON output${NC}
-  ./run-mcp-cli.sh tools list --output tools.json
+  ${GREEN}# List just tool names (calls: azmcp tools list --name-only)${NC}
+  ./run-mcp-cli.sh tools list --name-only
 
-  ${GREEN}# List namespaces${NC}
-  ./run-mcp-cli.sh tools list-namespaces
+  ${GREEN}# List tool namespaces (calls: azmcp tools list --namespace-mode)${NC}
+  ./run-mcp-cli.sh tools list --namespace-mode
 
-  ${GREEN}# Build image first, then run command${NC}
-  ./run-mcp-cli.sh --build tools list
+  ${GREEN}# Get MCP CLI version (calls: azmcp --version)${NC}
+  ./run-mcp-cli.sh -- --version
 
-  ${GREEN}# Use different MCP branch${NC}
-  ./run-mcp-cli.sh --branch feature-branch tools list
+  ${GREEN}# Wrapper option + MCP command: build image, then list tools${NC}
+  ./run-mcp-cli.sh --build -- tools list
 
-  ${GREEN}# Open interactive shell for debugging${NC}
+  ${GREEN}# Wrapper option: use different MCP git branch${NC}
+  ./run-mcp-cli.sh --branch feature-branch -- tools list
+
+  ${GREEN}# Wrapper option: open shell inside container (no MCP command)${NC}
   ./run-mcp-cli.sh --shell
 
-${YELLOW}Common Commands:${NC}
-  tools list              List all available MCP tools
-  tools list-namespaces   List all tool namespaces
-  --help                  Show MCP CLI help
-  --version               Show MCP CLI version
+${YELLOW}Common MCP CLI Commands (all run inside Docker):${NC}
+  tools list                      List all MCP tools (full JSON)
+  tools list --name-only          List just tool names (concise)
+  tools list --namespace-mode     List service namespaces
+  --help                          Show MCP CLI help
+  --version                       Show MCP CLI version
+
+${YELLOW}What Runs Where?${NC}
+  ${BOLD}Wrapper only:${NC}     --help, --build, --no-cache, --branch, --shell
+  ${BOLD}Inside Docker:${NC}    Everything else (passed to: azmcp [command])
+
+${YELLOW}Tip:${NC} Use ${BOLD}--${NC} to clearly separate wrapper options from MCP CLI arguments
 
 EOF
 }
@@ -113,6 +131,11 @@ run_command() {
         build_image
     fi
 
+    # Show header for MCP CLI output
+    printf "${CYAN}${BOLD}════════════════════════════════════════════════════════════${NC}\n"
+    printf "${CYAN}${BOLD}  MCP CLI OUTPUT${NC}\n"
+    printf "${CYAN}${BOLD}════════════════════════════════════════════════════════════${NC}\n\n"
+
     # Run the MCP CLI with provided arguments
     docker run \
         --rm \
@@ -128,6 +151,7 @@ BUILD=false
 NO_CACHE=false
 SHELL=false
 COMMAND_ARGS=()
+PASSTHROUGH=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -153,13 +177,18 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --help)
-            if [ ${#COMMAND_ARGS[@]} -eq 0 ]; then
+            if [ ${#COMMAND_ARGS[@]} -eq 0 ] && [ "$PASSTHROUGH" = false ]; then
                 print_usage
                 exit 0
             else
                 COMMAND_ARGS+=("$1")
                 shift
             fi
+            ;;
+        --)
+            # All remaining arguments go to MCP CLI
+            PASSTHROUGH=true
+            shift
             ;;
         *)
             COMMAND_ARGS+=("$1")
