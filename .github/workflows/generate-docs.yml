@@ -102,7 +102,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: generated-docs
+        name: generated-docs-${{ github.run_id }}-$(date +%Y-%m-%d-%H-%M)
         path: |
           generated/
         retention-days: 30
