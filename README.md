@@ -60,6 +60,16 @@ For iterative development or when you want to run steps independently:
 
 See **[USAGE.md](USAGE.md)** for detailed usage guide and troubleshooting.
 
+**Step 3: Generate example prompts from LLMs**
+
+```bash
+./run-generative-ai-output.sh
+```
+
+This includes: 
+
+- example prompts for each tool
+
 ### Additional Tools
 
 #### Lightweight CLI Container (For Interactive MCP Commands)

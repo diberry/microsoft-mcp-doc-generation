@@ -44,6 +44,15 @@ param(
     [bool]$ExamplePrompts = $true
 )
 
+# Set up logging
+$logDir = "generated/logs"
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+$logFile = Join-Path $logDir "generation-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+Start-Transcript -Path $logFile -Append
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Log file: $logFile" -ForegroundColor Cyan
+
 # Helper functions for colored output
 function Write-Info { param([string]$Message) Write-Host "INFO: $Message" -ForegroundColor Cyan }
 function Write-Success { param([string]$Message) Write-Host "SUCCESS: $Message" -ForegroundColor Green }
@@ -103,6 +112,7 @@ try {
     }
     
     New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
+    New-Item -ItemType Directory -Path "generated/logs" -Force | Out-Null
     New-Item -ItemType Directory -Path "generated/tools" -Force | Out-Null
     if ($ExamplePrompts) {
         New-Item -ItemType Directory -Path "generated/example-prompts" -Force | Out-Null
@@ -602,5 +612,9 @@ try {
 } catch {
     Write-Error "Documentation generation failed: $($_.Exception.Message)"
     Write-Error "Error details: $($_.ScriptStackTrace)"
+    Stop-Transcript
     exit 1
 }
+
+Write-Host "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Generation complete" -ForegroundColor Green
+Stop-Transcript
