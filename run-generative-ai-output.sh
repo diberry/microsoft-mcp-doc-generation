@@ -15,7 +15,8 @@ cd "$SCRIPT_DIR/docs-generation"
 if [ -f ".env" ]; then
     echo "📄 Loading .env file..."
     echo "📄 .env file contents:"
-    cat .env
+    # Mask API key - show only first 6 characters
+    sed 's/\(FOUNDRY_API_KEY="\)\(.\{6\}\)\(.*\)"$/\1\2..." [MASKED]/g' .env
     echo ""
     
     set -a
@@ -24,7 +25,9 @@ if [ -f ".env" ]; then
     
     echo "✅ Environment variables loaded and exported"
     echo "📊 Environment check after loading:"
-    echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)} | Value: ${FOUNDRY_API_KEY}"
+    # Mask API key - show only first 6 characters
+    MASKED_KEY="${FOUNDRY_API_KEY:0:6}...[MASKED]"
+    echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)} | Value: ${MASKED_KEY}"
     echo "  FOUNDRY_ENDPOINT: ${FOUNDRY_ENDPOINT:+SET} | Value: ${FOUNDRY_ENDPOINT}"
     echo "  FOUNDRY_MODEL_NAME: ${FOUNDRY_MODEL_NAME:+SET} | Value: ${FOUNDRY_MODEL_NAME}"
     echo "  FOUNDRY_MODEL_API_VERSION: ${FOUNDRY_MODEL_API_VERSION:+SET} | Value: ${FOUNDRY_MODEL_API_VERSION}"

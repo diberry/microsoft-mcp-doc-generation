@@ -43,6 +43,8 @@ Note: Use only the category that matches the tool's ACTION_VERB. All 5 prompts s
 
 Output format: Return a JSON object with the tool name as the key and an array of 5 example prompt strings as the value. Each prompt should include the category label and the prompt text.
 
+**CRITICAL: Use ONLY plain markdown formatting. Do NOT use HTML entities like &quot;, &amp;, &lt;, &gt;, or any other HTML encoding. Use regular characters: quotes ("), apostrophes ('), ampersands (&), angle brackets (< >), and hash symbols (#) directly in your text. The output must be valid markdown that renders correctly without HTML entity decoding.**
+
 Example output format:
 {
   "tool-name-here": [
@@ -53,3 +55,5 @@ Example output format:
     "**Check containers**: Display containers available in devstorageacct"
   ]
 }
+
+Remember: Use plain text characters directly - write "action":"login" not &quot;action&quot;:&quot;login&quot;

@@ -184,9 +184,12 @@ public class ExamplePromptGenerator
 
     /// <summary>
     /// Generates a single example prompt file for a tool, including Handlebars template processing.
+    /// Creates two files:
+    /// 1. Input prompt file in prompts-for-example-tool-prompts/ directory (with userPrompt metadata)
+    /// 2. Generated example prompts file in example-prompts/ directory (clean template output)
     /// </summary>
     /// <param name="tool">The tool to generate example prompts for</param>
-    /// <param name="examplePromptsDir">Directory to write the example prompts file</param>
+    /// <param name="examplePromptsDir">Directory to write the generated example prompts file</param>
     /// <param name="annotationFileName">The annotation filename (used to derive example prompts filename)</param>
     /// <param name="version">CLI version for metadata</param>
     /// <param name="templateProcessor">Function to process Handlebars templates</param>
@@ -214,18 +217,33 @@ public class ExamplePromptGenerator
                 
                 // Use same filename pattern as annotations: {brand-filename}-{tool-family}-{operation}-example-prompts.md
                 var exampleFileName = annotationFileName.Replace("-annotations.md", "-example-prompts.md");
-                var exampleOutputFile = Path.Combine(examplePromptsDir, exampleFileName);
                 
-                // Process template and generate file content
-                var fileContent = await ProcessExamplePromptsTemplateAsync(
+                // Directory structure:
+                // - Input prompts: ../prompts-for-example-tool-prompts/
+                // - Generated prompts: ../example-prompts/
+                var parentDir = Directory.GetParent(examplePromptsDir)?.FullName ?? examplePromptsDir;
+                var inputPromptsDir = Path.Combine(parentDir, "prompts-for-example-tool-prompts");
+                Directory.CreateDirectory(inputPromptsDir);
+                
+                // 1. Save input prompt file (with userPrompt metadata)
+                var inputPromptFileName = annotationFileName.Replace("-annotations.md", "-input-prompt.md");
+                var inputPromptFile = Path.Combine(inputPromptsDir, inputPromptFileName);
+                var inputPromptContent = FrontmatterUtility.GenerateInputPromptFrontmatter(
+                    tool.Command ?? "unknown",
+                    version,
+                    inputPromptFileName,
+                    userPrompt);
+                await File.WriteAllTextAsync(inputPromptFile, inputPromptContent);
+                
+                // 2. Save generated example prompts file (clean template output)
+                var exampleOutputFile = Path.Combine(examplePromptsDir, exampleFileName);
+                var examplePromptsContent = await ProcessExamplePromptsTemplateAsync(
                     tool, 
                     promptsResponse, 
-                    userPrompt, 
                     version, 
-                    exampleFileName,
                     templateProcessor);
-                    
-                await File.WriteAllTextAsync(exampleOutputFile, fileContent);
+                await File.WriteAllTextAsync(exampleOutputFile, examplePromptsContent);
+                
                 tool.HasExamplePrompts = true;
                 var displayCommand = tool.Command ?? tool.Name ?? "unknown";
                 Console.WriteLine($"  ✅ {displayCommand,-50} → {exampleFileName}");
@@ -247,50 +265,25 @@ public class ExamplePromptGenerator
     }
 
     /// <summary>
-    /// Processes the example prompts Handlebars template and generates file content with frontmatter.
+    /// Processes the example prompts Handlebars template and generates clean output with frontmatter.
+    /// This produces the final generated example prompts file content.
     /// </summary>
     private async Task<string> ProcessExamplePromptsTemplateAsync(
         Tool tool,
         ExamplePromptsResponse promptsResponse,
-        string userPrompt,
         string? version,
-        string exampleFileName,
         Func<string, Dictionary<string, object>, Task<string>> templateProcessor)
     {
         try
         {
-            // Extract action verb and resource type from command
-            var commandParts = tool.Command?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
-            var actionVerb = commandParts.Length > 1 ? commandParts[^1] : "manage";
-            var resourceType = commandParts.Length > 1 ? string.Join(" ", commandParts[1..^1]) : "resource";
-
-            // Transform prompts into template format with categories
-            var examplePrompts = new List<object>();
-            for (int i = 0; i < promptsResponse.Prompts.Count; i++)
-            {
-                var prompt = promptsResponse.Prompts[i];
-                // Use a simple category based on the action verb or prompt position
-                var category = i == 0 ? $"{char.ToUpper(actionVerb[0])}{actionVerb.Substring(1)} {resourceType}" 
-                                      : $"{char.ToUpper(actionVerb[0])}{actionVerb.Substring(1)} example {i + 1}";
-                examplePrompts.Add(new { category, prompt });
-            }
-
-            // Transform parameters for template
-            var parameters = tool.Option?.Select(opt => (object)new
-            {
-                name = opt.NL_Name ?? opt.Name ?? "unknown",
-                required = opt.Required,
-                description = opt.Description ?? "No description"
-            }).ToList() ?? new List<object>();
+            // Transform prompts into template format
+            var examplePrompts = promptsResponse.Prompts.Select(p => new { prompt = p }).ToList();
 
             // Prepare template context
             var templateContext = new Dictionary<string, object>
             {
-                ["toolName"] = tool.Name ?? "Unknown",
-                ["toolCommand"] = $"<!-- azmcp {tool.Command} -->",
-                ["actionVerb"] = actionVerb,
-                ["resourceType"] = resourceType,
-                ["parameters"] = parameters,
+                ["version"] = version ?? "unknown",
+                ["generatedAt"] = DateTime.UtcNow,
                 ["examplePrompts"] = examplePrompts
             };
 
@@ -299,14 +292,7 @@ public class ExamplePromptGenerator
             var templateFile = Path.Combine(templatesDir, "example-prompts-template.hbs");
             var templateOutput = await templateProcessor(templateFile, templateContext);
 
-            // Generate frontmatter using utility
-            var frontmatter = FrontmatterUtility.GenerateExamplePromptFrontmatter(
-                tool.Command ?? "unknown",
-                version,
-                exampleFileName,
-                userPrompt);
-
-            return frontmatter + templateOutput;
+            return templateOutput;
         }
         catch (Exception ex)
         {

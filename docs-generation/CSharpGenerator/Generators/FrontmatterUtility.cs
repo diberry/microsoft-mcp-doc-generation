@@ -13,17 +13,17 @@ namespace CSharpGenerator.Generators;
 public static class FrontmatterUtility
 {
     /// <summary>
-    /// Generates frontmatter for example prompts documentation files
+    /// Generates frontmatter for input prompt files (stored in prompts-for-example-tool-prompts/)
     /// </summary>
     /// <param name="toolCommand">The tool command (e.g., "azmcp storage account create")</param>
     /// <param name="version">The CLI version</param>
-    /// <param name="exampleFileName">The example prompts filename</param>
+    /// <param name="inputPromptFileName">The input prompt filename</param>
     /// <param name="userPrompt">The user prompt used to generate the examples</param>
-    /// <returns>Formatted frontmatter string with opening and closing "---" markers</returns>
-    public static string GenerateExamplePromptFrontmatter(
+    /// <returns>Formatted frontmatter string with opening and closing "---" markers and userPrompt content</returns>
+    public static string GenerateInputPromptFrontmatter(
         string toolCommand,
         string? version,
-        string exampleFileName,
+        string inputPromptFileName,
         string userPrompt)
     {
         var indentedUserPrompt = string.Join("\n", 
@@ -34,7 +34,7 @@ ms.topic: include
 ms.date: {DateTime.UtcNow:yyyy-MM-dd}
 mcp-cli.version: {version ?? "unknown"}
 generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
-# [!INCLUDE [{toolCommand}](../includes/tools/example-prompts/{exampleFileName})]
+# [!INCLUDE [{toolCommand}](../includes/tools/prompts-for-example-tool-prompts/{inputPromptFileName})]
 <!-- azmcp {toolCommand} -->
 userPrompt: |
 {indentedUserPrompt}

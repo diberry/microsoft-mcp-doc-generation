@@ -37,11 +37,14 @@ echo -e "${BLUE}   Full path: $(realpath "$CLI_OUTPUT")${NC}"
 # Verify environment variables (loaded by parent script)
 echo -e "${BLUE}=== Environment Variables Check ===${NC}"
 echo -e "${BLUE}Full environment (FOUNDRY_* only):${NC}"
-env | grep FOUNDRY_ || echo "  (no FOUNDRY_* variables found in environment)"
+# Mask API key in environment display
+env | grep FOUNDRY_ | sed 's/\(FOUNDRY_API_KEY=\)\(.\{6\}\)\(.*\)$/\1\2...[MASKED]/' || echo "  (no FOUNDRY_* variables found in environment)"
 echo ""
 
 echo -e "${BLUE}Verifying required variables:${NC}"
-echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)} | Value: ${FOUNDRY_API_KEY:0:20}..."
+# Mask API key - show only first 6 characters
+MASKED_KEY="${FOUNDRY_API_KEY:0:6}...[MASKED]"
+echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)} | Value: ${MASKED_KEY}"
 echo "  FOUNDRY_ENDPOINT: ${FOUNDRY_ENDPOINT:+SET} | Value: ${FOUNDRY_ENDPOINT}"
 echo "  FOUNDRY_MODEL_NAME: ${FOUNDRY_MODEL_NAME:+SET} | Value: ${FOUNDRY_MODEL_NAME}"
 echo "  FOUNDRY_MODEL_API_VERSION: ${FOUNDRY_MODEL_API_VERSION:+SET} | Value: ${FOUNDRY_MODEL_API_VERSION}"
