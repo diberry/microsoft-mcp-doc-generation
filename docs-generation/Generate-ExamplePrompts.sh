@@ -38,21 +38,21 @@ echo -e "${BLUE}   Full path: $(realpath "$CLI_OUTPUT")${NC}"
 if [ -f ".env" ]; then
     echo -e "${YELLOW}📄 Loading credentials from .env${NC}"
     # Properly load .env file and export variables, stripping quotes
-    while IFS='=' read -r key value; do
+    while IFS='=' read -r key value || [ -n "$key" ]; do
         # Skip comments and empty lines
         [[ $key =~ ^#.*$ ]] && continue
         [[ -z $key ]] && continue
         # Remove quotes and whitespace from value
         value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        # Export the variable
-        export "$key=$value"
+        # Export the variable using declare to ensure proper handling
+        declare -x "$key"="$value"
         echo "  Exported: $key=${value:0:20}..." # Show first 20 chars for debugging
     done < .env
     echo -e "${GREEN}✅ Credentials loaded${NC}"
     
     # Verify exports
     echo -e "${BLUE}Verifying environment variables:${NC}"
-    echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)}"
+    echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)} / ${FOUNDRY_API_KEY:-NOT SET}"
     echo "  FOUNDRY_ENDPOINT: ${FOUNDRY_ENDPOINT:-NOT SET}"
     echo "  FOUNDRY_MODEL_NAME: ${FOUNDRY_MODEL_NAME:-NOT SET}"
 else
