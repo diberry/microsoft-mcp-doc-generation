@@ -34,36 +34,27 @@ fi
 echo -e "${GREEN}✅ Found CLI output: $CLI_OUTPUT${NC}"
 echo -e "${BLUE}   Full path: $(realpath "$CLI_OUTPUT")${NC}"
 
-# Check if .env file exists
-if [ -f ".env" ]; then
-    echo -e "${YELLOW}📄 Loading credentials from .env${NC}"
-    # Use set -a to auto-export all variables, then source the .env file
-    set -a
-    source .env
-    set +a
-    echo -e "${GREEN}✅ Credentials loaded${NC}"
-    
-    # Verify exports
-    echo -e "${BLUE}Verifying environment variables:${NC}"
-    echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)}"
-    echo "  FOUNDRY_ENDPOINT: ${FOUNDRY_ENDPOINT:-NOT SET}"
-    echo "  FOUNDRY_MODEL_NAME: ${FOUNDRY_MODEL_NAME:-NOT SET}"
-else
-    echo -e "${YELLOW}⚠️  No .env file found${NC}"
-    echo -e "${YELLOW}   Checking environment variables...${NC}"
-    
-    if [ -z "$FOUNDRY_API_KEY" ] || [ -z "$FOUNDRY_ENDPOINT" ] || [ -z "$FOUNDRY_MODEL_NAME" ]; then
-        echo -e "${RED}❌ Missing required environment variables:${NC}"
-        echo "   - FOUNDRY_API_KEY"
-        echo "   - FOUNDRY_ENDPOINT"
-        echo "   - FOUNDRY_MODEL_NAME"
-        echo "   - FOUNDRY_MODEL_API_VERSION"
-        echo ""
-        echo "Create a .env file with these variables or set them in your environment"
-        exit 1
-    fi
-    echo -e "${GREEN}✅ Using environment variables${NC}"
+# Verify environment variables (loaded by parent script)
+echo -e "${BLUE}=== Environment Variables Check ===${NC}"
+echo -e "${BLUE}Full environment (FOUNDRY_* only):${NC}"
+env | grep FOUNDRY_ || echo "  (no FOUNDRY_* variables found in environment)"
+echo ""
+
+echo -e "${BLUE}Verifying required variables:${NC}"
+echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)} | Value: ${FOUNDRY_API_KEY:0:20}..."
+echo "  FOUNDRY_ENDPOINT: ${FOUNDRY_ENDPOINT:+SET} | Value: ${FOUNDRY_ENDPOINT}"
+echo "  FOUNDRY_MODEL_NAME: ${FOUNDRY_MODEL_NAME:+SET} | Value: ${FOUNDRY_MODEL_NAME}"
+echo "  FOUNDRY_MODEL_API_VERSION: ${FOUNDRY_MODEL_API_VERSION:+SET} | Value: ${FOUNDRY_MODEL_API_VERSION}"
+echo ""
+
+if [ -z "$FOUNDRY_API_KEY" ] || [ -z "$FOUNDRY_ENDPOINT" ] || [ -z "$FOUNDRY_MODEL_NAME" ]; then
+    echo -e "${RED}❌ Missing required environment variables${NC}"
+    echo "Required: FOUNDRY_API_KEY, FOUNDRY_ENDPOINT, FOUNDRY_MODEL_NAME"
+    echo ""
+    echo "These should be loaded by run-generative-ai-output.sh from .env file"
+    exit 1
 fi
+echo -e "${GREEN}✅ Environment variables verified${NC}"
 
 # Create output directory and fix permissions
 mkdir -p "$OUTPUT_DIR"
