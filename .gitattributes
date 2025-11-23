@@ -1,0 +1,13 @@
+# Ensure shell scripts are always executable
+*.sh text eol=lf
+*.sh linguist-language=Shell
+
+# PowerShell scripts
+*.ps1 text eol=lf
+*.ps1 linguist-language=PowerShell
+
+# Line ending normalization
+* text=auto
+
+# Explicitly mark shell scripts as executable in Git
+# This requires setting the executable bit in Git index

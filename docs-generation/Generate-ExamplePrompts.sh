@@ -59,21 +59,13 @@ if [ -z "$FOUNDRY_API_KEY" ] || [ -z "$FOUNDRY_ENDPOINT" ] || [ -z "$FOUNDRY_MOD
 fi
 echo -e "${GREEN}✅ Environment variables verified${NC}"
 
-# Create output directory and fix permissions
+# Create output directory
 mkdir -p "$OUTPUT_DIR"
 
 # Clean output directory before regenerating
 echo -e "${YELLOW}🧹 Cleaning output directory...${NC}"
 rm -rf "$OUTPUT_DIR"/*
 echo -e "${GREEN}✅ Output directory cleaned${NC}"
-
-# Fix permissions on generated directories if any subdirectories are owned by root
-GENERATED_DIR="$(dirname "$OUTPUT_DIR")"
-if find "$GENERATED_DIR" -user root 2>/dev/null | grep -q .; then
-    echo -e "${YELLOW}⚠️  Fixing permissions on generated directory (created by Docker)...${NC}"
-    sudo chown -R $(id -u):$(id -g) "$GENERATED_DIR"
-    echo -e "${GREEN}✅ Permissions fixed${NC}"
-fi
 
 echo -e "${GREEN}✅ Output directory: $OUTPUT_DIR${NC}"
 echo -e "${BLUE}   Full path: $(realpath "$OUTPUT_DIR")${NC}"

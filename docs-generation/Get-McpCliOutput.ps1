@@ -121,6 +121,18 @@ try {
         Write-Info "Created output directory: $OutputPath"
     }
     
+    # Test write permissions
+    $testFile = Join-Path $OutputPath ".write-test"
+    try {
+        [System.IO.File]::WriteAllText($testFile, "test")
+        Remove-Item $testFile -Force -ErrorAction SilentlyContinue
+        Write-Info "✓ Write permissions verified"
+    } catch {
+        Write-Error "❌ Cannot write to output directory: $OutputPath"
+        Write-Error "   Check permissions or Docker user mapping"
+        exit 1
+    }
+    
     # Define output files
     $cliOutputFile = Join-Path $OutputPath "cli-output.json"
     $namespaceOutputFile = Join-Path $OutputPath "cli-namespace.json"

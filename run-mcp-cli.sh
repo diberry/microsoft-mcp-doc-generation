@@ -87,7 +87,7 @@ build_image() {
         ${no_cache} \
         --build-arg MCP_BRANCH="${MCP_BRANCH}" \
         -t "${IMAGE_NAME}" \
-        -f Dockerfile.cli \
+        -f docker/Dockerfile.cli \
         .
 
     printf "${GREEN}✅ Docker image built successfully${NC}\n"

@@ -5,6 +5,12 @@ set -e
 # This script generates documentation from existing CLI output files
 # Prerequisites: CLI output files must exist in generated/cli/
 
+# Set up logging
+mkdir -p generated/logs
+LOG_FILE="generated/logs/run-content-generation-output.log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "=== Log started at $(date) ===" 
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -35,6 +41,19 @@ fi
 
 echo -e "${GREEN}✅ Docker is ready${NC}"
 echo ""
+
+# Check if running with sudo (not recommended)
+if [ "$EUID" -eq 0 ]; then
+    echo -e "${RED}❌ Do not run this script with sudo${NC}"
+    echo -e "${YELLOW}The script will handle Docker permissions automatically${NC}"
+    echo -e "${YELLOW}Run without sudo: ./run-content-generation-output.sh${NC}"
+    exit 1
+fi
+
+# Get user/group IDs for non-root container execution
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
+echo -e "${BLUE}Building for user: ${USER_ID}:${GROUP_ID}${NC}"
 
 # Parse command line arguments
 BUILD_ONLY=false
@@ -153,12 +172,12 @@ if [ "$SKIP_BUILD" = false ]; then
         echo ""
     fi
 
-    BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH}"
+    BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH} --build-arg USER_ID=${USER_ID} --build-arg GROUP_ID=${GROUP_ID}"
     if [ "$NO_CACHE" = true ]; then
         BUILD_ARGS="${BUILD_ARGS} --no-cache"
     fi
 
-    if docker build ${BUILD_ARGS} -t azure-mcp-docgen:latest .; then
+    if docker build ${BUILD_ARGS} -t azure-mcp-docgen:latest -f docker/Dockerfile .; then
         echo ""
         echo -e "${GREEN}✅ Docker image built successfully${NC}"
         
@@ -194,15 +213,16 @@ fi
 echo -e "${YELLOW}🗑️  Cleaning previous documentation output...${NC}"
 if [ -d "generated" ]; then
     # Preserve CLI directory, remove everything else
-    find generated -mindepth 1 -maxdepth 1 ! -name 'cli' -exec rm -rf {} + 2>/dev/null || {
-        echo -e "${YELLOW}   Retrying with elevated permissions...${NC}"
-        sudo find generated -mindepth 1 -maxdepth 1 ! -name 'cli' -exec rm -rf {} +
-    }
+    find generated -mindepth 1 -maxdepth 1 ! -name 'cli' -exec rm -rf {} + 2>/dev/null || true
     echo -e "${GREEN}✅ Previous documentation output removed (CLI files preserved)${NC}"
 else
     mkdir -p generated
     echo -e "${GREEN}✅ Output directory created${NC}"
 fi
+
+# Pre-create directories with proper permissions
+mkdir -p generated/tools generated/example-prompts generated/logs
+chmod -R u+rwX,go+rX generated/ 2>/dev/null || true
 echo ""
 
 # Interactive mode
@@ -214,6 +234,7 @@ if [ "$INTERACTIVE" = true ]; then
     echo ""
     docker run --rm -it \
         -v "$(pwd)/generated:/output" \
+        --user "${USER_ID}:${GROUP_ID}" \
         --env SKIP_CLI_GENERATION="true" \
         --entrypoint /bin/bash \
         azure-mcp-docgen:latest
@@ -248,6 +269,7 @@ echo ""
 
 if docker run --rm \
     -v "$(pwd)/generated:/output" \
+    --user "${USER_ID}:${GROUP_ID}" \
     --env SKIP_CLI_GENERATION="true" \
     --env MCP_SERVER_PATH="/mcp/servers/Azure.Mcp.Server/src" \
     $ENV_ARGS \

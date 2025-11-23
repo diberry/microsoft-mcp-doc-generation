@@ -335,7 +335,7 @@ cd microsoft-mcp-doc-generation
 - Version management headaches
 
 **Docker:**
-- One command: `docker-compose up`
+- One command: `docker-compose -f docker/docker-compose.yml up`
 - No manual dependency installation
 - Works everywhere Docker runs
 - Consistent versions

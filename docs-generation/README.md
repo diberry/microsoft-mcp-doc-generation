@@ -14,20 +14,37 @@ The documentation generation system consists of:
 
 ```
 docs-generation/
-├── Generate-MultiPageDocs.ps1     # Main orchestration script
+├── Generate-MultiPageDocs.ps1     # Main orchestration script (Stage 2)
+├── Get-McpCliOutput.ps1           # CLI extraction script (Stage 1)
+├── Generate-ExamplePrompts.sh     # AI prompts script (Stage 3)
 ├── stop-words.json                # Stop words removed from include filenames
 ├── compound-words.json            # Compound word mappings for include filenames
 ├── brand-to-server-mapping.json   # Brand name to filename mappings
-├── CSharpGenerator/               # C# console application
-│   ├── CSharpGenerator.csproj    # Project file with Handlebars.Net dependency
-│   └── Program.cs                # Main generator logic
+├── nl-parameters.json             # Natural language parameter names
+├── static-text-replacement.json   # Text replacements
+├── config.json                    # Main configuration
+├── CSharpGenerator/               # C# console application (.NET 9.0)
+│   ├── CSharpGenerator.csproj    # Project file
+│   ├── Program.cs                # Main entry point
+│   ├── DocumentationGenerator.cs # Core generation logic
+│   ├── HandlebarsTemplateEngine.cs # Template processor
+│   └── Config.cs                 # Configuration loader
+├── NaturalLanguageGenerator/      # Natural language processing
+│   └── TextCleanup.cs            # Text normalization
+├── GenerativeAI/                  # AI integration for example prompts
+│   ├── GenerativeAIClient.cs     # AI service client
+│   └── GenerativeAIOptions.cs    # Configuration
 ├── ToolMetadataExtractor/        # Tool for extracting ToolMetadata information
 │   ├── Models/                   # Data models for tool metadata
 │   ├── Services/                 # Services for metadata extraction
 │   └── Program.cs                # Command-line interface
-└── templates/                    # Handlebars template files
-    ├── area-template.hbs         # Template for area-specific documentation
-    └── common-tools.hbs          # Template for common tools documentation
+├── Shared/                        # Shared utilities
+└── templates/                     # Handlebars template files
+    ├── commands-template.hbs      # Main service documentation
+    ├── annotation-template.hbs    # Tool annotations
+    ├── parameter-template.hbs     # Tool parameters
+    ├── area-template.hbs          # Template for area-specific documentation
+    └── common-tools.hbs           # Template for common tools documentation
 ```
 
 ## Configuration Files
@@ -232,13 +249,34 @@ When updating `brand-to-server-mapping.json` or `compound-words.json`:
 3. Verify new filenames match expected patterns
 4. Commit changes with descriptive message explaining filename updates
 
-## Process Flow
+## Three-Stage Process Flow
 
-1. **Data Extraction**: The PowerShell script calls the Azure MCP CLI (`dotnet run -- tools list`) to extract tool information
-2. **Metadata Extraction**: The ToolMetadataExtractor can be used to extract ToolMetadata properties from tool source files
-3. **Data Processing**: CLI output and metadata are saved as JSON and passed to the C# generator
-4. **Template Processing**: The C# generator uses Handlebars.Net to process templates with the extracted data
-5. **Documentation Generation**: Multi-page Markdown documentation is generated in the `generated/multi-page/` directory
+### Stage 1: CLI Extraction (`Get-McpCliOutput.ps1` via `run-mcp-cli-output.sh`)
+1. **MCP Server Build**: Builds the Azure MCP Server in the Microsoft/MCP repository
+2. **Tool Data Extraction**: Runs `dotnet run -- tools list` to extract tool information as JSON
+3. **Namespace Extraction**: Runs `dotnet run -- tools list --namespace-mode` for namespace data
+4. **Version Capture**: Captures MCP server version with `--version` flag
+5. **Output**: Saves to `generated/cli/` (cli-output.json, cli-namespace.json, mcp-version.txt)
+
+### Stage 2: Markdown Generation (`Generate-MultiPageDocs.ps1` via `run-content-generation-output.sh`)
+1. **Configuration Loading**: Loads brand mappings, compound words, stop words, NL parameters
+2. **Generator Build**: Compiles C# generator projects (CSharpGenerator, NaturalLanguageGenerator, Shared)
+3. **Data Processing**: Parses CLI JSON output (181 tools across 44 service areas)
+4. **Filename Resolution**: Applies 3-tier resolution (brand → compound words → original name)
+5. **Template Processing**: Uses Handlebars.Net to process .hbs templates with tool data
+6. **Documentation Generation**: Writes 591 markdown files to `generated/multi-page/`
+   - Main service docs: acr.md, aks.md, storage.md, etc.
+   - Include files: annotations/, parameters/, param-and-annotation/
+   - Index files: index.md, common-tools.md, azmcp-commands.md
+
+### Stage 3: AI Example Prompts (`Generate-ExamplePrompts.sh` via `run-generative-ai-output.sh`)
+1. **Environment Setup**: Loads `.env` file with AI service credentials
+2. **AI Integration**: Uses Azure OpenAI or GitHub Models to generate example prompts
+3. **Prompt Generation**: Creates realistic usage examples for each tool
+4. **Output**: Saves to `generated/example-prompts/`
+
+### Optional: Metadata Extraction
+The ToolMetadataExtractor can be used separately to extract ToolMetadata properties from tool source files for additional context.
 
 ## Dependencies
 
@@ -291,17 +329,30 @@ pwsh ./Generate-MultiPageDocs.ps1
 
 ## Generated Output
 
-The script generates documentation in the `generated/` directory:
+The three-stage process generates documentation in the `generated/` directory:
 
 ```
 generated/
-├── cli/
-│   ├── cli-output.json          # Raw CLI output data
-│   └── cli-namespace.json       # Namespace data
-└── multi-page/                 # Generated Markdown documentation
-    ├── index.md                # Main index page (if enabled)
-    ├── common-tools.md          # Common tools documentation (if enabled)
-    └── [area-name].md           # Area-specific documentation pages
+├── cli/                         # Stage 1 output
+│   ├── cli-output.json          # Raw CLI output data (715KB)
+│   ├── cli-namespace.json       # Namespace data
+│   └── mcp-version.txt          # MCP server version
+├── multi-page/                  # Stage 2 output (591 files)
+│   ├── index.md                 # Main index page
+│   ├── common-tools.md          # Common tools documentation
+│   ├── azmcp-commands.md        # All commands reference (469KB)
+│   ├── [area-name].md           # 44 area-specific documentation pages
+│   ├── annotations/             # Tool annotation includes (547 files)
+│   ├── parameters/              # Tool parameter includes
+│   └── param-and-annotation/    # Combined includes
+├── example-prompts/             # Stage 3 output
+│   └── *-example-prompts.md     # AI-generated usage examples
+├── namespaces.csv               # CSV export (1.7KB)
+├── generation-summary.md        # Statistics report
+└── logs/                        # Generation logs
+    ├── run-mcp-cli-output.log
+    ├── run-content-generation-output.log
+    └── run-generative-ai-output.log
 ```
 
 ## Templates

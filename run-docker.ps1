@@ -89,7 +89,16 @@ Write-Info "📦 Building Docker image..."
 Write-Warning "MCP Branch: $Branch"
 Write-Host ""
 
-$buildArgs = @("build", "--build-arg", "MCP_BRANCH=$Branch", "-t", "azure-mcp-docgen:latest")
+# Get user/group IDs on Linux/macOS for non-root container execution
+$userArgs = @()
+if ($IsLinux -or $IsMacOS) {
+    $userId = & id -u
+    $groupId = & id -g
+    $userArgs = @("--build-arg", "USER_ID=$userId", "--build-arg", "GROUP_ID=$groupId")
+    Write-Info "Building with user mapping: $userId:$groupId"
+}
+
+$buildArgs = @("build", "--build-arg", "MCP_BRANCH=$Branch") + $userArgs + @("-t", "azure-mcp-docgen:latest", "-f", "docker/Dockerfile")
 if ($NoCache) {
     $buildArgs += "--no-cache"
 }
@@ -116,8 +125,11 @@ if ($BuildOnly) {
     exit 0
 }
 
-# Create output directory
-$null = New-Item -ItemType Directory -Path "generated" -Force
+# Create output directories with proper permissions
+$dirs = @("generated/cli", "generated/tools", "generated/example-prompts", "generated/logs")
+foreach ($dir in $dirs) {
+    $null = New-Item -ItemType Directory -Path $dir -Force
+}
 
 # Interactive mode
 if ($Interactive) {
@@ -127,10 +139,13 @@ if ($Interactive) {
     Write-Warning "Exit with: exit"
     Write-Host ""
     
-    docker run --rm -it `
-        -v "${PWD}/generated:/output" `
-        --entrypoint /bin/bash `
-        azure-mcp-docgen:latest
+    $runArgs = @("run", "--rm", "-it")
+    if ($IsLinux -or $IsMacOS) {
+        $runArgs += @("--user", "${userId}:${groupId}")
+    }
+    $runArgs += @("-v", "${PWD}/generated:/output", "--entrypoint", "/bin/bash", "azure-mcp-docgen:latest")
+    
+    & docker $runArgs
     exit 0
 }
 
@@ -140,9 +155,13 @@ Write-Info "📝 Running documentation generator..."
 Write-Warning "Output directory: $PWD/generated"
 Write-Host ""
 
-docker run --rm `
-    -v "${PWD}/generated:/output" `
-    azure-mcp-docgen:latest | Out-Null
+$runArgs = @("run", "--rm")
+if ($IsLinux -or $IsMacOS) {
+    $runArgs += @("--user", "${userId}:${groupId}")
+}
+$runArgs += @("-v", "${PWD}/generated:/output", "azure-mcp-docgen:latest")
+
+& docker $runArgs | Out-Null
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""

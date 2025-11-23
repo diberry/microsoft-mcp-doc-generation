@@ -8,9 +8,10 @@ Generates comprehensive markdown documentation for all Azure MCP server tools, i
 - Individual service documentation files (ACR, AKS, Storage, Key Vault, etc.)
 - Tool annotations and parameters
 - Complete command reference
+- AI-generated example prompts for each tool
 - JSON/CSV data exports
 
-**590+ documentation files** generated automatically from the MCP server code.
+**591 documentation files** generated automatically from the MCP server code.
 
 ## 🚀 Quick Start (5 Minutes)
 
@@ -38,37 +39,43 @@ cd microsoft-mcp-doc-generation
 .\run-docker.ps1
 ```
 
-Documentation will be generated in `./generated/tools/` directory.
+Documentation will be generated in `./generated/multi-page/` directory.
 
-### Two-Step Workflow (For Development)
+### Three-Stage Workflow (For Development)
 
-For iterative development or when you want to run steps independently:
+For iterative development or when you want to run stages independently:
 
-**Step 1: Generate MCP CLI Output** (only needed once, or when MCP changes)
+**Guided Interactive Workflow:**
+```bash
+./getting-started.sh
+```
+This script guides you through all three stages with confirmations.
+
+**Or run stages manually:**
+
+**Stage 1: Extract MCP CLI Metadata** (run once, or when MCP changes)
 ```bash
 ./run-mcp-cli-output.sh
 ```
 
-**Step 2: Generate Documentation** (can be run repeatedly)
+**Stage 2: Generate Markdown Documentation** (can be run repeatedly)
 ```bash
 ./run-content-generation-output.sh
 ```
 
-**Output:**
-- Step 1: `generated/cli/` - CLI output files (cli-output.json, cli-namespace.json, cli-version.json)
-- Step 2: `generated/tools/` - 590+ documentation markdown files
-
-See **[USAGE.md](USAGE.md)** for detailed usage guide and troubleshooting.
-
-**Step 3: Generate example prompts from LLMs**
-
+**Stage 3: Generate AI Example Prompts** (requires .env file)
 ```bash
 ./run-generative-ai-output.sh
 ```
 
-This includes: 
+**Output:**
+- Stage 1: `generated/cli/` - CLI output files (cli-output.json, cli-namespace.json, mcp-version.txt)
+- Stage 2: `generated/multi-page/` - 591 documentation markdown files
+- Stage 3: `generated/example-prompts/` - AI-generated usage examples
 
-- example prompts for each tool
+**Note:** Stage 3 requires a `.env` file with AI service credentials (Azure OpenAI or GitHub Models).
+
+See **[USAGE.md](docs/USAGE.md)** for detailed usage guide and troubleshooting.
 
 ### Additional Tools
 
@@ -89,7 +96,7 @@ Need to run raw MCP CLI commands interactively? Use the lightweight container:
 
 **Docker Compose:**
 ```bash
-docker-compose --profile cli run --rm mcp-cli tools list
+docker-compose -f docker/docker-compose.yml --profile cli run --rm mcp-cli tools list
 ```
 
 See [CLI Container Guide](docs/CLI-CONTAINER.md) for details.
@@ -207,13 +214,18 @@ generated/
 │   ├── appconfig.md               # App Configuration
 │   ├── storage.md                 # Azure Storage
 │   ├── keyvault.md                # Key Vault
-│   └── ... (590+ total files)
+│   ├── annotations/               # Tool annotation includes (547 files)
+│   ├── parameters/                # Tool parameter includes
+│   └── param-and-annotation/      # Combined includes
 │
 ├── cli/
-│   ├── cli-output.json            # Raw tool data
-│   └── cli-namespace.json         # Namespace data
+│   ├── cli-output.json            # Raw tool data (715KB)
+│   ├── cli-namespace.json         # Namespace data
+│   └── mcp-version.txt            # MCP server version
+├── example-prompts/               # AI-generated usage examples
 ├── namespaces.csv                 # CSV export
-└── generation-summary.md          # Statistics
+├── generation-summary.md          # Statistics
+└── logs/                          # Generation logs
 ```
 
 ## 🔧 Development
@@ -222,8 +234,11 @@ generated/
 
 ```
 .
-├── Dockerfile                     # Multi-stage build
-├── docker-compose.yml             # Orchestration
+├── docker/                        # Docker configuration
+│   ├── Dockerfile                 # Multi-stage doc generator
+│   ├── Dockerfile.cli             # Lightweight CLI container
+│   ├── Dockerfile.mcp-cli-output  # CLI output generator
+│   └── docker-compose.yml         # Container orchestration
 ├── run-docker.sh                  # Linux/macOS helper
 ├── run-docker.ps1                 # Windows helper
 ├── docs/                          # 📚 Documentation
@@ -319,12 +334,13 @@ docker logs $(docker ps -lq)
 
 See [FIXES-APPLIED.md](docs/FIXES-APPLIED.md) for detailed troubleshooting.
 
-## 📈 Metrics
+## 📊 Metrics
 
 - **Code Reduction**: 70% fewer lines vs original workflow (476 → 140 lines)
 - **Steps Reduction**: 63% fewer steps (16 → 6 steps)
 - **Files Generated**: 591 markdown documentation files
-- **Services Covered**: 30+ Azure service areas
+- **Tools Documented**: 181 Azure MCP tools
+- **Service Areas**: 44 Azure service areas
 - **Docker Image**: 2.36GB (includes full SDK and MCP server)
 
 ## 🤝 Contributing

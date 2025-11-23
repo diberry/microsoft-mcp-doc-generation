@@ -1,5 +1,7 @@
 # Azure MCP CLI Container Usage Guide
 
+**Current System Documentation** - This guide describes the existing Azure MCP CLI container system.
+
 ## Overview
 
 The `run-mcp-cli.sh` (Bash) and `run-mcp-cli.ps1` (PowerShell) scripts are wrapper scripts that make it easy to run the Azure MCP CLI via Docker without needing to install .NET or clone the MCP repository locally.

@@ -35,8 +35,8 @@ Quick reference for understanding the Azure MCP Documentation Generator architec
                         │
                         ▼
               ┌─────────────────────┐
-              │  Generated Docs      │
-              │  590+ Markdown Files │
+              │  Complete Documentation │
+              │  591 Files Total        │
               └─────────────────────┘
 ```
 
@@ -105,32 +105,51 @@ JSON Input → Parse Tools → Apply Config → Process Templates → Output Mar
 ## Data Flow
 
 ```
-1. PowerShell calls MCP CLI
-   └─> dotnet run -- tools list --output cli/cli-output.json
+Stage 1: CLI Extraction (run-mcp-cli-output.sh)
+  1. Build MCP Server
+     └─> cd /mcp/servers/Azure.Mcp.Server/src && dotnet build
+  
+  2. Extract tool metadata
+     ├─> dotnet run -- tools list > cli-output.json
+     ├─> dotnet run -- tools list --namespace-mode > cli-namespace.json
+     └─> dotnet run -- --version > mcp-version.txt
+  
+  3. Output: generated/cli/ (3 files, 715KB)
 
-2. PowerShell calls namespace extraction
-   └─> dotnet run -- tools list-namespaces --output cli/cli-namespace.json
+Stage 2: Markdown Generation (run-content-generation-output.sh)
+  1. Build C# generator
+     └─> dotnet build CSharpGenerator/CSharpGenerator.csproj
+  
+  2. Invoke generator
+     └─> dotnet run --project CSharpGenerator/ generate-docs \
+         cli/cli-output.json \
+         multi-page/ \
+         --index --common --commands --version <ver>
+  
+  3. Generator processes data
+     ├─> Loads configuration files (brand mapping, compound words, etc.)
+     ├─> Parses CLI JSON (181 tools across 44 service areas)
+     ├─> Applies 3-tier filename resolution
+     ├─> Processes Handlebars templates
+     └─> Writes markdown files
+  
+  4. Output: generated/multi-page/ (591 files)
+     ├─> Main service docs: acr.md, aks.md, storage.md, etc.
+     ├─> Include files: annotations/, parameters/, param-and-annotation/
+     └─> Index: index.md, common-tools.md, azmcp-commands.md
 
-3. PowerShell builds C# generator
-   └─> dotnet build CSharpGenerator/CSharpGenerator.csproj
+Stage 3: AI Prompts (run-generative-ai-output.sh)
+  1. Load .env file (required)
+     └─> FOUNDRY_API_KEY, FOUNDRY_ENDPOINT, FOUNDRY_MODEL_NAME
+  
+  2. Generate example prompts
+     └─> Generate-ExamplePrompts.sh (uses Azure OpenAI or GitHub Models)
+  
+  3. Output: generated/example-prompts/
 
-4. PowerShell invokes generator
-   └─> dotnet run --project CSharpGenerator/ generate-docs \
-       cli/cli-output.json \
-       multi-page/ \
-       --index \
-       --common \
-       --commands
-
-5. Generator processes data
-   ├─> Loads configuration files
-   ├─> Parses CLI JSON
-   ├─> Applies filename resolution (3-tier)
-   ├─> Processes Handlebars templates
-   └─> Writes markdown files
-
-6. PowerShell copies output (Docker only)
-   └─> cp -r generated/* /output/
+Final Step (Docker only):
+  PowerShell copies output to mounted volume
+  └─> cp -r generated/* /output/
 ```
 
 ## Filename Resolution (3-Tier System)
@@ -230,30 +249,37 @@ docs-generation/
 
 ```
 generated/
-├── cli/
-│   ├── cli-output.json          # Raw MCP CLI data
-│   └── cli-namespace.json       # Namespace data
-├── namespaces.csv              # CSV export
-│
-└── multi-page/                 # Documentation root
-    ├── index.md                # Main index
-    ├── common-tools.md         # Cross-service tools
-    ├── azmcp-commands.md       # All commands (469KB)
-    │
-    ├── acr.md                  # Main service files
-    ├── aks.md                  # (Not affected by cleaning)
-    ├── storage.md
-    ├── keyvault.md
-    ├── ... (30+ service files)
-    │
-    ├── annotations/            # Tool annotations includes
-    │   └── azure-*-annotations.md
-    │
-    ├── parameters/             # Tool parameters includes
-    │   └── azure-*-parameters.md
-    │
-    └── param-and-annotation/   # Combined includes
-        └── azure-*-param-annotation.md
+├── cli/                        # Stage 1 output
+│   ├── cli-output.json          # Raw MCP CLI data (715KB)
+│   ├── cli-namespace.json       # Namespace data
+│   └── mcp-version.txt          # MCP server version
+├── multi-page/                 # Stage 2 output (591 files)
+│   ├── index.md                # Main index
+│   ├── common-tools.md         # Cross-service tools
+│   ├── azmcp-commands.md       # All commands (469KB)
+│   │
+│   ├── acr.md                  # Main service files (44 total)
+│   ├── aks.md                  # Not affected by filename cleaning
+│   ├── storage.md
+│   ├── keyvault.md
+│   ├── ... (40+ more service files)
+│   │
+│   ├── annotations/            # Tool annotations includes (547 files)
+│   │   └── azure-*-annotations.md
+│   │
+│   ├── parameters/             # Tool parameters includes
+│   │   └── azure-*-parameters.md
+│   │
+│   └── param-and-annotation/   # Combined includes
+│       └── azure-*-param-annotation.md
+├── example-prompts/            # Stage 3 output
+│   └── *-example-prompts.md    # AI-generated usage examples
+├── namespaces.csv              # CSV export (1.7KB)
+├── generation-summary.md       # Statistics
+└── logs/                       # Generation logs
+    ├── run-mcp-cli-output.log
+    ├── run-content-generation-output.log
+    └── run-generative-ai-output.log
 ```
 
 ## Key Dependencies

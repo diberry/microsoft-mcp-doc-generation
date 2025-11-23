@@ -79,13 +79,30 @@ function Clear-PreviousOutput {
         Write-Info "Removed previous generated directory"
     }
     
-    New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
-    New-Item -ItemType Directory -Path "generated/cli" -Force | Out-Null
-    New-Item -ItemType Directory -Path "generated/tools" -Force | Out-Null
+    # Create output directories
+    $dirs = @($parentDir, "generated/cli", "generated/tools", "generated/logs")
     if ($ExamplePrompts) {
-        New-Item -ItemType Directory -Path "generated/example-prompts" -Force | Out-Null
+        $dirs += "generated/example-prompts"
+    }
+    
+    foreach ($dir in $dirs) {
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
     }
     Write-Info "Created output directories"
+    
+    # Test write permissions
+    $testFile = Join-Path $parentDir ".write-test"
+    try {
+        [System.IO.File]::WriteAllText($testFile, "test")
+        Remove-Item $testFile -Force -ErrorAction SilentlyContinue
+        Write-Info "✓ Write permissions verified"
+    } catch {
+        Write-Error "❌ Cannot write to output directory: $parentDir"
+        Write-Error "   Check permissions or Docker user mapping"
+        exit 1
+    }
 }
 
 # Main execution

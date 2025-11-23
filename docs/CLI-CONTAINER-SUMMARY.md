@@ -1,24 +1,26 @@
 # Azure MCP CLI Container - Summary
 
+**Current System Documentation** - This document describes the existing CLI container implementation.
+
 ## Quick Reference
 
 ### Two Container Options
 
-1. **Full Documentation Generator** (`Dockerfile`)
+1. **Full Documentation Generator** (`docker/Dockerfile`)
    - Size: ~2.36GB
    - Stages: 3 (mcp-builder → docs-builder → runtime)
-   - Purpose: Generate 590+ documentation markdown files
+   - Purpose: Generate 591 documentation markdown files (181 tools across 44 service areas)
    - Includes: PowerShell 7.4.6, C# generators, Handlebars templates
    - Entry point: PowerShell script
-   - Run: `./run-docker.sh` or `docker-compose up`
+   - Run: `./run-docker.sh` or `docker-compose -f docker/docker-compose.yml up`
 
-2. **Lightweight CLI Container** (`Dockerfile.cli`) - **NEW**
+2. **Lightweight CLI Container** (`docker/Dockerfile.cli`) - **NEW**
    - Size: ~1-2GB (50% smaller)
    - Stages: 1 (single-stage build)
    - Purpose: Direct MCP server CLI access
    - Includes: Only MCP server, .NET SDKs
    - Entry point: CLI wrapper script
-   - Run: `./run-mcp-cli.sh tools list` or `docker-compose --profile cli run mcp-cli`
+   - Run: `./run-mcp-cli.sh tools list` or `docker-compose -f docker/docker-compose.yml --profile cli run mcp-cli`
 
 ### Helper Scripts
 
@@ -51,20 +53,20 @@ mcp-cli:
 
 Usage:
 ```bash
-docker-compose --profile cli build mcp-cli
-docker-compose --profile cli run --rm mcp-cli tools list
-docker-compose --profile cli run --rm mcp-cli --help
+docker-compose -f docker/docker-compose.yml --profile cli build mcp-cli
+docker-compose -f docker/docker-compose.yml --profile cli run --rm mcp-cli tools list
+docker-compose -f docker/docker-compose.yml --profile cli run --rm mcp-cli --help
 ```
 
 ## Files Created
 
-1. **Dockerfile.cli** - Single-stage lightweight build
+1. **docker/Dockerfile.cli** - Single-stage lightweight build
 2. **run-mcp-cli.sh** - Bash helper with colored output
 3. **run-mcp-cli.ps1** - PowerShell helper with proper error handling
 4. **docs/CLI-CONTAINER.md** - Comprehensive CLI documentation
 5. **docker-compose.yml** - Added `mcp-cli` service (updated)
 6. **README.md** - Added CLI container section (updated)
-7. **CLI-CONTAINER-SUMMARY.md** - This file
+7. **docs/CLI-CONTAINER-SUMMARY.md** - This file
 
 ## Build Performance
 
@@ -123,10 +125,10 @@ Test MCP changes from different branches:
 Use CLI to extract data, full generator to create docs:
 ```bash
 # Extract metadata
-docker-compose --profile cli run --rm mcp-cli tools list > metadata.json
+docker-compose -f docker/docker-compose.yml --profile cli run --rm mcp-cli tools list > metadata.json
 
 # Generate documentation
-docker-compose up docgen
+docker-compose -f docker/docker-compose.yml up docgen
 ```
 
 ## Comparison Matrix
@@ -142,7 +144,7 @@ docker-compose up docgen
 | **Handlebars** | ❌ No | ✅ Yes |
 | **MCP CLI** | ✅ Yes | ✅ Yes |
 | **Config Files** | ❌ No | ✅ Yes (mapping, stop-words, etc.) |
-| **Output** | stdout/JSON | 590+ .md files |
+| **Output** | stdout/JSON | 591 .md files |
 | **Entry Point** | CLI wrapper | PowerShell script |
 | **Interactive Mode** | ✅ Yes (--shell) | ✅ Yes (debug profile) |
 

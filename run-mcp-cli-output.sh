@@ -4,6 +4,12 @@ set -e
 # Azure MCP CLI Output Generator - Docker Wrapper Script
 # Builds and runs container to generate CLI output files for documentation
 
+# Set up logging
+mkdir -p generated/logs
+LOG_FILE="generated/logs/run-mcp-cli-output.log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "=== Log started at $(date) ===" 
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -34,6 +40,19 @@ fi
 
 echo -e "${GREEN}✅ Docker is ready${NC}"
 echo ""
+
+# Check if running with sudo (not recommended)
+if [ "$EUID" -eq 0 ]; then
+    echo -e "${RED}❌ Do not run this script with sudo${NC}"
+    echo -e "${YELLOW}The script will handle Docker permissions automatically${NC}"
+    echo -e "${YELLOW}Run without sudo: ./run-mcp-cli-output.sh${NC}"
+    exit 1
+fi
+
+# Get user/group IDs for non-root container execution
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
+echo -e "${BLUE}Building for user: ${USER_ID}:${GROUP_ID}${NC}"
 
 # Parse command line arguments
 BUILD_ONLY=false
@@ -100,12 +119,12 @@ if [ "$SKIP_BUILD" = false ]; then
         echo ""
     fi
     
-    BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH}"
+    BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH} --build-arg USER_ID=${USER_ID} --build-arg GROUP_ID=${GROUP_ID}"
     if [ "$NO_CACHE" = true ]; then
         BUILD_ARGS="${BUILD_ARGS} --no-cache"
     fi
     
-    if docker build ${BUILD_ARGS} -t $IMAGE_NAME -f Dockerfile.mcp-cli-output .; then
+    if docker build ${BUILD_ARGS} -t $IMAGE_NAME -f docker/Dockerfile.mcp-cli-output .; then
         echo ""
         echo -e "${GREEN}✅ Docker image built successfully${NC}"
         
@@ -134,10 +153,11 @@ if [ "$BUILD_ONLY" = true ]; then
     exit 0
 fi
 
-# Create output directory
+# Create output directory with proper permissions
 echo ""
 echo -e "${YELLOW}📁 Preparing output directory...${NC}"
 mkdir -p generated/cli
+chmod -R u+rwX,go+rX generated/ 2>/dev/null || true
 echo -e "${GREEN}✅ Output directory ready: ./generated/cli${NC}"
 
 # Run the CLI output generator
@@ -148,6 +168,7 @@ echo ""
 
 if docker run --rm \
     -v "$(pwd)/generated/cli:/output/cli" \
+    --user "${USER_ID}:${GROUP_ID}" \
     $IMAGE_NAME; then
     
     echo ""

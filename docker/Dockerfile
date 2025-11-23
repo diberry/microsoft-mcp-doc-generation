@@ -42,12 +42,23 @@ ENV DOTNET_ROLL_FORWARD=Major
 # Create output directory
 RUN mkdir -p /output
 
+# Add non-root user support
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN groupadd -g ${GROUP_ID} vscode || true && \
+    useradd -m -u ${USER_ID} -g ${GROUP_ID} vscode || true && \
+    chown -R vscode:vscode /docs-generation /output
+
 # Volume for generated documentation (expects CLI files in /output/cli)
 VOLUME ["/output"]
+
+# Switch to non-root user
+USER vscode
 
 # Default command: Generate documentation from existing CLI output
 CMD ["pwsh", "-Command", \
     "Write-Host '=== Azure MCP Documentation Generator ===' -ForegroundColor Cyan; \
+    Write-Host \"Running as user: $(id -u):$(id -g)\" -ForegroundColor Yellow; \
     Write-Host 'Output Path: /output' -ForegroundColor Yellow; \
     Write-Host ''; \
     if (-not (Test-Path '/output/cli/cli-output.json')) { \

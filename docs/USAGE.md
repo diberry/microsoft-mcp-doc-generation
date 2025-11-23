@@ -1,18 +1,43 @@
 # Azure MCP Documentation Generator - Usage Guide
 
-This guide explains how to use the Azure MCP documentation generator system, which consists of two main steps: generating MCP CLI output files and generating documentation from those files.
+**Current System Documentation** - This guide describes the existing three-stage documentation generation system.
 
-## Overview
+## Current System
 
-The documentation generation process is split into two independent steps:
+The Azure MCP documentation generator is a production-ready system that consists of three main stages:
 
-1. **CLI Output Generation**: Clones Microsoft/MCP repository, builds the server, and generates JSON files containing tool metadata
-2. **Documentation Generation**: Processes the CLI JSON files to create 590+ markdown documentation files
+1. **CLI Extraction** (`run-mcp-cli-output.sh`) - Extract tool metadata from MCP server
+2. **Markdown Generation** (`run-content-generation-output.sh`) - Generate 44 service documentation files
+3. **AI Prompts** (`run-generative-ai-output.sh`) - Create AI-generated usage examples
 
-This separation allows you to:
-- Run each step independently during development
-- Reuse CLI output across multiple documentation runs
-- Skip expensive MCP cloning/building when only changing documentation templates
+For a guided walkthrough, use: `./getting-started.sh`
+
+## System Architecture
+
+The current system uses a three-stage pipeline:
+
+### Stage 1: CLI Extraction (`run-mcp-cli-output.sh`)
+- Clones Microsoft/MCP repository
+- Builds Azure MCP Server
+- Extracts tool metadata as JSON
+- Output: `generated/cli/*.json`
+
+### Stage 2: Markdown Generation (`run-content-generation-output.sh`)
+- Processes JSON metadata
+- Uses C# generators with Handlebars templates
+- Creates 44 service documentation files
+- Output: `generated/tools/*.md`, include files
+
+### Stage 3: AI Example Prompts (`run-generative-ai-output.sh`)
+- Uses Azure OpenAI or GitHub Models
+- Generates realistic usage examples
+- Requires `.env` configuration
+- Output: `generated/example-prompts/*.md`
+
+This architecture allows:
+- Independent execution of each stage
+- Reuse of CLI output across multiple runs
+- Quick iteration on templates without rebuilding MCP
 
 ## Prerequisites
 
@@ -20,29 +45,30 @@ This separation allows you to:
 - **8GB RAM** available for Docker
 - **~10GB free disk space**
 
-## Quick Start (All-in-One)
+## Quick Start (Guided Workflow)
 
-The fastest way to generate complete documentation:
+The easiest way to run all three stages:
 
 ```bash
-./run-docker.sh
+./getting-started.sh
 ```
 
-This automatically:
-1. Builds the CLI output generator container
-2. Generates CLI output files (`generated/cli/*.json`)
-3. Builds the documentation generator container
-4. Generates 590+ documentation markdown files (`generated/tools/*.md`)
+This interactive script guides you through:
+1. **Stage 1**: CLI extraction → `run-mcp-cli-output.sh`
+2. **Stage 2**: Markdown generation → `run-content-generation-output.sh`
+3. **Stage 3**: AI prompts → `run-generative-ai-output.sh`
+
+Each stage pauses for confirmation before proceeding.
 
 **Output location**: `./generated/`
 
-## Two-Step Workflow (For Development)
+## Three-Stage Workflow (For Development)
 
-When developing or debugging, you can run each step independently:
+When developing or debugging, run each stage independently:
 
-### Step 1: Generate MCP CLI Output
+### Stage 1: Extract MCP CLI Metadata
 
-Generate the CLI JSON files (only needs to be done once, or when MCP changes):
+Generate the CLI JSON files (run once, or when MCP changes):
 
 ```bash
 ./run-mcp-cli-output.sh
@@ -53,11 +79,11 @@ Generate the CLI JSON files (only needs to be done once, or when MCP changes):
 - Builds Azure MCP Server with .NET 10
 - Runs `tools list` command to get tool metadata
 - Runs `tools list --namespace-mode` to get namespace data
-- Captures CLI version information
-- Saves three files to `generated/cli/`:
-  - `cli-output.json` - Complete tool metadata (~540KB)
-  - `cli-namespace.json` - Service area namespaces (~12KB)
-  - `cli-version.json` - Version and generation metadata
+- Captures MCP version information
+- Saves files to `generated/cli/`:
+  - `cli-output.json` - Complete tool metadata
+  - `cli-namespace.json` - Service area namespaces
+  - `mcp-version.txt` - Version information
 
 **Options:**
 ```bash
@@ -67,22 +93,42 @@ Generate the CLI JSON files (only needs to be done once, or when MCP changes):
 ./run-mcp-cli-output.sh --skip-build            # Use existing image
 ```
 
-### Step 2: Generate Documentation
+### Stage 2: Generate Markdown Documentation
 
 Generate documentation using the pre-generated CLI files:
 
 ```bash
-./run-docker.sh --skip-cli-generation
+./run-content-generation-output.sh
 ```
 
 **What this does:**
 - Validates CLI output files exist and are valid
 - Builds C# documentation generator
 - Processes CLI JSON with Handlebars templates
-- Generates 590+ markdown documentation files
+- Generates 44 service markdown files + include files
 - Creates summary reports and CSV exports
 
 **Output location**: `./generated/tools/`
+
+### Stage 3: Generate AI Example Prompts
+
+Generate AI-powered usage examples (requires `.env` configuration):
+
+```bash
+./run-generative-ai-output.sh
+```
+
+**What this does:**
+- Reads tool metadata from Stage 1 output
+- Calls Azure OpenAI or GitHub Models API
+- Generates contextual usage examples
+- Creates scenario-based prompts
+
+**Output location**: `./generated/example-prompts/`
+
+**Requirements:**
+- `.env` file with AI credentials (see `.env.example`)
+- Azure OpenAI or GitHub Models access
 
 ## Advanced Usage
 
@@ -92,23 +138,24 @@ Generate documentation using the pre-generated CLI files:
 # Generate CLI output from specific MCP branch
 ./run-mcp-cli-output.sh --branch feature-branch
 
-# Then generate docs
-./run-docker.sh --skip-cli-generation
+# Then generate docs (uses existing CLI output)
+./run-content-generation-output.sh
 ```
 
 ### Rebuild Everything from Scratch
 
 ```bash
-# Clear Docker caches and rebuild
+# Clear Docker caches and rebuild all stages
 ./run-mcp-cli-output.sh --no-cache
-./run-docker.sh --no-cache
+./run-content-generation-output.sh --no-cache
+./run-generative-ai-output.sh --no-cache
 ```
 
 ### Interactive Debug Mode
 
 ```bash
-# Start interactive shell in documentation generator container
-./run-docker.sh --interactive
+# Start interactive shell in content generation container
+./run-content-generation-output.sh --interactive
 
 # Inside container, run commands manually:
 pwsh ./Generate-MultiPageDocs.ps1
@@ -116,7 +163,7 @@ pwsh ./Generate-MultiPageDocs.ps1
 
 ### Local PowerShell Execution (Without Docker)
 
-If you have the Microsoft/MCP repository cloned locally at `../servers/`, you can run PowerShell scripts directly:
+If you have the Microsoft/MCP repository cloned locally, you can run PowerShell scripts directly:
 
 ```bash
 # Generate CLI output locally
@@ -129,26 +176,30 @@ pwsh ./Generate-MultiPageDocs.ps1
 
 **Requirements for local execution:**
 - .NET 9.0 SDK
-- .NET 10.0 Preview SDK
+- .NET 10.0 Preview SDK (10.0.100-rc.2.25502.107 or later)
 - PowerShell 7.4+
-- Microsoft/MCP repository cloned at `../servers/`
+- Microsoft/MCP repository (path auto-detected via `$env:MCP_SERVER_PATH`)
+
+**Note**: Local execution auto-detects whether running in container or on host system.
 
 ## Output Files
 
 ### CLI Output Files (`generated/cli/`)
 
-| File | Size | Description |
-|------|------|-------------|
-| `cli-output.json` | ~540KB | Complete tool metadata with parameters |
-| `cli-namespace.json` | ~12KB | Service area namespace definitions |
-| `cli-version.json` | <1KB | Version, timestamp, and generation metadata |
+| File | Description |
+|------|-------------|
+| `cli-output.json` | Complete tool metadata with parameters |
+| `cli-namespace.json` | Service area namespace definitions |
+| `mcp-version.txt` | MCP server version and build information |
 
 ### Documentation Files (`generated/tools/`)
 
-- **30+ service files**: Main documentation for each Azure service (e.g., `acr.md`, `aks.md`)
-- **200+ annotation files**: Tool descriptions and examples (`annotations/*.md`)
-- **200+ parameter files**: Parameter details for each tool (`parameters/*.md`)
-- **150+ combined files**: Combined annotations and parameters (`param-and-annotation/*.md`)
+- **44 service files**: Main documentation for each Azure service (e.g., `acr.md`, `aks.md`, `appconfig.md`)
+- **Annotation files**: Tool descriptions and examples (`annotations/*.md`)
+- **Parameter files**: Parameter details for each tool (`parameters/*.md`)
+- **Combined files**: Merged annotations and parameters (`param-and-annotation/*.md`)
+
+**Total**: 44 main documentation files + associated include files
 
 ### Additional Files
 
@@ -225,8 +276,10 @@ The GitHub Actions workflow automatically runs both steps:
 microsoft-mcp-doc-generation/
 ├── run-mcp-cli-output.sh           # CLI output generator wrapper
 ├── run-docker.sh                    # Documentation generator wrapper
-├── Dockerfile.mcp-cli-output        # CLI output container definition
-├── Dockerfile                       # Documentation generator container
+├── docker/
+│   ├── Dockerfile.mcp-cli-output   # CLI output container definition
+│   ├── Dockerfile                  # Documentation generator container
+│   └── Dockerfile.cli              # Lightweight CLI container
 ├── docs-generation/
 │   ├── Get-McpCliOutput.ps1        # CLI output PowerShell script
 │   ├── Generate-MultiPageDocs.ps1  # Documentation PowerShell script
@@ -246,6 +299,13 @@ microsoft-mcp-doc-generation/
 
 ## Common Workflows
 
+### First-Time Setup
+
+```bash
+# Run guided walkthrough (recommended)
+./getting-started.sh
+```
+
 ### Daily Development
 
 ```bash
@@ -253,9 +313,9 @@ microsoft-mcp-doc-generation/
 ./run-mcp-cli-output.sh
 
 # Iterate on documentation templates
-./run-docker.sh --skip-cli-generation  # Fast: ~2-3 minutes
-# Edit templates...
-./run-docker.sh --skip-cli-generation  # Regenerate
+./run-content-generation-output.sh  # Fast: ~2-3 minutes
+# Edit templates in docs-generation/templates/
+./run-content-generation-output.sh  # Regenerate
 ```
 
 ### Testing MCP Changes
@@ -265,7 +325,7 @@ microsoft-mcp-doc-generation/
 ./run-mcp-cli-output.sh --branch feature-xyz
 
 # Generate docs with new CLI output
-./run-docker.sh --skip-cli-generation
+./run-content-generation-output.sh
 ```
 
 ### Fresh Start
@@ -273,21 +333,22 @@ microsoft-mcp-doc-generation/
 ```bash
 # Clean everything
 rm -rf generated/
-docker rmi azure-mcp-cli-output:latest azure-mcp-docgen:latest
+docker rmi mcp-cli-output:latest content-generation:latest
 
 # Rebuild from scratch
-./run-docker.sh
+./getting-started.sh
 ```
 
 ## Performance Notes
 
-| Operation | Time (Cold) | Time (Cached) | Notes |
-|-----------|-------------|---------------|-------|
-| CLI output generation | 8-10 min | 3-5 min | Clones & builds MCP |
-| Documentation generation (full) | 10-15 min | 5-7 min | Includes building docs generator |
-| Documentation generation (skip CLI) | 5-7 min | 2-3 min | Uses existing CLI files |
+| Operation | Time (First Run) | Time (Cached) | Notes |
+|-----------|------------------|---------------|-------|
+| Stage 1: CLI extraction | 8-10 min | 3-5 min | Clones & builds MCP server |
+| Stage 2: Markdown generation | 5-7 min | 2-3 min | C# generators + templates |
+| Stage 3: AI prompts | 10-15 min | 10-15 min | Depends on API latency |
+| **All stages** | 23-32 min | 15-23 min | Complete pipeline |
 
-**Tip**: Use `--skip-cli-generation` during development to iterate quickly on documentation templates without rebuilding MCP.
+**Development Tip**: Run Stage 1 once, then iterate on Stage 2 by modifying templates. Stage 1 output rarely changes unless MCP server updates.
 
 ## Next Steps
 
