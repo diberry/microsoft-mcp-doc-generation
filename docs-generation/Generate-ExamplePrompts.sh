@@ -37,7 +37,10 @@ echo -e "${BLUE}   Full path: $(realpath "$CLI_OUTPUT")${NC}"
 # Check if .env file exists
 if [ -f ".env" ]; then
     echo -e "${YELLOW}📄 Loading credentials from .env${NC}"
-    export $(grep -v '^#' .env | xargs)
+    # Properly load .env file, handling quotes and special characters
+    set -a
+    source .env
+    set +a
     echo -e "${GREEN}✅ Credentials loaded${NC}"
 else
     echo -e "${YELLOW}⚠️  No .env file found${NC}"
