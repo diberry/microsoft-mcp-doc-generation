@@ -64,6 +64,7 @@ jobs:
     - name: Run generative ai 
       run: |
         chmod +x ./run-generative-ai-output.sh
+        chmod +x ./docs-generation/Generate-ExamplePrompts.sh
         ./run-generative-ai-output.sh
 
     - name: Upload Generative AI output artifact
