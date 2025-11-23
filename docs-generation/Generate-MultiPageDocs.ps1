@@ -128,6 +128,7 @@ try {
     } else { 
         "generated/cli"  # Local path
     }
+    Pop-Location
     
     $cliOutputFile = Join-Path $cliOutputPath "cli-output.json"
     $namespaceOutputFile = Join-Path $cliOutputPath "cli-namespace.json"

@@ -399,10 +399,34 @@ public static class DocumentationGenerator
             }
         }
 
+        // Create a filtered list of tools that were successfully assigned to areas
+        // Preserve original tools list length for total counts
+        var originalToolsList = tools ?? new List<Tool>();
+
+        // Identify tools that weren't added to any area (e.g., empty or malformed commands)
+        var groupedToolSet = new HashSet<string>(areaGroups.Values.SelectMany(a => a.Tools).Select(t => t.Command ?? "").Where(s => !string.IsNullOrEmpty(s)));
+        var uncategorizedTools = originalToolsList
+            .Where(t => string.IsNullOrEmpty(t.Command) || !groupedToolSet.Contains(t.Command ?? ""))
+            .ToList();
+
+        if (uncategorizedTools.Any())
+        {
+            // Add an 'uncategorized' area to expose these tools in generated output
+            var uncategorizedArea = new AreaData
+            {
+                Description = "Uncategorized tools (no valid command)",
+                ToolCount = uncategorizedTools.Count,
+                Tools = uncategorizedTools
+            };
+
+            areaGroups["uncategorized"] = uncategorizedArea;
+        }
+
         return new TransformedData
         {
             Version = "1.0.0",
-            Tools = tools ?? new List<Tool>(),
+            // Keep the full original tools list so total counts match what was parsed
+            Tools = originalToolsList,
             Areas = areaGroups,
             GeneratedAt = DateTime.UtcNow
         };
