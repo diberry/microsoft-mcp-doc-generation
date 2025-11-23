@@ -1,30 +1,8 @@
 # Multi-stage Dockerfile for Azure MCP Documentation Generator
-# This container packages both the MCP server and the documentation generation tools
+# This container only builds the documentation generation tools
+# It expects CLI output files to be provided via volume mount
 
-# Stage 1: Build MCP Server
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS mcp-builder
-
-# Install git and wget for cloning and downloading .NET 10 preview
-RUN apt-get update && \
-    apt-get install -y git wget && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install .NET 10.0 preview SDK (required by MCP global.json)
-RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && \
-    chmod +x dotnet-install.sh && \
-    ./dotnet-install.sh --channel 10.0 --quality preview --install-dir /usr/share/dotnet && \
-    rm dotnet-install.sh
-
-# Clone Microsoft/MCP repository
-WORKDIR /build/mcp
-ARG MCP_BRANCH=main
-RUN git clone --depth 1 --branch ${MCP_BRANCH} https://github.com/Microsoft/MCP.git .
-
-# Build the Azure MCP Server
-WORKDIR /build/mcp/servers/Azure.Mcp.Server/src
-RUN dotnet build --configuration Release
-
-# Stage 2: Build Documentation Generator
+# Stage 1: Build Documentation Generator
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS docs-builder
 
 # Copy docs-generation source
@@ -35,10 +13,10 @@ COPY docs-generation/ .
 RUN dotnet restore docs-generation.sln && \
     dotnet build docs-generation.sln --configuration Release --no-restore
 
-# Stage 3: Runtime Environment
+# Stage 2: Runtime Environment
 FROM mcr.microsoft.com/dotnet/sdk:9.0
 
-# Install PowerShell and wget for .NET 10 preview
+# Install PowerShell
 # Using direct PowerShell installation method that works on Debian
 RUN apt-get update && \
     apt-get install -y wget apt-transport-https software-properties-common && \
@@ -48,41 +26,36 @@ RUN apt-get update && \
     rm powershell_7.4.6-1.deb_amd64.deb && \
     rm -rf /var/lib/apt/lists/*
 
-# Install .NET 10.0 preview SDK (required by MCP)
-RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && \
-    chmod +x dotnet-install.sh && \
-    ./dotnet-install.sh --channel 10.0 --quality preview --install-dir /usr/share/dotnet && \
-    rm dotnet-install.sh
-
-# Copy built MCP server from builder stage
-COPY --from=mcp-builder /build/mcp /mcp
-
 # Copy built docs-generation from builder stage
 COPY --from=docs-builder /build/docs-generation /docs-generation
+
+# Copy root-level scripts
+COPY run-generative-ai-output.sh /run-generative-ai-output.sh
+RUN chmod +x /run-generative-ai-output.sh
 
 # Set working directory
 WORKDIR /docs-generation
 
 # Set environment variables
 ENV DOTNET_ROLL_FORWARD=Major
-ENV MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src
 
 # Create output directory
 RUN mkdir -p /output
 
-# Volume for generated documentation
+# Volume for generated documentation (expects CLI files in /output/cli)
 VOLUME ["/output"]
 
-# Default command: Generate documentation and copy to /output
+# Default command: Generate documentation from existing CLI output
 CMD ["pwsh", "-Command", \
     "Write-Host '=== Azure MCP Documentation Generator ===' -ForegroundColor Cyan; \
-    Write-Host \"MCP Server Path: $env:MCP_SERVER_PATH\" -ForegroundColor Yellow; \
     Write-Host 'Output Path: /output' -ForegroundColor Yellow; \
     Write-Host ''; \
+    if (-not (Test-Path '/output/cli/cli-output.json')) { \
+        Write-Host '❌ CLI output files not found in /output/cli/' -ForegroundColor Red; \
+        Write-Host 'Please mount CLI output files generated from Dockerfile.mcp-cli-output' -ForegroundColor Yellow; \
+        exit 1; \
+    }; \
     Write-Host 'Starting documentation generation...' -ForegroundColor Green; \
-    Push-Location \"$env:MCP_SERVER_PATH\"; \
-    dotnet build --configuration Release --nologo --verbosity quiet; \
-    Pop-Location; \
     ./Generate-MultiPageDocs.ps1; \
     Write-Host ''; \
     Write-Host 'Copying generated documentation to /output...' -ForegroundColor Green; \
