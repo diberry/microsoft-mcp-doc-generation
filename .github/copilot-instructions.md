@@ -121,8 +121,9 @@ Include files use 3-tier resolution:
 
 ```
 generated/
-├── cli-output.json              # Raw MCP CLI data
-├── cli-namespace.json           # Namespace data
+├── cli/
+│   ├── cli-output.json          # Raw MCP CLI data
+│   └── cli-namespace.json       # Namespace data
 ├── namespaces.csv              # CSV export
 └── multi-page/                 # 591 markdown files
     ├── *.md                    # Main service docs (30+ services)

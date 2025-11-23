@@ -41,7 +41,7 @@ function Clear-PreviousOutput {
 
 # Set paths and variables
 $rootDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$cliOutputPath = Join-Path $PSScriptRoot "generated/cli-output.json"
+$cliOutputPath = Join-Path $PSScriptRoot "generated/cli/cli-output.json"
 $outputDir = Join-Path $PSScriptRoot "generated"
 
 Write-Progress "Starting Azure MCP Multi-Page Documentation Generation..."

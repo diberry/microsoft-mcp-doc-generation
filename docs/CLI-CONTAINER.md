@@ -269,7 +269,7 @@ docker run --rm azure-mcp-cli:develop tools list
 ### Integration with Full Generator
 ```bash
 # Use CLI container to extract metadata
-docker-compose --profile cli run --rm mcp-cli tools list > cli-output.json
+docker-compose --profile cli run --rm mcp-cli tools list > cli/cli-output.json
 
 # Then use full generator to create documentation
 docker-compose up docgen

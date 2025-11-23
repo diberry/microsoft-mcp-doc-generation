@@ -40,6 +40,7 @@ BUILD_ONLY=false
 NO_CACHE=false
 MCP_BRANCH="main"
 INTERACTIVE=false
+SKIP_CLI_GENERATION=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -59,22 +60,32 @@ while [[ $# -gt 0 ]]; do
             INTERACTIVE=true
             shift
             ;;
+        --skip-cli-generation)
+            SKIP_CLI_GENERATION=true
+            shift
+            ;;
         --help|-h)
             echo "Usage: ./run-docker.sh [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --build-only      Build the Docker image without running"
-            echo "  --no-cache        Build without using Docker cache"
-            echo "  --branch BRANCH   Use specific Microsoft/MCP branch (default: main)"
-            echo "  --interactive,-i  Start interactive shell in container"
-            echo "  --help,-h         Show this help message"
+            echo "  --build-only           Build the Docker image without running"
+            echo "  --no-cache             Build without using Docker cache"
+            echo "  --branch BRANCH        Use specific Microsoft/MCP branch (default: main)"
+            echo "  --skip-cli-generation  Skip CLI output generation (requires existing files)"
+            echo "  --interactive,-i       Start interactive shell in container"
+            echo "  --help,-h              Show this help message"
+            echo ""
+            echo "Workflow:"
+            echo "  By default, this script generates CLI output first, then documentation."
+            echo "  Use --skip-cli-generation to skip CLI generation if files already exist."
             echo ""
             echo "Examples:"
-            echo "  ./run-docker.sh                           # Build and run"
-            echo "  ./run-docker.sh --build-only              # Just build the image"
-            echo "  ./run-docker.sh --no-cache                # Rebuild from scratch"
-            echo "  ./run-docker.sh --branch feature-branch   # Use specific MCP branch"
-            echo "  ./run-docker.sh --interactive             # Start debug shell"
+            echo "  ./run-docker.sh                            # Generate CLI output + docs"
+            echo "  ./run-docker.sh --skip-cli-generation      # Generate docs only (requires CLI files)"
+            echo "  ./run-docker.sh --build-only               # Just build the image"
+            echo "  ./run-docker.sh --no-cache                 # Rebuild from scratch"
+            echo "  ./run-docker.sh --branch feature-branch    # Use specific MCP branch"
+            echo "  ./run-docker.sh --interactive              # Start debug shell"
             exit 0
             ;;
         *)
@@ -89,6 +100,15 @@ done
 echo -e "${BLUE}📦 Building Docker image...${NC}"
 echo -e "${YELLOW}MCP Branch: ${MCP_BRANCH}${NC}"
 echo ""
+
+# Remove existing image and build cache if --no-cache is specified
+if [ "$NO_CACHE" = true ]; then
+    echo -e "${YELLOW}🗑️  Removing existing Docker image and build cache...${NC}"
+    docker rmi azure-mcp-docgen:latest 2>/dev/null || echo -e "${CYAN}   (No existing image to remove)${NC}"
+    docker builder prune -f --filter "label!=keep-cache" 2>/dev/null || true
+    echo -e "${GREEN}✅ Cache cleared${NC}"
+    echo ""
+fi
 
 BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH}"
 if [ "$NO_CACHE" = true ]; then
@@ -115,31 +135,109 @@ if [ "$BUILD_ONLY" = true ]; then
     exit 0
 fi
 
-# Create output directory
+# Clean and create output directory
+echo ""
+echo -e "${YELLOW}🗑️  Cleaning previous output...${NC}"
+# Use sudo if needed for Docker-created files (owned by root)
+if [ -d "generated" ]; then
+    if rm -rf generated 2>/dev/null; then
+        echo -e "${GREEN}✅ Previous output removed${NC}"
+    else
+        echo -e "${YELLOW}   Retrying with elevated permissions...${NC}"
+        sudo rm -rf generated
+        echo -e "${GREEN}✅ Previous output removed${NC}"
+    fi
+fi
 mkdir -p generated
+echo -e "${GREEN}✅ Output directory ready${NC}"
 
 # Interactive mode
 if [ "$INTERACTIVE" = true ]; then
     echo ""
     echo -e "${BLUE}🔧 Starting interactive debug shell...${NC}"
+    if [ "$SKIP_CLI_GENERATION" = true ]; then
+        echo -e "${YELLOW}CLI generation will be skipped. If files are missing, run:${NC}"
+        echo -e "${YELLOW}  pwsh /scripts/Get-McpCliOutput.ps1 -OutputPath /output/cli${NC}"
+    fi
     echo -e "${YELLOW}Run inside container: ${NC}pwsh ./Generate-MultiPageDocs.ps1"
     echo -e "${YELLOW}Exit with: ${NC}exit"
     echo ""
     docker run --rm -it \
         -v "$(pwd)/generated:/output" \
+        --env SKIP_CLI_GENERATION="$SKIP_CLI_GENERATION" \
         --entrypoint /bin/bash \
         azure-mcp-docgen:latest
     exit 0
 fi
 
-# Run the documentation generator
+# Step 1: Generate CLI output files (unless skipped)
+if [ "$SKIP_CLI_GENERATION" = false ]; then
+    echo ""
+    echo -e "${BLUE}📝 Step 1: Generating MCP CLI output files...${NC}"
+    echo ""
+    
+    # Run CLI output generation
+    if ./run-mcp-cli-output.sh --skip-build 2>/dev/null || ./run-mcp-cli-output.sh; then
+        echo -e "${GREEN}✅ CLI output files generated${NC}"
+    else
+        echo -e "${RED}❌ Failed to generate CLI output files${NC}"
+        exit 1
+    fi
+else
+    echo ""
+    echo -e "${YELLOW}⏭️  Skipping CLI generation (--skip-cli-generation flag set)${NC}"
+    echo ""
+    
+    # Validate that required files exist
+    CLI_OUTPUT_FILE="generated/cli/cli-output.json"
+    NAMESPACE_FILE="generated/cli/cli-namespace.json"
+    VERSION_FILE="generated/cli/cli-version.json"
+    
+    if [ ! -f "$CLI_OUTPUT_FILE" ] || [ ! -f "$NAMESPACE_FILE" ] || [ ! -f "$VERSION_FILE" ]; then
+        echo -e "${RED}❌ CLI output files not found${NC}"
+        echo ""
+        echo "Required files:"
+        echo "  • $CLI_OUTPUT_FILE"
+        echo "  • $NAMESPACE_FILE"
+        echo "  • $VERSION_FILE"
+        echo ""
+        echo "Run: ./run-mcp-cli-output.sh to generate them"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✅ CLI output files found${NC}"
+fi
+
+# Step 2: Load .env file if it exists
+ENV_FILE="docs-generation/.env"
+ENV_ARGS=""
+if [ -f "$ENV_FILE" ]; then
+    echo -e "${CYAN}📄 Loading credentials from $ENV_FILE${NC}"
+    # Export variables from .env file
+    while IFS='=' read -r key value; do
+        # Skip comments and empty lines
+        [[ $key =~ ^#.*$ ]] && continue
+        [[ -z $key ]] && continue
+        # Remove quotes and whitespace
+        value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+        ENV_ARGS="$ENV_ARGS --env $key=$value"
+    done < "$ENV_FILE"
+    echo -e "${GREEN}✅ Credentials loaded${NC}"
+else
+    echo -e "${YELLOW}⚠️  No .env file found at $ENV_FILE${NC}"
+    echo -e "${YELLOW}   Example prompts will not be generated${NC}"
+fi
+
+# Step 3: Run the documentation generator
 echo ""
-echo -e "${BLUE}📝 Running documentation generator...${NC}"
+echo -e "${BLUE}📝 Step 2: Running documentation generator...${NC}"
 echo -e "${YELLOW}Output directory: $(pwd)/generated${NC}"
 echo ""
 
 if docker run --rm \
     -v "$(pwd)/generated:/output" \
+    --env SKIP_CLI_GENERATION="true" \
+    $ENV_ARGS \
     azure-mcp-docgen:latest; then
     
     echo ""
@@ -149,8 +247,8 @@ if docker run --rm \
     echo ""
     
     # Show summary of generated files
-    if [ -d "generated/tools" ]; then
-        FILE_COUNT=$(find generated/tools -name "*.md" -type f | wc -l)
+    if [ -d "generated/multi-page" ]; then
+        FILE_COUNT=$(find generated/multi-page -name "*.md" -type f | wc -l)
         echo -e "${CYAN}📄 Generated ${FILE_COUNT} markdown files${NC}"
         echo ""
         echo -e "${CYAN}Output location:${NC}"
@@ -159,7 +257,7 @@ if docker run --rm \
         
         # Show first few files
         echo -e "${CYAN}Sample files:${NC}"
-        find generated/tools -name "*.md" -type f | sort | head -5 | while read file; do
+        find generated/multi-page -name "*.md" -type f | sort | head -5 | while read file; do
             SIZE=$(du -h "$file" | cut -f1)
             echo "  • $(basename "$file") (${SIZE})"
         done
@@ -171,7 +269,7 @@ if docker run --rm \
         echo ""
         echo -e "${GREEN}🎉 Ready to use!${NC}"
     else
-        echo -e "${YELLOW}⚠️  No tools directory found${NC}"
+        echo -e "${YELLOW}⚠️  No multi-page directory found${NC}"
         echo "Generated files:"
         ls -lh generated/ 2>/dev/null || echo "  (empty)"
     fi

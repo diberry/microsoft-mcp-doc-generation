@@ -1,0 +1,24 @@
+Generate 5 diverse example prompts for the following Azure MCP Server tool:
+
+Tool Name: {TOOL_NAME}
+Tool Command: {TOOL_COMMAND}
+Action: {ACTION_VERB}
+Resource: {RESOURCE_TYPE}
+
+Parameters:
+{{#each PARAMETERS}}
+- {{name}} ({{#if required}}Required{{else}}Optional{{/if}}): {{description}}
+{{/each}}
+
+Return your response as a JSON object with this exact structure:
+{
+  "{TOOL_COMMAND}": [
+    "prompt 1 text here",
+    "prompt 2 text here",
+    "prompt 3 text here",
+    "prompt 4 text here",
+    "prompt 5 text here"
+  ]
+}
+
+Generate the prompts now.

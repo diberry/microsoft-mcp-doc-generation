@@ -3,7 +3,9 @@
 
 using System.Text.RegularExpressions;
 using NaturalLanguageGenerator;
-using Shared; 
+using Shared;
+
+namespace CSharpGenerator;
 
 public static class OptionsDiscovery
 {
@@ -34,11 +36,11 @@ public static class OptionsDiscovery
 
         // Get mappings from options classes regardless of whether we have definitions
         var mappingsFromClasses = await DiscoverOptionsClassMappings();
-        Console.WriteLine($"Found {mappingsFromClasses.Count} property mappings from options classes");
+        Console.WriteLine($"  📋 Found {mappingsFromClasses.Count} property mappings from options classes");
 
         if (optionDefinitionsPath == null)
         {
-            Console.WriteLine("Warning: OptionDefinitions.cs not found in any of the expected locations. Using only options classes.");
+            Console.WriteLine("  ⚠️  OptionDefinitions.cs not found - using options classes only");
             
             // Create basic parameters from the discovered properties
             foreach (var mapping in mappingsFromClasses)
@@ -300,7 +302,7 @@ public static class OptionsDiscovery
         
         if (optionsDirectoryPath == null)
         {
-            Console.WriteLine("Warning: Options directory not found in any of the expected locations");
+            Console.WriteLine("  ⚠️  Options directory not found in expected locations");
             return mappings;
         }
         

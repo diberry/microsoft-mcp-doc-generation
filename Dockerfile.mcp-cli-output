@@ -1,0 +1,64 @@
+# Dockerfile for Azure MCP CLI Output Generation
+# This container clones Microsoft/MCP, builds the server, and generates CLI output files
+# Output files: cli-output.json, cli-namespace.json, cli-version.json
+
+FROM mcr.microsoft.com/dotnet/sdk:9.0
+
+# Install git, wget, and PowerShell
+RUN apt-get update && \
+    apt-get install -y git wget apt-transport-https software-properties-common && \
+    # Download and install PowerShell for Debian 12
+    wget https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/powershell_7.4.6-1.deb_amd64.deb && \
+    dpkg -i powershell_7.4.6-1.deb_amd64.deb || apt-get install -f -y && \
+    rm powershell_7.4.6-1.deb_amd64.deb && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install .NET 10.0 preview SDK (required by MCP global.json)
+RUN wget https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh && \
+    chmod +x dotnet-install.sh && \
+    ./dotnet-install.sh --channel 10.0 --quality preview --install-dir /usr/share/dotnet && \
+    rm dotnet-install.sh
+
+# Clone Microsoft/MCP repository
+WORKDIR /mcp
+ARG MCP_BRANCH=main
+RUN git clone --depth 1 --branch ${MCP_BRANCH} https://github.com/Microsoft/MCP.git .
+
+# Build the Azure MCP Server
+WORKDIR /mcp/servers/Azure.Mcp.Server/src
+RUN dotnet build --configuration Release --nologo
+
+# Set environment variables
+ENV DOTNET_ROLL_FORWARD=Major
+ENV MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src
+
+# Copy the CLI output generation script
+COPY docs-generation/Get-McpCliOutput.ps1 /scripts/Get-McpCliOutput.ps1
+
+# Create output directory
+RUN mkdir -p /output/cli
+
+# Volume for CLI output files
+VOLUME ["/output"]
+
+# Default command: Generate CLI output files
+CMD ["pwsh", "-Command", \
+    "Write-Host '=== Azure MCP CLI Output Generator ===' -ForegroundColor Cyan; \
+    Write-Host \"MCP Server Path: $env:MCP_SERVER_PATH\" -ForegroundColor Yellow; \
+    Write-Host \"MCP Branch: ${MCP_BRANCH}\" -ForegroundColor Yellow; \
+    Write-Host 'Output Path: /output/cli' -ForegroundColor Yellow; \
+    Write-Host ''; \
+    Write-Host 'Generating CLI output files...' -ForegroundColor Green; \
+    /scripts/Get-McpCliOutput.ps1 -OutputPath '/output/cli'; \
+    if ($LASTEXITCODE -ne 0) { \
+        Write-Host '❌ CLI output generation failed' -ForegroundColor Red; \
+        exit 1; \
+    }; \
+    Write-Host '✅ CLI output files generated successfully!' -ForegroundColor Green; \
+    Write-Host 'Files available at /output/cli' -ForegroundColor Cyan"]
+
+# Labels for container metadata
+LABEL maintainer="Azure MCP Documentation Team"
+LABEL description="Azure MCP CLI Output Generator - Generates JSON files for documentation generation"
+LABEL version="1.0"
+LABEL org.opencontainers.image.source="https://github.com/diberry/microsoft-mcp-doc-generation"

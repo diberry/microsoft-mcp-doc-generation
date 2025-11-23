@@ -17,6 +17,6 @@ node_modules/
 .env.local
 .env.*.local
 
-generated/
+generated*/
 /docs/commandline
 git

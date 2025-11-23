@@ -74,8 +74,8 @@ RUN mkdir -p /output
 VOLUME ["/output"]
 
 # Default command: Generate documentation and copy to /output
-CMD ["pwsh", "-Command", "\
-    Write-Host '=== Azure MCP Documentation Generator ===' -ForegroundColor Cyan; \
+CMD ["pwsh", "-Command", \
+    "Write-Host '=== Azure MCP Documentation Generator ===' -ForegroundColor Cyan; \
     Write-Host \"MCP Server Path: $env:MCP_SERVER_PATH\" -ForegroundColor Yellow; \
     Write-Host 'Output Path: /output' -ForegroundColor Yellow; \
     Write-Host ''; \

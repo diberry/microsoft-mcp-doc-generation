@@ -5,6 +5,8 @@ using System.Text.Json;
 using Shared;
 using NaturalLanguageGenerator; // Added namespace for TextCleanup
 
+namespace CSharpGenerator;
+
 public class ConfigFiles
 {
     public string? NLParametersPath { get; set; }

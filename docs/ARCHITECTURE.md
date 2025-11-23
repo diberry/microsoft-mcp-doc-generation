@@ -106,17 +106,17 @@ JSON Input → Parse Tools → Apply Config → Process Templates → Output Mar
 
 ```
 1. PowerShell calls MCP CLI
-   └─> dotnet run -- tools list --output cli-output.json
+   └─> dotnet run -- tools list --output cli/cli-output.json
 
 2. PowerShell calls namespace extraction
-   └─> dotnet run -- tools list-namespaces --output cli-namespace.json
+   └─> dotnet run -- tools list-namespaces --output cli/cli-namespace.json
 
 3. PowerShell builds C# generator
    └─> dotnet build CSharpGenerator/CSharpGenerator.csproj
 
 4. PowerShell invokes generator
    └─> dotnet run --project CSharpGenerator/ generate-docs \
-       cli-output.json \
+       cli/cli-output.json \
        multi-page/ \
        --index \
        --common \
@@ -230,8 +230,9 @@ docs-generation/
 
 ```
 generated/
-├── cli-output.json              # Raw MCP CLI data
-├── cli-namespace.json           # Namespace data
+├── cli/
+│   ├── cli-output.json          # Raw MCP CLI data
+│   └── cli-namespace.json       # Namespace data
 ├── namespaces.csv              # CSV export
 │
 └── multi-page/                 # Documentation root

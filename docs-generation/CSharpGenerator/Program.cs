@@ -4,7 +4,9 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
-using Shared; 
+using Shared;
+
+namespace CSharpGenerator;
 
 internal class Program
 {
@@ -121,7 +123,7 @@ internal class Program
      {
          if (args.Length < 2)
          {
-             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--no-service-options] [--version <version>]");
+             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--example-prompts] [--no-service-options] [--version <version>]");
              return 1;
          }
 
@@ -131,6 +133,7 @@ internal class Program
          var generateCommon = args.Contains("--common");
          var generateCommands = args.Contains("--commands");
          var generateAnnotations = args.Contains("--annotations");
+         var generateExamplePrompts = args.Contains("--example-prompts");
          var generateServiceOptions = !args.Contains("--no-service-options");
          
          // Extract version if provided
@@ -149,7 +152,8 @@ internal class Program
              generateCommands,
              generateServiceOptions,
              generateAnnotations,
-             cliVersion);
+             cliVersion,
+             generateExamplePrompts);
      }
 }
 
@@ -170,6 +174,9 @@ public class Tool
     public ToolMetadata? Metadata { get; set; }
     public string? AnnotationContent { get; set; } // Content from annotation file
     public string? AnnotationFileName { get; set; } // Filename of the annotation file
+    public bool HasAnnotation { get; set; } // Whether annotation file was generated
+    public bool HasParameters { get; set; } // Whether parameter file was generated
+    public bool HasExamplePrompts { get; set; } // Whether example prompts file was generated
 }
 
 public class ToolMetadata

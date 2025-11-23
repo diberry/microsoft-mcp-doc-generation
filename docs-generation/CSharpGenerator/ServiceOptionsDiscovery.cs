@@ -5,6 +5,8 @@ using System.Text.RegularExpressions;
 using NaturalLanguageGenerator;
 using Shared;
 
+namespace CSharpGenerator;
+
 public static class ServiceOptionsDiscovery
 {
     public static async Task<List<ServiceOption>> DiscoverServiceStartOptionsFromSource()
@@ -32,7 +34,7 @@ public static class ServiceOptionsDiscovery
 
         if (serviceOptionDefinitionsPath == null)
         {
-            Console.WriteLine("Warning: ServiceOptionDefinitions.cs not found in any of the expected locations.");
+            Console.WriteLine("  ⚠️  ServiceOptionDefinitions.cs not found in expected locations");
             return serviceOptions;
         }
 

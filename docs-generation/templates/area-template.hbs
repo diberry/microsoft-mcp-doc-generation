@@ -1,7 +1,7 @@
 {{#if generateAreaPage}}
 ---
 ms.topic: include
-ms.date: {{formatDateShort generatedAt}}
+ms.date: {{formatDate generatedAt}}
 mcp-cli.version: {{version}}
 ---
 
@@ -29,10 +29,10 @@ mcp-cli.version: {{version}}
 {{description}}
 
 {{#if option}}
-| Parameter | Required or optional | Description |
-|-----------|----------------------|-------------|
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
 {{#each option}}
-| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** | {{RequiredText}} | {{description}} |
+| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
 {{/each}}
 {{ else}}
 <!-- No parameters for this tool -->
@@ -58,7 +58,7 @@ Documentation generated from Azure MCP Server source code
 {{#if generateIndex}}
 ---
 ms.topic: include
-ms.date: {{formatDateShort generatedAt}}
+ms.date: {{formatDate generatedAt}}
 ---
 
 # Azure MCP Tools Documentation

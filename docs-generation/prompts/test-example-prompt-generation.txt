@@ -1,0 +1,81 @@
+===========================================
+TEST: Example Prompt Generation
+Using system-prompt-example-prompt.txt + user-prompt-example-prompt.txt
+===========================================
+
+SYSTEM PROMPT:
+-------------------------------------------
+You are an expert technical writer specializing in Azure cloud services and developer documentation. Your task is to generate natural, conversational example prompts that developers would use to interact with Azure MCP (Model Context Protocol) tools.
+
+Your goal is to create exactly 5 diverse example prompts that:
+
+1. **Sound authentic**: Write prompts as real developers would naturally phrase them in conversation or when typing commands
+2. **Use realistic values**: Follow Azure naming conventions (lowercase for storage accounts, kebab-case for resource groups, PascalCase for some resources)
+3. **Vary significantly**: Use different sentence structures, synonyms, formality levels, and grammatical approaches across all 5 prompts
+4. **Include required parameters**: Naturally incorporate all required parameters with realistic example values
+5. **Match the action category**: Use appropriate category labels that align with the tool's primary action (list, create, get, update, delete, etc.)
+6. **Follow the exact format**: Each prompt must be formatted as: `- **Category label**: "The example prompt text"`
+
+Important guidelines:
+- Mix different prompt styles: direct commands, questions, requests, imperatives
+- Vary parameter ordering naturally across prompts
+- Use realistic Azure resource names and values
+- Ensure each prompt is complete and standalone
+- All 5 prompts should use varied labels from the same category that matches the tool's action
+- Do not repeat phrasing or sentence structures between prompts
+
+Output only the 5 formatted example prompts, nothing else.
+
+USER PROMPT (with filled variables):
+-------------------------------------------
+Generate 5 diverse, natural language example prompts for an Azure MCP Server tool with the following characteristics:
+
+Tool Name: Azure Storage Account Creator
+Tool Command: azure storage account create
+Action: create
+Resource: storage account
+
+Parameters:
+- account-name (Required): The name of the storage account (3-24 lowercase letters and numbers)
+- resource-group (Required): Name of the resource group
+- location (Required): Azure region (e.g., eastus, westus2, centralus)
+- sku (Optional): Storage account SKU (Standard_LRS, Standard_GRS, Premium_LRS)
+- kind (Optional): Storage account kind (StorageV2, BlobStorage, FileStorage)
+
+Requirements:
+1. Create exactly 5 example prompts
+2. Each prompt should be conversational and natural, as a developer would ask
+3. Vary the phrasing significantly between prompts (use different sentence structures, synonyms, and approaches)
+4. For required parameters, use realistic example values in quotes (e.g., 'mystorageaccount', 'my-resource-group', 'eastus')
+5. Mix formal and informal language styles
+6. Include variations like:
+   - Direct commands ("Show me...", "List...", "Get...")
+   - Question format ("What...?", "How many...?")
+   - Request format ("I need to...", "Can you...")
+   - Imperative format ("Create...", "Add...", "Upload...")
+7. When multiple required parameters exist, demonstrate different ordering and natural ways to express them
+8. Make values realistic to Azure naming conventions (lowercase for storage accounts, kebab-case for resource groups, etc.)
+9. Each prompt should be a complete, standalone instruction that includes all required parameters
+10. Format as a bulleted list with a bolded category label followed by a colon, then the prompt in quotes
+
+Example format:
+- **Category label**: "The example prompt text"
+
+Categories to use (choose the appropriate category based on the tool's action and vary labels naturally within that category):
+- For list/query operations: "List [resource]", "Show [resource]", "Find [resource]", "Query [resource]", "Check [resource]"
+- For create operations: "Create [resource]", "New [resource]", "Set up [resource]", "Add [resource]", "Make [resource]"
+- For get/retrieve operations: "Get [resource] details", "View [resource] info", "Retrieve [resource]", "Check [resource]", "Find [resource]"
+- For update operations: "Update [resource]", "Modify [resource]", "Change [resource]", "Edit [resource]", "Configure [resource]"
+- For delete operations: "Delete [resource]", "Remove [resource]", "Clean up [resource]"
+- For upload/download: "Upload [file/data]", "Download [file/data]", "Transfer [resource]"
+- For query/search: "Query [resource]", "Search [resource]", "Find [items]"
+
+Note: Use only the category that matches the tool's ACTION_VERB. All 5 prompts should use varied labels from that same category.
+
+EXPECTED OUTPUT:
+-------------------------------------------
+- **Create storage account**: "Create a new storage account called 'myappdata2024' in the eastus region within my-prod-rg resource group"
+- **Set up storage**: "I need to set up a storage account named 'backupstorage123' for my-backup-resources resource group in westus2"
+- **New storage account**: "Can you make a new storage account 'webappstorage456' in centralus for the webapp-rg group?"
+- **Add storage**: "Add a storage account with the name 'logstorage789' to my-logging-rg in the eastus2 location"
+- **Make storage**: "Make me a storage account called 'datastorage2024' located in westeurope under my-data-rg"

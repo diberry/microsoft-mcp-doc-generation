@@ -4,6 +4,8 @@
 using HandlebarsDotNet;
 using System.Text.Json;
 
+namespace CSharpGenerator;
+
 /// <summary>
 /// Manages Handlebars template compilation and custom helper registration.
 /// Responsible for all template-related operations and rendering logic.

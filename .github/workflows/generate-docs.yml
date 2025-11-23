@@ -21,6 +21,52 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
+    - name: Build MCP CLI output generator image
+      run: |
+        echo "=== Building Azure MCP CLI Output Generator ==="
+        docker build \
+          --tag azure-mcp-cli-output:latest \
+          --build-arg MCP_BRANCH=main \
+          --progress=plain \
+          -f Dockerfile.mcp-cli-output \
+          .
+        
+        echo "✅ CLI output generator image built successfully"
+        docker images azure-mcp-cli-output:latest
+    
+    - name: Generate MCP CLI output files
+      run: |
+        echo "=== Generating MCP CLI Output Files ==="
+        
+        # Create output directory
+        mkdir -p generated/cli
+        
+        # Run CLI output generator
+        docker run \
+          --rm \
+          --volume "$(pwd)/generated/cli:/output/cli" \
+          azure-mcp-cli-output:latest
+        
+        echo "=== Verifying CLI Output ==="
+        if [ -f "generated/cli/cli-output.json" ] && \
+           [ -f "generated/cli/cli-namespace.json" ] && \
+           [ -f "generated/cli/cli-version.json" ]; then
+          echo "✅ CLI output files generated successfully"
+          ls -lh generated/cli/
+        else
+          echo "❌ CLI output generation failed"
+          exit 1
+        fi
+    
+    - name: Upload CLI output artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mcp-cli-output
+        path: |
+          generated/cli/
+        retention-days: 30
+      
     - name: Build documentation generator image
       run: |
         echo "=== Building Azure MCP Documentation Generator ==="
@@ -33,28 +79,66 @@ jobs:
         echo "✅ Docker image built successfully"
         docker images azure-mcp-docgen:latest
         
+    - name: Create .env file for documentation generation
+      run: |
+        echo "=== Creating .env file ==="
+        mkdir -p docs-generation
+        cat > docs-generation/.env << EOF
+        FOUNDRY_API_KEY="${{ secrets.FOUNDRY_API_KEY }}"
+        FOUNDRY_ENDPOINT="${{ secrets.FOUNDRY_ENDPOINT }}"
+        FOUNDRY_MODEL_NAME="${{ secrets.FOUNDRY_MODEL_NAME }}"
+        FOUNDRY_MODEL_API_VERSION="${{ secrets.FOUNDRY_MODEL_API_VERSION }}"
+        EOF
+        echo "✅ .env file created"
+    
     - name: Run documentation generation
       run: |
         echo "=== Running Documentation Generation ==="
         
-        # Create output directory
-        mkdir -p generated
-        
-        # Run the container
+        # CLI output files are already in generated/cli from previous step
+        # Run the container with SKIP_CLI_GENERATION=true
         docker run \
           --rm \
           --volume "$(pwd)/generated:/output" \
+          --volume "$(pwd)/docs-generation/.env:/docs-generation/.env:ro" \
           --env DOTNET_ROLL_FORWARD=Major \
           --env MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src \
+          --env SKIP_CLI_GENERATION=true \
           azure-mcp-docgen:latest
         
         echo "=== Verifying Generated Output ==="
-        if [ -d "generated/tools" ] && [ "$(ls -A generated/tools)" ]; then
+        if [ -d "generated/multi-page" ]; then
           echo "✅ Documentation generated successfully"
-          file_count=$(find generated/tools -name "*.md" -type f | wc -l)
+          file_count=$(find generated/multi-page -name "*.md" -type f | wc -l)
           echo "📄 ${file_count} markdown files created"
         else
           echo "❌ Documentation generation failed"
+          ls -la generated/
+          exit 1
+        fi
+        
+    - name: Run example prompt generation
+      run: |
+        echo "=== Running Example Prompt Generation ==="
+        
+        # Run example prompt generation using the root-level script
+        docker run \
+          --rm \
+          --volume "$(pwd)/generated:/output" \
+          --volume "$(pwd)/docs-generation/.env:/docs-generation/.env:ro" \
+          --volume "$(pwd)/run-generative-ai-output.sh:/run-generative-ai-output.sh:ro" \
+          --env DOTNET_ROLL_FORWARD=Major \
+          --env MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src \
+          azure-mcp-docgen:latest \
+          bash /run-generative-ai-output.sh
+        
+        echo "=== Verifying Example Prompts Output ==="
+        if [ -d "generated/example-prompts" ]; then
+          echo "✅ Example prompts generated successfully"
+          file_count=$(find generated/example-prompts -name "*.md" -type f | wc -l)
+          echo "📄 ${file_count} example prompt files created"
+        else
+          echo "❌ Example prompt generation failed"
           ls -la generated/
           exit 1
         fi
@@ -66,16 +150,34 @@ jobs:
         echo "Job status: ${{ job.status }}"
         echo ""
         
-        # Show generated files
-        if [ -d "generated/tools" ]; then
+        # Show generated documentation files
+        if [ -d "generated/multi-page" ]; then
           echo "✅ Generated documentation files:"
-          find generated/tools -name "*.md" -type f | sort | while read -r file; do
+          find generated/multi-page -name "*.md" -type f | sort | while read -r file; do
             size=$(stat -c%s "$file" 2>/dev/null || echo "0")
             size_kb=$((size / 1024))
             echo "  📄 $(basename "$file") (${size_kb}KB)"
           done
         else
-          echo "⚠️  No tools documentation directory found"
+          echo "⚠️  No multi-page documentation directory found"
+        fi
+        
+        # Show example prompt files
+        echo ""
+        if [ -d "generated/example-prompts" ]; then
+          echo "✅ Generated example prompt files:"
+          example_count=$(find generated/example-prompts -name "*.md" -type f | wc -l)
+          echo "  📄 ${example_count} example prompt files"
+          find generated/example-prompts -name "*.md" -type f | sort | head -10 | while read -r file; do
+            size=$(stat -c%s "$file" 2>/dev/null || echo "0")
+            size_kb=$((size / 1024))
+            echo "    • $(basename "$file") (${size_kb}KB)"
+          done
+          if [ $example_count -gt 10 ]; then
+            echo "    ... and $((example_count - 10)) more files"
+          fi
+        else
+          echo "⚠️  No example-prompts directory found"
         fi
         
         # Show data files

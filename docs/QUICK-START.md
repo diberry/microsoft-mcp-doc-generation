@@ -72,8 +72,9 @@ generated/
 │   ├── storage.md          # Azure Storage
 │   ├── keyvault.md         # Key Vault
 │   └── ... (50+ more files)
-├── cli-output.json         # Raw data
-├── cli-namespace.json      # Namespace data
+├── cli/
+│   ├── cli-output.json     # Raw data
+│   └── cli-namespace.json  # Namespace data
 ├── namespaces.csv          # CSV export
 └── generation-summary.md   # Statistics
 ```
