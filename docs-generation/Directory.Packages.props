@@ -1,9 +1,27 @@
 <Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
   <ItemGroup>
+    <!-- Testing packages -->
     <PackageVersion Include="NUnit" Version="3.13.3" />
     <PackageVersion Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.6.3" />
+    <PackageVersion Include="xunit" Version="2.4.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.4.5" />
+    
+    <!-- Core packages -->
+    <PackageVersion Include="System.Text.Json" Version="9.0.0" />
     <PackageVersion Include="Handlebars.Net" Version="2.1.6" />
-    <!-- Replaced xunit with NUnit and NUnit3TestAdapter -->
+    
+    <!-- Azure packages -->
+    <PackageVersion Include="Azure.AI.OpenAI" Version="2.0.0" />
+    
+    <!-- Tool packages -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 </Project>
