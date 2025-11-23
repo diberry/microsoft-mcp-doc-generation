@@ -8,6 +8,16 @@ set -e
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Change to the docs-generation directory and run the generator
+# Change to the docs-generation directory
 cd "$SCRIPT_DIR/docs-generation"
+
+# Load .env file if it exists and export variables
+if [ -f ".env" ]; then
+    echo "📄 Loading .env file..."
+    set -a
+    source .env
+    set +a
+    echo "✅ Environment variables loaded and exported"
+fi
+
 ./Generate-ExamplePrompts.sh "$@"
