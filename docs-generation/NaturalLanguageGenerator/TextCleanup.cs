@@ -324,4 +324,40 @@ public static class TextCleanup
         
         return text + ".";
     }
+
+    /// <summary>
+    /// Cleans AI-generated text by replacing smart quotes with straight quotes and HTML entities with plain characters.
+    /// This is a safety net to fix issues that the AI model might generate despite prompt instructions.
+    /// </summary>
+    /// <param name="text">The text to clean (typically AI-generated example prompts)</param>
+    /// <returns>Cleaned text with only straight quotes and plain characters</returns>
+    public static string CleanAIGeneratedText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return text;
+        }
+
+        // Replace smart/curly quotes with straight quotes
+        // Unicode characters for smart quotes:
+        // U+2018: ' (left single quotation mark)
+        // U+2019: ' (right single quotation mark, also used as apostrophe)
+        // U+201C: " (left double quotation mark)
+        // U+201D: " (right double quotation mark)
+        text = text.Replace('\u2018', '\'');  // ' → '
+        text = text.Replace('\u2019', '\'');  // ' → '
+        text = text.Replace('\u201C', '"');   // " → "
+        text = text.Replace('\u201D', '"');   // " → "
+
+        // Replace HTML entities with their plain character equivalents
+        text = text.Replace("&quot;", "\"");  // &quot; → "
+        text = text.Replace("&#34;", "\"");   // &#34; → "
+        text = text.Replace("&apos;", "'");   // &apos; → '
+        text = text.Replace("&#39;", "'");    // &#39; → '
+        text = text.Replace("&amp;", "&");    // &amp; → &
+        text = text.Replace("&lt;", "<");     // &lt; → <
+        text = text.Replace("&gt;", ">");     // &gt; → >
+
+        return text;
+    }
 }

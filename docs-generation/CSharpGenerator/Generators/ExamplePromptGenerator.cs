@@ -157,7 +157,10 @@ public class ExamplePromptGenerator
                     promptsResponse = new ExamplePromptsResponse
                     {
                         ToolName = firstEntry.Key,
+                        // Clean each prompt to fix smart quotes and HTML entities
                         Prompts = firstEntry.Value
+                            .Select(p => NaturalLanguageGenerator.TextCleanup.CleanAIGeneratedText(p))
+                            .ToList()
                     };
                 }
             }

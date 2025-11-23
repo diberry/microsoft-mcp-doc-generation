@@ -43,17 +43,38 @@ Note: Use only the category that matches the tool's ACTION_VERB. All 5 prompts s
 
 Output format: Return a JSON object with the tool name as the key and an array of 5 example prompt strings as the value. Each prompt should include the category label and the prompt text.
 
-**CRITICAL: Use ONLY plain markdown formatting. Do NOT use HTML entities like &quot;, &amp;, &lt;, &gt;, or any other HTML encoding. Use regular characters: quotes ("), apostrophes ('), ampersands (&), angle brackets (< >), and hash symbols (#) directly in your text. The output must be valid markdown that renders correctly without HTML entity decoding.**
+**CRITICAL FORMATTING RULES - MUST FOLLOW EXACTLY:**
 
-Example output format:
+1. **ONLY STRAIGHT QUOTES**: Use ONLY straight quotes (') and (") - keyboard apostrophe and quote keys
+   - ❌ NEVER use smart/curly quotes: ' ' " "
+   - ❌ NEVER use typographical quotes (Unicode U+2018, U+2019, U+201C, U+201D)
+   - ✅ ALWAYS use straight quotes: ' and "
+
+2. **NO HTML ENTITIES**: Do NOT use HTML encoding of any kind
+   - ❌ NEVER write: &quot; &apos; &#39; &#34; &amp; &lt; &gt;
+   - ✅ ALWAYS write plain characters: " ' & < >
+
+3. **CHARACTER EXAMPLES**:
+   - For single quotes: type ' (straight apostrophe, not ' or ')
+   - For double quotes: type " (straight quote, not " or ")
+   - For JSON: write {"key":"value"} not {&quot;key&quot;:&quot;value&quot;}
+   - For SQL: write WHERE status='active' not WHERE status='active'
+
+4. **BEFORE SUBMITTING**: Verify your output contains ONLY:
+   - Straight quotes: ' "
+   - NOT curly quotes: ' ' " "
+   - NOT HTML entities: &quot; &apos; &#
+
+Example output format (note the straight quotes):
 {
   "tool-name-here": [
     "**List containers**: Show me all storage containers in mystorageaccount",
-    "**Show containers**: What containers exist in myaccount?",
+    "**Show containers**: What containers exist in 'myaccount'?",
     "**Find containers**: Get the list of containers for storageacct123",
-    "**Query containers**: I need to see all containers in prod-storage",
-    "**Check containers**: Display containers available in devstorageacct"
+    "**Query containers**: I need to see all containers in 'prod-storage'",
+    "**Check containers**: Display containers available in 'devstorageacct'"
   ]
 }
 
-Remember: Use plain text characters directly - write "action":"login" not &quot;action&quot;:&quot;login&quot;
+FINAL CHECK: Look at your output. If you see any of these characters, you made a mistake: ' ' " " &quot; &apos;
+Correct format uses only: ' and "
