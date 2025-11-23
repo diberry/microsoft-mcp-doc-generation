@@ -37,10 +37,17 @@ echo -e "${BLUE}   Full path: $(realpath "$CLI_OUTPUT")${NC}"
 # Check if .env file exists
 if [ -f ".env" ]; then
     echo -e "${YELLOW}📄 Loading credentials from .env${NC}"
-    # Properly load .env file, handling quotes and special characters
-    set -a
-    source .env
-    set +a
+    # Properly load .env file and export variables, stripping quotes
+    while IFS='=' read -r key value; do
+        # Skip comments and empty lines
+        [[ $key =~ ^#.*$ ]] && continue
+        [[ -z $key ]] && continue
+        # Remove quotes and whitespace from value
+        value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+        # Export the variable
+        export "$key=$value"
+        echo "  Exported: $key"
+    done < .env
     echo -e "${GREEN}✅ Credentials loaded${NC}"
 else
     echo -e "${YELLOW}⚠️  No .env file found${NC}"
