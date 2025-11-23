@@ -5,6 +5,9 @@ using System.Text.Json;
 using GenerativeAI;
 using NaturalLanguageGenerator;
 using Shared;
+using CSharpGenerator.Models;
+using CSharpGenerator.Generators;
+using static CSharpGenerator.Generators.FrontmatterUtility;
 
 namespace CSharpGenerator;
 
@@ -217,19 +220,44 @@ public static class DocumentationGenerator
             Console.WriteLine("Example: dotnet run --example-prompts\n");
         }
         
-        await GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate, examplePromptGenerator, examplePromptsDir);
+        // Initialize all generators with shared dependencies
+        var annotationGenerator = new AnnotationGenerator(
+            LoadBrandMappingsAsync,
+            LoadStopWordsAsync,
+            LoadCompoundWordsAsync,
+            CleanFileNameAsync);
+            
+        var parameterGenerator = new ParameterGenerator(
+            LoadBrandMappingsAsync,
+            LoadCompoundWordsAsync,
+            CleanFileNameAsync);
+            
+        var paramAnnotationGenerator = new ParamAnnotationGenerator(
+            LoadBrandMappingsAsync,
+            LoadCompoundWordsAsync,
+            CleanFileNameAsync);
+            
+        var pageGenerator = new PageGenerator(
+            LoadBrandMappingsAsync,
+            CleanFileNameAsync,
+            ExtractCommonParameters);
+            
+        var reportGenerator = new ReportGenerator();
+
+        // Generate annotation files
+        await annotationGenerator.GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate, examplePromptGenerator, examplePromptsDir);
 
         // Generate individual parameter files for each tool (at parent level)
         var parametersDir = Path.Combine(parentDir, "parameters");
         Directory.CreateDirectory(parametersDir);
         var parameterTemplate = Path.Combine(templatesDir, "parameter-template.hbs");
-        await GenerateParameterFilesAsync(transformedData, parametersDir, parameterTemplate);
+        await parameterGenerator.GenerateParameterFilesAsync(transformedData, parametersDir, parameterTemplate);
 
         // Generate combined parameter and annotation files for each tool (at parent level)
         var paramAnnotationDir = Path.Combine(parentDir, "param-and-annotation");
         Directory.CreateDirectory(paramAnnotationDir);
         var paramAnnotationTemplate = Path.Combine(templatesDir, "param-annotation-template.hbs");
-        await GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
+        await paramAnnotationGenerator.GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
 
         // Setup area template (needed for index page too)
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
@@ -239,7 +267,7 @@ public static class DocumentationGenerator
         {
             foreach (var area in transformedData.Areas)
             {
-                await GenerateAreaPageAsync(area.Key, area.Value, transformedData, outputDir, areaTemplate);
+                await pageGenerator.GenerateAreaPageAsync(area.Key, area.Value, transformedData, outputDir, areaTemplate);
             }
         }
 
@@ -247,27 +275,27 @@ public static class DocumentationGenerator
         if (generateCommon)
         {
             var commonTemplate = Path.Combine(templatesDir, "common-tools.hbs");
-            await GenerateCommonToolsPageAsync(transformedData, outputDir, commonTemplate);
+            await pageGenerator.GenerateCommonToolsPageAsync(transformedData, outputDir, commonTemplate);
         }
 
         // Generate index page if requested
         if (generateIndex)
         {
-            await GenerateIndexPageAsync(transformedData, outputDir, areaTemplate);
+            await pageGenerator.GenerateIndexPageAsync(transformedData, outputDir, areaTemplate);
         }
 
         // Generate commands page if requested
         if (generateCommands)
         {
             var commandsTemplate = Path.Combine(templatesDir, "commands-template.hbs");
-            await GenerateCommandsPageAsync(transformedData, outputDir, commandsTemplate);
+            await pageGenerator.GenerateCommandsPageAsync(transformedData, outputDir, commandsTemplate);
         }
         
         // Generate service options page
         if (generateServiceOptions)
         {
             var serviceOptionsTemplate = Path.Combine(templatesDir, "service-start-option.hbs");
-            await GenerateServiceOptionsPageAsync(transformedData, outputDir, serviceOptionsTemplate);
+            await pageGenerator.GenerateServiceOptionsPageAsync(transformedData, outputDir, serviceOptionsTemplate);
         }
 
         // Generate tool annotations summary file if annotations are enabled (but not in annotations-only mode)
@@ -275,7 +303,7 @@ public static class DocumentationGenerator
         {
             var toolAnnotationsTemplate = Path.Combine(templatesDir, "tool-annotations-template.hbs");
             var generatedDir = Path.GetDirectoryName(outputDir) ?? outputDir;
-            await GenerateToolAnnotationsSummaryAsync(transformedData, generatedDir, toolAnnotationsTemplate, annotationsDir);
+            await annotationGenerator.GenerateToolAnnotationsSummaryAsync(transformedData, generatedDir, toolAnnotationsTemplate, annotationsDir);
         }
 
         // Note: Annotations are always generated at the start, before area pages
@@ -284,7 +312,7 @@ public static class DocumentationGenerator
         if (!generateAnnotations || generateCommands || generateIndex || generateCommon)
         {
             var securityReportsDir = Path.GetDirectoryName(outputDir) ?? outputDir;
-            await GenerateSecurityReportsAsync(transformedData, securityReportsDir);
+            await reportGenerator.GenerateSecurityReportsAsync(transformedData, securityReportsDir);
         }
 
         // Output summary statistics
@@ -399,34 +427,10 @@ public static class DocumentationGenerator
             }
         }
 
-        // Create a filtered list of tools that were successfully assigned to areas
-        // Preserve original tools list length for total counts
-        var originalToolsList = tools ?? new List<Tool>();
-
-        // Identify tools that weren't added to any area (e.g., empty or malformed commands)
-        var groupedToolSet = new HashSet<string>(areaGroups.Values.SelectMany(a => a.Tools).Select(t => t.Command ?? "").Where(s => !string.IsNullOrEmpty(s)));
-        var uncategorizedTools = originalToolsList
-            .Where(t => string.IsNullOrEmpty(t.Command) || !groupedToolSet.Contains(t.Command ?? ""))
-            .ToList();
-
-        if (uncategorizedTools.Any())
-        {
-            // Add an 'uncategorized' area to expose these tools in generated output
-            var uncategorizedArea = new AreaData
-            {
-                Description = "Uncategorized tools (no valid command)",
-                ToolCount = uncategorizedTools.Count,
-                Tools = uncategorizedTools
-            };
-
-            areaGroups["uncategorized"] = uncategorizedArea;
-        }
-
         return new TransformedData
         {
             Version = "1.0.0",
-            // Keep the full original tools list so total counts match what was parsed
-            Tools = originalToolsList,
+            Tools = tools ?? new List<Tool>(),
             Areas = areaGroups,
             GeneratedAt = DateTime.UtcNow
         };
@@ -1058,56 +1062,19 @@ public static class DocumentationGenerator
                     ["annotationFileName"] = fileName
                 };
 
-                var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, annotationData);
+                var templateResult = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, annotationData);
+                var frontmatter = FrontmatterUtility.GenerateAnnotationFrontmatter(
+                    tool.Command ?? "unknown",
+                    data.Version,
+                    fileName);
+                var result = frontmatter + templateResult;
                 await File.WriteAllTextAsync(outputFile, result);
                 tool.HasAnnotation = true;
                 
                 // Generate example prompts if requested
-                if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
-                {
-                    Console.WriteLine($"DEBUG: Generating example prompt for {tool.Command ?? tool.Name}");
-                    try
-                    {
-                        var examplePrompts = await examplePromptGenerator.GenerateAsync(tool);
-                        Console.WriteLine($"DEBUG: Generated {examplePrompts?.Length ?? 0} characters for {tool.Command ?? tool.Name}");
-                        if (!string.IsNullOrEmpty(examplePrompts))
-                        {
-                            // Use same filename pattern as annotations: {brand-filename}-{tool-family}-{operation}-example-prompts.md
-                            var exampleFileName = fileName.Replace("-annotations.md", "-example-prompts.md");
-                            var exampleOutputFile = Path.Combine(examplePromptsDir, exampleFileName);
-                            
-                            // Add metadata frontmatter to example prompts
-                            var frontmatter = $@"---
-ms.topic: include
-ms.date: {DateTime.UtcNow:yyyy-MM-dd}
-mcp-cli.version: {data.Version ?? "unknown"}
-generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
-# [!INCLUDE [{tool.Command}](../includes/tools/example-prompts/{exampleFileName})]
-<!-- azmcp {tool.Command} -->
----
-
-";
-                            var contentWithMetadata = frontmatter + examplePrompts;
-                            await File.WriteAllTextAsync(exampleOutputFile, contentWithMetadata);
-                            tool.HasExamplePrompts = true;
-                            examplePromptsGenerated++;
-                            var displayCommand = tool.Command ?? tool.Name ?? "unknown";
-                            Console.WriteLine($"  ✅ {displayCommand,-50} → {exampleFileName}");
-                        }
-                        else
-                        {
-                            examplePromptsFailed++;
-                            var displayCommand = tool.Command ?? tool.Name ?? "unknown";
-                            Console.WriteLine($"  ❌ {displayCommand,-50} (generation returned empty)");
-                        }
-                    }
-                    catch (Exception exampleEx)
-                    {
-                        examplePromptsFailed++;
-                        var displayCommand = tool.Command ?? tool.Name ?? "unknown";
-                        Console.WriteLine($"  ❌ {displayCommand,-50} (error: {exampleEx.Message})");
-                    }
-                }
+                var (successCount, failureCount) = await GenerateSingleExamplePromptAsync(tool, examplePromptGenerator, examplePromptsDir, fileName, data.Version);
+                examplePromptsGenerated += successCount;
+                examplePromptsFailed += failureCount;
             }
             
             Console.WriteLine($"Generated {data.Tools.Count} annotation files in {outputDir}");
@@ -1132,6 +1099,30 @@ generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             Console.WriteLine($"Error generating annotation files: {ex.Message}");
             Console.WriteLine(ex.StackTrace);
         }
+    }
+
+    /// <summary>
+    /// Generates a single example prompt file for a tool.
+    /// Delegates to ExamplePromptGenerator with template processor function.
+    /// </summary>
+    /// <returns>Tuple of (successCount, failureCount) - either (1,0) or (0,1) or (0,0)</returns>
+    private static async Task<(int successCount, int failureCount)> GenerateSingleExamplePromptAsync(
+        Tool tool, 
+        ExamplePromptGenerator? examplePromptGenerator, 
+        string? examplePromptsDir, 
+        string annotationFileName, 
+        string? version)
+    {
+        if (examplePromptGenerator == null || string.IsNullOrEmpty(examplePromptsDir))
+            return (0, 0);
+
+        // Delegate to ExamplePromptGenerator, passing in the Handlebars template processor
+        return await examplePromptGenerator.GenerateExamplePromptFileAsync(
+            tool,
+            examplePromptsDir,
+            annotationFileName,
+            version,
+            HandlebarsTemplateEngine.ProcessTemplateAsync);
     }
 
     /// <summary>
@@ -1221,7 +1212,12 @@ generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
                     ["parameterFileName"] = fileName
                 };
 
-                var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, parameterData);
+                var templateResult = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, parameterData);
+                var frontmatter = FrontmatterUtility.GenerateParameterFrontmatter(
+                    tool.Command ?? "unknown",
+                    data.Version,
+                    fileName);
+                var result = frontmatter + templateResult;
                 await File.WriteAllTextAsync(outputFile, result);
                 tool.HasParameters = true;
             }
@@ -1381,13 +1377,22 @@ generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
                     ["command"] = tool.Command ?? "",
                     ["area"] = tool.Area ?? "",
                     ["option"] = (object?)transformedOptions ?? new List<object>(),
-                    ["generateParamAnnotation"] = true,
+                    ["generateParameterAndAnnotation"] = true,
                     ["generatedAt"] = data.GeneratedAt,
                     ["version"] = data.Version ?? "unknown",
                     ["paramAnnotationFileName"] = fileName
                 };
 
-                var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, paramAnnotationData);
+                var templateResult = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, paramAnnotationData);
+                var frontmatter = FrontmatterUtility.GenerateGenericFrontmatter(
+                    "include",
+                    data.Version,
+                    new Dictionary<string, string>
+                    {
+                        ["comment"] = $"[!INCLUDE [{tool.Command ?? "unknown"}](../includes/tools/param-and-annotation/{fileName})]",
+                        ["azmcp"] = $"<!-- azmcp {tool.Command ?? "unknown"} -->"
+                    });
+                var result = frontmatter + templateResult;
                 await File.WriteAllTextAsync(outputFile, result);
             }
             

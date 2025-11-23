@@ -249,6 +249,7 @@ echo ""
 if docker run --rm \
     -v "$(pwd)/generated:/output" \
     --env SKIP_CLI_GENERATION="true" \
+    --env MCP_SERVER_PATH="/mcp/servers/Azure.Mcp.Server/src" \
     $ENV_ARGS \
     azure-mcp-docgen:latest; then
     

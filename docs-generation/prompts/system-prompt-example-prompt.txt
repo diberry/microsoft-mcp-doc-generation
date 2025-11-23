@@ -46,10 +46,10 @@ Output format: Return a JSON object with the tool name as the key and an array o
 Example output format:
 {
   "tool-name-here": [
-    "List containers: Show me all storage containers in mystorageaccount",
-    "Show containers: What containers exist in myaccount?",
-    "Find containers: Get the list of containers for storageacct123",
-    "Query containers: I need to see all containers in prod-storage",
-    "Check containers: Display containers available in devstorageacct"
+    "**List containers**: Show me all storage containers in mystorageaccount",
+    "**Show containers**: What containers exist in myaccount?",
+    "**Find containers**: Get the list of containers for storageacct123",
+    "**Query containers**: I need to see all containers in prod-storage",
+    "**Check containers**: Display containers available in devstorageacct"
   ]
 }

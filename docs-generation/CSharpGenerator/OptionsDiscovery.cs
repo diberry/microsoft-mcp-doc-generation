@@ -4,6 +4,7 @@
 using System.Text.RegularExpressions;
 using NaturalLanguageGenerator;
 using Shared;
+using CSharpGenerator.Models;
 
 namespace CSharpGenerator;
 

@@ -3,6 +3,7 @@
 
 using HandlebarsDotNet;
 using System.Text.Json;
+using CSharpGenerator.Models;
 
 namespace CSharpGenerator;
 

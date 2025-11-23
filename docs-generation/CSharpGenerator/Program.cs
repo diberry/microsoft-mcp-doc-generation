@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
 using Shared;
+using CSharpGenerator.Models;
 
 namespace CSharpGenerator;
 
@@ -157,98 +158,7 @@ internal class Program
      }
 }
 
-// Data models
-public class CliOutput
-{
-    public List<Tool> Results { get; set; } = new();
-}
-
-public class Tool
-{
-    public string? Name { get; set; }
-    public string? Command { get; set; }
-    public string? Description { get; set; }
-    public string? SourceFile { get; set; }
-    public List<Option>? Option { get; set; }
-    public string? Area { get; set; }
-    public ToolMetadata? Metadata { get; set; }
-    public string? AnnotationContent { get; set; } // Content from annotation file
-    public string? AnnotationFileName { get; set; } // Filename of the annotation file
-    public bool HasAnnotation { get; set; } // Whether annotation file was generated
-    public bool HasParameters { get; set; } // Whether parameter file was generated
-    public bool HasExamplePrompts { get; set; } // Whether example prompts file was generated
-}
-
-public class ToolMetadata
-{
-    [JsonPropertyName("destructive")]
-    public MetadataValue? Destructive { get; set; }
-    
-    [JsonPropertyName("idempotent")]
-    public MetadataValue? Idempotent { get; set; }
-    
-    [JsonPropertyName("openWorld")]
-    public MetadataValue? OpenWorld { get; set; }
-    
-    [JsonPropertyName("readOnly")]
-    public MetadataValue? ReadOnly { get; set; }
-    
-    [JsonPropertyName("secret")]
-    public MetadataValue? Secret { get; set; }
-    
-    [JsonPropertyName("localRequired")]
-    public MetadataValue? LocalRequired { get; set; }
-}
-
-public class MetadataValue
-{
-    [JsonPropertyName("value")]
-    public bool Value { get; set; }
-    
-    [JsonPropertyName("description")]
-    public string? Description { get; set; }
-}
-
-public class Option
-{
-    public string? Name { get; set; }
-    public string? NL_Name { get; set; }
-    public string? Type { get; set; }
-    public bool Required { get; set; }
-    public string RequiredText { get; set; } = "";
-    public string? Description { get; set; }
-}
-
-public class AreaData
-{
-    public string Description { get; set; } = "";
-    public int ToolCount { get; set; }
-    public List<Tool> Tools { get; set; } = new();
-}
-
-public class TransformedData
-{
-    public string Version { get; set; } = "";
-    public List<Tool> Tools { get; set; } = new();
-    public Dictionary<string, AreaData> Areas { get; set; } = new();
-    public DateTime GeneratedAt { get; set; }
-    public List<CommonParameter> SourceDiscoveredCommonParams { get; set; } = new();
-}
-
-public class CommonParameter
-{
-    public string Name { get; set; } = "";
-    public string Type { get; set; } = "";
-    public bool IsRequired { get; set; }
-    public string Description { get; set; } = "";
-    public double UsagePercent { get; set; }
-    public bool IsHidden { get; set; }
-    public string Source { get; set; } = "";
-    public string RequiredText { get; set; } = "";
-    public string NL_Name { get; set; } = "";
-
-}
-
+// Models moved to Models/ directory with CSharpGenerator.Models namespace
 
 // Extension method for regex replacement
 public static class StringExtensions
