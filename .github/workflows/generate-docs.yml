@@ -39,12 +39,12 @@ jobs:
       run: |
         echo "=== Creating .env file ==="
         mkdir -p docs-generation
-        cat > docs-generation/.env << EOF
-        FOUNDRY_API_KEY="${{ secrets.FOUNDRY_API_KEY }}"
-        FOUNDRY_ENDPOINT="${{ secrets.FOUNDRY_ENDPOINT }}"
-        FOUNDRY_MODEL_NAME="${{ secrets.FOUNDRY_MODEL_NAME }}"
-        FOUNDRY_MODEL_API_VERSION="${{ secrets.FOUNDRY_MODEL_API_VERSION }}"
-        EOF
+        cat > docs-generation/.env << 'EOF'
+FOUNDRY_API_KEY=${{ secrets.FOUNDRY_API_KEY }}
+FOUNDRY_ENDPOINT=${{ secrets.FOUNDRY_ENDPOINT }}
+FOUNDRY_MODEL_NAME=${{ secrets.FOUNDRY_MODEL_NAME }}
+FOUNDRY_MODEL_API_VERSION=${{ secrets.FOUNDRY_MODEL_API_VERSION }}
+EOF
         echo "✅ .env file created"
 
     - name: Run content generation (documentation + example prompts)
