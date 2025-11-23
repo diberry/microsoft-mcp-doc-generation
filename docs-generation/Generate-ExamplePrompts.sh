@@ -46,9 +46,15 @@ if [ -f ".env" ]; then
         value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//" -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
         # Export the variable
         export "$key=$value"
-        echo "  Exported: $key"
+        echo "  Exported: $key=${value:0:20}..." # Show first 20 chars for debugging
     done < .env
     echo -e "${GREEN}✅ Credentials loaded${NC}"
+    
+    # Verify exports
+    echo -e "${BLUE}Verifying environment variables:${NC}"
+    echo "  FOUNDRY_API_KEY: ${FOUNDRY_API_KEY:+SET (${#FOUNDRY_API_KEY} chars)}"
+    echo "  FOUNDRY_ENDPOINT: ${FOUNDRY_ENDPOINT:-NOT SET}"
+    echo "  FOUNDRY_MODEL_NAME: ${FOUNDRY_MODEL_NAME:-NOT SET}"
 else
     echo -e "${YELLOW}⚠️  No .env file found${NC}"
     echo -e "${YELLOW}   Checking environment variables...${NC}"
