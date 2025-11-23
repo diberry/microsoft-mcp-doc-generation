@@ -34,7 +34,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: mcp-cli-output-${{ github.run_id }}-$(date +%Y-%m-%d-%H-%M)
+        name: mcp-cli-output-${{ github.run_id }}-${{ github.run_number }}
         path: |
           generated/cli/
         retention-days: 30
@@ -65,7 +65,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: tool-output-${{ github.run_id }}-$(date +%Y-%m-%d-%H-%M)
+        name: tool-output-${{ github.run_id }}-${{ github.run_number }}
         path: |
           generated/
         retention-days: 30
@@ -80,7 +80,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: generative-output-${{ github.run_id }}-$(date +%Y-%m-%d-%H-%M)
+        name: generative-output-${{ github.run_id }}-${{ github.run_number }}
         path: |
           generated/
         retention-days: 30
