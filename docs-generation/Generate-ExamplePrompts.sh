@@ -59,6 +59,11 @@ fi
 # Create output directory and fix permissions
 mkdir -p "$OUTPUT_DIR"
 
+# Clean output directory before regenerating
+echo -e "${YELLOW}🧹 Cleaning output directory...${NC}"
+rm -rf "$OUTPUT_DIR"/*
+echo -e "${GREEN}✅ Output directory cleaned${NC}"
+
 # Fix permissions on generated directories if any subdirectories are owned by root
 GENERATED_DIR="$(dirname "$OUTPUT_DIR")"
 if find "$GENERATED_DIR" -user root 2>/dev/null | grep -q .; then
