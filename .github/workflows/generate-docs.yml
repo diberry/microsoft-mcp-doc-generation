@@ -6,8 +6,12 @@ on:
     - cron: '0 2 * * *'
   push:
     branches: [ main ]
+    paths-ignore:
+      - '.github/workflows/test-secrets.yml'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '.github/workflows/test-secrets.yml'
   workflow_dispatch:
 
 jobs:
