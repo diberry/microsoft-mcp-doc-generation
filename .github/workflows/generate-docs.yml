@@ -82,6 +82,43 @@ jobs:
       
     - name: Create .env file for AI generation
       run: |
+        echo "=== Validating required environment variables ==="
+        
+        # Check for empty variables
+        MISSING_VARS=""
+        
+        if [ -z "${{ secrets.FOUNDRY_API_KEY }}" ]; then
+          MISSING_VARS="${MISSING_VARS}- FOUNDRY_API_KEY\n"
+        fi
+        
+        if [ -z "${{ secrets.FOUNDRY_ENDPOINT }}" ]; then
+          MISSING_VARS="${MISSING_VARS}- FOUNDRY_ENDPOINT\n"
+        fi
+        
+        if [ -z "${{ secrets.FOUNDRY_MODEL_NAME }}" ]; then
+          MISSING_VARS="${MISSING_VARS}- FOUNDRY_MODEL_NAME\n"
+        fi
+        
+        if [ -z "${{ secrets.FOUNDRY_MODEL_API_VERSION }}" ]; then
+          MISSING_VARS="${MISSING_VARS}- FOUNDRY_MODEL_API_VERSION\n"
+        fi
+        
+        # If any variables are missing, fail with clear message
+        if [ -n "$MISSING_VARS" ]; then
+          echo "❌ ERROR: Required environment variables are missing!"
+          echo ""
+          echo "The following GitHub secrets are not set or are empty:"
+          echo -e "$MISSING_VARS"
+          echo ""
+          echo "Please configure these secrets in:"
+          echo "  Settings → Secrets and variables → Actions → Repository secrets"
+          echo ""
+          exit 1
+        fi
+        
+        echo "✅ All required environment variables are set"
+        echo ""
+        
         echo "=== Creating .env file ==="
         mkdir -p docs-generation
         {
