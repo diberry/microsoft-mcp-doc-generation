@@ -272,7 +272,6 @@ try {
     if ($CreateCommon) { $generatorArgs += "--common" }
     if ($CreateCommands) { $generatorArgs += "--commands" }
     $generatorArgs += "--annotations"  # Always generate annotation files
-    if ($ExamplePrompts) { $generatorArgs += "--example-prompts" }  # Generate example prompts using Azure OpenAI
     if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
     if ($cliVersion -and $cliVersion -ne "unknown") { 
         $generatorArgs += "--version"
