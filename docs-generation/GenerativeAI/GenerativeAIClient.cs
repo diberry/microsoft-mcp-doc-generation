@@ -30,10 +30,13 @@ public class GenerativeAIClient
 
         var options = new ChatCompletionOptions
         {
-            MaxOutputTokenCount = 512
+            MaxOutputTokenCount = 2000
         };
 
         var response = await _chatClient.CompleteChatAsync(messages, options, ct);
+
+
+
         return response.Value.Content[0].Text ?? string.Empty;
     }
 }

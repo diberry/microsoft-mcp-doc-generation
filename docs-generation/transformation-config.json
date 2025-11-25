@@ -1,0 +1,36 @@
+{
+  "services": {
+    "mappings": [
+      {
+        "mcpName": "azure-ai-foundry-agents",
+        "brandName": "Azure AI Foundry Agents",
+        "filename": "azure-ai-foundry-agents"
+      },
+      {
+        "mcpName": "azure-ai-search",
+        "brandName": "Azure AI Search",
+        "filename": "azure-ai-search"
+      },
+      {
+        "mcpName": "azure-app-configuration",
+        "brandName": "Azure App Configuration",
+        "filename": "azure-app-configuration"
+      },
+      {
+        "mcpName": "azure-app-service",
+        "brandName": "Azure App Service",
+        "filename": "azure-app-service"
+      },
+      {
+        "mcpName": "azure-applens-resource",
+        "brandName": "Azure AppLens Resource",
+        "filename": "azure-applens-resource"
+      },
+      {
+        "mcpName": "azure-application-insights",
+        "brandName": "Azure Application Insights",
+        "filename": "azure-application-insights"
+      }
+    ]
+  }
+}
