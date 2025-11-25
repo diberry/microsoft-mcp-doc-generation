@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextTransformation", "TextT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextTransformation.Tests", "TextTransformation.Tests\TextTransformation.Tests.csproj", "{867EE180-F20E-456B-8D32-92FB509D38A8}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorizontalArticleGenerator", "HorizontalArticleGenerator\HorizontalArticleGenerator.csproj", "{7A72E833-0D82-4D83-A867-A3E135BCB4AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,6 +135,18 @@ Global
 		{867EE180-F20E-456B-8D32-92FB509D38A8}.Release|x64.Build.0 = Release|Any CPU
 		{867EE180-F20E-456B-8D32-92FB509D38A8}.Release|x86.ActiveCfg = Release|Any CPU
 		{867EE180-F20E-456B-8D32-92FB509D38A8}.Release|x86.Build.0 = Release|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Debug|x64.Build.0 = Debug|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Debug|x86.Build.0 = Debug|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Release|x64.ActiveCfg = Release|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Release|x64.Build.0 = Release|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Release|x86.ActiveCfg = Release|Any CPU
+		{7A72E833-0D82-4D83-A867-A3E135BCB4AB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
