@@ -33,6 +33,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExamplePromptValidator.Test
 	ProjectSection(ProjectDependencies) = postProject
 		{E1A2B3C4-D5E6-7890-ABCD-EF1234567890} = {E1A2B3C4-D5E6-7890-ABCD-EF1234567890}
 	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorizontalArticleGenerator", "HorizontalArticleGenerator\HorizontalArticleGenerator.csproj", "{7A72E833-0D82-4D83-A867-A3E135BCB4AB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

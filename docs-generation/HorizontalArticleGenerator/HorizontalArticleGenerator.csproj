@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>HorizontalArticleGenerator</RootNamespace>
+    <StartupObject>HorizontalArticleGenerator.HorizontalArticleProgram</StartupObject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference existing shared projects -->
+    <ProjectReference Include="..\CSharpGenerator\CSharpGenerator.csproj" />
+    <ProjectReference Include="..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\GenerativeAI\GenerativeAI.csproj" />
+    <ProjectReference Include="..\NaturalLanguageGenerator\NaturalLanguageGenerator.csproj" />
+    <ProjectReference Include="..\TextTransformation\TextTransformation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Inherit Central Package Management versions -->
+    <PackageReference Include="Handlebars.Net" />
+  </ItemGroup>
+
+  <!-- All .cs files in this directory and subdirectories are automatically included -->
+  <!-- No need to explicitly list them -->
+
+</Project>
