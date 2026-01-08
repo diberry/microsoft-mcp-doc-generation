@@ -122,6 +122,13 @@ internal class Program
 
      private static async Task<int> GenerateDocumentation(string[] args)
      {
+         // DEBUG: Print all arguments
+         Console.WriteLine($"DEBUG: GenerateDocumentation received {args.Length} arguments:");
+         for (int i = 0; i < args.Length; i++)
+         {
+             Console.WriteLine($"  args[{i}] = '{args[i]}'");
+         }
+         
          if (args.Length < 2)
          {
              Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--example-prompts] [--no-service-options] [--version <version>]");
@@ -135,6 +142,15 @@ internal class Program
          var generateCommands = args.Contains("--commands");
          var generateAnnotations = args.Contains("--annotations");
          var generateExamplePrompts = args.Contains("--example-prompts");
+         
+         // DEBUG: Print flag values
+         Console.WriteLine($"DEBUG: Flag values:");
+         Console.WriteLine($"  generateIndex: {generateIndex}");
+         Console.WriteLine($"  generateCommon: {generateCommon}");
+         Console.WriteLine($"  generateCommands: {generateCommands}");
+         Console.WriteLine($"  generateAnnotations: {generateAnnotations}");
+         Console.WriteLine($"  generateExamplePrompts: {generateExamplePrompts}");
+         
          var generateServiceOptions = !args.Contains("--no-service-options");
          
          // Extract version if provided

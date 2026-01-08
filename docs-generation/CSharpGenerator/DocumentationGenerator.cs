@@ -195,20 +195,29 @@ public static class DocumentationGenerator
                 // Verify the generator is functional by checking if OpenAI client is initialized
                 if (!examplePromptGenerator.IsInitialized())
                 {
-                    throw new InvalidOperationException(
-                        "ExamplePromptGenerator failed to initialize. " +
-                        "Ensure Azure OpenAI credentials are set via environment variables or .env file. " +
-                        "Required: FOUNDRY_API_KEY, FOUNDRY_ENDPOINT, FOUNDRY_MODEL_NAME");
+                    Console.WriteLine("⚠️  WARNING: ExamplePromptGenerator failed to initialize.");
+                    Console.WriteLine("    Azure OpenAI credentials are not configured.");
+                    Console.WriteLine("    Required environment variables or .env file entries:");
+                    Console.WriteLine("      - FOUNDRY_API_KEY");
+                    Console.WriteLine("      - FOUNDRY_ENDPOINT");
+                    Console.WriteLine("      - FOUNDRY_MODEL_NAME");
+                    Console.WriteLine("    Example prompts will be SKIPPED. Documentation generation will continue.");
+                    Console.WriteLine("");
+                    examplePromptGenerator = null;
+                    examplePromptsDir = null;
                 }
-                
-                Console.WriteLine("✅ ExamplePromptGenerator initialized and verified");
+                else
+                {
+                    Console.WriteLine("✅ ExamplePromptGenerator initialized and verified");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Failed to initialize ExamplePromptGenerator: {ex.Message}");
-                throw new InvalidOperationException(
-                    "Cannot generate example prompts - initialization failed. " +
-                    "Check Azure OpenAI credentials and configuration.", ex);
+                Console.WriteLine($"⚠️  WARNING: Failed to initialize ExamplePromptGenerator: {ex.Message}");
+                Console.WriteLine("    Example prompts will be SKIPPED. Documentation generation will continue.");
+                Console.WriteLine("");
+                examplePromptGenerator = null;
+                examplePromptsDir = null;
             }
             
             Console.WriteLine("=== Starting Annotation Generation (with example prompts) ===\n");

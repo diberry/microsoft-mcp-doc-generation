@@ -73,15 +73,13 @@ CMD ["pwsh", "-Command", \
         exit 1; \
     }; \
     Write-Host 'Starting documentation generation...' -ForegroundColor Green; \
-    ./Generate-MultiPageDocs.ps1; \
+    ./Generate-MultiPageDocs.ps1 -ExamplePrompts $true; \
     Write-Host ''; \
-    Write-Host 'Copying generated documentation to /output...' -ForegroundColor Green; \
-    if (Test-Path 'generated') { \
-        Copy-Item -Path 'generated/*' -Destination '/output/' -Recurse -Force; \
+    if (Test-Path '/output/tools') { \
         Write-Host '✅ Documentation generated successfully!' -ForegroundColor Green; \
         Write-Host 'Files available in mounted volume at /output' -ForegroundColor Cyan; \
     } else { \
-        Write-Host '❌ Generation failed - no output directory found' -ForegroundColor Red; \
+        Write-Host '❌ Generation failed - no output directory found at /output/tools' -ForegroundColor Red; \
         exit 1; \
     }"]
 
