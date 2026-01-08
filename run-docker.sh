@@ -57,7 +57,6 @@ echo -e "${BLUE}Building for user: ${USER_ID}:${GROUP_ID}${NC}"
 # Parse command line arguments
 BUILD_ONLY=false
 NO_CACHE=false
-MCP_BRANCH="main"
 INTERACTIVE=false
 SKIP_CLI_GENERATION=false
 
@@ -70,10 +69,6 @@ while [[ $# -gt 0 ]]; do
         --no-cache)
             NO_CACHE=true
             shift
-            ;;
-        --branch)
-            MCP_BRANCH="$2"
-            shift 2
             ;;
         --interactive|-i)
             INTERACTIVE=true
@@ -89,7 +84,6 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --build-only           Build the Docker image without running"
             echo "  --no-cache             Build without using Docker cache"
-            echo "  --branch BRANCH        Use specific Microsoft/MCP branch (default: main)"
             echo "  --skip-cli-generation  Skip CLI output generation (requires existing files)"
             echo "  --interactive,-i       Start interactive shell in container"
             echo "  --help,-h              Show this help message"
@@ -103,7 +97,6 @@ while [[ $# -gt 0 ]]; do
             echo "  ./run-docker.sh --skip-cli-generation      # Generate docs only (requires CLI files)"
             echo "  ./run-docker.sh --build-only               # Just build the image"
             echo "  ./run-docker.sh --no-cache                 # Rebuild from scratch"
-            echo "  ./run-docker.sh --branch feature-branch    # Use specific MCP branch"
             echo "  ./run-docker.sh --interactive              # Start debug shell"
             exit 0
             ;;
@@ -117,7 +110,6 @@ done
 
 # Build the Docker image
 echo -e "${BLUE}📦 Building Docker image...${NC}"
-echo -e "${YELLOW}MCP Branch: ${MCP_BRANCH}${NC}"
 echo ""
 
 # Remove existing image and build cache if --no-cache is specified
@@ -129,7 +121,7 @@ if [ "$NO_CACHE" = true ]; then
     echo ""
 fi
 
-BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH} --build-arg USER_ID=${USER_ID} --build-arg GROUP_ID=${GROUP_ID}"
+BUILD_ARGS="--build-arg USER_ID=${USER_ID} --build-arg GROUP_ID=${GROUP_ID}"
 if [ "$NO_CACHE" = true ]; then
     BUILD_ARGS="${BUILD_ARGS} --no-cache"
 fi
@@ -154,18 +146,35 @@ if [ "$BUILD_ONLY" = true ]; then
     exit 0
 fi
 
-# Clean and create output directory
+# Clean and create output directory (but preserve CLI files if skipping CLI generation)
 echo ""
-echo -e "${YELLOW}🗑️  Cleaning previous output...${NC}"
-if [ -d "generated" ]; then
-    rm -rf generated 2>/dev/null || true
-    echo -e "${GREEN}✅ Previous output removed${NC}"
+if [ "$SKIP_CLI_GENERATION" = false ]; then
+    echo -e "${YELLOW}🗑️  Cleaning previous output...${NC}"
+    if [ -d "generated" ]; then
+        rm -rf generated 2>/dev/null || true
+        echo -e "${GREEN}✅ Previous output removed${NC}"
+    fi
+    
+    # Pre-create directories with proper permissions
+    mkdir -p generated/cli generated/tools generated/example-prompts generated/logs
+    chmod -R u+rwX,go+rX generated/ 2>/dev/null || true
+    echo -e "${GREEN}✅ Output directory ready${NC}"
+else
+    echo -e "${YELLOW}🗑️  Cleaning previous documentation output (preserving CLI files)...${NC}"
+    if [ -d "generated/multi-page" ]; then
+        rm -rf generated/multi-page 2>/dev/null || true
+    fi
+    if [ -d "generated/tools" ]; then
+        rm -rf generated/tools 2>/dev/null || true
+    fi
+    if [ -d "generated/example-prompts" ]; then
+        rm -rf generated/example-prompts 2>/dev/null || true
+    fi
+    # Ensure directories exist
+    mkdir -p generated/cli generated/tools generated/example-prompts generated/logs
+    chmod -R u+rwX,go+rX generated/ 2>/dev/null || true
+    echo -e "${GREEN}✅ Output directories ready (CLI files preserved)${NC}"
 fi
-
-# Pre-create directories with proper permissions
-mkdir -p generated/cli generated/tools generated/example-prompts generated/logs
-chmod -R u+rwX,go+rX generated/ 2>/dev/null || true
-echo -e "${GREEN}✅ Output directory ready${NC}"
 
 # Interactive mode
 if [ "$INTERACTIVE" = true ]; then
@@ -173,7 +182,7 @@ if [ "$INTERACTIVE" = true ]; then
     echo -e "${BLUE}🔧 Starting interactive debug shell...${NC}"
     if [ "$SKIP_CLI_GENERATION" = true ]; then
         echo -e "${YELLOW}CLI generation will be skipped. If files are missing, run:${NC}"
-        echo -e "${YELLOW}  pwsh /scripts/Get-McpCliOutput.ps1 -OutputPath /output/cli${NC}"
+        echo -e "${YELLOW}  pwsh docs-generation/Get-McpCliOutput.ps1 -OutputPath generated/cli${NC}"
     fi
     echo -e "${YELLOW}Run inside container: ${NC}pwsh ./Generate-MultiPageDocs.ps1"
     echo -e "${YELLOW}Exit with: ${NC}exit"
@@ -193,8 +202,10 @@ if [ "$SKIP_CLI_GENERATION" = false ]; then
     echo -e "${BLUE}📝 Step 1: Generating MCP CLI output files...${NC}"
     echo ""
     
-    # Run CLI output generation
-    if ./run-mcp-cli-output.sh --skip-build 2>/dev/null || ./run-mcp-cli-output.sh; then
+    # Run CLI output generation using npm-based approach
+    # Export the npm project path so the PowerShell script can find it
+    export NPM_PROJECT_PATH="$(pwd)/test-npm-azure-mcp"
+    if pwsh docs-generation/Get-McpCliOutput.ps1 -OutputPath generated/cli; then
         echo -e "${GREEN}✅ CLI output files generated${NC}"
     else
         echo -e "${RED}❌ Failed to generate CLI output files${NC}"
@@ -218,7 +229,7 @@ else
         echo "  • $NAMESPACE_FILE"
         echo "  • $VERSION_FILE"
         echo ""
-        echo "Run: ./run-mcp-cli-output.sh to generate them"
+        echo "Run: ./run-docker.sh to generate them"
         exit 1
     fi
     

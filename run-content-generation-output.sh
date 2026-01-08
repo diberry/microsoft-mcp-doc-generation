@@ -58,7 +58,6 @@ echo -e "${BLUE}Building for user: ${USER_ID}:${GROUP_ID}${NC}"
 # Parse command line arguments
 BUILD_ONLY=false
 NO_CACHE=false
-MCP_BRANCH="main"
 INTERACTIVE=false
 SKIP_BUILD=false
 
@@ -71,10 +70,6 @@ while [[ $# -gt 0 ]]; do
         --no-cache)
             NO_CACHE=true
             shift
-            ;;
-        --branch)
-            MCP_BRANCH="$2"
-            shift 2
             ;;
         --interactive|-i)
             INTERACTIVE=true
@@ -94,18 +89,20 @@ while [[ $# -gt 0 ]]; do
             echo "            generated/cli/cli-version.json"
             echo ""
             echo "Options:"
-            echo "  --build-only           Build the Docker image without running"
-            echo "  --skip-build           Skip building, use existing image"
-            echo "  --no-cache             Build without using Docker cache"
-            echo "  --branch BRANCH        Use specific Microsoft/MCP branch (default: main)"
-            echo "  --interactive,-i       Start interactive shell in container"
-            echo "  --help,-h              Show this help message"
+            echo "  --build-only      Build the Docker image without running"
+            echo "  --skip-build      Skip building, use existing image"
+            echo "  --no-cache        Build without using Docker cache"
+            echo "  --interactive,-i  Start interactive shell in container"
+            echo "  --help,-h         Show this help message"
             echo ""
             echo "Examples:"
             echo "  ./run-content-generation-output.sh              # Generate docs"
             echo "  ./run-content-generation-output.sh --skip-build # Use existing image"
             echo "  ./run-content-generation-output.sh --no-cache   # Rebuild from scratch"
             echo "  ./run-content-generation-output.sh -i           # Debug shell"
+            echo ""
+            echo "Prerequisites:"
+            echo "  • Generate CLI output first: ./run-mcp-cli-output.sh"
             exit 0
             ;;
         *)
@@ -160,7 +157,6 @@ echo ""
 # Build the Docker image (unless skipped)
 if [ "$SKIP_BUILD" = false ]; then
     echo -e "${BLUE}📦 Building Docker image...${NC}"
-    echo -e "${YELLOW}MCP Branch: ${MCP_BRANCH}${NC}"
     echo ""
 
     # Remove existing image and build cache if --no-cache is specified
@@ -172,7 +168,7 @@ if [ "$SKIP_BUILD" = false ]; then
         echo ""
     fi
 
-    BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH} --build-arg USER_ID=${USER_ID} --build-arg GROUP_ID=${GROUP_ID}"
+    BUILD_ARGS="--build-arg USER_ID=${USER_ID} --build-arg GROUP_ID=${GROUP_ID}"
     if [ "$NO_CACHE" = true ]; then
         BUILD_ARGS="${BUILD_ARGS} --no-cache"
     fi

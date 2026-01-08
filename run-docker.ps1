@@ -13,11 +13,11 @@
 .PARAMETER NoCache
     Build without using Docker cache (clean build)
     
-.PARAMETER Branch
-    Specify which Microsoft/MCP branch to use (default: main)
-    
 .PARAMETER Interactive
     Start an interactive shell in the container for debugging
+
+.PARAMETER SkipCliGeneration
+    Skip CLI output generation (requires existing files)
     
 .EXAMPLE
     ./run-docker.ps1
@@ -32,10 +32,6 @@
     Rebuild from scratch without cache
     
 .EXAMPLE
-    ./run-docker.ps1 -Branch feature-branch
-    Use a specific MCP branch
-    
-.EXAMPLE
     ./run-docker.ps1 -Interactive
     Start an interactive debug shell
 #>
@@ -43,8 +39,8 @@
 param(
     [switch]$BuildOnly,
     [switch]$NoCache,
-    [string]$Branch = "main",
-    [switch]$Interactive
+    [switch]$Interactive,
+    [switch]$SkipCliGeneration
 )
 
 # Helper functions for colored output
@@ -86,7 +82,6 @@ Write-Host ""
 
 # Build the Docker image
 Write-Info "📦 Building Docker image..."
-Write-Warning "MCP Branch: $Branch"
 Write-Host ""
 
 # Get user/group IDs on Linux/macOS for non-root container execution
@@ -98,7 +93,7 @@ if ($IsLinux -or $IsMacOS) {
     Write-Info "Building with user mapping: $userId:$groupId"
 }
 
-$buildArgs = @("build", "--build-arg", "MCP_BRANCH=$Branch") + $userArgs + @("-t", "azure-mcp-docgen:latest", "-f", "docker/Dockerfile")
+$buildArgs = @("build", "-t", "azure-mcp-docgen:latest", "-f", "docker/Dockerfile") + $userArgs
 if ($NoCache) {
     $buildArgs += "--no-cache"
 }
@@ -135,6 +130,10 @@ foreach ($dir in $dirs) {
 if ($Interactive) {
     Write-Host ""
     Write-Info "🔧 Starting interactive debug shell..."
+    if ($SkipCliGeneration) {
+        Write-Warning "CLI generation will be skipped. If files are missing, run:"
+        Write-Warning "  pwsh docs-generation/Get-McpCliOutput.ps1 -OutputPath generated/cli"
+    }
     Write-Warning "Run inside container: pwsh ./Generate-MultiPageDocs.ps1"
     Write-Warning "Exit with: exit"
     Write-Host ""
@@ -149,17 +148,71 @@ if ($Interactive) {
     exit 0
 }
 
-# Run the documentation generator
+# Step 1: Generate CLI output files (unless skipped)
+if (-not $SkipCliGeneration) {
+    Write-Host ""
+    Write-Info "📝 Step 1: Generating MCP CLI output files..."
+    Write-Host ""
+    
+    # Run CLI output generation using npm-based approach
+    # Set environment variable so PowerShell script can find npm project
+    $env:NPM_PROJECT_PATH = Join-Path $PWD "test-npm-azure-mcp"
+    if (pwsh docs-generation/Get-McpCliOutput.ps1 -OutputPath generated/cli) {
+        Write-Success "✅ CLI output files generated"
+    } else {
+        Write-Host ""
+        Write-Error "❌ Failed to generate CLI output files"
+        exit 1
+    }
+} else {
+    Write-Host ""
+    Write-Warning "⏭️  Skipping CLI generation (--skip-cli-generation flag set)"
+    Write-Host ""
+    
+    # Validate that required files exist
+    $cliOutputFile = "generated/cli/cli-output.json"
+    $namespaceFile = "generated/cli/cli-namespace.json"
+    $versionFile = "generated/cli/cli-version.json"
+    
+    if (-not (Test-Path $cliOutputFile) -or -not (Test-Path $namespaceFile) -or -not (Test-Path $versionFile)) {
+        Write-Host ""
+        Write-Error "❌ CLI output files not found"
+        Write-Host ""
+        Write-Host "Required files:"
+        Write-Host "  • $cliOutputFile"
+        Write-Host "  • $namespaceFile"
+        Write-Host "  • $versionFile"
+        Write-Host ""
+        Write-Host "Run: ./run-docker.ps1 to generate them"
+        exit 1
+    }
+    
+    Write-Success "✅ CLI output files found"
+}
+
+# Step 2: Load .env file if it exists
+$envFile = "docs-generation/.env"
+$envArgs = @()
+if (Test-Path $envFile) {
+    Write-Host ""
+    Write-Info "📄 Loading credentials from $envFile"
+    # Note: Environment variables from .env would need to be sourced in the Docker context
+    Write-Success "✅ Credentials loaded"
+} else {
+    Write-Warning "⚠️  No .env file found at $envFile"
+    Write-Warning "   Example prompts will not be generated"
+}
+
+# Step 3: Run the documentation generator
 Write-Host ""
-Write-Info "📝 Running documentation generator..."
+Write-Info "📝 Step 2: Running documentation generator..."
 Write-Warning "Output directory: $PWD/generated"
-Write-Host ""
 
 $runArgs = @("run", "--rm")
 if ($IsLinux -or $IsMacOS) {
     $runArgs += @("--user", "${userId}:${groupId}")
 }
-$runArgs += @("-v", "${PWD}/generated:/output", "azure-mcp-docgen:latest")
+$runArgs += @("-v", "${PWD}/generated:/output", "--env", "SKIP_CLI_GENERATION=true", "azure-mcp-docgen:latest")
 
 & docker $runArgs | Out-Null
 

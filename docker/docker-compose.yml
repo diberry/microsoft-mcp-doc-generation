@@ -2,13 +2,13 @@ version: '3.8'
 
 services:
   # Azure MCP Documentation Generator
+  # Generates 590+ markdown documentation files from CLI output JSON files
+  # Prerequisites: CLI output files must exist in generated/cli/ (run ./run-mcp-cli-output.sh first)
   docgen:
     build:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        # Specify which branch of Microsoft/MCP to use
-        MCP_BRANCH: main
         USER_ID: "${UID:-1000}"
         GROUP_ID: "${GID:-1000}"
     image: azure-mcp-docgen:latest
@@ -25,8 +25,8 @@ services:
     environment:
       # Allow using preview .NET runtime
       - DOTNET_ROLL_FORWARD=Major
-      # Optional: Customize MCP server path if needed
-      # - MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src
+      # Skip CLI generation (CLI files already generated locally)
+      - SKIP_CLI_GENERATION=true
     
     # Resource limits (adjust based on your needs)
     deploy:
@@ -42,35 +42,14 @@ services:
     # Comment out if you want to inspect the container after it runs
     # remove: true
     
-  # Lightweight Azure MCP CLI (no documentation generation)
-  # Use this for quick MCP server CLI commands
-  mcp-cli:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.cli
-      args:
-        MCP_BRANCH: main
-        USER_ID: "${UID:-1000}"
-        GROUP_ID: "${GID:-1000}"
-    image: azure-mcp-cli:latest
-    container_name: azure-mcp-cli
-    user: "${UID:-1000}:${GID:-1000}"
-    
-    # Override to run specific commands
-    # Example: docker-compose run --rm mcp-cli tools list
-    command: []
-    
-    # Don't start this service by default
-    profiles:
-      - cli
-  
-  # Alternative service for interactive debugging
+  # Interactive debugging service
+  # Access container shell for debugging and development
+  # Usage: docker-compose -f docker/docker-compose.yml --profile debug run --rm docgen-interactive
   docgen-interactive:
     build:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        MCP_BRANCH: main
         USER_ID: "${UID:-1000}"
         GROUP_ID: "${GID:-1000}"
     image: azure-mcp-docgen:latest
@@ -84,6 +63,7 @@ services:
     
     environment:
       - DOTNET_ROLL_FORWARD=Major
+      - SKIP_CLI_GENERATION=true
     
     # Override entrypoint for interactive shell
     entrypoint: ["/bin/bash"]
