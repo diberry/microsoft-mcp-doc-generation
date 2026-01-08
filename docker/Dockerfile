@@ -37,7 +37,13 @@ RUN chmod +x /run-generative-ai-output.sh
 WORKDIR /docs-generation
 
 # Set environment variables
-ENV DOTNET_ROLL_FORWARD=Major
+ENV DOTNET_ROLL_FORWARD=Major \
+    DOTNET_CLI_WORKLOAD_UPDATE_NOTIFICATION_SCHEDULE=never \
+    DOTNET_SKIP_WORKLOAD_VERIFICATION=1 \
+    DOTNET_NOLOGO=1
+
+# Preemptively update workloads to avoid verification notices
+RUN dotnet --info && dotnet workload update || true
 
 # Create output directory
 RUN mkdir -p /output

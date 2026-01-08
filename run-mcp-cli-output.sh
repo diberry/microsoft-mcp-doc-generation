@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-# Azure MCP CLI Output Generator - Docker Wrapper Script
-# Builds and runs container to generate CLI output files for documentation
+# Azure MCP CLI Output Generator - NPM-based Script
+# Generates CLI output files using local test-npm-azure-mcp package
 
 # Set up logging
 mkdir -p generated/logs
@@ -23,77 +23,22 @@ echo -e "${CYAN}Azure MCP CLI Output Generator${NC}"
 echo -e "${CYAN}========================================${NC}"
 echo ""
 
-# Check if Docker is installed
-if ! command -v docker &> /dev/null; then
-    echo -e "${RED}❌ Docker is not installed${NC}"
-    echo "Please install Docker Desktop or Docker Engine"
-    echo "Visit: https://docs.docker.com/get-docker/"
-    exit 1
-fi
-
-# Check if Docker daemon is running
-if ! docker info &> /dev/null; then
-    echo -e "${RED}❌ Docker daemon is not running${NC}"
-    echo "Please start Docker Desktop or the Docker service"
-    exit 1
-fi
-
-echo -e "${GREEN}✅ Docker is ready${NC}"
-echo ""
-
-# Check if running with sudo (not recommended)
-if [ "$EUID" -eq 0 ]; then
-    echo -e "${RED}❌ Do not run this script with sudo${NC}"
-    echo -e "${YELLOW}The script will handle Docker permissions automatically${NC}"
-    echo -e "${YELLOW}Run without sudo: ./run-mcp-cli-output.sh${NC}"
-    exit 1
-fi
-
-# Get user/group IDs for non-root container execution
-USER_ID=$(id -u)
-GROUP_ID=$(id -g)
-echo -e "${BLUE}Building for user: ${USER_ID}:${GROUP_ID}${NC}"
-
 # Parse command line arguments
-BUILD_ONLY=false
-NO_CACHE=false
-MCP_BRANCH="main"
-SKIP_BUILD=false
-
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --build-only)
-            BUILD_ONLY=true
-            shift
-            ;;
-        --no-cache)
-            NO_CACHE=true
-            shift
-            ;;
-        --branch)
-            MCP_BRANCH="$2"
-            shift 2
-            ;;
-        --skip-build)
-            SKIP_BUILD=true
-            shift
-            ;;
         --help|-h)
             echo "Usage: ./run-mcp-cli-output.sh [OPTIONS]"
             echo ""
             echo "Options:"
-            echo "  --build-only      Build the Docker image without running"
-            echo "  --no-cache        Build without using Docker cache"
-            echo "  --branch BRANCH   Use specific Microsoft/MCP branch (default: main)"
-            echo "  --skip-build      Skip building, use existing image"
-            echo "  --help,-h         Show this help message"
+            echo "  --help,-h   Show this help message"
             echo ""
             echo "Examples:"
-            echo "  ./run-mcp-cli-output.sh                    # Build and generate CLI output"
-            echo "  ./run-mcp-cli-output.sh --build-only       # Just build the image"
-            echo "  ./run-mcp-cli-output.sh --no-cache         # Rebuild from scratch"
-            echo "  ./run-mcp-cli-output.sh --branch feature   # Use specific MCP branch"
-            echo "  ./run-mcp-cli-output.sh --skip-build       # Use existing image"
+            echo "  ./run-mcp-cli-output.sh                    # Generate CLI output"
+            echo ""
+            echo "This script uses the local test-npm-azure-mcp package to generate:"
+            echo "  • cli-output.json (tools list)"
+            echo "  • cli-namespace.json (tools in namespace mode)"
+            echo "  • cli-version.json (CLI version information)"
             exit 0
             ;;
         *)
@@ -104,73 +49,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Build or check for Docker image
-IMAGE_NAME="azure-mcp-cli-output:latest"
-
-if [ "$SKIP_BUILD" = false ]; then
-    echo -e "${BLUE}📦 Building Docker image...${NC}"
-    echo -e "${YELLOW}MCP Branch: ${MCP_BRANCH}${NC}"
-    echo ""
-    
-    # Remove existing image if --no-cache is specified
-    if [ "$NO_CACHE" = true ]; then
-        echo -e "${YELLOW}🗑️  Removing existing Docker image...${NC}"
-        docker rmi $IMAGE_NAME 2>/dev/null || echo -e "${CYAN}   (No existing image to remove)${NC}"
-        echo ""
-    fi
-    
-    BUILD_ARGS="--build-arg MCP_BRANCH=${MCP_BRANCH} --build-arg USER_ID=${USER_ID} --build-arg GROUP_ID=${GROUP_ID}"
-    if [ "$NO_CACHE" = true ]; then
-        BUILD_ARGS="${BUILD_ARGS} --no-cache"
-    fi
-    
-    if docker build ${BUILD_ARGS} -t $IMAGE_NAME -f docker/Dockerfile.mcp-cli-output .; then
-        echo ""
-        echo -e "${GREEN}✅ Docker image built successfully${NC}"
-        
-        # Show image info
-        IMAGE_SIZE=$(docker images $IMAGE_NAME --format "{{.Size}}")
-        echo -e "${CYAN}Image size: ${IMAGE_SIZE}${NC}"
-    else
-        echo ""
-        echo -e "${RED}❌ Docker build failed${NC}"
-        exit 1
-    fi
-else
-    # Check if image exists
-    if ! docker image inspect $IMAGE_NAME >/dev/null 2>&1; then
-        echo -e "${RED}❌ Image $IMAGE_NAME not found${NC}"
-        echo "Run without --skip-build to build the image first"
-        exit 1
-    fi
-    echo -e "${GREEN}✅ Using existing Docker image: $IMAGE_NAME${NC}"
-fi
-
-# Exit if build-only mode
-if [ "$BUILD_ONLY" = true ]; then
-    echo ""
-    echo -e "${CYAN}Build-only mode: Skipping CLI output generation${NC}"
-    exit 0
-fi
-
-# Create output directory with proper permissions
-echo ""
-echo -e "${YELLOW}📁 Preparing output directory...${NC}"
-mkdir -p generated/cli
-chmod -R u+rwX,go+rX generated/ 2>/dev/null || true
-echo -e "${GREEN}✅ Output directory ready: ./generated/cli${NC}"
-
-# Run the CLI output generator
-echo ""
+# Run the npm-based CLI output generator via PowerShell
 echo -e "${BLUE}📝 Generating MCP CLI output files...${NC}"
-echo -e "${YELLOW}Output directory: $(pwd)/generated/cli${NC}"
+echo -e "${YELLOW}Using: test-npm-azure-mcp package${NC}"
 echo ""
 
-if docker run --rm \
-    -v "$(pwd)/generated/cli:/output/cli" \
-    --user "${USER_ID}:${GROUP_ID}" \
-    $IMAGE_NAME; then
-    
+if pwsh docs-generation/Get-McpCliOutput.ps1 -OutputPath generated/cli; then
     echo ""
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}✅ CLI output generated successfully!${NC}"
@@ -201,11 +85,9 @@ if docker run --rm \
         if command -v jq &> /dev/null; then
             VERSION=$(jq -r '.version' "$VERSION_FILE" 2>/dev/null || echo "unknown")
             TIMESTAMP=$(jq -r '.timestamp' "$VERSION_FILE" 2>/dev/null || echo "unknown")
-            BRANCH=$(jq -r '.mcpBranch' "$VERSION_FILE" 2>/dev/null || echo "unknown")
             
             echo -e "${CYAN}Version Information:${NC}"
             echo "  • CLI Version: $VERSION"
-            echo "  • MCP Branch: $BRANCH"
             echo "  • Generated: $TIMESTAMP"
         fi
         
@@ -222,9 +104,9 @@ else
     echo -e "${RED}❌ CLI output generation failed${NC}"
     echo ""
     echo "Troubleshooting:"
-    echo "  1. Check Docker logs above for errors"
-    echo "  2. Try rebuilding: ./run-mcp-cli-output.sh --no-cache"
-    echo "  3. Verify Docker has enough memory (4GB recommended)"
-    echo "  4. Check available disk space"
+    echo "  1. Ensure PowerShell 7+ is installed and accessible via 'pwsh'"
+    echo "  2. Check that test-npm-azure-mcp has node_modules installed"
+    echo "  3. Run: cd test-npm-azure-mcp && npm install"
+    echo "  4. Then retry: ./run-mcp-cli-output.sh"
     exit 1
 fi

@@ -36,7 +36,7 @@
 
 param(
     [ValidateSet('json', 'yaml', 'both')]
-    [string]$Format = 'both',
+    [string]$Format = 'json',
     [bool]$CreateIndex = $true,
     [bool]$CreateCommon = $true,
     [bool]$CreateCommands = $true,
@@ -139,13 +139,16 @@ try {
     # Step 1: Validate CLI output files
     Write-Progress "Step 1: Validating CLI output files..."
     
-    # Determine CLI output path (container vs local)
-    $cliOutputPath = if ($env:MCP_SERVER_PATH) { 
-        "/output/cli"  # Container path
-    } else { 
-        "generated/cli"  # Local path
+    # Determine CLI output path by probing common locations
+    $cliOutputPath = $null
+    if (Test-Path "/output/cli/cli-output.json") {
+        $cliOutputPath = "/output/cli"  # Container-mounted output
+    } elseif (Test-Path "generated/cli/cli-output.json") {
+        $cliOutputPath = "generated/cli"  # Local workspace output
+    } else {
+        # Fallback based on environment variable if neither path exists yet
+        $cliOutputPath = if ($env:MCP_SERVER_PATH) { "/output/cli" } else { "generated/cli" }
     }
-    Pop-Location
     
     $cliOutputFile = Join-Path $cliOutputPath "cli-output.json"
     $namespaceOutputFile = Join-Path $cliOutputPath "cli-namespace.json"
@@ -245,7 +248,7 @@ try {
     # Step 2: Build C# generator and all dependencies via solution file
     Write-Progress "Step 2: Building C# generator and dependencies..."
     
-    & dotnet build docs-generation.sln --configuration Release --nologo --verbosity quiet
+    & dotnet build docs-generation/docs-generation.sln --configuration Release --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to build documentation solution (exit code: $LASTEXITCODE)"
     }
@@ -255,15 +258,17 @@ try {
     Write-Progress "Step 3: Generating documentation using C# generator..."
     
     # Determine CLI output path relative to CSharpGenerator directory
-    $cliInputPath = if ($env:MCP_SERVER_PATH) {
-        "/output/cli/cli-output.json"  # Container path
+    if (Test-Path "/output/cli/cli-output.json") {
+        $cliInputPath = "/output/cli/cli-output.json"
+    } elseif (Test-Path "../../generated/cli/cli-output.json") {
+        $cliInputPath = "../../generated/cli/cli-output.json"
     } else {
-        "../generated/cli/cli-output.json"  # Local path
+        $cliInputPath = if ($env:MCP_SERVER_PATH) { "/output/cli/cli-output.json" } else { "../../generated/cli/cli-output.json" }
     }
     $outputDir = if ($env:MCP_SERVER_PATH) {
         "/output/tools"  # Container path
     } else {
-        "../generated/tools"  # Local path
+        "../../generated/tools"  # Local path
     }
     
     # Build arguments for C# generator
@@ -278,7 +283,7 @@ try {
         $generatorArgs += $cliVersion
     }
     
-    Push-Location "CSharpGenerator"
+    Push-Location "docs-generation/CSharpGenerator"
     
     # Echo the exact command being run for debugging
     $commandString = "dotnet run --configuration Release --no-build -- " + ($generatorArgs -join " ")
@@ -323,8 +328,10 @@ try {
     # Step 4: Generate additional data formats if requested
     if ($Format -eq 'yaml' -or $Format -eq 'both') {
         Write-Progress "Step 4: Converting to YAML format..."
-        # For now, focus on JSON since that's what works with tools list
-        Write-Warning "YAML format conversion not implemented yet"
+        # YAML conversion is not implemented; skip silently unless explicitly requested
+        if ($Format -eq 'yaml') {
+            Write-Warning "YAML format conversion not implemented yet"
+        }
     }
     
     # Step 5: Summary
@@ -338,11 +345,12 @@ try {
     $localToolDescPath = "generated/ToolDescriptionEvaluator.json"
     
     try {
-        # Run the ToolDescriptionEvaluator script to generate tools.json
-        & $toolDescriptionEvaluatorScript -Force
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Failed to run ToolDescriptionEvaluator Update-ToolsJson.ps1, continuing with CLI-only comparison"
-        } else {
+        # Run the ToolDescriptionEvaluator script to generate tools.json if present
+        if (Test-Path $toolDescriptionEvaluatorScript) {
+            & $toolDescriptionEvaluatorScript -Force
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "Failed to run ToolDescriptionEvaluator Update-ToolsJson.ps1, continuing with CLI-only comparison"
+            } else {
             Write-Success "ToolDescriptionEvaluator tools.json generated successfully"
             
             # Copy the generated tools.json to our generated folder for easy access
@@ -418,6 +426,9 @@ try {
             } catch {
                 Write-Warning "Failed to compare tool counts: $($_.Exception.Message)"
             }
+        }
+        } else {
+            Write-Info "ToolDescriptionEvaluator scripts not found. Skipping comparison step."
         }
     } catch {
         Write-Warning "Error running ToolDescriptionEvaluator: $($_.Exception.Message)"

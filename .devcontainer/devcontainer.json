@@ -3,7 +3,7 @@
     "name": "Microsoft MCP Codespace",
     "features": {
         "ghcr.io/devcontainers/features/node:1": {
-            "version": "20"
+            "version": "22"
         },
         "ghcr.io/devcontainers/features/azure-cli:1": {},
         "ghcr.io/devcontainers/features/powershell:1": {},
@@ -34,5 +34,10 @@
         }
     },
     "remoteUser": "vscode",
-    "postCreateCommand": "dotnet --version && az --version && azd version && pwsh --version && npm --version && chmod +x /workspaces/microsoft-mcp-doc-generation/*.sh /workspaces/microsoft-mcp-doc-generation/docs-generation/*.sh"
+    "containerEnv": {
+        "DOTNET_CLI_WORKLOAD_UPDATE_NOTIFICATION_SCHEDULE": "never",
+        "DOTNET_SKIP_WORKLOAD_VERIFICATION": "1",
+        "DOTNET_NOLOGO": "1"
+    },
+    "postCreateCommand": "dotnet --version && dotnet workload update || true && az --version && azd version && pwsh --version && npm --version && chmod +x /workspaces/microsoft-mcp-doc-generation/*.sh /workspaces/microsoft-mcp-doc-generation/docs-generation/*.sh"
 }
