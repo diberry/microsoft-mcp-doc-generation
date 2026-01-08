@@ -24,8 +24,11 @@ public class HorizontalArticleGenerator
         try
         {
             Console.WriteLine($"{progress} Processing {staticData.ServiceBrandName}...");
-            // Generate AI content
-            var aiResponse = await GenerateAIContent(staticData);
+            // Generate AI content and save prompt
+            var promptDir = Path.GetFullPath("../generated/horizontal-article-prompts");
+            Directory.CreateDirectory(promptDir);
+            string userPromptText = null;
+            var aiResponse = await GenerateAIContentWithPromptSave(staticData, promptDir, out userPromptText);
             AIGeneratedArticleData aiData = null;
             bool parseFailed = false;
             try
