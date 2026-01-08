@@ -4,18 +4,19 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start:info": "azmcp server info",
-    "start:help": "azmcp --help",
-    "start:list": "azmcp tools list",
-    "get:version": "azmcp --version",
-    "get:tools-json": "azmcp tools list",
-    "get:tools-namespace": "azmcp tools list --namespace-mode"
+    "start:info": "npx azmcp server info",
+    "start:help": "npx azmcp --help",
+    "start:list": "npx azmcp tools list",
+    "get:version": "npx azmcp --version",
+    "get:tools-json": "npx azmcp tools list",
+    "get:tools-namespace": "npx azmcp tools list --namespace-mode"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@azure/mcp": "^2.0.0-beta.10"
+    "@azure/mcp": "^2.0.0-beta.9",
+    "@azure/mcp-linux-x64": "^2.0.0-beta.9"
   }
 }

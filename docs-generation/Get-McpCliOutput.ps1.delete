@@ -199,7 +199,7 @@ try {
         
         # Capture CLI version
         Write-Progress "Capturing CLI version..."
-        $versionOutput = & npm run get:version 2>&1 | Select-Object -First 1
+        $versionOutput = & npm run get:version 2>&1 | Select-Object -First 1 | ForEach-Object { $_.ToString() }
         $cliVersion = "unknown"
         if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($versionOutput)) {
             $cliVersion = $versionOutput.Trim()
@@ -223,7 +223,9 @@ try {
         }
         
         # Extract JSON from output (filter out npm warnings/notices)
-        $jsonOutput = $output | Where-Object { $_ -and -not $_.StartsWith("npm") -and -not $_.StartsWith(">") } | Join-String -Separator "`n"
+        $jsonOutput = ($output | ForEach-Object { $_.ToString() }) |
+            Where-Object { $_ -and -not $_.StartsWith("npm") -and -not $_.StartsWith(">") } |
+            Join-String -Separator "`n"
         
         # Save JSON output
         $jsonOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
@@ -243,7 +245,9 @@ try {
         }
         
         # Extract JSON from output (filter out npm warnings/notices)
-        $jsonNamespaceOutput = $output | Where-Object { $_ -and -not $_.StartsWith("npm") -and -not $_.StartsWith(">") } | Join-String -Separator "`n"
+        $jsonNamespaceOutput = ($output | ForEach-Object { $_.ToString() }) |
+            Where-Object { $_ -and -not $_.StartsWith("npm") -and -not $_.StartsWith(">") } |
+            Join-String -Separator "`n"
         
         # Save JSON output
         $jsonNamespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
