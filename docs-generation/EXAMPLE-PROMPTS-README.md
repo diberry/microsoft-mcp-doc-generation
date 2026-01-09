@@ -18,14 +18,14 @@ Then edit `.env` and fill in your values:
 ```dotenv
 FOUNDRY_API_KEY="your-api-key-here"
 FOUNDRY_ENDPOINT="https://your-resource.openai.azure.com/"
-FOUNDRY_MODEL_NAME="gpt-4o-mini"
+FOUNDRY_MODEL_NAME="gpt-4.1-mini"
 FOUNDRY_MODEL_API_VERSION="2025-01-01-preview"
 ```
 
 **Required variables:**
 - `FOUNDRY_API_KEY` - Your Azure OpenAI API key
 - `FOUNDRY_ENDPOINT` - Your Azure OpenAI endpoint URL
-- `FOUNDRY_MODEL_NAME` - The deployment name (e.g., "gpt-4o-mini")
+- `FOUNDRY_MODEL_NAME` - The deployment name (e.g., "gpt-4.1-mini")
 
 ### 2. Enable Example Prompts Generation
 
@@ -35,6 +35,16 @@ To explicitly disable it:
 ```bash
 pwsh ./docs-generation/Generate-MultiPageDocs.ps1 -ExamplePrompts $false
 ```
+
+## Edit Prompt Templates
+
+If you need to adjust how example prompts are generated, edit these files:
+
+- System prompt: [docs-generation/prompts/system-prompt-example-prompt.txt](docs-generation/prompts/system-prompt-example-prompt.txt)
+- User prompt template: [docs-generation/prompts/user-prompt-example-prompt.txt](docs-generation/prompts/user-prompt-example-prompt.txt)
+- Output formatting template (Handlebars): [docs-generation/templates/example-prompts-template.hbs](docs-generation/templates/example-prompts-template.hbs)
+
+The generator (`ExamplePromptGenerator`) loads the system and user prompt templates from the paths above and renders results using the Handlebars template.
 
 ## How It Works
 
@@ -96,4 +106,4 @@ Example prompt generation makes API calls to Azure OpenAI:
 - Each call uses ~100-200 tokens
 - Estimated cost: $0.10-0.50 depending on model and pricing
 
-Consider using a smaller/cheaper model like `gpt-4o-mini` for cost efficiency.
+Consider using a smaller/cheaper model like `gpt-4.1-mini` for cost efficiency.
