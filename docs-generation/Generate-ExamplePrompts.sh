@@ -11,6 +11,7 @@ cd "$SCRIPT_DIR"
 CLI_OUTPUT="$SCRIPT_DIR/../generated/cli/cli-output.json"
 TOOLS_DIR="$SCRIPT_DIR/../generated/tools"
 OUTPUT_DIR="$SCRIPT_DIR/../generated/example-prompts"
+PROMPTS_INPUT_DIR="$SCRIPT_DIR/../generated/prompts-for-example-tool-prompts"
 PROJECT_PATH="$SCRIPT_DIR/CSharpGenerator/CSharpGenerator.csproj"
 # ===================================================
 
@@ -66,6 +67,11 @@ mkdir -p "$OUTPUT_DIR"
 echo -e "${YELLOW}🧹 Cleaning output directory...${NC}"
 rm -rf "$OUTPUT_DIR"/*
 echo -e "${GREEN}✅ Output directory cleaned${NC}"
+
+# Clean prompts-for-example-tool-prompts directory
+echo -e "${YELLOW}🧹 Cleaning prompts-for-example-tool-prompts directory...${NC}"
+rm -rf "$PROMPTS_INPUT_DIR"/*
+echo -e "${GREEN}✅ prompts-for-example-tool-prompts directory cleaned${NC}"
 
 echo -e "${GREEN}✅ Output directory: $OUTPUT_DIR${NC}"
 echo -e "${BLUE}   Full path: $(realpath "$OUTPUT_DIR")${NC}"

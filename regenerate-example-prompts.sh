@@ -88,7 +88,7 @@ echo -e "${BLUE}🤖 Generating example prompts with Azure OpenAI...${NC}"
 echo -e "${YELLOW}   This may take a few minutes (199 tools × ~5-10 sec each)${NC}"
 echo ""
 
-dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Release --no-build -- \
+dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Release -- \
     generate-docs \
     ../generated/cli/cli-output.json \
     ../generated/tools \

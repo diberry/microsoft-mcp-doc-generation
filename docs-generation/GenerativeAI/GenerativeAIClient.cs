@@ -30,7 +30,7 @@ public class GenerativeAIClient
 
         var options = new ChatCompletionOptions
         {
-            MaxOutputTokenCount = 512
+            MaxOutputTokenCount = 1024 // allow more room to avoid truncated JSON
         };
 
         var response = await _chatClient.CompleteChatAsync(messages, options, ct);

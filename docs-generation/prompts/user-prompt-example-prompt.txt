@@ -10,6 +10,10 @@ Parameters:
 - {{name}} ({{#if required}}Required{{else}}Optional{{/if}}): {{description}}
 {{/each}}
 
+Rules for optional parameters:
+- If `resource-group` is Required, include it. If Optional, omit it.
+- If a parameter is marked Optional, include it only when truly necessary for the action.
+
 Return your response as a JSON object with this exact structure:
 {
   "{TOOL_COMMAND}": [
