@@ -58,7 +58,7 @@ if (-not $SkipExtraction) {
     
     # Run the extractor with the tool list file
     $outputPath = Join-Path $ProjectPath $OutputFile
-    dotnet run --project $extractorProject --no-build -- --tools-file $toolListPath --output $outputPath
+    dotnet run --project $extractorProject -- --tools-file $toolListPath --output $outputPath
     
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Metadata extraction failed"

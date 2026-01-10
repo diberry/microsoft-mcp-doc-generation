@@ -319,10 +319,10 @@ try {
     }
     
     # Echo the exact command being run for debugging
-    $commandString = "dotnet run --configuration Release --no-build -- " + ($generatorArgs -join " ")
+    $commandString = "dotnet run --configuration Release -- " + ($generatorArgs -join " ")
     Write-Info "Running: $commandString"
     
-    $generatorOutput = & dotnet run --configuration Release --no-build -- $generatorArgs 2>&1
+    $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Command failed with exit code: $LASTEXITCODE"
         Write-Error "Generator output: $($generatorOutput | Out-String)"

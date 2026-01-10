@@ -1,0 +1,26 @@
+{
+  "name": "azure-mcp-summary-generator",
+  "version": "1.0.0",
+  "description": "JavaScript port of Azure MCP documentation summary generator from PowerShell",
+  "main": "generate-summary.js",
+  "bin": {
+    "generate-summary": "./generate-summary.js"
+  },
+  "scripts": {
+    "start": "node generate-summary.js",
+    "summary": "node generate-summary.js",
+    "test": "node test-summary.js"
+  },
+  "keywords": [
+    "azure",
+    "mcp",
+    "documentation",
+    "summary",
+    "generator"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

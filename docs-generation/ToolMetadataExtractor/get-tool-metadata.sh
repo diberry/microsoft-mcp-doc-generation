@@ -87,7 +87,7 @@ if [ "$SKIP_EXTRACTION" = false ]; then
   
   # Run the extractor with the tool list file
   OUTPUT_PATH="$PROJECT_PATH/$OUTPUT_FILE"
-  dotnet run --project "$EXTRACTOR_PROJECT" --no-build -- --tools-file "$TOOL_LIST_PATH" --output "$OUTPUT_PATH"
+  dotnet run --project "$EXTRACTOR_PROJECT" -- --tools-file "$TOOL_LIST_PATH" --output "$OUTPUT_PATH"
   
   if [ $? -ne 0 ]; then
     echo "Metadata extraction failed"

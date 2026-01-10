@@ -91,7 +91,7 @@ echo ""
 
 # Run example prompt generation
 echo -e "${BLUE}Generating example prompts...${NC}"
-dotnet run --project "$PROJECT_PATH" --configuration Release --no-build -- \
+dotnet run --project "$PROJECT_PATH" --configuration Release -- \
     generate-docs \
     "$CLI_OUTPUT" \
     "$TOOLS_DIR" \
