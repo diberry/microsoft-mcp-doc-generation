@@ -35,7 +35,7 @@ ms.date: {DateTime.UtcNow:yyyy-MM-dd}
 mcp-cli.version: {version ?? "unknown"}
 generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 # [!INCLUDE [{toolCommand}](../includes/tools/prompts-for-example-tool-prompts/{inputPromptFileName})]
-<!-- azmcp {toolCommand} -->
+# azmcp {toolCommand}
 userPrompt: |
 {indentedUserPrompt}
 ---
@@ -94,7 +94,7 @@ ms.date: {DateTime.UtcNow:yyyy-MM-dd}
 mcp-cli.version: {version ?? "unknown"}
 generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 # [!INCLUDE [{toolCommand}](../includes/tools/annotations/{annotationFileName})]
-<!-- azmcp {toolCommand} -->
+# azmcp {toolCommand}
 ---
 
 ";
@@ -118,7 +118,7 @@ ms.date: {DateTime.UtcNow:yyyy-MM-dd}
 mcp-cli.version: {version ?? "unknown"}
 generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 # [!INCLUDE [{toolCommand}](../includes/tools/parameters/{parameterFileName})]
-<!-- azmcp {toolCommand} -->
+# azmcp {toolCommand}
 ---
 
 ";

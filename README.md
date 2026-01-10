@@ -254,6 +254,40 @@ generated/
     └── generate-docs.yml          # CI/CD automation
 ```
 
+### Modifying C# Generator Code
+
+The C# generator is built **inside the Docker image** at build time, not at runtime. If you modify any C# code in `docs-generation/CSharpGenerator/`, you **must rebuild the Docker image** to see your changes:
+
+```bash
+# Rebuild with fresh build (recommended)
+./run-content-generation-output.sh --no-cache
+
+# Or rebuild the image only
+./run-content-generation-output.sh --build-only --no-cache
+```
+
+**Why `--no-cache` is important:**
+- Docker caches build layers for speed
+- Without `--no-cache`, Docker may reuse old cached layers with your old code
+- The `--no-cache` flag forces Docker to rebuild everything from scratch
+
+**How to verify your changes are applied:**
+```bash
+# Check when the DLL was last built
+ls -la docs-generation/CSharpGenerator/bin/Release/net9.0/CSharpGenerator.dll
+
+# Check when your generated files were created
+ls -la generated/annotations/*.md
+
+# If the DLL timestamp is older than your generated files, rebuild the image!
+```
+
+**What gets built when:**
+- **Image build time** (Dockerfile): C# code is compiled into DLLs
+- **Container runtime**: PowerShell script runs, calling the pre-built DLLs
+- **Changing C# code**: Requires image rebuild
+- **Changing templates/config**: No rebuild needed (mounted at runtime)
+
 ### Customizing Templates
 
 Edit Handlebars templates in `docs-generation/templates/`:

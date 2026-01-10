@@ -1399,7 +1399,7 @@ public static class DocumentationGenerator
                     new Dictionary<string, string>
                     {
                         ["comment"] = $"[!INCLUDE [{tool.Command ?? "unknown"}](../includes/tools/param-and-annotation/{fileName})]",
-                        ["azmcp"] = $"<!-- azmcp {tool.Command ?? "unknown"} -->"
+                        ["azmcp"] = $"# azmcp {tool.Command ?? "unknown"}"
                     });
                 var result = frontmatter + templateResult;
                 await File.WriteAllTextAsync(outputFile, result);
