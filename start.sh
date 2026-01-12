@@ -31,7 +31,8 @@ dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Rele
     --annotations \
     --example-prompts \
     --param-and-annotation \
-    --common-general
+    --common-general \
+    --complete-tools
 cd ..
 
 # # Summarize generated docs
