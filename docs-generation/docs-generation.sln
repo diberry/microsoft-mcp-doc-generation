@@ -36,6 +36,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExamplePromptValidator.Test
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HorizontalArticleGenerator", "HorizontalArticleGenerator\HorizontalArticleGenerator.csproj", "{7A72E833-0D82-4D83-A867-A3E135BCB4AB}"
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExamplePromptValidator", "ExamplePromptValidator\ExamplePromptValidator.csproj", "{E1A2B3C4-D5E6-7890-ABCD-EF1234567890}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExamplePromptValidator.Tests", "ExamplePromptValidator.Tests\ExamplePromptValidator.Tests.csproj", "{F2B3C4D5-E6F7-8901-BCDE-F23456789012}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E1A2B3C4-D5E6-7890-ABCD-EF1234567890} = {E1A2B3C4-D5E6-7890-ABCD-EF1234567890}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
