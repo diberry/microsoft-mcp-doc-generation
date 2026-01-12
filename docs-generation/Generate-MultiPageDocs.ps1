@@ -36,7 +36,7 @@
 
 param(
     [ValidateSet('json', 'yaml', 'both')]
-    [string]$Format = 'both',
+    [string]$Format = 'json',
     [bool]$CreateIndex = $true,
     [bool]$CreateCommon = $true,
     [bool]$CreateCommands = $true,
@@ -139,13 +139,16 @@ try {
     # Step 1: Validate CLI output files
     Write-Progress "Step 1: Validating CLI output files..."
     
-    # Determine CLI output path (container vs local)
-    $cliOutputPath = if ($env:MCP_SERVER_PATH) { 
-        "/output/cli"  # Container path
-    } else { 
-        "generated/cli"  # Local path
+    # Determine CLI output path by probing common locations
+    $cliOutputPath = $null
+    if (Test-Path "/output/cli/cli-output.json") {
+        $cliOutputPath = "/output/cli"  # Container-mounted output
+    } elseif (Test-Path "generated/cli/cli-output.json") {
+        $cliOutputPath = "generated/cli"  # Local workspace output
+    } else {
+        # Fallback based on environment variable if neither path exists yet
+        $cliOutputPath = if ($env:MCP_SERVER_PATH) { "/output/cli" } else { "generated/cli" }
     }
-    Pop-Location
     
     $cliOutputFile = Join-Path $cliOutputPath "cli-output.json"
     $namespaceOutputFile = Join-Path $cliOutputPath "cli-namespace.json"
@@ -245,7 +248,17 @@ try {
     # Step 2: Build C# generator and all dependencies via solution file
     Write-Progress "Step 2: Building C# generator and dependencies..."
     
-    & dotnet build docs-generation.sln --configuration Release --nologo --verbosity quiet
+    # Detect environment and set correct solution path
+    $solutionPath = if (Test-Path "docs-generation.sln") {
+        "docs-generation.sln"  # Running from docs-generation directory (container)
+    } elseif (Test-Path "docs-generation/docs-generation.sln") {
+        "docs-generation/docs-generation.sln"  # Running from workspace root (local)
+    } else {
+        throw "Could not locate docs-generation.sln in expected locations"
+    }
+    
+    Write-Info "Building solution: $solutionPath"
+    & dotnet build $solutionPath --configuration Release --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to build documentation solution (exit code: $LASTEXITCODE)"
     }
@@ -254,37 +267,62 @@ try {
     # Step 3: Run C# generator to create documentation
     Write-Progress "Step 3: Generating documentation using C# generator..."
     
-    # Determine CLI output path relative to CSharpGenerator directory
-    $cliInputPath = if ($env:MCP_SERVER_PATH) {
-        "/output/cli/cli-output.json"  # Container path
+    # Determine CLI output path and output directory based on environment
+    # Use absolute paths to avoid issues with Push-Location
+    $currentLocation = Get-Location
+    
+    if (Test-Path "/output/cli/cli-output.json") {
+        # Container with mounted volumes
+        $cliInputPath = "/output/cli/cli-output.json"
+        $outputDir = "/output/tools"
+    } elseif (Test-Path (Join-Path $currentLocation "generated/cli/cli-output.json")) {
+        # Container or local: generated in current directory
+        $cliInputPath = Join-Path $currentLocation "generated/cli/cli-output.json"
+        $outputDir = Join-Path $currentLocation "generated/tools"
     } else {
-        "../generated/cli/cli-output.json"  # Local path
-    }
-    $outputDir = if ($env:MCP_SERVER_PATH) {
-        "/output/tools"  # Container path
-    } else {
-        "../generated/tools"  # Local path
+        # Fallback: try environment variable
+        if ($env:MCP_SERVER_PATH) {
+            $cliInputPath = "/output/cli/cli-output.json"
+            $outputDir = "/output/tools"
+        } else {
+            throw "Cannot locate CLI output files"
+        }
     }
     
-    # Build arguments for C# generator
+    # Determine generator directory
+    $generatorPath = if (Test-Path "CSharpGenerator/CSharpGenerator.csproj") {
+        "CSharpGenerator"  # Running from docs-generation directory (container)
+    } elseif (Test-Path "docs-generation/CSharpGenerator/CSharpGenerator.csproj") {
+        "docs-generation/CSharpGenerator"  # Running from workspace root (local)
+    } else {
+        throw "Cannot locate CSharpGenerator project"
+    }
+    
+    # Save parent directory for output file paths (used after Pop-Location)
+    $parentOutputDir = if (Test-Path "/output") {
+        "/output"
+    } else {
+        Join-Path $currentLocation "generated"
+    }
+    
+    Push-Location $generatorPath
     $generatorArgs = @("generate-docs", $cliInputPath, $outputDir)
     if ($CreateIndex) { $generatorArgs += "--index" }
     if ($CreateCommon) { $generatorArgs += "--common" }
     if ($CreateCommands) { $generatorArgs += "--commands" }
     $generatorArgs += "--annotations"  # Always generate annotation files
+    if ($ExamplePrompts) { $generatorArgs += "--example-prompts" }
     if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
     if ($cliVersion -and $cliVersion -ne "unknown") { 
         $generatorArgs += "--version"
         $generatorArgs += $cliVersion
     }
     
-    Push-Location "CSharpGenerator"
-    
     # Echo the exact command being run for debugging
-    $commandString = "dotnet run --configuration Release --no-build -- " + ($generatorArgs -join " ")
+    $commandString = "dotnet run --configuration Release -- " + ($generatorArgs -join " ")
     Write-Info "Running: $commandString"
     
-    $generatorOutput = & dotnet run --configuration Release --no-build -- $generatorArgs 2>&1
+    $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Command failed with exit code: $LASTEXITCODE"
         Write-Error "Generator output: $($generatorOutput | Out-String)"
@@ -323,8 +361,10 @@ try {
     # Step 4: Generate additional data formats if requested
     if ($Format -eq 'yaml' -or $Format -eq 'both') {
         Write-Progress "Step 4: Converting to YAML format..."
-        # For now, focus on JSON since that's what works with tools list
-        Write-Warning "YAML format conversion not implemented yet"
+        # YAML conversion is not implemented; skip silently unless explicitly requested
+        if ($Format -eq 'yaml') {
+            Write-Warning "YAML format conversion not implemented yet"
+        }
     }
     
     # Step 5: Summary
@@ -338,11 +378,12 @@ try {
     $localToolDescPath = "generated/ToolDescriptionEvaluator.json"
     
     try {
-        # Run the ToolDescriptionEvaluator script to generate tools.json
-        & $toolDescriptionEvaluatorScript -Force
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Failed to run ToolDescriptionEvaluator Update-ToolsJson.ps1, continuing with CLI-only comparison"
-        } else {
+        # Run the ToolDescriptionEvaluator script to generate tools.json if present
+        if (Test-Path $toolDescriptionEvaluatorScript) {
+            & $toolDescriptionEvaluatorScript -Force
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "Failed to run ToolDescriptionEvaluator Update-ToolsJson.ps1, continuing with CLI-only comparison"
+            } else {
             Write-Success "ToolDescriptionEvaluator tools.json generated successfully"
             
             # Copy the generated tools.json to our generated folder for easy access
@@ -419,6 +460,9 @@ try {
                 Write-Warning "Failed to compare tool counts: $($_.Exception.Message)"
             }
         }
+        } else {
+            Write-Info "ToolDescriptionEvaluator scripts not found. Skipping comparison step."
+        }
     } catch {
         Write-Warning "Error running ToolDescriptionEvaluator: $($_.Exception.Message)"
     }
@@ -427,8 +471,8 @@ try {
     Write-Info ""
     Write-Info "Generated files in 'generated/tools':"
     
-    # List generated files
-    $actualOutputDir = "generated/tools"
+    # List generated files using absolute path
+    $actualOutputDir = Join-Path $parentOutputDir "tools"
     if (Test-Path $actualOutputDir) {
         $files = Get-ChildItem $actualOutputDir -Name "*.md" | Sort-Object
         foreach ($file in $files) {
@@ -440,25 +484,25 @@ try {
     
     Write-Info ""
     Write-Info "Data files:"
-    $actualCliOutputPath = "generated/cli/cli-output.json"
+    $actualCliOutputPath = Join-Path $parentOutputDir "cli/cli-output.json"
     if (Test-Path $actualCliOutputPath) {
         $jsonSize = [math]::Round((Get-Item $actualCliOutputPath).Length / 1KB, 1)
         Write-Info "  📄 $actualCliOutputPath (${jsonSize}KB) - CLI output"
     }
     
-    $actualNamespaceOutputPath = "generated/cli/cli-namespace.json"
+    $actualNamespaceOutputPath = Join-Path $parentOutputDir "cli/cli-namespace.json"
     if (Test-Path $actualNamespaceOutputPath) {
         $namespaceSize = [math]::Round((Get-Item $actualNamespaceOutputPath).Length / 1KB, 1)
         Write-Info "  📄 $actualNamespaceOutputPath (${namespaceSize}KB) - CLI namespace output"
     }
     
-    $actualCsvOutputPath = "generated/namespaces.csv"
+    $actualCsvOutputPath = Join-Path $parentOutputDir "namespaces.csv"
     if (Test-Path $actualCsvOutputPath) {
         $csvSize = [math]::Round((Get-Item $actualCsvOutputPath).Length / 1KB, 1)
         Write-Info "  📄 $actualCsvOutputPath (${csvSize}KB) - Alphabetically sorted namespaces CSV"
     }
     
-    $comparisonReportPath = "generated/tool-count-comparison.json"
+    $comparisonReportPath = Join-Path $parentOutputDir "tool-count-comparison.json"
     if (Test-Path $comparisonReportPath) {
         $reportSize = [math]::Round((Get-Item $comparisonReportPath).Length / 1KB, 1)
         Write-Info "  📄 $comparisonReportPath (${reportSize}KB) - Tool count comparison report"
@@ -586,7 +630,7 @@ try {
     }
     
     # Save summary to file
-    $summaryFilePath = "generated/generation-summary.md"
+    $summaryFilePath = Join-Path $parentOutputDir "generation-summary.md"
     try {
         $summaryContent = $summaryLines -join "`n"
         $summaryContent | Out-File -FilePath $summaryFilePath -Encoding UTF8

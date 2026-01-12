@@ -20,3 +20,7 @@ node_modules/
 generated*/
 /docs/commandline
 git
+
+generated*
+
+*.log

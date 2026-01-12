@@ -98,7 +98,8 @@ public static class DocumentationGenerator
         bool generateServiceOptions = true,
         bool generateAnnotations = false,
         string? cliVersion = null,
-        bool generateExamplePrompts = false)
+        bool generateExamplePrompts = false,
+        bool generateCompleteTools = false)
     {
         // Config.Load has been called in Program.Main and TextCleanup is initialized statically
 
@@ -195,20 +196,29 @@ public static class DocumentationGenerator
                 // Verify the generator is functional by checking if OpenAI client is initialized
                 if (!examplePromptGenerator.IsInitialized())
                 {
-                    throw new InvalidOperationException(
-                        "ExamplePromptGenerator failed to initialize. " +
-                        "Ensure Azure OpenAI credentials are set via environment variables or .env file. " +
-                        "Required: FOUNDRY_API_KEY, FOUNDRY_ENDPOINT, FOUNDRY_MODEL_NAME");
+                    Console.WriteLine("⚠️  WARNING: ExamplePromptGenerator failed to initialize.");
+                    Console.WriteLine("    Azure OpenAI credentials are not configured.");
+                    Console.WriteLine("    Required environment variables or .env file entries:");
+                    Console.WriteLine("      - FOUNDRY_API_KEY");
+                    Console.WriteLine("      - FOUNDRY_ENDPOINT");
+                    Console.WriteLine("      - FOUNDRY_MODEL_NAME");
+                    Console.WriteLine("    Example prompts will be SKIPPED. Documentation generation will continue.");
+                    Console.WriteLine("");
+                    examplePromptGenerator = null;
+                    examplePromptsDir = null;
                 }
-                
-                Console.WriteLine("✅ ExamplePromptGenerator initialized and verified");
+                else
+                {
+                    Console.WriteLine("✅ ExamplePromptGenerator initialized and verified");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Failed to initialize ExamplePromptGenerator: {ex.Message}");
-                throw new InvalidOperationException(
-                    "Cannot generate example prompts - initialization failed. " +
-                    "Check Azure OpenAI credentials and configuration.", ex);
+                Console.WriteLine($"⚠️  WARNING: Failed to initialize ExamplePromptGenerator: {ex.Message}");
+                Console.WriteLine("    Example prompts will be SKIPPED. Documentation generation will continue.");
+                Console.WriteLine("");
+                examplePromptGenerator = null;
+                examplePromptsDir = null;
             }
             
             Console.WriteLine("=== Starting Annotation Generation (with example prompts) ===\n");
@@ -230,7 +240,8 @@ public static class DocumentationGenerator
         var parameterGenerator = new ParameterGenerator(
             LoadBrandMappingsAsync,
             LoadCompoundWordsAsync,
-            CleanFileNameAsync);
+            CleanFileNameAsync,
+            ExtractCommonParameters);
             
         var paramAnnotationGenerator = new ParamAnnotationGenerator(
             LoadBrandMappingsAsync,
@@ -241,6 +252,10 @@ public static class DocumentationGenerator
             LoadBrandMappingsAsync,
             CleanFileNameAsync,
             ExtractCommonParameters);
+            
+        var completeToolGenerator = new CompleteToolGenerator(
+            LoadBrandMappingsAsync,
+            CleanFileNameAsync);
             
         var reportGenerator = new ReportGenerator();
 
@@ -258,6 +273,21 @@ public static class DocumentationGenerator
         Directory.CreateDirectory(paramAnnotationDir);
         var paramAnnotationTemplate = Path.Combine(templatesDir, "param-annotation-template.hbs");
         await paramAnnotationGenerator.GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
+
+        // Generate complete tool files if requested (at parent level)
+        if (generateCompleteTools)
+        {
+            var toolsDir = Path.Combine(parentDir, "tools");
+            Directory.CreateDirectory(toolsDir);
+            var completeToolTemplate = Path.Combine(templatesDir, "tool-complete-template.hbs");
+            await completeToolGenerator.GenerateCompleteToolFilesAsync(
+                transformedData,
+                toolsDir,
+                completeToolTemplate,
+                annotationsDir,
+                parametersDir,
+                examplePromptsDir ?? Path.Combine(parentDir, "example-prompts"));
+        }
 
         // Setup area template (needed for index page too)
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
@@ -1390,7 +1420,7 @@ public static class DocumentationGenerator
                     new Dictionary<string, string>
                     {
                         ["comment"] = $"[!INCLUDE [{tool.Command ?? "unknown"}](../includes/tools/param-and-annotation/{fileName})]",
-                        ["azmcp"] = $"<!-- azmcp {tool.Command ?? "unknown"} -->"
+                        ["azmcp"] = $"# azmcp {tool.Command ?? "unknown"}"
                     });
                 var result = frontmatter + templateResult;
                 await File.WriteAllTextAsync(outputFile, result);

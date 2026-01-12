@@ -4,10 +4,10 @@
     Generate MCP CLI output files for documentation generation
     
 .DESCRIPTION
-    This script builds the Azure MCP Server and runs CLI commands to generate
+    This script uses the @azure/mcp CLI from test-npm-azure-mcp to generate
     three output files: cli-output.json, cli-namespace.json, and cli-version.json
     
-    This script is designed to work in both containerized and local environments.
+    This script runs locally using npm to call the CLI commands.
     
 .PARAMETER OutputPath
     Directory where CLI output files will be saved (default: generated/cli)
@@ -93,27 +93,50 @@ function Test-ValidVersionFile {
 try {
     Write-Progress "Starting Azure MCP CLI Output Generation..."
     
-    # Determine environment (container vs local)
-    $mcpServerPath = if ($env:MCP_SERVER_PATH) { 
-        $env:MCP_SERVER_PATH 
+    # Determine test-npm-azure-mcp path
+    if ($env:NPM_PROJECT_PATH) { 
+        $npmProjectPath = $env:NPM_PROJECT_PATH 
     } else { 
-        "..\servers\Azure.Mcp.Server\src" 
+        # Resolve relative to script location, then go up to repo root
+        $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+        $repoRoot = Split-Path -Parent $scriptDir
+        $npmProjectPath = Join-Path $repoRoot "test-npm-azure-mcp"
     }
     
-    $environment = if ($env:MCP_SERVER_PATH) { "docker" } else { "local" }
-    Write-Info "Environment: $environment"
-    Write-Info "MCP Server Path: $mcpServerPath"
+    # Resolve to absolute path
+    $npmProjectPath = (Resolve-Path -LiteralPath $npmProjectPath -ErrorAction SilentlyContinue).ProviderPath
     
-    # Verify MCP server path exists
-    if (-not (Test-Path $mcpServerPath)) {
-        Write-Error "MCP server path not found: $mcpServerPath"
+    $environment = "npm"
+    Write-Info "Environment: $environment"
+    Write-Info "NPM Project Path: $npmProjectPath"
+    
+    # Verify npm project path exists
+    if (-not (Test-Path $npmProjectPath)) {
+        Write-Error "NPM project path not found: $npmProjectPath"
         Write-Error ""
-        Write-Error "For local execution, please clone Microsoft/MCP repository:"
-        Write-Error "  git clone https://github.com/Microsoft/MCP.git ../servers"
-        Write-Error ""
-        Write-Error "Expected location: ../servers/Azure.Mcp.Server/src"
+        Write-Error "Expected location: ../test-npm-azure-mcp"
         exit 1
     }
+    
+    # Verify package.json exists
+    $packageJsonPath = Join-Path $npmProjectPath "package.json"
+    if (-not (Test-Path $packageJsonPath)) {
+        Write-Error "package.json not found at: $packageJsonPath"
+        exit 1
+    }
+    
+    # Resolve OutputPath to absolute path BEFORE changing directories
+    $OutputPath = (Resolve-Path -LiteralPath $OutputPath -ErrorAction SilentlyContinue).ProviderPath
+    if (-not $OutputPath) {
+        # If path doesn't exist yet, resolve the parent directory
+        $parentPath = Split-Path -Parent $OutputPath
+        if (Test-Path $parentPath) {
+            $OutputPath = Join-Path $parentPath (Split-Path -Leaf $OutputPath)
+        } else {
+            $OutputPath = (Get-Item $PWD).FullName + "/" + $OutputPath
+        }
+    }
+    Write-Info "Resolved output path: $OutputPath"
     
     # Create output directory
     if (-not (Test-Path $OutputPath)) {
@@ -157,50 +180,52 @@ try {
         }
     }
     
-    # Navigate to MCP server directory
-    Push-Location $mcpServerPath
+    # Navigate to npm project directory
+    Push-Location $npmProjectPath
     
     try {
-        # Build the MCP Server
-        Write-Progress "Building Azure MCP Server..."
-        & dotnet build --configuration Release --nologo --verbosity quiet
-        if ($LASTEXITCODE -ne 0) { 
-            throw "Failed to build Azure MCP Server (exit code: $LASTEXITCODE)" 
+        # Ensure dependencies are installed
+        Write-Progress "Verifying npm dependencies..."
+        if (-not (Test-Path "node_modules")) {
+            Write-Progress "Installing npm dependencies..."
+            & npm install --silent
+            if ($LASTEXITCODE -ne 0) { 
+                throw "Failed to install npm dependencies (exit code: $LASTEXITCODE)" 
+            }
+            Write-Success "Dependencies installed successfully"
+        } else {
+            Write-Success "Dependencies already installed"
         }
-        Write-Success "MCP Server built successfully"
         
         # Capture CLI version
         Write-Progress "Capturing CLI version..."
-        $versionOutput = & dotnet run --no-build --configuration Release -- --version 2>&1
+        $versionOutput = & npm run get:version 2>&1 | Select-Object -First 1
         $cliVersion = "unknown"
-        if ($LASTEXITCODE -eq 0) {
-            $cliVersion = ($versionOutput | Where-Object { $_ -match '^\d+\.\d+\.\d+' } | Select-Object -First 1).Trim()
-            if ([string]::IsNullOrWhiteSpace($cliVersion)) {
-                $cliVersion = "unknown"
-            }
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($versionOutput)) {
+            $cliVersion = $versionOutput.Trim()
         }
         Write-Info "CLI Version: $cliVersion"
         
-        # Get MCP branch from git (if available)
-        $mcpBranch = "unknown"
+        # Get npm package version info
+        $npmVersion = "unknown"
         try {
-            $branchOutput = & git rev-parse --abbrev-ref HEAD 2>&1
-            if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($branchOutput)) {
-                $mcpBranch = $branchOutput.Trim()
-            }
+            $packageJson = Get-Content "package.json" -Raw | ConvertFrom-Json
+            $npmVersion = $packageJson.dependencies.'@azure/mcp'
         } catch {
-            Write-Warning "Could not determine MCP branch: $($_.Exception.Message)"
+            Write-Warning "Could not determine @azure/mcp version: $($_.Exception.Message)"
         }
         
         # Run CLI tools list command (standard mode)
         Write-Progress "Running CLI tools list command..."
-        $rawOutput = & dotnet run --no-build --configuration Release -- tools list
+        $output = & npm run --silent get:tools-json 2>&1
         if ($LASTEXITCODE -ne 0) { 
             throw "Failed to generate CLI output (exit code: $LASTEXITCODE)" 
         }
         
-        # Filter out non-JSON content and save
-        $jsonOutput = $rawOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
+        # Extract JSON from output (filter out npm warnings/notices)
+        $jsonOutput = $output | Where-Object { $_ -and -not $_.StartsWith("npm") -and -not $_.StartsWith(">") } | Join-String -Separator "`n"
+        
+        # Save JSON output
         $jsonOutput | Out-File -FilePath $cliOutputFile -Encoding UTF8
         
         if (-not (Test-ValidCliOutputFile $cliOutputFile)) {
@@ -212,13 +237,15 @@ try {
         
         # Run CLI tools list command (namespace mode)
         Write-Progress "Running CLI tools list command (namespace mode)..."
-        $namespaceRawOutput = & dotnet run --no-build --configuration Release -- tools list --namespace-mode
+        $output = & npm run --silent get:tools-namespace 2>&1
         if ($LASTEXITCODE -ne 0) { 
             throw "Failed to generate namespace data (exit code: $LASTEXITCODE)" 
         }
         
-        # Filter out non-JSON content and save
-        $jsonNamespaceOutput = $namespaceRawOutput | Where-Object { $_ -match '^\s*[\{\[]' -or $_ -notmatch '^Using launch settings' }
+        # Extract JSON from output (filter out npm warnings/notices)
+        $jsonNamespaceOutput = $output | Where-Object { $_ -and -not $_.StartsWith("npm") -and -not $_.StartsWith(">") } | Join-String -Separator "`n"
+        
+        # Save JSON output
         $jsonNamespaceOutput | Out-File -FilePath $namespaceOutputFile -Encoding UTF8
         
         if (-not (Test-ValidCliOutputFile $namespaceOutputFile)) {
@@ -235,9 +262,9 @@ try {
         $versionData = @{
             version = $cliVersion
             timestamp = $timestamp
-            mcpBranch = $mcpBranch
+            npmVersion = $npmVersion
             environment = $environment
-            mcpServerPath = $mcpServerPath
+            npmProjectPath = $npmProjectPath
         }
         
         $versionData | ConvertTo-Json -Depth 10 | Out-File -FilePath $versionOutputFile -Encoding UTF8
@@ -263,7 +290,7 @@ try {
     Write-Info "  📄 $versionOutputFile (${versionSize}KB)"
     Write-Info ""
     Write-Info "CLI Version: $cliVersion"
-    Write-Info "MCP Branch: $mcpBranch"
+    Write-Info "@azure/mcp Version: $npmVersion"
     Write-Info "Environment: $environment"
     
     exit 0

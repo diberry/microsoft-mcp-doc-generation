@@ -21,15 +21,18 @@ public class ParameterGenerator
     private readonly Func<Task<Dictionary<string, BrandMapping>>> _loadBrandMappings;
     private readonly Func<Task<Dictionary<string, string>>> _loadCompoundWords;
     private readonly Func<string, Task<string>> _cleanFileName;
+    private readonly Func<List<Tool>, List<CommonParameter>> _extractCommonParameters;
 
     public ParameterGenerator(
         Func<Task<Dictionary<string, BrandMapping>>> loadBrandMappings,
         Func<Task<Dictionary<string, string>>> loadCompoundWords,
-        Func<string, Task<string>> cleanFileName)
+        Func<string, Task<string>> cleanFileName,
+        Func<List<Tool>, List<CommonParameter>> extractCommonParameters)
     {
         _loadBrandMappings = loadBrandMappings;
         _loadCompoundWords = loadCompoundWords;
         _cleanFileName = cleanFileName;
+        _extractCommonParameters = extractCommonParameters;
     }
 
     /// <summary>
@@ -46,6 +49,12 @@ public class ParameterGenerator
             
             // Load brand mappings
             var brandMappings = await _loadBrandMappings();
+            
+            // Get common parameters to filter out (unless required)
+            var commonParameters = data.SourceDiscoveredCommonParams.Any() 
+                ? data.SourceDiscoveredCommonParams 
+                : _extractCommonParameters(data.Tools);
+            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
             
             foreach (var tool in data.Tools)
             {
@@ -99,16 +108,20 @@ public class ParameterGenerator
                 
                 var outputFile = Path.Combine(outputDir, fileName);
 
+                // Filter out common parameters unless they are required
                 // Transform options to include RequiredText
-                var transformedOptions = tool.Option?.Select(opt => new
-                {
-                    name = opt.Name,
-                    NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
-                    type = opt.Type,
-                    required = opt.Required,
-                    RequiredText = opt.Required == true ? "Required" : "Optional",
-                    description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
-                }).ToList();
+                var transformedOptions = tool.Option?
+                    .Where(opt => !string.IsNullOrEmpty(opt.Name) && 
+                                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true))
+                    .Select(opt => new
+                    {
+                        name = opt.Name,
+                        NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
+                        type = opt.Type,
+                        required = opt.Required,
+                        RequiredText = opt.Required == true ? "Required" : "Optional",
+                        description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
+                    }).ToList();
 
                 var parameterData = new Dictionary<string, object>
                 {

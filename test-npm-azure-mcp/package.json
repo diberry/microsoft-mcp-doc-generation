@@ -1,0 +1,21 @@
+{
+  "name": "test-npm-azure-mcp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start:info": "azmcp server info",
+    "start:help": "azmcp --help",
+    "start:list": "azmcp tools list",
+    "get:version": "azmcp --version",
+    "get:tools-json": "azmcp tools list",
+    "get:tools-namespace": "azmcp tools list --namespace-mode"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@azure/mcp": "^2.0.0-beta.10"
+  }
+}

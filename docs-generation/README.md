@@ -325,6 +325,9 @@ pwsh ./Generate-MultiPageDocs.ps1
 
 # Skip common tools page generation
 ./Generate-MultiPageDocs.ps1 -CreateCommon $false
+
+# Generate example prompts
+./Generate-MultiPageDocs.ps1 -GenerateExamplePrompts $true
 ```
 
 ## Generated Output
