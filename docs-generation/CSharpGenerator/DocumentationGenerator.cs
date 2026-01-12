@@ -1902,7 +1902,7 @@ public static class DocumentationGenerator
         report.AppendLine("```");
         
         await File.WriteAllTextAsync(reportPath, report.ToString());
-        Console.WriteLine($"\\n📋 Generated missing mappings report: {reportPath}");
+        Console.WriteLine($"\n📋 Generated missing mappings report: {reportPath}");
         Console.WriteLine($"   Found {missingMappings.Count} area(s) without brand mapping or compound word definition");
     }
 
@@ -1997,7 +1997,7 @@ public static class DocumentationGenerator
         }
 
         // Print summary
-        Console.WriteLine("\\n=== Validation Summary ===");
+        Console.WriteLine("\n=== Validation Summary ===");
         Console.WriteLine($"Total tools: {totalTools}");
         Console.WriteLine($"Tools with example prompts: {toolsWithPrompts}");
         Console.WriteLine($"Valid tools: {validTools} ({(toolsWithPrompts > 0 ? (validTools * 100.0 / toolsWithPrompts).ToString("F1") : "0.0")}%)");
@@ -2046,7 +2046,7 @@ public static class DocumentationGenerator
         }
 
         await File.WriteAllTextAsync(reportPath, report.ToString());
-        Console.WriteLine($"\\n📋 Validation report saved to: {reportPath}");
+        Console.WriteLine($"\n📋 Validation report saved to: {reportPath}");
     }
 }
 
