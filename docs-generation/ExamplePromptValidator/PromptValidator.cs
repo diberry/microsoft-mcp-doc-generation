@@ -163,3 +163,17 @@ public class PromptValidation
     public List<string> FoundParameters { get; set; } = new();
     public List<string> Issues { get; set; } = new();
 }
+
+/// <summary>
+/// Aggregated result of validating multiple prompts.
+/// </summary>
+public class AggregatedValidationResult
+{
+    public bool IsValid { get; set; }
+    public int TotalPrompts { get; set; }
+    public int ValidPrompts { get; set; }
+    public int InvalidPrompts { get; set; }
+    public List<string> AllMissingParameters { get; set; } = new();
+    public List<ValidationResult> IndividualResults { get; set; } = new();
+    public string? ErrorMessage { get; set; }
+}
