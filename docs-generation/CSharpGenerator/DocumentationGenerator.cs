@@ -279,6 +279,7 @@ public static class DocumentationGenerator
         var toolsDir = Path.Combine(parentDir, "tools");
         if (generateCompleteTools)
         {
+            var toolsDir = Path.Combine(parentDir, "tools");
             Directory.CreateDirectory(toolsDir);
             var completeToolTemplate = Path.Combine(templatesDir, "tool-complete-template.hbs");
             await completeToolGenerator.GenerateCompleteToolFilesAsync(

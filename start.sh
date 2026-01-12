@@ -49,8 +49,7 @@ dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Rele
     --example-prompts \
     --param-and-annotation \
     --common-general \
-    --complete-tools \
-    $VALIDATE_PROMPTS
+    --complete-tools
 cd ..
 
 # # Summarize generated docs
