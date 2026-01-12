@@ -263,13 +263,6 @@ public static class DocumentationGenerator
         // Generate annotation files
         await annotationGenerator.GenerateAnnotationFilesAsync(transformedData, annotationsDir, annotationTemplate, examplePromptGenerator, examplePromptsDir);
 
-        // Validate example prompts if requested
-        if (validatePrompts && generateExamplePrompts && examplePromptsDir != null)
-        {
-            Console.WriteLine("\n=== Validating Example Prompts ===");
-            await ValidateExamplePromptsAsync(transformedData, examplePromptsDir);
-        }
-
         // Generate individual parameter files for each tool (at parent level)
         var parametersDir = Path.Combine(parentDir, "parameters");
         Directory.CreateDirectory(parametersDir);
@@ -283,9 +276,9 @@ public static class DocumentationGenerator
         await paramAnnotationGenerator.GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
 
         // Generate complete tool files if requested (at parent level)
+        var toolsDir = Path.Combine(parentDir, "tools");
         if (generateCompleteTools)
         {
-            var toolsDir = Path.Combine(parentDir, "tools");
             Directory.CreateDirectory(toolsDir);
             var completeToolTemplate = Path.Combine(templatesDir, "tool-complete-template.hbs");
             await completeToolGenerator.GenerateCompleteToolFilesAsync(
@@ -295,6 +288,17 @@ public static class DocumentationGenerator
                 annotationsDir,
                 parametersDir,
                 examplePromptsDir ?? Path.Combine(parentDir, "example-prompts"));
+        }
+
+        // Validate example prompts if requested (after complete tools are generated)
+        if (validatePrompts && generateExamplePrompts && examplePromptsDir != null && generateCompleteTools)
+        {
+            Console.WriteLine("\n=== Validating Example Prompts with LLM ===");
+            await ValidateExamplePromptsAsync(transformedData, examplePromptsDir, toolsDir);
+        }
+        else if (validatePrompts && (!generateCompleteTools || !generateExamplePrompts))
+        {
+            Console.WriteLine("\n⚠️  Validation requires both --complete-tools and --example-prompts flags");
         }
 
         // Setup area template (needed for index page too)
@@ -1907,10 +1911,10 @@ public static class DocumentationGenerator
     }
 
     /// <summary>
-    /// Validates generated example prompts against tool parameters.
-    /// Excludes common parameters like subscription, tenant, auth, and retry.
+    /// Validates generated example prompts using LLM with full tool context.
+    /// Reads complete tool files from generated/tools/ directory for rich context.
     /// </summary>
-    private static async Task ValidateExamplePromptsAsync(TransformedData data, string examplePromptsDir)
+    private static async Task ValidateExamplePromptsAsync(TransformedData data, string examplePromptsDir, string toolsDir)
     {
         if (!Directory.Exists(examplePromptsDir))
         {
@@ -1918,11 +1922,27 @@ public static class DocumentationGenerator
             return;
         }
 
-        var validationResults = new List<(string toolCommand, string fileName, ExamplePromptValidator.AggregatedValidationResult result)>();
+        if (!Directory.Exists(toolsDir))
+        {
+            Console.WriteLine($"⚠️  Tools directory not found: {toolsDir}");
+            Console.WriteLine($"   Validation requires --complete-tools flag to generate tool files");
+            return;
+        }
+
+        // Initialize LLM validator
+        var validator = new ExamplePromptValidator.PromptValidator();
+        if (!validator.IsInitialized())
+        {
+            Console.WriteLine($"⚠️  Validator not initialized. Check Azure OpenAI configuration.");
+            return;
+        }
+
+        var validationResults = new List<(string toolCommand, ExamplePromptValidator.ValidationResult? result)>();
         int totalTools = 0;
         int toolsWithPrompts = 0;
         int validTools = 0;
         int invalidTools = 0;
+        int skippedTools = 0;
 
         foreach (var tool in data.Tools)
         {
@@ -1935,64 +1955,61 @@ public static class DocumentationGenerator
 
             toolsWithPrompts++;
             
-            // Derive example prompt filename from annotation filename
+            // Derive filenames
             var exampleFileName = tool.AnnotationFileName.Replace("-annotations.md", "-example-prompts.md");
             var exampleFilePath = Path.Combine(examplePromptsDir, exampleFileName);
+            
+            // Find the complete tool file
+            var toolFileName = tool.AnnotationFileName.Replace("-annotations.md", ".complete.md");
+            var toolFilePath = Path.Combine(toolsDir, toolFileName);
 
             if (!File.Exists(exampleFilePath))
             {
-                Console.WriteLine($"  ⚠️  {tool.Command,-50} (file not found: {exampleFileName})");
+                Console.WriteLine($"  ⚠️  {tool.Command,-50} (example prompts file not found)");
+                skippedTools++;
                 continue;
             }
 
-            // Read the example prompts file
-            var content = await File.ReadAllTextAsync(exampleFilePath);
-            
-            // Extract prompts from markdown (look for lines starting with "- **")
-            var prompts = new List<string>();
-            var lines = content.Split('\n');
-            foreach (var line in lines)
+            if (!File.Exists(toolFilePath))
             {
-                var trimmedLine = line.Trim();
-                if (trimmedLine.StartsWith("- **") || trimmedLine.StartsWith("* **"))
-                {
-                    // Extract the prompt text (remove markdown formatting)
-                    var prompt = trimmedLine.TrimStart('-', '*', ' ')
-                        .Replace("**", "")
-                        .Trim();
-                    if (!string.IsNullOrWhiteSpace(prompt))
-                    {
-                        prompts.Add(prompt);
-                    }
-                }
-            }
-
-            if (prompts.Count == 0)
-            {
-                Console.WriteLine($"  ⚠️  {tool.Command,-50} (no prompts found in file)");
+                Console.WriteLine($"  ⚠️  {tool.Command,-50} (complete tool file not found)");
+                skippedTools++;
                 continue;
             }
 
-            // Get required parameters (only required ones, as they must be in prompts)
-            var requiredParams = tool.Option?
-                .Where(o => o.Required)
-                .Select(o => o.Name ?? "")
-                .Where(n => !string.IsNullOrEmpty(n))
-                .ToList() ?? new List<string>();
+            // Read files
+            var toolContent = await File.ReadAllTextAsync(toolFilePath);
+            var examplePromptsContent = await File.ReadAllTextAsync(exampleFilePath);
 
-            // Validate the prompts
-            var result = ExamplePromptValidator.PromptValidator.ValidatePrompts(prompts, requiredParams);
-            validationResults.Add((tool.Command ?? "unknown", exampleFileName, result));
+            // Validate using LLM
+            var result = await validator.ValidateWithLLMAsync(
+                toolContent,
+                tool.Name ?? "Unknown",
+                tool.Command ?? "unknown",
+                tool.Description ?? "No description",
+                examplePromptsContent);
+
+            if (result == null)
+            {
+                Console.WriteLine($"  ⚠️  {tool.Command,-50} (validation failed)");
+                skippedTools++;
+                continue;
+            }
+
+            validationResults.Add((tool.Command ?? "unknown", result));
 
             if (result.IsValid)
             {
                 validTools++;
-                Console.WriteLine($"  ✅ {tool.Command,-50} ({prompts.Count} prompts, all valid)");
+                Console.WriteLine($"  ✅ {tool.Command,-50} ({result.TotalPrompts} prompts, all valid)");
             }
             else
             {
                 invalidTools++;
-                Console.WriteLine($"  ❌ {tool.Command,-50} ({result.InvalidPrompts}/{prompts.Count} prompts missing params: {string.Join(", ", result.AllMissingParameters)})");
+                var missingParams = string.Join(", ", result.Validation
+                    .SelectMany(v => v.MissingParameters)
+                    .Distinct());
+                Console.WriteLine($"  ❌ {tool.Command,-50} ({result.InvalidPrompts}/{result.TotalPrompts} prompts invalid)");
             }
         }
 
@@ -2000,8 +2017,10 @@ public static class DocumentationGenerator
         Console.WriteLine("\n=== Validation Summary ===");
         Console.WriteLine($"Total tools: {totalTools}");
         Console.WriteLine($"Tools with example prompts: {toolsWithPrompts}");
+        Console.WriteLine($"Validated: {validTools + invalidTools}");
         Console.WriteLine($"Valid tools: {validTools} ({(toolsWithPrompts > 0 ? (validTools * 100.0 / toolsWithPrompts).ToString("F1") : "0.0")}%)");
         Console.WriteLine($"Invalid tools: {invalidTools} ({(toolsWithPrompts > 0 ? (invalidTools * 100.0 / toolsWithPrompts).ToString("F1") : "0.0")}%)");
+        Console.WriteLine($"Skipped: {skippedTools}");
 
         // Generate validation report
         var parentDir = Path.GetDirectoryName(examplePromptsDir) ?? examplePromptsDir;
@@ -2010,7 +2029,7 @@ public static class DocumentationGenerator
         var reportPath = Path.Combine(logsDir, "validation-report.md");
         
         var report = new System.Text.StringBuilder();
-        report.AppendLine("# Example Prompt Validation Report");
+        report.AppendLine("# Example Prompt Validation Report (LLM-Based)");
         report.AppendLine();
         report.AppendLine($"**Generated:** {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
         report.AppendLine();
@@ -2018,30 +2037,67 @@ public static class DocumentationGenerator
         report.AppendLine();
         report.AppendLine($"- **Total tools:** {totalTools}");
         report.AppendLine($"- **Tools with example prompts:** {toolsWithPrompts}");
+        report.AppendLine($"- **Validated:** {validTools + invalidTools}");
         report.AppendLine($"- **Valid tools:** {validTools} ({(toolsWithPrompts > 0 ? (validTools * 100.0 / toolsWithPrompts).ToString("F1") : "0.0")}%)");
         report.AppendLine($"- **Invalid tools:** {invalidTools} ({(toolsWithPrompts > 0 ? (invalidTools * 100.0 / toolsWithPrompts).ToString("F1") : "0.0")}%)");
+        report.AppendLine($"- **Skipped:** {skippedTools}");
         report.AppendLine();
 
         if (invalidTools > 0)
         {
-            report.AppendLine("## Tools with Missing Parameters");
+            report.AppendLine("## Tools with Issues");
             report.AppendLine();
-            report.AppendLine("| Tool Command | Missing Parameters | Invalid Prompts |");
-            report.AppendLine("|--------------|-------------------|-----------------|");
             
-            foreach (var (toolCommand, fileName, result) in validationResults.Where(r => !r.result.IsValid))
+            foreach (var (toolCommand, result) in validationResults.Where(r => r.result != null && !r.result.IsValid))
             {
-                var missingParams = string.Join(", ", result.AllMissingParameters);
-                report.AppendLine($"| `{toolCommand}` | {missingParams} | {result.InvalidPrompts}/{result.TotalPrompts} |");
+                if (result == null) continue;
+                
+                report.AppendLine($"### `{toolCommand}`");
+                report.AppendLine();
+                report.AppendLine($"**Summary:** {result.Summary}");
+                report.AppendLine();
+                report.AppendLine($"**Required Parameters:** {string.Join(", ", result.RequiredParameters)}");
+                report.AppendLine();
+                
+                if (result.Recommendations.Any())
+                {
+                    report.AppendLine("**Recommendations:**");
+                    foreach (var rec in result.Recommendations)
+                    {
+                        report.AppendLine($"- {rec}");
+                    }
+                    report.AppendLine();
+                }
+
+                report.AppendLine("**Prompt Details:**");
+                report.AppendLine();
+                report.AppendLine("| Prompt | Valid | Missing Parameters |");
+                report.AppendLine("|--------|-------|-------------------|");
+                foreach (var promptValidation in result.Validation)
+                {
+                    var status = promptValidation.IsValid ? "✅" : "❌";
+                    var missing = promptValidation.MissingParameters.Any() 
+                        ? string.Join(", ", promptValidation.MissingParameters)
+                        : "-";
+                    var promptPreview = promptValidation.Prompt.Length > 60 
+                        ? promptValidation.Prompt.Substring(0, 57) + "..."
+                        : promptValidation.Prompt;
+                    report.AppendLine($"| {promptPreview} | {status} | {missing} |");
+                }
+                report.AppendLine();
             }
-            report.AppendLine();
         }
 
         if (validTools > 0)
         {
             report.AppendLine("## Valid Tools");
             report.AppendLine();
-            report.AppendLine($"{validTools} tools have all required parameters in their example prompts.");
+            report.AppendLine($"{validTools} tools have all required parameters in their example prompts:");
+            report.AppendLine();
+            foreach (var (toolCommand, result) in validationResults.Where(r => r.result != null && r.result.IsValid))
+            {
+                report.AppendLine($"- `{toolCommand}`");
+            }
             report.AppendLine();
         }
 

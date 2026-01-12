@@ -1,155 +1,218 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.RegularExpressions;
+using System.Text;
+using System.Text.Json;
+using GenerativeAI;
 
 namespace ExamplePromptValidator;
 
 /// <summary>
-/// Validates that generated example prompts contain the required tool parameters.
-/// Excludes common parameters like subscription, tenant, auth, and retry parameters.
+/// Validates generated example prompts using LLM to ensure they contain required tool parameters.
+/// Uses the GenerativeAI package to perform rich, context-aware validation.
 /// </summary>
 public class PromptValidator
 {
-    // Common parameters to exclude from validation (case-insensitive)
-    private static readonly HashSet<string> _excludedParameters = new(StringComparer.OrdinalIgnoreCase)
+    private readonly GenerativeAIClient? _aiClient;
+    private readonly string _systemPrompt;
+    private readonly string _userPromptTemplate;
+
+    public PromptValidator()
     {
-        "subscription-id",
-        "subscription",
-        "tenant-id",
-        "tenant",
-        "auth-method",
-        "auth",
-        "authentication",
-        "retry-max-attempts",
-        "retry-delay",
-        "retry",
-        "output",
-        "output-format",
-        "verbose",
-        "debug",
-        "help"
-    };
-
-    /// <summary>
-    /// Validates a single example prompt against a list of required parameters.
-    /// </summary>
-    /// <param name="prompt">The example prompt text to validate</param>
-    /// <param name="requiredParameters">List of required parameter names (will be filtered for exclusions)</param>
-    /// <returns>Validation result containing success status and missing parameters</returns>
-    public static ValidationResult ValidatePrompt(string prompt, List<string> requiredParameters)
-    {
-        if (string.IsNullOrWhiteSpace(prompt))
+        try
         {
-            return new ValidationResult
-            {
-                IsValid = false,
-                ErrorMessage = "Prompt is empty or null"
-            };
-        }
-
-        // Filter out excluded parameters
-        var parametersToCheck = requiredParameters
-            .Where(p => !_excludedParameters.Contains(p))
-            .ToList();
-
-        if (parametersToCheck.Count == 0)
-        {
-            // No non-excluded parameters to check - consider valid
-            return new ValidationResult { IsValid = true };
-        }
-
-        var missingParameters = new List<string>();
-        var promptLower = prompt.ToLowerInvariant();
-
-        foreach (var param in parametersToCheck)
-        {
-            // Check if parameter name appears in the prompt (with various formats)
-            // Look for: parameter-name, parameter_name, "parameter name", or just parameter name
-            var paramLower = param.ToLowerInvariant();
-            var paramWithSpaces = paramLower.Replace("-", " ").Replace("_", " ");
+            _aiClient = new GenerativeAIClient();
             
-            // Check multiple formats
-            bool found = promptLower.Contains(paramLower) ||
-                        promptLower.Contains(paramWithSpaces) ||
-                        promptLower.Contains(param.Replace("-", "_").ToLowerInvariant());
-
-            if (!found)
+            // Load validation prompts
+            var promptsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "prompts");
+            var systemPromptPath = Path.Combine(promptsDir, "system-prompt-validation.txt");
+            var userPromptPath = Path.Combine(promptsDir, "user-prompt-validation.txt");
+            
+            if (File.Exists(systemPromptPath) && File.Exists(userPromptPath))
             {
-                missingParameters.Add(param);
+                _systemPrompt = File.ReadAllText(systemPromptPath);
+                _userPromptTemplate = File.ReadAllText(userPromptPath);
+            }
+            else
+            {
+                Console.WriteLine($"⚠️  Validation prompt files not found at {promptsDir}");
+                _aiClient = null;
+                _systemPrompt = string.Empty;
+                _userPromptTemplate = string.Empty;
             }
         }
-
-        return new ValidationResult
+        catch (Exception ex)
         {
-            IsValid = missingParameters.Count == 0,
-            MissingParameters = missingParameters,
-            ErrorMessage = missingParameters.Count > 0 
-                ? $"Missing required parameters: {string.Join(", ", missingParameters)}"
-                : null
-        };
+            Console.WriteLine($"⚠️  Failed to initialize PromptValidator: {ex.Message}");
+            _aiClient = null;
+            _systemPrompt = string.Empty;
+            _userPromptTemplate = string.Empty;
+        }
     }
 
     /// <summary>
-    /// Validates multiple example prompts against required parameters.
+    /// Checks if the validator is properly initialized and ready to validate.
     /// </summary>
-    /// <param name="prompts">List of example prompt texts</param>
-    /// <param name="requiredParameters">List of required parameter names</param>
-    /// <returns>Aggregated validation result for all prompts</returns>
-    public static AggregatedValidationResult ValidatePrompts(List<string> prompts, List<string> requiredParameters)
+    public bool IsInitialized()
     {
-        if (prompts == null || prompts.Count == 0)
+        return _aiClient != null && 
+               !string.IsNullOrEmpty(_systemPrompt) && 
+               !string.IsNullOrEmpty(_userPromptTemplate);
+    }
+
+    /// <summary>
+    /// Validates example prompts for a tool using the complete tool context.
+    /// </summary>
+    /// <param name="toolContent">Complete tool documentation content from generated/tools/</param>
+    /// <param name="toolName">Name of the tool</param>
+    /// <param name="toolCommand">Command for the tool</param>
+    /// <param name="toolDescription">Description of the tool</param>
+    /// <param name="examplePromptsContent">Generated example prompts content</param>
+    /// <returns>Validation result from LLM</returns>
+    public async Task<ValidationResult?> ValidateWithLLMAsync(
+        string toolContent,
+        string toolName,
+        string toolCommand,
+        string toolDescription,
+        string examplePromptsContent)
+    {
+        if (!IsInitialized())
         {
-            return new AggregatedValidationResult
-            {
-                IsValid = false,
-                ErrorMessage = "No prompts provided for validation"
-            };
+            return null;
         }
 
-        var results = prompts.Select(p => ValidatePrompt(p, requiredParameters)).ToList();
-        var allValid = results.All(r => r.IsValid);
-
-        // Collect all unique missing parameters across all prompts
-        var allMissingParameters = results
-            .SelectMany(r => r.MissingParameters)
-            .Distinct()
-            .OrderBy(p => p)
-            .ToList();
-
-        return new AggregatedValidationResult
+        try
         {
-            IsValid = allValid,
-            TotalPrompts = prompts.Count,
-            ValidPrompts = results.Count(r => r.IsValid),
-            InvalidPrompts = results.Count(r => !r.IsValid),
-            AllMissingParameters = allMissingParameters,
-            IndividualResults = results,
-            ErrorMessage = allValid ? null : $"{results.Count(r => !r.IsValid)} of {prompts.Count} prompts are missing required parameters"
-        };
+            // Build user prompt with full tool context
+            var userPrompt = _userPromptTemplate
+                .Replace("{TOOL_NAME}", toolName)
+                .Replace("{TOOL_COMMAND}", toolCommand)
+                .Replace("{TOOL_DESCRIPTION}", toolDescription)
+                .Replace("{PARAMETERS_LIST}", ExtractParametersFromToolContent(toolContent))
+                .Replace("{TOOL_METADATA}", ExtractMetadataFromToolContent(toolContent))
+                .Replace("{EXAMPLE_PROMPTS}", examplePromptsContent);
+
+            // Call LLM for validation
+            var response = await _aiClient!.GetChatCompletionAsync(_systemPrompt, userPrompt);
+
+            if (string.IsNullOrEmpty(response))
+            {
+                return null;
+            }
+
+            // Parse JSON response
+            return ParseValidationResponse(response);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️  Error during LLM validation: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extracts parameters section from tool content.
+    /// </summary>
+    private string ExtractParametersFromToolContent(string toolContent)
+    {
+        // Extract the parameters section between ## Parameters and the next ## section
+        var parametersStart = toolContent.IndexOf("## Parameters");
+        if (parametersStart == -1) return "No parameters documented";
+
+        var nextSection = toolContent.IndexOf("##", parametersStart + 13);
+        var parametersSection = nextSection == -1 
+            ? toolContent.Substring(parametersStart)
+            : toolContent.Substring(parametersStart, nextSection - parametersStart);
+
+        return parametersSection.Trim();
+    }
+
+    /// <summary>
+    /// Extracts metadata section from tool content.
+    /// </summary>
+    private string ExtractMetadataFromToolContent(string toolContent)
+    {
+        // Extract the metadata/annotations section
+        var metadataStart = toolContent.IndexOf("## Tool Metadata");
+        if (metadataStart == -1)
+        {
+            metadataStart = toolContent.IndexOf("## Annotations");
+        }
+        
+        if (metadataStart == -1) return "No metadata available";
+
+        var nextSection = toolContent.IndexOf("##", metadataStart + 13);
+        var metadataSection = nextSection == -1 
+            ? toolContent.Substring(metadataStart)
+            : toolContent.Substring(metadataStart, nextSection - metadataStart);
+
+        return metadataSection.Trim();
+    }
+
+    /// <summary>
+    /// Parses the JSON validation response from the LLM.
+    /// </summary>
+    private ValidationResult? ParseValidationResponse(string response)
+    {
+        try
+        {
+            // Clean the response - remove markdown code blocks if present
+            var jsonText = response.Trim();
+            if (jsonText.StartsWith("```json"))
+            {
+                jsonText = jsonText.Substring(7);
+                var endIndex = jsonText.LastIndexOf("```");
+                if (endIndex > 0)
+                    jsonText = jsonText.Substring(0, endIndex);
+            }
+            else if (jsonText.StartsWith("```"))
+            {
+                jsonText = jsonText.Substring(3);
+                var endIndex = jsonText.LastIndexOf("```");
+                if (endIndex > 0)
+                    jsonText = jsonText.Substring(0, endIndex);
+            }
+            jsonText = jsonText.Trim();
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            return JsonSerializer.Deserialize<ValidationResult>(jsonText, options);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️  Failed to parse validation response: {ex.Message}");
+            Console.WriteLine($"Response: {response}");
+            return null;
+        }
     }
 }
 
 /// <summary>
-/// Result of validating a single prompt.
+/// Result of validating example prompts using LLM.
 /// </summary>
 public class ValidationResult
 {
-    public bool IsValid { get; set; }
-    public List<string> MissingParameters { get; set; } = new();
-    public string? ErrorMessage { get; set; }
-}
-
-/// <summary>
-/// Aggregated result of validating multiple prompts.
-/// </summary>
-public class AggregatedValidationResult
-{
-    public bool IsValid { get; set; }
+    public string ToolName { get; set; } = "";
+    public List<string> RequiredParameters { get; set; } = new();
     public int TotalPrompts { get; set; }
     public int ValidPrompts { get; set; }
     public int InvalidPrompts { get; set; }
-    public List<string> AllMissingParameters { get; set; } = new();
-    public List<ValidationResult> IndividualResults { get; set; } = new();
-    public string? ErrorMessage { get; set; }
+    public bool IsValid { get; set; }
+    public List<PromptValidation> Validation { get; set; } = new();
+    public string Summary { get; set; } = "";
+    public List<string> Recommendations { get; set; } = new();
+}
+
+/// <summary>
+/// Validation details for a single prompt.
+/// </summary>
+public class PromptValidation
+{
+    public string Prompt { get; set; } = "";
+    public bool IsValid { get; set; }
+    public List<string> MissingParameters { get; set; } = new();
+    public List<string> FoundParameters { get; set; } = new();
 }
