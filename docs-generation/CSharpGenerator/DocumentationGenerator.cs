@@ -98,7 +98,8 @@ public static class DocumentationGenerator
         bool generateServiceOptions = true,
         bool generateAnnotations = false,
         string? cliVersion = null,
-        bool generateExamplePrompts = false)
+        bool generateExamplePrompts = false,
+        bool generateCompleteTools = false)
     {
         // Config.Load has been called in Program.Main and TextCleanup is initialized statically
 
@@ -239,7 +240,8 @@ public static class DocumentationGenerator
         var parameterGenerator = new ParameterGenerator(
             LoadBrandMappingsAsync,
             LoadCompoundWordsAsync,
-            CleanFileNameAsync);
+            CleanFileNameAsync,
+            ExtractCommonParameters);
             
         var paramAnnotationGenerator = new ParamAnnotationGenerator(
             LoadBrandMappingsAsync,
@@ -250,6 +252,10 @@ public static class DocumentationGenerator
             LoadBrandMappingsAsync,
             CleanFileNameAsync,
             ExtractCommonParameters);
+            
+        var completeToolGenerator = new CompleteToolGenerator(
+            LoadBrandMappingsAsync,
+            CleanFileNameAsync);
             
         var reportGenerator = new ReportGenerator();
 
@@ -267,6 +273,21 @@ public static class DocumentationGenerator
         Directory.CreateDirectory(paramAnnotationDir);
         var paramAnnotationTemplate = Path.Combine(templatesDir, "param-annotation-template.hbs");
         await paramAnnotationGenerator.GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
+
+        // Generate complete tool files if requested (at parent level)
+        if (generateCompleteTools)
+        {
+            var toolsDir = Path.Combine(parentDir, "tools");
+            Directory.CreateDirectory(toolsDir);
+            var completeToolTemplate = Path.Combine(templatesDir, "tool-complete-template.hbs");
+            await completeToolGenerator.GenerateCompleteToolFilesAsync(
+                transformedData,
+                toolsDir,
+                completeToolTemplate,
+                annotationsDir,
+                parametersDir,
+                examplePromptsDir ?? Path.Combine(parentDir, "example-prompts"));
+        }
 
         // Setup area template (needed for index page too)
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
