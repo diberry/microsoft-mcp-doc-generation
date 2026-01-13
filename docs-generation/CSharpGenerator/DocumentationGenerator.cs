@@ -1977,17 +1977,11 @@ public static class DocumentationGenerator
                 continue;
             }
 
-            // Read files
-            var toolContent = await File.ReadAllTextAsync(toolFilePath);
-            var examplePromptsContent = await File.ReadAllTextAsync(exampleFilePath);
+            // Read complete tool file
+            var toolFileContent = await File.ReadAllTextAsync(toolFilePath);
 
-            // Validate using LLM
-            var result = await validator.ValidateWithLLMAsync(
-                toolContent,
-                tool.Name ?? "Unknown",
-                tool.Command ?? "unknown",
-                tool.Description ?? "No description",
-                examplePromptsContent);
+            // Validate using LLM - just pass the complete tool file
+            var result = await validator.ValidateWithLLMAsync(toolFileContent);
 
             if (result == null)
             {
@@ -2071,18 +2065,18 @@ public static class DocumentationGenerator
 
                 report.AppendLine("**Prompt Details:**");
                 report.AppendLine();
-                report.AppendLine("| Prompt | Valid | Missing Parameters |");
-                report.AppendLine("|--------|-------|-------------------|");
+                report.AppendLine("| Prompt | Valid | Issues |");
+                report.AppendLine("|--------|-------|--------|");
                 foreach (var promptValidation in result.Validation)
                 {
                     var status = promptValidation.IsValid ? "✅" : "❌";
-                    var missing = promptValidation.MissingParameters.Any() 
-                        ? string.Join(", ", promptValidation.MissingParameters)
+                    var issues = promptValidation.Issues.Any() 
+                        ? string.Join("; ", promptValidation.Issues)
                         : "-";
                     var promptPreview = promptValidation.Prompt.Length > 60 
                         ? promptValidation.Prompt.Substring(0, 57) + "..."
                         : promptValidation.Prompt;
-                    report.AppendLine($"| {promptPreview} | {status} | {missing} |");
+                    report.AppendLine($"| {promptPreview} | {status} | {issues} |");
                 }
                 report.AppendLine();
             }

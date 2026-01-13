@@ -1,25 +1,21 @@
 # User Prompt Template for Example Prompt Validation
 
-## Tool Context
+Please validate the example prompts in the following complete tool documentation file.
 
-**Tool Name**: {TOOL_NAME}
-**Command**: {TOOL_COMMAND}
-**Description**: {TOOL_DESCRIPTION}
-
-### All Parameters
-
-{PARAMETERS_LIST}
-
-### Tool Metadata
-
-{TOOL_METADATA}
-
-## Generated Example Prompts to Validate
-
-{EXAMPLE_PROMPTS}
+The tool file contains:
+- Tool name, command, and description
+- All parameters with their requirements (Required/Optional)
+- Tool metadata and annotations
+- The generated example prompts to validate
 
 ---
 
-Please validate these example prompts and determine if they include all required parameters (excluding common infrastructure parameters like subscription-id, tenant-id, auth-method, retry-*, output, verbose, debug, help).
+{TOOL_FILE_CONTENT}
+
+---
+
+Please validate the example prompts in this tool file and determine if they are valid according to the validation rules:
+1. All required parameters must be present (excluding infrastructure parameters: subscription-id, tenant-id, auth-method, retry-*, output, verbose, debug, help)
+2. All parameter values must be wrapped in single quotes ('value')
 
 Return your validation results in JSON format as specified in the system prompt.

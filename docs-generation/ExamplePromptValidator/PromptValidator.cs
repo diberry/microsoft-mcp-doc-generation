@@ -61,20 +61,11 @@ public class PromptValidator
     }
 
     /// <summary>
-    /// Validates example prompts for a tool using the complete tool context.
+    /// Validates example prompts for a tool using the complete tool file.
     /// </summary>
-    /// <param name="toolContent">Complete tool documentation content from generated/tools/</param>
-    /// <param name="toolName">Name of the tool</param>
-    /// <param name="toolCommand">Command for the tool</param>
-    /// <param name="toolDescription">Description of the tool</param>
-    /// <param name="examplePromptsContent">Generated example prompts content</param>
+    /// <param name="toolFileContent">Complete tool file content from generated/tools/*.complete.md</param>
     /// <returns>Validation result from LLM</returns>
-    public async Task<ValidationResult?> ValidateWithLLMAsync(
-        string toolContent,
-        string toolName,
-        string toolCommand,
-        string toolDescription,
-        string examplePromptsContent)
+    public async Task<ValidationResult?> ValidateWithLLMAsync(string toolFileContent)
     {
         if (!IsInitialized())
         {
@@ -83,14 +74,8 @@ public class PromptValidator
 
         try
         {
-            // Build user prompt with full tool context
-            var userPrompt = _userPromptTemplate
-                .Replace("{TOOL_NAME}", toolName)
-                .Replace("{TOOL_COMMAND}", toolCommand)
-                .Replace("{TOOL_DESCRIPTION}", toolDescription)
-                .Replace("{PARAMETERS_LIST}", ExtractParametersFromToolContent(toolContent))
-                .Replace("{TOOL_METADATA}", ExtractMetadataFromToolContent(toolContent))
-                .Replace("{EXAMPLE_PROMPTS}", examplePromptsContent);
+            // Build user prompt with complete tool file
+            var userPrompt = _userPromptTemplate.Replace("{TOOL_FILE_CONTENT}", toolFileContent);
 
             // Call LLM for validation
             var response = await _aiClient!.GetChatCompletionAsync(_systemPrompt, userPrompt);
@@ -108,45 +93,6 @@ public class PromptValidator
             Console.WriteLine($"⚠️  Error during LLM validation: {ex.Message}");
             return null;
         }
-    }
-
-    /// <summary>
-    /// Extracts parameters section from tool content.
-    /// </summary>
-    private string ExtractParametersFromToolContent(string toolContent)
-    {
-        // Extract the parameters section between ## Parameters and the next ## section
-        var parametersStart = toolContent.IndexOf("## Parameters");
-        if (parametersStart == -1) return "No parameters documented";
-
-        var nextSection = toolContent.IndexOf("##", parametersStart + 13);
-        var parametersSection = nextSection == -1 
-            ? toolContent.Substring(parametersStart)
-            : toolContent.Substring(parametersStart, nextSection - parametersStart);
-
-        return parametersSection.Trim();
-    }
-
-    /// <summary>
-    /// Extracts metadata section from tool content.
-    /// </summary>
-    private string ExtractMetadataFromToolContent(string toolContent)
-    {
-        // Extract the metadata/annotations section
-        var metadataStart = toolContent.IndexOf("## Tool Metadata");
-        if (metadataStart == -1)
-        {
-            metadataStart = toolContent.IndexOf("## Annotations");
-        }
-        
-        if (metadataStart == -1) return "No metadata available";
-
-        var nextSection = toolContent.IndexOf("##", metadataStart + 13);
-        var metadataSection = nextSection == -1 
-            ? toolContent.Substring(metadataStart)
-            : toolContent.Substring(metadataStart, nextSection - metadataStart);
-
-        return metadataSection.Trim();
     }
 
     /// <summary>
@@ -215,4 +161,5 @@ public class PromptValidation
     public bool IsValid { get; set; }
     public List<string> MissingParameters { get; set; } = new();
     public List<string> FoundParameters { get; set; } = new();
+    public List<string> Issues { get; set; } = new();
 }
