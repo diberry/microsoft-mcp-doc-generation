@@ -153,7 +153,7 @@ internal class Program
          Console.WriteLine($"  generateAnnotations: {generateAnnotations}");
          Console.WriteLine($"  generateExamplePrompts: {generateExamplePrompts}");
          Console.WriteLine($"  generateCompleteTools: {generateCompleteTools}");
-         Console.WriteLine($"  validatePrompts: {validatePrompts}");
+         Console.WriteLine($"  validateExamplePrompts: {validatePrompts}");
          
          var generateServiceOptions = !args.Contains("--no-service-options");
          

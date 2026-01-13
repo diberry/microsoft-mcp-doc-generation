@@ -23,10 +23,10 @@ public class PromptValidator
         {
             _aiClient = new GenerativeAIClient();
             
-            // Load validation prompts
+            // Load example prompt validation prompts
             var promptsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "prompts");
-            var systemPromptPath = Path.Combine(promptsDir, "system-prompt-validation.txt");
-            var userPromptPath = Path.Combine(promptsDir, "user-prompt-validation.txt");
+            var systemPromptPath = Path.Combine(promptsDir, "system-prompt-example-prompt-validation.txt");
+            var userPromptPath = Path.Combine(promptsDir, "user-prompt-example-prompt-validation.txt");
             
             if (File.Exists(systemPromptPath) && File.Exists(userPromptPath))
             {
@@ -35,7 +35,7 @@ public class PromptValidator
             }
             else
             {
-                Console.WriteLine($"⚠️  Validation prompt files not found at {promptsDir}");
+                Console.WriteLine($"⚠️  Example prompt validation prompt files not found at {promptsDir}");
                 _aiClient = null;
                 _systemPrompt = string.Empty;
                 _userPromptTemplate = string.Empty;

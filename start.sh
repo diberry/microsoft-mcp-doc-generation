@@ -11,7 +11,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --validate)
             VALIDATE_PROMPTS="--validate-prompts"
-            echo "✓ Validation enabled (will run after content generation)"
+            echo "✓ Example prompt validation enabled (will run after content generation)"
             shift
             ;;
         *)

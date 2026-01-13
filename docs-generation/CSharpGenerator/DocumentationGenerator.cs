@@ -298,7 +298,7 @@ public static class DocumentationGenerator
         }
         else if (validatePrompts && (!generateCompleteTools || !generateExamplePrompts))
         {
-            Console.WriteLine("\n⚠️  Validation requires both --complete-tools and --example-prompts flags");
+            Console.WriteLine("\n⚠️  Example prompt validation requires both --complete-tools and --example-prompts flags");
         }
 
         // Setup area template (needed for index page too)
@@ -2020,7 +2020,7 @@ public static class DocumentationGenerator
         var parentDir = Path.GetDirectoryName(examplePromptsDir) ?? examplePromptsDir;
         var logsDir = Path.Combine(parentDir, "logs");
         Directory.CreateDirectory(logsDir);
-        var reportPath = Path.Combine(logsDir, "validation-report.md");
+        var reportPath = Path.Combine(logsDir, "example-prompt-validation-report.md");
         
         var report = new System.Text.StringBuilder();
         report.AppendLine("# Example Prompt Validation Report (LLM-Based)");
@@ -2096,7 +2096,6 @@ public static class DocumentationGenerator
         }
 
         await File.WriteAllTextAsync(reportPath, report.ToString());
-        Console.WriteLine($"\n📋 Validation report saved to: {reportPath}");
+        Console.WriteLine($"\n📋 Example prompt validation report saved to: {reportPath}");
     }
 }
-
