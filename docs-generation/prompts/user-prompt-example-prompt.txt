@@ -13,6 +13,10 @@ Parameters:
 Rules for optional parameters:
 - If `resource-group` is Required, include it. If Optional, omit it.
 - If a parameter is marked Optional, include it only when truly necessary for the action.
+- **For optional resource-identifying parameters** (like resource name, item ID, etc. that specify which specific item to get):
+  - Generate at least 2 examples WITHOUT the parameter to show listing/getting all items
+  - Generate at least 2 examples WITH the parameter to show getting a specific item
+  - This demonstrates the tool's dual capability: list all vs. get one
 
 Return your response as a JSON object with this exact structure:
 {
