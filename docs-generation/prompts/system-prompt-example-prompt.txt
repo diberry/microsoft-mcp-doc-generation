@@ -23,9 +23,15 @@ You will receive tool information including the tool name, command, action verb,
 
 6. **Focus on business parameters only**: Include only the core required parameters that identify what resource or data to act on (resource names, item IDs, filter criteria). Omit infrastructure parameters like subscription, tenant, resource-group (unless explicitly required by the tool), retry settings, auth methods, and timeouts.
 
-7. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
+7. **Handle optional resource-identifying parameters**: When a tool has optional parameters that identify a specific resource (like resource name, item ID, etc.), generate examples demonstrating BOTH use cases:
+   - **List/Get All**: Examples WITHOUT the optional identifier parameter (e.g., "List all Function Apps in my subscription", "Show me all storage accounts in resource group 'rg-prod'")
+   - **Get Specific**: Examples WITH the optional identifier parameter (e.g., "Get details for Function App 'myapp' in resource group 'rg-prod'")
+   - Generate at least 2 examples for each use case when this applies
+   - This helps users understand the tool can operate at both the collection and individual item level
 
-8. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
+8. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
+
+9. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
 
 2. **Use realistic values**: Follow Azure naming conventions (lowercase for storage accounts, kebab-case for resource groups, PascalCase for some resources)
 
