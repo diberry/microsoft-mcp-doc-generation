@@ -55,8 +55,22 @@ internal class HorizontalArticleProgram
             Console.WriteLine("✓ Environment variables loaded and validated");
             Console.WriteLine();
             
+            // Parse command-line arguments
+            bool generateAllArticles = !args.Contains("--single"); // Default to all, use --single for testing
+            bool useTextTransformation = args.Contains("--transform");
+            
+            if (generateAllArticles)
+            {
+                Console.WriteLine("Mode: Generating ALL horizontal articles");
+            }
+            else
+            {
+                Console.WriteLine("Mode: Generating SINGLE article (test mode, use without --single for all)");
+            }
+            Console.WriteLine();
+            
             // Run generator
-            var generator = new Generators.HorizontalArticleGenerator(aiOptions);
+            var generator = new Generators.HorizontalArticleGenerator(aiOptions, useTextTransformation, generateAllArticles);
             await generator.GenerateAllArticles();
             
             return 0;

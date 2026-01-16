@@ -20,7 +20,7 @@ public class GenerativeAIClient
         _chatClient = _azureClient.GetChatClient(_opts.Deployment!);
     }
 
-    public async Task<string> GetChatCompletionAsync(string systemPrompt, string userPrompt, CancellationToken ct = default)
+    public async Task<string> GetChatCompletionAsync(string systemPrompt, string userPrompt, int maxTokens = 8000, CancellationToken ct = default)
     {
         var messages = new ChatMessage[]
         {
@@ -30,7 +30,7 @@ public class GenerativeAIClient
 
         var options = new ChatCompletionOptions
         {
-            MaxOutputTokenCount = 2000
+            MaxOutputTokenCount = maxTokens
         };
 
         var response = await _chatClient.CompleteChatAsync(messages, options, ct);
