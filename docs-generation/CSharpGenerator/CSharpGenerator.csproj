@@ -20,6 +20,9 @@
     <ProjectReference Include="../GenerativeAI/GenerativeAI.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../ExamplePromptValidator/ExamplePromptValidator.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Handlebars.Net" />
     <!-- Explicitly set Handlebars.Net version to 2.1.6 -->
   </ItemGroup>

@@ -131,7 +131,7 @@ internal class Program
          
          if (args.Length < 2)
          {
-             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--example-prompts] [--complete-tools] [--no-service-options] [--version <version>]");
+             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--example-prompts] [--complete-tools] [--no-service-options] [--validate-prompts] [--version <version>]");
              return 1;
          }
 
@@ -143,6 +143,7 @@ internal class Program
          var generateAnnotations = args.Contains("--annotations");
          var generateExamplePrompts = args.Contains("--example-prompts");
          var generateCompleteTools = args.Contains("--complete-tools");
+         var validatePrompts = args.Contains("--validate-prompts");
          
          // DEBUG: Print flag values
          Console.WriteLine($"DEBUG: Flag values:");
@@ -152,6 +153,7 @@ internal class Program
          Console.WriteLine($"  generateAnnotations: {generateAnnotations}");
          Console.WriteLine($"  generateExamplePrompts: {generateExamplePrompts}");
          Console.WriteLine($"  generateCompleteTools: {generateCompleteTools}");
+         Console.WriteLine($"  validatePrompts: {validatePrompts}");
          
          var generateServiceOptions = !args.Contains("--no-service-options");
          
@@ -173,7 +175,8 @@ internal class Program
              generateAnnotations,
              cliVersion,
              generateExamplePrompts,
-             generateCompleteTools);
+             generateCompleteTools,
+             validatePrompts);
      }
 }
 

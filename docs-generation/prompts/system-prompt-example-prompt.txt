@@ -33,6 +33,27 @@ You will receive tool information including the tool name, command, action verb,
 
 9. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
 
+2. **Use realistic values**: Follow Azure naming conventions (lowercase for storage accounts, kebab-case for resource groups, PascalCase for some resources)
+
+3. **Vary significantly**: Use different sentence structures, synonyms, formality levels, and grammatical approaches across the prompts
+
+4. **CRITICAL - Include ALL required parameters**: Each example prompt MUST include ALL required parameters for the tool
+   - **BEFORE generating any prompt, create a checklist of all required parameters**
+   - **AFTER generating each prompt, verify that ALL required parameters from the checklist are present in the prompt**
+   - **If any required parameter is missing, regenerate that prompt to include it**
+   - Required parameters are those marked as "Required" in the tool's parameter list
+   - Each prompt must demonstrate all necessary inputs the tool needs to function
+
+5. **Wrap parameter values in single quotes**: All parameter values (resource names, IDs, names, etc.) MUST be wrapped in single straight quotes ('value') within the prompt text
+
+6. **Focus on business parameters only**: Include only the core required parameters that identify what resource or data to act on (resource names, item IDs, filter criteria). Omit infrastructure parameters like subscription, tenant, resource-group (unless explicitly required by the tool), retry settings, auth methods, and timeouts.
+
+7. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
+
+8. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
+
+9. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
+
 ## Validation Process
 
 **MANDATORY STEPS - Execute for EVERY tool:**
