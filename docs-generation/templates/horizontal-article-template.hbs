@@ -1,0 +1,159 @@
+---
+title: Use Azure MCP Server with {{serviceBrandName}}
+description: Learn how to use Azure Model Context Protocol (MCP) Server to interact with {{serviceBrandName}} using natural language commands through AI assistants.
+ms.date: {{formatDate generatedAt}}
+ms.topic: how-to
+ms.custom: mcp-integration, devx-track-ai
+ms.service: {{serviceIdentifier}}
+---
+
+# Use Azure MCP Server with {{serviceBrandName}}
+
+Azure Model Context Protocol (MCP) Server enables AI assistants like GitHub Copilot, Claude Desktop, and others to interact with {{serviceBrandName}} through natural language commands. This integration allows you to manage {{genai-serviceShortDescription}} without writing code or remembering complex CLI syntax.
+
+## Overview
+
+{{serviceBrandName}} {{genai-serviceOverview}}
+
+With Azure MCP Server integration, you can use natural language to:
+
+{{#each genai-capabilities}}
+- {{this}}
+{{/each}}
+
+## Prerequisites
+
+Before using Azure MCP Server with {{serviceBrandName}}, ensure you have:
+
+- **Azure MCP Server installed and running** - Follow the [Azure MCP Server setup guide](https://github.com/microsoft/azure-mcp-server)
+- **AI assistant configured** - GitHub Copilot, Claude Desktop, or another MCP-compatible client
+- **Azure credentials** - Authentication configured for your Azure subscription
+{{#if genai-serviceSpecificPrerequisites}}
+{{#each genai-serviceSpecificPrerequisites}}
+- **{{this.title}}** - {{this.description}}
+{{/each}}
+{{/if}}
+
+## Available MCP tools
+
+Azure MCP Server provides the following tools for {{serviceBrandName}}:
+
+{{#each tools}}
+- **[{{command}}]({{moreInfoLink}})** - {{genai-shortDescription}}
+{{/each}}
+
+For detailed parameter information and usage examples, see the [{{serviceBrandName}} MCP tools reference]({{toolsReferenceLink}}).
+
+## Common scenarios
+
+{{#each genai-scenarios}}
+### Scenario {{add @index 1}}: {{title}}
+
+{{description}}
+
+**Example commands you can ask your AI assistant:**
+
+{{#each examples}}
+- "{{this}}"
+{{/each}}
+
+{{#if expectedOutcome}}
+**Expected outcome:**  
+{{expectedOutcome}}
+{{/if}}
+
+{{/each}}
+
+{{#if genai-aiSpecificScenarios}}
+## AI-specific use cases
+
+{{serviceBrandName}} includes AI capabilities that integrate seamlessly with Azure MCP Server:
+
+{{#each genai-aiSpecificScenarios}}
+### {{title}}
+
+{{description}}
+
+**Example interactions:**
+
+{{#each examples}}
+- "{{this}}"
+{{/each}}
+
+{{/each}}
+{{/if}}
+
+## Authentication and permissions
+
+To use {{serviceBrandName}} through Azure MCP Server, ensure your Azure identity has appropriate permissions:
+
+{{#if genai-requiredRoles}}
+**Required Azure RBAC roles:**
+
+{{#each genai-requiredRoles}}
+- **{{name}}** - {{purpose}}
+{{/each}}
+{{else}}
+- Contributor or Owner role on the subscription or resource group
+- Or specific {{serviceBrandName}} permissions as needed
+{{/if}}
+
+{{#if genai-authenticationNotes}}
+**Additional authentication notes:**
+
+{{genai-authenticationNotes}}
+{{/if}}
+
+## Troubleshooting
+
+{{#if genai-commonIssues}}
+### Common issues
+
+{{#each genai-commonIssues}}
+**{{title}}**
+
+{{description}}
+
+{{#if resolution}}
+**Resolution:** {{resolution}}
+{{/if}}
+
+{{/each}}
+{{else}}
+If you encounter issues:
+
+1. Verify Azure MCP Server is running: Check the server status in your AI assistant
+2. Confirm authentication: Ensure your Azure credentials are valid
+3. Check permissions: Verify you have necessary RBAC roles for {{serviceBrandName}}
+4. Review error messages: MCP Server provides detailed error information
+{{/if}}
+
+## Best practices
+
+{{#if genai-bestPractices}}
+{{#each genai-bestPractices}}
+- **{{title}}** - {{description}}
+{{/each}}
+{{else}}
+- Use natural language that clearly describes your intent
+- Specify resource groups and names when working with specific resources
+- Review actions before confirming destructive operations
+- Use consistent naming conventions for resources
+{{/if}}
+
+## Related content
+
+- [Azure MCP Server documentation](https://github.com/microsoft/azure-mcp-server)
+- [{{serviceBrandName}} MCP tools reference]({{toolsReferenceLink}})
+{{#if genai-serviceDocLink}}
+- [{{serviceBrandName}} documentation]({{genai-serviceDocLink}})
+{{/if}}
+{{#if genai-additionalLinks}}
+{{#each genai-additionalLinks}}
+- [{{title}}]({{url}})
+{{/each}}
+{{/if}}
+
+---
+
+*This article was generated for Azure MCP Server version {{version}} on {{formatDate generatedAt}}*
