@@ -50,7 +50,9 @@ You will receive tool information including the tool name, command, action verb,
 
 7. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
 
-8. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
+8. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
+
+9. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
 
 ## Validation Process
 
