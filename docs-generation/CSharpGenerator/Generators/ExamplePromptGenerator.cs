@@ -17,6 +17,8 @@ public class ExamplePromptGenerator
     private readonly GenerativeAI.GenerativeAIClient? _openAIClient;
     private readonly string _systemPrompt;
     private readonly string _userPromptTemplate;
+    private readonly string? _serviceSpecificDir;
+    private readonly Dictionary<string, string> _serviceInstructionsCache = new();
 
     public ExamplePromptGenerator()
     {
@@ -52,6 +54,23 @@ public class ExamplePromptGenerator
                 _systemPrompt = string.Empty;
                 _userPromptTemplate = string.Empty;
             }
+            
+            // Check for service-specific instructions directory
+            _serviceSpecificDir = Path.Combine(promptsDir, "service-specific");
+            if (Directory.Exists(_serviceSpecificDir))
+            {
+                var instructionFiles = Directory.GetFiles(_serviceSpecificDir, "*-instructions.md");
+                Console.WriteLine($"  Service-specific instructions: {instructionFiles.Length} files found");
+                foreach (var file in instructionFiles)
+                {
+                    Console.WriteLine($"    📄 {Path.GetFileName(file)}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"  Service-specific instructions: directory not found");
+                _serviceSpecificDir = string.Empty;
+            }
         }
         catch (Exception ex)
         {
@@ -74,6 +93,35 @@ public class ExamplePromptGenerator
     }
 
     /// <summary>
+    /// Gets service-specific instructions for a given service area (e.g., "keyvault", "storage")
+    /// </summary>
+    /// <param name="serviceArea">The service area identifier</param>
+    /// <returns>Service-specific instructions or empty string if not found</returns>
+    private string GetServiceSpecificInstructions(string serviceArea)
+    {
+        if (string.IsNullOrEmpty(_serviceSpecificDir) || string.IsNullOrEmpty(serviceArea))
+            return string.Empty;
+
+        // Check cache first
+        if (_serviceInstructionsCache.TryGetValue(serviceArea, out var cached))
+            return cached;
+
+        // Try to load service-specific instructions file
+        var instructionsPath = Path.Combine(_serviceSpecificDir, $"{serviceArea}-instructions.md");
+        if (File.Exists(instructionsPath))
+        {
+            var instructions = File.ReadAllText(instructionsPath);
+            _serviceInstructionsCache[serviceArea] = instructions;
+            Console.WriteLine($"    📋 Loaded service-specific instructions for '{serviceArea}'");
+            return instructions;
+        }
+
+        // Cache empty result to avoid repeated file system checks
+        _serviceInstructionsCache[serviceArea] = string.Empty;
+        return string.Empty;
+    }
+
+    /// <summary>
     /// Generates example prompts for a given tool
     /// </summary>
     /// <param name="tool">The tool to generate example prompts for</param>
@@ -90,6 +138,7 @@ public class ExamplePromptGenerator
         {
             // Extract action verb and resource type from command
             var commandParts = tool.Command?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? Array.Empty<string>();
+            var serviceArea = commandParts.Length > 0 ? commandParts[0].ToLowerInvariant() : string.Empty;
             var actionVerb = commandParts.Length > 1 ? commandParts[^1] : "manage"; // Last part is usually the action
             var resourceType = commandParts.Length > 1 ? string.Join(" ", commandParts[1..^1]) : "resource";
 
@@ -119,8 +168,17 @@ public class ExamplePromptGenerator
             // Add the final instruction
             userPrompt += "\nGenerate the prompts now.";
 
+            // Build final system prompt with service-specific instructions if available
+            var serviceInstructions = GetServiceSpecificInstructions(serviceArea);
+            var finalSystemPrompt = _systemPrompt;
+            if (!string.IsNullOrEmpty(serviceInstructions))
+            {
+                Console.WriteLine($"    📋 Applying service-specific instructions for '{serviceArea}'");
+                finalSystemPrompt = _systemPrompt + "\n\n" + serviceInstructions;
+            }
+
             // Call Azure OpenAI
-            var responseText = await _openAIClient.GetChatCompletionAsync(_systemPrompt, userPrompt);
+            var responseText = await _openAIClient.GetChatCompletionAsync(finalSystemPrompt, userPrompt);
 
             if (string.IsNullOrEmpty(responseText))
             {

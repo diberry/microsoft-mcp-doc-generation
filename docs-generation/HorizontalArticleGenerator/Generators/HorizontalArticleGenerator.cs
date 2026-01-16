@@ -24,12 +24,9 @@ public class HorizontalArticleGenerator
         try
         {
             Console.WriteLine($"{progress} Processing {staticData.ServiceBrandName}...");
-            // Generate AI content and save prompt
-            var promptDir = Path.GetFullPath("../generated/horizontal-article-prompts");
-            Directory.CreateDirectory(promptDir);
-            string userPromptText = null;
-            var aiResponse = await GenerateAIContentWithPromptSave(staticData, promptDir, out userPromptText);
-            AIGeneratedArticleData aiData = null;
+            // Generate AI content
+            var aiResponse = await GenerateAIContent(staticData);
+            AIGeneratedArticleData? aiData = null;
             bool parseFailed = false;
             try
             {
@@ -44,7 +41,7 @@ public class HorizontalArticleGenerator
                 Console.WriteLine();
                 parseFailed = true;
             }
-            if (parseFailed) return false; // Skip this article
+            if (parseFailed || aiData == null) return false; // Skip this article
             // Merge static + AI data
             var templateData = MergeData(staticData, aiData);
             // Render and save
@@ -65,6 +62,7 @@ public class HorizontalArticleGenerator
     private const string CLI_OUTPUT_PATH = "../generated/cli/cli-output.json";
     private const string CLI_VERSION_PATH = "../generated/cli/cli-version.json";
     private const string OUTPUT_DIR = "../generated/horizontal-articles";
+    private const string PROMPT_OUTPUT_DIR = "../generated/horizontal-article-prompts";
     private const string SYSTEM_PROMPT_PATH = "./prompts/horizontal-article-system-prompt.txt";
     private const string USER_PROMPT_PATH = "./prompts/horizontal-article-user-prompt.txt";
     private const string TEMPLATE_PATH = "./templates/horizontal-article-template.hbs";
@@ -117,11 +115,6 @@ public class HorizontalArticleGenerator
                 bool result = await GenerateSingleArticleAsync(staticData, outputDir, progress);
                 if (result) successCount++;
                 else failureCount++;
-                // Rate limiting
-                if (i < staticDataList.Count - 1)
-                {
-                    await Task.Delay(1000);
-                }
             }
         }
         else
@@ -165,9 +158,20 @@ public class HorizontalArticleGenerator
 
         // Load version info
         var versionPath = Path.GetFullPath(CLI_VERSION_PATH);
-        var versionContent = await File.ReadAllTextAsync(versionPath);
-        var versionJson = JsonDocument.Parse(versionContent);
-        var cliVersion = versionJson.RootElement.GetProperty("version").GetString() ?? "unknown";
+        var versionContent = (await File.ReadAllTextAsync(versionPath)).Trim();
+        string cliVersion;
+        
+        // Handle both plain text version and JSON format
+        if (versionContent.StartsWith("{"))
+        {
+            var versionJson = JsonDocument.Parse(versionContent);
+            cliVersion = versionJson.RootElement.GetProperty("version").GetString() ?? "unknown";
+        }
+        else
+        {
+            // Plain text version string
+            cliVersion = versionContent;
+        }
 
         // Group tools by service area (first word of command or name)
         var toolsByService = cliData.Results
@@ -314,6 +318,27 @@ public class HorizontalArticleGenerator
 
         var userPrompt = userPromptCompiled(promptContext);
 
+        // Save prompts to output directory
+        var promptDir = Path.GetFullPath(PROMPT_OUTPUT_DIR);
+        Directory.CreateDirectory(promptDir);
+        
+        var promptFileName = $"horizontal-article-{staticData.ServiceIdentifier}-prompt.md";
+        var promptFilePath = Path.Combine(promptDir, promptFileName);
+        var promptContent = $"""
+# Horizontal Article Prompt: {staticData.ServiceBrandName}
+
+Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
+
+## System Prompt
+
+{systemPrompt}
+
+## User Prompt
+
+{userPrompt}
+""";
+        await File.WriteAllTextAsync(promptFilePath, promptContent);
+
         // Print prompts for debugging
         Console.WriteLine("--- System Prompt ---");
         Console.WriteLine(systemPrompt);
@@ -321,20 +346,33 @@ public class HorizontalArticleGenerator
         Console.WriteLine("--- User Prompt ---");
         Console.WriteLine(userPrompt);
         Console.WriteLine("--- End User Prompt ---\n");
+
+        // Calculate token limit based on tool count
+        // Base: 2000 tokens + 400 tokens per tool (for tool descriptions, scenarios, etc.)
+        // Min: 2500, Max: 12000
+        var toolCount = staticData.Tools.Count;
+        var calculatedTokens = 2000 + (toolCount * 400);
+        var maxTokens = Math.Clamp(calculatedTokens, 2500, 12000);
+        Console.WriteLine($"Token limit: {maxTokens} (based on {toolCount} tools)");
 
         // Call AI client
         var response = await _aiClient.GetChatCompletionAsync(
             systemPrompt,
-            userPrompt
+            userPrompt,
+            maxTokens
         );
 
-        // Print prompts for debugging
-        Console.WriteLine("--- System Prompt ---");
-        Console.WriteLine(systemPrompt);
-        Console.WriteLine("--- End System Prompt ---\n");
-        Console.WriteLine("--- User Prompt ---");
-        Console.WriteLine(userPrompt);
-        Console.WriteLine("--- End User Prompt ---\n");
+        // Append AI response to prompt file
+        var responseContent = $"""
+
+
+## AI Response
+
+```json
+{response}
+```
+""";
+        await File.AppendAllTextAsync(promptFilePath, responseContent);
 
         // Print raw response
         Console.WriteLine("--- Raw GenerativeAI Response ---");
