@@ -5,22 +5,22 @@ rm -rf generated/
 mkdir -p generated/
 mkdir -p generated/cli
 
-# Parse command line arguments
-VALIDATE_PROMPTS=""
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --validate)
-            VALIDATE_PROMPTS="--validate-prompts"
-            echo "✓ Example prompt validation enabled (will run after content generation)"
-            shift
-            ;;
-        *)
-            echo "Unknown option: $1"
-            echo "Usage: $0 [--validate]"
-            exit 1
-            ;;
-    esac
-done
+# # Parse command line arguments
+# VALIDATE_PROMPTS=""
+# while [[ $# -gt 0 ]]; do
+#     case $1 in
+#         --validate)
+#             VALIDATE_PROMPTS="--validate-prompts"
+#             echo "✓ Example prompt validation enabled (will run after content generation)"
+#             shift
+#             ;;
+#         *)
+#             echo "Unknown option: $1"
+#             echo "Usage: $0 [--validate]"
+#             exit 1
+#             ;;
+#     esac
+# done
 
 # Generate tool metadata from MCP CLI
 cd test-npm-azure-mcp
@@ -50,7 +50,7 @@ dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Rele
     --param-and-annotation \
     --common-general \
     --complete-tools \
-    $VALIDATE_PROMPTS
+    --validate --validate-prompts
 cd ..
 
 # # Summarize generated docs

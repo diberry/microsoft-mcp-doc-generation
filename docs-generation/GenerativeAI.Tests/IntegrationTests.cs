@@ -56,7 +56,7 @@ public class IntegrationTests
 
         // Call Azure OpenAI
         var client = new Client(opts);
-        var result = await client.GetChatCompletionAsync(systemPrompt, userPrompt, CancellationToken.None);
+        var result = await client.GetChatCompletionAsync(systemPrompt, userPrompt, 8000, CancellationToken.None);
 
         _output.WriteLine("========================================");
         _output.WriteLine("AI RESPONSE:");
