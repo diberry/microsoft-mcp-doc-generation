@@ -18,7 +18,7 @@ The Azure MCP Server lets you manage Azure Storage resources, including storage 
 
 [Azure Storage](/azure/storage/common/storage-introduction) is Microsoft's cloud storage solution for modern data storage scenarios.
 
-[!INCLUDE [tip-about-params](../includes/tools/parameter-consideration.md)]
+[!INCLUDE [tip-about-params](../../../includes/tools/parameter-consideration.md)]
 
 ## Account: Create
 
@@ -26,7 +26,7 @@ The Azure MCP Server lets you manage Azure Storage resources, including storage 
 
 Create a new Azure Storage account.
 
-**Prerequisites**: The conversation context establishes [global parameters](index.md#tool-parameters) (subscription, resource group). Caller must have Storage Account Contributor role or equivalent permissions on the target subscription.
+**Prerequisites**: The conversation context establishes [global parameters](../../index.md#tool-parameters) (subscription, resource group). Caller must have Storage Account Contributor role or equivalent permissions on the target subscription.
 
 Example prompts include:
 
@@ -45,9 +45,9 @@ Example prompts include:
 
 **Success verification**: The tool returns the created storage account details.
 
-[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):
 
-[!INCLUDE [storage account create](../includes/tools/annotations/azure-storage-account-create-annotations.md)]
+[!INCLUDE [storage account create](../../../includes/tools/annotations/azure-storage-account-create-annotations.md)]
 
 ## Account: Get details
 
@@ -55,7 +55,7 @@ Example prompts include:
 
 Retrieves detailed information about Azure Storage accounts, including account name, location, SKU, kind, hierarchical namespace status, HTTPS-only settings, and blob public access configuration. If you don't provide a specific account name, the tool returns details for all accounts in the subscription.
 
-**Prerequisites**: The conversation context establishes [global parameters](index.md#tool-parameters) (subscription, authentication). Caller must have Storage Account Reader role or equivalent permissions.
+**Prerequisites**: The conversation context establishes [global parameters](../../index.md#tool-parameters) (subscription, authentication). Caller must have Storage Account Reader role or equivalent permissions.
 
 Example prompts include:
 
@@ -69,9 +69,9 @@ Example prompts include:
 
 **Success verification**: Returns JSON with storage account properties or a list of all accounts if you don't specify a name.
 
-[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):
 
-[!INCLUDE [storage account get](../includes/tools/annotations/azure-storage-account-get-annotations.md)]
+[!INCLUDE [storage account get](../../../includes/tools/annotations/azure-storage-account-get-annotations.md)]
 
 ## Container: Create container
 
@@ -79,7 +79,7 @@ Example prompts include:
 
 Create a blob container with optional blob public access.
 
-**Prerequisites**: The conversation context establishes [global parameters](index.md#tool-parameters) (subscription, authentication). Caller must have Storage Blob Data Contributor role or equivalent on the storage account.
+**Prerequisites**: The conversation context establishes [global parameters](../../index.md#tool-parameters) (subscription, authentication). Caller must have Storage Blob Data Contributor role or equivalent on the storage account.
 
 Example prompts include:
 
@@ -93,9 +93,9 @@ Example prompts include:
 
 **Success verification**: The tool returns the created container properties.
 
-[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):
 
-[!INCLUDE [storage blob container create](../includes/tools/annotations/azure-storage-blob-container-create-annotations.md)]
+[!INCLUDE [storage blob container create](../../../includes/tools/annotations/azure-storage-blob-container-create-annotations.md)]
 
 
 ## Container: Get container details
@@ -104,7 +104,7 @@ Example prompts include:
 
 List all blob containers in a storage account or show details for a specific container. Displays container properties including access policies, lease status, and metadata.
 
-**Prerequisites**: The conversation context establishes [global parameters](index.md#tool-parameters) (subscription, authentication). Caller must have Storage Blob Data Reader role or equivalent on the storage account.
+**Prerequisites**: The conversation context establishes [global parameters](../../index.md#tool-parameters) (subscription, authentication). Caller must have Storage Blob Data Reader role or equivalent on the storage account.
 
 Example prompts include:
 
@@ -119,9 +119,9 @@ Example prompts include:
 
 **Success verification**: Returns JSON with container properties or a list of all containers if you don't specify a name.
 
-[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):
 
-[!INCLUDE [storage blob container get](../includes/tools/annotations/azure-storage-blob-container-get-annotations.md)]
+[!INCLUDE [storage blob container get](../../../includes/tools/annotations/azure-storage-blob-container-get-annotations.md)]
 
 ## Blob: Get blob details
 
@@ -129,7 +129,7 @@ Example prompts include:
 
 List blobs in a container or get details for a specific blob. Shows blob properties including metadata, size, last modification time, and content properties.
 
-**Prerequisites**: The conversation context establishes [global parameters](index.md#tool-parameters) (subscription, authentication). Caller must have Storage Blob Data Reader role or equivalent on the storage account.
+**Prerequisites**: The conversation context establishes [global parameters](../../index.md#tool-parameters) (subscription, authentication). Caller must have Storage Blob Data Reader role or equivalent on the storage account.
 
 Example prompts include:
 
@@ -145,9 +145,9 @@ Example prompts include:
 
 **Success verification**: Returns JSON with blob properties or a list of all blobs if you don't specify a name.
 
-[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):
 
-[!INCLUDE [storage blob get](../includes/tools/annotations/azure-storage-blob-get-annotations.md)]
+[!INCLUDE [storage blob get](../../../includes/tools/annotations/azure-storage-blob-get-annotations.md)]
 
 ## Blob: Upload
 
@@ -155,7 +155,7 @@ Example prompts include:
 
 Uploads a local file to a blob in Azure Storage if the blob doesn't exist.
 
-**Prerequisites**: The conversation context establishes [global parameters](index.md#tool-parameters) (subscription, authentication). Caller must have Storage Blob Data Contributor role or equivalent on the storage account. Local file must exist and be accessible.
+**Prerequisites**: The conversation context establishes [global parameters](../../index.md#tool-parameters) (subscription, authentication). Caller must have Storage Blob Data Contributor role or equivalent on the storage account. Local file must exist and be accessible.
 
 Example prompts include:
 
@@ -171,12 +171,12 @@ Example prompts include:
 
 **Success verification**: The tool returns the last modified time, ETag, and content hash of the uploaded blob.
 
-[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):
 
-[!INCLUDE [storage blob upload](../includes/tools/annotations/azure-storage-blob-upload-annotations.md)]
+[!INCLUDE [storage blob upload](../../../includes/tools/annotations/azure-storage-blob-upload-annotations.md)]
 
 ## Related content
 
-- [What are the Azure MCP Server tools?](index.md)
-- [Get started using Azure MCP Server](../get-started.md)
+- [What are the Azure MCP Server tools?](../../index.md)
+- [Get started using Azure MCP Server](../../../get-started.md)
 - [Azure Storage](/azure/storage/common/storage-introduction)
