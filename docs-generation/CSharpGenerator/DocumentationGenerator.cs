@@ -60,7 +60,12 @@ public static class DocumentationGenerator
 
         try
         {
-            var mappingFile = Path.Combine("..", "brand-to-server-mapping.json");
+            // Try to resolve the brand mapping relative to the assembly location first (works for dotnet run)
+            var candidateFromBin = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "brand-to-server-mapping.json");
+            var mappingFile = File.Exists(candidateFromBin)
+                ? candidateFromBin
+                : Path.Combine("..", "brand-to-server-mapping.json"); // Fallback for legacy invocation paths
+
             if (!File.Exists(mappingFile))
             {
                 Console.WriteLine($"Warning: Brand mapping file not found at {mappingFile}, using default naming");
