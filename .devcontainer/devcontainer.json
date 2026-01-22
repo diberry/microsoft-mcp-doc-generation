@@ -39,5 +39,5 @@
         "DOTNET_SKIP_WORKLOAD_VERIFICATION": "1",
         "DOTNET_NOLOGO": "1"
     },
-    "postCreateCommand": "dotnet --version && dotnet workload update || true && az --version && azd version && pwsh --version && npm --version && chmod +x /workspaces/microsoft-mcp-doc-generation/*.sh /workspaces/microsoft-mcp-doc-generation/docs-generation/*.sh"
+    "postCreateCommand": "dotnet --version && az --version && azd version && pwsh --version && npm --version && sudo chmod +x /workspaces/microsoft-mcp-doc-generation/*.sh /workspaces/microsoft-mcp-doc-generation/docs-generation/*.sh"
 }

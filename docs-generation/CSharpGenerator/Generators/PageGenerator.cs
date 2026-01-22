@@ -53,7 +53,8 @@ public class PageGenerator
             var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
 
             // Annotations directory path (at parent level)
-            var parentDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+            var parentDirCandidate = Path.GetDirectoryName(outputDir);
+            var parentDir = string.IsNullOrWhiteSpace(parentDirCandidate) ? outputDir : parentDirCandidate;
             var annotationsDir = Path.Combine(parentDir, "annotations");
             
             // Load brand mappings for annotation filename lookup
@@ -90,6 +91,12 @@ public class PageGenerator
                         else
                         {
                             brandFileName = area.ToLowerInvariant();
+                        }
+
+                        // Ensure prefix 'azure-'
+                        if (!brandFileName.StartsWith("azure-", StringComparison.OrdinalIgnoreCase))
+                        {
+                            brandFileName = $"azure-{brandFileName}";
                         }
 
                         // Build remaining parts

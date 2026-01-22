@@ -158,7 +158,8 @@ public static class DocumentationGenerator
         Directory.CreateDirectory(outputDir);
         
         // Get parent directory for sibling folders
-        var parentDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+        var parentDirCandidate = Path.GetDirectoryName(outputDir);
+        var parentDir = string.IsNullOrWhiteSpace(parentDirCandidate) ? outputDir : parentDirCandidate;
         
         // Create common-general directory for general documentation files
         var commonGeneralDir = Path.Combine(parentDir, "common-general");

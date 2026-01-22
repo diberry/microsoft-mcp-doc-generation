@@ -124,6 +124,12 @@ public class AnnotationGenerator
                     ? await _cleanFileName(remainingParts) 
                     : "";
 
+                // Ensure brand filename is prefixed with 'azure-'
+                if (!brandFileName.StartsWith("azure-", StringComparison.OrdinalIgnoreCase))
+                {
+                    brandFileName = $"azure-{brandFileName}";
+                }
+
                 // Create filename: {brand-filename}-{tool-family}-{operation}-annotations.md
                 var fileName = !string.IsNullOrEmpty(cleanedRemainingParts)
                     ? $"{brandFileName}-{cleanedRemainingParts}-annotations.md"
@@ -266,6 +272,10 @@ public class AnnotationGenerator
     {
         try
         {
+            // Load mappings and helpers to compute consistent filenames
+            var brandMappings = await _loadBrandMappings();
+            var compoundWords = await _loadCompoundWords();
+
             // Collect all tools from all areas
             var allTools = new List<object>();
             
@@ -273,8 +283,42 @@ public class AnnotationGenerator
             {
                 foreach (var tool in area.Value.Tools)
                 {
-                    // Read the annotation file for this tool
-                    var annotationFileName = $"{tool.Command?.Replace(" ", "-").ToLowerInvariant() ?? "unknown"}-annotations.md";
+                    // Compute annotation filename using same logic as generation
+                    // Parse command
+                    var commandText = tool.Command ?? string.Empty;
+                    var commandParts = commandText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    string areaName = commandParts.Length > 0 ? commandParts[0] : string.Empty;
+                    string brandFileName;
+                    if (!string.IsNullOrEmpty(areaName) && brandMappings.TryGetValue(areaName, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
+                    {
+                        brandFileName = mapping.FileName!;
+                    }
+                    else if (!string.IsNullOrEmpty(areaName) && compoundWords.TryGetValue(areaName.ToLowerInvariant(), out var compoundReplacement))
+                    {
+                        brandFileName = compoundReplacement;
+                    }
+                    else
+                    {
+                        brandFileName = areaName.ToLowerInvariant();
+                    }
+
+                    // Ensure prefix 'azure-'
+                    if (!brandFileName.StartsWith("azure-", StringComparison.OrdinalIgnoreCase))
+                    {
+                        brandFileName = $"azure-{brandFileName}";
+                    }
+
+                    // Remaining parts
+                    var remainingParts = commandParts.Length > 1
+                        ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
+                        : string.Empty;
+                    var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts)
+                        ? await _cleanFileName(remainingParts)
+                        : string.Empty;
+
+                    var annotationFileName = !string.IsNullOrEmpty(cleanedRemainingParts)
+                        ? $"{brandFileName}-{cleanedRemainingParts}-annotations.md"
+                        : $"{brandFileName}-annotations.md";
                     var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
                     
                     string? annotationContent = null;
