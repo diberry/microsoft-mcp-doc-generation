@@ -60,6 +60,52 @@ function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" 
 function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -ForegroundColor Red }
 function Write-Progress { param([string]$Message) Write-Host "PROGRESS: $Message" -ForegroundColor Magenta }
 
+function Invoke-DocsGenerator {
+    param(
+        [string]$GeneratorPath,
+        [string]$CliInputPath,
+        [string]$OutputDir,
+        [bool]$CreateIndex,
+        [bool]$CreateCommon,
+        [bool]$CreateCommands,
+        [bool]$ExamplePrompts,
+        [bool]$CreateServiceOptions,
+        [bool]$GenerateAnnotations,
+        [bool]$GenerateCompleteTools,
+        [string]$CliVersion
+    )
+
+    Push-Location $GeneratorPath
+    try {
+        $generatorArgs = @("generate-docs", $CliInputPath, $OutputDir)
+        if ($CreateIndex) { $generatorArgs += "--index" }
+        if ($CreateCommon) { $generatorArgs += "--common" }
+        if ($CreateCommands) { $generatorArgs += "--commands" }
+        if ($GenerateAnnotations) { $generatorArgs += "--annotations" }
+        if ($ExamplePrompts) { $generatorArgs += "--example-prompts" }
+        if ($GenerateCompleteTools) { $generatorArgs += "--complete-tools" }
+        if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
+        if ($CliVersion -and $CliVersion -ne "unknown") {
+            $generatorArgs += "--version"
+            $generatorArgs += $CliVersion
+        }
+
+        $commandString = "dotnet run --configuration Release -- " + ($generatorArgs -join " ")
+        Write-Info "Running: $commandString"
+
+        $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Command failed with exit code: $LASTEXITCODE"
+            Write-Error "Generator output: $($generatorOutput | Out-String)"
+            throw "Failed to generate documentation with C# generator"
+        }
+
+        return $generatorOutput
+    } finally {
+        Pop-Location
+    }
+}
+
 # Main execution
 try {
     Write-Progress "Starting Azure MCP Multi-Page Documentation Generation..."
@@ -118,31 +164,28 @@ try {
     # Save parent directory for output file paths (used after Pop-Location)
     Join-Path $currentLocation "generated"
     
-    Push-Location $generatorPath
-    $generatorArgs = @("generate-docs", $cliInputPath, $outputDir)
-    if ($CreateIndex) { $generatorArgs += "--index" }
-    if ($CreateCommon) { $generatorArgs += "--common" }
-    if ($CreateCommands) { $generatorArgs += "--commands" }
-    $generatorArgs += "--annotations"  # Always generate annotation files
-    if ($ExamplePrompts) { $generatorArgs += "--example-prompts" }
-    $generatorArgs += "--complete-tools"  # Always generate complete tool files
-    if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
-    if ($cliVersion -and $cliVersion -ne "unknown") { 
-        $generatorArgs += "--version"
-        $generatorArgs += $cliVersion
+    # Execute independent passes; capture the final (complete tools) output for statistics
+    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$true -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+
+    if ($CreateCommands) {
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$true -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
     }
-    
-    # Echo the exact command being run for debugging
-    $commandString = "dotnet run --configuration Release -- " + ($generatorArgs -join " ")
-    Write-Info "Running: $commandString"
-    
-    $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Command failed with exit code: $LASTEXITCODE"
-        Write-Error "Generator output: $($generatorOutput | Out-String)"
-        throw "Failed to generate documentation with C# generator"
+
+    if ($CreateCommon) {
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$true -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
     }
-    
+
+    if ($CreateIndex) {
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$true -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+    }
+
+    if ($ExamplePrompts) {
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+    }
+
+    # Complete tools last (after example prompts)
+    $generatorOutput = Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$true -CliVersion $cliVersion
+
     # Parse tool count information from generator output
     $totalTools = 0
     $totalAreas = 0
@@ -165,8 +208,6 @@ try {
             $toolListOutput += $line
         }
     }
-    
-    Pop-Location
     
     # Step 2: Generate additional data formats if requested
     if ($Format -eq 'yaml' -or $Format -eq 'both') {
