@@ -71,6 +71,7 @@ function Invoke-DocsGenerator {
         [bool]$ExamplePrompts,
         [bool]$CreateServiceOptions,
         [bool]$GenerateAnnotations,
+        [bool]$GenerateParameters,
         [bool]$GenerateCompleteTools,
         [string]$CliVersion
     )
@@ -82,6 +83,7 @@ function Invoke-DocsGenerator {
         if ($CreateCommon) { $generatorArgs += "--common" }
         if ($CreateCommands) { $generatorArgs += "--commands" }
         if ($GenerateAnnotations) { $generatorArgs += "--annotations" }
+        if ($GenerateParameters) { $generatorArgs += "--parameters" }
         if ($ExamplePrompts) { $generatorArgs += "--example-prompts" }
         if ($GenerateCompleteTools) { $generatorArgs += "--complete-tools" }
         if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
@@ -147,7 +149,7 @@ try {
     if (Test-Path (Join-Path $currentLocation "generated/cli/cli-output.json")) {
         # Container or local: generated in current directory
         $cliInputPath = Join-Path $currentLocation "generated/cli/cli-output.json"
-        $outputDir = Join-Path $currentLocation "generated/tools"
+        $outputDir = Join-Path $currentLocation "generated"
     } else {
         throw "Cannot locate CLI output files"
     }
@@ -161,30 +163,37 @@ try {
         throw "Cannot locate CSharpGenerator project"
     }
     
-    # Save parent directory for output file paths (used after Pop-Location)
-    Join-Path $currentLocation "generated"
-    
     # Execute independent passes; capture the final (complete tools) output for statistics
-    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$true -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$true -GenerateParameters:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+
+    # Generate parameter include files so complete tools have both dependencies
+    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateParameters:$true -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
 
     if ($CreateCommands) {
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$true -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$true -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateParameters:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
     }
 
     if ($CreateCommon) {
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$true -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$true -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateParameters:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
     }
 
     if ($CreateIndex) {
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$true -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$true -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateParameters:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
     }
 
     if ($ExamplePrompts) {
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateParameters:$false -GenerateCompleteTools:$false -CliVersion $cliVersion | Out-Null
     }
 
-    # Complete tools last (after example prompts)
-    $generatorOutput = Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$false -CreateCommon:$false -CreateCommands:$false -ExamplePrompts:$false -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$false -GenerateCompleteTools:$true -CliVersion $cliVersion
+    # Complete tools last (after example prompts) - call dedicated script
+    Write-Progress "Invoking Generate-CompleteTools.ps1 for complete tool file generation..."
+    
+    $completeToolsScript = Join-Path (Split-Path -Parent $PSScriptRoot) "docs-generation" "Generate-CompleteTools.ps1"
+    if (-not (Test-Path $completeToolsScript)) {
+        $completeToolsScript = "Generate-CompleteTools.ps1"
+    }
+    
+    $generatorOutput = & pwsh $completeToolsScript 2>&1
 
     # Parse tool count information from generator output
     $totalTools = 0
@@ -320,10 +329,10 @@ try {
     
     Write-Success "Multi-page documentation generation completed successfully!"
     Write-Info ""
-    Write-Info "Generated files in 'generated/tools':"
+    Write-Info "Generated files in 'generated':"
     
     # List generated files using absolute path
-    $actualOutputDir = Join-Path $parentOutputDir "tools"
+    $actualOutputDir = $outputDir
     if (Test-Path $actualOutputDir) {
         $files = Get-ChildItem $actualOutputDir -Name "*.md" | Sort-Object
         foreach ($file in $files) {
@@ -335,25 +344,25 @@ try {
     
     Write-Info ""
     Write-Info "Data files:"
-    $actualCliOutputPath = Join-Path $parentOutputDir "cli/cli-output.json"
+    $actualCliOutputPath = Join-Path $outputDir "cli/cli-output.json"
     if (Test-Path $actualCliOutputPath) {
         $jsonSize = [math]::Round((Get-Item $actualCliOutputPath).Length / 1KB, 1)
         Write-Info "  📄 $actualCliOutputPath (${jsonSize}KB) - CLI output"
     }
     
-    $actualNamespaceOutputPath = Join-Path $parentOutputDir "cli/cli-namespace.json"
+    $actualNamespaceOutputPath = Join-Path $outputDir "cli/cli-namespace.json"
     if (Test-Path $actualNamespaceOutputPath) {
         $namespaceSize = [math]::Round((Get-Item $actualNamespaceOutputPath).Length / 1KB, 1)
         Write-Info "  📄 $actualNamespaceOutputPath (${namespaceSize}KB) - CLI namespace output"
     }
     
-    $actualCsvOutputPath = Join-Path $parentOutputDir "namespaces.csv"
+    $actualCsvOutputPath = Join-Path $outputDir "namespaces.csv"
     if (Test-Path $actualCsvOutputPath) {
         $csvSize = [math]::Round((Get-Item $actualCsvOutputPath).Length / 1KB, 1)
         Write-Info "  📄 $actualCsvOutputPath (${csvSize}KB) - Alphabetically sorted namespaces CSV"
     }
     
-    $comparisonReportPath = Join-Path $parentOutputDir "tool-count-comparison.json"
+    $comparisonReportPath = Join-Path $outputDir "tool-count-comparison.json"
     if (Test-Path $comparisonReportPath) {
         $reportSize = [math]::Round((Get-Item $comparisonReportPath).Length / 1KB, 1)
         Write-Info "  📄 $comparisonReportPath (${reportSize}KB) - Tool count comparison report"
@@ -478,7 +487,7 @@ try {
     }
     
     # Save summary to file
-    $summaryFilePath = Join-Path $parentOutputDir "generation-summary.md"
+    $summaryFilePath = Join-Path $outputDir "generation-summary.md"
     try {
         $summaryContent = $summaryLines -join "`n"
         $summaryContent | Out-File -FilePath $summaryFilePath -Encoding UTF8

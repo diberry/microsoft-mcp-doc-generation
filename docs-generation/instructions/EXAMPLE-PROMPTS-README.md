@@ -40,9 +40,9 @@ pwsh ./docs-generation/Generate-MultiPageDocs.ps1 -ExamplePrompts $false
 
 If you need to adjust how example prompts are generated, edit these files:
 
-- System prompt: [docs-generation/prompts/system-prompt-example-prompt.txt](docs-generation/prompts/system-prompt-example-prompt.txt)
-- User prompt template: [docs-generation/prompts/user-prompt-example-prompt.txt](docs-generation/prompts/user-prompt-example-prompt.txt)
-- Output formatting template (Handlebars): [docs-generation/templates/example-prompts-template.hbs](docs-generation/templates/example-prompts-template.hbs)
+- System prompt: [docs-generation/prompts/system-prompt-example-prompt.txt](../docs-generation/prompts/system-prompt-example-prompt.txt)
+- User prompt template: [docs-generation/prompts/user-prompt-example-prompt.txt](../docs-generation/prompts/user-prompt-example-prompt.txt)
+- Output formatting template (Handlebars): [docs-generation/templates/example-prompts-template.hbs](../docs-generation/templates/example-prompts-template.hbs)
 
 The generator (`ExamplePromptGenerator`) loads the system and user prompt templates from the paths above and renders results using the Handlebars template.
 
