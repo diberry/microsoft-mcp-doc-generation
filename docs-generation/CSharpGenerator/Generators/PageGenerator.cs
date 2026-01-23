@@ -197,8 +197,9 @@ public class PageGenerator
 
         var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, commonPageData);
 
-        // Generate in common-general directory
-        var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
+        // Generate in common-general directory under the provided output folder
+        var commonGeneralDir = Path.Combine(outputDir, "common-general");
+        Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "common-tools.md");
         await File.WriteAllTextAsync(outputFile, result);
         Console.WriteLine($"Generated common tools page: common-general/common-tools.md");
@@ -223,8 +224,9 @@ public class PageGenerator
 
         var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, indexPageData);
 
-        // Generate in common-general directory
-        var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
+        // Generate in common-general directory under the provided output folder
+        var commonGeneralDir = Path.Combine(outputDir, "common-general");
+        Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "index.md");
         await File.WriteAllTextAsync(outputFile, result);
         Console.WriteLine($"Generated index page: common-general/index.md");
@@ -254,8 +256,9 @@ public class PageGenerator
 
         var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, commandsPageData);
 
-        // Generate in common-general directory
-        var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
+        // Generate in common-general directory under the provided output folder
+        var commonGeneralDir = Path.Combine(outputDir, "common-general");
+        Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
         await File.WriteAllTextAsync(outputFile, result);
         Console.WriteLine($"Generated commands page: common-general/azmcp-commands.md");
@@ -283,8 +286,9 @@ public class PageGenerator
 
             var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, serviceOptionsPageData);
 
-            // Generate in common-general directory
-            var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
+            // Generate in common-general directory under the provided output folder
+            var commonGeneralDir = Path.Combine(outputDir, "common-general");
+            Directory.CreateDirectory(commonGeneralDir);
             var outputFile = Path.Combine(commonGeneralDir, "service-start-option.md");
             await File.WriteAllTextAsync(outputFile, result);
             Console.WriteLine($"Generated service options page: common-general/service-start-option.md");

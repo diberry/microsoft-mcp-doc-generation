@@ -25,9 +25,11 @@ mkdir -p generated/cli
 # Generate tool metadata from MCP CLI
 cd test-npm-azure-mcp
 npm install
+echo "Generating CLI tool metadata..."
 npm run --silent get:version > ../generated/cli/cli-version.json
 npm run --silent get:tools-json > ../generated/cli/cli-output.json
 npm run --silent get:tools-namespace > ../generated/cli/cli-namespace.json
+echo "✓ Generated CLI tool metadata"
 cd ..
 
 mkdir -p generated/common-general
@@ -37,21 +39,16 @@ mkdir -p generated/example-prompts
 mkdir -p generated/annotations
 mkdir -p generated/logs
 
-## Generate docs using C# generator
-cd docs-generation 
-dotnet restore docs-generation.sln
-dotnet build docs-generation.sln --configuration Release --no-restore
-dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Release -- \
-    generate-docs \
-    ../generated/cli/cli-output.json \
-    ../generated/tools \
-    --annotations \
-    --example-prompts \
-    --param-and-annotation \
-    --common-general \
-    --complete-tools \
-    --validate --validate-prompts
+## Generate docs using PowerShell orchestrator
+cd docs-generation
+pwsh ./Generate-MultiPageDocs.ps1 -OutputPath "../generated"
 cd ..
+
+# # Verify generated documentation
+# cd verify-quantity
+# npm install
+# node index.js > ../verify.md
+# cd ..
 
 # # Summarize generated docs
 # cd summary-generator

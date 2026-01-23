@@ -29,7 +29,7 @@ internal class Program
              Console.Error.WriteLine("Usage: CSharpGenerator <mode> [arguments...]");
              Console.Error.WriteLine("Modes:");
              Console.Error.WriteLine("  template <template-file> <data-file> <output-file> [additional-context-json]");
-             Console.Error.WriteLine("  generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--no-service-options]");
+             Console.Error.WriteLine("  generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations] [--no-service-options]");
              return 1;
          }
 
@@ -131,12 +131,13 @@ internal class Program
          
          if (args.Length < 2)
          {
-             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--example-prompts] [--complete-tools] [--no-service-options] [--validate-prompts] [--version <version>]");
+             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations] [--example-prompts] [--complete-tools] [--no-service-options] [--validate-prompts] [--version <version>]");
              return 1;
          }
 
          var cliOutputFile = args[0];
          var outputDir = args[1];
+         var generateToolPages = args.Contains("--tool-pages");
          var generateIndex = args.Contains("--index");
          var generateCommon = args.Contains("--common");
          var generateCommands = args.Contains("--commands");
@@ -147,6 +148,7 @@ internal class Program
          
          // DEBUG: Print flag values
          Console.WriteLine($"DEBUG: Flag values:");
+         Console.WriteLine($"  generateToolPages: {generateToolPages}");
          Console.WriteLine($"  generateIndex: {generateIndex}");
          Console.WriteLine($"  generateCommon: {generateCommon}");
          Console.WriteLine($"  generateCommands: {generateCommands}");
@@ -168,6 +170,7 @@ internal class Program
          return await DocumentationGenerator.GenerateAsync(
              cliOutputFile,
              outputDir,
+             generateToolPages,
              generateIndex,
              generateCommon,
              generateCommands,

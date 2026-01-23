@@ -97,6 +97,7 @@ public static class DocumentationGenerator
     public static async Task<int> GenerateAsync(
         string cliOutputFile,
         string outputDir,
+        bool generateToolPages = false,
         bool generateIndex = false,
         bool generateCommon = false,
         bool generateCommands = false,
@@ -162,9 +163,8 @@ public static class DocumentationGenerator
         // Ensure output directory exists
         Directory.CreateDirectory(outputDir);
         
-        // Get parent directory for sibling folders
-        var parentDirCandidate = Path.GetDirectoryName(outputDir);
-        var parentDir = string.IsNullOrWhiteSpace(parentDirCandidate) ? outputDir : parentDirCandidate;
+        // Use output directory as the base for sibling folders (annotations, parameters, etc.)
+        var parentDir = outputDir;
         
         // Create common-general directory for general documentation files
         var commonGeneralDir = Path.Combine(parentDir, "common-general");
@@ -311,7 +311,7 @@ public static class DocumentationGenerator
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
 
         // Generate area pages (skip if only generating annotations)
-        if (!generateAnnotations || generateCommands || generateIndex || generateCommon)
+        if (generateToolPages && (!generateAnnotations || generateCommands || generateIndex || generateCommon))
         {
             foreach (var area in transformedData.Areas)
             {
