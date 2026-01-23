@@ -242,24 +242,6 @@ try {
         Write-Progress "Generating example prompts with Azure OpenAI..."
         Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion | Out-Null
     }
- 
-    # Complete tools last (after example prompts) - call dedicated script
-    Write-Progress "Generating tools with help of Generate-CompleteTools.ps1..."
-    
-    $completeToolsScript = Join-Path (Split-Path -Parent $PSScriptRoot) "docs-generation" "Generate-CompleteTools.ps1"
-    if (-not (Test-Path $completeToolsScript)) {
-        $completeToolsScript = "Generate-CompleteTools.ps1"
-    }
-    
-    Write-Info "Using complete tools script: $completeToolsScript"
-    $generatorOutput = & pwsh $completeToolsScript 2>&1
-
-
-    # Tool pages should be generated once, after prerequisites are ready
-    if ($CreateToolPages) {
-        Write-Progress "Generating per-service tool pages..."
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateToolPages:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion | Out-Null
-    }
 
     # Parse tool count information from generator output
     $totalTools = 0

@@ -150,6 +150,48 @@ try {
     }
     
     Write-Success "Complete tools generation finished"
+    
+    # Generate per-service tool pages (optional)
+    # Uncomment to enable tool pages generation
+    Write-Progress "Generating per-service tool pages..."
+    Write-Info "Debug: Per-service tool pages generation"
+    Write-Info "  • Generator path: $generatorPath"
+    Write-Info "  • CLI input: $cliInputPath"
+    Write-Info "  • Output dir: $outputDir"
+    Write-Info "  • CLI version: $cliVersion"
+    
+    Push-Location $generatorPath
+    try {
+        $toolPagesArgs = @("generate-docs", $cliInputPath, $outputDir, "--tool-pages")
+        if ($cliVersion -and $cliVersion -ne "unknown") {
+            $toolPagesArgs += "--version"
+            $toolPagesArgs += $cliVersion
+        }
+        
+        $toolPagesCommand = "dotnet run --configuration Release -- " + ($toolPagesArgs -join " ")
+        Write-Info "Running: $toolPagesCommand"
+        
+        $toolPagesOutput = & dotnet run --configuration Release -- $toolPagesArgs 2>&1
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Tool pages generation failed with exit code: $LASTEXITCODE"
+            Write-Error "Output: $($toolPagesOutput | Out-String)"
+            throw "Failed to generate tool pages"
+        }
+        
+        # Display output
+        Write-Info ""
+        Write-Info "Tool pages generation output:"
+        foreach ($line in $toolPagesOutput) {
+            Write-Info $line
+        }
+        
+        Write-Success "Tool pages generated successfully"
+    } catch {
+        Write-Warning "Failed to generate tool pages: $($_.Exception.Message)"
+    } finally {
+        Pop-Location
+    }
 
 } catch {
     Write-Error "Generation failed: $($_.Exception.Message)"

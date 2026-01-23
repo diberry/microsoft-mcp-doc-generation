@@ -42,16 +42,17 @@ mkdir -p generated/logs
 ## Generate docs using PowerShell orchestrator
 cd docs-generation
 pwsh ./Generate-MultiPageDocs.ps1 -OutputPath "../generated"
+pwsh ./Generate-CompleteTools.ps1
 cd ..
 
-# # Verify generated documentation
-# cd verify-quantity
-# npm install
-# node index.js > ../verify.md
-# cd ..
+# Verify generated documentation
+cd verify-quantity
+npm install
+node index.js > ../verify.md
+cd ..
 
-# # Summarize generated docs
-# cd summary-generator
-# npm install
-# node generate-summary.js
-# cd ..
+# Summarize generated docs
+cd summary-generator
+npm install
+node generate-summary.js
+cd ..
