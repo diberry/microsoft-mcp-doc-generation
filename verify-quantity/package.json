@@ -1,0 +1,19 @@
+{
+  "name": "verify-quantity",
+  "version": "1.0.0",
+  "description": "Verifies completeness of generated Azure MCP documentation files",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "verify": "node index.js",
+    "report": "node index.js --report"
+  },
+  "keywords": [
+    "azure",
+    "mcp",
+    "documentation",
+    "verification"
+  ],
+  "author": "",
+  "license": "MIT"
+}
