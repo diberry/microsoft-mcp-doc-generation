@@ -256,7 +256,7 @@ function visualizeResults(results) {
 
 // Generate detailed report file
 function generateReport(results, tools) {
-  const reportPath = path.join(ROOT, 'missing-tools.md');
+  const reportPath = path.join(ROOT, './generated/missing-tools.md');
   
   let report = `# Azure MCP Documentation Generation - Missing Files Report\n\n`;
   report += `Generated: ${new Date().toISOString()}\n\n`;

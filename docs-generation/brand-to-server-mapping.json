@@ -256,5 +256,23 @@
     "mcpServerName": "workbooks",
     "shortName": "Workbooks",
     "fileName": "azure-workbooks"
+  },
+  {
+    "brandName": "Azure File Shares",
+    "mcpServerName": "fileshares",
+    "shortName": "File Shares",
+    "fileName": "azure-fileshares"
+  },
+  {
+    "brandName": "Azure Storage Sync",
+    "mcpServerName": "storagesync",
+    "shortName": "Storage Sync",
+    "fileName": "azure-storage-sync"
+  },
+  {
+    "brandName": "Azure Policy",
+    "mcpServerName": "policy",
+    "shortName": "Policy",
+    "fileName": "azure-policy"
   }
 ]

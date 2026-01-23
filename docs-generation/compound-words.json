@@ -12,6 +12,7 @@
   "kv": "key-value",
   "monitoredresources": "monitored-resources",
   "nodepool": "node-pool",
+  "query-and-evaluate": "query-evaluate",
   "runtime": "run-time",
   "stt": "operation-speech-text",
   "subnetsize": "subnet-size",
