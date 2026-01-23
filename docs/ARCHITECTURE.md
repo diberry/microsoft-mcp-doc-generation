@@ -95,7 +95,7 @@ JSON Input → Parse Tools → Apply Config → Process Templates → Output Mar
 
 | Template | Purpose | Output Location |
 |----------|---------|-----------------|
-| `commands-template.hbs` | Main service docs | `multi-page/*.md` |
+| `tool-family-page.hbs` | Main service docs | `multi-page/*.md` |
 | `annotation-template.hbs` | Tool annotations | `multi-page/annotations/*.md` |
 | `parameter-template.hbs` | Tool parameters | `multi-page/parameters/*.md` |
 | `param-annotation-template.hbs` | Combined | `multi-page/param-and-annotation/*.md` |

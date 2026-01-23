@@ -93,7 +93,7 @@ ms.version: {{version}}
 **Version:** {{version}}
 ```
 
-**Commands Template (`commands-template.hbs`):**
+**Commands Template (`tool-family-page.hbs`):**
 ```handlebars
 ---
 ms.topic: include
@@ -253,7 +253,7 @@ dotnet run --configuration Release -- generate-docs \
 - `docs-generation/CSharpGenerator/Program.cs` - CLI argument parsing
 - `docs-generation/CSharpGenerator/DocumentationGenerator.cs` - Version handling
 - `docs-generation/templates/area-template.hbs` - Area page template
-- `docs-generation/templates/commands-template.hbs` - Commands page template
+- `docs-generation/templates/tool-family-page.hbs` - Commands page template
 
 ## See Also
 

@@ -23,7 +23,7 @@ This is the Azure MCP Documentation Generator - an automated system that generat
 
 3. **Template Layer** (Handlebars)
    - `docs-generation/templates/*.hbs` - Define documentation structure
-   - `commands-template.hbs` - Main service docs
+   - `tool-family-page.hbs` - Main service docs
    - `annotation-template.hbs`, `parameter-template.hbs` - Includes
    - `tool-complete-template.hbs` - Complete tool documentation (NEW)
 

@@ -79,7 +79,7 @@ Core components:
 **Directory**: `docs-generation/templates/`
 
 Templates define documentation structure:
-- `commands-template.hbs` - Main service documentation
+- `tool-family-page.hbs` - Main service documentation
 - `annotation-template.hbs` - Tool annotation includes
 - `parameter-template.hbs` - Parameter reference includes
 - Supporting partials for reusable components

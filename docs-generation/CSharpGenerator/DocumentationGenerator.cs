@@ -335,7 +335,7 @@ public static class DocumentationGenerator
         // Generate commands page if requested
         if (generateCommands)
         {
-            var commandsTemplate = Path.Combine(templatesDir, "commands-template.hbs");
+            var commandsTemplate = Path.Combine(templatesDir, "tool-family-page.hbs");
             await pageGenerator.GenerateCommandsPageAsync(transformedData, outputDir, commandsTemplate);
         }
         

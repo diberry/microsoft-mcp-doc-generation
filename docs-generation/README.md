@@ -40,7 +40,7 @@ docs-generation/
 │   └── Program.cs                # Command-line interface
 ├── Shared/                        # Shared utilities
 └── templates/                     # Handlebars template files
-    ├── commands-template.hbs      # Main service documentation
+    ├── tool-family-page.hbs      # Main service documentation
     ├── annotation-template.hbs    # Tool annotations
     ├── parameter-template.hbs     # Tool parameters
     ├── area-template.hbs          # Template for area-specific documentation
