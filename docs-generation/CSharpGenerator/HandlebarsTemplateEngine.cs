@@ -94,6 +94,19 @@ public static class HandlebarsTemplateEngine
                 .RegularExpressionReplace("[^a-z0-9-]", "") ?? string.Empty;
         });
 
+        // Slugify helper - converts text to URL-safe slug for anchor links
+        handlebars.RegisterHelper("slugify", (context, arguments) =>
+        {
+            if (arguments.Length == 0 || arguments[0] == null)
+                return string.Empty;
+
+            var str = arguments[0].ToString();
+            return str?.ToLowerInvariant()
+                .Replace(' ', '-')
+                .Replace('_', '-')
+                .RegularExpressionReplace("[^a-z0-9-]", "") ?? string.Empty;
+        });
+
         // Get area count helper
         handlebars.RegisterHelper("getAreaCount", (context, arguments) =>
         {

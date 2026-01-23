@@ -260,6 +260,11 @@ public static class DocumentationGenerator
             CleanFileNameAsync,
             ExtractCommonParameters);
             
+        var toolFamilyPageGenerator = new ToolFamilyPageGenerator(
+            LoadBrandMappingsAsync,
+            CleanFileNameAsync,
+            ExtractCommonParameters);
+            
         var completeToolGenerator = new CompleteToolGenerator(
             LoadBrandMappingsAsync,
             CleanFileNameAsync);
@@ -309,13 +314,16 @@ public static class DocumentationGenerator
 
         // Setup area template (needed for index page too)
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
+        
+        // Get tool family page template
+        var toolFamilyTemplate = Path.Combine(templatesDir, "tool-family-page.hbs");
 
         // Generate area pages (skip if only generating annotations)
         if (generateToolPages && (!generateAnnotations || generateCommands || generateIndex || generateCommon))
         {
             foreach (var area in transformedData.Areas)
             {
-                await pageGenerator.GenerateAreaPageAsync(area.Key, area.Value, transformedData, outputDir, areaTemplate);
+                await toolFamilyPageGenerator.GenerateAsync(area.Key, area.Value, transformedData, outputDir, toolFamilyTemplate);
             }
         }
 

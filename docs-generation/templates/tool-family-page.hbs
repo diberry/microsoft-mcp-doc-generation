@@ -4,57 +4,56 @@ ms.date: {{formatDate generatedAt}}
 mcp-cli.version: {{version}}
 ---
 
-# Azure MCP CLI Commands
+# {{areaName}} Tools
 
+**Area:** {{areaName}}  
+**Description:** {{areaDescription}}  
+**Tool Count:** {{toolCount}}  
 **Generated:** {{formatDate generatedAt}}  
 **Version:** {{version}}
 
-This page contains the command syntax for all Azure MCP CLI commands.
-
-{{#each areas}}
-## {{@key}} Operations
+## Quick Navigation
 
 {{#each tools}}
-### {{command}}
+- [{{Name}}](#{{slugify Name}})
+{{/each}}
 
-```bash
-azmcp {{command}}{{#each option}}{{#if required}} \
-                        --{{name}} <{{name}}>{{/if}}{{/each}}{{#each option}}{{#unless required}} \
-                        [--{{name}} <{{name}}>]{{/unless}}{{/each}}
-```
+## Tools
 
-{{#if description}}
-{{description}}
+{{#each tools}}
+## {{Name}}
+
+<!-- {{Command}} -->
+
+{{Description}}
+
+{{#if ExamplePromptsContent}}
+{{{ExamplePromptsContent}}}
+
 {{/if}}
-
-{{#if option}}
-**Parameters:**
-
-{{#each option}}
-- `--{{name}}` ({{type}}){{#if required}} - **Required**{{/if}}{{#if description}} - {{description}}{{/if}}
+{{#if Option}}
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
+{{#each Option}}
+| **{{Name}}** |  {{RequiredText}} | {{Description}} |
 {{/each}}
+
+{{else}}
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
+| *No parameters* |  | |
+
 {{/if}}
+{{#if AnnotationFileName}}
+[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-{{/each}}
-{{/each}}
-
-{{#if commonParameters}}
-## Common Parameters
-
-The following parameters are available across multiple commands:
-
-{{#each (groupBy commonParameters "Source")}}
-### {{@key}} Parameters
-
-| Parameter | Type | Required or optional | Description |
-|-----------|------|----------|-------------|
-{{#each this}}
-| `--{{Name}}` | {{Type}} | {{#if IsRequired}}Required{{else}}Optional{{/if}} | {{Description}} |
-{{/each}}
-
-{{/each}}
+[!INCLUDE [{{Command}}](../annotations/{{AnnotationFileName}})]
+{{else}}
+<!-- No tool annotations for this tool -->
 {{/if}}
 
 ---
 
-*This documentation is automatically generated from the Azure MCP Server source code.*
+{{/each}}
+
+Documentation generated from Azure MCP Server source code
