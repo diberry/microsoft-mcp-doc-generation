@@ -14,13 +14,17 @@ public class CleanupGenerator
 {
     private const string SYSTEM_PROMPT_PATH = "./prompts/tool-family-cleanup-system-prompt.txt";
     private const string USER_PROMPT_PATH = "./prompts/tool-family-cleanup-user-prompt.txt";
+    private const int DEFAULT_MAX_TOKENS = 16000; // Maximum tokens for LLM output (configurable for large files)
 
     // Compiled regex patterns for performance when processing multiple files
-    private static readonly Regex HeadersRegex = new(@"^#{1,6}\s+.+$", RegexOptions.Multiline | RegexOptions.Compiled);
-    private static readonly Regex ListsRegex = new(@"^\s*[-*]\s+.+$", RegexOptions.Multiline | RegexOptions.Compiled);
-    private static readonly Regex LinksRegex = new(@"\[.+?\]\(.+?\)", RegexOptions.Compiled);
-    private static readonly Regex CodeBlockRegex = new(@"```markdown\s*(.*?)\s*```", RegexOptions.Singleline | RegexOptions.Compiled);
-    private static readonly Regex FrontmatterRegex = new(@"^---\s*\n", RegexOptions.Multiline | RegexOptions.Compiled);
+    // Using CultureInvariant for consistent behavior across different system locales
+    private static readonly Regex HeadersRegex = new(@"^#{1,6}\s+.+$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex ListsRegex = new(@"^\s*[-*]\s+.+$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex LinksRegex = new(@"\[.+?\]\(.+?\)", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex CodeBlockRegex = new(@"```markdown\s*(.*?)\s*```", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex FrontmatterRegex = new(@"^---\s*\n", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex CodeFencesRegex = new(@"```[\s\S]*?```", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex BlockquotesRegex = new(@"^\s*>\s+.+$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private readonly GenerativeAIClient _aiClient;
     private readonly CleanupConfiguration _config;
@@ -97,8 +101,8 @@ public class CleanupGenerator
                 var promptPath = Path.Combine(promptsDir, promptFileName);
                 await File.WriteAllTextAsync(promptPath, $"SYSTEM PROMPT:\n{_systemPrompt}\n\n---\n\nUSER PROMPT:\n{userPrompt}");
                 
-                // Call LLM to get cleaned markdown
-                var cleanedMarkdown = await _aiClient.GetChatCompletionAsync(_systemPrompt!, userPrompt, maxTokens: 16000);
+                // Call LLM to get cleaned markdown (using configurable max tokens)
+                var cleanedMarkdown = await _aiClient.GetChatCompletionAsync(_systemPrompt!, userPrompt, maxTokens: DEFAULT_MAX_TOKENS);
                 
                 // Validate that output is markdown
                 if (!IsValidMarkdown(cleanedMarkdown))
@@ -174,17 +178,22 @@ public class CleanupGenerator
             return false;
 
         // Check for common markdown patterns using compiled regex patterns
+        // Validates presence of typical markdown elements to ensure LLM output is markdown
         // - Headers (# ## ###)
-        // - Links ([text](url))
         // - Lists (- or *)
-        // - Code blocks (```)
+        // - Links ([text](url))
+        // - Code fences (```)
+        // - Blockquotes (>)
         
         var hasHeaders = HeadersRegex.IsMatch(text);
         var hasLists = ListsRegex.IsMatch(text);
         var hasLinks = LinksRegex.IsMatch(text);
+        var hasCodeFences = CodeFencesRegex.IsMatch(text);
+        var hasBlockquotes = BlockquotesRegex.IsMatch(text);
         
-        // Consider it markdown if it has at least headers or lists
-        return hasHeaders || hasLists || hasLinks;
+        // Consider it markdown if it has at least one of the common markdown patterns
+        // Most tool family files will have headers and lists at minimum
+        return hasHeaders || hasLists || hasLinks || hasCodeFences || hasBlockquotes;
     }
 
     private string ExtractMarkdown(string response)
