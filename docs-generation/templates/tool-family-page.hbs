@@ -31,12 +31,8 @@ mcp-cli.version: {{version}}
 {{{ExamplePromptsContent}}}
 
 {{/if}}
-{{#if Option}}
-| Parameter |  Required or optional | Description |
-|-----------------------|----------------------|-------------|
-{{#each Option}}
-| **{{Name}}** |  {{RequiredText}} | {{Description}} |
-{{/each}}
+{{#if ParametersContent}}
+{{{ParametersContent}}}
 
 {{else}}
 | Parameter |  Required or optional | Description |

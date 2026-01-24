@@ -13,6 +13,8 @@ public class Tool
     public string? AnnotationFileName { get; set; } // Filename of the annotation file
     public string? ExamplePromptsContent { get; set; } // Content from example prompts file
     public string? ExamplePromptsFileName { get; set; } // Filename of the example prompts file
+    public string? ParametersContent { get; set; } // Content from parameters file
+    public string? ParametersFileName { get; set; } // Filename of the parameters file
     public bool HasAnnotation { get; set; } // Whether annotation file was generated
     public bool HasParameters { get; set; } // Whether parameter file was generated
     public bool HasExamplePrompts { get; set; } // Whether example prompts file was generated

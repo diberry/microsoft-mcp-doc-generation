@@ -44,7 +44,12 @@ public class ToolFamilyPageGenerator
         {
             var areaNameForFile = areaName.ToLowerInvariant().Replace(" ", "-");
             var fileName = $"{areaNameForFile}.md";
-            var outputFile = Path.Combine(outputDir, fileName);
+            
+            // Create tool-family subdirectory
+            var toolFamilyDir = Path.Combine(outputDir, "tool-family");
+            Directory.CreateDirectory(toolFamilyDir);
+            
+            var outputFile = Path.Combine(toolFamilyDir, fileName);
 
             // Get common parameter names to filter them out
             var commonParameters = data.SourceDiscoveredCommonParams.Any()
@@ -57,6 +62,7 @@ public class ToolFamilyPageGenerator
             var parentDir = string.IsNullOrWhiteSpace(parentDirCandidate) ? outputDir : parentDirCandidate;
             var annotationsDir = Path.Combine(outputDir, "annotations");
             var examplePromptsDir = Path.Combine(outputDir, "example-prompts");
+            var parametersDir = Path.Combine(outputDir, "parameters");
 
             // Load brand mappings for filename lookup
             var brandMappings = await _loadBrandMappings();
@@ -66,7 +72,7 @@ public class ToolFamilyPageGenerator
             {
                 var filteredTool = new Tool
                 {
-                    Name = tool.Name,
+                    Name = DisplayNameBuilder.BuildDisplayName(tool.Command, tool.Name),
                     Command = tool.Command,
                     Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(tool.Description ?? "")),
                     SourceFile = tool.SourceFile,
@@ -148,26 +154,31 @@ public class ToolFamilyPageGenerator
                                 filteredTool.ExamplePromptsContent = "";
                             }
                         }
+
+                        // Load parameters content
+                        var parametersFileName = !string.IsNullOrEmpty(cleanedRemainingParts)
+                            ? $"{brandFileName}-{cleanedRemainingParts}-parameters.md"
+                            : $"{brandFileName}-parameters.md";
+
+                        var parametersFilePath = Path.Combine(parametersDir, parametersFileName);
+                        if (File.Exists(parametersFilePath))
+                        {
+                            try
+                            {
+                                var content = File.ReadAllText(parametersFilePath);
+                                // Strip frontmatter if present
+                                filteredTool.ParametersContent = StripFrontmatter(content);
+                                filteredTool.ParametersFileName = parametersFileName;
+                            }
+                            catch
+                            {
+                                filteredTool.ParametersContent = "";
+                            }
+                        }
                     }
                 }
 
-                // Filter out common parameters
-                if (tool.Option != null)
-                {
-                    filteredTool.Option = tool.Option
-                        .Where(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name))
-                        .Select(opt => new Option
-                        {
-                            Name = opt.Name,
-                            NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
-                            Type = opt.Type,
-                            Required = opt.Required,
-                            RequiredText = opt.Required == true ? "Required" : "Optional",
-                            Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")),
-                        })
-                        .ToList();
-                }
-
+                // No longer need to manually filter parameters - we use the pre-generated parameter file
                 return filteredTool;
             });
 
