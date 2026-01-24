@@ -15,6 +15,13 @@ public class CleanupGenerator
     private const string SYSTEM_PROMPT_PATH = "./prompts/tool-family-cleanup-system-prompt.txt";
     private const string USER_PROMPT_PATH = "./prompts/tool-family-cleanup-user-prompt.txt";
 
+    // Compiled regex patterns for performance when processing multiple files
+    private static readonly Regex HeadersRegex = new(@"^#{1,6}\s+.+$", RegexOptions.Multiline | RegexOptions.Compiled);
+    private static readonly Regex ListsRegex = new(@"^\s*[-*]\s+.+$", RegexOptions.Multiline | RegexOptions.Compiled);
+    private static readonly Regex LinksRegex = new(@"\[.+?\]\(.+?\)", RegexOptions.Compiled);
+    private static readonly Regex CodeBlockRegex = new(@"```markdown\s*(.*?)\s*```", RegexOptions.Singleline | RegexOptions.Compiled);
+    private static readonly Regex FrontmatterRegex = new(@"^---\s*\n", RegexOptions.Multiline | RegexOptions.Compiled);
+
     private readonly GenerativeAIClient _aiClient;
     private readonly CleanupConfiguration _config;
     private string? _systemPrompt;
@@ -166,15 +173,15 @@ public class CleanupGenerator
         if (string.IsNullOrWhiteSpace(text))
             return false;
 
-        // Check for common markdown patterns
+        // Check for common markdown patterns using compiled regex patterns
         // - Headers (# ## ###)
         // - Links ([text](url))
         // - Lists (- or *)
         // - Code blocks (```)
         
-        var hasHeaders = Regex.IsMatch(text, @"^#{1,6}\s+.+$", RegexOptions.Multiline);
-        var hasLists = Regex.IsMatch(text, @"^\s*[-*]\s+.+$", RegexOptions.Multiline);
-        var hasLinks = Regex.IsMatch(text, @"\[.+?\]\(.+?\)");
+        var hasHeaders = HeadersRegex.IsMatch(text);
+        var hasLists = ListsRegex.IsMatch(text);
+        var hasLinks = LinksRegex.IsMatch(text);
         
         // Consider it markdown if it has at least headers or lists
         return hasHeaders || hasLists || hasLinks;
@@ -183,7 +190,7 @@ public class CleanupGenerator
     private string ExtractMarkdown(string response)
     {
         // If the response is wrapped in markdown code blocks, extract it
-        var codeBlockMatch = Regex.Match(response, @"```markdown\s*(.*?)\s*```", RegexOptions.Singleline);
+        var codeBlockMatch = CodeBlockRegex.Match(response);
         if (codeBlockMatch.Success)
         {
             return codeBlockMatch.Groups[1].Value.Trim();
@@ -191,7 +198,7 @@ public class CleanupGenerator
 
         // If response has explanatory text before the markdown, try to extract just the markdown
         // Look for the start of typical frontmatter or first header
-        var frontmatterMatch = Regex.Match(response, @"^---\s*\n", RegexOptions.Multiline);
+        var frontmatterMatch = FrontmatterRegex.Match(response);
         if (frontmatterMatch.Success)
         {
             return response.Substring(frontmatterMatch.Index).Trim();
