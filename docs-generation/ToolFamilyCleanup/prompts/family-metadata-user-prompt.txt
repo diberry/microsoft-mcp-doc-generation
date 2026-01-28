@@ -1,0 +1,12 @@
+Generate the metadata section (frontmatter + H1 + introduction) for the following Azure MCP Server tool family:
+
+**Tool Family**: {{FAMILY_NAME}}
+**Tool Count**: {{TOOL_COUNT}}
+**Tools in Family**: {{TOOL_LIST}}
+
+Requirements:
+- Generate frontmatter with title, description, keywords, ms.service, ms.topic, and tool_count
+- Include H1 heading matching the title
+- Write 2 intro paragraphs describing the service and its capabilities
+- Include the parameter tip INCLUDE statement
+- Use proper Microsoft Learn formatting and style

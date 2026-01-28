@@ -41,8 +41,8 @@ Create a `.env` file in `docs-generation/` directory:
 ```bash
 FOUNDRY_API_KEY=your-api-key-here
 FOUNDRY_ENDPOINT=https://your-resource.openai.azure.com/
-FOUNDRY_MODEL_NAME=your-deployment-name
-FOUNDRY_MODEL_API_VERSION=2024-08-01-preview
+TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME=your-deployment-name
+TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION=2024-08-01-preview
 ```
 
 **Important**: Never commit the `.env` file. It's already in `.gitignore`.
@@ -199,7 +199,7 @@ pwsh ./Generate-ToolFamilyCleanup.ps1 -InputDir "/tmp/selected-files"
   env:
     FOUNDRY_API_KEY: ${{ secrets.AZURE_OPENAI_KEY }}
     FOUNDRY_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-    FOUNDRY_MODEL_NAME: ${{ secrets.AZURE_OPENAI_MODEL }}
+    TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME: ${{ secrets.AZURE_OPENAI_MODEL }}
 ```
 
 ## Output Structure
@@ -248,7 +248,7 @@ cd docs-generation
 cat > .env << EOF
 FOUNDRY_API_KEY=your-key
 FOUNDRY_ENDPOINT=https://your-resource.openai.azure.com/
-FOUNDRY_MODEL_NAME=your-model
+TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME=your-model
 EOF
 ```
 

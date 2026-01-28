@@ -6,35 +6,186 @@ Independent .NET package for cleaning up Azure MCP tool family documentation fil
 
 This tool takes generated tool family markdown files and applies AI-powered cleanup to ensure they meet Microsoft style guide standards and Azure MCP-specific documentation conventions.
 
+**Two Processing Modes:**
+
+1. **Single-Phase Mode** (Default): Processes complete pre-assembled tool family files in one LLM call per file
+2. **Multi-Phase Mode** (Advanced): Assembles tool families from individual tool files, generating metadata and related content separately to avoid token limits
+
 ### Features
 
 - **Independent Operation**: Works independently of other documentation generation processes
+- **Two Workflows**: Choose between single-phase (fast) or multi-phase (handles large families)
 - **Configurable Paths**: All input/output directories are configurable with sensible defaults
 - **Prompt Preservation**: Saves individual prompts for each file for review and iteration
 - **LLM-Powered**: Uses Azure OpenAI to apply style guide standards
 - **Markdown-Only Output**: Validates and extracts only markdown output from LLM responses
+- **Token Limit Handling**: Multi-phase mode solves 16K token limit by processing tools individually
 
 ## Quick Start
 
-### Basic Usage
+### Single-Phase Mode (Default)
+
+**Use When**: Processing pre-assembled tool family files (e.g., from `./generated/tool-family/`)
 
 ```bash
 cd docs-generation
 pwsh ./Generate-ToolFamilyCleanup.ps1
 ```
 
-### With Custom Paths
+**How It Works:**
+1. Reads complete tool family markdown files
+2. Sends entire file to LLM for cleanup
+3. Saves cleaned output
+4. **Limitation**: Files with 15+ tools may hit 16K token limit
 
+**Output Structure:**
+```
+generated/
+├── tool-family-cleanup-prompts/    # Prompts sent to LLM
+└── tool-family-cleaned/            # Cleaned markdown files
+```
+
+### Multi-Phase Mode (Advanced)
+
+**Use When**: Processing tool families with 15+ tools that exceed token limits
+
+```bash
+cd docs-generation
+pwsh ./GenerateToolFamilyCleanup-multifile.ps1
+```
+
+**How It Works:**
+1. **Phase 1**: Reads individual tool files from `./generated/tools/` and groups by family
+2. **Phase 2**: Generates metadata (frontmatter + H1 + intro) using AI per family
+3. **Phase 3**: Generates "Related content" section using AI per family
+4. **Phase 4**: Stitches tools together with AI-generated metadata/related content (no AI)
+
+**Advantages:**
+- ✓ No 16K token limit (processes tools individually)
+- ✓ 95% cost reduction (~115K tokens vs. 2M tokens for large files)
+- ✓ All tools included (no truncation)
+- ✓ Intermediate files saved for debugging
+
+**Output Structure:**
+```
+generated/
+├── tool-family-metadata/      # AI-generated metadata per family
+├── tool-family-related/       # AI-generated related content per family
+└── tool-family-multifile/     # Final stitched files
+```
+
+## PowerShell Scripts
+
+### Generate-ToolFamilyCleanup.ps1 (Single-Phase)
+
+**Purpose**: Process complete tool family files with full cleanup
+
+**Usage:**
+```bash
+pwsh ./Generate-ToolFamilyCleanup.ps1 [options]
+```
+
+**Options:**
+- `-InputDir <path>` - Input directory with tool family markdown files (default: `../generated/tool-family`)
+- `-PromptsDir <path>` - Directory for generated prompts (default: `../generated/tool-family-cleanup-prompts`)
+- `-OutputDir <path>` - Directory for cleaned markdown files (default: `../generated/tool-family-cleaned`)
+- `-Help` - Display help message
+
+**Example - Custom Paths:**
 ```bash
 pwsh ./Generate-ToolFamilyCleanup.ps1 -InputDir "./custom/input" -OutputDir "./custom/output"
 ```
 
-### Command-Line Options
+### GenerateToolFamilyCleanup-multifile.ps1 (Multi-Phase)
 
-- `-i, --input-dir <path>` - Input directory with tool family markdown files (default: `../generated/tool-family`)
-- `-p, --prompts-dir <path>` - Directory for generated prompts (default: `../generated/tool-family-cleanup-prompts`)
-- `-o, --output-dir <path>` - Directory for cleaned markdown files (default: `../generated/tool-family-cleaned`)
+**Purpose**: Assemble and clean tool families from individual tool files, avoiding token limits
+
+**Usage:**
+```bash
+pwsh ./GenerateToolFamilyCleanup-multifile.ps1 [options]
+```
+
+**Options:**
+- `-ToolsInputDir <path>` - Input directory with complete tool files (default: `../generated/tools`)
+- `-MetadataOutputDir <path>` - Output directory for AI-generated metadata (default: `../generated/tool-family-metadata`)
+- `-RelatedOutputDir <path>` - Output directory for AI-generated related content (default: `../generated/tool-family-related`)
+- `-FinalOutputDir <path>` - Output directory for final stitched files (default: `../generated/tool-family-multifile`)
+- `-Help` - Display help message
+
+**Example - Custom Paths:**
+```bash
+pwsh ./GenerateToolFamilyCleanup-multifile.ps1 `
+  -ToolsInputDir "./generated/tools" `
+  -FinalOutputDir "./generated/final"
+```
+
+## Command-Line Options (Direct .NET Execution)
+
+Run the tool directly for more control:
+
+```bash
+cd docs-generation/ToolFamilyCleanup
+dotnet run --configuration Release [options]
+```
+
+**Options:**
+- `-m, --multi-phase` - Enable multi-phase mode (tool-level assembly)
+- `-i, --input-dir <path>` - Input directory (single-phase mode only)
+- `-p, --prompts-dir <path>` - Directory to save prompts (single-phase mode only)
+- `-o, --output-dir <path>` - Directory to save cleaned files (single-phase mode only)
 - `-h, --help` - Display help message
+
+**Examples:**
+```bash
+# Single-phase with defaults
+dotnet run --configuration Release
+
+# Multi-phase mode
+dotnet run --configuration Release --multi-phase
+
+# Single-phase with custom paths
+dotnet run --configuration Release --input-dir "./custom/input"
+```
+
+## Choosing Between Modes
+
+### Use Single-Phase Mode When:
+- ✓ Tool families have <15 tools each
+- ✓ Pre-assembled tool family files already exist
+- ✓ Fast processing is priority
+- ✓ Files are under 10KB each
+- ✓ Testing or iterating on prompts
+- ✓ Simple cleanup without assembly needed
+
+**Example Use Cases:**
+- Cleaning up manually created tool family files
+- Quick style guide enforcement
+- Prompt iteration and testing
+
+### Use Multi-Phase Mode When:
+- ✓ Tool families have 15+ tools (e.g., foundry with 19 tools)
+- ✓ Files exceed 16K token limit in single-phase
+- ✓ Starting from individual tool files
+- ✓ Need to minimize AI costs (95% reduction)
+- ✓ Want intermediate outputs for review
+- ✓ Troubleshooting truncation issues
+
+**Example Use Cases:**
+- Processing large service families (foundry, storage, sql)
+- Cost-sensitive batch processing
+- Building tool families from scratch
+- Debugging token limit errors
+
+### Quick Decision Guide
+
+| Scenario | Recommended Mode | Reason |
+|----------|-----------------|---------|
+| ACR family (6 tools, 3KB) | Single-phase | Small, fast |
+| Storage family (25 tools, 15KB) | Multi-phase | Large, exceeds token limit |
+| Quick cleanup test | Single-phase | Fast iteration |
+| Full production run | Multi-phase | Cost-effective, reliable |
+| First-time setup | Single-phase | Simpler workflow |
+| Token limit errors | Multi-phase | Solves 16K limit |
 
 ## Configuration
 
@@ -45,8 +196,8 @@ Required via `.env` file or environment:
 ```bash
 FOUNDRY_API_KEY=your-api-key-here
 FOUNDRY_ENDPOINT=https://your-resource.openai.azure.com/
-FOUNDRY_MODEL_NAME=gpt-4o
-FOUNDRY_MODEL_API_VERSION=2025-01-01-preview
+TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME=gpt-4o
+TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION=2025-01-01-preview
 ```
 
 Create a `.env` file in `docs-generation/` directory with these values.
@@ -110,6 +261,8 @@ Available placeholders:
 
 ## Output Structure
 
+### Single-Phase Mode Output
+
 ```
 generated/
 ├── tool-family/                         # Original files (input)
@@ -117,6 +270,27 @@ generated/
 │   └── {filename}-prompt.txt
 └── tool-family-cleaned/                 # Cleaned files (output)
     └── *.md
+```
+
+### Multi-Phase Mode Output
+
+```
+generated/
+├── tools/                               # Individual tool files (input)
+│   ├── mcp-azure-mcp-acr-list-registries.complete.md
+│   └── ...
+├── tool-family-metadata/                # AI-generated metadata
+│   ├── acr-metadata.md
+│   ├── storage-metadata.md
+│   └── ...
+├── tool-family-related/                 # AI-generated related content
+│   ├── acr-related.md
+│   ├── storage-related.md
+│   └── ...
+└── tool-family-multifile/               # Final stitched files
+    ├── acr.md
+    ├── storage.md
+    └── ...
 ```
 
 ## LLM Model Recommendation
@@ -138,24 +312,39 @@ generated/
 
 ```
 ToolFamilyCleanup/
-├── Program.cs                          # CLI entry point
+├── Program.cs                          # CLI entry point, mode selection
 ├── Services/
 │   ├── CleanupConfiguration.cs        # Configuration
-│   └── CleanupGenerator.cs            # Core logic
+│   ├── CleanupGenerator.cs            # Core logic (both modes)
+│   ├── FamilyMetadataGenerator.cs     # Multi-phase: metadata generation
+│   ├── RelatedContentGenerator.cs     # Multi-phase: related content
+│   ├── FamilyFileStitcher.cs          # Multi-phase: file assembly
+│   └── ToolReader.cs                  # Multi-phase: tool file reader
+├── Models/
+│   ├── FamilyContent.cs               # Multi-phase: family data model
+│   └── ToolContent.cs                 # Multi-phase: tool data model
 ├── prompts/                            # Prompt files
-│   ├── tool-family-cleanup-system-prompt.txt
-│   └── tool-family-cleanup-user-prompt.txt
+│   ├── tool-family-cleanup-system-prompt.txt      # Single-phase
+│   ├── tool-family-cleanup-user-prompt.txt        # Single-phase
+│   ├── family-metadata-system-prompt.txt          # Multi-phase
+│   ├── family-metadata-user-prompt.txt            # Multi-phase
+│   ├── related-content-system-prompt.txt          # Multi-phase
+│   └── related-content-user-prompt.txt            # Multi-phase
 └── ToolFamilyCleanup.csproj           # Project file
 ```
 
 ## Workflow Integration
 
+### Single-Phase Workflow
+
+**Use Case**: Cleaning pre-assembled tool family files with <15 tools per family
+
 ```
 Step 1: Generate Base Documentation
   → pwsh ./Generate-MultiPageDocs.ps1
-  → Output: ../generated/tool-family/*.md
+  → Output: ../generated/tool-family/*.md (30+ files)
 
-Step 2: Run Tool Family Cleanup
+Step 2: Run Single-Phase Cleanup
   → pwsh ./Generate-ToolFamilyCleanup.ps1
   → Output: ../generated/tool-family-cleaned/*.md
   → Prompts: ../generated/tool-family-cleanup-prompts/*.txt
@@ -165,6 +354,45 @@ Step 3: Review and Integrate
   → Manually merge approved changes
   → Update prompts as needed
 ```
+
+**Processing Time**: ~5-15 minutes for 30 files
+
+### Multi-Phase Workflow
+
+**Use Case**: Handling large tool families (15+ tools) or assembling from individual tool files
+
+```
+Step 1: Generate Complete Tool Files
+  → pwsh ./Generate-MultiPageDocs.ps1 --complete-tools
+  → Output: ../generated/tools/*.complete.md (208 files)
+
+Step 2: Run Multi-Phase Assembly & Cleanup
+  → pwsh ./GenerateToolFamilyCleanup-multifile.ps1
+  
+  Phase 1: Read and group tools by family
+    → Groups 221 tools into 39 families
+  
+  Phase 2: Generate metadata per family
+    → Output: ../generated/tool-family-metadata/*.md
+    → AI generates: frontmatter + H1 + intro
+  
+  Phase 3: Generate related content per family
+    → Output: ../generated/tool-family-related/*.md
+    → AI generates: related links and resources
+  
+  Phase 4: Stitch together (no AI)
+    → Output: ../generated/tool-family-multifile/*.md
+    → Combines: metadata + tools + related content
+
+Step 3: Review and Integrate
+  → Review intermediate files (metadata, related content)
+  → Verify final stitched files
+  → Integrate approved outputs
+```
+
+**Processing Time**: ~10-20 minutes for 39 families
+
+**Token Savings**: ~95% reduction (115K vs 2M tokens for large files)
 
 ## Building
 
@@ -269,7 +497,7 @@ For explicit truncation errors:
    - This helps files with 16-20 tools fit under 16,384 limit
 
 4. **Use gpt-4-turbo** (32K output tokens):
-   - Update `.env`: `FOUNDRY_MODEL_NAME=gpt-4-turbo`
+   - Update `.env`: `TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME=gpt-4-turbo`
    - **Cost**: 2x more expensive than gpt-4o
    - Supports up to 32 tools per file
 

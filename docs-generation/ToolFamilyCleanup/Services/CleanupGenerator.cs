@@ -3,6 +3,7 @@
 
 using GenerativeAI;
 using System.Text.RegularExpressions;
+using ToolFamilyCleanup.Models;
 
 namespace ToolFamilyCleanup.Services;
 
@@ -31,11 +32,13 @@ public class CleanupGenerator
 
     private readonly GenerativeAIClient _aiClient;
     private readonly CleanupConfiguration _config;
+    private readonly GenerativeAIOptions _options;
     private string? _systemPrompt;
     private string? _userPromptTemplate;
 
     public CleanupGenerator(GenerativeAIOptions options, CleanupConfiguration config)
     {
+        _options = options;
         _aiClient = new GenerativeAIClient(options);
         _config = config;
     }
@@ -177,8 +180,9 @@ public class CleanupGenerator
 
     private async Task LoadPrompts()
     {
-        var systemPromptPath = Path.GetFullPath(SYSTEM_PROMPT_PATH);
-        var userPromptPath = Path.GetFullPath(USER_PROMPT_PATH);
+        var baseDir = AppContext.BaseDirectory;
+        var systemPromptPath = Path.Combine(baseDir, "prompts", "tool-family-cleanup-system-prompt.txt");
+        var userPromptPath = Path.Combine(baseDir, "prompts", "tool-family-cleanup-user-prompt.txt");
 
         if (!File.Exists(systemPromptPath))
         {
@@ -220,7 +224,7 @@ public class CleanupGenerator
             // Allocate ~1000 tokens per tool (covers description, params, examples, annotations)
             // Add 2000 base tokens for frontmatter, H1, intro, Related content
             int toolBasedTokens = (toolCount * 1000) + 2000;
-            int cappedTokens = Math.Min(MAX_OUTPUT_TOKENS, Math.Max(MIN_MAX_TOKENS, toolBasedTokens));
+            int cappedToolTokens = Math.Min(MAX_OUTPUT_TOKENS, Math.Max(MIN_MAX_TOKENS, toolBasedTokens));
             
             Console.WriteLine($"           Token calculation: tool-count method ({toolCount} tools × 1000 + 2000)");
             if (toolBasedTokens > MAX_OUTPUT_TOKENS)
@@ -228,7 +232,7 @@ public class CleanupGenerator
                 Console.WriteLine($"           ⚠ Capped at model limit: {toolBasedTokens} → {MAX_OUTPUT_TOKENS} tokens");
             }
             
-            return cappedTokens;
+            return cappedToolTokens;
         }
         
         // Fallback: Count words in content (less accurate but works for files without metadata)
@@ -239,7 +243,7 @@ public class CleanupGenerator
         
         // Calculate max output tokens with buffer (2x input for cleanup formatting + safety margin)
         int calculatedMaxTokens = (int)(estimatedInputTokens * TOKEN_MULTIPLIER);
-        int cappedTokens = Math.Min(MAX_OUTPUT_TOKENS, Math.Max(MIN_MAX_TOKENS, calculatedMaxTokens));
+        int cappedWordTokens = Math.Min(MAX_OUTPUT_TOKENS, Math.Max(MIN_MAX_TOKENS, calculatedMaxTokens));
         
         Console.WriteLine($"           Token calculation: word-count method ({wordCount} words × {TOKEN_MULTIPLIER} multiplier)");
         if (calculatedMaxTokens > MAX_OUTPUT_TOKENS)
@@ -247,7 +251,7 @@ public class CleanupGenerator
             Console.WriteLine($"           ⚠ Capped at model limit: {calculatedMaxTokens} → {MAX_OUTPUT_TOKENS} tokens");
         }
         
-        return cappedTokens;
+        return cappedWordTokens;
     }
 
     private bool IsValidMarkdown(string text)
@@ -293,5 +297,124 @@ public class CleanupGenerator
 
         // Return as-is if no special extraction needed
         return response.Trim();
+    }
+
+    /// <summary>
+    /// Processes tool families using multi-phase approach: read tools, generate metadata/related content, stitch together.
+    /// Solves 16K token limit by processing tools individually and assembling at the end.
+    /// </summary>
+    public async Task ProcessToolFamiliesMultiPhase()
+    {
+        Console.WriteLine("=== Tool Family Cleanup Generation (Multi-Phase) ===");
+        Console.WriteLine();
+
+        // Create output directories (resolve relative paths)
+        var metadataDir = Path.GetFullPath(_config.MetadataOutputDirectory);
+        var relatedDir = Path.GetFullPath(_config.RelatedContentOutputDirectory);
+        var outputDir = Path.GetFullPath(_config.MultiFileOutputDirectory);
+        Directory.CreateDirectory(metadataDir);
+        Directory.CreateDirectory(relatedDir);
+        Directory.CreateDirectory(outputDir);
+
+        // Phase 1: Read and group tools by family (resolve relative path)
+        Console.WriteLine("Phase 1: Reading tools from directory...");
+        var toolsInputDir = Path.GetFullPath(_config.ToolsInputDirectory);
+        var toolReader = new ToolReader(toolsInputDir);
+        var toolsByFamily = await toolReader.ReadAndGroupToolsAsync();
+
+        if (toolsByFamily.Count == 0)
+        {
+            Console.WriteLine("⚠ No tool families found.");
+            return;
+        }
+
+        // Initialize generators
+        var metadataGenerator = new FamilyMetadataGenerator(_options);
+        var relatedContentGenerator = new RelatedContentGenerator(_options);
+        var stitcher = new FamilyFileStitcher();
+
+        await metadataGenerator.LoadPromptsAsync();
+        await relatedContentGenerator.LoadPromptsAsync();
+        Console.WriteLine("✓ Generators initialized");
+        Console.WriteLine();
+
+        // Phase 2 & 3 & 4: Process each family
+        int successCount = 0;
+        int failCount = 0;
+        int totalTokensUsed = 0;
+
+        foreach (var (familyName, tools) in toolsByFamily.OrderBy(kv => kv.Key))
+        {
+            var progress = $"[{successCount + failCount + 1}/{toolsByFamily.Count}]";
+
+            try
+            {
+                Console.WriteLine($"{progress} Processing family: {familyName} ({tools.Count} tools)...");
+
+                // Create FamilyContent object
+                var familyContent = new FamilyContent
+                {
+                    FamilyName = familyName,
+                    Tools = tools,
+                    Metadata = string.Empty, // Will be populated
+                    RelatedContent = string.Empty // Will be populated
+                };
+
+                // Phase 2: Generate metadata
+                Console.Write($"{progress}   Phase 2: Generating metadata... ");
+                var metadata = await metadataGenerator.GenerateAsync(familyContent);
+                familyContent.Metadata = metadata;
+                
+                // Save metadata
+                var metadataPath = Path.Combine(metadataDir, $"{familyName}-metadata.md");
+                await File.WriteAllTextAsync(metadataPath, metadata);
+                Console.WriteLine($"✓ ({EstimateTokens(metadata)} tokens)");
+
+                // Phase 3: Generate related content
+                Console.Write($"{progress}   Phase 3: Generating related content... ");
+                var relatedContent = await relatedContentGenerator.GenerateAsync(familyContent);
+                familyContent.RelatedContent = relatedContent;
+                
+                // Save related content
+                var relatedPath = Path.Combine(relatedDir, $"{familyName}-related.md");
+                await File.WriteAllTextAsync(relatedPath, relatedContent);
+                Console.WriteLine($"✓ ({EstimateTokens(relatedContent)} tokens)");
+
+                // Phase 4: Stitch together
+                Console.Write($"{progress}   Phase 4: Stitching file... ");
+                var outputPath = Path.Combine(outputDir, $"{familyName}.md");
+                await stitcher.StitchAndSaveAsync(familyContent, outputPath);
+                Console.WriteLine($"✓ Saved to {familyName}.md");
+
+                totalTokensUsed += EstimateTokens(metadata) + EstimateTokens(relatedContent);
+                successCount++;
+                Console.WriteLine();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{progress} ✗ Failed to process {familyName}: {ex.Message}");
+                failCount++;
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("=== Summary ===");
+        Console.WriteLine($"Total families:   {toolsByFamily.Count}");
+        Console.WriteLine($"Successful:       {successCount}");
+        Console.WriteLine($"Failed:           {failCount}");
+        Console.WriteLine($"Est. AI tokens:   ~{totalTokensUsed:N0}");
+        Console.WriteLine();
+        Console.WriteLine($"Metadata:         {metadataDir}");
+        Console.WriteLine($"Related content:  {relatedDir}");
+        Console.WriteLine($"Final files:      {outputDir}");
+    }
+
+    /// <summary>
+    /// Estimates token count from text (rough approximation: 1 token ≈ 0.75 words).
+    /// </summary>
+    private int EstimateTokens(string text)
+    {
+        var wordCount = text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        return (int)(wordCount / 0.75);
     }
 }
