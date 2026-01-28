@@ -1,0 +1,33 @@
+**Your Task**:
+1. Review the content for adherence to Microsoft style guide standards
+2. **CRITICAL: Ensure ALL required parameters appear in at least 3 example prompts**
+3. Add missing content sections (Overview, Prerequisites, Success verification, Related content)
+4. Improve clarity, readability, and technical accuracy
+5. Ensure consistent formatting and structure
+6. Apply Azure MCP-specific documentation conventions
+7. Fix metadata/frontmatter to use `concept-article` format
+8. Output ONLY the cleaned markdown - no explanations or commentary
+
+**Filename**: {{FILENAME}}
+
+**Current Content**:
+```markdown
+{{CONTENT}}
+```
+
+**Your Task**:
+1. Review the content for adherence to Microsoft style guide standards
+2. **CRITICAL: Ensure ALL (100%) required parameters appear in at least 3 example prompts**
+3. Add missing content sections (Overview, Related content)
+4. Improve clarity, readability, and technical accuracy
+5. Ensure consistent formatting and structure
+6. Apply Azure MCP-specific documentation conventions
+7. Fix metadata/frontmatter to use `concept-article` format
+8. Output ONLY the cleaned markdown - no explanations or commentary
+
+**Remember**:
+- Preserve all frontmatter (YAML metadata)
+- Keep all include references
+- Maintain all links and technical content
+- Focus on style improvements and clarity
+- Output must be valid, production-ready markdown

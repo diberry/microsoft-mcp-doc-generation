@@ -14,7 +14,10 @@ public class CleanupGenerator
 {
     private const string SYSTEM_PROMPT_PATH = "./prompts/tool-family-cleanup-system-prompt.txt";
     private const string USER_PROMPT_PATH = "./prompts/tool-family-cleanup-user-prompt.txt";
-    private const int DEFAULT_MAX_TOKENS = 16000; // Maximum tokens for LLM output (configurable for large files)
+    private const int MIN_MAX_TOKENS = 12000; // Minimum tokens for LLM output
+    private const int MAX_OUTPUT_TOKENS = 16384; // Maximum tokens supported by gpt-4o model
+    private const int PROMPT_OVERHEAD_TOKENS = 1600; // Estimated tokens for system + user prompt templates (~1,590 actual)
+    private const double TOKEN_MULTIPLIER = 2.0; // Output tokens = input tokens * multiplier (2x for cleanup formatting)
 
     // Compiled regex patterns for performance when processing multiple files
     // Using CultureInvariant for consistent behavior across different system locales
@@ -93,6 +96,10 @@ public class CleanupGenerator
                 // Read the tool family file
                 var content = await File.ReadAllTextAsync(filePath);
                 
+                // Calculate dynamic max tokens based on content size
+                int maxTokens = CalculateMaxTokens(content);
+                Console.WriteLine($"{progress} Content: {content.Split(new[] { ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length} words, Max tokens: {maxTokens}");
+                
                 // Generate prompt for this file
                 var userPrompt = GenerateUserPrompt(fileName, content);
                 
@@ -101,8 +108,34 @@ public class CleanupGenerator
                 var promptPath = Path.Combine(promptsDir, promptFileName);
                 await File.WriteAllTextAsync(promptPath, $"SYSTEM PROMPT:\n{_systemPrompt}\n\n---\n\nUSER PROMPT:\n{userPrompt}");
                 
-                // Call LLM to get cleaned markdown (using configurable max tokens)
-                var cleanedMarkdown = await _aiClient.GetChatCompletionAsync(_systemPrompt!, userPrompt, maxTokens: DEFAULT_MAX_TOKENS);
+                // Call LLM to get cleaned markdown (using dynamic max tokens)
+                string cleanedMarkdown;
+                try
+                {
+                    cleanedMarkdown = await _aiClient.GetChatCompletionAsync(_systemPrompt!, userPrompt, maxTokens: maxTokens);
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("truncated"))
+                {
+                    // Specific handling for truncation errors
+                    Console.WriteLine($"{progress} ✗ TRUNCATED: {fileName}");
+                    Console.WriteLine($"           {ex.Message}");
+                    Console.WriteLine($"           Try increasing MIN_MAX_TOKENS or tokens-per-tool multiplier");
+                    
+                    // Log detailed error
+                    var errorPath = Path.Combine(cleanupDir, Path.GetFileNameWithoutExtension(fileName) + "-truncation-error.txt");
+                    await File.WriteAllTextAsync(errorPath, 
+                        $"File: {fileName}\n" +
+                        $"Max tokens allocated: {maxTokens}\n" +
+                        $"Error: {ex.Message}\n\n" +
+                        $"Solutions:\n" +
+                        $"1. Check if tool count was detected (should show in console)\n" +
+                        $"2. Increase MIN_MAX_TOKENS in CleanupGenerator.cs (currently {MIN_MAX_TOKENS})\n" +
+                        $"3. Increase tokens per tool (currently 1000 per tool)\n" +
+                        $"4. Reduce prompt sizes if they exceed 2000 words\n");
+                    
+                    failCount++;
+                    continue;
+                }
                 
                 // Validate that output is markdown
                 if (!IsValidMarkdown(cleanedMarkdown))
@@ -170,6 +203,51 @@ public class CleanupGenerator
         return _userPromptTemplate!
             .Replace("{{FILENAME}}", fileName)
             .Replace("{{CONTENT}}", content);
+    }
+
+    /// <summary>
+    /// Calculates maximum output tokens based on input content size and tool count.
+    /// Prioritizes tool count if available, falls back to word count estimation.
+    /// Caps at MAX_OUTPUT_TOKENS (16,384 for gpt-4o).
+    /// Formula: min(MAX_OUTPUT_TOKENS, max(MIN_MAX_TOKENS, toolCount * 1000 OR estimatedInputTokens * 2))
+    /// </summary>
+    private int CalculateMaxTokens(string content)
+    {
+        // Try to extract tool count from metadata (more accurate for large files)
+        var toolCountMatch = System.Text.RegularExpressions.Regex.Match(content, @"\*\*Tool Count:\*\*\s*(\d+)");
+        if (toolCountMatch.Success && int.TryParse(toolCountMatch.Groups[1].Value, out int toolCount))
+        {
+            // Allocate ~1000 tokens per tool (covers description, params, examples, annotations)
+            // Add 2000 base tokens for frontmatter, H1, intro, Related content
+            int toolBasedTokens = (toolCount * 1000) + 2000;
+            int cappedTokens = Math.Min(MAX_OUTPUT_TOKENS, Math.Max(MIN_MAX_TOKENS, toolBasedTokens));
+            
+            Console.WriteLine($"           Token calculation: tool-count method ({toolCount} tools × 1000 + 2000)");
+            if (toolBasedTokens > MAX_OUTPUT_TOKENS)
+            {
+                Console.WriteLine($"           ⚠ Capped at model limit: {toolBasedTokens} → {MAX_OUTPUT_TOKENS} tokens");
+            }
+            
+            return cappedTokens;
+        }
+        
+        // Fallback: Count words in content (less accurate but works for files without metadata)
+        int wordCount = content.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        
+        // Estimate tokens: 1 word ≈ 1.33 tokens, so tokens ≈ wordCount / 0.75
+        int estimatedInputTokens = (int)(wordCount / 0.75);
+        
+        // Calculate max output tokens with buffer (2x input for cleanup formatting + safety margin)
+        int calculatedMaxTokens = (int)(estimatedInputTokens * TOKEN_MULTIPLIER);
+        int cappedTokens = Math.Min(MAX_OUTPUT_TOKENS, Math.Max(MIN_MAX_TOKENS, calculatedMaxTokens));
+        
+        Console.WriteLine($"           Token calculation: word-count method ({wordCount} words × {TOKEN_MULTIPLIER} multiplier)");
+        if (calculatedMaxTokens > MAX_OUTPUT_TOKENS)
+        {
+            Console.WriteLine($"           ⚠ Capped at model limit: {calculatedMaxTokens} → {MAX_OUTPUT_TOKENS} tokens");
+        }
+        
+        return cappedTokens;
     }
 
     private bool IsValidMarkdown(string text)

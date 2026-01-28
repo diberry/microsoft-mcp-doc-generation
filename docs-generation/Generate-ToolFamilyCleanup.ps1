@@ -43,6 +43,39 @@ Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
 
 try {
+    # Get the script's directory (docs-generation folder)
+    $scriptDir = $PSScriptRoot
+
+    # Set default values if not provided
+    if (-not $InputDir) { $InputDir = "../generated/tool-family" }
+    if (-not $PromptsDir) { $PromptsDir = "../generated/tool-family-cleanup-prompts" }
+    if (-not $OutputDir) { $OutputDir = "../generated/tool-family-cleaned" }
+
+    # Convert to absolute paths relative to script directory
+    $InputDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($scriptDir, $InputDir))
+    $PromptsDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($scriptDir, $PromptsDir))
+    $OutputDir = [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($scriptDir, $OutputDir))
+
+    # Display configuration
+    Write-Host "Configuration:" -ForegroundColor Yellow
+    Write-Host "  Input Dir:   $InputDir"
+    Write-Host "  Prompts Dir: $PromptsDir"
+    Write-Host "  Output Dir:  $OutputDir"
+    Write-Host ""
+
+    # Create output directories
+    Write-Host "Creating output directories..." -ForegroundColor Yellow
+    $directoriesToCreate = @($PromptsDir, $OutputDir)
+    foreach ($dir in $directoriesToCreate) {
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            Write-Host "  ✓ Created: $dir"
+        } else {
+            Write-Host "  ✓ Exists: $dir"
+        }
+    }
+    Write-Host ""
+
     # Navigate to project directory
     $projectDir = Join-Path $PSScriptRoot "ToolFamilyCleanup"
     
