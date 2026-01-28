@@ -1,0 +1,12 @@
+Generate the "Related content" section for the following Azure MCP Server tool family:
+
+**Tool Family**: {{FAMILY_NAME}}
+**Tool Count**: {{TOOL_COUNT}}
+**Tools in Family**: {{TOOL_LIST}}
+
+Requirements:
+- Start with "## Related content" heading
+- Include standard links to index.md and get-started.md
+- Add relevant official Microsoft Learn documentation link for this service
+- Keep total links to 3-5 maximum
+- Use proper markdown link format

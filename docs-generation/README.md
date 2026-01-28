@@ -38,13 +38,50 @@ docs-generation/
 │   ├── Models/                   # Data models for tool metadata
 │   ├── Services/                 # Services for metadata extraction
 │   └── Program.cs                # Command-line interface
+├── ToolFamilyCleanup/             # LLM-based cleanup tool (independent)
+│   ├── Program.cs                # CLI entry point
+│   ├── Services/                 # Cleanup services
+│   │   ├── CleanupConfiguration.cs
+│   │   └── CleanupGenerator.cs
+│   └── README.md                 # Detailed documentation
 ├── Shared/                        # Shared utilities
+├── prompts/                       # LLM prompt templates
+│   ├── tool-family-cleanup-system-prompt.txt  # System prompt for style guide
+│   └── tool-family-cleanup-user-prompt.txt    # User prompt template
 └── templates/                     # Handlebars template files
     ├── tool-family-page.hbs      # Main service documentation
     ├── annotation-template.hbs    # Tool annotations
     ├── parameter-template.hbs     # Tool parameters
     ├── area-template.hbs          # Template for area-specific documentation
     └── common-tools.hbs           # Template for common tools documentation
+```
+
+## Tool Family Cleanup (New)
+
+The **ToolFamilyCleanup** package is an independent tool that applies Microsoft style guide standards to generated tool family documentation using LLM-based processing.
+
+### Key Features
+- **Independent operation**: Works separately from main documentation generation
+- **Configurable paths**: All directories can be customized (default: `./generated/multi-page`)
+- **Prompt preservation**: Saves individual prompts for each file for review
+- **LLM-powered**: Uses Azure OpenAI for style guide enforcement
+- **Markdown-only output**: Validates and extracts only markdown from LLM responses
+
+### Quick Start
+```bash
+cd docs-generation
+pwsh ./Generate-ToolFamilyCleanup.ps1
+```
+
+### Customizing Prompts for Azure MCP Style
+To add Azure MCP-specific style requirements, edit these files:
+- **System Prompt**: `docs-generation/prompts/tool-family-cleanup-system-prompt.txt`
+  - Add Azure MCP conventions under section 4 "Azure MCP-Specific Standards"
+- **User Prompt**: `docs-generation/prompts/tool-family-cleanup-user-prompt.txt`
+  - Modify the task instructions to emphasize specific requirements
+
+See `docs-generation/ToolFamilyCleanup/README.md` for detailed documentation.
+
 ```
 
 ## Configuration Files

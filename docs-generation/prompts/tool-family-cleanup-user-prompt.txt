@@ -1,0 +1,22 @@
+Please review and clean up the following Azure MCP tool family documentation file to ensure it meets Microsoft style guide standards.
+
+**Filename**: {{FILENAME}}
+
+**Current Content**:
+```markdown
+{{CONTENT}}
+```
+
+**Your Task**:
+1. Review the content for adherence to Microsoft style guide standards
+2. Improve clarity, readability, and technical accuracy
+3. Ensure consistent formatting and structure
+4. Apply Azure MCP-specific documentation conventions
+5. Output ONLY the cleaned markdown - no explanations or commentary
+
+**Remember**:
+- Preserve all frontmatter (YAML metadata)
+- Keep all include references
+- Maintain all links and technical content
+- Focus on style improvements and clarity
+- Output must be valid, production-ready markdown
