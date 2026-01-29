@@ -20,10 +20,17 @@ Characteristics:
 
 ## Your Task
 
-**FIRST**: Search for published Azure documentation about {{serviceBrandName}}. Find:
+**FIRST**: Analyze the tools to determine data plane vs management plane focus:
+- Review each tool's command and description
+- **Data plane tools**: Work with data/functionality in existing resources (get, set, query, upload, execute, read, write)
+- **Management plane tools**: Manage resource lifecycle (create, delete, update, provision, configure resources)
+- **Default assumption**: If unclear, assume **data plane** unless tool explicitly manages resource lifecycle
+- Determine the service's primary focus based on the majority of tools
+
+**SECOND**: Search for published Azure documentation about {{serviceBrandName}}. Find:
 - Official service overview/description
 - Prerequisites and setup requirements
-- RBAC roles and permissions
+- RBAC roles and permissions (data plane vs management plane roles)
 - Best practices and security recommendations
 - Common use cases and scenarios
 
@@ -33,8 +40,10 @@ Characteristics:
    - What this Azure service does (serviceShortDescription)
    - Its main value proposition (serviceOverview)
    - Core capabilities accessible through MCP (capabilities)
+   - **Primary plane focus**: Does this service primarily provide data plane operations (working with data in existing resources) or management plane operations (provisioning and configuring resources)? Default to data plane if unclear.
 
 2. **Tool Summaries**: For each tool, create a concise 10-15 word description (genai-shortDescription) that captures its purpose without technical jargon
+   - Clarify whether it's a data operation or resource management operation if needed for context
 
 3. **Realistic Scenarios**: Create 3-5 practical scenarios based on common workflows with these tools. Each scenario needs:
    - A clear title indicating the user's goal (business-focused)
@@ -43,11 +52,17 @@ Characteristics:
      - **Important**: Phrase as natural conversation: "Create a storage account named 'myapp-data' in East US" not "storage account create myapp-data eastus"
      - Include specific values: resource names, regions, SKUs, configurations
      - Vary from simple to complex commands
+     - **For data plane**: Assume resources exist. Example: "Get secret 'db-password' from key vault 'prod-secrets'"
+     - **For management plane**: Focus on provisioning. Example: "Create a new key vault named 'prod-secrets' in East US"
    - The expected result they'll see (user-facing outcome, not internal state)
 
 4. **AI Service Detection**: Determine if this is an AI-related service (contains keywords: AI, Foundry, OpenAI, Speech, Search with AI features, etc.). If yes, create AI-specific scenarios
 
 5. **Permissions**: Search Azure documentation for the service's access control/RBAC page. Based on tool characteristics (destructive, read-only) and official documentation, determine appropriate Azure RBAC roles needed
+   - **Critical**: Match roles to the plane of operation
+   - **Data plane tools**: Suggest data plane roles (e.g., "Storage Blob Data Reader", "Key Vault Secrets User")
+   - **Management plane tools**: Suggest management roles (e.g., "Storage Account Contributor", "Key Vault Contributor")
+   - Don't assume management plane roles unless tools explicitly manage resource lifecycle
 
 6. **Best Practices**: Search Azure documentation for the service's best practices guide. Adapt official Azure recommendations to the MCP/AI assistant context:
    - **Prioritize**: Security, reliability, cost optimization, operational excellence, performance

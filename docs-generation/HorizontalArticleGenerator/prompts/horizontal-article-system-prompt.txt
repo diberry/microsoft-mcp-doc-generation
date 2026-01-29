@@ -70,22 +70,42 @@ Generate a JSON object with the following structure. All fields prefixed with "g
 
 **IMPORTANT**: Search for and use published Azure documentation as your primary authoritative source. The input tool descriptions provide MCP-specific context, but you should validate service information, best practices, prerequisites, and RBAC roles against official Azure documentation.
 
+**CRITICAL - Data Plane vs Management Plane Analysis**:
+Before generating content, carefully analyze each tool to determine if it operates on the **data plane** or **management plane**:
+
+- **Management Plane Operations**: Create, delete, or configure Azure resources themselves (e.g., "create storage account", "delete key vault", "update database configuration"). These are ARM (Azure Resource Manager) operations that manage the resource lifecycle.
+
+- **Data Plane Operations**: Work with data or functionality within existing resources (e.g., "upload blob to storage", "get secret from key vault", "query database", "execute function"). These operations assume the resource already exists and interact with its data or services.
+
+**Default Assumption**: If the tool's purpose is ambiguous, **assume it is a data plane operation** unless the tool name explicitly includes resource lifecycle verbs like "create", "delete", "provision", or clearly manages resource configuration.
+
+**Impact on Article Content**:
+- For **data plane focused services**: Emphasize working with existing resources, data operations, and assume resources are already provisioned. Prerequisites should include "existing [resource] already created".
+- For **management plane focused services**: Focus on resource lifecycle management, provisioning, and configuration.
+- For **mixed services**: Clearly distinguish between management operations (provisioning) and data operations (using the service) in scenarios and capabilities.
+
 1. **serviceShortDescription**: Search Azure documentation for the official service description. Extract the core purpose. Keep it concise and service-focused: "storage accounts for data persistence", "AI model deployment and management", "relational database services"
+   - **Reflect plane focus**: For data plane services, emphasize what data/operations users work with. For management plane, emphasize resource provisioning.
 
 2. **serviceOverview**: Search Azure documentation for the service overview page. Write 2-3 sentences that:
    - Define what the service is
    - Explain the primary problem it solves
    - Describe how MCP integration enhances accessibility through natural language
+   - **For data plane services**: Emphasize working with existing resources and data operations
+   - **For management plane services**: Focus on resource lifecycle and configuration management
 
 3. **capabilities**: Transform tool descriptions into user-facing capability statements based on official Azure documentation. 
    - Start with action verbs: "Create and configure", "Monitor and diagnose", "Deploy and scale"
    - Focus on business outcomes, not technical implementation
    - Group related operations logically
+   - **Align with plane**: Data plane capabilities focus on "Access", "Query", "Store", "Retrieve", "Execute". Management plane focuses on "Create", "Configure", "Delete", "Manage"
 
 4. **serviceSpecificPrerequisites**: Only list prerequisites that are truly service-specific and required. 
    - Don't repeat generic Azure requirements (those are in the template)
    - Examples: "Existing Azure OpenAI resource", "Approved access to GPT-4", "Virtual network configured"
    - Each prerequisite should explain WHY it's needed, not just WHAT it is
+   - **For data plane services**: Include "Existing [resource] already provisioned" as a prerequisite since data plane assumes resources exist
+   - **For management plane services**: Focus on subscription access and permissions to create resources
 
 5. **tools.genai-shortDescription**: Condense the full tool description to its essential action and target. Remove technical details but keep the core purpose
 
@@ -98,10 +118,15 @@ Generate a JSON object with the following structure. All fields prefixed with "g
      - Be specific: Include actual resource names, locations, and configuration values
      - Vary complexity: Mix simple requests with more detailed multi-parameter commands
    - Describe the expected outcome in user-friendly terms (what appears in portal/CLI, not technical internals)
+   - **For data plane scenarios**: Assume resources already exist. Examples: "Get the secret 'api-key' from my key vault 'prod-kv'", "Upload file 'data.csv' to container 'imports'"
+   - **For management plane scenarios**: Focus on provisioning and configuration. Examples: "Create a new storage account in East US", "Configure the database with 100 DTUs"
 
 7. **aiSpecificScenarios**: Only populate if the service is AI-related (Foundry, AI Search, OpenAI, Speech, etc.). Search for AI-specific documentation to understand model interaction, training, deployment scenarios
 
 8. **requiredRoles**: Search Azure documentation for the service's RBAC roles page. Use officially documented role names based on the tool operations (create/read/update/delete). Common examples: "Contributor", "Reader", "Owner", or service-specific roles
+   - **For data plane services**: Prioritize data plane roles (e.g., "Storage Blob Data Contributor", "Key Vault Secrets User", "Cosmos DB Data Reader")
+   - **For management plane services**: Prioritize resource management roles (e.g., "Storage Account Contributor", "Key Vault Contributor", "Cosmos DB Account Contributor")
+   - **Match the tool operations**: If tools are primarily data-focused, don't suggest management roles unless explicitly needed
 
 9. **bestPractices**: Search Azure documentation for the service's best practices, security recommendations, and performance guidance. Adapt these to the MCP/AI assistant context. 
    - **Priority order**: Security first, then reliability, cost optimization, operational excellence, and performance
