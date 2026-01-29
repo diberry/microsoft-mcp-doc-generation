@@ -63,9 +63,9 @@ public class HorizontalArticleGenerator
     private const string CLI_VERSION_PATH = "../generated/cli/cli-version.json";
     private const string OUTPUT_DIR = "../generated/horizontal-articles";
     private const string PROMPT_OUTPUT_DIR = "../generated/horizontal-article-prompts";
-    private const string SYSTEM_PROMPT_PATH = "./prompts/horizontal-article-system-prompt.txt";
-    private const string USER_PROMPT_PATH = "./prompts/horizontal-article-user-prompt.txt";
-    private const string TEMPLATE_PATH = "./templates/horizontal-article-template.hbs";
+    private const string SYSTEM_PROMPT_PATH = "./HorizontalArticleGenerator/prompts/horizontal-article-system-prompt.txt";
+    private const string USER_PROMPT_PATH = "./HorizontalArticleGenerator/prompts/horizontal-article-user-prompt.txt";
+    private const string TEMPLATE_PATH = "./HorizontalArticleGenerator/templates/horizontal-article-template.hbs";
     
     private readonly GenerativeAIClient _aiClient;
     private readonly bool _useTextTransformation;

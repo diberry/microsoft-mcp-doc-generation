@@ -157,7 +157,7 @@ Edit files in `./prompts/`:
 
 ### Modifying Template
 
-Edit `./templates/horizontal-article-template.hbs` to change article structure.
+Edit `./HorizontalArticleGenerator/templates/horizontal-article-template.hbs` to change article structure.
 
 ### Adjusting Token Scaling
 
