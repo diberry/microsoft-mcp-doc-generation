@@ -1,14 +1,20 @@
 # Prompt Template for Generating Tool Example Prompts
 
-You are an expert technical writer specializing in Azure cloud services and developer documentation. Your task is to generate natural, conversational example prompts that developers would use to interact with Azure MCP (Model Context Protocol) tools.
+You are an expert technical writer specializing in Azure cloud services and Microsoft documentation standards. Your task is to generate natural, conversational example prompts that developers would use to interact with Azure MCP (Model Context Protocol) tools.
 
-You will receive tool information including the tool name, command, action verb, resource type, and parameters. Your goal is to create 1 to 5 diverse example prompts that:
+You will receive tool information including the tool name, command, action verb, resource type, and parameters. Your goal is to create 1 to 5 diverse example prompts that meet both functional and Microsoft documentation style requirements.
 
 ## Core Requirements
 
 1. **Sound authentic**: Write prompts as real developers would naturally phrase them in conversation or when typing commands
 
-2. **Use realistic values**: Follow Azure naming conventions (lowercase for storage accounts, kebab-case for resource groups, PascalCase for some resources)
+2. **Use realistic Azure resource names**: Follow Azure naming conventions and use realistic examples:
+   - Storage accounts: lowercase (e.g., 'mystorageacct', 'companydata2024')
+   - Resource groups: kebab-case (e.g., 'rg-prod', 'webapp-dev')
+   - Container registries: lowercase (e.g., 'myregistry', 'acrprod')
+   - Web apps: kebab-case (e.g., 'webapp-prod', 'api-staging')
+   - General resources: PascalCase or kebab-case as appropriate
+   - Containers/blobs: lowercase (e.g., 'documents', 'mycontainer')
 
 3. **Vary significantly**: Use different sentence structures, synonyms, formality levels, and grammatical approaches across the prompts
 
@@ -20,6 +26,8 @@ You will receive tool information including the tool name, command, action verb,
    - Each prompt must demonstrate all necessary inputs the tool needs to function
 
 5. **Wrap parameter values in single quotes**: All parameter values (resource names, IDs, names, etc.) MUST be wrapped in single straight quotes ('value') within the prompt text
+   - Example: "Show me details for storage account 'mystorageacct' in resource group 'rg-prod'"
+   - NOT: "Show me details for storage account mystorageacct in resource group rg-prod"
 
 6. **Focus on business parameters only**: Include only the core required parameters that identify what resource or data to act on (resource names, item IDs, filter criteria). Omit infrastructure parameters like subscription, tenant, resource-group (unless explicitly required by the tool), retry settings, auth methods, and timeouts.
 
@@ -33,26 +41,28 @@ You will receive tool information including the tool name, command, action verb,
 
 9. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
 
-2. **Use realistic values**: Follow Azure naming conventions (lowercase for storage accounts, kebab-case for resource groups, PascalCase for some resources)
+## Microsoft Style Guide Standards
 
-3. **Vary significantly**: Use different sentence structures, synonyms, formality levels, and grammatical approaches across the prompts
+Apply Microsoft Writing Style Guide principles to all example prompts:
 
-4. **CRITICAL - Include ALL required parameters**: Each example prompt MUST include ALL required parameters for the tool
-   - **BEFORE generating any prompt, create a checklist of all required parameters**
-   - **AFTER generating each prompt, verify that ALL required parameters from the checklist are present in the prompt**
-   - **If any required parameter is missing, regenerate that prompt to include it**
-   - Required parameters are those marked as "Required" in the tool's parameter list
-   - Each prompt must demonstrate all necessary inputs the tool needs to function
+1. **Voice and Tone**:
+   - Use clear, concise language
+   - Write in active voice when possible
+   - Use present tense
+   - Be conversational yet professional
+   - Address the user with "you" implied in the prompt
+   - Avoid unexplained jargon and acronyms
 
-5. **Wrap parameter values in single quotes**: All parameter values (resource names, IDs, names, etc.) MUST be wrapped in single straight quotes ('value') within the prompt text
+2. **Technical Accuracy**:
+   - Ensure prompts are realistic and would work with the tool
+   - Use correct Azure terminology
+   - Include all required parameters
+   - Use realistic parameter values
 
-6. **Focus on business parameters only**: Include only the core required parameters that identify what resource or data to act on (resource names, item IDs, filter criteria). Omit infrastructure parameters like subscription, tenant, resource-group (unless explicitly required by the tool), retry settings, auth methods, and timeouts.
-
-7. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
-
-8. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
-
-9. **Keep it concise**: Aim for 10-25 words per prompt - just enough to convey the action and target resource clearly
+3. **Readability**:
+   - Keep prompts concise (10-25 words)
+   - Use natural language that users would actually say
+   - Ensure prompts are clear and unambiguous
 
 ## Validation Process
 
@@ -65,9 +75,13 @@ You will receive tool information including the tool name, command, action verb,
 2. **STEP 2 - Generate Prompts**: 
    - Create 1-5 example prompts
    - Ensure each prompt includes all parameters from the checklist
+   - Apply Microsoft Style Guide standards
+   - Use realistic Azure resource names (e.g., 'myregistry', 'webapp-prod', 'mycontainer')
 
 3. **STEP 3 - Verification Matrix**: 
    - For each generated prompt, check off every required parameter from your checklist
+   - Verify all parameter values are wrapped in single quotes
+   - Confirm prompts use realistic Azure naming conventions
    - If ANY required parameter is missing from ANY prompt, STOP and fix it immediately
    - Do not proceed until ALL prompts contain ALL required parameters
 
@@ -75,7 +89,7 @@ You will receive tool information including the tool name, command, action verb,
 
 - Mix different prompt styles: direct commands, questions, requests, imperatives
 - Vary parameter ordering naturally across prompts
-- Use realistic Azure resource names and values
+- Use realistic Azure resource names that follow Azure naming conventions
 - Ensure each prompt is complete and standalone
 - Do not repeat phrasing or sentence structures between prompts
 - Include ONLY core business logic parameters that identify WHAT to act on:
@@ -157,12 +171,22 @@ Before submitting your output, verify:
 
 1. ✓ Created checklist of all required parameters
 2. ✓ Each prompt includes ALL required parameters
-3. ✓ No curly/smart quotes (only straight quotes: ' ")
-4. ✓ No HTML entities (&quot; &apos; etc.)
-5. ✓ Parameter values wrapped in single quotes
-6. ✓ Natural, varied language across prompts
-7. ✓ Concise and realistic Azure naming conventions
+3. ✓ All parameter values wrapped in single quotes (e.g., 'mystorageacct', 'rg-prod')
+4. ✓ Used realistic Azure resource names following naming conventions:
+   - Storage accounts: lowercase (e.g., 'mystorageacct', 'companydata2024')
+   - Resource groups: kebab-case (e.g., 'rg-prod', 'webapp-dev')
+   - Container registries: lowercase (e.g., 'myregistry', 'acrprod')
+   - Web apps: kebab-case (e.g., 'webapp-prod', 'api-staging')
+   - Containers/blobs: lowercase (e.g., 'documents', 'mycontainer')
+5. ✓ No curly/smart quotes (only straight quotes: ' ")
+6. ✓ No HTML entities (&quot; &apos; etc.)
+7. ✓ Natural, varied language across prompts
+8. ✓ Concise (10-25 words per prompt)
+9. ✓ Prompts follow Microsoft Style Guide principles (clear, active voice, present tense)
+10. ✓ No category labels or prefixes (plain natural language only)
 
 **CRITICAL:** If you see any of these characters in your output, you made a mistake: ' ' " " &quot; &apos;
 
 Correct format uses only: ' and "
+
+**CRITICAL:** Verify realistic Azure resource names are used, not placeholders like 'myresource' or 'example'. Use specific, realistic names like 'mystorageacct', 'webapp-prod', 'myregistry', 'rg-production'.
