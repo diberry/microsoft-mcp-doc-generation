@@ -1,0 +1,334 @@
+---
+title: Use Azure MCP Server with {{serviceBrandName}}
+description: Learn how to manage and interact with {{serviceBrandName}} using Azure Model Context Protocol (MCP) Server through natural language commands.
+ms.date: {{formatDate generatedAt}}
+ms.topic: how-to
+ms.service: {{serviceIdentifier}}
+{{#if genai-author}}
+author: {{genai-author}}
+ms.author: {{genai-msAuthor}}
+{{/if}}
+---
+
+# Use Azure MCP Server with {{serviceBrandName}}
+
+{{serviceBrandName}} {{genai-serviceShortDescription}}. Azure Model Context Protocol (MCP) Server enables you to {{genai-primaryInteraction}} using natural language commands through AI assistants like Claude, ChatGPT, or GitHub Copilot.
+
+## What is {{serviceBrandName}}?
+
+{{genai-serviceFullDescription}}
+
+{{#if genai-coreCapabilities}}
+It provides:
+
+{{#each genai-coreCapabilities}}
+- **{{this.name}}** - {{this.description}}
+{{/each}}
+{{/if}}
+
+When integrated with Azure MCP Server, you can {{genai-integrationBenefit}}.
+
+## Prerequisites
+
+To use Azure MCP Server with {{serviceBrandName}}, you need:
+
+- **Azure subscription** - An active Azure subscription. [Create one for free](https://azure.microsoft.com/free/).
+- **Azure MCP Server** - Installed and configured. See the [Azure MCP Server setup guide](https://github.com/microsoft/azure-mcp-server).
+{{#if genai-serviceSpecificPrerequisites}}
+{{#each genai-serviceSpecificPrerequisites}}
+- **{{this.title}}** - {{this.description}}
+{{/each}}
+{{/if}}
+- **Authentication** - Azure credentials configured with appropriate permissions.
+
+## How Azure MCP Server works with {{serviceBrandName}}
+
+Azure MCP Server provides a bridge between AI assistants and {{serviceBrandName}}. When you make a request:
+
+{{#if genai-workflowSteps}}
+{{#each genai-workflowSteps}}
+{{add @index 1}}. {{this}}
+{{/each}}
+{{else}}
+1. Your AI assistant receives your natural language request
+2. The AI assistant translates your request into an MCP tool call
+3. Azure MCP Server authenticates with Azure using your credentials
+4. The server executes the operation on {{serviceBrandName}}
+5. Results are returned to your AI assistant in a readable format
+{{/if}}
+
+This enables you to manage {{serviceBrandName}} resources without writing code or remembering complex CLI syntax.
+
+{{#if genai-setupSteps}}
+## Set up Azure MCP Server for {{serviceBrandName}}
+
+{{#each genai-setupSteps}}
+### Step {{add @index 1}}: {{this.title}}
+
+{{this.content}}
+
+{{#if this.example}}
+**Example:**
+
+```{{this.exampleLanguage}}
+{{this.example}}
+```
+{{/if}}
+
+{{/each}}
+{{/if}}
+
+## Available operations
+
+Azure MCP Server provides the following operations for {{serviceBrandName}}:
+
+{{#if genai-operationCategories}}
+{{#each genai-operationCategories}}
+### {{this.category}}
+
+{{#if this.description}}
+{{this.description}}
+
+{{/if}}
+{{#each this.tools}}
+- **[{{this.command}}]({{this.moreInfoLink}})** - {{this.genai-shortDescription}}
+{{/each}}
+
+{{/each}}
+{{else}}
+{{#each tools}}
+- **[{{command}}]({{moreInfoLink}})** - {{genai-shortDescription}}
+{{/each}}
+{{/if}}
+
+For complete parameter details and advanced usage, see the [{{serviceBrandName}} MCP tools reference]({{toolsReferenceLink}}).
+
+## Common tasks
+
+{{#each genai-commonTasks}}
+### Task {{add @index 1}}: {{title}}
+
+{{description}}
+
+**Example prompts:**
+
+```text
+{{#each examples}}
+{{this}}
+{{/each}}
+```
+
+{{#if whatHappens}}
+**What happens:**
+
+{{whatHappens}}
+{{/if}}
+
+{{#if result}}
+**Expected result:**
+
+{{result}}
+{{/if}}
+
+{{/each}}
+
+## Authentication and permissions
+
+### Required permissions
+
+To perform {{serviceBrandName}} operations through Azure MCP Server, your Azure identity needs the following permissions:
+
+{{#if genai-permissionsTable}}
+| Operation Type | Required Role | Scope |
+|---------------|---------------|--------|
+{{#each genai-permissionsTable}}
+| {{this.operationType}} | {{this.role}} | {{this.scope}} |
+{{/each}}
+{{else}}
+{{#if genai-requiredRoles}}
+{{#each genai-requiredRoles}}
+- **{{name}}** - {{purpose}}
+{{/each}}
+{{else}}
+- **Contributor** or **Owner** role on the subscription or resource group
+- Or specific {{serviceBrandName}} permissions as required for your operations
+{{/if}}
+{{/if}}
+
+{{#if genai-authenticationMethods}}
+### Authentication methods
+
+Azure MCP Server supports the following authentication methods with {{serviceBrandName}}:
+
+{{#each genai-authenticationMethods}}
+- **{{this.method}}** - {{this.description}}
+{{/each}}
+{{/if}}
+
+{{#if genai-authenticationNotes}}
+### Additional authentication notes
+
+{{genai-authenticationNotes}}
+{{/if}}
+
+## Best practices
+
+{{#if genai-bestPracticesStructured}}
+### Security
+
+{{#each genai-bestPracticesStructured.security}}
+- {{this}}
+{{/each}}
+
+{{#if genai-bestPracticesStructured.performance}}
+### Performance
+
+{{#each genai-bestPracticesStructured.performance}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if genai-bestPracticesStructured.costOptimization}}
+### Cost optimization
+
+{{#each genai-bestPracticesStructured.costOptimization}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if genai-bestPracticesStructured.reliability}}
+### Reliability
+
+{{#each genai-bestPracticesStructured.reliability}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if genai-bestPracticesStructured.operational}}
+### Operational excellence
+
+{{#each genai-bestPracticesStructured.operational}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{else}}
+{{#if genai-bestPractices}}
+{{#each genai-bestPractices}}
+- **{{title}}** - {{description}}
+{{/each}}
+{{else}}
+- Use clear, specific natural language commands that include resource names and locations
+- Review actions before confirming operations that modify or delete resources
+- Follow the [Azure Well-Architected Framework](https://learn.microsoft.com/azure/well-architected/) principles
+- Implement proper access control using Azure RBAC
+- Monitor operations and set up alerts for critical changes
+{{/if}}
+{{/if}}
+
+## Troubleshooting
+
+{{#if genai-troubleshootingIssues}}
+{{#each genai-troubleshootingIssues}}
+### Issue: {{title}}
+
+{{#if symptoms}}
+**Symptoms:** {{symptoms}}
+
+{{/if}}
+{{#if cause}}
+**Cause:** {{cause}}
+
+{{/if}}
+**Resolution:** {{resolution}}
+
+{{/each}}
+
+### Get support
+
+If you need additional help:
+
+- Review the [Azure MCP Server documentation](https://github.com/microsoft/azure-mcp-server)
+- Check the [Azure MCP Server troubleshooting guide](https://github.com/microsoft/azure-mcp-server/blob/main/docs/troubleshooting.md)
+- Contact [Azure Support](https://azure.microsoft.com/support/options/)
+{{#if genai-supportLinks}}
+{{#each genai-supportLinks}}
+- [{{this.title}}]({{this.url}})
+{{/each}}
+{{/if}}
+
+{{else}}
+{{#if genai-commonIssues}}
+{{#each genai-commonIssues}}
+**{{title}}**
+
+{{description}}
+
+{{#if resolution}}
+**Resolution:** {{resolution}}
+{{/if}}
+
+{{/each}}
+{{else}}
+If you encounter issues when using Azure MCP Server with {{serviceBrandName}}:
+
+1. **Verify Azure MCP Server is running** - Check that the MCP server is active in your AI assistant
+2. **Confirm authentication** - Ensure your Azure credentials are valid and properly configured
+3. **Check permissions** - Verify you have the required RBAC roles for {{serviceBrandName}} operations
+4. **Review error messages** - MCP Server provides detailed error information to help diagnose issues
+5. **Check service status** - Verify {{serviceBrandName}} and Azure MCP Server are operational
+
+For more help, see the [Azure MCP Server troubleshooting guide](https://github.com/microsoft/azure-mcp-server/blob/main/docs/troubleshooting.md).
+{{/if}}
+{{/if}}
+
+{{#if genai-nextSteps}}
+## Next steps
+
+Now that you've learned to use Azure MCP Server with {{serviceBrandName}}, explore these resources:
+
+{{#each genai-nextSteps}}
+- [{{this.title}}]({{this.url}}){{#if this.description}} - {{this.description}}{{/if}}
+{{/each}}
+
+{{/if}}
+
+## Related content
+
+### Azure MCP Server
+
+- [Azure MCP Server overview](https://github.com/microsoft/azure-mcp-server)
+- [Azure MCP Server installation guide](https://github.com/microsoft/azure-mcp-server#installation)
+- [Azure MCP Server configuration](https://github.com/microsoft/azure-mcp-server/blob/main/docs/configuration.md)
+- [{{serviceBrandName}} MCP tools reference]({{toolsReferenceLink}})
+
+{{#if genai-serviceDocLink}}
+### {{serviceBrandName}}
+
+- [{{serviceBrandName}} documentation]({{genai-serviceDocLink}})
+{{#if genai-serviceLinks}}
+{{#each genai-serviceLinks}}
+- [{{this.title}}]({{this.url}})
+{{/each}}
+{{/if}}
+{{/if}}
+
+{{#if genai-additionalLinks}}
+### Additional resources
+
+{{#each genai-additionalLinks}}
+- [{{title}}]({{url}})
+{{/each}}
+{{/if}}
+
+{{#if genai-aiAutomationLinks}}
+### AI and automation
+
+{{#each genai-aiAutomationLinks}}
+- [{{this.title}}]({{this.url}})
+{{/each}}
+{{/if}}
+
+---
+
+*This article was generated for Azure MCP Server version {{version}} on {{formatDate generatedAt}}*
