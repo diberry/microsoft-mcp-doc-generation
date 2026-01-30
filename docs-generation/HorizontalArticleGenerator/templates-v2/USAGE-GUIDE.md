@@ -20,8 +20,8 @@ cd docs-generation/HorizontalArticleGenerator/templates
 # Backup original
 cp horizontal-article-template.hbs horizontal-article-template.hbs.backup
 
-# Use new template
-cp horizontal-service-template.hbs horizontal-article-template.hbs
+# Use new template from templates-v2
+cp ../templates-v2/horizontal-service-template.hbs horizontal-article-template.hbs
 
 # Run generator
 cd ../..
@@ -49,7 +49,10 @@ private readonly string _templatePath;
 public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, string templateName = "horizontal-article")
 {
     // ... existing validation ...
-    _templatePath = $"./HorizontalArticleGenerator/templates/{templateName}-template.hbs";
+    // Support both templates and templates-v2 directories
+    _templatePath = templateName == "horizontal-service" 
+        ? "./HorizontalArticleGenerator/templates-v2/horizontal-service-template.hbs"
+        : $"./HorizontalArticleGenerator/templates/{templateName}-template.hbs";
     _aiClient = new GenerativeAIClient(options);
     _useTextTransformation = useTextTransformation;
     _generateAllArticles = generateAllArticles;
