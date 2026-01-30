@@ -36,7 +36,7 @@ mv horizontal-article-template.hbs.backup horizontal-article-template.hbs
 
 To make the template selectable via command line:
 
-1. **Edit HorizontalArticleGenerator.cs** (line 68):
+1. **Edit HorizontalArticleGenerator.cs** (in the class constants section near the top):
 
 ```csharp
 // Before:
@@ -45,7 +45,7 @@ private const string TEMPLATE_PATH = "./HorizontalArticleGenerator/templates/hor
 // After:
 private readonly string _templatePath;
 
-// Update constructor (around line 74):
+// Update constructor:
 public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, string templateName = "horizontal-article")
 {
     // ... existing validation ...
@@ -55,7 +55,7 @@ public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTrans
     _generateAllArticles = generateAllArticles;
 }
 
-// Update RenderAndSaveArticle method (line 478):
+// Update RenderAndSaveArticle method:
 private async Task RenderAndSaveArticle(HorizontalArticleTemplateData templateData)
 {
     var templatePath = Path.GetFullPath(_templatePath); // Use _templatePath instead of TEMPLATE_PATH

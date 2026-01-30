@@ -55,7 +55,7 @@
       "title": "Verify Azure MCP Server configuration",
       "content": "Ensure Azure MCP Server is running and authenticated with your Azure account. Test the connection by asking your AI assistant to list your Key Vaults.",
       "example": "List my Key Vaults in the East US region",
-      "exampleLanguage": "text"
+      "exampleLanguage": "plaintext"
     }
   ],
   "genai-operationCategories": [
