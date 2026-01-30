@@ -1,0 +1,284 @@
+{
+  "serviceBrandName": "Azure Key Vault",
+  "serviceIdentifier": "keyvault",
+  "generatedAt": "2024-01-29T12:00:00Z",
+  "version": "1.0.0",
+  "toolsReferenceLink": "../tools/keyvault.md",
+  "genai-author": "Azure Documentation Team",
+  "genai-msAuthor": "azuredocs",
+  "genai-serviceShortDescription": "provides secure storage for secrets, keys, and certificates",
+  "genai-primaryInteraction": "manage secrets, keys, and certificates securely",
+  "genai-serviceFullDescription": "Azure Key Vault is a cloud service for securely storing and accessing secrets, encryption keys, and certificates. It helps you control access to passwords, API keys, and other secrets your applications need. Key Vault eliminates the need to store sensitive information in code and provides centralized secret management with audit logging and compliance capabilities.",
+  "genai-coreCapabilities": [
+    {
+      "name": "Secret management",
+      "description": "Securely store and tightly control access to tokens, passwords, certificates, API keys, and other secrets"
+    },
+    {
+      "name": "Key management",
+      "description": "Create and control encryption keys used to encrypt your data"
+    },
+    {
+      "name": "Certificate management",
+      "description": "Provision, manage, and deploy public and private SSL/TLS certificates"
+    }
+  ],
+  "genai-integrationBenefit": "manage your Key Vault secrets, keys, and certificates through conversational AI without writing code or remembering complex CLI syntax",
+  "genai-serviceSpecificPrerequisites": [
+    {
+      "title": "Existing Key Vault resource",
+      "description": "A Key Vault must be created before you can manage secrets. Data plane operations require an existing vault."
+    }
+  ],
+  "genai-workflowSteps": [
+    "Your AI assistant receives your natural language request (e.g., 'Get the secret named api-key from my-vault')",
+    "The AI assistant translates your request into an MCP tool call with appropriate parameters",
+    "Azure MCP Server authenticates with Azure using your configured credentials",
+    "The server executes the Key Vault operation using Azure SDK",
+    "Results are formatted and returned to your AI assistant in a human-readable format",
+    "The AI assistant presents the information to you in natural language"
+  ],
+  "genai-setupSteps": [
+    {
+      "title": "Create a Key Vault resource",
+      "content": "If you don't already have a Key Vault, create one using the Azure portal, Azure CLI, or PowerShell.",
+      "example": "az keyvault create --name my-keyvault --resource-group my-rg --location eastus",
+      "exampleLanguage": "bash"
+    },
+    {
+      "title": "Configure access permissions",
+      "content": "Assign the appropriate RBAC role to your Azure identity. For reading secrets, use 'Key Vault Secrets User'. For managing secrets, use 'Key Vault Secrets Officer'.",
+      "example": "az role assignment create --role \"Key Vault Secrets User\" --assignee <user-object-id> --scope <key-vault-resource-id>",
+      "exampleLanguage": "bash"
+    },
+    {
+      "title": "Verify Azure MCP Server configuration",
+      "content": "Ensure Azure MCP Server is running and authenticated with your Azure account. Test the connection by asking your AI assistant to list your Key Vaults.",
+      "example": "List my Key Vaults in the East US region",
+      "exampleLanguage": "text"
+    }
+  ],
+  "genai-operationCategories": [
+    {
+      "category": "Secret Management",
+      "description": "Operations for managing secrets stored in Key Vault",
+      "tools": [
+        {
+          "command": "keyvault secret set",
+          "moreInfoLink": "../parameters/keyvault-secret-set-parameters.md",
+          "genai-shortDescription": "Create a new secret or update an existing secret's value in Key Vault"
+        },
+        {
+          "command": "keyvault secret get",
+          "moreInfoLink": "../parameters/keyvault-secret-get-parameters.md",
+          "genai-shortDescription": "Retrieve the value of a secret from Key Vault"
+        },
+        {
+          "command": "keyvault secret delete",
+          "moreInfoLink": "../parameters/keyvault-secret-delete-parameters.md",
+          "genai-shortDescription": "Delete a secret from Key Vault (supports soft-delete)"
+        }
+      ]
+    },
+    {
+      "category": "Key Management",
+      "description": "Operations for managing cryptographic keys",
+      "tools": [
+        {
+          "command": "keyvault key create",
+          "moreInfoLink": "../parameters/keyvault-key-create-parameters.md",
+          "genai-shortDescription": "Create a new encryption key in Key Vault"
+        }
+      ]
+    }
+  ],
+  "genai-commonTasks": [
+    {
+      "title": "Store application secrets",
+      "description": "Store sensitive configuration like database connection strings, API keys, or service credentials that your applications need to access.",
+      "examples": [
+        "Store my database connection string as a secret named 'db-connection' in Key Vault 'prod-vault'",
+        "Create a new secret called 'api-key' with value 'sk_live_abc123' in my Key Vault 'app-secrets'",
+        "Add a secret named 'storage-key' to the vault 'myapp-kv' in resource group 'production'"
+      ],
+      "whatHappens": "Azure MCP Server authenticates to your Key Vault using your credentials, then creates or updates the secret with the specified name and value. The secret is encrypted at rest using Azure's encryption infrastructure. All access to the secret is logged for audit purposes.",
+      "result": "The AI assistant confirms the secret was stored successfully, provides the secret version identifier, and may include the secret's metadata (creation time, expiration if set, but never the secret value itself in confirmation)."
+    },
+    {
+      "title": "Retrieve secrets for application use",
+      "description": "Fetch secret values that your applications need at runtime without hardcoding sensitive information.",
+      "examples": [
+        "Get the secret 'api-key' from my Key Vault 'prod-vault'",
+        "Retrieve the value of secret 'db-password' from vault 'app-secrets'",
+        "Show me the current value of 'connection-string' in Key Vault 'myapp-kv'"
+      ],
+      "whatHappens": "Azure MCP Server retrieves the latest version of the secret from Key Vault. The access is logged, and the secret value is returned securely to your AI assistant.",
+      "result": "Your AI assistant receives the secret value and presents it to you. Use caution when viewing secrets in shared environments. The assistant may also show metadata like the secret's version and last updated date."
+    },
+    {
+      "title": "Rotate and manage secret lifecycle",
+      "description": "Update secrets to new values as part of security best practices or when credentials change.",
+      "examples": [
+        "Update the secret 'api-key' in vault 'prod-vault' with a new value",
+        "Rotate the database password secret 'db-pass' in Key Vault 'app-secrets'",
+        "Change the value of 'service-token' in my Key Vault to a new token"
+      ],
+      "whatHappens": "Azure MCP Server creates a new version of the secret with the updated value. Previous versions are retained (if versioning is enabled) and can be accessed if needed. The change is immediately available to applications.",
+      "result": "The secret is updated with a new version identifier. Applications using the latest version will automatically receive the new value on their next retrieval."
+    }
+  ],
+  "genai-permissionsTable": [
+    {
+      "operationType": "Read secrets",
+      "role": "Key Vault Secrets User",
+      "scope": "Key Vault resource"
+    },
+    {
+      "operationType": "Create/update secrets",
+      "role": "Key Vault Secrets Officer",
+      "scope": "Key Vault resource"
+    },
+    {
+      "operationType": "Delete secrets",
+      "role": "Key Vault Secrets Officer",
+      "scope": "Key Vault resource"
+    },
+    {
+      "operationType": "Manage Key Vault itself",
+      "role": "Key Vault Contributor",
+      "scope": "Resource Group or Subscription"
+    }
+  ],
+  "genai-authenticationMethods": [
+    {
+      "method": "Azure CLI (az login)",
+      "description": "Use 'az login' to authenticate locally. Recommended for development and testing."
+    },
+    {
+      "method": "Managed Identity",
+      "description": "Automatically authenticate when running in Azure services like VMs, App Service, or Functions. Best for production workloads."
+    },
+    {
+      "method": "Service Principal",
+      "description": "Use application credentials for CI/CD pipelines and automated scenarios. Requires client ID, tenant ID, and secret."
+    }
+  ],
+  "genai-authenticationNotes": "Key Vault supports both Azure RBAC (recommended) and classic access policies. Ensure your vault is configured for RBAC permissions if you're using the data plane roles listed above. Legacy vaults may need to enable RBAC in the Access configuration.",
+  "genai-bestPracticesStructured": {
+    "security": [
+      "Use Azure RBAC instead of access policies for fine-grained permission control",
+      "Enable soft delete and purge protection to prevent accidental or malicious deletion",
+      "Implement network restrictions using firewall rules and private endpoints",
+      "Rotate secrets regularly and set expiration dates on sensitive credentials",
+      "Use managed identities instead of service principals whenever possible"
+    ],
+    "performance": [
+      "Cache secrets locally in your applications to reduce Key Vault API calls and costs",
+      "Use Key Vault references in Azure App Service for automatic secret injection",
+      "Consider using Premium tier for HSM-backed keys if you need hardware security modules"
+    ],
+    "costOptimization": [
+      "Monitor Key Vault transaction costs, especially for high-volume applications",
+      "Use Standard tier for most production workloads unless HSM protection is required",
+      "Consolidate secrets into fewer Key Vaults where it makes sense to reduce management overhead"
+    ],
+    "reliability": [
+      "Enable diagnostic logging to track access patterns and identify issues",
+      "Implement retry logic with exponential backoff for transient failures",
+      "Use geo-redundant Key Vaults or backup/restore for critical secrets"
+    ],
+    "operational": [
+      "Use descriptive secret names that clearly indicate their purpose (e.g., 'prod-sql-db-password')",
+      "Include metadata tags to track ownership, environment, and lifecycle",
+      "Set up Azure Monitor alerts for failed authentication attempts or unusual access patterns",
+      "Document your secret naming conventions and rotation schedules"
+    ]
+  },
+  "genai-troubleshootingIssues": [
+    {
+      "title": "Access denied when trying to read secrets",
+      "symptoms": "You receive 'Forbidden' or 'Access denied' errors when attempting to retrieve secret values through Azure MCP Server.",
+      "cause": "Your Azure identity lacks the necessary RBAC permissions on the Key Vault resource. This commonly occurs when using classic access policies instead of RBAC, or when the role assignment scope is incorrect.",
+      "resolution": "Assign the 'Key Vault Secrets User' role to your identity on the Key Vault resource. Use: az role assignment create --role 'Key Vault Secrets User' --assignee <your-object-id> --scope <key-vault-resource-id>. Ensure the vault has RBAC enabled in its Access configuration settings."
+    },
+    {
+      "title": "Secret not found error",
+      "symptoms": "You get 'Secret not found' or 'SecretNotFound' errors when trying to retrieve a secret you believe exists.",
+      "cause": "The secret name is misspelled, the secret has been deleted (soft-delete may be retaining it), or you're accessing the wrong Key Vault.",
+      "resolution": "Verify the exact secret name and Key Vault name. Check for soft-deleted secrets using 'az keyvault secret list-deleted'. Ensure you're authenticated to the correct Azure subscription and tenant."
+    },
+    {
+      "title": "Network connectivity issues",
+      "symptoms": "Timeouts or connection failures when accessing Key Vault through MCP Server.",
+      "cause": "Key Vault firewall rules or private endpoint configuration is blocking access from your current location or the MCP server's network.",
+      "resolution": "Check Key Vault's Networking settings in the Azure portal. Either add your IP address to the firewall allowlist, or configure the appropriate private endpoint access if using VNet integration."
+    }
+  ],
+  "genai-supportLinks": [
+    {
+      "title": "Key Vault troubleshooting guide",
+      "url": "https://learn.microsoft.com/azure/key-vault/general/troubleshooting"
+    },
+    {
+      "title": "Azure RBAC troubleshooting",
+      "url": "https://learn.microsoft.com/azure/role-based-access-control/troubleshooting"
+    }
+  ],
+  "genai-nextSteps": [
+    {
+      "title": "Automate secret rotation",
+      "url": "https://learn.microsoft.com/azure/key-vault/secrets/tutorial-rotation",
+      "description": "Learn how to automatically rotate secrets using Azure Functions and Event Grid"
+    },
+    {
+      "title": "Integrate Key Vault with Azure Functions",
+      "url": "https://learn.microsoft.com/azure/azure-functions/functions-identity-based-connections",
+      "description": "Use Key Vault references to securely pass secrets to your serverless applications"
+    },
+    {
+      "title": "Monitor Key Vault with Azure Monitor",
+      "url": "https://learn.microsoft.com/azure/key-vault/general/monitor-key-vault",
+      "description": "Set up monitoring, alerting, and diagnostics for your Key Vault resources"
+    },
+    {
+      "title": "Use Key Vault with Azure Kubernetes Service",
+      "url": "https://learn.microsoft.com/azure/aks/csi-secrets-store-driver",
+      "description": "Mount secrets from Key Vault as volumes in AKS pods using CSI driver"
+    }
+  ],
+  "genai-serviceDocLink": "https://learn.microsoft.com/azure/key-vault/general/overview",
+  "genai-serviceLinks": [
+    {
+      "title": "Key Vault quickstart",
+      "url": "https://learn.microsoft.com/azure/key-vault/secrets/quick-create-portal"
+    },
+    {
+      "title": "Key Vault security best practices",
+      "url": "https://learn.microsoft.com/azure/key-vault/general/best-practices"
+    },
+    {
+      "title": "Key Vault pricing",
+      "url": "https://azure.microsoft.com/pricing/details/key-vault/"
+    }
+  ],
+  "genai-additionalLinks": [
+    {
+      "title": "Azure MCP Server GitHub repository",
+      "url": "https://github.com/microsoft/azure-mcp-server"
+    },
+    {
+      "title": "Model Context Protocol specification",
+      "url": "https://modelcontextprotocol.io/"
+    }
+  ],
+  "genai-aiAutomationLinks": [
+    {
+      "title": "Using AI assistants with Azure",
+      "url": "https://learn.microsoft.com/azure/developer/ai/"
+    },
+    {
+      "title": "Azure automation best practices",
+      "url": "https://learn.microsoft.com/azure/automation/automation-intro"
+    }
+  ]
+}
