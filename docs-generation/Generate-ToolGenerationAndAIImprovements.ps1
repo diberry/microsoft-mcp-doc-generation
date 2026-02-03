@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Separate tool generation orchestration script - runs all 3 generators in sequence
+    Tool generation and AI improvements orchestration script - runs all 3 generators in sequence
     
 .DESCRIPTION
-    This script orchestrates the separated tool generation process:
+    This script orchestrates the tool generation and AI improvements process:
     1. RawToolGenerator - Creates raw files with placeholders
     2. ComposedToolGenerator - Replaces placeholders with actual content
     3. ImprovedToolGenerator - Applies AI-based improvements
@@ -30,10 +30,10 @@
     Maximum tokens for AI improvements (default: 8000)
     
 .EXAMPLE
-    ./Generate-SeparateTools.ps1
-    ./Generate-SeparateTools.ps1 -SkipRaw
-    ./Generate-SeparateTools.ps1 -SkipImproved
-    ./Generate-SeparateTools.ps1 -MaxTokens 12000
+    ./Generate-ToolGenerationAndAIImprovements.ps1
+    ./Generate-ToolGenerationAndAIImprovements.ps1 -SkipRaw
+    ./Generate-ToolGenerationAndAIImprovements.ps1 -SkipImproved
+    ./Generate-ToolGenerationAndAIImprovements.ps1 -MaxTokens 12000
 #>
 
 param(
@@ -68,7 +68,7 @@ $logDir = Join-Path $outputDir "logs"
 if (-not (Test-Path $logDir)) {
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 }
-$logFile = Join-Path $logDir "separate-tools-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+$logFile = Join-Path $logDir "tool-generation-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 Start-Transcript -Path $logFile -Append
 
 # Helper functions for colored output
@@ -89,7 +89,7 @@ function Write-Section {
 # Display header
 Write-Host ""
 Write-Host "╔═══════════════════════════════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║       Separate Tool Generation Orchestration Script              ║" -ForegroundColor Green
+Write-Host "║    Tool Generation and AI Improvements Script                    ║" -ForegroundColor Green
 Write-Host "╚═══════════════════════════════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
 Write-Host "Output Directory: $outputDir" -ForegroundColor White
