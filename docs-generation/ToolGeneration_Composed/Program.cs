@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using ComposedToolGenerator.Services;
+using ToolGeneration_Composed.Services;
 
-namespace ComposedToolGenerator;
+namespace ToolGeneration_Composed;
 
 internal class Program
 {

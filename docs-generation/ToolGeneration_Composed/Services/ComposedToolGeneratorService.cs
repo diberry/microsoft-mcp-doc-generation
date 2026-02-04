@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using System.Text;
-using ComposedToolGenerator.Models;
+using ToolGeneration_Composed.Models;
 
-namespace ComposedToolGenerator.Services;
+namespace ToolGeneration_Composed.Services;
 
 /// <summary>
 /// Service that composes tool documentation by replacing placeholders with actual content

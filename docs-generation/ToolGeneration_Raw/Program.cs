@@ -2,10 +2,10 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
-using RawToolGenerator.Services;
+using ToolGeneration_Raw.Services;
 using Shared;
 
-namespace RawToolGenerator;
+namespace ToolGeneration_Raw;
 
 internal class Program
 {

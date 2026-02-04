@@ -28,7 +28,7 @@ The system consists of three independent .NET packages that implement a modular 
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌───────────────────┐      ┌────────────────────┐             │
-│  │ CLI Output JSON   │ ────▶│ RawToolGenerator   │             │
+│  │ CLI Output JSON   │ ────▶│ ToolGeneration_Raw   │             │
 │  │ (cli-output.json) │      │  - Creates raw     │             │
 │  └───────────────────┘      │    files with      │             │
 │                              │    placeholders    │             │
@@ -74,11 +74,11 @@ generated/
 
 ## Three-Stage Pipeline
 
-### Stage 1: RawToolGenerator
+### Stage 1: ToolGeneration_Raw
 
 **Purpose**: Creates raw tool documentation files with placeholders from CLI output.
 
-**Package**: `docs-generation/RawToolGenerator/`
+**Package**: `docs-generation/ToolGeneration_Raw/`
 
 **Input**: 
 - `./generated/cli/cli-output.json` (MCP CLI output)
@@ -95,13 +95,13 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [RawToolGenerator/README.md](RawToolGenerator/README.md)
+**README**: [ToolGeneration_Raw/README.md](ToolGeneration_Raw/README.md)
 
-### Stage 2: ComposedToolGenerator
+### Stage 2: ToolGeneration_Composed
 
 **Purpose**: Composes complete tool documentation by replacing placeholders with actual content.
 
-**Package**: `docs-generation/ComposedToolGenerator/`
+**Package**: `docs-generation/ToolGeneration_Composed/`
 
 **Input**:
 - `./generated/tools-raw/*.md` (Raw files from Stage 1)
@@ -121,13 +121,13 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [ComposedToolGenerator/README.md](ComposedToolGenerator/README.md)
+**README**: [ToolGeneration_Composed/README.md](ToolGeneration_Composed/README.md)
 
-### Stage 3: ImprovedToolGenerator
+### Stage 3: ToolGeneration_Improved
 
 **Purpose**: Applies AI-based improvements using Azure OpenAI to enforce Microsoft style guidelines.
 
-**Package**: `docs-generation/ImprovedToolGenerator/`
+**Package**: `docs-generation/ToolGeneration_Improved/`
 
 **Input**:
 - `./generated/tools-composed/*.md` (Composed files)
@@ -147,7 +147,7 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [ImprovedToolGenerator/README.md](ImprovedToolGenerator/README.md)
+**README**: [ToolGeneration_Improved/README.md](ToolGeneration_Improved/README.md)
 
 ---
 
@@ -161,32 +161,32 @@ Create 3 new .NET packages to separate the tool generation process into distinct
 
 All 5 phases of the implementation are complete:
 
-#### Phase 1: RawToolGenerator ✅
+#### Phase 1: ToolGeneration_Raw ✅
 
 **Files Created**:
-- `RawToolGenerator.csproj` - Project file with dependencies
+- `ToolGeneration_Raw.csproj` - Project file with dependencies
 - `Program.cs` - CLI interface with argument parsing
 - `Models/CliModels.cs` - Data models for CLI input
 - `Models/RawToolData.cs` - Model for raw tool files
-- `Services/RawToolGeneratorService.cs` - Core generation logic
+- `Services/ToolGeneration_RawService.cs` - Core generation logic
 - `README.md` - Comprehensive usage documentation
 
-#### Phase 2: ComposedToolGenerator ✅
+#### Phase 2: ToolGeneration_Composed ✅
 
 **Files Created**:
-- `ComposedToolGenerator.csproj` - Project file
+- `ToolGeneration_Composed.csproj` - Project file
 - `Program.cs` - CLI interface
 - `Models/ComposedToolData.cs` - Model for composed tools
-- `Services/ComposedToolGeneratorService.cs` - Composition logic
+- `Services/ToolGeneration_ComposedService.cs` - Composition logic
 - `README.md` - Usage documentation
 
-#### Phase 3: ImprovedToolGenerator ✅
+#### Phase 3: ToolGeneration_Improved ✅
 
 **Files Created**:
-- `ImprovedToolGenerator.csproj` - Project file with GenerativeAI dependency
+- `ToolGeneration_Improved.csproj` - Project file with GenerativeAI dependency
 - `Program.cs` - CLI interface with Azure OpenAI integration
 - `Models/ImprovedToolData.cs` - Model for improved tools
-- `Services/ImprovedToolGeneratorService.cs` - AI improvement logic
+- `Services/ToolGeneration_ImprovedService.cs` - AI improvement logic
 - `Prompts/system-prompt.txt` - System prompt for AI (Microsoft Style Guide)
 - `Prompts/user-prompt-template.txt` - User prompt template
 - `README.md` - Usage documentation with troubleshooting
@@ -251,11 +251,11 @@ All documentation consolidated into this single comprehensive guide.
 
 From Issue #18:
 
-- ✅ Create Tool file from CLI generation with placeholders → **RawToolGenerator**
+- ✅ Create Tool file from CLI generation with placeholders → **ToolGeneration_Raw**
 - ✅ Put this file in ./tools-raw → **Outputs to correct directory**
-- ✅ Replace placeholders with actual content → **ComposedToolGenerator**
+- ✅ Replace placeholders with actual content → **ToolGeneration_Composed**
 - ✅ Put this file in ./tools-composed → **Outputs to correct directory**
-- ✅ Send improved tool file to AI with Microsoft guidelines → **ImprovedToolGenerator**
+- ✅ Send improved tool file to AI with Microsoft guidelines → **ToolGeneration_Improved**
 - ✅ Put this file in ./tools-ai-improved → **Outputs to correct directory**
 - ✅ Use existing GenerativeAI .NET package → **Integrated successfully**
 - ✅ Create script to run all 3 packages → **Generate-ToolGenerationAndAIImprovements.ps1**
@@ -272,9 +272,9 @@ From Issue #18:
 - Documentation files: 5
 
 **Lines of Code**:
-- RawToolGenerator: ~300 LOC
-- ComposedToolGenerator: ~300 LOC
-- ImprovedToolGenerator: ~250 LOC
+- ToolGeneration_Raw: ~300 LOC
+- ToolGeneration_Composed: ~300 LOC
+- ToolGeneration_Improved: ~250 LOC
 - Orchestration script: ~350 LOC
 
 **Build Status**: 100% successful (0 errors, 0 warnings)
@@ -297,9 +297,9 @@ Based on 208 tools:
 1. **Build all packages**:
    ```bash
    cd docs-generation
-   dotnet build RawToolGenerator/RawToolGenerator.csproj
-   dotnet build ComposedToolGenerator/ComposedToolGenerator.csproj
-   dotnet build ImprovedToolGenerator/ImprovedToolGenerator.csproj
+   dotnet build ToolGeneration_Raw/ToolGeneration_Raw.csproj
+   dotnet build ToolGeneration_Composed/ToolGeneration_Composed.csproj
+   dotnet build ToolGeneration_Improved/ToolGeneration_Improved.csproj
    ```
 
 2. **Ensure prerequisites exist**:
@@ -343,13 +343,13 @@ pwsh ./Generate-ToolGenerationAndAIImprovements.ps1
 
 ```bash
 # Stage 1: Raw generation
-dotnet run --project RawToolGenerator \
+dotnet run --project ToolGeneration_Raw \
   ../generated/cli/cli-output.json \
   ../generated/tools-raw \
   "2.0.0-beta.13"
 
 # Stage 2: Composition
-dotnet run --project ComposedToolGenerator \
+dotnet run --project ToolGeneration_Composed \
   ../generated/tools-raw \
   ../generated/tools-composed \
   ../generated/multi-page/annotations \
@@ -357,7 +357,7 @@ dotnet run --project ComposedToolGenerator \
   ../generated/multi-page/example-prompts
 
 # Stage 3: AI Improvement (optional)
-dotnet run --project ImprovedToolGenerator \
+dotnet run --project ToolGeneration_Improved \
   ../generated/tools-composed \
   ../generated/tools-ai-improved \
   8000
@@ -368,16 +368,16 @@ dotnet run --project ImprovedToolGenerator \
 #### Adding New Features
 
 **To modify raw file format**:
-- Edit `RawToolGenerator/Services/RawToolGeneratorService.cs`
+- Edit `ToolGeneration_Raw/Services/ToolGeneration_RawService.cs`
 - Update `GenerateRawToolContent()` method
 
 **To change content composition**:
-- Edit `ComposedToolGenerator/Services/ComposedToolGeneratorService.cs`
+- Edit `ToolGeneration_Composed/Services/ToolGeneration_ComposedService.cs`
 - Modify `ComposeContent()` method
 
 **To improve AI prompts**:
-- Edit `ImprovedToolGenerator/Prompts/system-prompt.txt`
-- Update `ImprovedToolGenerator/Prompts/user-prompt-template.txt`
+- Edit `ToolGeneration_Improved/Prompts/system-prompt.txt`
+- Update `ToolGeneration_Improved/Prompts/user-prompt-template.txt`
 
 #### Testing
 
@@ -385,7 +385,7 @@ Each generator can be tested independently:
 
 ```bash
 # Test with a small subset
-dotnet run --project RawToolGenerator \
+dotnet run --project ToolGeneration_Raw \
   test-cli-output.json \
   test-output \
   "test"
@@ -395,7 +395,7 @@ dotnet run --project RawToolGenerator \
 
 #### Missing Content Files
 
-If ComposedToolGenerator reports missing content files:
+If ToolGeneration_Composed reports missing content files:
 1. Ensure annotations, parameters, and example prompts are generated
 2. Check filename matching patterns
 3. Review file counts in source directories
@@ -453,9 +453,9 @@ Replace the existing `CompleteToolGenerator` with the separated tool generation 
    - ParamAnnotationGenerator → multi-page/param-and-annotation/*.md
    - ExamplePromptGenerator → multi-page/example-prompts/*.md
 3. Run Separated Tool Generation:
-   - RawToolGenerator → tools-raw/*.md
-   - ComposedToolGenerator → tools-composed/*.md
-   - ImprovedToolGenerator → tools-ai-improved/*.md (optional)
+   - ToolGeneration_Raw → tools-raw/*.md
+   - ToolGeneration_Composed → tools-composed/*.md
+   - ToolGeneration_Improved → tools-ai-improved/*.md (optional)
 4. Generate reports and summaries
 ```
 
@@ -468,9 +468,9 @@ Run both existing and new pipelines in parallel for comparison:
 2. Run CSharpGenerator (existing pipeline)
    - All existing generators including CompleteToolGenerator
 3. Run Separated Tool Generation (new pipeline)
-   - RawToolGenerator
-   - ComposedToolGenerator
-   - ImprovedToolGenerator (optional)
+   - ToolGeneration_Raw
+   - ToolGeneration_Composed
+   - ToolGeneration_Improved (optional)
 4. Compare outputs for quality assessment
 ```
 
@@ -522,9 +522,9 @@ Modify the Dockerfile to include the new generators:
 ```dockerfile
 # Build separated tool generators
 WORKDIR /docs-generation
-RUN dotnet build RawToolGenerator/RawToolGenerator.csproj && \
-    dotnet build ComposedToolGenerator/ComposedToolGenerator.csproj && \
-    dotnet build ImprovedToolGenerator/ImprovedToolGenerator.csproj
+RUN dotnet build ToolGeneration_Raw/ToolGeneration_Raw.csproj && \
+    dotnet build ToolGeneration_Composed/ToolGeneration_Composed.csproj && \
+    dotnet build ToolGeneration_Improved/ToolGeneration_Improved.csproj
 ```
 
 #### Step 4: Update GitHub Actions Workflow
@@ -666,7 +666,7 @@ The integration is considered successful when:
 
 #### Prompt Management
 
-- Prompts are stored in `ImprovedToolGenerator/Prompts/`
+- Prompts are stored in `ToolGeneration_Improved/Prompts/`
 - Version control prompts alongside code
 - Document prompt changes and their effects
 

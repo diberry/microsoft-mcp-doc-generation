@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using GenerativeAI;
-using ImprovedToolGenerator.Models;
+using ToolGeneration_Improved.Models;
 
-namespace ImprovedToolGenerator.Services;
+namespace ToolGeneration_Improved.Services;
 
 /// <summary>
 /// Service that improves tool documentation using AI based on Microsoft content guidelines

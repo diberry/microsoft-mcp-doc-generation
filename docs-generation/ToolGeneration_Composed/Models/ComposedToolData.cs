@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace ComposedToolGenerator.Models;
+namespace ToolGeneration_Composed.Models;
 
 /// <summary>
 /// Represents a composed tool with actual content replacing placeholders

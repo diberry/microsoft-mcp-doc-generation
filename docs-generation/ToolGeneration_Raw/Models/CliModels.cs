@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace RawToolGenerator.Models;
+namespace ToolGeneration_Raw.Models;
 
 /// <summary>
 /// Represents CLI output data for raw tool generation

@@ -5,9 +5,9 @@
     
 .DESCRIPTION
     This script orchestrates the tool generation and AI improvements process:
-    1. RawToolGenerator - Creates raw files with placeholders
-    2. ComposedToolGenerator - Replaces placeholders with actual content
-    3. ImprovedToolGenerator - Applies AI-based improvements
+    1. ToolGeneration_Raw - Creates raw files with placeholders
+    2. ToolGeneration_Composed - Replaces placeholders with actual content
+    3. ToolGeneration_Improved - Applies AI-based improvements
     
     Prerequisites:
     - CLI output must exist (./generated/cli/cli-output.json)
@@ -18,13 +18,13 @@
     Base output directory (default: ../generated)
     
 .PARAMETER SkipRaw
-    Skip RawToolGenerator (use existing raw files)
+    Skip ToolGeneration_Raw (use existing raw files)
     
 .PARAMETER SkipComposed
-    Skip ComposedToolGenerator (use existing composed files)
+    Skip ToolGeneration_Composed (use existing composed files)
     
 .PARAMETER SkipImproved
-    Skip ImprovedToolGenerator (skip AI improvements)
+    Skip ToolGeneration_Improved (skip AI improvements)
     
 .PARAMETER MaxTokens
     Maximum tokens for AI improvements (default: 8000)
@@ -164,16 +164,16 @@ if ($hasErrors) {
     exit 1
 }
 
-# Phase 1: RawToolGenerator
+# Phase 1: ToolGeneration_Raw
 if (-not $SkipRaw) {
     Write-Section "Phase 1: Generating Raw Tool Files"
     
-    Write-Progress "Running RawToolGenerator..."
+    Write-Progress "Running ToolGeneration_Raw..."
     Push-Location $currentDir
     
     try {
         $rawArgs = @(
-            "--project", "RawToolGenerator",
+            "--project", "ToolGeneration_Raw",
             "--", 
             $cliOutputFile,
             $rawToolsDir,
@@ -184,7 +184,7 @@ if (-not $SkipRaw) {
         dotnet run @rawArgs
         
         if ($LASTEXITCODE -ne 0) {
-            throw "RawToolGenerator failed with exit code $LASTEXITCODE"
+            throw "ToolGeneration_Raw failed with exit code $LASTEXITCODE"
         }
         
         $rawCount = (Get-ChildItem $rawToolsDir -Filter "*.md" -File -ErrorAction SilentlyContinue).Count
@@ -201,19 +201,19 @@ if (-not $SkipRaw) {
     }
 }
 else {
-    Write-Warning "Skipping Phase 1 (RawToolGenerator) - using existing files"
+    Write-Warning "Skipping Phase 1 (ToolGeneration_Raw) - using existing files"
 }
 
-# Phase 2: ComposedToolGenerator
+# Phase 2: ToolGeneration_Composed
 if (-not $SkipComposed) {
     Write-Section "Phase 2: Composing Tool Files"
     
-    Write-Progress "Running ComposedToolGenerator..."
+    Write-Progress "Running ToolGeneration_Composed..."
     Push-Location $currentDir
     
     try {
         $composedArgs = @(
-            "--project", "ComposedToolGenerator",
+            "--project", "ToolGeneration_Composed",
             "--",
             $rawToolsDir,
             $composedToolsDir,
@@ -226,7 +226,7 @@ if (-not $SkipComposed) {
         dotnet run @composedArgs
         
         if ($LASTEXITCODE -ne 0) {
-            throw "ComposedToolGenerator failed with exit code $LASTEXITCODE"
+            throw "ToolGeneration_Composed failed with exit code $LASTEXITCODE"
         }
         
         $composedCount = (Get-ChildItem $composedToolsDir -Filter "*.md" -File -ErrorAction SilentlyContinue).Count
@@ -243,10 +243,10 @@ if (-not $SkipComposed) {
     }
 }
 else {
-    Write-Warning "Skipping Phase 2 (ComposedToolGenerator) - using existing files"
+    Write-Warning "Skipping Phase 2 (ToolGeneration_Composed) - using existing files"
 }
 
-# Phase 3: ImprovedToolGenerator
+# Phase 3: ToolGeneration_Improved
 if (-not $SkipImproved) {
     Write-Section "Phase 3: Applying AI Improvements"
     
@@ -270,12 +270,12 @@ if (-not $SkipImproved) {
     }
     
     if ($hasCredentials) {
-        Write-Progress "Running ImprovedToolGenerator..."
+        Write-Progress "Running ToolGeneration_Improved..."
         Push-Location $currentDir
         
         try {
             $improvedArgs = @(
-                "--project", "ImprovedToolGenerator",
+                "--project", "ToolGeneration_Improved",
                 "--",
                 $composedToolsDir,
                 $improvedToolsDir,
@@ -286,7 +286,7 @@ if (-not $SkipImproved) {
             dotnet run @improvedArgs
             
             if ($LASTEXITCODE -ne 0) {
-                throw "ImprovedToolGenerator failed with exit code $LASTEXITCODE"
+                throw "ToolGeneration_Improved failed with exit code $LASTEXITCODE"
             }
             
             $improvedCount = (Get-ChildItem $improvedToolsDir -Filter "*.md" -File -ErrorAction SilentlyContinue).Count
@@ -304,7 +304,7 @@ if (-not $SkipImproved) {
     }
 }
 else {
-    Write-Warning "Skipping Phase 3 (ImprovedToolGenerator) - AI improvements disabled"
+    Write-Warning "Skipping Phase 3 (ToolGeneration_Improved) - AI improvements disabled"
 }
 
 # Summary

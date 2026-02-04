@@ -2,11 +2,11 @@
 // Licensed under the MIT License.
 
 using System.Text;
-using RawToolGenerator.Models;
+using ToolGeneration_Raw.Models;
 using NaturalLanguageGenerator;
 using Shared;
 
-namespace RawToolGenerator.Services;
+namespace ToolGeneration_Raw.Services;
 
 /// <summary>
 /// Service that generates raw tool documentation files with placeholders

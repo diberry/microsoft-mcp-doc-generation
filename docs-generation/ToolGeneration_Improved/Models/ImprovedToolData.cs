@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace ImprovedToolGenerator.Models;
+namespace ToolGeneration_Improved.Models;
 
 /// <summary>
 /// Represents an improved tool file with AI enhancements

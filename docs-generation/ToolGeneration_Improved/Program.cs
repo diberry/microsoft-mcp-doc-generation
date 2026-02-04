@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using GenerativeAI;
-using ImprovedToolGenerator.Services;
+using ToolGeneration_Improved.Services;
 
-namespace ImprovedToolGenerator;
+namespace ToolGeneration_Improved;
 
 internal class Program
 {
