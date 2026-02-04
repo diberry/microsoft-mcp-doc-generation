@@ -1,0 +1,12 @@
+Please review and improve the following Azure MCP tool documentation according to Microsoft style guidelines:
+
+{0}
+
+Focus on:
+1. Improving clarity and readability
+2. Ensuring technical accuracy
+3. Following Microsoft writing style
+4. Enhancing example prompts to be more realistic
+5. Improving parameter descriptions for better understanding
+
+Return only the improved markdown content, maintaining the same structure and format.
