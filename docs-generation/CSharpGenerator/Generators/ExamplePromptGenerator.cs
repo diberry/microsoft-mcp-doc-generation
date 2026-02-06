@@ -189,22 +189,39 @@ public class ExamplePromptGenerator
             ExamplePromptsResponse? promptsResponse = null;
             try
             {
-                // Extract JSON from response (might be wrapped in markdown code blocks)
+                // Extract JSON from response (might be wrapped in markdown code blocks or have preamble text)
                 var jsonText = responseText.Trim();
-                if (jsonText.StartsWith("```json"))
+                
+                // Look for JSON code block first
+                if (jsonText.Contains("```json"))
                 {
-                    jsonText = jsonText.Substring(7); // Remove ```json
-                    var endIndex = jsonText.LastIndexOf("```");
-                    if (endIndex > 0)
-                        jsonText = jsonText.Substring(0, endIndex);
+                    var startIndex = jsonText.IndexOf("```json") + 7;
+                    var endIndex = jsonText.IndexOf("```", startIndex);
+                    if (endIndex > startIndex)
+                    {
+                        jsonText = jsonText.Substring(startIndex, endIndex - startIndex);
+                    }
                 }
-                else if (jsonText.StartsWith("```"))
+                else if (jsonText.Contains("```"))
                 {
-                    jsonText = jsonText.Substring(3); // Remove ```
+                    var startIndex = jsonText.IndexOf("```") + 3;
                     var endIndex = jsonText.LastIndexOf("```");
-                    if (endIndex > 0)
-                        jsonText = jsonText.Substring(0, endIndex);
+                    if (endIndex > startIndex)
+                    {
+                        jsonText = jsonText.Substring(startIndex, endIndex - startIndex);
+                    }
                 }
+                else
+                {
+                    // No code blocks - look for JSON object by finding first { and last }
+                    var firstBrace = jsonText.IndexOf('{');
+                    var lastBrace = jsonText.LastIndexOf('}');
+                    if (firstBrace >= 0 && lastBrace > firstBrace)
+                    {
+                        jsonText = jsonText.Substring(firstBrace, lastBrace - firstBrace + 1);
+                    }
+                }
+                
                 jsonText = jsonText.Trim();
 
                 // Parse the JSON - it's a dictionary with tool name as key
@@ -225,7 +242,7 @@ public class ExamplePromptGenerator
             catch (Exception ex)
             {
                 Console.WriteLine($"Warning: Failed to parse JSON response for '{tool.Name}': {ex.Message}");
-                Console.WriteLine($"Raw response: {responseText}");
+                Console.WriteLine($"Raw response (first 500 chars): {responseText.Substring(0, Math.Min(500, responseText.Length))}...");
             }
 
             if (promptsResponse == null || !promptsResponse.Prompts.Any())

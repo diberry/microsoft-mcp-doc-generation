@@ -240,7 +240,13 @@ try {
 
     if ($ExamplePrompts) {
         Write-Progress "Generating example prompts with Azure OpenAI..."
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion | Out-Null
+        $examplePromptsOutput = Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
+        
+        # Write output to console/log
+        Write-Info ""
+        Write-Info "Example Prompts Generator Output:"
+        $examplePromptsOutput | ForEach-Object { Write-Info $_ }
+        Write-Info ""
     }
 
     # Parse tool count information from generator output
