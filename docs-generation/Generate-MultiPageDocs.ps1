@@ -86,54 +86,6 @@ function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" 
 function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -ForegroundColor Red }
 function Write-Progress { param([string]$Message) Write-Host "PROGRESS: $Message" -ForegroundColor Magenta }
 
-function Invoke-DocsGenerator {
-    param(
-        [string]$GeneratorPath,
-        [string]$CliInputPath,
-        [string]$OutputDir,
-        [bool]$CreateIndex,
-        [bool]$CreateCommon,
-        [bool]$CreateCommands,
-        [bool]$CreateToolPages,
-        [bool]$ExamplePrompts,
-        [bool]$CreateServiceOptions,
-        [bool]$GenerateAnnotations,
-        [bool]$GenerateParameters,
-        [bool]$GenerateCompleteTools,
-        [string]$CliVersion
-    )
-
-    Push-Location $GeneratorPath
-    try {
-        $generatorArgs = @("generate-docs", $CliInputPath, $OutputDir)
-        if ($CreateIndex) { $generatorArgs += "--index" }
-        if ($CreateCommon) { $generatorArgs += "--common" }
-        if ($CreateCommands) { $generatorArgs += "--commands" }
-        if ($CreateToolPages) { $generatorArgs += "--tool-pages" }
-        if ($GenerateAnnotations) { $generatorArgs += "--annotations" }
-        if ($GenerateParameters) { $generatorArgs += "--parameters" }
-        if ($ExamplePrompts) { $generatorArgs += "--example-prompts" }
-        if ($GenerateCompleteTools) { $generatorArgs += "--complete-tools" }
-        if (-not $CreateServiceOptions) { $generatorArgs += "--no-service-options" }
-        if ($CliVersion -and $CliVersion -ne "unknown") {
-            $generatorArgs += "--version"
-            $generatorArgs += $CliVersion
-        }
-
-        $commandString = "dotnet run --configuration Release -- " + ($generatorArgs -join " ")
-        Write-Info "Running: $commandString"
-
-        # Run without capturing to show real-time output
-        & dotnet run --configuration Release -- $generatorArgs
-        if ($LASTEXITCODE -ne 0) {
-            Write-Error "Command failed with exit code: $LASTEXITCODE"
-            throw "Failed to generate documentation with C# generator"
-        }
-    } finally {
-        Pop-Location
-    }
-}
-
 # Main execution
 try {
     Write-Progress "Starting Azure MCP Multi-Page Documentation Generation..."
@@ -194,91 +146,96 @@ try {
     
     Write-Info "CLI Version: $cliVersion"
     
-    # Step 1: Run C# generator to create documentation
-    Write-Progress "Step 1: Generating documentation using C# generator..."
-    
-    # Use the CLI output file we already verified exists
-    $cliInputPath = $cliOutputFile
-    
-    Write-Info "Using CLI input path: $cliInputPath"
-    Write-Info "Using output directory: $outputDir"
-    
-    # Determine generator directory
-    $generatorPath = if (Test-Path "CSharpGenerator/CSharpGenerator.csproj") {
-        "CSharpGenerator"  # Running from docs-generation directory (container)
-    } elseif (Test-Path "docs-generation/CSharpGenerator/CSharpGenerator.csproj") {
-        "docs-generation/CSharpGenerator"  # Running from workspace root (local)
-    } else {
-        throw "Cannot locate CSharpGenerator project"
+    # Generate annotations using separate script
+    Write-Progress "Step 1: Generating annotation include files..."
+    & "$PSScriptRoot\scripts\Generate-Annotations.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
+    if ($LASTEXITCODE -ne 0) {
+        throw "Annotations generation failed"
     }
-    
-    # Execute independent passes; capture the final (complete tools) output for statistics
-    Write-Info "Invoking generator with output directory: $outputDir"
-    
-    Write-Progress "Generating annotation include files..."
-    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$true -CliVersion $cliVersion
 
-    Write-Progress "Generating parameter include files..."
-    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateServiceOptions $CreateServiceOptions -GenerateParameters:$true -CliVersion $cliVersion
+    # Generate parameters using separate script
+    Write-Progress "Step 2: Generating parameter include files..."
+    & "$PSScriptRoot\scripts\Generate-Parameters.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
+    if ($LASTEXITCODE -ne 0) {
+        throw "Parameters generation failed"
+    }
 
+    # Generate commands using separate script
     if ($CreateCommands) {
-        Write-Progress "Generating commands page..."
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateCommands:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
+        Write-Progress "Step 3: Generating commands page..."
+        & "$PSScriptRoot\scripts\Generate-Commands.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
+        if ($LASTEXITCODE -ne 0) {
+            throw "Commands generation failed"
+        }
     }
 
+    # Generate common using separate script
     if ($CreateCommon) {
-        Write-Progress "Generating common tools page..."
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateCommon:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
+        Write-Progress "Step 4: Generating common tools page..."
+        & "$PSScriptRoot\scripts\Generate-Common.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
+        if ($LASTEXITCODE -ne 0) {
+            throw "Common tools generation failed"
+        }
     }
 
+    # Generate index using separate script
     if ($CreateIndex) {
-        Write-Progress "Generating index page..."
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
+        Write-Progress "Step 5: Generating index page..."
+        & "$PSScriptRoot\scripts\Generate-Index.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
+        if ($LASTEXITCODE -ne 0) {
+            throw "Index generation failed"
+        }
     }
 
+    # Generate example prompts using separate script
     if ($ExamplePrompts) {
-        Write-Progress "Generating example prompts with Azure OpenAI..."
-        Write-Info "Output will stream in real-time below:"
-        Write-Info ""
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
-        Write-Info ""
-        Write-Success "Example prompts generation completed"
+        Write-Progress "Step 6: Generating example prompts with Azure OpenAI..."
+        & "$PSScriptRoot\scripts\Generate-ExamplePromptsAI.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
+        if ($LASTEXITCODE -ne 0) {
+            throw "Example prompts generation failed"
+        }
     }
 
-    # Parse tool count information from generator output
-    $totalTools = 0
-    $totalAreas = 0
-    $toolCountsByArea = @{}
-    $captureToolList = $false
-    $toolListOutput = @()
+    # Parse tool count information from CLI data instead
+    Write-Info ""
+    Write-Info "Parsing tool information from CLI data..."
     
-    foreach ($line in $generatorOutput) {
-        if ($line -match "Total tools: (\d+)") {
-            $totalTools = [int]$matches[1]
-        } elseif ($line -match "Total service areas: (\d+)") {
-            $totalAreas = [int]$matches[1]
-        } elseif ($line -match "^\s*(\w+):\s*(\d+)\s*tools") {
-            $areaName = $matches[1]
-            $areaCount = [int]$matches[2]
-            $toolCountsByArea[$areaName] = $areaCount
-        } elseif ($line -match "^Tool List by Service Area:") {
-            $captureToolList = $true
-        } elseif ($captureToolList) {
-            $toolListOutput += $line
+    try {
+        $cliData = Get-Content $cliOutputFile -Raw | ConvertFrom-Json
+        $totalTools = if ($cliData.results) { $cliData.results.Count } else { 0 }
+        
+        # Group tools by area for statistics
+        $toolCountsByArea = @{}
+        if ($cliData.results) {
+            foreach ($tool in $cliData.results) {
+                $command = $tool.command ?? ""
+                if ($command) {
+                    $area = ($command -split ' ')[0]
+                    if (-not $toolCountsByArea.ContainsKey($area)) {
+                        $toolCountsByArea[$area] = 0
+                    }
+                    $toolCountsByArea[$area]++
+                }
+            }
         }
+        
+        $totalAreas = $toolCountsByArea.Count
+        Write-Success "✓ Parsed tool information: $totalTools tools across $totalAreas areas"
+    } catch {
+        Write-Warning "Failed to parse CLI data for statistics: $($_.Exception.Message)"
+        $totalTools = 0
+        $totalAreas = 0
+        $toolCountsByArea = @{}
     }
     
-    # Step 2: Generate additional data formats if requested
-    if ($Format -eq 'yaml' -or $Format -eq 'both') {
-        Write-Progress "Step 2: Converting to YAML format..."
-        # YAML conversion is not implemented; skip silently unless explicitly requested
-        if ($Format -eq 'yaml') {
-            Write-Warning "YAML format conversion not implemented yet"
-        }
+    # Step 7: Generate tool generation pipeline (complete tools, AI improvements, tool families)
+    Write-Progress "Step 7: Tool Generation Pipeline"
+    Write-Info ""
+    & "$PSScriptRoot\scripts\Generate-ToolGeneration.ps1" -OutputPath $OutputPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Tool generation pipeline failed or was skipped"
     }
-    
-    # Step 3: Summary
-    Write-Progress "Step 3: Generation Summary"
+    Write-Info ""
     
     # Step 3.1: Generate tools.json using ToolDescriptionEvaluator and compare tool counts
     Write-Progress "Step 3.1: Generating tools.json for comparison..."
@@ -500,39 +457,6 @@ try {
                 $summaryLines += "- **${area}:** $count tools"
             }
         }
-        
-        # Add the complete tool list
-        if ($toolListOutput.Count -gt 0) {
-            $summaryLines += ""
-            $summaryLines += "## Complete Tool List"
-            $summaryLines += ""
-            $inToolGroup = $false
-            foreach ($line in $toolListOutput) {
-                if ($line.Trim() -ne "") {
-                    # Convert the console output format to markdown
-                    if ($line -match "^(.+) \((\d+) tools\):$") {
-                        # Add 2 empty lines before next group (except first group)
-                        if ($inToolGroup) {
-                            $summaryLines += ""
-                            $summaryLines += ""
-                        }
-                        $areaName = $matches[1]
-                        $toolCount = $matches[2]
-                        $summaryLines += "### $areaName ($toolCount tools)"
-                        $summaryLines += ""
-                        $inToolGroup = $true
-                    } elseif ($line -match "^[-]+$") {
-                        # Skip separator lines
-                        continue
-                    } elseif ($line -match "^\s*•\s*(.+)$") {
-                        $toolInfo = $matches[1]
-                        $summaryLines += "- $toolInfo"
-                    } else {
-                        $summaryLines += $line
-                    }
-                }
-            }
-        }
     }
     
     # Save summary to file
@@ -560,17 +484,6 @@ try {
             foreach ($area in ($toolCountsByArea.Keys | Sort-Object)) {
                 $count = $toolCountsByArea[$area]
                 Write-Info "     • ${area}: $count tools"
-            }
-        }
-        
-        # Display the complete tool list
-        if ($toolListOutput.Count -gt 0) {
-            Write-Info ""
-            Write-Info "Complete Tool List:"
-            foreach ($line in $toolListOutput) {
-                if ($line.Trim() -ne "") {
-                    Write-Info $line
-                }
             }
         }
     }
