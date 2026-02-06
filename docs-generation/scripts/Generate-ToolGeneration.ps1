@@ -35,7 +35,7 @@
 #>
 
 param(
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     [switch]$SkipCompleteTools = $false,
     [switch]$SkipToolGeneration = $false,
     [switch]$SkipToolFamily = $false,
@@ -55,23 +55,27 @@ try {
     Write-Info "Starting at: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     Write-Info ""
     
-    # Resolve paths
+    # Resolve paths (relative to current working directory, not script location)
     $scriptDir = $PSScriptRoot
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
         $OutputPath
     } else {
-        Join-Path $scriptDir $OutputPath
+        # Resolve relative to current working directory, then convert to absolute path
+        $absPath = Join-Path (Get-Location) $OutputPath
+        [System.IO.Path]::GetFullPath($absPath)
     }
     
     Write-Info "Output directory: $outputDir"
     
-    # Check for CLI files
+    # Check for CLI files (warn if missing, but allow scripts to run)
     $cliOutputFile = Join-Path $outputDir "cli" "cli-output.json"
     if (-not (Test-Path $cliOutputFile)) {
-        throw "CLI output file not found: $cliOutputFile"
+        Write-Warning "CLI output file not found: $cliOutputFile"
+        Write-Warning "The tool generation scripts may still work if annotations and parameters exist"
+        Write-Warning "For full pipeline with CLI data, run: pwsh ./Generate-MultiPageDocs.ps1"
+    } else {
+        Write-Success "✓ CLI files found"
     }
-    
-    Write-Success "✓ CLI files found"
     Write-Info ""
     
     # Phase 1: Generate complete tools
@@ -110,7 +114,7 @@ try {
     if (-not $SkipToolFamily) {
         Write-Progress "Phase 3: Generating Tool Family Cleanup and Assembly..."
         Write-Info ""
-        & "$scriptDir\GenerateToolFamilyCleanup-multifile.ps1"
+        & "$scriptDir\GenerateToolFamilyCleanup-multifile.ps1" -OutputPath $OutputPath
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Tool family cleanup failed or was skipped"
         }

@@ -7,13 +7,25 @@
     This script runs the complete-tools generator using existing annotation and parameter files
     from the ./generated directory.
     
+.PARAMETER OutputPath
+    Path to the generated directory (default: ../../generated from script location)
+    
 .EXAMPLE
     ./Generate-CompleteTools.ps1
+    ./Generate-CompleteTools.ps1 -OutputPath C:\path\to\generated
 #>
 
-# Resolve output directory - always use 'generated' sibling to this script's location
-$scriptDir = Split-Path -Parent $PSScriptRoot
-$generatedDir = Join-Path $scriptDir "generated"
+param(
+    [string]$OutputPath = "../../generated"
+)
+
+# Resolve output directory
+$generatedDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
+    $OutputPath
+} else {
+    $absPath = Join-Path (Get-Location) $OutputPath
+    [System.IO.Path]::GetFullPath($absPath)
+}
 
 # Set up logging
 $logDir = Join-Path $generatedDir "logs"

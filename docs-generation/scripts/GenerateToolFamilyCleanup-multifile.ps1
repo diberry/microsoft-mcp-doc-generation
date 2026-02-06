@@ -2,12 +2,27 @@
 # Assembles tool family files from individual tool files using AI for metadata/related content
 
 param(
-    [string]$ToolsInputDir = "../generated/tools",
-    [string]$MetadataOutputDir = "../generated/tool-family-metadata",
-    [string]$RelatedOutputDir = "../generated/tool-family-related",
-    [string]$FinalOutputDir = "../generated/tool-family-multifile",
+    [string]$OutputPath = "../../generated",
+    [string]$ToolsInputDir = "",
+    [string]$MetadataOutputDir = "",
+    [string]$RelatedOutputDir = "",
+    [string]$FinalOutputDir = "",
     [switch]$Help
 )
+
+# Resolve output directory
+$generatedDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
+    $OutputPath
+} else {
+    $absPath = Join-Path (Get-Location) $OutputPath
+    [System.IO.Path]::GetFullPath($absPath)
+}
+
+# Set default subdirectories if not specified
+if (-not $ToolsInputDir) { $ToolsInputDir = "$generatedDir/tools" }
+if (-not $MetadataOutputDir) { $MetadataOutputDir = "$generatedDir/tool-family-metadata" }
+if (-not $RelatedOutputDir) { $RelatedOutputDir = "$generatedDir/tool-family-related" }
+if (-not $FinalOutputDir) { $FinalOutputDir = "$generatedDir/tool-family-multifile" }
 
 if ($Help) {
     Write-Host "Azure MCP Tool Family Cleanup Generator (Multi-Phase)"
@@ -16,17 +31,19 @@ if ($Help) {
     Write-Host "Usage: ./GenerateToolFamilyCleanup-multifile.ps1 [options]"
     Write-Host ""
     Write-Host "Options:"
+    Write-Host "  -OutputPath <path>          Base output directory (default: ../../generated)"
+    Write-Host ""
     Write-Host "  -ToolsInputDir <path>       Input directory with complete tool files"
-    Write-Host "                              Default: ../generated/tools"
+    Write-Host "                              Default: <OutputPath>/tools"
     Write-Host ""
     Write-Host "  -MetadataOutputDir <path>   Output directory for AI-generated metadata"
-    Write-Host "                              Default: ../generated/tool-family-metadata"
+    Write-Host "                              Default: <OutputPath>/tool-family-metadata"
     Write-Host ""
     Write-Host "  -RelatedOutputDir <path>    Output directory for AI-generated related content"
-    Write-Host "                              Default: ../generated/tool-family-related"
+    Write-Host "                              Default: <OutputPath>/tool-family-related"
     Write-Host ""
     Write-Host "  -FinalOutputDir <path>      Output directory for final stitched files"
-    Write-Host "                              Default: ../generated/tool-family-multifile"
+    Write-Host "                              Default: <OutputPath>/tool-family-multifile"
     Write-Host ""
     Write-Host "  -Help                       Display this help message"
     Write-Host ""
@@ -48,12 +65,7 @@ Write-Host "Azure MCP Tool Family Cleanup Generator (Multi-Phase)"
 Write-Host "======================================================"
 Write-Host ""
 
-# Configuration
-$ToolsInputDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $ToolsInputDir))
-$MetadataOutputDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $MetadataOutputDir))
-$RelatedOutputDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $RelatedOutputDir))
-$FinalOutputDir = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $FinalOutputDir))
-
+# Configuration - paths are already resolved above, no need to resolve again
 Write-Host "Configuration:"
 Write-Host "  Tools Input:      $ToolsInputDir"
 Write-Host "  Metadata Output:  $MetadataOutputDir"
@@ -80,11 +92,14 @@ Write-Host "Creating output directories..."
         Write-Host "  ✓ Exists: $_"
     }
 }
+# Get the docs-generation directory (parent of scripts/)
+$docsGenDir = Split-Path -Parent $PSScriptRoot
+
 Write-Host ""
 
 # Build ToolFamilyCleanup
 Write-Host "Building ToolFamilyCleanup..."
-Push-Location "$PSScriptRoot/ToolFamilyCleanup"
+Push-Location "$docsGenDir/ToolFamilyCleanup"
 try {
     $buildOutput = dotnet build --configuration Release 2>&1
     if ($LASTEXITCODE -ne 0) {
@@ -101,10 +116,10 @@ finally {
 
 # Run Tool Family Cleanup in multi-phase mode
 Write-Host "Running Tool Family Cleanup (Multi-Phase)..."
-$exePath = "$PSScriptRoot/ToolFamilyCleanup/bin/Release/net9.0/ToolFamilyCleanup.dll"
+$exePath = "$docsGenDir/ToolFamilyCleanup/bin/Release/net9.0/ToolFamilyCleanup.dll"
 
 # Run from docs-generation directory so relative paths work correctly
-Push-Location $PSScriptRoot
+Push-Location $docsGenDir
 try {
     dotnet $exePath --multi-phase
     

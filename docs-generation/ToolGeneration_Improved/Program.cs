@@ -96,10 +96,18 @@ internal class Program
         // Try to find the prompt file in multiple locations
         var searchPaths = new[]
         {
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Prompts", promptFileName),
-            Path.Combine(AppContext.BaseDirectory, "Prompts", promptFileName),
+            // Relative to AppContext.BaseDirectory (bin/Release/net9.0)
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Prompts", promptFileName),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ToolGeneration_Improved", "Prompts", promptFileName),
+            
+            // Relative to current working directory
             Path.Combine(Directory.GetCurrentDirectory(), "Prompts", promptFileName),
-            Path.Combine(Directory.GetCurrentDirectory(), "..", "Prompts", promptFileName)
+            Path.Combine(Directory.GetCurrentDirectory(), "ToolGeneration_Improved", "Prompts", promptFileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "docs-generation", "ToolGeneration_Improved", "Prompts", promptFileName),
+            
+            // Relative to project directory
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "Prompts", promptFileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "ToolGeneration_Improved", "Prompts", promptFileName),
         };
 
         foreach (var path in searchPaths)

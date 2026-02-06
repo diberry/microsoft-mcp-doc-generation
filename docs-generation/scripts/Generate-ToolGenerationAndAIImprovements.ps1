@@ -36,13 +36,62 @@
     ./Generate-ToolGenerationAndAIImprovements.ps1 -MaxTokens 12000
 #>
 
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    Tool generation and AI improvements orchestration script - runs all 3 generators in sequence
+    
+.DESCRIPTION
+    This script orchestrates the tool generation and AI improvements process:
+    1. ToolGeneration_Raw - Creates raw files with placeholders
+    2. ToolGeneration_Composed - Replaces placeholders with actual content
+    3. ToolGeneration_Improved - Applies AI-based improvements
+    
+    Prerequisites:
+    - CLI output must exist (./generated/cli/cli-output.json)
+    - Annotations, parameters, and example prompts must be generated
+    - Azure OpenAI credentials must be configured (for step 3)
+    
+.PARAMETER OutputPath
+    Path to the generated directory (default: ../../generated from script location)
+    
+.PARAMETER SkipRaw
+    Skip ToolGeneration_Raw (use existing raw files)
+    
+.PARAMETER SkipComposed
+    Skip ToolGeneration_Composed (use existing composed files)
+    
+.PARAMETER SkipImproved
+    Skip ToolGeneration_Improved (skip AI improvements)
+    
+.PARAMETER MaxTokens
+    Maximum tokens for AI improvements (default: 8000)
+    
+.EXAMPLE
+    ./Generate-ToolGenerationAndAIImprovements.ps1
+    ./Generate-ToolGenerationAndAIImprovements.ps1 -SkipRaw
+    ./Generate-ToolGenerationAndAIImprovements.ps1 -SkipImproved
+    ./Generate-ToolGenerationAndAIImprovements.ps1 -MaxTokens 12000
+#>
+
 param(
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     [switch]$SkipRaw = $false,
     [switch]$SkipComposed = $false,
     [switch]$SkipImproved = $false,
     [int]$MaxTokens = 8000
 )
+
+# Resolve output directory
+$generatedDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
+    $OutputPath
+} else {
+    $absPath = Join-Path (Get-Location) $OutputPath
+    [System.IO.Path]::GetFullPath($absPath)
+}
+
+# Get the docs-generation directory (parent of scripts/)
+$docsGenDir = Split-Path -Parent $PSScriptRoot
 
 # Resolve output path
 $currentDir = Get-Location
@@ -169,7 +218,7 @@ if (-not $SkipRaw) {
     Write-Section "Phase 1: Generating Raw Tool Files"
     
     Write-Progress "Running ToolGeneration_Raw..."
-    Push-Location $currentDir
+    Push-Location $docsGenDir
     
     try {
         $rawArgs = @(
@@ -209,7 +258,7 @@ if (-not $SkipComposed) {
     Write-Section "Phase 2: Composing Tool Files"
     
     Write-Progress "Running ToolGeneration_Composed..."
-    Push-Location $currentDir
+    Push-Location $docsGenDir
     
     try {
         $composedArgs = @(
@@ -271,7 +320,7 @@ if (-not $SkipImproved) {
     
     if ($hasCredentials) {
         Write-Progress "Running ToolGeneration_Improved..."
-        Push-Location $currentDir
+        Push-Location $docsGenDir
         
         try {
             $improvedArgs = @(

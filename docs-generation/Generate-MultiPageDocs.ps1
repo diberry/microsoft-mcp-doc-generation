@@ -41,7 +41,7 @@
 #>
 
 param(
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     [ValidateSet('json', 'yaml', 'both')]
     [string]$Format = 'json',
     [bool]$CreateIndex = $true,
@@ -487,6 +487,15 @@ try {
             }
         }
     }
+    
+    # Step 8: Run validation orchestrator
+    Write-Progress "Step 8: Running Validation Checks..."
+    Write-Info ""
+    & "$PSScriptRoot\scripts\Validate.ps1" -OutputPath $OutputPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Validation checks reported issues"
+    }
+    Write-Info ""
 
 } catch {
     Write-Error "Documentation generation failed: $($_.Exception.Message)"
