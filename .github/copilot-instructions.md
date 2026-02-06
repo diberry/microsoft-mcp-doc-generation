@@ -107,6 +107,39 @@ Other configs:
 - Keeps annotations as [!INCLUDE] reference only
 - See `CSharpGenerator/Generators/COMPLETE-TOOLS-README.md` for details
 
+### Example Prompts Generation
+**Purpose**: Generates 5 natural language example prompts per tool using Azure OpenAI
+
+**Key Components**:
+- `ExamplePromptGenerator.cs` - Generator class (in `CSharpGenerator/Generators/`)
+- `GenerativeAI/GenerativeAIClient.cs` - Azure OpenAI client with retry logic
+- `--example-prompts` CLI flag - Enables generation
+- Output: `./generated/example-prompts/{tool}-example-prompts.md` (208 files)
+
+**Environment Variables Required** (from `.env` in `docs-generation/`):
+- `FOUNDRY_API_KEY` - Azure OpenAI API key
+- `FOUNDRY_ENDPOINT` - Azure OpenAI endpoint URL
+- `FOUNDRY_MODEL_NAME` - Model deployment name (e.g., "gpt-4o-mini")
+- `FOUNDRY_MODEL_API_VERSION` - API version (optional)
+
+**Rate Limiting & Retry Logic**:
+- `GenerativeAIClient.cs` implements exponential backoff retry logic
+- **5 retries** with delays: 1s → 2s → 4s → 8s → 16s
+- Only retries on rate limit errors (429 status codes, "rate limit", "too many requests", "quota")
+- All other exceptions fail immediately
+- Critical for handling 208 sequential API calls without failing
+
+**JSON Response Parsing**:
+- AI responses may include preamble text (e.g., "STEP 1:", "STEP 2:")
+- Parser extracts JSON by finding first `{` and last `}` if not in code blocks
+- Handles both ```json code blocks and plain JSON
+- Cleans smart quotes and HTML entities from prompts
+
+**Common Issues**:
+- If generation stops without errors, check Azure OpenAI credentials in `.env`
+- If only 15-20 files generate, rate limits are being hit (retry logic should handle this)
+- If JSON parsing fails, AI may be returning unexpected format (check raw response in logs)
+
 ### Adding New Service Area
 1. Add to `brand-to-server-mapping.json` if needs brand name
 2. Add to `compound-words.json` if has concatenated words
@@ -232,6 +265,7 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
 3. **Templates**: Use Handlebars helpers for loops and conditionals
 4. **Configuration**: Brand mapping > Compound words > Original name
 5. **File naming**: Lowercase with hyphens for include files
+6. **Console Output**: Never buffer dotnet output - stream in real-time for visibility
 
 ## When Helping with Code
 
@@ -239,6 +273,11 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
 - Consider both container and local environments
 - Use `Push-Location` / `Pop-Location` for directory navigation
 - Check `$env:MCP_SERVER_PATH` for container detection
+- **Critical**: Never capture dotnet output with `$var = & dotnet ... 2>&1`
+  - This buffers ALL output until completion, making long-running tasks appear frozen
+  - Instead use: `& dotnet ...` (streams output in real-time)
+  - Applies to: `Generate-MultiPageDocs.ps1`, `Generate-CompleteTools.ps1`, all orchestration scripts
+  - Exception: Short commands where you need to parse output immediately
 
 ### For C# Changes
 - Follow .NET 9.0 patterns
@@ -249,6 +288,12 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
   - Use dependency injection for shared functions (brand mapping, filename cleaning)
   - Filter common parameters using `ExtractCommonParameters` unless they're required
   - Document in separate README.md file within the generator directory
+- **For Azure OpenAI integration**:
+  - Always implement retry logic with exponential backoff (see `GenerativeAIClient.cs`)
+  - Only retry on rate limit errors (429, "rate limit", "quota")
+  - Parse AI responses robustly - extract JSON by finding `{` and `}` markers
+  - Handle preamble text (AI may return steps/reasoning before JSON)
+  - Use `Console.WriteLine` extensively for debugging - output streams to PowerShell logs
 
 ### For Template Changes
 - Use Handlebars syntax: `{{#each}}`, `{{#if}}`, etc.
@@ -267,6 +312,31 @@ For comprehensive architecture details, workflows, and troubleshooting:
 - See `docs/ARCHITECTURE.md` for visual diagrams
 - See `docs/USING-CONTEXTDOCS.md` for LLM integration guide
 
+## Debugging & Troubleshooting
+
+### Example Prompts Not Generating
+1. **Check environment variables** in `docs-generation/.env`:
+   - `FOUNDRY_API_KEY`, `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME` must be set
+   - Generator will skip example prompts if credentials are missing (with warning)
+2. **Check console output** - should see "DEBUG: Generating example prompt for..." for each tool
+3. **Rate limiting** - expect retries with exponential backoff (1s, 2s, 4s, 8s, 16s delays)
+4. **JSON parsing failures** - AI may return preamble text; parser finds first `{` and last `}`
+5. **Use Test-ExamplePrompts.ps1** for isolated debugging with real-time output
+
+### PowerShell Output Not Visible
+- **Symptom**: Long-running commands appear frozen, no output
+- **Cause**: Output buffering with `$var = & dotnet ... 2>&1`
+- **Solution**: Remove variable capture, use `& dotnet ...` directly
+- **Files**: `Generate-MultiPageDocs.ps1`, `Generate-CompleteTools.ps1`
+- **Benefit**: Output streams to console AND transcript logs in real-time
+
+### Testing Changes
+- **Quick test**: `pwsh ./Test-ExamplePrompts.ps1` (shows real-time output)
+- **Full generation**: `pwsh ./Generate-MultiPageDocs.ps1 -OutputPath ../generated`
+- **Complete tools only**: `pwsh ./Generate-CompleteTools.ps1`
+- **Logs**: Check `generated/logs/generation-*.log` for transcript
+- **Verify output**: Count files in `generated/example-prompts/` (should be 208)
+
 ## Last Updated
 
-January 12, 2026
+February 6, 2026

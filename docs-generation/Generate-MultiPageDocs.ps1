@@ -123,14 +123,12 @@ function Invoke-DocsGenerator {
         $commandString = "dotnet run --configuration Release -- " + ($generatorArgs -join " ")
         Write-Info "Running: $commandString"
 
-        $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
+        # Run without capturing to show real-time output
+        & dotnet run --configuration Release -- $generatorArgs
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Command failed with exit code: $LASTEXITCODE"
-            Write-Error "Generator output: $($generatorOutput | Out-String)"
             throw "Failed to generate documentation with C# generator"
         }
-
-        return $generatorOutput
     } finally {
         Pop-Location
     }
@@ -218,35 +216,33 @@ try {
     Write-Info "Invoking generator with output directory: $outputDir"
     
     Write-Progress "Generating annotation include files..."
-    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$true -CliVersion $cliVersion | Out-Null
+    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateServiceOptions $CreateServiceOptions -GenerateAnnotations:$true -CliVersion $cliVersion
 
     Write-Progress "Generating parameter include files..."
-    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateServiceOptions $CreateServiceOptions -GenerateParameters:$true -CliVersion $cliVersion | Out-Null
+    Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateServiceOptions $CreateServiceOptions -GenerateParameters:$true -CliVersion $cliVersion
 
     if ($CreateCommands) {
         Write-Progress "Generating commands page..."
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateCommands:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion | Out-Null
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateCommands:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
     }
 
     if ($CreateCommon) {
         Write-Progress "Generating common tools page..."
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateCommon:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion | Out-Null
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateCommon:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
     }
 
     if ($CreateIndex) {
         Write-Progress "Generating index page..."
-        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion | Out-Null
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -CreateIndex:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
     }
 
     if ($ExamplePrompts) {
         Write-Progress "Generating example prompts with Azure OpenAI..."
-        $examplePromptsOutput = Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
-        
-        # Write output to console/log
+        Write-Info "Output will stream in real-time below:"
         Write-Info ""
-        Write-Info "Example Prompts Generator Output:"
-        $examplePromptsOutput | ForEach-Object { Write-Info $_ }
+        Invoke-DocsGenerator -GeneratorPath $generatorPath -CliInputPath $cliInputPath -OutputDir $outputDir -ExamplePrompts:$true -CreateServiceOptions $CreateServiceOptions -CliVersion $cliVersion
         Write-Info ""
+        Write-Success "Example prompts generation completed"
     }
 
     # Parse tool count information from generator output
