@@ -22,7 +22,7 @@ $generatedDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
 if (-not $ToolsInputDir) { $ToolsInputDir = "$generatedDir/tools" }
 if (-not $MetadataOutputDir) { $MetadataOutputDir = "$generatedDir/tool-family-metadata" }
 if (-not $RelatedOutputDir) { $RelatedOutputDir = "$generatedDir/tool-family-related" }
-if (-not $FinalOutputDir) { $FinalOutputDir = "$generatedDir/tool-family-multifile" }
+if (-not $FinalOutputDir) { $FinalOutputDir = "$generatedDir/tool-family" }
 
 if ($Help) {
     Write-Host "Azure MCP Tool Family Cleanup Generator (Multi-Phase)"
@@ -43,7 +43,7 @@ if ($Help) {
     Write-Host "                              Default: <OutputPath>/tool-family-related"
     Write-Host ""
     Write-Host "  -FinalOutputDir <path>      Output directory for final stitched files"
-    Write-Host "                              Default: <OutputPath>/tool-family-multifile"
+    Write-Host "                              Default: <OutputPath>/tool-family"
     Write-Host ""
     Write-Host "  -Help                       Display this help message"
     Write-Host ""

@@ -43,7 +43,8 @@ try {
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
         $OutputPath
     } else {
-        Join-Path $scriptDir $OutputPath
+        $absPath = Join-Path (Get-Location) $OutputPath
+        [System.IO.Path]::GetFullPath($absPath)
     }
     
     Write-Info "Output directory: $outputDir"

@@ -40,6 +40,12 @@ public class RawToolGeneratorService
             return 1;
         }
 
+        if (cliData.Results.Count == 0)
+        {
+            Console.Error.WriteLine("No tools found in CLI output. Check the CLI output JSON format.");
+            return 1;
+        }
+
         Console.WriteLine($"  Loaded {cliData.Results.Count} tools from CLI output");
 
         // Ensure output directory exists
@@ -97,7 +103,10 @@ public class RawToolGeneratorService
         try
         {
             var json = await File.ReadAllTextAsync(filePath);
-            return System.Text.Json.JsonSerializer.Deserialize<CliOutput>(json);
+            return System.Text.Json.JsonSerializer.Deserialize<CliOutput>(json, new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
         }
         catch (Exception ex)
         {

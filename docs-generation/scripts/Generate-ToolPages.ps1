@@ -1,10 +1,10 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Tool generation orchestrator - runs all tool generation phases
+    Tool pages orchestrator - runs all tool page generation phases
     
 .DESCRIPTION
-    This script orchestrates the complete tool generation pipeline:
+    This script orchestrates the complete tool page generation pipeline:
     1. Generate-CompleteTools - Creates complete tool documentation files
     2. Generate-ToolGenerationAndAIImprovements - Runs 3-phase tool generation with AI improvements
     3. GenerateToolFamilyCleanup - Assembles tool family files with AI-generated metadata
@@ -29,9 +29,9 @@
     Maximum tokens for AI improvements (default: 8000)
 
 .EXAMPLE
-    ./Generate-ToolGeneration.ps1
-    ./Generate-ToolGeneration.ps1 -SkipToolGeneration
-    ./Generate-ToolGeneration.ps1 -SkipToolFamily -MaxTokens 12000
+    ./Generate-ToolPages.ps1
+    ./Generate-ToolPages.ps1 -SkipToolGeneration
+    ./Generate-ToolPages.ps1 -SkipToolFamily -MaxTokens 12000
 #>
 
 param(
@@ -98,7 +98,7 @@ try {
     if (-not $SkipToolGeneration) {
         Write-Progress "Phase 2: Generating Tool Generation and AI Improvements..."
         Write-Info ""
-        & "$scriptDir\Generate-ToolGenerationAndAIImprovements.ps1" -OutputPath $OutputPath -MaxTokens $MaxTokens
+        & "$scriptDir\..\Generate-ToolGenerationAndAIImprovements.ps1" -OutputPath $OutputPath -MaxTokens $MaxTokens
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Tool generation and AI improvements failed or was skipped"
         }

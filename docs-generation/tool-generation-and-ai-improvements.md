@@ -63,9 +63,9 @@ generated/
 │   ├── annotations/                 # Input: Annotation files (208)
 │   ├── parameters/                  # Input: Parameter files (208)
 │   └── example-prompts/             # Input: Example prompt files (208)
-├── tools-raw/                       # Phase 1 output (208 files)
-├── tools-composed/                  # Phase 2 output (208 files)
-├── tools-ai-improved/               # Phase 3 output (208 files, optional)
+├── tools-raw/                       # Phase 1 output
+├── tools-composed/                  # Phase 2 output
+├── tools-ai-improved/               # Phase 3 output (optional)
 └── logs/
     └── tool-generation-*.log        # Generation logs
 ```
@@ -281,7 +281,7 @@ From Issue #18:
 
 ### Performance Estimates
 
-Based on 208 tools:
+Based on current tool count (~200+):
 
 - **Stage 1 (Raw)**: 5-10 seconds
 - **Stage 2 (Composed)**: 10-15 seconds

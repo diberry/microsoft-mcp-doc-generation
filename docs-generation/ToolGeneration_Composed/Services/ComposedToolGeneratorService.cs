@@ -43,6 +43,45 @@ public class ComposedToolGeneratorService
         Console.WriteLine($"  Output Directory: {outputDir}");
         Console.WriteLine();
 
+        // Check for missing prerequisite directories and warn
+        var missingDirs = new List<string>();
+        if (!Directory.Exists(annotationsDir))
+        {
+            Console.WriteLine($"  ⚠ Annotations directory not found: {annotationsDir}");
+            missingDirs.Add("annotations (run Step 1)");
+        }
+        else
+        {
+            var annotationFiles = Directory.GetFiles(annotationsDir, "*.md").Length;
+            Console.WriteLine($"  ✓ Annotations directory found: {annotationFiles} files");
+        }
+        if (!Directory.Exists(parametersDir))
+        {
+            Console.WriteLine($"  ⚠ Parameters directory not found: {parametersDir}");
+            missingDirs.Add("parameters (run Step 1)");
+        }
+        else
+        {
+            var parameterFiles = Directory.GetFiles(parametersDir, "*.md").Length;
+            Console.WriteLine($"  ✓ Parameters directory found: {parameterFiles} files");
+        }
+        if (!Directory.Exists(examplePromptsDir))
+        {
+            Console.WriteLine($"  ⚠ Example prompts directory not found: {examplePromptsDir}");
+            missingDirs.Add("example-prompts (run Step 2)");
+        }
+        else
+        {
+            var promptFiles = Directory.GetFiles(examplePromptsDir, "*.md").Length;
+            Console.WriteLine($"  ✓ Example prompts directory found: {promptFiles} files");
+        }
+        if (missingDirs.Count > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("  Note: Composition will complete but will use placeholder content for missing files.");
+            Console.WriteLine();
+        }
+
         // Ensure output directory exists
         if (!Directory.Exists(outputDir))
         {
@@ -139,11 +178,16 @@ public class ComposedToolGeneratorService
         string contentType,
         Dictionary<string, List<string>> missingContent)
     {
-        // Try to find the content file - it might have a suffix
+        // Try to find the content file - it might have variations
         var possibleFiles = new[]
         {
+            // Exact match with suffix
             Path.Combine(contentDir, $"{baseFileName}-{contentType}.md"),
-            Path.Combine(contentDir, $"{baseFileName}.md")
+            // Without suffix
+            Path.Combine(contentDir, $"{baseFileName}.md"),
+            // With azure- prefix (from Step 1 generation)
+            Path.Combine(contentDir, $"azure-{baseFileName}-{contentType}.md"),
+            // List all files in the directory and try fuzzy match as last resort
         };
 
         foreach (var filePath in possibleFiles)
@@ -153,6 +197,29 @@ public class ComposedToolGeneratorService
                 var content = await File.ReadAllTextAsync(filePath);
                 return StripFrontmatter(content);
             }
+        }
+
+        // If exact matches fail, search for files containing the base name
+        try
+        {
+            var allFiles = Directory.GetFiles(contentDir, "*.md");
+            var matchingFiles = allFiles.Where(f => 
+            {
+                var fileName = Path.GetFileName(f);
+                // Look for files that contain the base name and content type
+                return fileName.Contains(baseFileName.Split('-').Last(), StringComparison.OrdinalIgnoreCase) && 
+                       fileName.Contains(contentType, StringComparison.OrdinalIgnoreCase);
+            }).ToArray();
+
+            if (matchingFiles.Length > 0)
+            {
+                var content = await File.ReadAllTextAsync(matchingFiles[0]);
+                return StripFrontmatter(content);
+            }
+        }
+        catch
+        {
+            // Ignore errors during fallback search
         }
 
         // Content file not found - track it

@@ -51,7 +51,7 @@ public class CleanupConfiguration
     
     /// <summary>
     /// Directory where final stitched tool family files will be saved (multi-phase mode).
-    /// Default: ../generated/tool-family-multifile
+    /// Default: ../generated/tool-family
     /// </summary>
-    public string MultiFileOutputDirectory { get; set; } = "../generated/tool-family-multifile";
+    public string MultiFileOutputDirectory { get; set; } = "../generated/tool-family";
 }

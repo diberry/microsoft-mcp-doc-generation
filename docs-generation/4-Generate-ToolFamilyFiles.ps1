@@ -66,9 +66,9 @@ try {
 
     Write-Progress "Step 2: Generating composed + improved tools..."
     if ($skipRaw) {
-        & "$scriptDir\Generate-ToolGenerationAndAIImprovements.ps1" -OutputPath $OutputPath -SkipRaw -MaxTokens $MaxTokens
+        & "$scriptDir\..\Generate-ToolGenerationAndAIImprovements.ps1" -OutputPath $OutputPath -SkipRaw -MaxTokens $MaxTokens
     } else {
-        & "$scriptDir\Generate-ToolGenerationAndAIImprovements.ps1" -OutputPath $OutputPath -MaxTokens $MaxTokens
+        & "$scriptDir\..\Generate-ToolGenerationAndAIImprovements.ps1" -OutputPath $OutputPath -MaxTokens $MaxTokens
     }
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Tool generation and AI improvements reported issues"

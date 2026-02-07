@@ -263,7 +263,7 @@ public class ExamplePromptGenerator
     /// <summary>
     /// Generates a single example prompt file for a tool, including Handlebars template processing.
     /// Creates two files:
-    /// 1. Input prompt file in prompts-for-example-tool-prompts/ directory (with userPrompt metadata)
+    /// 1. Input prompt file in example-prompts-prompts/ directory (with userPrompt metadata)
     /// 2. Generated example prompts file in example-prompts/ directory (clean template output)
     /// </summary>
     /// <param name="tool">The tool to generate example prompts for</param>
@@ -297,10 +297,10 @@ public class ExamplePromptGenerator
                 var exampleFileName = annotationFileName.Replace("-annotations.md", "-example-prompts.md");
                 
                 // Directory structure:
-                // - Input prompts: ../prompts-for-example-tool-prompts/
+                // - Input prompts: ../example-prompts-prompts/
                 // - Generated prompts: ../example-prompts/
                 var parentDir = Directory.GetParent(examplePromptsDir)?.FullName ?? examplePromptsDir;
-                var inputPromptsDir = Path.Combine(parentDir, "prompts-for-example-tool-prompts");
+                var inputPromptsDir = Path.Combine(parentDir, "example-prompts-prompts");
                 Directory.CreateDirectory(inputPromptsDir);
                 
                 // 1. Save input prompt file (with userPrompt metadata)
@@ -362,6 +362,7 @@ public class ExamplePromptGenerator
             {
                 ["version"] = version ?? "unknown",
                 ["generatedAt"] = DateTime.UtcNow,
+                ["command"] = tool.Command ?? "unknown",
                 ["examplePrompts"] = examplePrompts
             };
 

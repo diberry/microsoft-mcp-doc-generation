@@ -7,6 +7,7 @@ This project automatically generates multi-page documentation for Azure MCP (Mod
 The documentation generation system consists of:
 
 - **PowerShell Orchestrator** (`Generate-MultiPageDocs.ps1`) - Main entry point that coordinates the generation process
+- **Modular Scripts** (`scripts/`) - Independent scripts for annotations/parameters/raw tools, example prompts, tool family files, and validation
 - **C# Generator** (`CSharpGenerator/`) - .NET 9.0 console application that processes CLI output and generates documentation using Handlebars templates
 - **Handlebars Templates** (`templates/`) - Template files that define the structure and format of generated documentation
 
@@ -14,9 +15,13 @@ The documentation generation system consists of:
 
 ```
 docs-generation/
-├── Generate-MultiPageDocs.ps1     # Main orchestration script (Stage 2)
-├── Get-McpCliOutput.ps1           # CLI extraction script (Stage 1)
-├── Generate-ExamplePrompts.sh     # AI prompts script (Stage 3)
+├── Generate-MultiPageDocs.ps1     # Main orchestration script
+├── scripts/                       # Modular generation scripts
+│   ├── Generate-AnnotationsParametersRaw.ps1  # Annotations + parameters + raw tools
+│   ├── Generate-ExamplePrompts.ps1            # Example prompts generation
+│   ├── Generate-ToolFamilyFiles.ps1           # Complete tools + AI improvements + tool family files
+│   └── Validate.ps1                           # Validation orchestrator
+├── Get-McpCliOutput.ps1           # CLI extraction script
 ├── stop-words.json                # Stop words removed from include filenames
 ├── compound-words.json            # Compound word mappings for include filenames
 ├── brand-to-server-mapping.json   # Brand name to filename mappings
@@ -54,6 +59,45 @@ docs-generation/
     ├── parameter-template.hbs     # Tool parameters
     ├── area-template.hbs          # Template for area-specific documentation
     └── common-tools.hbs           # Template for common tools documentation
+```
+
+## Run Independently (Modular Scripts)
+
+Run these from the `docs-generation` directory so paths resolve correctly.
+
+### 1) Annotations + Parameters + Raw Tools
+
+```powershell
+pwsh ./scripts/Generate-AnnotationsParametersRaw.ps1 -OutputPath ../generated
+```
+
+### 2) Example Prompts (Azure OpenAI)
+
+```powershell
+pwsh ./scripts/Generate-ExamplePrompts.ps1 -OutputPath ../generated
+```
+
+### 3) Tool Family Files (Final Output)
+
+This step produces the final tool family files by running:
+- Complete tools
+- Tool generation (composed + AI improvements)
+- Tool family cleanup/assembly
+
+```powershell
+pwsh ./scripts/Generate-ToolFamilyFiles.ps1 -OutputPath ../generated
+```
+
+### 4) Final Validation
+
+Validates documentation quantity and completeness:
+- Checks that all expected files were generated
+- Generates missing tools report
+
+**Note**: Example prompt validation is performed during Step 2 (`3-Generate-ExamplePrompts.ps1`) and is not repeated here.
+
+```powershell
+pwsh ./scripts/Validate.ps1 -OutputPath ../generated
 ```
 
 ## Tool Family Cleanup (New)

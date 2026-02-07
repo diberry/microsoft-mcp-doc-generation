@@ -11,7 +11,7 @@ This is the Azure MCP Documentation Generator - an automated system that generat
 ### Three-Tier System
 
 1. **Orchestration Layer** (PowerShell)
-   - `docs-generation/Generate-MultiPageDocs.ps1` - Main entry point
+   - `docs-generation/Generate.ps1` - Main entry point
    - Detects container vs local environment via `$env:MCP_SERVER_PATH`
    - Calls Azure MCP CLI to extract tool data
    - Invokes C# generator with JSON input
@@ -30,7 +30,7 @@ This is the Azure MCP Documentation Generator - an automated system that generat
 ## Key Components
 
 ### PowerShell Orchestrator
-**File**: `docs-generation/Generate-MultiPageDocs.ps1`
+**File**: `docs-generation/Generate.ps1`
 
 Environment detection:
 ```powershell
@@ -98,7 +98,7 @@ Other configs:
 - `CompleteToolGenerator.cs` - Generator class
 - `tool-complete-template.hbs` - Template with embedded content
 - `--complete-tools` CLI flag - Enables generation
-- Output: `./generated/tools/{tool}.complete.md` (208 files)
+- Output: `./generated/tools/{tool}.complete.md` (one per tool)
 
 **Architecture**:
 - Runs AFTER annotations, parameters, and example-prompts generation
@@ -107,20 +107,31 @@ Other configs:
 - Keeps annotations as [!INCLUDE] reference only
 - See `CSharpGenerator/Generators/COMPLETE-TOOLS-README.md` for details
 
-### Example Prompts Generation
-**Purpose**: Generates 5 natural language example prompts per tool using Azure OpenAI
+### Example Prompts Generation (ExamplePromptGeneratorStandalone)
+**Purpose**: Standalone .NET package that generates 5 natural language example prompts per tool using Azure OpenAI
 
 **Key Components**:
-- `ExamplePromptGenerator.cs` - Generator class (in `CSharpGenerator/Generators/`)
+- `ExamplePromptGeneratorStandalone/` - Standalone console application (NEW)
+- `Program.cs` - CLI entry point, processes all tools sequentially
+- `Generators/ExamplePromptGenerator.cs` - Core AI generation logic with regex parameter replacement
 - `GenerativeAI/GenerativeAIClient.cs` - Azure OpenAI client with retry logic
-- `--example-prompts` CLI flag - Enables generation
-- Output: `./generated/example-prompts/{tool}-example-prompts.md` (208 files)
+- Embedded resources: `prompts/` (system/user prompts), `templates/` (Handlebars template)
+- Output: 
+  - `./generated/example-prompts/{tool}-example-prompts.md` (AI-generated prompt files)
+  - `./generated/example-prompts-prompts/{tool}-input-prompt.md` (input prompts for debugging)
 
 **Environment Variables Required** (from `.env` in `docs-generation/`):
 - `FOUNDRY_API_KEY` - Azure OpenAI API key
 - `FOUNDRY_ENDPOINT` - Azure OpenAI endpoint URL
 - `FOUNDRY_MODEL_NAME` - Model deployment name (e.g., "gpt-4o-mini")
 - `FOUNDRY_MODEL_API_VERSION` - API version (optional)
+
+**Processing Flow (Sequential, not batch)**:
+1. For each tool, generate custom user prompt from template with tool-specific parameters
+2. Call Azure OpenAI with system + user prompts
+3. Parse JSON response (5 example prompts)
+4. Save input prompt to `example-prompts-prompts/` and output prompts to `example-prompts/`
+5. Move to next tool (sequential processing ensures incremental progress)
 
 **Rate Limiting & Retry Logic**:
 - `GenerativeAIClient.cs` implements exponential backoff retry logic
@@ -148,7 +159,7 @@ Other configs:
 ### Modifying Templates
 1. Edit `.hbs` file in `templates/`
 2. Rebuild: `dotnet build CSharpGenerator/`
-3. Regenerate: `pwsh ./Generate-MultiPageDocs.ps1`
+3. Regenerate: `pwsh ./Generate.ps1`
 
 ### Filename Generation
 Include files use 3-tier resolution:
@@ -185,10 +196,10 @@ generated/
 │   └── *.complete.md           # 208 complete tool files (--complete-tools flag)
 └── multi-page/                 # 591 markdown files
     ├── *.md                    # Main service docs (30+ services)
-    ├── annotations/            # Tool annotation includes (208 files)
-    ├── parameters/             # Tool parameter includes (208 files)
-    ├── example-prompts/        # Example prompt includes (208 files)
-    └── param-and-annotation/   # Combined includes (208 files)
+    ├── annotations/            # Tool annotation includes
+    ├── parameters/             # Tool parameter includes
+    ├── example-prompts/        # Example prompt includes
+    └── param-and-annotation/   # Combined includes
 ```
 
 ## Development Workflows
@@ -196,7 +207,7 @@ generated/
 ### Local Development
 ```bash
 cd docs-generation
-pwsh ./Generate-MultiPageDocs.ps1
+pwsh ./Generate.ps1
 ```
 
 ### Docker Development
@@ -211,6 +222,35 @@ pwsh ./Generate-MultiPageDocs.ps1
 ```bash
 pwsh ./Debug-MultiPageDocs.ps1  # Prepare environment
 # Then F5 in VS Code with "Debug Generate Docs" config
+```
+
+## ⚠️ IMPORTANT: Testing Projects with Generative AI
+
+**Critical for time management**: Any project that uses generative AI (Azure OpenAI) will make sequential API calls to generate content. This can take **15-30+ minutes** to complete a full run (~200+ tools × ~2-4 seconds per API call).
+
+**When testing or debugging projects with GenerativeAI:**
+1. **Only run to the point you know what you're testing passes** - do NOT let full generation complete
+2. **Do NOT run full test suites** unless specifically needed for final validation
+3. **Cancel after first 2-5 successful tool outputs** to verify:
+   - API credentials are loaded correctly
+   - Template processing works
+   - Output files are created in correct locations
+   - File content looks reasonable
+4. **Use `Ctrl+C` to cancel** - safe to interrupt between tools
+5. **Save 20-30 minutes of waiting** for each test iteration
+
+**Affected Projects**:
+- `ExamplePromptGeneratorStandalone` - Generates 5 prompts per tool via Azure OpenAI (sequential processing for all tools)
+- Any other project using `GenerativeAI` package
+
+**Quick Test Pattern**:
+```bash
+# Run tool, let it process 2-3 tools successfully, then Ctrl+C
+dotnet run --project ProjectName -- [args]
+# After 3-5 successes, verify:
+# - Console shows ✅ checkmarks for at least 3 tools
+# - Output files exist in target directory
+# - File content is valid (frontmatter, command comment, etc.)
 ```
 
 ## Dependencies
@@ -253,7 +293,7 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
   - 591 multi-page documentation files
   - 208 complete tool files (with `--complete-tools`)
 - **Service Areas**: 30+ Azure services
-- **Tools Documented**: 208 tools
+- **Tools Documented**: 200+ Azure MCP tools
 - **Build Time**: 10-15 min first run, 5-7 min cached
 - **Docker Image**: 2.36GB
 - **Workflow Reduction**: 476 → 140 lines (70% reduction)
@@ -327,15 +367,15 @@ For comprehensive architecture details, workflows, and troubleshooting:
 - **Symptom**: Long-running commands appear frozen, no output
 - **Cause**: Output buffering with `$var = & dotnet ... 2>&1`
 - **Solution**: Remove variable capture, use `& dotnet ...` directly
-- **Files**: `Generate-MultiPageDocs.ps1`, `Generate-CompleteTools.ps1`
+- **Files**: `Generate.ps1`, `Generate-CompleteTools.ps1`
 - **Benefit**: Output streams to console AND transcript logs in real-time
 
 ### Testing Changes
 - **Quick test**: `pwsh ./Test-ExamplePrompts.ps1` (shows real-time output)
-- **Full generation**: `pwsh ./Generate-MultiPageDocs.ps1 -OutputPath ../generated`
+- **Full generation**: `pwsh ./Generate.ps1 -OutputPath ../generated`
 - **Complete tools only**: `pwsh ./Generate-CompleteTools.ps1`
 - **Logs**: Check `generated/logs/generation-*.log` for transcript
-- **Verify output**: Count files in `generated/example-prompts/` (should be 208)
+- **Verify output**: Count files in `generated/example-prompts/` (should match tool count)
 
 ## Last Updated
 

@@ -32,12 +32,12 @@
     Whether to generate example prompts using Azure OpenAI (default: false)
     
 .EXAMPLE
-    ./Generate-MultiPageDocs.ps1
-    ./Generate-MultiPageDocs.ps1 -Format json
-    ./Generate-MultiPageDocs.ps1 -CreateIndex $false
-    ./Generate-MultiPageDocs.ps1 -CreateCommands $false
-    ./Generate-MultiPageDocs.ps1 -CreateServiceOptions $false
-    ./Generate-MultiPageDocs.ps1 -ExamplePrompts $true
+    ./Generate.ps1
+    ./Generate.ps1 -Format json
+    ./Generate.ps1 -CreateIndex $false
+    ./Generate.ps1 -CreateCommands $false
+    ./Generate.ps1 -CreateServiceOptions $false
+
 #>
 
 param(
@@ -48,8 +48,7 @@ param(
     [bool]$CreateCommon = $true,
     [bool]$CreateCommands = $true,
     [bool]$CreateToolPages = $false,
-    [bool]$CreateServiceOptions = $true,
-    [bool]$ExamplePrompts = $true
+    [bool]$CreateServiceOptions = $true
 )
 
 # Resolve output path and set up logging
@@ -146,193 +145,80 @@ try {
     
     Write-Info "CLI Version: $cliVersion"
     
-    # Generate annotations using separate script
-    Write-Progress "Step 1: Generating annotation include files..."
-    & "$PSScriptRoot\scripts\Generate-Annotations.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
+    # Generate annotations, parameters, raw tools, commands, and common
+    Write-Progress "Step 1: Generating annotations, parameters, raw tools, commands, and common..."
+    & "$PSScriptRoot\1-Generate-AnnotationsParametersRaw.ps1" -OutputPath $OutputPath -CreateCommands $CreateCommands -CreateCommon $CreateCommon -CreateServiceOptions $CreateServiceOptions
     if ($LASTEXITCODE -ne 0) {
-        throw "Annotations generation failed"
+        throw "Annotations/parameters/raw tools/commands/common generation failed"
     }
 
-    # Generate parameters using separate script
-    Write-Progress "Step 2: Generating parameter include files..."
-    & "$PSScriptRoot\scripts\Generate-Parameters.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
-    if ($LASTEXITCODE -ne 0) {
-        throw "Parameters generation failed"
-    }
-
-    # Generate commands using separate script
-    if ($CreateCommands) {
-        Write-Progress "Step 3: Generating commands page..."
-        & "$PSScriptRoot\scripts\Generate-Commands.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
+    # Generate example prompts and validate them
+    if ($ExamplePrompts) {
+        Write-Progress "Step 2: Generating example prompts with Azure OpenAI and validating required parameters..."
+        & "$PSScriptRoot\3-Generate-ExamplePrompts.ps1" -OutputPath $OutputPath
         if ($LASTEXITCODE -ne 0) {
-            throw "Commands generation failed"
-        }
-    }
-
-    # Generate common using separate script
-    if ($CreateCommon) {
-        Write-Progress "Step 4: Generating common tools page..."
-        & "$PSScriptRoot\scripts\Generate-Common.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
-        if ($LASTEXITCODE -ne 0) {
-            throw "Common tools generation failed"
+            throw "Example prompts generation or validation failed"
         }
     }
 
     # Generate index using separate script
-    if ($CreateIndex) {
-        Write-Progress "Step 5: Generating index page..."
-        & "$PSScriptRoot\scripts\Generate-Index.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
-        if ($LASTEXITCODE -ne 0) {
-            throw "Index generation failed"
-        }
-    }
-
-    # Generate example prompts using separate script
-    if ($ExamplePrompts) {
-        Write-Progress "Step 6: Generating example prompts with Azure OpenAI..."
-        & "$PSScriptRoot\scripts\Generate-ExamplePromptsAI.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
-        if ($LASTEXITCODE -ne 0) {
-            throw "Example prompts generation failed"
-        }
-    }
+    # if ($CreateIndex) {
+    #     Write-Progress "Step 3: Generating index page..."
+    #     & "$PSScriptRoot\scripts\Generate-Index.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
+    #     if ($LASTEXITCODE -ne 0) {
+    #         throw "Index generation failed"
+    #     }
+    # }
 
     # Parse tool count information from CLI data instead
-    Write-Info ""
-    Write-Info "Parsing tool information from CLI data..."
+    # Write-Info ""
+    # Write-Info "Parsing tool information from CLI data..."
     
-    try {
-        $cliData = Get-Content $cliOutputFile -Raw | ConvertFrom-Json
-        $totalTools = if ($cliData.results) { $cliData.results.Count } else { 0 }
+    # try {
+    #     $cliData = Get-Content $cliOutputFile -Raw | ConvertFrom-Json
+    #     $totalTools = if ($cliData.results) { $cliData.results.Count } else { 0 }
         
-        # Group tools by area for statistics
-        $toolCountsByArea = @{}
-        if ($cliData.results) {
-            foreach ($tool in $cliData.results) {
-                $command = $tool.command ?? ""
-                if ($command) {
-                    $area = ($command -split ' ')[0]
-                    if (-not $toolCountsByArea.ContainsKey($area)) {
-                        $toolCountsByArea[$area] = 0
-                    }
-                    $toolCountsByArea[$area]++
-                }
-            }
-        }
+    #     # Group tools by area for statistics
+    #     $toolCountsByArea = @{}
+    #     if ($cliData.results) {
+    #         foreach ($tool in $cliData.results) {
+    #             $command = $tool.command ?? ""
+    #             if ($command) {
+    #                 $area = ($command -split ' ')[0]
+    #                 if (-not $toolCountsByArea.ContainsKey($area)) {
+    #                     $toolCountsByArea[$area] = 0
+    #                 }
+    #                 $toolCountsByArea[$area]++
+    #             }
+    #         }
+    #     }
         
-        $totalAreas = $toolCountsByArea.Count
-        Write-Success "✓ Parsed tool information: $totalTools tools across $totalAreas areas"
-    } catch {
-        Write-Warning "Failed to parse CLI data for statistics: $($_.Exception.Message)"
-        $totalTools = 0
-        $totalAreas = 0
-        $toolCountsByArea = @{}
-    }
+    #     $totalAreas = $toolCountsByArea.Count
+    #     Write-Success "✓ Parsed tool information: $totalTools tools across $totalAreas areas"
+    # } catch {
+    #     Write-Warning "Failed to parse CLI data for statistics: $($_.Exception.Message)"
+    #     $totalTools = 0
+    #     $totalAreas = 0
+    #     $toolCountsByArea = @{}
+    # }
     
-    # Step 7: Generate tool generation pipeline (complete tools, AI improvements, tool families)
-    Write-Progress "Step 7: Tool Generation Pipeline"
+    # Step 4: Generate tool family files (complete tools, AI improvements, tool families)
+    Write-Progress "Step 4: Tool Family Generation Pipeline"
     Write-Info ""
-    & "$PSScriptRoot\scripts\Generate-ToolGeneration.ps1" -OutputPath $OutputPath
+    & "$PSScriptRoot\4-Generate-ToolFamilyFiles.ps1" -OutputPath $OutputPath
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Tool generation pipeline failed or was skipped"
+        Write-Warning "Tool family generation pipeline failed or was skipped"
     }
     Write-Info ""
     
-    # Step 3.1: Generate tools.json using ToolDescriptionEvaluator and compare tool counts
-    Write-Progress "Step 3.1: Generating tools.json for comparison..."
-    
-    $toolDescriptionEvaluatorScript = "..\eng\tools\ToolDescriptionEvaluator\Update-ToolsJson.ps1"
-    $toolDescriptionEvaluatorPath = "..\eng\tools\ToolDescriptionEvaluator\tools.json"
-    $localToolDescPath = Join-Path $outputDir "ToolDescriptionEvaluator.json"
-    
-    try {
-        # Run the ToolDescriptionEvaluator script to generate tools.json if present
-        if (Test-Path $toolDescriptionEvaluatorScript) {
-            & $toolDescriptionEvaluatorScript -Force
-            if ($LASTEXITCODE -ne 0) {
-                Write-Warning "Failed to run ToolDescriptionEvaluator Update-ToolsJson.ps1, continuing with CLI-only comparison"
-            } else {
-                Write-Success "ToolDescriptionEvaluator tools.json generated successfully"
-            
-                # Copy the generated tools.json to our generated folder for easy access
-                if (Test-Path $toolDescriptionEvaluatorPath) {
-                    Copy-Item $toolDescriptionEvaluatorPath $localToolDescPath -Force
-                    $localToolDescSize = [math]::Round((Get-Item $localToolDescPath).Length / 1KB, 1)
-                    Write-Success "ToolDescriptionEvaluator output copied to: $localToolDescPath (${localToolDescSize}KB)"
-                }
-            
-                # Compare tool counts between CLI output and ToolDescriptionEvaluator output
-                Write-Progress "Comparing tool counts between CLI output and ToolDescriptionEvaluator..."
-            
-                try {
-                    # Parse CLI output
-                    $cliData = Get-Content $cliOutputFile -Raw | ConvertFrom-Json
-                    $cliToolCount = if ($cliData.results) { $cliData.results.Count } else { 0 }
-                
-                    # Parse ToolDescriptionEvaluator output
-                    $toolDescData = Get-Content $toolDescriptionEvaluatorPath -Raw | ConvertFrom-Json
-                    $toolDescToolCount = if ($toolDescData.results) { $toolDescData.results.Count } else { 0 }
-                
-                    Write-Info ""
-                    Write-Info "Tool Count Comparison:"
-                    Write-Info "  📊 CLI tool count: $cliToolCount"
-                    Write-Info "  📊 ToolDescriptionEvaluator tool count: $toolDescToolCount"
-                
-                    if ($cliToolCount -eq $toolDescToolCount) {
-                        Write-Success "  ✓ Tool counts match! Both sources report $cliToolCount tools."
-                    } else {
-                        Write-Warning "  ⚠ Tool count mismatch detected!"
-                        Write-Warning "    CLI output: $cliToolCount tools"
-                        Write-Warning "    ToolDescriptionEvaluator: $toolDescToolCount tools"
-                        Write-Warning "    Difference: $([Math]::Abs($cliToolCount - $toolDescToolCount)) tools"
-                    
-                        # Identify missing tools
-                        $cliToolNames = $cliData.results | ForEach-Object { "$($_.command)" } | Sort-Object
-                        $toolDescToolNames = $toolDescData.results | ForEach-Object { "$($_.command)" } | Sort-Object
-                    
-                        $missingInToolDesc = $cliToolNames | Where-Object { $_ -notin $toolDescToolNames }
-                        $missingInCli = $toolDescToolNames | Where-Object { $_ -notin $cliToolNames }
-                    
-                        if ($missingInToolDesc.Count -gt 0) {
-                            Write-Warning ""
-                            Write-Warning "  Tools present in CLI but missing in ToolDescriptionEvaluator:"
-                            foreach ($tool in $missingInToolDesc) {
-                                Write-Warning "    - $tool"
-                            }
-                        }
-                    
-                        if ($missingInCli.Count -gt 0) {
-                            Write-Warning ""
-                            Write-Warning "  Tools present in ToolDescriptionEvaluator but missing in CLI:"
-                            foreach ($tool in $missingInCli) {
-                                Write-Warning "    - $tool"
-                            }
-                        }
-                    
-                        # Save comparison report
-                        $comparisonReport = @{
-                            timestamp         = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                            cliToolCount      = $cliToolCount
-                            toolDescToolCount = $toolDescToolCount
-                            difference        = [Math]::Abs($cliToolCount - $toolDescToolCount)
-                            missingInToolDesc = $missingInToolDesc
-                            missingInCli      = $missingInCli
-                        }
-                    
-                        $comparisonReportPath = Join-Path $outputDir "tool-count-comparison.json"
-                        $comparisonReport | ConvertTo-Json -Depth 3 | Out-File -FilePath $comparisonReportPath -Encoding UTF8
-                        Write-Info "    📄 Tool count comparison report saved: $comparisonReportPath"
-                    }
-                
-                } catch {
-                    Write-Warning "Failed to compare tool counts: $($_.Exception.Message)"
-                }
-            }
-        } else {
-            Write-Info "ToolDescriptionEvaluator scripts not found. Skipping comparison step."
-        }
-    } catch {
-        Write-Warning "Error running ToolDescriptionEvaluator: $($_.Exception.Message)"
+    # Step 5: Validate total tool counts and generate family reports
+    Write-Progress "Step 5: Validating total tool counts and generating family reports..."
+    Write-Info ""
+    & "$PSScriptRoot\5-Validate-total-tool-count-and-family.ps1" -OutputPath $OutputPath
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Tool count validation completed with warnings"
     }
+    Write-Info ""
     
     Write-Success "Multi-page documentation generation completed successfully!"
     Write-Info ""
@@ -488,8 +374,8 @@ try {
         }
     }
     
-    # Step 8: Run validation orchestrator
-    Write-Progress "Step 8: Running Validation Checks..."
+    # Step 7: Run validation orchestrator
+    Write-Progress "Step 7: Running Validation Checks..."
     Write-Info ""
     & "$PSScriptRoot\scripts\Validate.ps1" -OutputPath $OutputPath
     if ($LASTEXITCODE -ne 0) {

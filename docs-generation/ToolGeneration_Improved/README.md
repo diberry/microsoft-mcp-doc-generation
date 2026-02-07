@@ -134,7 +134,7 @@ To customize the improvement behavior, edit the prompt files:
 
 - Processing time depends on the number of files and AI response time
 - Typical processing: ~2-5 seconds per file
-- For 208 tools: ~7-17 minutes total
+- For ~200+ tools: ~8-20 minutes total
 - Rate limiting delays add ~20 seconds total
 
 ## Integration Plan

@@ -27,7 +27,7 @@ public class ToolReader
     }
 
     /// <summary>
-    /// Reads all *.complete.md files from tools directory and groups by family name.
+    /// Reads all *.md files from tools directory and groups by family name.
     /// </summary>
     /// <returns>Dictionary mapping family name to list of tools</returns>
     public async Task<Dictionary<string, List<ToolContent>>> ReadAndGroupToolsAsync()
@@ -39,7 +39,7 @@ public class ToolReader
             throw new DirectoryNotFoundException($"Tools directory not found: {_toolsDirectory}");
         }
 
-        var toolFiles = Directory.GetFiles(_toolsDirectory, "*.complete.md", SearchOption.TopDirectoryOnly)
+        var toolFiles = Directory.GetFiles(_toolsDirectory, "*.md", SearchOption.TopDirectoryOnly)
             .OrderBy(f => f)
             .ToList();
 
@@ -136,37 +136,34 @@ public class ToolReader
 
     /// <summary>
     /// Extracts family name from filename.
-    /// Pattern: azure-{service-area}-*.complete.md
+    /// Pattern: {family}-*.md
+    /// Examples:
+    ///   advisor-recommendation-list.md → advisor
+    ///   storage-account-create.md → storage
+    ///   ai-foundry-agents-connect.md → ai-foundry (special case)
     /// </summary>
     private string ExtractFamilyName(string fileName)
     {
-        // Remove .complete.md extension
-        var nameWithoutExt = fileName.Replace(".complete.md", "");
+        // Remove .md extension
+        var nameWithoutExt = fileName.Replace(".md", "");
         
         // Split by hyphens
         var parts = nameWithoutExt.Split('-');
         
-        // Skip "azure" prefix and get service area
-        // Handle cases:
-        // - azure-ai-foundry-... → ai-foundry (but we want just "foundry")
-        // - azure-fileshares-... → fileshares
-        // - azure-storage-... → storage
-        
-        if (parts.Length < 2)
+        if (parts.Length < 1)
         {
             return "unknown";
         }
 
-        // Special case for multi-part service names
-        if (parts[1] == "ai" && parts.Length > 2)
+        // Special case for multi-part service names like "ai-foundry"
+        if (parts[0] == "ai" && parts.Length > 1)
         {
-            // azure-ai-foundry-... → foundry
-            // azure-ai-search-... → search
-            return parts[2];
+            // ai-foundry-... → ai-foundry
+            return $"{parts[0]}-{parts[1]}";
         }
         
-        // Default: second part after "azure"
-        return parts[1];
+        // Default: first part is the family name
+        return parts[0];
     }
 
     /// <summary>

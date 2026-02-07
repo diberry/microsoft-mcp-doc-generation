@@ -1,14 +1,13 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Validation orchestrator - runs all validation checks on generated documentation
+    Final validation orchestrator - verifies documentation quantity and completeness
     
 .DESCRIPTION
-    This script orchestrates validation of generated documentation:
-    1. ExamplePromptValidator - Validates example prompts include required parameters
-    2. Verify Quantity - Checks that all expected files were generated
+    This script performs final validation checks on generated documentation:
+    - Verify Quantity: Checks that all expected files were generated
     
-    Generates validation reports and summarizes results.
+    NOTE: Example prompt validation is performed during Step 3 (3-Generate-ExamplePrompts.ps1)
     
 .PARAMETER OutputPath
     Path to the generated directory (default: ../../generated from script location)
@@ -30,9 +29,8 @@ $generatedDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
     [System.IO.Path]::GetFullPath($absPath)
 }
 
-# Get the docs-generation directory (parent of scripts/)
-$docsGenDir = Split-Path -Parent $PSScriptRoot
-$repoRoot = Split-Path -Parent $docsGenDir
+# Get the repo root
+$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 # Helper functions for colored output
 function Write-Info { param([string]$Message) Write-Host "INFO: $Message" -ForegroundColor Cyan }
@@ -42,53 +40,98 @@ function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -For
 function Write-Progress { param([string]$Message) Write-Host "PROGRESS: $Message" -ForegroundColor Magenta }
 
 try {
-    Write-Progress "Starting Validation Orchestration"
+    Write-Progress "Starting Final Validation"
     Write-Info "Starting at: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     Write-Info ""
     
     # Track validation results
     $validationResults = @{
-        examplePrompts = $false
         quantityCheck = $false
         errors = @()
     }
     
-    # Step 1: Run Example Prompt Validator
-    Write-Progress "Step 1: Validating Example Prompts..."
+    Write-Info "NOTE: Example prompt validation is performed during Step 3 (3-Generate-ExamplePrompts.ps1)"
     Write-Info ""
     
-    $examplePromptValidatorProject = Join-Path $docsGenDir "ExamplePromptValidator"
-    if (Test-Path $examplePromptValidatorProject) {
-        Write-Info "Running ExamplePromptValidator..."
+    # Step 1: Run Verify Quantity Tool
+    Write-Progress "Step 1: Verifying Documentation Quantity..."
+    Write-Info ""
+    
+    $verifyQuantityProject = Join-Path $repoRoot "verify-quantity"
+    if (Test-Path $verifyQuantityProject) {
+        Write-Info "Running verify-quantity tool..."
         try {
-            Push-Location $docsGenDir
-            $validatorOutput = & dotnet run --project ExamplePromptValidator --configuration Release 2>&1
+            Push-Location $verifyQuantityProject
+            
+            # Check if node_modules exists, if not run npm install
+            if (-not (Test-Path "node_modules")) {
+                Write-Info "Installing npm dependencies..."
+                & npm install 2>&1 | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    throw "Failed to install npm dependencies"
+                }
+            }
+            
+            $quantityOutput = & node index.js 2>&1
             Pop-Location
             
-            # Write validator output
-            $validatorOutput | ForEach-Object { Write-Host $_ }
+            # Write quantity output
+            $quantityOutput | ForEach-Object { Write-Host $_ }
             
             if ($LASTEXITCODE -eq 0) {
-                Write-Success "✓ Example Prompt Validation completed successfully"
-                $validationResults.examplePrompts = $true
+                Write-Success "✓ Documentation Quantity Verification completed successfully"
+                $validationResults.quantityCheck = $true
+                
+                # Check if missing-tools.md was generated
+                $missingToolsReport = Join-Path $repoRoot "missing-tools.md"
+                if (Test-Path $missingToolsReport) {
+                    $reportSize = [math]::Round((Get-Item $missingToolsReport).Length / 1KB, 1)
+                    Write-Success "Missing tools report generated: $missingToolsReport (${reportSize}KB)"
+                }
             } else {
-                Write-Warning "Example Prompt Validation reported issues (exit code: $LASTEXITCODE)"
-                $validationResults.examplePrompts = $false
-                $validationResults.errors += "ExamplePromptValidator failed with exit code $LASTEXITCODE"
+                Write-Warning "Verify Quantity tool reported issues (exit code: $LASTEXITCODE)"
+                $validationResults.quantityCheck = $false
+                $validationResults.errors += "Verify Quantity tool failed with exit code $LASTEXITCODE"
             }
         } catch {
-            Write-Warning "Example Prompt Validator failed: $($_.Exception.Message)"
-            $validationResults.errors += "ExamplePromptValidator error: $($_.Exception.Message)"
+            Write-Warning "Verify Quantity tool failed: $($_.Exception.Message)"
+            $validationResults.errors += "Verify Quantity tool error: $($_.Exception.Message)"
         }
     } else {
-        Write-Info "ExamplePromptValidator not found at: $examplePromptValidatorProject"
-        Write-Info "Skipping example prompt validation"
+        Write-Info "Verify Quantity tool not found at: $verifyQuantityProject"
+        Write-Info "Skipping quantity verification"
     }
     Write-Info ""
     
-    # Step 2: Run Verify Quantity Tool
-    Write-Progress "Step 2: Verifying Documentation Quantity..."
+    # Summary
+    Write-Progress "Validation Summary"
     Write-Info ""
+    Write-Info "Validation Results:"
+    Write-Info "  • Quantity Verification: $(if ($validationResults.quantityCheck) { 'PASS' } else { 'SKIP/FAIL' })"
+    
+    if ($validationResults.errors.Count -gt 0) {
+        Write-Info ""
+        Write-Info "Validation Errors/Warnings:"
+        foreach ($validationError in $validationResults.errors) {
+            Write-Warning "  • $validationError"
+        }
+    }
+    
+    Write-Info ""
+    Write-Success "Final validation completed at: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    Write-Info ""
+    
+    # Return validation results for caller to handle
+    if ($validationResults.errors.Count -gt 0) {
+        exit 1
+    }
+    
+} catch {
+    Write-Error "Validation failed: $($_.Exception.Message)"
+    Write-Error "Error details: $($_.ScriptStackTrace)"
+    exit 1
+}
+
     
     $verifyQuantityProject = Join-Path $repoRoot "verify-quantity"
     if (Test-Path $verifyQuantityProject) {
@@ -146,8 +189,8 @@ try {
     if ($validationResults.errors.Count -gt 0) {
         Write-Info ""
         Write-Info "Validation Errors/Warnings:"
-        foreach ($error in $validationResults.errors) {
-            Write-Warning "  • $error"
+        foreach ($validationError in $validationResults.errors) {
+            Write-Warning "  • $validationError"
         }
     }
     

@@ -1,0 +1,87 @@
+# User Prompt Template for Example Prompt Validation
+
+Please validate the example prompts in the following complete tool documentation file.
+
+The tool file contains:
+- Tool name, command, and description
+- All parameters with their requirements (Required/Optional) and descriptions
+- Tool metadata and annotations
+- The generated example prompts to validate
+
+---
+
+{TOOL_FILE_CONTENT}
+
+---
+
+## Important Note
+
+If this tool has **0 required parameters** (after excluding infrastructure parameters listed in Rule 1), then:
+- All example prompts are automatically valid
+- Return the JSON with empty validation array and isValid=true
+- No further analysis is needed
+
+Example: If the tool only has optional and infrastructure parameters, return:
+```json
+{
+  "toolName": "example-tool",
+  "requiredParameters": [],
+  "totalPrompts": 5,
+  "validPrompts": 5,
+  "invalidPrompts": 0,
+  "isValid": true,
+  "validation": [],
+  "summary": "No required parameters to validate - all prompts are valid",
+  "recommendations": []
+}
+```
+
+## Validation Instructions
+
+Please validate the example prompts in this tool file according to these rules:
+
+### Rule 1: All Required Parameters Must Be Present
+Exclude these infrastructure parameters from validation:
+- subscription-id, subscription
+- tenant-id, tenant
+- auth-method, auth, authentication
+- retry-* (any retry-related parameters)
+- output, output-format
+- verbose, debug, help
+
+For the remaining required parameters:
+- They must appear in the prompt in some form (parameter name variations are acceptable)
+- They should have a clear value associated with them (quoted or contextually obvious)
+
+### Rule 2: Recognize Natural Language Parameter Variations
+Parameters are expressed naturally in the prompts. Recognize variations like:
+- For `resource-group`: "resource group 'rg-prod'", "in the resource group 'rg-prod'"
+- For `database-type`: "PostgreSQL", "database type 'PostgreSQL'", "of type 'PostgreSQL'"
+- For `account`: "account 'myaccount'", "App Configuration store 'myaccount'"
+- For `endpoint`: "endpoint 'https://...'", "using 'https://...'"
+- For `key`: "key 'mykey'", "key-value 'mykey'"
+- For `app`: "app 'myapp'", "app service 'myapp'"
+- For `database`: "database 'mydb'", "database named 'mydb'"
+- For `container`: "container 'mycontainer'", "in container 'mycontainer'"
+
+### Rule 3: Parameter Values Should Be Identifiable
+Parameter values should be:
+- Quoted (single or double quotes are both acceptable)
+- OR clearly separated/context-based so their meaning is obvious
+
+Example valid prompts:
+- "Delete the key 'dbConnectionString' from App Configuration store 'my-appconfig'." (both params with quotes)
+- "Set the key 'timeout' to '30' in the App Configuration store 'my-appconfig'" (all params with quotes)
+- "Query items in container 'my-container' from database 'my-database' on Cosmos DB account 'my-cosmos-account'." (all params with quotes)
+
+## Output Format
+
+Return your validation results as a JSON object with the structure shown in the system prompt, including:
+- toolName
+- requiredParameters (list of parameter names from the tool definition)
+- totalPrompts, validPrompts, invalidPrompts counts
+- isValid (true only if all prompts are valid)
+- validation array with details for each prompt (including isValid, foundParameters, missingParameters, and issues)
+- summary and recommendations for improvement
+
+Be thorough and ensure all required parameters are accounted for in each prompt.
