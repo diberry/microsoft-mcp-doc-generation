@@ -186,6 +186,10 @@ Include files use 3-tier resolution:
 
 ## Output Structure
 
+## Default Output Directory (Important)
+
+All generation scripts should default to the repository root `./generated` directory unless an explicit output path is provided. This ensures consistent output locations across PowerShell, bash, and C# tooling.
+
 ```
 generated/
 ├── cli/
