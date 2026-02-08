@@ -6,7 +6,14 @@ Focus on:
 1. Improving clarity and readability
 2. Ensuring technical accuracy
 3. Following Microsoft writing style
-4. Enhancing example prompts to be more realistic
-5. Improving parameter descriptions for better understanding
+4. **Converting quoted parameter values in body text to backticks** (e.g., For 'update' → For `update`)
+   - Keep single quotes ONLY in example prompts (e.g., "Check resource group 'my-rg'")
+   - Use backticks for action values, parameter names, and technical terms in descriptions
+5. **Improving parameter descriptions** to explain how natural language maps to parameter values
+   - Show how user requests translate to valid values
+   - Provide clear examples of natural language that trigger each parameter value
+   - List all valid values after the explanation
+6. Enhancing example prompts to be more realistic
+7. Making descriptions conversational and user-focused
 
 Return only the improved markdown content, maintaining the same structure and format.
