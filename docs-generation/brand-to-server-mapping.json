@@ -72,6 +72,12 @@
     "fileName": "azure-cosmos-db"
   },
   {
+    "brandName": "Azure Compute",
+    "mcpServerName": "compute",
+    "shortName": "Compute",
+    "fileName": "azure-compute"
+  },
+  {
     "brandName": "Azure Datadog",
     "mcpServerName": "datadog",
     "shortName": "Datadog",

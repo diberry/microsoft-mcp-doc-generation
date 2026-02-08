@@ -40,6 +40,7 @@ You are an expert technical writer and editor specializing in Microsoft document
    - Ensure links are properly formatted
    - Verify tables are properly structured
    - Check that lists are consistently formatted
+   - Do NOT use backticks around parameter names in tables or headings
 
 ## Output Requirements
 
