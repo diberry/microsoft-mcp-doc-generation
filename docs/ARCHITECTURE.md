@@ -19,7 +19,7 @@ Quick reference for understanding the Azure MCP Documentation Generator architec
                             ▼
               ┌─────────────────────────┐
               │  PowerShell Orchestrator │
-              │ Generate-MultiPageDocs.ps1│
+              │      Generate.ps1     │
               └────────────┬────────────┘
                           │
          ┌────────────────┼────────────────┐
@@ -44,7 +44,7 @@ Quick reference for understanding the Azure MCP Documentation Generator architec
 
 ### Layer 1: Orchestration (PowerShell)
 
-**File**: `docs-generation/Generate-MultiPageDocs.ps1`
+**File**: `docs-generation/Generate.ps1`
 
 **Responsibilities**:
 - Environment detection (container vs local)
@@ -206,7 +206,7 @@ Stage 3: runtime
 ├─ Copy MCP server (from Stage 1)
 ├─ Copy generators (from Stage 2)
 ├─ Copy scripts & config
-└─ CMD: Run Generate-MultiPageDocs.ps1
+└─ CMD: Run Generate.ps1
 ```
 
 ### Container Execution
@@ -218,7 +218,7 @@ Docker Run
   ├─> Env:   MCP_SERVER_PATH=/mcp/servers/Azure.Mcp.Server/src
   ├─> Env:   DOTNET_ROLL_FORWARD=Major
   │
-  └─> Execute: pwsh Generate-MultiPageDocs.ps1
+  └─> Execute: pwsh Generate.ps1
       │
       ├─> Build MCP Server
       ├─> Generate CLI output
@@ -332,7 +332,7 @@ Project files reference without version:
 
 1. Edit `.hbs` file in `templates/`
 2. Rebuild generator: `dotnet build CSharpGenerator/`
-3. Regenerate: `pwsh ./Generate-MultiPageDocs.ps1`
+3. Regenerate: `pwsh ./Generate.ps1`
 4. Verify output in `generated/multi-page/`
 
 ### Debugging
@@ -378,7 +378,7 @@ Project files reference without version:
 
 **Start local generation**:
 ```bash
-pwsh docs-generation/Generate-MultiPageDocs.ps1
+pwsh docs-generation/Generate.ps1
 ```
 
 **Start Docker generation**:

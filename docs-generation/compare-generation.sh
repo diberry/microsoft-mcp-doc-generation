@@ -27,7 +27,7 @@ echo ""
 if [ ! -d "$BASELINE_DIR" ]; then
     echo -e "${RED}Error: Baseline directory not found: $BASELINE_DIR${NC}"
     echo "Generate baseline first with:"
-    echo "  pwsh ./Generate-MultiPageDocs.ps1"
+    echo "  pwsh ./Generate.ps1"
     echo "  mv generated baseline-output"
     exit 1
 fi
@@ -35,7 +35,7 @@ fi
 if [ ! -d "$CURRENT_DIR" ]; then
     echo -e "${RED}Error: Current directory not found: $CURRENT_DIR${NC}"
     echo "Generate current output first with:"
-    echo "  pwsh ./Generate-MultiPageDocs.ps1"
+    echo "  pwsh ./Generate.ps1"
     exit 1
 fi
 

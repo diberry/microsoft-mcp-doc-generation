@@ -7,13 +7,25 @@
     This script runs the complete-tools generator using existing annotation and parameter files
     from the ./generated directory.
     
+.PARAMETER OutputPath
+    Path to the generated directory (default: ../../generated from script location)
+    
 .EXAMPLE
     ./Generate-CompleteTools.ps1
+    ./Generate-CompleteTools.ps1 -OutputPath C:\path\to\generated
 #>
 
-# Resolve output directory - always use 'generated' sibling to this script's location
-$scriptDir = Split-Path -Parent $PSScriptRoot
-$generatedDir = Join-Path $scriptDir "generated"
+param(
+    [string]$OutputPath = "../../generated"
+)
+
+# Resolve output directory
+$generatedDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
+    $OutputPath
+} else {
+    $absPath = Join-Path (Get-Location) $OutputPath
+    [System.IO.Path]::GetFullPath($absPath)
+}
 
 # Set up logging
 $logDir = Join-Path $generatedDir "logs"
@@ -104,25 +116,22 @@ try {
     
     $commandString = "dotnet run --configuration Release -- " + ($generatorArgs -join " ")
     Write-Info "Running: $commandString"
+    Write-Info ""
     
-    # Execute generator
+    # Execute generator with real-time output
     Push-Location $generatorPath
     try {
-        $generatorOutput = & dotnet run --configuration Release -- $generatorArgs 2>&1
+        & dotnet run --configuration Release -- $generatorArgs
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Command failed with exit code: $LASTEXITCODE"
-            Write-Error "Generator output: $($generatorOutput | Out-String)"
             throw "Failed to generate complete tools"
         }
         
+        Write-Info ""
         Write-Success "Generator completed successfully"
     } finally {
         Pop-Location
     }
-    
-    # Display output
-    Write-Info ""
-    Write-Info "Generator output:"
     foreach ($line in $generatorOutput) {
         Write-Info $line
     }
@@ -170,22 +179,16 @@ try {
         
         $toolPagesCommand = "dotnet run --configuration Release -- " + ($toolPagesArgs -join " ")
         Write-Info "Running: $toolPagesCommand"
+        Write-Info ""
         
-        $toolPagesOutput = & dotnet run --configuration Release -- $toolPagesArgs 2>&1
+        & dotnet run --configuration Release -- $toolPagesArgs
         
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Tool pages generation failed with exit code: $LASTEXITCODE"
-            Write-Error "Output: $($toolPagesOutput | Out-String)"
             throw "Failed to generate tool pages"
         }
         
-        # Display output
         Write-Info ""
-        Write-Info "Tool pages generation output:"
-        foreach ($line in $toolPagesOutput) {
-            Write-Info $line
-        }
-        
         Write-Success "Tool pages generated successfully"
     } catch {
         Write-Warning "Failed to generate tool pages: $($_.Exception.Message)"

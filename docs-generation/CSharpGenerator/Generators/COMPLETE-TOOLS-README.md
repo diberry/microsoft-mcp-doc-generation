@@ -82,7 +82,7 @@ generated/
 ├── example-prompts/                           ← Read by CompleteToolGenerator
 │   └── {tool}-example-prompts.md
 └── tools/                                     ← Created by CompleteToolGenerator
-    └── {tool}.complete.md                     ← 208 files
+    └── {tool}.complete.md                     ← One file per tool
 ```
 
 ## How It Works
@@ -395,7 +395,7 @@ dotnet run --project CSharpGenerator/CSharpGenerator.csproj -- \
 
 # 3. Verify output
 ls -la ../generated/test-output/tools/*.complete.md | wc -l
-# Should show 208 files
+# Should show one file per tool
 
 # 4. Check content
 cat ../generated/test-output/tools/acr-registry-list.complete.md
@@ -417,7 +417,7 @@ cat ../generated/test-output/tools/acr-registry-list.complete.md
 
 ## Performance
 
-- **Generation Time:** ~2-3 seconds for 208 tools
+- **Generation Time:** ~2-3 seconds for all tools
 - **Memory:** Minimal (reads one file at a time)
 - **Disk I/O:** Read 3 files per tool, write 1 file per tool
 

@@ -41,8 +41,7 @@ mkdir -p generated/logs
 
 ## Generate docs using PowerShell orchestrator
 cd docs-generation
-pwsh ./Generate-MultiPageDocs.ps1 -OutputPath "../generated"
-pwsh ./Generate-CompleteTools.ps1
+pwsh ./Generate.ps1 -OutputPath "../generated"
 cd ..
 
 # Verify generated documentation

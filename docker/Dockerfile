@@ -73,7 +73,7 @@ CMD ["pwsh", "-Command", \
         exit 1; \
     }; \
     Write-Host 'Starting documentation generation...' -ForegroundColor Green; \
-    ./Generate-MultiPageDocs.ps1 -ExamplePrompts $true; \
+    ./Generate.ps1 -ExamplePrompts $true; \
     Write-Host ''; \
     if (Test-Path '/output/tools') { \
         Write-Host '✅ Documentation generated successfully!' -ForegroundColor Green; \

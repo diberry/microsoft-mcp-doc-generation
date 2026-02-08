@@ -364,7 +364,7 @@ Step 3: Review and Integrate
 ```
 Step 1: Generate Complete Tool Files
   → pwsh ./Generate-MultiPageDocs.ps1 --complete-tools
-  → Output: ../generated/tools/*.complete.md (208 files)
+  → Output: ../generated/tools/*.complete.md (one per tool)
 
 Step 2: Run Multi-Phase Assembly & Cleanup
   → pwsh ./GenerateToolFamilyCleanup-multifile.ps1

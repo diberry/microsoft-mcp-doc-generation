@@ -1,39 +1,95 @@
 # Example Prompt Validator
 
-The Example Prompt Validator is a standalone package that uses LLM (Large Language Model) to validate generated example prompts with rich context awareness.
+The Example Prompt Validator is a standalone package that validates generated example prompts, ensuring they contain all required parameters.
 
 ## Purpose
 
 When generating example prompts for Azure MCP tools, it's important to ensure that the prompts include all required parameters. This validator:
 
-1. **Uses LLM for intelligent validation** - Leverages Azure OpenAI to understand context and validate prompts
+1. **Validates required parameters** - Checks that each prompt contains all required parameters for the command
 2. **Provides full tool context** - Passes complete tool documentation including description, parameters, and metadata
-3. **Handles natural language variations** - LLM understands different ways parameters can be expressed
+3. **Handles natural language variations** - Understands different ways parameters can be expressed in natural language
 4. **Excludes infrastructure parameters** - Automatically filters out subscription, tenant, auth, and retry parameters
-5. **Generates detailed reports** - Provides per-prompt validation with specific missing parameter information
+5. **Generates detailed reports** - Provides per-tool validation with specific missing parameter information
+
+## Folder Structure
+
+```
+ExamplePromptValidator/
+├── Program.cs                           # CLI entry point
+├── PromptValidator.cs                   # Core validation logic
+├── ExamplePromptValidator.csproj        # Project file
+├── README.md                            # This file
+├── prompts/                             # Validation prompts
+│   ├── system-prompt-example-prompt-validation.txt
+│   └── user-prompt-example-prompt-validation.txt
+├── scripts/                             # Validation scripts
+│   └── Validate-ExamplePrompts-RequiredParams.ps1
+└── bin/, obj/                           # Build artifacts
+```
+
+## Components
+
+### Core Validator (Program.cs & PromptValidator.cs)
+- Reads CLI output JSON with tool definitions
+- Scans example prompt files for required parameters
+- Generates validation report
+
+### Validation Scripts (scripts/)
+- `Validate-ExamplePrompts-RequiredParams.ps1` - PowerShell orchestrator that calls the .NET validator
+
+### Validation Prompts (prompts/)
+- System and user prompts for parameter validation logic
+- Used by the validation process to understand what makes a valid prompt
 
 ## Architecture
 
-### LLM-Based Validation
+The validator works in two modes:
 
-Unlike simple text-matching approaches, this validator uses the GenerativeAI package to:
-- Read complete tool files from `generated/tools/` directory
-- Pass full context to Azure OpenAI for intelligent validation
-- Get structured validation results with specific feedback
-- Handle natural language variations in how parameters are expressed
-
-### Required Components
-
-- **GenerativeAI package** - For Azure OpenAI integration
-- **Complete tool files** - Generated with `--complete-tools` flag
-- **Validation prompts** - System and user prompts in `docs-generation/prompts/`
-- **Azure OpenAI configuration** - API key, endpoint, and deployment name
+1. **Command-based** - Validates parameters are present in example prompts
+2. **LLM-assisted** (optional) - Uses Azure OpenAI for intelligent validation with full context
 
 ## Usage
 
 ### Command Line
 
-Enable validation when running the documentation generator:
+#### Running the PowerShell Validation Script
+
+From the `docs-generation` folder, validate example prompts with files in `../generated`:
+
+```bash
+# From docs-generation folder
+cd docs-generation
+./ExamplePromptValidator/scripts/Validate-ExamplePrompts-RequiredParams.ps1 -OutputPath ../generated
+```
+
+Or with explicit paths:
+
+```bash
+./ExamplePromptValidator/scripts/Validate-ExamplePrompts-RequiredParams.ps1 `
+  -OutputPath ../generated `
+  -CliOutputFile ../generated/cli/cli-output.json `
+  -ExamplePromptsDir ../generated/example-prompts
+```
+
+#### Running the .NET Validator Directly
+
+From the `docs-generation` folder:
+
+```bash
+cd docs-generation
+dotnet run --project ExamplePromptValidator --configuration Release -- `
+  ../generated/cli/cli-output.json `
+  ../generated/example-prompts `
+  50
+```
+
+Arguments:
+1. **CLI Output File**: Path to `cli-output.json` (contains tool definitions)
+2. **Example Prompts Directory**: Path to folder with generated `*-example-prompts.md` files
+3. **Max Missing Details** (optional): Maximum number of tools with missing params to display (default: 50)
+
+#### Enable validation when running the documentation generator:
 
 ```bash
 # Run with validation enabled (requires --complete-tools)
