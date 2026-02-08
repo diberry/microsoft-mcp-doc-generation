@@ -373,10 +373,12 @@ public class CleanupGenerator
         // Initialize generators
         var metadataGenerator = new FamilyMetadataGenerator(_options);
         var relatedContentGenerator = new RelatedContentGenerator(_options);
+        var h2HeadingGenerator = new H2HeadingGenerator(_options);
         var stitcher = new FamilyFileStitcher();
 
         await metadataGenerator.LoadPromptsAsync();
         await relatedContentGenerator.LoadPromptsAsync();
+        await h2HeadingGenerator.LoadPromptsAsync();
         Console.WriteLine("✓ Generators initialized");
         Console.WriteLine();
 
@@ -409,6 +411,17 @@ public class CleanupGenerator
                     RelatedContent = string.Empty // Will be populated
                 };
 
+                // Phase 1.5: Generate improved H2 headings for each tool
+                Console.Write($"{progress}   Phase 1.5: Generating H2 headings... ");
+                var h2TokensUsed = 0;
+                foreach (var tool in familyContent.Tools)
+                {
+                    var improvedHeading = await h2HeadingGenerator.GenerateHeadingAsync(tool, displayName);
+                    tool.Content = ReplaceH2Heading(tool.Content, improvedHeading);
+                    h2TokensUsed += EstimateTokens(improvedHeading);
+                }
+                Console.WriteLine($"✓ ({h2TokensUsed} tokens)");
+
                 // Phase 2: Generate metadata
                 Console.Write($"{progress}   Phase 2: Generating metadata... ");
                 var metadata = await metadataGenerator.GenerateAsync(familyContent);
@@ -435,7 +448,7 @@ public class CleanupGenerator
                 await stitcher.StitchAndSaveAsync(familyContent, outputPath);
                 Console.WriteLine($"✓ Saved to {familyName}.md");
 
-                totalTokensUsed += EstimateTokens(metadata) + EstimateTokens(relatedContent);
+                totalTokensUsed += h2TokensUsed + EstimateTokens(metadata) + EstimateTokens(relatedContent);
                 successCount++;
                 Console.WriteLine();
             }
@@ -465,5 +478,53 @@ public class CleanupGenerator
     {
         var wordCount = text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
         return (int)(wordCount / 0.75);
+    }
+
+    /// <summary>
+    /// Replaces the H1 or H2 heading in tool content with an improved H2 heading.
+    /// Ensures proper H2 markdown syntax (##).
+    /// Preserves the CLI comment and all other content.
+    /// </summary>
+    private string ReplaceH2Heading(string content, string newHeading)
+    {
+        if (string.IsNullOrWhiteSpace(newHeading))
+        {
+            return content;
+        }
+
+        // Ensure heading has proper H2 syntax
+        var cleanedHeading = newHeading.Trim();
+        if (cleanedHeading.StartsWith("##"))
+        {
+            cleanedHeading = cleanedHeading.Substring(2).Trim();
+        }
+        if (cleanedHeading.StartsWith("#"))
+        {
+            cleanedHeading = cleanedHeading.Substring(1).Trim();
+        }
+
+        var properHeading = $"## {cleanedHeading}";
+
+        var lines = content.Split('\n');
+        var result = new List<string>();
+        var replaced = false;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            
+            // Find and replace the first H1 or H2 heading
+            if (!replaced && (line.StartsWith("## ") || line.StartsWith("# ")))
+            {
+                result.Add(properHeading);
+                replaced = true;
+            }
+            else
+            {
+                result.Add(line);
+            }
+        }
+
+        return string.Join('\n', result);
     }
 }

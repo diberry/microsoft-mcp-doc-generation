@@ -72,6 +72,25 @@ public class FamilyMetadataGenerator
         // Call LLM
         var metadata = await _aiClient.GetChatCompletionAsync(_systemPrompt, userPrompt, maxTokens: MAX_TOKENS);
 
-        return metadata.Trim();
+        // Extract markdown if wrapped in code fences
+        return ExtractMarkdown(metadata.Trim());
+    }
+
+    /// <summary>
+    /// Extracts markdown from AI response if wrapped in code fences.
+    /// </summary>
+    private static string ExtractMarkdown(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response))
+            return response;
+
+        // Check for markdown code fences
+        var match = System.Text.RegularExpressions.Regex.Match(response, @"```(?:markdown)?\s*(.*?)\s*```", System.Text.RegularExpressions.RegexOptions.Singleline);
+        if (match.Success)
+        {
+            return match.Groups[1].Value.Trim();
+        }
+
+        return response.Trim();
     }
 }

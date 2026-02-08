@@ -1,0 +1,7 @@
+Generate an H2 heading for the following Azure MCP tool:
+
+**Command**: {{COMMAND}}
+**Description**: {{DESCRIPTION}}
+**Service Family**: {{FAMILY_NAME}}
+
+Return ONLY the heading text (without markdown syntax).
