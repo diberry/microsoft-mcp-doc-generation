@@ -274,5 +274,11 @@
     "mcpServerName": "policy",
     "shortName": "Policy",
     "fileName": "azure-policy"
+  },
+  {
+    "brandName": "Azure Pricing",
+    "mcpServerName": "pricing",
+    "shortName": "Pricing",
+    "fileName": "azure-pricing"
   }
 ]

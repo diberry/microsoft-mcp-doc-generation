@@ -307,12 +307,23 @@ public static class OptionsDiscovery
             return mappings;
         }
         
-        // Get all .cs files in the Options directory
+        // Get all .cs files in the Options directory, but ONLY process common options classes
+        // Do not process tool-specific options like PricingOptions.cs, SearchOptions.cs, etc.
+        var commonOptionsClassNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "GlobalOptions.cs",
+            "RetryPolicyOptions.cs"
+        };
+        
         var optionsFiles = Directory.GetFiles(optionsDirectoryPath, "*.cs")
-            .Where(file => !Path.GetFileName(file).Equals("OptionDefinitions.cs", StringComparison.OrdinalIgnoreCase)) // Skip the definitions file
+            .Where(file => {
+                var fileName = Path.GetFileName(file);
+                return !fileName.Equals("OptionDefinitions.cs", StringComparison.OrdinalIgnoreCase) 
+                       && commonOptionsClassNames.Contains(fileName);
+            })
             .ToList();
         
-        Console.WriteLine($"Found {optionsFiles.Count} options class files");
+        Console.WriteLine($"Found {optionsFiles.Count} common options class files (GlobalOptions, RetryPolicyOptions)");
         
         if (optionsFiles.Count == 0)
         {

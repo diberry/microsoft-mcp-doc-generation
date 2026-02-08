@@ -47,7 +47,7 @@ $mcpServerPath = if ($env:MCP_SERVER_PATH) {
 Key files:
 - `Program.cs` - Entry point
 - `DocumentationGenerator.cs` - Core logic
-  - **Parameter Count**: The parameter count displayed in console output and `generation-summary.md` represents the count of **non-common parameters only** (those shown in the parameter tables). Common parameters (like `--subscription-id`, `--resource-group`) are filtered out to match what users see in the documentation.
+  - **Parameter Count**: The parameter count displayed in console output and `generation-summary.md` represents the count of **non-common parameters only** (those shown in the parameter tables). Common parameters are defined in `docs-generation/common-parameters.json` and are filtered out to match what users see in the documentation.
 - `HandlebarsTemplateEngine.cs` - Template processing
 - `Config.cs` - Configuration loader
 - `Generators/CompleteToolGenerator.cs` - Complete tool documentation generator (NEW)
@@ -82,7 +82,9 @@ Other configs:
 ### Parameter Counting Logic
 **Critical**: The parameter count shown in console output and `generation-summary.md` reflects only **non-common parameters** that appear in the documentation parameter tables.
 
-- **Common parameters** (e.g., `--subscription-id`, `--resource-group`, `--tenant`, `--auth-method`, `--retry-*`) are filtered out
+- **Common parameters** are defined in `docs-generation/common-parameters.json`:
+  - `--tenant`, `--subscription`, `--auth-method`, `--resource-group`
+  - `--retry-delay`, `--retry-max-delay`, `--retry-max-retries`, `--retry-mode`, `--retry-network-timeout`
 - **Exception**: Common parameters that are **required** for a specific tool are kept in the table
 - The count matches what users see in the parameter tables in the generated `.md` files
 - **Filtering occurs in**:
