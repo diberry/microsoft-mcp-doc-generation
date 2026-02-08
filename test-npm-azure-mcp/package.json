@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "az login",
     "start:info": "azmcp server info",
     "start:help": "azmcp --help",
     "start:list": "azmcp tools list",
     "get:version": "azmcp --version",
     "get:tools-json": "azmcp tools list",
-    "get:tools-namespace": "azmcp tools list --namespace-mode"
+    "get:tools-namespace": "azmcp tools list --namespace-mode",
+    "get:subscriptions": "azmcp subscription list",
+    "get:chat-completion": "azmcp foundry openai chat-completions-create --subscription aa94d689-ef39-45c8-9434-0d9efb62b456 --tenant 888d76fa-54b2-4ced-8ee5-aac1585adee7"
   },
   "keywords": [],
   "author": "",
