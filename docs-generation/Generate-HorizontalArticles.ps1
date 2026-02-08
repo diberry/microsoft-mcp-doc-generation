@@ -11,18 +11,32 @@
     This script is completely independent of Generate-MultiPageDocs.ps1 and does not
     modify any existing documentation generation.
     
+.PARAMETER OutputPath
+    Path to the generated directory (default: ../generated from script location)
+
 .PARAMETER SkipValidation
     Skip validation of CLI output files (not recommended)
     
 .EXAMPLE
     ./Generate-HorizontalArticles.ps1
+    ./Generate-HorizontalArticles.ps1 -OutputPath ../generated
 #>
 
 param(
+    [string]$OutputPath = "../generated",
     [switch]$SkipValidation = $false
 )
+
+# Resolve output directory
+$generatedDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
+    $OutputPath
+} else {
+    $absPath = Join-Path (Get-Location) $OutputPath
+    [System.IO.Path]::GetFullPath($absPath)
+}
+
 # Set up logging
-$logDir = "../generated/logs"
+$logDir = Join-Path $generatedDir "logs"
 if (-not (Test-Path $logDir)) {
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 }
@@ -46,8 +60,8 @@ try {
     # Step 1: Validate CLI output files...
     Write-Progress "Step 1: Validating CLI output files..."
     
-    $cliOutputPath = "../generated/cli/cli-output.json"
-    $cliVersionPath = "../generated/cli/cli-version.json"
+    $cliOutputPath = Join-Path $generatedDir "cli/cli-output.json"
+    $cliVersionPath = Join-Path $generatedDir "cli/cli-version.json"
     
     if (-not $SkipValidation) {
         if (-not (Test-Path $cliOutputPath)) {
@@ -102,7 +116,7 @@ try {
     # Step 4: Summary
     Write-Progress "Step 4: Generation Summary"
     
-    $outputDir = "../generated/horizontal-articles"
+    $outputDir = Join-Path $generatedDir "horizontal-articles"
     if (Test-Path $outputDir) {
         $files = Get-ChildItem $outputDir -Filter "*.md" | Sort-Object Name
         $totalFiles = $files.Count
