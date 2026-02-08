@@ -28,7 +28,19 @@ public class ToolContent
     /// Markdown content of the tool (H2 heading + description + parameters + examples + annotations)
     /// Frontmatter is stripped during reading.
     /// </summary>
-    public required string Content { get; init; }
+    public required string Content { get; set; }
+    
+    /// <summary>
+    /// MCP CLI command (e.g., "advisor recommendation list")
+    /// Extracted from @mcpcli comment in the tool file.
+    /// </summary>
+    public string? Command { get; init; }
+    
+    /// <summary>
+    /// Tool description extracted from the content.
+    /// Used for AI-based H2 heading generation.
+    /// </summary>
+    public string? Description { get; init; }
     
     /// <summary>
     /// Original full path to the source file for debugging

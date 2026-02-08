@@ -14,6 +14,7 @@ public class ToolReader
 {
     private static readonly Regex FrontmatterRegex = new(@"^---\s*\n.*?\n---\s*\n", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Regex ToolNameRegex = new(@"^#\s+(.+)$", RegexOptions.Multiline | RegexOptions.Compiled);
+    private static readonly Regex CommandRegex = new(@"<!--\s*@mcpcli\s+([^>]+?)\s*-->", RegexOptions.Compiled);
     
     private readonly string _toolsDirectory;
 
@@ -117,6 +118,7 @@ public class ToolReader
 
         // Extract tool name from H1 heading
         var toolName = ExtractToolName(content) ?? "Unknown Tool";
+        var command = ExtractCommand(content);
 
         // Strip frontmatter
         var contentWithoutFrontmatter = StripFrontmatter(content);
@@ -127,6 +129,8 @@ public class ToolReader
             FileName = fileName,
             FamilyName = familyName,
             Content = contentWithoutFrontmatter.Trim(),
+            Command = command,
+            Description = ExtractDescription(content),
             SourceFilePath = filePath
         };
     }
@@ -188,6 +192,37 @@ public class ToolReader
     {
         var match = ToolNameRegex.Match(content);
         return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
+
+    private string? ExtractCommand(string content)
+    {
+        var match = CommandRegex.Match(content);
+        return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
+
+    /// <summary>
+    /// Extracts the first line of tool description from content.
+    /// Skips @mcpcli comment and captures the first descriptive line.
+    /// </summary>
+    private string? ExtractDescription(string content)
+    {
+        var lines = content.Split('\n');
+        
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            
+            // Skip comment lines and empty lines
+            if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("<!--") || trimmed.StartsWith("#"))
+            {
+                continue;
+            }
+            
+            // Return first non-comment, non-heading line
+            return trimmed;
+        }
+        
+        return null;
     }
 
     /// <summary>
