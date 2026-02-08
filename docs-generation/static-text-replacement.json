@@ -26,6 +26,10 @@
     {
         "Parameter": "sku",
         "NaturalLanguage": "SKU"
+    },
+    {
+        "Parameter": "VMSS",
+        "NaturalLanguage": "Virtual machine scale set (VMSS)"
     }
 
 ]

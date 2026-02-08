@@ -193,6 +193,7 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 - Structural conformance to the requirements above
 - Not removing information or tools
 - Do NOT use backticks around parameter names in tables or headings
+ - In parameter tables, use bold text only (example: **VM name**, not **`VM name`**)
 
 ## Important Notes
 
