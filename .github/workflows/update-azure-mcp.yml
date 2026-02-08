@@ -80,6 +80,27 @@ jobs:
           
           echo "✅ Version verified successfully"
 
+      - name: Close previous automated PRs
+        if: steps.version-check.outputs.needs_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking for existing automated PRs..."
+          
+          # Find all open PRs with the 'automated' label created by this workflow
+          EXISTING_PRS=$(gh pr list --label "automated" --label "dependencies" --json number,headRefName,title --jq '.[] | select(.headRefName | startswith("update-azure-mcp-")) | .number')
+          
+          if [ -n "$EXISTING_PRS" ]; then
+            echo "Found existing automated PR(s) to close:"
+            for PR_NUMBER in $EXISTING_PRS; do
+              echo "  Closing PR #$PR_NUMBER"
+              gh pr close $PR_NUMBER --comment "Closing this PR as a newer version update is available." --delete-branch || true
+            done
+            echo "✅ Closed previous automated PRs"
+          else
+            echo "No existing automated PRs found"
+          fi
+
       - name: Create Pull Request
         if: steps.version-check.outputs.needs_update == 'true'
         id: create-pr

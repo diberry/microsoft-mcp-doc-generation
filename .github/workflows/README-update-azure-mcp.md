@@ -18,7 +18,8 @@ This workflow automatically checks for updates to the `@azure/mcp` package in th
 
 1. **Version Check**: Compares the current version in `package.json` with the latest version on npm
 2. **Update**: If a new version is found, runs `npm install @azure/mcp@latest` to update both `package.json` and `package-lock.json`
-3. **Pull Request**: Creates a PR with:
+3. **Clean Up Old PRs**: Automatically closes any previous automated PRs to ensure only one PR exists at a time
+4. **Pull Request**: Creates a PR with:
    - Clear description of the version change
    - Updated package files
    - Labels: `dependencies`, `automated`
@@ -63,6 +64,13 @@ To test the workflow:
 1. **Manual Trigger**: Run the workflow manually to verify it works
 2. **Check Summary**: View the job summary for version information
 3. **Verify PR**: If an update is available, check the created PR
+
+### PR Management Behavior
+
+The workflow ensures only **one automated PR exists at a time**:
+- Before creating a new PR, it automatically closes any existing PRs created by this workflow
+- Closed PRs include a comment explaining they were superseded by a newer version
+- This prevents PR stack-up when multiple versions are released between runs
 
 ## Troubleshooting
 

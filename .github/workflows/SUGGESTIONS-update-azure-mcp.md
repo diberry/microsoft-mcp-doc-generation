@@ -19,6 +19,7 @@ The workflow has been implemented with the following features:
 2. **Proper Permissions**: Explicitly defines required permissions
 3. **Branch Management**: Creates unique branch per version
 4. **Auto-cleanup**: Deletes branch after PR is merged/closed
+5. **PR Deduplication**: Automatically closes previous automated PRs before creating new one
 
 ### ✅ User Experience
 1. **Clear PR Descriptions**: Includes version info, file changes, verification steps
