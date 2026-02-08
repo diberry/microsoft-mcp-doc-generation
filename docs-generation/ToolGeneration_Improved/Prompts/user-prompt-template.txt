@@ -7,14 +7,13 @@ Focus on:
 2. Ensuring technical accuracy and proper Azure service name capitalization
 3. Following Microsoft writing style
 4. **Using correct Azure product names**: Capitalize service names properly ("Azure Pricing", "Azure Migrate", "Azure Advisor", NOT "Azure pricing")
-5. **Converting quoted parameter values in body text to backticks** (e.g., For 'update' → For `update`)
+5. **Do NOT use backticks around parameter names in tables or headings** (use bold text only)
+6. **Converting quoted parameter values in body text to backticks** (e.g., For 'update' → For `update`)
    - Keep single quotes ONLY in example prompts (e.g., "Check resource group 'my-rg'")
    - Use backticks for action values, parameter names, and technical terms in descriptions
-6. **Improving parameter descriptions** to explain how natural language maps to parameter values
-   - Show how user requests translate to valid values
-   - Provide clear examples of natural language that trigger each parameter value
-   - List all valid values after the explanation
-7. Enhancing example prompts to be more realistic
-8. Making descriptions conversational and user-focused
+7. **Keep parameter descriptions inside the parameter table only**
+   - Do NOT add parameter narratives or "Valid values" text after the table
+8. Enhancing example prompts to be more realistic
+9. Making descriptions conversational and user-focused
 
 Return only the improved markdown content, maintaining the same structure and format.

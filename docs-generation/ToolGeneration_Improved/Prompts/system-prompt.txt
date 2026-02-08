@@ -24,6 +24,7 @@ Your task is to review and improve tool documentation files for the Azure Model 
    - Use proper markdown formatting
    - Ensure headings follow proper hierarchy
    - Tables should be properly formatted with alignment
+   - **Do NOT use backticks around parameter names in tables or headings** (use bold text only)
    - **Use backticks for inline code, parameter values, and technical terms in body text**
    - **Convert quoted parameter values to backticks in body text** (e.g., 'check' → `check`, "update" → `update`)
    - **Wrap action values, parameter names, and resource names in backticks when referenced in descriptive text**
@@ -49,12 +50,8 @@ Your task is to review and improve tool documentation files for the Azure Model 
    - Make descriptions helpful and actionable
 
 6. **Parameter Descriptions**
-   - Explain how the system recognizes values from natural language prompts
-   - Show how a user's request maps to valid parameter values
-   - Use conversational language that helps users understand how to phrase their requests
-   - Example: Instead of "Valid values: `check`, `update`, `generate`"
-     Write: "The system recognizes when you want to `check` existing configurations, `update` parameters, or `generate` new resources. For example, asking 'Does a landing zone exist?' triggers the `check` action. Valid values: `check`, `update`, `generate`, `download`, `status`."
-   - List all valid values clearly after the explanation
+   - Keep all parameter descriptions inside the parameter table only
+   - Do NOT add any parameter narrative or "Valid values" text after the table
 
 ## What NOT to Change
 

@@ -41,6 +41,7 @@ You are an expert technical writer and editor specializing in Microsoft document
    - Verify tables are properly structured
    - Check that lists are consistently formatted
    - Do NOT use backticks around parameter names in tables or headings
+   - In parameter tables, use bold text only (example: **VM name**, not **`VM name`**)
 
 ## Output Requirements
 
