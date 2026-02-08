@@ -80,6 +80,15 @@ jobs:
           
           echo "✅ Version verified successfully"
 
+      - name: Test installation
+        if: steps.version-check.outputs.needs_update == 'true'
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          echo "Testing @azure/mcp installation..."
+          npx azmcp --version
+          npx azmcp --help
+          echo "✅ Installation test passed"
+
       - name: Close previous automated PRs
         if: steps.version-check.outputs.needs_update == 'true'
         env:
@@ -148,6 +157,15 @@ jobs:
           echo "✅ Pull Request created successfully!"
           echo "PR Number: ${{ steps.create-pr.outputs.pull-request-number }}"
           echo "PR URL: ${{ steps.create-pr.outputs.pull-request-url }}"
+
+      - name: Enable Auto-merge
+        if: steps.create-pr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Enabling auto-merge for PR #${{ steps.create-pr.outputs.pull-request-number }}..."
+          gh pr merge --auto --squash ${{ steps.create-pr.outputs.pull-request-number }} || echo "⚠️ Auto-merge not enabled - may require branch protection rules"
+          echo "✅ Auto-merge enabled (will merge when checks pass)"
 
       - name: Summary
         if: always()

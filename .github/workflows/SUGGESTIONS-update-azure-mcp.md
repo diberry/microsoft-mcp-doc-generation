@@ -27,11 +27,13 @@ The workflow has been implemented with the following features:
 3. **Assignment**: Assigns PR to repository owner
 4. **Job Summary**: Provides clear summary of run results
 5. **Release Notes Link**: Includes link to check for breaking changes
+6. **Testing**: Validates installation with `azmcp --version` and `azmcp --help`
+7. **Auto-merge**: Enables auto-merge for PRs that pass status checks
 
 ## Additional Suggested Improvements
 
-### 1. Enable Auto-merge (Optional)
-If you want PRs to auto-merge after passing checks:
+### 1. Enable Auto-merge ✅ IMPLEMENTED
+Auto-merge is now enabled in the workflow:
 
 ```yaml
       - name: Enable Auto-merge
@@ -41,7 +43,10 @@ If you want PRs to auto-merge after passing checks:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-**Note**: Requires branch protection rules and status checks to be configured.
+**Requirements**: 
+- Branch protection rules configured (use `.github/scripts/configure-branch-protection.sh`)
+- Status check `test-azure-mcp` must pass
+- See `.github/scripts/README.md` for setup instructions
 
 ### 2. Add Notification (Optional)
 Send notifications to Slack, Discord, or email:
@@ -58,8 +63,8 @@ Send notifications to Slack, Discord, or email:
             }
 ```
 
-### 3. Add Testing Step (Recommended)
-Validate the update before creating PR:
+### 3. Add Testing Step ✅ IMPLEMENTED
+Testing is now part of the workflow:
 
 ```yaml
       - name: Test installation
@@ -70,6 +75,8 @@ Validate the update before creating PR:
           npx azmcp --version
           npx azmcp --help
 ```
+
+A separate test workflow (`.github/workflows/test-azure-mcp-update.yml`) runs on PRs to provide the required status check for auto-merge.
 
 ### 4. Check for Breaking Changes (Advanced)
 Compare major versions to detect breaking changes:

@@ -1,0 +1,32 @@
+name: Test @azure/mcp Update
+
+on:
+  pull_request:
+    paths:
+      - 'test-npm-azure-mcp/package.json'
+      - 'test-npm-azure-mcp/package-lock.json'
+
+jobs:
+  test-azure-mcp:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./test-npm-azure-mcp
+        run: npm ci
+
+      - name: Test @azure/mcp CLI
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          echo "Testing @azure/mcp installation..."
+          npx azmcp --version
+          npx azmcp --help
+          echo "✅ All tests passed"

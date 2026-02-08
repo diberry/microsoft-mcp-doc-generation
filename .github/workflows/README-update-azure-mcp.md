@@ -18,12 +18,14 @@ This workflow automatically checks for updates to the `@azure/mcp` package in th
 
 1. **Version Check**: Compares the current version in `package.json` with the latest version on npm
 2. **Update**: If a new version is found, runs `npm install @azure/mcp@latest` to update both `package.json` and `package-lock.json`
-3. **Clean Up Old PRs**: Automatically closes any previous automated PRs to ensure only one PR exists at a time
-4. **Pull Request**: Creates a PR with:
+3. **Test**: Validates the installation by running `azmcp --version` and `azmcp --help`
+4. **Clean Up Old PRs**: Automatically closes any previous automated PRs to ensure only one PR exists at a time
+5. **Pull Request**: Creates a PR with:
    - Clear description of the version change
    - Updated package files
    - Labels: `dependencies`, `automated`
    - Assigned to the repository owner
+   - Auto-merge enabled (merges when status checks pass)
 
 ## Actions Used
 
@@ -33,7 +35,34 @@ All actions are pinned to their latest stable versions:
 - `actions/setup-node@v4` - Node.js environment
 - `peter-evans/create-pull-request@v7` - PR creation
 
+## Workflows
+
+### Main Workflow: `update-azure-mcp.yml`
+Checks for updates, creates PRs, and enables auto-merge.
+
+### Test Workflow: `test-azure-mcp-update.yml`
+Runs on PRs to validate the update works correctly. Provides the required status check for auto-merge.
+
 ## Configuration
+
+### Setting Up Auto-merge
+
+For auto-merge to work, you need to configure branch protection rules:
+
+1. **Run the configuration script**:
+   ```bash
+   ./.github/scripts/configure-branch-protection.sh
+   ```
+
+2. **Or configure manually** in GitHub:
+   - Go to: **Settings** → **Branches** → **Add rule**
+   - Branch name pattern: `main` (or your default branch)
+   - Enable:
+     - ✅ Require a pull request before merging
+     - ✅ Require status checks to pass: `test-azure-mcp`
+     - ✅ 0 required approvals (allows auto-merge)
+
+See `.github/scripts/README.md` for detailed setup instructions.
 
 ### Changing Schedule
 
