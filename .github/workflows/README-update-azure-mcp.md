@@ -7,7 +7,7 @@ This workflow automatically checks for updates to the `@azure/mcp` package in th
 ## Triggers
 
 ### Scheduled
-- Runs weekly on **Mondays at 9:00 AM UTC**
+- Runs nightly at **9:00 AM UTC**
 - Configurable via the cron expression in the workflow file
 
 ### Manual
@@ -40,11 +40,11 @@ Edit the cron expression in the workflow file:
 
 ```yaml
 schedule:
-  - cron: '0 9 * * 1'  # Weekly on Monday at 9 AM UTC
+  - cron: '0 9 * * *'  # Nightly at 9 AM UTC
 ```
 
 Common schedules:
-- Daily: `'0 9 * * *'`
+- Weekly: `'0 9 * * 1'` (Monday at 9 AM UTC)
 - Twice weekly: `'0 9 * * 1,4'` (Monday & Thursday)
 - Monthly: `'0 9 1 * *'` (1st of each month)
 

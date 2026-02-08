@@ -11,7 +11,7 @@ The workflow has been implemented with the following features:
 4. **Latest Actions**: All actions use latest stable versions (v5, v4, v7)
 
 ### ✅ Triggers
-1. **Scheduled**: Weekly on Mondays at 9:00 AM UTC
+1. **Scheduled**: Nightly at 9:00 AM UTC
 2. **Manual**: Can be triggered via workflow_dispatch
 
 ### ✅ Safety Features

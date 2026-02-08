@@ -1,9 +1,9 @@
 name: Update @azure/mcp Version
 
 on:
-  # Run weekly on Mondays at 9:00 AM UTC
+  # Run nightly at 9:00 AM UTC
   schedule:
-    - cron: '0 9 * * 1'
+    - cron: '0 9 * * *'
   # Allow manual trigger
   workflow_dispatch:
 
