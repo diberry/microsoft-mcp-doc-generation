@@ -102,7 +102,7 @@ For more control, you could modify to update to:
 - Latest minor only  
 - Latest version (current behavior)
 
-### 6. Add Concurrency Control
+### 6. Add Concurrency Control ✅ IMPLEMENTED
 Prevent multiple runs from creating duplicate PRs:
 
 ```yaml
@@ -111,7 +111,9 @@ concurrency:
   cancel-in-progress: false
 ```
 
-Add this at the job level or workflow level.
+**Status**: This is already implemented in the main workflow at lines 14-16.
+
+Add this at the job level or workflow level for additional isolation if needed.
 
 ### 7. Cache npm Dependencies
 Speed up the workflow with caching:
@@ -297,12 +299,21 @@ Possible future improvements:
 **Solution**: Add retry logic, verify package name, check npm status
 
 ### Issue: Version Mismatch
-**Causes**: Semver prefix handling, beta versions, pre-releases
+**Causes**: Semver prefix handling, beta versions, pre-releases, complex version ranges
 **Solution**: Review version comparison logic, adjust for pre-release handling
+
+**Note**: The current implementation handles simple semver prefixes (^, ~) using sed. If you use complex version ranges (>=, ||, x.x.x - y.y.y), consider using a more robust parser:
+
+```yaml
+# Alternative version extraction using npm list
+CURRENT_VERSION=$(npm list @azure/mcp --depth=0 --json | jq -r '.dependencies["@azure/mcp"].version' || node -p "require('./package.json').dependencies['@azure/mcp']" | sed 's/[\^~]//g')
+```
+
+This requires `jq` to be installed but handles all version formats correctly.
 
 ### Issue: Duplicate PRs
 **Causes**: Multiple workflow runs, branch not deleted
-**Solution**: Add concurrency control, verify branch cleanup
+**Solution**: Concurrency control is already implemented (workflow level), verify branch cleanup
 
 ## Conclusion
 

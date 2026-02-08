@@ -38,6 +38,7 @@ jobs:
           echo "Checking @azure/mcp version..."
           
           # Get current version from package.json
+          # Note: This strips simple semver prefixes (^, ~). For complex ranges, installed version is used.
           CURRENT_VERSION=$(node -p "require('./package.json').dependencies['@azure/mcp']" | sed 's/[\^~]//g')
           echo "Current version: $CURRENT_VERSION"
           
@@ -67,9 +68,17 @@ jobs:
           # Update to the latest version
           npm install @azure/mcp@latest
           
-          # Verify the update
+          # Verify the update succeeded
           NEW_VERSION=$(node -p "require('./package.json').dependencies['@azure/mcp']" | sed 's/[\^~]//g')
           echo "Updated to version: $NEW_VERSION"
+          
+          # Validate version matches expected
+          if [ "$NEW_VERSION" != "${{ steps.version-check.outputs.latest_version }}" ]; then
+            echo "::error::Version mismatch after update. Expected ${{ steps.version-check.outputs.latest_version }}, got $NEW_VERSION"
+            exit 1
+          fi
+          
+          echo "✅ Version verified successfully"
 
       - name: Create Pull Request
         if: steps.version-check.outputs.needs_update == 'true'
