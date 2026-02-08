@@ -167,7 +167,8 @@ generated/
 │   └── *.log
 ├── namespaces.csv               # CSV export
 ├── generation-summary.md        # Statistics report
-└── tools-metadata-report.md     # Comprehensive metadata
+└── reports/
+    └── tools-metadata-report.md     # Comprehensive metadata
 ```
 
 ## Key Metrics
@@ -335,7 +336,7 @@ Not affected by include file cleaning logic.
 
 ### Summary Reports
 - `generation-summary.md` - Statistics and metrics
-- `tools-metadata-report.md` - Comprehensive tool listing
+- `reports/tools-metadata-report.md` - Comprehensive tool listing
 - `namespaces.csv` - Spreadsheet-compatible export
 
 ## Security Considerations

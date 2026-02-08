@@ -222,10 +222,75 @@ try {
         }
     }
 
+    $brandMappingPath = Join-Path $scriptDir "brand-to-server-mapping.json"
+    if (Test-Path $brandMappingPath) {
+        Copy-Item -Path $brandMappingPath -Destination $tempDocs -Force
+    }
+
+    function Get-ToolNamespaceFromFile {
+        param([string]$FilePath)
+
+        $match = Select-String -Path $FilePath -Pattern "@mcpcli\s+([^\r\n]+)" -AllMatches -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $match) {
+            return $null
+        }
+
+        $commandText = $match.Matches[0].Groups[1].Value.Trim()
+        if (-not $commandText) {
+            return $null
+        }
+
+        return ($commandText.Split(' ')[0]).ToLower()
+    }
+
     # Copy only tools for this family into temp tools directory
-    $familyToolFiles = Get-ChildItem -Path $toolsInputDir -Filter "$familyName-*.md" -File -ErrorAction SilentlyContinue
-    if ($familyToolFiles.Count -eq 0) {
-        throw "No tool files found for family '$familyName' in $toolsInputDir"
+    $familyNameLower = $familyName.ToLower()
+
+    # Primary: match by tool namespace inside file content
+    $familyToolFiles = Get-ChildItem -Path $toolsInputDir -Filter "*.md" -File -ErrorAction SilentlyContinue | Where-Object {
+        (Get-ToolNamespaceFromFile $_.FullName) -eq $familyNameLower
+    }
+
+    # Fallback: match by filename prefixes (brand mappings)
+    $prefixes = New-Object System.Collections.Generic.List[string]
+    $prefixes.Add($familyNameLower)
+
+    # Try to load brand-to-server mapping for alternate filename prefixes
+    $brandMappingPath = Join-Path $scriptDir "brand-to-server-mapping.json"
+    if (Test-Path $brandMappingPath) {
+        try {
+            $brandMappings = Get-Content $brandMappingPath -Raw | ConvertFrom-Json
+            $mapping = $brandMappings | Where-Object { $_.mcpServerName -eq $familyNameLower } | Select-Object -First 1
+            if ($mapping -and $mapping.fileName) {
+                $prefixes.Add($mapping.fileName.ToLower())
+            }
+        } catch {
+            Write-Warning "Could not read brand-to-server-mapping.json: $($_.Exception.Message)"
+        }
+    }
+
+    # Common fallbacks for AI services
+    if (-not $prefixes.Contains("ai-$familyNameLower")) {
+        $prefixes.Add("ai-$familyNameLower")
+    }
+    if (-not $prefixes.Contains("azure-$familyNameLower")) {
+        $prefixes.Add("azure-$familyNameLower")
+    }
+
+    if (-not $familyToolFiles -or $familyToolFiles.Count -eq 0) {
+        $familyToolFiles = @()
+        foreach ($prefix in $prefixes) {
+            $matches = Get-ChildItem -Path $toolsInputDir -Filter "$prefix-*.md" -File -ErrorAction SilentlyContinue
+            if ($matches) {
+                $familyToolFiles += $matches
+            }
+        }
+
+        $familyToolFiles = $familyToolFiles | Sort-Object FullName -Unique
+        if ($familyToolFiles.Count -eq 0) {
+            $searched = ($prefixes | Sort-Object -Unique) -join ", "
+            throw "No tool files found for family '$familyName' in $toolsInputDir (checked prefixes: $searched)"
+        }
     }
 
     foreach ($file in $familyToolFiles) {
@@ -362,12 +427,17 @@ try {
                 Write-Warning "Some files were not generated"
             }
         } else {
-            # Multiple tools validation
-            Write-Success "✓ Generated $($matchingTools.Count) family files"
+            # Multiple tools validation (single family)
+            $metadataCount = if (Test-Path $metadataOutputDir) { (Get-ChildItem $metadataOutputDir -Filter "*.md" | Measure-Object).Count } else { 0 }
+            $relatedCount = if (Test-Path $relatedOutputDir) { (Get-ChildItem $relatedOutputDir -Filter "*.md" | Measure-Object).Count } else { 0 }
+            $finalCount = if (Test-Path $finalOutputDir) { (Get-ChildItem $finalOutputDir -Filter "*.md" | Measure-Object).Count } else { 0 }
+
+            Write-Success "✓ Processed $($matchingTools.Count) tools"
+            Write-Success "✓ Generated $finalCount family files"
             Write-Info "  Verify files in:"
-            Write-Info "    - $metadataOutputDir"
-            Write-Info "    - $relatedOutputDir"
-            Write-Info "    - $finalOutputDir"
+            Write-Info "    - $metadataOutputDir ($metadataCount files)"
+            Write-Info "    - $relatedOutputDir ($relatedCount files)"
+            Write-Info "    - $finalOutputDir ($finalCount files)"
         }
         
         Write-Host ""

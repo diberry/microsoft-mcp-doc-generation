@@ -110,13 +110,10 @@ public class ToolReader
         var fileName = Path.GetFileName(filePath);
         var content = await File.ReadAllTextAsync(filePath);
 
-        // Extract family name from filename
-        // Pattern: azure-{service}-{rest-of-name}.complete.md
-        // Examples:
-        //   azure-ai-foundry-agents-connect.complete.md → foundry
-        //   azure-fileshares-fileshare-create.complete.md → fileshares
-        //   azure-storage-account-create.complete.md → storage
-        var familyName = ExtractFamilyName(fileName);
+        // Extract family name from @mcpcli namespace in content
+        // Fallback to filename when not present
+        var familyName = ExtractFamilyNameFromContent(content)
+            ?? ExtractFamilyNameFromFileName(fileName);
 
         // Extract tool name from H1 heading
         var toolName = ExtractToolName(content) ?? "Unknown Tool";
@@ -142,7 +139,7 @@ public class ToolReader
     ///   storage-account-create.md → storage
     ///   ai-foundry-agents-connect.md → ai-foundry (special case)
     /// </summary>
-    private string ExtractFamilyName(string fileName)
+    private string ExtractFamilyNameFromFileName(string fileName)
     {
         // Remove .md extension
         var nameWithoutExt = fileName.Replace(".md", "");
@@ -164,6 +161,24 @@ public class ToolReader
         
         // Default: first part is the family name
         return parts[0];
+    }
+
+    private string? ExtractFamilyNameFromContent(string content)
+    {
+        var match = Regex.Match(content, "@mcpcli\\s+([^\\r\\n]+)");
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        var commandText = match.Groups[1].Value.Trim();
+        if (string.IsNullOrWhiteSpace(commandText))
+        {
+            return null;
+        }
+
+        var namespaceToken = commandText.Split(' ')[0].Trim();
+        return string.IsNullOrWhiteSpace(namespaceToken) ? null : namespaceToken.ToLowerInvariant();
     }
 
     /// <summary>

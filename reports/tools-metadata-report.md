@@ -1,6 +1,6 @@
 # Azure MCP Tools Metadata Report
 
-**Generated:** 2026-02-08 14:22:31 UTC
+**Generated:** 2026-02-08 15:16:12 UTC
 **Total Tools:** 19
 
 This comprehensive report provides detailed metadata analysis for all Azure MCP tools, including security requirements, operational characteristics, and safety considerations.

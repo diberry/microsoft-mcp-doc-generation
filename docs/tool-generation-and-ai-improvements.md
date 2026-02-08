@@ -95,7 +95,7 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [ToolGeneration_Raw/README.md](ToolGeneration_Raw/README.md)
+**README**: [ToolGeneration_Raw/README.md](../docs-generation/ToolGeneration_Raw/README.md)
 
 ### Stage 2: ToolGeneration_Composed
 
@@ -121,7 +121,7 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [ToolGeneration_Composed/README.md](ToolGeneration_Composed/README.md)
+**README**: [ToolGeneration_Composed/README.md](../docs-generation/ToolGeneration_Composed/README.md)
 
 ### Stage 3: ToolGeneration_Improved
 
@@ -147,7 +147,7 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [ToolGeneration_Improved/README.md](ToolGeneration_Improved/README.md)
+**README**: [ToolGeneration_Improved/README.md](../docs-generation/ToolGeneration_Improved/README.md)
 
 ---
 
