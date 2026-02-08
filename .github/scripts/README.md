@@ -1,4 +1,41 @@
-# Branch Protection Configuration Script
+# Repository Configuration Scripts
+
+This directory contains scripts to programmatically configure repository settings for automated dependency updates.
+
+## Available Scripts
+
+### 1. Branch Protection Configuration
+**Script**: `configure-branch-protection.sh`
+
+Configures branch protection rules to enable auto-merge for automated dependency update PRs.
+
+**Usage:**
+```bash
+./.github/scripts/configure-branch-protection.sh [branch-name]
+```
+
+**Configures:**
+- Required status check: `test-azure-mcp`
+- 0 required approvals (auto-merge compatible)
+- Prevents force pushes
+
+### 2. GitHub Actions Permissions
+**Script**: `configure-actions-permissions.sh`
+
+Configures GitHub Actions workflow permissions for the repository.
+
+**Usage:**
+```bash
+./.github/scripts/configure-actions-permissions.sh
+```
+
+**Configures:**
+- Default workflow permissions: Read and write
+- Allows GitHub Actions to create and approve pull requests
+
+---
+
+## Branch Protection Configuration
 
 This script programmatically configures branch protection rules for your repository to enable auto-merge for automated dependency update PRs.
 

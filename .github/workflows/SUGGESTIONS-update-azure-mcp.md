@@ -29,6 +29,10 @@ The workflow has been implemented with the following features:
 5. **Release Notes Link**: Includes link to check for breaking changes
 6. **Testing**: Validates installation with `azmcp --version` and `azmcp --help`
 7. **Auto-merge**: Enables auto-merge for PRs that pass status checks
+8. **CLI JSON Artifact**: Generates and uploads CLI tools list as artifact
+9. **Breaking Changes Detection**: Warns when major version changes detected
+10. **Security Audit**: Runs npm audit to check for vulnerabilities
+11. **Failure Notifications**: Creates GitHub issues when workflow fails
 
 ## Additional Suggested Improvements
 
@@ -78,7 +82,7 @@ Testing is now part of the workflow:
 
 A separate test workflow (`.github/workflows/test-azure-mcp-update.yml`) runs on PRs to provide the required status check for auto-merge.
 
-### 4. Check for Breaking Changes (Advanced)
+### 4. Check for Breaking Changes ✅ IMPLEMENTED
 Compare major versions to detect breaking changes:
 
 ```yaml
@@ -97,12 +101,7 @@ Compare major versions to detect breaking changes:
           fi
 ```
 
-Then update the PR body to highlight this:
-
-```yaml
-          body: |
-            ${{ steps.breaking-check.outputs.breaking == 'true' && '⚠️ **MAJOR VERSION CHANGE - BREAKING CHANGES LIKELY**' || '' }}
-```
+**Status**: Implemented in the main workflow. PR body includes warning for major version changes.
 
 ### 5. Add Dependabot-style Update Strategy
 For more control, you could modify to update to:
@@ -136,7 +135,7 @@ Speed up the workflow with caching:
             ${{ runner.os }}-node-
 ```
 
-### 8. Add Failure Notifications
+### 8. Add Failure Notifications ✅ IMPLEMENTED
 Get notified if the workflow fails:
 
 ```yaml
@@ -144,10 +143,11 @@ Get notified if the workflow fails:
         if: failure()
         run: |
           echo "::error::@azure/mcp update workflow failed"
-          # Add notification logic here
 ```
 
-### 9. Create GitHub Issue on Failure
+**Status**: Implemented in the main workflow.
+
+### 9. Create GitHub Issue on Failure ✅ IMPLEMENTED
 Automatically create an issue if update fails:
 
 ```yaml
@@ -165,7 +165,9 @@ Automatically create an issue if update fails:
             })
 ```
 
-### 10. Add Package Audit Check
+**Status**: Implemented in the main workflow with link to failed run.
+
+### 10. Add Package Audit Check ✅ IMPLEMENTED
 Check for security vulnerabilities after update:
 
 ```yaml
@@ -175,6 +177,8 @@ Check for security vulnerabilities after update:
         run: |
           npm audit --audit-level=moderate || echo "⚠️ Security vulnerabilities found - review carefully"
 ```
+
+**Status**: Implemented in the main workflow.
 
 ## Repository Settings Recommendations
 
@@ -192,6 +196,18 @@ To ensure quality, configure branch protection:
 ### GitHub Actions Permissions
 Verify workflow permissions:
 
+**Automated configuration script** (`.github/scripts/configure-actions-permissions.sh`):
+- Configures workflow permissions programmatically
+- Sets default permissions to "Read and write"
+- Enables "Allow GitHub Actions to create and approve pull requests"
+- Uses GitHub CLI and API
+
+**Usage:**
+```bash
+./.github/scripts/configure-actions-permissions.sh
+```
+
+**Or configure manually**:
 1. Go to **Settings** → **Actions** → **General**
 2. Set **Workflow permissions** to: "Read and write permissions"
 3. Enable: "Allow GitHub Actions to create and approve pull requests"
