@@ -135,7 +135,9 @@ public class ReportGenerator
             // For brevity, adding a simplified structure
 
             // Write report
-            var reportPath = Path.Combine(outputDir, "tools-metadata-report.md");
+            var reportDir = Path.Combine(outputDir, "reports");
+            Directory.CreateDirectory(reportDir);
+            var reportPath = Path.Combine(reportDir, "tools-metadata-report.md");
             await File.WriteAllLinesAsync(reportPath, reportLines);
             Console.WriteLine($"Generated tools metadata report: {reportPath}");
         }

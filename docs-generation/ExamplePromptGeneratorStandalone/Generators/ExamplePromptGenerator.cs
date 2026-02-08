@@ -144,8 +144,13 @@ public sealed class ExamplePromptGenerator
                 return null;
             }
 
-            // STEP 2: Deserialize the JSON
-            var dict = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(jsonText);
+            // STEP 2: Deserialize the JSON (allow trailing commas from LLM output)
+            var jsonOptions = new JsonSerializerOptions
+            {
+                AllowTrailingCommas = true
+            };
+
+            var dict = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(jsonText, jsonOptions);
 
             // STEP 3: Extract first entry as the tool's example prompts
             if (dict != null && dict.Count > 0)

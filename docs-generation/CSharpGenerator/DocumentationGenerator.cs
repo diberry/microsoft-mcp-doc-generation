@@ -358,7 +358,9 @@ public static class DocumentationGenerator
         if (generateAnnotations && (generateCommands || generateIndex || generateCommon))
         {
             var toolAnnotationsTemplate = Path.Combine(templatesDir, "tool-annotations-template.hbs");
-            var generatedDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+            var generatedDir = string.Equals(Path.GetFileName(outputDir), "generated", StringComparison.OrdinalIgnoreCase)
+                ? outputDir
+                : (Path.GetDirectoryName(outputDir) ?? outputDir);
             await annotationGenerator.GenerateToolAnnotationsSummaryAsync(transformedData, generatedDir, toolAnnotationsTemplate, annotationsDir);
         }
 
@@ -367,7 +369,9 @@ public static class DocumentationGenerator
         // Generate security reports in the parent directory (generated folder) (skip if only generating annotations)
         if (!generateAnnotations || generateCommands || generateIndex || generateCommon)
         {
-            var securityReportsDir = Path.GetDirectoryName(outputDir) ?? outputDir;
+            var securityReportsDir = string.Equals(Path.GetFileName(outputDir), "generated", StringComparison.OrdinalIgnoreCase)
+                ? outputDir
+                : (Path.GetDirectoryName(outputDir) ?? outputDir);
             await reportGenerator.GenerateSecurityReportsAsync(transformedData, securityReportsDir);
         }
 
@@ -1778,7 +1782,9 @@ public static class DocumentationGenerator
             });
 
             // Save the comprehensive report
-            var reportPath = Path.Combine(outputDir, "tools-metadata-report.md");
+            var reportDir = Path.Combine(outputDir, "reports");
+            Directory.CreateDirectory(reportDir);
+            var reportPath = Path.Combine(reportDir, "tools-metadata-report.md");
             await File.WriteAllTextAsync(reportPath, string.Join("\n", reportLines));
 
             Console.WriteLine($"Generated comprehensive metadata report:");

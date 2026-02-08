@@ -59,9 +59,13 @@ public class FamilyMetadataGenerator
             throw new InvalidOperationException("Prompts not loaded. Call LoadPromptsAsync() first.");
         }
 
+        var familyDisplayName = string.IsNullOrWhiteSpace(familyContent.DisplayName)
+            ? familyContent.FamilyName
+            : familyContent.DisplayName;
+
         // Generate user prompt with placeholders replaced
         var userPrompt = _userPromptTemplate
-            .Replace("{{FAMILY_NAME}}", familyContent.FamilyName)
+            .Replace("{{FAMILY_NAME}}", familyDisplayName)
             .Replace("{{TOOL_COUNT}}", familyContent.ToolCount.ToString())
             .Replace("{{TOOL_LIST}}", familyContent.ToolNamesList);
 

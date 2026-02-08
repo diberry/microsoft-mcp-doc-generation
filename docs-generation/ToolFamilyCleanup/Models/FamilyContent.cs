@@ -13,6 +13,11 @@ public class FamilyContent
     /// Tool family name (e.g., "foundry", "fileshares")
     /// </summary>
     public required string FamilyName { get; init; }
+
+    /// <summary>
+    /// Brand display name (e.g., "Azure AI Foundry") used in metadata
+    /// </summary>
+    public string? DisplayName { get; set; }
     
     /// <summary>
     /// AI-generated metadata section including:

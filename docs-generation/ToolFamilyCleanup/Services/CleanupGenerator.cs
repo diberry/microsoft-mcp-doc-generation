@@ -4,6 +4,7 @@
 using GenerativeAI;
 using System.Text.RegularExpressions;
 using ToolFamilyCleanup.Models;
+using System.Text.Json;
 
 namespace ToolFamilyCleanup.Services;
 
@@ -36,11 +37,52 @@ public class CleanupGenerator
     private string? _systemPrompt;
     private string? _userPromptTemplate;
 
+    private sealed class BrandMapping
+    {
+        public string? mcpServerName { get; set; }
+        public string? brandName { get; set; }
+    }
+
     public CleanupGenerator(GenerativeAIOptions options, CleanupConfiguration config)
     {
         _options = options;
         _aiClient = new GenerativeAIClient(options);
         _config = config;
+    }
+
+    private static Dictionary<string, string> LoadBrandMappings()
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var mappingPath = Path.Combine(Directory.GetCurrentDirectory(), "brand-to-server-mapping.json");
+        if (!File.Exists(mappingPath))
+        {
+            return result;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(mappingPath);
+            var mappings = JsonSerializer.Deserialize<List<BrandMapping>>(json);
+            if (mappings == null)
+            {
+                return result;
+            }
+
+            foreach (var mapping in mappings)
+            {
+                if (!string.IsNullOrWhiteSpace(mapping.mcpServerName) &&
+                    !string.IsNullOrWhiteSpace(mapping.brandName))
+                {
+                    result[mapping.mcpServerName.Trim().ToLowerInvariant()] = mapping.brandName.Trim();
+                }
+            }
+        }
+        catch
+        {
+            return result;
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -338,6 +380,8 @@ public class CleanupGenerator
         Console.WriteLine("✓ Generators initialized");
         Console.WriteLine();
 
+        var brandMappings = LoadBrandMappings();
+
         // Phase 2 & 3 & 4: Process each family
         int successCount = 0;
         int failCount = 0;
@@ -352,9 +396,14 @@ public class CleanupGenerator
                 Console.WriteLine($"{progress} Processing family: {familyName} ({tools.Count} tools)...");
 
                 // Create FamilyContent object
+                var displayName = brandMappings.TryGetValue(familyName, out var brandName)
+                    ? brandName
+                    : familyName;
+
                 var familyContent = new FamilyContent
                 {
                     FamilyName = familyName,
+                    DisplayName = displayName,
                     Tools = tools,
                     Metadata = string.Empty, // Will be populated
                     RelatedContent = string.Empty // Will be populated
