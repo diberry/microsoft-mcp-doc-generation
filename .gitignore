@@ -26,3 +26,6 @@ git
 generated*
 
 *.log
+
+**/reports/
+./reports/
