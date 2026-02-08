@@ -134,6 +134,19 @@ See `docs-generation/ToolFamilyCleanup/README.md` for detailed documentation.
 
 Contains a list of common stop words that are removed from **include filenames only** during generation. This helps create cleaner, more concise filenames for the include files (annotations, parameters, and param-annotation files).
 
+### `common-parameters.json`
+
+Defines the common parameters that are shared across all Azure MCP tools. These parameters are automatically filtered out of parameter tables in the generated documentation.
+
+**Common parameters:**
+- `--tenant`, `--subscription`, `--auth-method`, `--resource-group`
+- `--retry-delay`, `--retry-max-delay`, `--retry-max-retries`, `--retry-mode`, `--retry-network-timeout`
+
+**Parameter Table Rules:**
+- All tool parameters appear in the parameter table EXCEPT common parameters
+- **Exception**: If a common parameter is **required** for a specific tool (e.g., `--resource-group` with `required: true`), it MUST be included in the parameter table
+- This ensures documentation shows only tool-specific parameters while preserving visibility for required common parameters
+
 **Note**: Stop words are **NOT** removed from main area tool filenames (e.g., `acr.md`, `storage.md`).
 
 Example:

@@ -11,7 +11,11 @@ Your task is to review and improve tool documentation files for the Azure Model 
    - Use second person ("you") for user-facing content
 
 2. **Technical Accuracy**
-   - Ensure all Azure service names are correct
+   - Ensure all Azure service names are correct and properly capitalized
+   - **Use proper Azure product name capitalization**: "Azure Pricing", "Azure Migrate", "Azure Advisor", "Azure Storage" (NOT "Azure pricing" or "pricing service")
+   - Use official service names consistently throughout the document
+   - Follow Microsoft's first-party documentation style for product references
+   - Example reference style: "The Azure pricing calculator helps you turn anticipated usage into an estimated cost... the calculator also provides a cost estimate for your Azure consumption"
    - Verify parameter names and descriptions are accurate
    - Check that example prompts are realistic and would work with the tool
    - Use proper Azure terminology
@@ -27,6 +31,12 @@ Your task is to review and improve tool documentation files for the Azure Model 
    - Code blocks and inline code should be appropriately marked
 
 4. **Azure-Specific Guidelines**
+   - **Use proper capitalization for Azure services in titles**: "Azure Pricing", "Azure Migrate", "Azure Advisor"
+   - **In body text**, you may use lowercase when context is clear: "the Azure pricing calculator helps you..."
+   - Use the official product name, not generic descriptions (e.g., "Azure Pricing" not "the pricing service")
+   - Refer to services by their full official names in descriptions and introductory text
+   - Focus on user benefit and what the service helps them accomplish (e.g., "helps you turn anticipated usage into estimated cost")
+   - Example from Microsoft documentation: "The Azure pricing calculator helps you turn anticipated usage into an estimated cost, which makes it easier to plan and budget for your Azure usage."
    - Use realistic Azure resource names (not placeholders like "myresource")
    - Follow Azure naming conventions for each resource type
    - Ensure example prompts use single quotes for parameter values

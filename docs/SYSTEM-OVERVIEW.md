@@ -183,7 +183,11 @@ generated/
 
 **Important**: The parameter count in console output and `generation-summary.md` shows only **non-common parameters** that appear in documentation tables.
 
-**Common parameters excluded:**
+**Common parameters excluded** (defined in `docs-generation/common-parameters.json`):
+- `--tenant`, `--subscription`, `--auth-method`, `--resource-group`
+- `--retry-delay`, `--retry-max-delay`, `--retry-max-retries`, `--retry-mode`, `--retry-network-timeout`
+
+**Exception**: If `--resource-group` or any other common parameter is **required** for a specific tool, it MUST appear in the parameter table.
 - `--subscription-id`
 - `--resource-group`
 - `--output`

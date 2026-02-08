@@ -154,11 +154,8 @@ public static class DocumentationGenerator
             Console.WriteLine($"Using CLI version: {cliVersion}");
         }
 
-        // Add source code discovered common parameters
-        var sourceCommonParams = await OptionsDiscovery.DiscoverCommonParametersFromSource();
-
-        // Merge source-discovered parameters with CLI-discovered ones
-        transformedData = MergeCommonParameters(transformedData, sourceCommonParams);
+        // Load common parameters from JSON file
+        transformedData.SourceDiscoveredCommonParams = await LoadCommonParametersFromFile();
 
         // Ensure output directory exists
         Directory.CreateDirectory(outputDir);
@@ -707,6 +704,41 @@ public static class DocumentationGenerator
         var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
         await File.WriteAllTextAsync(outputFile, result);
         Console.WriteLine($"Generated commands page: common-general/azmcp-commands.md");
+    }
+
+    /// <summary>
+    /// Loads common parameters from JSON configuration file.
+    /// </summary>
+    private static async Task<List<CommonParameter>> LoadCommonParametersFromFile()
+    {
+        var commonParamsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "common-parameters.json");
+        
+        if (!File.Exists(commonParamsFile))
+        {
+            Console.WriteLine($"Warning: common-parameters.json not found at {commonParamsFile}");
+            return new List<CommonParameter>();
+        }
+
+        var json = await File.ReadAllTextAsync(commonParamsFile);
+        var commonParams = JsonSerializer.Deserialize<List<CommonParameterDefinition>>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        }) ?? new List<CommonParameterDefinition>();
+
+        Console.WriteLine($"Loaded {commonParams.Count} common parameters from configuration file");
+
+        return commonParams.Select(p => new CommonParameter
+        {
+            Name = p.Name,
+            Type = p.Type,
+            IsRequired = p.IsRequired,
+            Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(p.Description)),
+            UsagePercent = 100,
+            IsHidden = false,
+            Source = "common-parameters.json",
+            RequiredText = p.IsRequired ? "Required" : "Optional",
+            NL_Name = TextCleanup.NormalizeParameter(p.Name)
+        }).ToList();
     }
 
     /// <summary>

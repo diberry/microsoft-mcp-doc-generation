@@ -192,6 +192,7 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 - Style, clarity, and correctness improvements
 - Structural conformance to the requirements above
 - Not removing information or tools
+- Do NOT use backticks around parameter names in tables or headings
 
 ## Important Notes
 

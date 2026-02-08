@@ -26,12 +26,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [[ $# -lt 1 ]]; then
-	echo "Usage: $0 <tool-family>"
+	echo "Usage: $0 <tool-family> [steps]"
 	echo "Example: $0 advisor"
+	echo "Example: $0 advisor 1        (run only step 1)"
 	exit 1
 fi
 
 TOOL_FAMILY="$1"
+STEPS="${2:-1,2,3,4}"
 
 # Clean up last run
 rm -rf "$ROOT_DIR/generated/"
@@ -74,8 +76,8 @@ mkdir -p "$ROOT_DIR/generated/example-prompts"
 mkdir -p "$ROOT_DIR/generated/annotations"
 mkdir -p "$ROOT_DIR/generated/logs"
 
-echo "Running tool family pipeline for: $TOOL_FAMILY"
+echo "Running tool family pipeline for: $TOOL_FAMILY (steps: $STEPS)"
 cd "$ROOT_DIR/docs-generation"
-./generate-tool-family.sh "$TOOL_FAMILY" 1,2,3,4
+./generate-tool-family.sh "$TOOL_FAMILY" "$STEPS"
 
 echo "OK: Tool family file generated at: $ROOT_DIR/generated/tool-family/$TOOL_FAMILY.md"

@@ -72,6 +72,12 @@
     "fileName": "azure-cosmos-db"
   },
   {
+    "brandName": "Azure Compute",
+    "mcpServerName": "compute",
+    "shortName": "Compute",
+    "fileName": "azure-compute"
+  },
+  {
     "brandName": "Azure Datadog",
     "mcpServerName": "datadog",
     "shortName": "Datadog",
@@ -274,5 +280,11 @@
     "mcpServerName": "policy",
     "shortName": "Policy",
     "fileName": "azure-policy"
+  },
+  {
+    "brandName": "Azure Pricing",
+    "mcpServerName": "pricing",
+    "shortName": "Pricing",
+    "fileName": "azure-pricing"
   }
 ]

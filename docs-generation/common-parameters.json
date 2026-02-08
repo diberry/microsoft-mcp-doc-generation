@@ -1,0 +1,56 @@
+[
+  {
+    "name": "--tenant",
+    "type": "string",
+    "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
+    "isRequired": false
+  },
+  {
+    "name": "--subscription",
+    "type": "string",
+    "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
+    "isRequired": false
+  },
+  {
+    "name": "--auth-method",
+    "type": "string",
+    "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
+    "isRequired": false
+  },
+  {
+    "name": "--resource-group",
+    "type": "string",
+    "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
+    "isRequired": false
+  },
+  {
+    "name": "--retry-delay",
+    "type": "number",
+    "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
+    "isRequired": false
+  },
+  {
+    "name": "--retry-max-delay",
+    "type": "number",
+    "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
+    "isRequired": false
+  },
+  {
+    "name": "--retry-max-retries",
+    "type": "integer",
+    "description": "Maximum number of retry attempts for failed operations before giving up.",
+    "isRequired": false
+  },
+  {
+    "name": "--retry-mode",
+    "type": "string",
+    "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
+    "isRequired": false
+  },
+  {
+    "name": "--retry-network-timeout",
+    "type": "number",
+    "description": "Network operation timeout in seconds. Operations taking longer than this will be canceled.",
+    "isRequired": false
+  }
+]

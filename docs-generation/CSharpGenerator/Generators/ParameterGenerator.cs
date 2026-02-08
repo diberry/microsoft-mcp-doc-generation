@@ -50,10 +50,8 @@ public class ParameterGenerator
             // Load brand mappings
             var brandMappings = await _loadBrandMappings();
             
-            // Get common parameters to filter out (unless required)
-            var commonParameters = data.SourceDiscoveredCommonParams.Any() 
-                ? data.SourceDiscoveredCommonParams 
-                : _extractCommonParameters(data.Tools);
+            // Get common parameters from CLI data only
+            var commonParameters = data.SourceDiscoveredCommonParams;
             var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
             
             foreach (var tool in data.Tools)
@@ -108,9 +106,11 @@ public class ParameterGenerator
                 
                 var outputFile = Path.Combine(outputDir, fileName);
 
-                // Filter out common parameters unless they are required
-                // Transform options to include RequiredText
-                var transformedOptions = tool.Option?
+                // Filter out common parameters unless they are required for this specific tool
+                var allOptions = tool.Option ?? new List<Option>();
+                
+                // Filter to get only tool-specific parameters (non-common) or required common parameters
+                var transformedOptions = allOptions
                     .Where(opt => !string.IsNullOrEmpty(opt.Name) && 
                                   (!commonParameterNames.Contains(opt.Name) || opt.Required == true))
                     .Select(opt => new
