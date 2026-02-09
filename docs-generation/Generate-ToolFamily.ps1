@@ -62,6 +62,9 @@
 .PARAMETER SkipValidation
     Skip file validation steps (default: $false)
 
+.PARAMETER UseTextTransformation
+    Apply text transformations to horizontal article output (default: $true)
+
 .PARAMETER Steps
     Array of step numbers to run (default: @(1,2,3,4,5) - all steps)
     Example: -Steps @(1,3) to run only steps 1 and 3
@@ -153,6 +156,8 @@ param(
     [bool]$SkipAIImprovements = $false,
     
     [bool]$SkipValidation = $false,
+
+    [bool]$UseTextTransformation = $true,
     
     [int[]]$Steps = @(1, 2, 3, 4, 5),
     
@@ -411,6 +416,7 @@ try {
             $step5Params = @{
                 ServiceArea = $ToolFamily
                 OutputPath = $OutputPath
+                UseTextTransformation = $UseTextTransformation
             }
             
             if ($SkipValidation) {
