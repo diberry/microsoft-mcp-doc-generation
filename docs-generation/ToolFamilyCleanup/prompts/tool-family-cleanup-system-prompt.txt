@@ -187,6 +187,8 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 - All links (unless broken)
 - CLI comments below tool H2 headings
 - Every single tool section from the original document
+- Any conditional requirement sentence that starts with "Requires at least one" (keep verbatim)
+- Asterisks in the "Required or optional" column and the footnote explaining the asterisk
 
 **Focus on**:
 - Style, clarity, and correctness improvements

@@ -157,6 +157,7 @@ public class CompleteToolGenerator
                 {
                     ["command"] = tool.Command,
                     ["description"] = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(tool.Description ?? "")),
+                    ["conditionalRequiredNote"] = tool.ConditionalRequiredNote ?? "",
                     ["annotationsFileName"] = annotationsFileName,
                     ["parametersFileName"] = parametersFileName,
                     ["examplePromptsFileName"] = examplePromptsFileName,

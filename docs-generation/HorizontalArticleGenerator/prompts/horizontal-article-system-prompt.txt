@@ -125,6 +125,7 @@ Before generating content, carefully analyze each tool to determine if it operat
 5. **tools.genai-shortDescription**: Condense the full tool description to its essential action and target. Remove technical details but keep the core purpose
    - **Target length**: 8-12 words (max 15 words)
    - **Be specific**: Include what data/details are retrieved, not just "get details"
+  - **Conditional requirements**: If the tool description includes a sentence starting with "Requires at least one", include a brief clause reflecting that requirement
    - **Examples of GOOD descriptions**:
      - "Retrieve index schema, field definitions, and scoring profiles" (not "Get details of indexes")
      - "Execute full-text search with filters, facets, and scoring" (not "Query indexes for data")

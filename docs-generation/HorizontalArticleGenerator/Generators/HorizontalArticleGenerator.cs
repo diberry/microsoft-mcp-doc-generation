@@ -154,14 +154,8 @@ public class HorizontalArticleGenerator
     /// </summary>
     public async Task GenerateSingleServiceArticle(string serviceArea)
     {
-        Console.WriteLine("=== Horizontal Article Generation (Single Service) ===");
-        Console.WriteLine();
-        
         // Phase 1: Extract static data
-        Console.WriteLine("Phase 1: Extracting static data from CLI output...");
         var staticDataList = await ExtractStaticData();
-        Console.WriteLine($"✓ Found {staticDataList.Count} total services");
-        Console.WriteLine();
         
         // Find the requested service
         var targetService = staticDataList.FirstOrDefault(s => 
@@ -177,22 +171,13 @@ public class HorizontalArticleGenerator
         // Create output directory
         var outputDir = Path.GetFullPath(OUTPUT_DIR);
         Directory.CreateDirectory(outputDir);
-        Console.WriteLine($"Output directory: {outputDir}");
-        Console.WriteLine();
         
         // Generate the article
-        Console.WriteLine("Phase 2-3: Generating AI content and rendering article...");
-        Console.WriteLine();
         bool result = await GenerateSingleArticleAsync(targetService, outputDir, "[1/1]");
         
-        Console.WriteLine();
-        if (result)
+        if (!result)
         {
-            Console.WriteLine("✓ Single service article generation completed successfully");
-        }
-        else
-        {
-            Console.WriteLine("✗ Single service article generation failed");
+            Console.Error.WriteLine($"✗ Single service article generation failed for {serviceArea}");
         }
     }
 
@@ -404,21 +389,12 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 """;
         await File.WriteAllTextAsync(promptFilePath, promptContent);
 
-        // Print prompts for debugging
-        Console.WriteLine("--- System Prompt ---");
-        Console.WriteLine(systemPrompt);
-        Console.WriteLine("--- End System Prompt ---\n");
-        Console.WriteLine("--- User Prompt ---");
-        Console.WriteLine(userPrompt);
-        Console.WriteLine("--- End User Prompt ---\n");
-
         // Calculate token limit based on tool count
         // Base: 2000 tokens + 400 tokens per tool (for tool descriptions, scenarios, etc.)
         // Min: 2500, Max: 12000
         var toolCount = staticData.Tools.Count;
         var calculatedTokens = 2000 + (toolCount * 400);
         var maxTokens = Math.Clamp(calculatedTokens, 2500, 12000);
-        Console.WriteLine($"Token limit: {maxTokens} (based on {toolCount} tools)");
 
         // Call AI client
         var response = await _aiClient.GetChatCompletionAsync(
@@ -438,11 +414,6 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 ```
 """;
         await File.AppendAllTextAsync(promptFilePath, responseContent);
-
-        // Print raw response
-        Console.WriteLine("--- Raw GenerativeAI Response ---");
-        Console.WriteLine(response);
-        Console.WriteLine("--- End Raw Response ---\n");
         return response;
     }
     
@@ -574,12 +545,6 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
                 ["genai-shortDescription"] = t.ShortDescription
             }).ToList()
         };
-        
-        Console.WriteLine($"DEBUG: Template data prepared with {data.Count} top-level keys");
-        Console.WriteLine($"DEBUG: serviceBrandName = '{templateData.ServiceBrandName}'");
-        Console.WriteLine($"DEBUG: genai-serviceShortDescription = '{templateData.ServiceShortDescription}'");
-        Console.WriteLine($"DEBUG: genai-capabilities count = {templateData.Capabilities.Count}");
-        Console.WriteLine($"DEBUG: tools count = {templateData.Tools.Count}");
         
         var renderedContent = await HandlebarsTemplateEngine.ProcessTemplateAsync(templatePath, data);
         

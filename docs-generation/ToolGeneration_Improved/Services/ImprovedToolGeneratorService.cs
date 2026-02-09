@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using GenerativeAI;
+using System.Linq;
 using ToolGeneration_Improved.Models;
 
 namespace ToolGeneration_Improved.Services;
@@ -14,6 +15,20 @@ public class ImprovedToolGeneratorService
     private readonly GenerativeAIClient _aiClient;
     private readonly string _systemPrompt;
     private readonly string _userPromptTemplate;
+    private static readonly string[] TemplateLabels =
+    [
+        "Example prompts include:",
+        "Example prompts:",
+        "Required options:",
+        "Optional options:",
+        "Required parameters:",
+        "Optional parameters:",
+        "**Prerequisites**:",
+        "**Success verification**:",
+        "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):",
+        "[Tool annotation hints](../index.md#tool-annotations-for-azure-mcp-server):",
+        "[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):"
+    ];
 
     public ImprovedToolGeneratorService(GenerativeAIClient aiClient, string systemPrompt, string userPromptTemplate)
     {
@@ -81,8 +96,11 @@ public class ImprovedToolGeneratorService
                 // Load composed file content
                 var originalContent = await File.ReadAllTextAsync(composedFilePath);
 
+                // Protect handlebar template labels from AI modification
+                var protectedContent = ProtectTemplateLabels(originalContent, out var labelMap);
+
                 // Generate user prompt with the content
-                var userPrompt = string.Format(_userPromptTemplate, originalContent);
+                var userPrompt = string.Format(_userPromptTemplate, protectedContent);
 
                 // Call AI to improve the content
                 var improvedContent = await _aiClient.GetChatCompletionAsync(
@@ -90,9 +108,13 @@ public class ImprovedToolGeneratorService
                     userPrompt,
                     maxTokens);
 
+                // Restore protected labels and normalize formatting
+                var restoredContent = RestoreTemplateLabels(improvedContent, labelMap);
+                restoredContent = NormalizeTemplateLabels(restoredContent);
+
                 // Save improved content
                 var outputPath = Path.Combine(outputDir, fileName);
-                await File.WriteAllTextAsync(outputPath, improvedContent);
+                await File.WriteAllTextAsync(outputPath, restoredContent);
 
                 successCount++;
                 Console.WriteLine(" ✓");
@@ -144,5 +166,69 @@ public class ImprovedToolGeneratorService
         }
 
         return errorCount > 0 ? 1 : 0;
+    }
+
+    private static string ProtectTemplateLabels(string content, out Dictionary<string, string> labelMap)
+    {
+        var map = new Dictionary<string, string>();
+        if (string.IsNullOrEmpty(content))
+        {
+            labelMap = map;
+            return content;
+        }
+
+        var labelPattern = string.Join("|", TemplateLabels.Select(label => System.Text.RegularExpressions.Regex.Escape(label)));
+        var regex = new System.Text.RegularExpressions.Regex(
+            $@"^(\s*)({labelPattern})\s*$",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        var index = 0;
+        var protectedContent = regex.Replace(content, match =>
+        {
+            var token = $"__TPL_LABEL_{index++}__";
+            map[token] = match.Value;
+            return token;
+        });
+
+        labelMap = map;
+        return protectedContent;
+    }
+
+    private static string RestoreTemplateLabels(string content, Dictionary<string, string> labelMap)
+    {
+        if (string.IsNullOrEmpty(content) || labelMap.Count == 0)
+        {
+            return content;
+        }
+
+        var restored = content;
+        foreach (var pair in labelMap)
+        {
+            restored = restored.Replace(pair.Key, pair.Value);
+        }
+
+        return restored;
+    }
+
+    private static string NormalizeTemplateLabels(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return content;
+        }
+
+        var normalized = content;
+        foreach (var label in TemplateLabels)
+        {
+            var labelText = label.Trim();
+            var labelLiteral = System.Text.RegularExpressions.Regex.Escape(labelText.Trim('*'));
+            var regex = new System.Text.RegularExpressions.Regex(
+                $@"^(\s*)(\*\*|###\s+)?{labelLiteral}(\*\*)?\s*$",
+                System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            normalized = regex.Replace(normalized, $"$1{labelText}");
+        }
+
+        return normalized;
     }
 }

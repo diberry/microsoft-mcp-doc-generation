@@ -195,6 +195,7 @@ public class CleanupGenerator
                 
                 // Extract markdown from response (in case LLM added explanatory text)
                 var extractedMarkdown = ExtractMarkdown(cleanedMarkdown);
+                extractedMarkdown = NormalizeExamplePromptsLabel(extractedMarkdown);
                 
                 // Save cleaned markdown
                 var outputPath = Path.Combine(cleanupDir, fileName);
@@ -339,6 +340,22 @@ public class CleanupGenerator
 
         // Return as-is if no special extraction needed
         return response.Trim();
+    }
+
+    private string NormalizeExamplePromptsLabel(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return content;
+        }
+
+        var normalized = System.Text.RegularExpressions.Regex.Replace(
+            content,
+            @"^(\s*)(\*\*|###\s+)?Example prompts include:(\*\*)?\s*$",
+            "$1Example prompts include:",
+            System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        return normalized;
     }
 
     /// <summary>

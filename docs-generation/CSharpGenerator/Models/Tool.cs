@@ -5,6 +5,9 @@ public class Tool
     public string? Name { get; set; }
     public string? Command { get; set; }
     public string? Description { get; set; }
+    public string? ConditionalRequiredNote { get; set; }
+    public List<string>? ConditionalRequiredParameters { get; set; }
+    public bool HasConditionalRequired { get; set; }
     public string? SourceFile { get; set; }
     public List<Option>? Option { get; set; }
     public string? Area { get; set; }
