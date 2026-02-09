@@ -25,6 +25,9 @@
 .PARAMETER SkipValidation
     Skip validation of CLI output files
 
+.PARAMETER UseTextTransformation
+    Apply text transformations to AI-generated content (default: $true)
+
 .EXAMPLE
     ./Generate-HorizontalArticles-One.ps1 -ServiceArea "keyvault"
     ./Generate-HorizontalArticles-One.ps1 -ServiceArea "storage" -OutputPath ../generated
@@ -37,7 +40,9 @@ param(
     
     [string]$OutputPath = "../generated",
     
-    [switch]$SkipValidation = $false
+    [switch]$SkipValidation = $false,
+
+    [bool]$UseTextTransformation = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -147,8 +152,9 @@ try {
     
     Push-Location $scriptDir
     try {
-        # Run with filtered CLI output
-        & dotnet run --project HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --no-build -- --input-file $filteredOutputFile --output-dir $outputDir --service-area $ServiceArea
+        # Run with single service flag
+        $transformArg = if ($UseTextTransformation) { "--transform" } else { "" }
+        & dotnet run --project HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --no-build -- --single-service $ServiceArea $transformArg
         $exitCode = $LASTEXITCODE
     } finally {
         Pop-Location

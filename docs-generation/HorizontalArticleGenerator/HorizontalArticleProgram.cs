@@ -4,6 +4,8 @@
 using CSharpGenerator;
 using HorizontalArticleGenerator.Generators;
 using Shared;
+using Azure.Mcp.TextTransformation.Models;
+using Azure.Mcp.TextTransformation.Services;
 
 namespace HorizontalArticleGenerator;
 
@@ -58,8 +60,20 @@ internal class HorizontalArticleProgram
             // Parse command-line arguments
             bool generateAllArticles = !args.Contains("--single"); // Default to all, use --single for testing
             bool useTextTransformation = args.Contains("--transform");
+            string? singleService = null;
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (args[i] == "--single-service" && i + 1 < args.Length)
+                {
+                    singleService = args[i + 1];
+                }
+            }
             
-            if (generateAllArticles)
+            if (singleService != null)
+            {
+                Console.WriteLine($"Mode: Generating SINGLE article for {singleService}");
+            }
+            else if (generateAllArticles)
             {
                 Console.WriteLine("Mode: Generating ALL horizontal articles");
             }
@@ -69,10 +83,39 @@ internal class HorizontalArticleProgram
             }
             Console.WriteLine();
             
-            // Run generator
-            var generator = new Generators.HorizontalArticleGenerator(aiOptions, useTextTransformation, generateAllArticles);
-            await generator.GenerateAllArticles();
             
+                        // Load transformation config if using text transformation
+                        TransformationEngine? transformationEngine = null;
+                        if (useTextTransformation)
+                        {
+                            Console.WriteLine("Loading text transformation engine...");
+                            try
+                            {
+                                var transformConfigPath = Path.Combine(AppContext.BaseDirectory, "../../../../transformation-config.json");
+                                var loader = new ConfigLoader(transformConfigPath);
+                                var transformConfig = await loader.LoadAsync();
+                                transformationEngine = new TransformationEngine(transformConfig);
+                                Console.WriteLine("✓ Text transformation engine loaded");
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.Error.WriteLine($"Warning: Could not load transformation engine: {ex.Message}");
+                                Console.Error.WriteLine("Continuing without text transformation...");
+                            }
+                        }
+                        Console.WriteLine();
+            
+                        // Run generator
+                        var generator = new Generators.HorizontalArticleGenerator(aiOptions, useTextTransformation, generateAllArticles, transformationEngine);
+                        
+                        if (singleService != null)
+                        {
+                            await generator.GenerateSingleServiceArticle(singleService);
+                        }
+                        else
+                        {
+                            await generator.GenerateAllArticles();
+                        }
             return 0;
         }
         catch (Exception ex)

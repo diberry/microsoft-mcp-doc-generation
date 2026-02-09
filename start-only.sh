@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start-only: generate a single tool family end-to-end (Steps 1–4).
+# Start-only: generate a single tool family end-to-end (Steps 1–5).
 #
 # Usage:
 #   ./start-only.sh <tool-family>
@@ -8,7 +8,7 @@
 # What it does:
 #   1) Clears ./generated
 #   2) Generates MCP CLI metadata via test-npm-azure-mcp
-#   3) Runs docs-generation/generate-tool-family.sh with Steps 1,2,3,4
+#   3) Runs docs-generation/generate-tool-family.sh with Steps 1,2,3,4,5
 #   4) Produces ./generated/tool-family/<tool-family>.md
 #
 # Prerequisites:
@@ -33,7 +33,7 @@ if [[ $# -lt 1 ]]; then
 fi
 
 TOOL_FAMILY="$1"
-STEPS="${2:-1,2,3,4}"
+STEPS="${2:-1,2,3,4,5}"
 
 # Clean up last run
 rm -rf "$ROOT_DIR/generated/"

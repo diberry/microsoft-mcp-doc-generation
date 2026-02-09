@@ -70,6 +70,13 @@ Generate a JSON object with the following structure. All fields prefixed with "g
 
 **IMPORTANT**: Search for and use published Azure documentation as your primary authoritative source. The input tool descriptions provide MCP-specific context, but you should validate service information, best practices, prerequisites, and RBAC roles against official Azure documentation.
 
+**CRITICAL - Service Naming Consistency**:
+- **ALWAYS use the official Azure service name** consistently throughout the article
+- Find the official name from the service's documentation homepage (e.g., "Azure AI Search", "Azure Cosmos DB", "Azure Key Vault")
+- Do NOT use shortened names ("Search", "Cosmos", "Key Vault") in the Overview or tool descriptions
+- Exception: The service identifier (e.g., "search") is used only in file paths and IDs
+- Validate: No sentence should start with a repeated word (e.g., "Search Azure Search" is invalid)
+
 **CRITICAL - Data Plane vs Management Plane Analysis**:
 Before generating content, carefully analyze each tool to determine if it operates on the **data plane** or **management plane**:
 
@@ -85,12 +92,20 @@ Before generating content, carefully analyze each tool to determine if it operat
 - For **mixed services**: Clearly distinguish between management operations (provisioning) and data operations (using the service) in scenarios and capabilities.
 
 1. **serviceShortDescription**: Search Azure documentation for the official service description. Extract the core purpose. Keep it concise and service-focused: "storage accounts for data persistence", "AI model deployment and management", "relational database services"
+   - **Use descriptive capabilities**, not the service name itself (e.g., "full-text search capabilities" not "search service")
+   - Keep under 10 words
+   - Focus on WHAT it does, not WHAT it's called
    - **Reflect plane focus**: For data plane services, emphasize what data/operations users work with. For management plane, emphasize resource provisioning.
 
 2. **serviceOverview**: Search Azure documentation for the service overview page. Write 2-3 sentences that:
-   - Define what the service is
+   - **CRITICAL**: Do NOT start with the service brand name (template will add it automatically). Start directly with "is a..." or "provides..."
+   - Example: For "Azure AI Search", write "is a cloud search service..." not "Azure AI Search is a cloud search service..."
    - Explain the primary problem it solves
-   - Describe how MCP integration enhances accessibility through natural language
+   - Describe key capabilities and benefits
+   - **Quality checks**:
+     - First word must be a verb ("is", "provides", "offers", "enables") - NOT a noun or service name
+     - Each sentence should provide NEW information (no repetitive phrases)
+     - Use active voice and specific terminology
    - **For data plane services**: Emphasize working with existing resources and data operations
    - **For management plane services**: Focus on resource lifecycle and configuration management
 
@@ -108,6 +123,16 @@ Before generating content, carefully analyze each tool to determine if it operat
    - **For management plane services**: Focus on subscription access and permissions to create resources
 
 5. **tools.genai-shortDescription**: Condense the full tool description to its essential action and target. Remove technical details but keep the core purpose
+   - **Target length**: 8-12 words (max 15 words)
+   - **Be specific**: Include what data/details are retrieved, not just "get details"
+   - **Examples of GOOD descriptions**:
+     - "Retrieve index schema, field definitions, and scoring profiles" (not "Get details of indexes")
+     - "Execute full-text search with filters, facets, and scoring" (not "Query indexes for data")
+     - "List blob containers with metadata and access tier info" (not "List containers")
+   - **Examples of BAD descriptions** (too generic):
+     - "Get information about resources" ❌
+     - "Manage service settings" ❌
+     - "Perform operations on data" ❌
 
 6. **scenarios**: Create 3-5 realistic use cases based on tool capabilities. Each scenario should:
    - Have a clear business/operational goal that resonates with Azure users
@@ -121,31 +146,73 @@ Before generating content, carefully analyze each tool to determine if it operat
    - **For data plane scenarios**: Assume resources already exist. Examples: "Get the secret 'api-key' from my key vault 'prod-kv'", "Upload file 'data.csv' to container 'imports'"
    - **For management plane scenarios**: Focus on provisioning and configuration. Examples: "Create a new storage account in East US", "Configure the database with 100 DTUs"
 
-7. **aiSpecificScenarios**: Only populate if the service is AI-related (Foundry, AI Search, OpenAI, Speech, etc.). Search for AI-specific documentation to understand model interaction, training, deployment scenarios
+7. **aiSpecificScenarios**: Only populate if the service is AI-related. **AI Service Detection Rules**:
+   - **Service name contains**: "AI", "Foundry", "OpenAI", "Cognitive", "Speech", "Vision", "Language"
+   - **Tool descriptions contain AI keywords**: "knowledge base", "embeddings", "semantic", "vector", "retrieval", "inference", "model", "completion"
+   - **If ANY of above match**: Generate 2-3 AI-specific scenarios showing AI capabilities (semantic search, RAG patterns, model deployment, etc.)
+   - Search for AI-specific documentation to understand model interaction, training, deployment scenarios
+   - Example scenarios: "Use semantic search with embeddings", "Implement RAG pattern with knowledge bases", "Deploy and query AI models"
 
 8. **requiredRoles**: Search Azure documentation for the service's RBAC roles page. Use officially documented role names based on the tool operations (create/read/update/delete). Common examples: "Contributor", "Reader", "Owner", or service-specific roles
-   - **For data plane services**: Prioritize data plane roles (e.g., "Storage Blob Data Contributor", "Key Vault Secrets User", "Cosmos DB Data Reader")
+   - **⚠️ CRITICAL - ROLE NAME FORMAT RULES**:
+     - Azure data plane roles follow pattern: "[Service] [Resource Type] Data [Action]"
+       - Examples: "Storage Blob Data Reader", "Key Vault Secrets User", "Search Index Data Reader"
+     - Azure management roles follow pattern: "[Service] [Resource Type] Contributor"
+       - Examples: "Storage Account Contributor", "Key Vault Contributor", "Search Service Contributor"
+     - ❌ NEVER use invented patterns like "[Service] [Feature] Data Reader" (e.g., "Search Knowledge Base Data Reader", "Storage Container Data Reader")
+     - ❌ WRONG examples (will BLOCK generation): "Search Knowledge Base Data Reader", "Cosmos Index Data Reader", "Storage File Share Data Operator"
+     - ✅ CORRECT fallback if unsure: Use generic "[Service] Service Contributor" or "[Service] Index Data Reader"
+     - ✅ For Search specifically: Use ONLY "Search Index Data Reader", "Search Service Contributor" (Knowledge bases are part of Index operations, NOT separate roles)
+   - **WHERE TO FIND OFFICIAL ROLES**:
+     - **AUTHORITATIVE SOURCE**: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+     - Search that page for "[Service Name]" to find all official roles
+     - Azure Portal → [Service] → Access control (IAM) → Roles (for service-specific roles)
+   - **VALIDATION RULES**: 
+     - If a role name contains "Knowledge Base Data", "Feature Data", "Resource Data", "KB", or similar non-standard patterns: ❌ DO NOT USE (it's invented)
+     - When in doubt: Consult the official Microsoft Learn RBAC roles page above
+     - If you cannot find a role on the official page: Use the generic service-level role instead (e.g., "Search Service Contributor")
+     - GENERATION WILL BE BLOCKED if invented roles are detected - this is a critical error
+   - **For data plane services**: Prioritize data plane roles (e.g., "Storage Blob Data Contributor", "Key Vault Secrets User", "Cosmos DB Data Reader", "Search Index Data Reader")
    - **For management plane services**: Prioritize resource management roles (e.g., "Storage Account Contributor", "Key Vault Contributor", "Cosmos DB Account Contributor")
    - **Match the tool operations**: If tools are primarily data-focused, don't suggest management roles unless explicitly needed
+   - **Minimum requirement**: Suggest at least 2 roles (one read-only, one contributor/admin) based on tool capabilities
 
 9. **bestPractices**: Search Azure documentation for the service's best practices, security recommendations, and performance guidance. Adapt these to the MCP/AI assistant context. 
+   - **Minimum requirement**: Generate 4-5 best practices (not just 2)
+   - **How to find**: Search for "Azure [Service Name] best practices" official documentation page
    - **Priority order**: Security first, then reliability, cost optimization, operational excellence, and performance
+   - **Required coverage**: At least one practice from each category:
+     1. **Security**: ✅ Authentication method (prefer Entra ID over API keys), role assignments, network security, data encryption
+        - ❌ AVOID: "Secure your API keys" (outdated - recommend Entra ID instead)
+     2. **Reliability**: Redundancy, backup, disaster recovery, health monitoring, geo-replication
+     3. **Cost**: Right-sizing, tier selection, query optimization, reserved capacity, monitoring usage
+     4. **Performance**: Caching, partitioning, indexing strategies, query patterns, scaling limits
    - **Focus on**: Azure Well-Architected Framework principles adapted for natural language interaction
-   - Combine official Azure best practices with MCP-specific considerations:
+   - **MCP-specific considerations**:
      - How to phrase commands for destructive operations (confirmation patterns)
      - When to use read-only operations vs. modifications
      - Resource naming conventions for clarity in conversation
      - How to leverage AI assistant context across multiple operations
+   - **Avoid generic advice**: ❌ "Use descriptive names", "Test before production", "Optimize strategies" (too obvious, not service-specific)
+   - **Be specific**: Each practice should reference actual service features or configurations
 
 ## Writing Style (Microsoft Learn Guidelines)
 - **Tone**: Professional, clear, action-oriented, and customer-focused
 - **Voice**: Use second person ("you can", "ensure you have") to address readers directly
 - **Natural language examples**: Conversational yet professional - as if speaking to a colleague
+- **Sentence structure validation**:
+  - ✅ CORRECT: "This integration allows you to manage data without writing code"
+  - ❌ WRONG: "This integration allows you to manage data. without writing code" (period before lowercase word)
+  - ✅ CORRECT: "Azure AI Search is a cloud search service"
+  - ❌ WRONG: "Search Azure AI Search is a cloud search service" (repeated word at start)
+  - No run-on sentences exceeding 35 words
+  - Each sentence should have clear subject-verb-object structure
 - **Avoid**:
   - Marketing language or promotional content
   - Passive voice (use "create a resource" not "a resource is created")
   - Jargon without explanation
   - Future tense for current capabilities
+  - Generic phrases: "for your convenience", "easily manage", "powerful features"
 - **Be specific**: Include concrete examples with resource names, regions, SKUs
 - **Scenarios**: Focus on real-world business problems and solutions
 - **Prerequisites**: List only essential requirements, be precise about versions/access needed
@@ -160,3 +227,12 @@ Before generating content, carefully analyze each tool to determine if it operat
 - Ensure all JSON is valid and properly escaped
 - If a service has no AI features, omit genai-aiSpecificScenarios entirely
 - Generate 3-5 scenarios minimum; can be more for services with many tools
+
+**MANDATORY PRE-SUBMISSION VALIDATION CHECKLIST** (Review before outputting JSON):
+- [ ] No sentences contain period-before-lowercase-word patterns (e.g., "data. without")
+- [ ] No sentences start with a repeated word (e.g., "Search Azure AI Search")
+- [ ] Service name is consistent (official Azure name used throughout, no shortened versions in content)
+- [ ] All RBAC role names match Azure's standard patterns (check against examples above)
+- [ ] Tool descriptions are 8-12 words and specific (not "get details" or "manage resources")
+- [ ] Best practices include 4-5 items covering: security, reliability, cost, performance
+- [ ] If service has AI keywords (knowledge base, semantic, vector), AI-specific scenarios are included
