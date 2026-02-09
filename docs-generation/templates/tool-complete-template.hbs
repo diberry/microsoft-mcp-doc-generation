@@ -13,6 +13,11 @@ generated: {{formatDate generatedAt}}
 
 {{description}}
 
+{{#if conditionalRequiredNote}}
+{{conditionalRequiredNote}}
+
+{{/if}}
+
 {{#if hasExamplePrompts}}
 {{{examplePromptsContent}}}
 {{else}}

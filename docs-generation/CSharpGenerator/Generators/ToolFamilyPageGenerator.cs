@@ -75,6 +75,9 @@ public class ToolFamilyPageGenerator
                     Name = DisplayNameBuilder.BuildDisplayName(tool.Command, tool.Name),
                     Command = tool.Command,
                     Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(tool.Description ?? "")),
+                    ConditionalRequiredNote = tool.ConditionalRequiredNote,
+                    ConditionalRequiredParameters = tool.ConditionalRequiredParameters,
+                    HasConditionalRequired = tool.HasConditionalRequired,
                     SourceFile = tool.SourceFile,
                     Area = tool.Area,
                     Metadata = tool.Metadata

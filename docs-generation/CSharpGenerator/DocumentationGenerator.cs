@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using GenerativeAI;
 using NaturalLanguageGenerator;
 using Shared;
@@ -20,6 +21,12 @@ public static class DocumentationGenerator
     private static Dictionary<string, BrandMapping>? _brandMappings;
     private static HashSet<string>? _stopWords;
     private static Dictionary<string, string>? _compoundWords;
+    private static readonly Regex ConditionalRequirementRegex = new(
+        @"Requires at least one[^.]*\.?",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex ParameterNameRegex = new(
+        @"--[A-Za-z0-9-]+",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Loads stop words from JSON file.
@@ -477,6 +484,14 @@ public static class DocumentationGenerator
                 
                 // Add area property to tool for compatibility
                 tool.Area = area;
+
+                var conditionalRequirement = ExtractConditionalRequirement(tool.Description ?? "");
+                if (conditionalRequirement.Parameters.Count > 0)
+                {
+                    tool.ConditionalRequiredNote = conditionalRequirement.Note;
+                    tool.ConditionalRequiredParameters = conditionalRequirement.Parameters;
+                    tool.HasConditionalRequired = true;
+                }
             }
             catch (Exception ex)
             {
@@ -653,6 +668,28 @@ public static class DocumentationGenerator
         var outputFile = Path.Combine(commonGeneralDir, "common-tools.md");
         await File.WriteAllTextAsync(outputFile, result);
         Console.WriteLine($"Generated common tools page: common-general/common-tools.md");
+    }
+
+    private static (string? Note, List<string> Parameters) ExtractConditionalRequirement(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return (null, new List<string>());
+        }
+
+        var match = ConditionalRequirementRegex.Match(description);
+        if (!match.Success)
+        {
+            return (null, new List<string>());
+        }
+
+        var note = match.Value.Trim();
+        var parameters = ParameterNameRegex.Matches(note)
+            .Select(m => m.Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return (note, parameters);
     }
 
     /// <summary>

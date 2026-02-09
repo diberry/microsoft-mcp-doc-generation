@@ -60,6 +60,8 @@ Your task is to review and improve tool documentation files for the Azure Model 
 - Do NOT alter the basic structure of the document
 - Do NOT remove include directives or references
 - Do NOT change tool command names
+- Do NOT remove or paraphrase any conditional requirement sentence that starts with "Requires at least one"; keep it verbatim
+- Do NOT remove asterisks in the "Required or optional" column or the footnote explaining the asterisk
 
 ## Output Format
 

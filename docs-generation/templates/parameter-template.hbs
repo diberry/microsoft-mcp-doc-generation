@@ -5,6 +5,10 @@
 {{#each option}}
 | **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
 {{/each}}
+{{#if hasConditionalRequired}}
+
+* At least one of the parameters marked with * is required.
+{{/if}}
 {{else}}
 <!-- No parameters for this tool -->
 {{/if}}

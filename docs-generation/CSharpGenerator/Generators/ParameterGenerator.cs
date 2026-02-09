@@ -110,6 +110,10 @@ public class ParameterGenerator
                 var allOptions = tool.Option ?? new List<Option>();
                 
                 // Filter to get only tool-specific parameters (non-common) or required common parameters
+                var conditionalParameters = new HashSet<string>(
+                    tool.ConditionalRequiredParameters ?? new List<string>(),
+                    StringComparer.OrdinalIgnoreCase);
+
                 var transformedOptions = allOptions
                     .Where(opt => !string.IsNullOrEmpty(opt.Name) && 
                                   (!commonParameterNames.Contains(opt.Name) || opt.Required == true))
@@ -119,7 +123,7 @@ public class ParameterGenerator
                         NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
                         type = opt.Type,
                         required = opt.Required,
-                        RequiredText = opt.Required == true ? "Required" : "Optional",
+                        RequiredText = BuildRequiredText(opt.Required, opt.Name ?? "", conditionalParameters),
                         description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
                     }).ToList();
 
@@ -129,6 +133,7 @@ public class ParameterGenerator
                     ["command"] = tool.Command ?? "",
                     ["area"] = tool.Area ?? "",
                     ["option"] = (object?)transformedOptions ?? new List<object>(),
+                    ["hasConditionalRequired"] = transformedOptions?.Any(o => o.RequiredText.EndsWith("*", StringComparison.Ordinal)) ?? false,
                     ["generateParameter"] = true,
                     ["generatedAt"] = data.GeneratedAt,
                     ["version"] = data.Version ?? "unknown",
@@ -153,5 +158,16 @@ public class ParameterGenerator
             Console.WriteLine(ex.StackTrace);
             throw;
         }
+    }
+
+    private static string BuildRequiredText(bool required, string parameterName, HashSet<string> conditionalParameters)
+    {
+        var baseText = required ? "Required" : "Optional";
+        if (conditionalParameters.Contains(parameterName))
+        {
+            return baseText + "*";
+        }
+
+        return baseText;
     }
 }
