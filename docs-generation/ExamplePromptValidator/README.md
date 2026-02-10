@@ -92,12 +92,12 @@ Arguments:
 #### Enable validation when running the documentation generator:
 
 ```bash
-# Run with validation enabled (requires --complete-tools)
-./start.sh --validate
+# Run full generation (includes validation if configured)
+./generate.sh all
 
-# Or directly with dotnet
+# Or directly with PowerShell
 cd docs-generation
-dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Release -- \
+pwsh ./Generate.ps1 -OutputPath "../generated"
     generate-docs \
     ../generated/cli/cli-output.json \
     ../generated/tools \

@@ -37,12 +37,15 @@ The Horizontal Article Generator is a standalone C# console application that:
 ### From Repository Root
 
 ```bash
-# Generate all horizontal articles
-./start-horizontal.sh
+# Horizontal articles are now generated as part of tool family generation (Step 5)
+# Generate a complete tool family (includes horizontal article in Step 5)
+./generate.sh family <namespace>
 
-# Test with a single article
-./start-horizontal.sh --single
+# For example:
+./generate.sh family keyvault
 ```
+
+**Note:** The standalone `start-horizontal.sh` script has been archived. Horizontal articles are now integrated into the main generation pipeline.
 
 ### From docs-generation Directory
 
@@ -73,7 +76,7 @@ FOUNDRY_MODEL_API_VERSION=2025-01-01-preview
 
 ### CLI Output
 
-Run `./start.sh` first to generate the required CLI output files:
+Run `./generate.sh reports` or any generation command first to generate the required CLI output files:
 - `./generated/cli/cli-output.json` - Tool definitions from MCP CLI
 - `./generated/cli/cli-version.json` - MCP version string
 
@@ -145,7 +148,7 @@ If AI responses are cut off (JSON parse errors), the generator:
 |-------|-------|----------|
 | `Expected end of string` | Token limit too low | Increase base token multiplier |
 | `FOUNDRY_API_KEY not set` | Missing env vars | Check `.env` file |
-| `CLI output not found` | Missing prerequisites | Run `./start.sh` first |
+| `CLI output not found` | Missing prerequisites | Run `./generate.sh reports` first |
 
 ## Customization
 

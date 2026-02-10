@@ -190,11 +190,11 @@ To change which parameters are considered "common":
 ## Testing
 
 ```bash
-# Test with a single tool
-./start-only.sh pricing 1
+# Test with a single tool family (Step 1 only - annotations, parameters, raw tools)
+./generate.sh family pricing --steps 1
 
-# Test full generation
-./start-only.sh advisor 1,2,3,4
+# Test full tool family generation (all steps)
+./generate.sh family advisor
 ```
 
 ## Related Documentation

@@ -381,29 +381,25 @@ Before creating a new validation, answer these questions to guide your implement
    }
    ```
 
-### Step 4: Update start.sh
+### Step 4: Update generate.sh (Optional)
 
-Add flag to `start.sh`:
+If you need to add a command-line flag for your validator, you can modify `generate.sh` at the repository root. However, most validators are integrated into the generation pipeline automatically. If you need a separate flag:
+
 ```bash
-# Parse command line arguments
-VALIDATE_{YOUR_CONTENT}=""
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --validate-{your-content})
-            VALIDATE_{YOUR_CONTENT}="--validate-{your-content}"
-            echo "✓ {Your Content} validation enabled (will run after content generation)"
-            shift
-            ;;
-        # ... other cases
-    esac
-done
+# This is optional - most validators run automatically as part of the pipeline
+# Only add this if you need a separate validation command
 
-# Pass to dotnet run
-dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Release -- \
-    generate-docs \
-    # ... other flags
-    $VALIDATE_{YOUR_CONTENT}
+# Add to OPTIONS section in show_help()
+    --validate-{your-content}  Enable {your content} validation
+
+# Add to argument parsing
+    --validate-{your-content})
+        VALIDATE_{YOUR_CONTENT}=true
+        shift
+        ;;
 ```
+
+Alternatively, integrate your validation into the existing PowerShell pipeline (`Generate.ps1` or related scripts).
 
 ### Step 5: Create Tests
 
@@ -480,7 +476,11 @@ dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Rele
 3. **Test end-to-end**
    ```bash
    cd ..
-   ./start.sh --validate-{your-content}
+   # Run full generation (includes all validators in pipeline)
+   ./generate.sh all
+   
+   # Or run specific tool family
+   ./generate.sh family keyvault
    ```
 
 4. **Check output**
