@@ -383,6 +383,12 @@ try {
     }
     Write-Info ""
 
+    # Step 8: Run CLI analyzer for visual analysis
+    Write-Progress "Step 8: Running CLI Analyzer..."
+    Write-Info ""
+    & "$PSScriptRoot\scripts\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true
+    Write-Info ""
+
 } catch {
     Write-Error "Documentation generation failed: $($_.Exception.Message)"
     Write-Error "Error details: $($_.ScriptStackTrace)"

@@ -256,6 +256,15 @@ try {
     }
     Write-Host ""
 
+    # Run CLI analyzer for visual analysis
+    Write-Divider
+    Write-Progress "Running CLI Analyzer"
+    Write-Divider
+    Write-Host ""
+    
+    & "$PSScriptRoot\scripts\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true
+    Write-Host ""
+
     # ========================================================================
     # Step 1: Generate annotations, parameters, and raw tool files
     # ========================================================================
