@@ -9,6 +9,11 @@ using CSharpGenerator.Models;
 
 namespace CSharpGenerator.Generators;
 
+/*
+DEPRECATED: This class has been superseded by ExamplePromptGeneratorStandalone package.
+Keeping code in place for reference but not used. Use ExamplePromptGeneratorStandalone instead.
+See: UNUSED-FUNCTIONALITY.md for details.
+
 /// <summary>
 /// Generates example prompts for MCP tools using Azure OpenAI
 /// </summary>
@@ -28,6 +33,7 @@ public class ExamplePromptGenerator
         try
         {
             // Try to initialize OpenAI client - may fail if credentials not configured
+
             Console.Write("  Azure OpenAI Client: ");
             _openAIClient = new GenerativeAI.GenerativeAIClient();
             Console.WriteLine("✅ Connected");
@@ -380,3 +386,4 @@ public class ExamplePromptGenerator
         }
     }
 }
+*/

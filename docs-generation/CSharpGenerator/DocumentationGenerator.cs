@@ -183,6 +183,9 @@ public static class DocumentationGenerator
         Directory.CreateDirectory(annotationsDir);
         var annotationTemplate = Path.Combine(templatesDir, "annotation-template.hbs");
         
+        // DEPRECATED: Example prompts generation has been moved to ExamplePromptGeneratorStandalone package
+        // Keeping code in place for reference but disabled. Use ExamplePromptGeneratorStandalone instead.
+        /*
         // Setup example prompts generation if requested
         ExamplePromptGenerator? examplePromptGenerator = null;
         string? examplePromptsDir = null;
@@ -240,6 +243,11 @@ public static class DocumentationGenerator
             Console.WriteLine("To enable example prompts generation, use the --example-prompts flag");
             Console.WriteLine("Example: dotnet run --example-prompts\n");
         }
+        */
+        
+        // Disabled: Example prompts generation. Use ExamplePromptGeneratorStandalone package instead.
+        object? examplePromptGenerator = null;
+        string? examplePromptsDir = null;
         
         // Initialize all generators with shared dependencies
         var annotationGenerator = new AnnotationGenerator(
@@ -319,9 +327,10 @@ public static class DocumentationGenerator
         // Setup area template (needed for index page too)
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
         
-        // Get tool family page template
-        var toolFamilyTemplate = Path.Combine(templatesDir, "tool-family-page.hbs");
-
+        
+        // DEPRECATED: Tool pages generation has been moved to ToolGeneration_Raw, ToolGeneration_Composed, and ToolGeneration_Improved packages
+        // Keeping code in place for reference but disabled. Use standalone packages instead.
+        /*
         // Generate area pages (skip if only generating annotations)
         if (generateToolPages && (!generateAnnotations || generateCommands || generateIndex || generateCommon))
         {
@@ -330,6 +339,7 @@ public static class DocumentationGenerator
                 await toolFamilyPageGenerator.GenerateAsync(area.Key, area.Value, transformedData, outputDir, toolFamilyTemplate);
             }
         }
+        */
 
         // Generate common tools page if requested
         if (generateCommon)
@@ -1026,7 +1036,7 @@ public static class DocumentationGenerator
     /// <summary>
     /// Generates individual annotation files for each tool.
     /// </summary>
-    private static async Task GenerateAnnotationFilesAsync(TransformedData data, string outputDir, string templateFile, ExamplePromptGenerator? examplePromptGenerator = null, string? examplePromptsDir = null)
+    private static async Task GenerateAnnotationFilesAsync(TransformedData data, string outputDir, string templateFile, object? examplePromptGenerator = null, string? examplePromptsDir = null)
     {
         try
         {
@@ -1232,12 +1242,12 @@ public static class DocumentationGenerator
 
     /// <summary>
     /// Generates a single example prompt file for a tool.
-    /// Delegates to ExamplePromptGenerator with template processor function.
+    /// DEPRECATED: Use ExamplePromptGeneratorStandalone package instead.
     /// </summary>
     /// <returns>Tuple of (successCount, failureCount) - either (1,0) or (0,1) or (0,0)</returns>
     private static async Task<(int successCount, int failureCount)> GenerateSingleExamplePromptAsync(
         Tool tool, 
-        ExamplePromptGenerator? examplePromptGenerator, 
+        object? examplePromptGenerator, 
         string? examplePromptsDir, 
         string annotationFileName, 
         string? version)
@@ -1245,13 +1255,17 @@ public static class DocumentationGenerator
         if (examplePromptGenerator == null || string.IsNullOrEmpty(examplePromptsDir))
             return (0, 0);
 
-        // Delegate to ExamplePromptGenerator, passing in the Handlebars template processor
+        // DEPRECATED: Delegate to ExamplePromptGenerator, passing in the Handlebars template processor
+        // Use ExamplePromptGeneratorStandalone package instead
+        /*
         return await examplePromptGenerator.GenerateExamplePromptFileAsync(
             tool,
             examplePromptsDir,
             annotationFileName,
             version,
             HandlebarsTemplateEngine.ProcessTemplateAsync);
+        */
+        return (0, 0);
     }
 
     /// <summary>

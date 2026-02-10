@@ -38,11 +38,13 @@ public class AnnotationGenerator
     /// <summary>
     /// Generates annotation files for all tools
     /// </summary>
+    // NOTE: examplePromptGenerator parameter is deprecated and kept for backwards compatibility only
+    // Use ExamplePromptGeneratorStandalone package instead
     public async Task GenerateAnnotationFilesAsync(
         TransformedData data, 
         string outputDir, 
         string templateFile, 
-        ExamplePromptGenerator? examplePromptGenerator = null, 
+        object? examplePromptGenerator = null, 
         string? examplePromptsDir = null)
     {
         try
@@ -223,6 +225,9 @@ public class AnnotationGenerator
                 tool.HasAnnotation = true;
                 
                 // Generate example prompts if requested
+                // DEPRECATED: Example prompts generation moved to ExamplePromptGeneratorStandalone package
+                // Keeping reference for backwards compatibility but disabled
+                /*
                 if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
                 {
                     var (successCount, failureCount) = await examplePromptGenerator.GenerateExamplePromptFileAsync(
@@ -234,6 +239,7 @@ public class AnnotationGenerator
                     examplePromptsGenerated += successCount;
                     examplePromptsFailed += failureCount;
                 }
+                */
             }
             
             Console.WriteLine($"Generated {data.Tools.Count} annotation files in {outputDir}");
