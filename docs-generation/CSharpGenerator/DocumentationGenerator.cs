@@ -261,11 +261,13 @@ public static class DocumentationGenerator
             LoadCompoundWordsAsync,
             CleanFileNameAsync,
             ExtractCommonParameters);
-            
-        var paramAnnotationGenerator = new ParamAnnotationGenerator(
-            LoadBrandMappingsAsync,
-            LoadCompoundWordsAsync,
-            CleanFileNameAsync);
+        
+        // DEPRECATED: ParamAnnotationGenerator no longer used
+        // Keeping variable declaration for backwards compatibility but disabled
+        // var paramAnnotationGenerator = new ParamAnnotationGenerator(
+        //     LoadBrandMappingsAsync,
+        //     LoadCompoundWordsAsync,
+        //     CleanFileNameAsync);
             
         var pageGenerator = new PageGenerator(
             LoadBrandMappingsAsync,
@@ -292,11 +294,16 @@ public static class DocumentationGenerator
         var parameterTemplate = Path.Combine(templatesDir, "parameter-template.hbs");
         await parameterGenerator.GenerateParameterFilesAsync(transformedData, parametersDir, parameterTemplate);
 
+        // DEPRECATED: Combined parameter and annotation files generation
+        // Keeping code in place for reference but disabled.
+        // Use separate annotations and parameters files instead (or complete tool files with --complete-tools flag)
+        /*
         // Generate combined parameter and annotation files for each tool (at parent level)
         var paramAnnotationDir = Path.Combine(parentDir, "param-and-annotation");
         Directory.CreateDirectory(paramAnnotationDir);
         var paramAnnotationTemplate = Path.Combine(templatesDir, "param-annotation-template.hbs");
         await paramAnnotationGenerator.GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
+        */
 
         // Generate complete tool files if requested (at parent level)
         var toolsDir = Path.Combine(parentDir, "tools");
@@ -1374,6 +1381,10 @@ public static class DocumentationGenerator
         }
     }
 
+    // DEPRECATED: Combined parameter and annotation file generation
+    // Keeping method for reference but disabled.
+    // Use separate annotations and parameters files instead (or complete tool files with --complete-tools flag)
+    /*
     /// <summary>
     /// Generates combined parameter and annotation files for each tool.
     /// </summary>
@@ -1547,6 +1558,7 @@ public static class DocumentationGenerator
             Console.WriteLine(ex.StackTrace);
         }
     }
+    */
 
     /// <summary>
     /// Generates a comprehensive metadata report covering all tool characteristics.

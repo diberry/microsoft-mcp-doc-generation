@@ -300,3 +300,55 @@ Before removing any code:
 - `ExamplePromptGenerator.cs` class
 - `--example-prompts` flag handling in `Program.cs` and `DocumentationGenerator.cs`
 - Related prompt template loading logic in `DocumentationGenerator.cs` (lines ~186-238)
+
+---
+
+## 6. Combined Parameter and Annotation File Generation
+
+### Location in CSharpGenerator
+- **File**: `CSharpGenerator/Generators/ParamAnnotationGenerator.cs`
+- **Lines**: ~235 lines
+- **Integration Point**: Called from `DocumentationGenerator.cs` during base documentation generation
+
+### Current Status
+**DISABLED** - Combined parameter-and-annotation files are no longer generated in the pipeline.
+
+### Evidence
+The class is entirely commented out in `ParamAnnotationGenerator.cs`:
+```csharp
+/*
+DEPRECATED: Combined parameter and annotation file generation has been disabled.
+Keeping code in place for reference but not used. 
+Use separate annotations and parameters files instead (or complete tool files with --complete-tools flag).
+
+public class ParamAnnotationGenerator
+{
+    // ... entire class commented out (~235 lines)
+}
+*/
+```
+
+The initialization in `DocumentationGenerator.cs` is also commented out (line ~265).
+
+### Why It Was Disabled
+- **Redundancy**: Annotations and parameters files already exist separately in the output
+- **Cleaner Organization**: Separate files provide better flexibility and easier maintenance
+- **Reduced Output Clutter**: Eliminates unnecessary duplicate files
+- **Better Alternatives**: Complete tools (with `--complete-tools` flag) provide better combined output when needed
+
+---
+
+## Updated Conclusion
+
+**All Deprecated Functionality Status**: ✅ COMMENTED OUT IN PLACE
+
+1. `Generators/ExamplePromptGenerator.cs` - Disabled (383 lines) ✓
+2. Tool generation logic (tool pages) - Disabled (section commented out) ✓
+3. `Generators/ParamAnnotationGenerator.cs` - Disabled (235 lines) ✓
+
+**Current Build Status**: ✅ Builds successfully - all deprecated code is in place but not executed
+
+**Next Steps**: 
+- Keep deprecated code in place for backwards compatibility reference
+- Plan removal for next major version
+- Standalone packages are active replacements
