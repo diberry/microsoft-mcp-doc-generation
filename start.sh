@@ -33,7 +33,6 @@ echo "✓ Generated CLI tool metadata"
 cd ..
 
 mkdir -p generated/common-general
-mkdir -p generated/param-and-annotation
 mkdir -p generated/tools
 mkdir -p generated/example-prompts
 mkdir -p generated/annotations

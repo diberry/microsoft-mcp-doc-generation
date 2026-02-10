@@ -14,12 +14,52 @@ The `CSharpGenerator` project was originally a monolithic generator handling all
 **Superseded Components**:
 1. Example Prompt Generation (moved to `ExamplePromptGeneratorStandalone`)
 2. Tool Generation/Composition (moved to `ToolGeneration_Raw`, `ToolGeneration_Composed`, `ToolGeneration_Improved`)
-3. Tool Family Assembly (moved to `ToolFamilyCleanup`)
-4. Horizontal Article Generation (moved to `HorizontalArticleGenerator`)
+3. Complete Tool Generation (moved to `ToolGeneration_Composed`)
+4. Tool Family Assembly (moved to `ToolFamilyCleanup`)
+5. Horizontal Article Generation (moved to `HorizontalArticleGenerator`)
+6. Parameter-Annotation Combined Files (deprecated, use separate files)
+
+**Deprecated Models**:
+1. `ExamplePromptsResponse` (only used by deprecated ExamplePromptGenerator)
 
 ---
 
-## 1. Example Prompt Generation
+## 1. Complete Tool Generation
+
+### Location in CSharpGenerator
+- **File**: `CSharpGenerator/Generators/CompleteToolGenerator.cs`
+- **Lines**: ~248 lines
+- **Integration Point**: Called from `DocumentationGenerator.cs` when `--complete-tools` flag is used
+
+### Superseded By
+- **Package**: `ToolGeneration_Composed/`
+- **Used By**: 
+  - `2-Generate-ToolGenerationAndAIImprovements.ps1` (uses ToolGeneration_Composed)
+  - `3-Generate-ToolGenerationAndAIImprovements-One.ps1` (uses ToolGeneration_Composed)
+
+### Current Status
+**UNUSED** - Complete tool generation now uses the ToolGeneration_Raw → ToolGeneration_Composed → ToolGeneration_Improved pipeline.
+
+### Functionality
+CompleteToolGenerator would:
+- Read annotation, parameter, and example-prompts files
+- Strip YAML frontmatter
+- Embed content into a single complete file
+- Output to `./generated/tools/`
+
+This is **exactly what ToolGeneration_Composed does**, but the new approach:
+- ToolGeneration_Raw creates files with placeholders
+- ToolGeneration_Composed replaces placeholders (same output as CompleteToolGenerator)
+- ToolGeneration_Improved applies AI enhancements
+
+### Why It Was Moved
+- **Modular Pipeline**: Separates raw generation, composition, and AI improvement into distinct stages
+- **Better Testing**: Each stage can be tested independently
+- **Flexibility**: Can skip AI improvement step if needed
+
+---
+
+## 2. Example Prompt Generation
 
 ### Location in CSharpGenerator
 - **File**: `CSharpGenerator/Generators/ExamplePromptGenerator.cs`
@@ -112,7 +152,20 @@ $generatorProject = Join-Path $scriptDir "ExamplePromptGeneratorStandalone"
 
 ---
 
-## 4. Horizontal Article Generation
+## 4. Scripts Calling Deprecated CSharpGenerator Functionality
+
+### Generate-CompleteTools.ps1
+- **Location**: `scripts/Generate-CompleteTools.ps1`
+- **Called By**: 
+  - `4-Generate-ToolFamilyFiles.ps1` (line 62)
+  - `Generate-ToolPages.ps1` (line 85)
+- **Functionality**: Calls CSharpGenerator with `--complete-tools` flag
+- **Status**: **DEPRECATED** - Use `2-Generate-ToolGenerationAndAIImprovements.ps1` instead
+- **Deprecation Note**: Added to script header
+
+---
+
+## 5. Horizontal Article Generation
 
 ### Location in CSharpGenerator
 **NOT PRESENT** - This functionality was never in CSharpGenerator; it was created directly as a standalone package.
@@ -338,17 +391,58 @@ The initialization in `DocumentationGenerator.cs` is also commented out (line ~2
 
 ---
 
-## Updated Conclusion
+## 7. ExamplePromptsResponse Model
+
+### Location in CSharpGenerator
+- **File**: `CSharpGenerator/Models/ExamplePromptsResponse.cs`
+- **Lines**: ~12 lines (class definition)
+- **Integration Point**: Used only by deprecated `ExamplePromptGenerator.cs`
+
+### Superseded By
+- **Package**: `ExamplePromptGeneratorStandalone/` has its own version of this model
+- **Usage**: No active code references this model (all references are in commented-out ExamplePromptGenerator)
+
+### Current Status
+**UNUSED** - Model is commented out. Only used by deprecated ExamplePromptGenerator.
+
+### Functionality
+This model was used to deserialize AI-generated example prompts from Azure OpenAI:
+```csharp
+public class ExamplePromptsResponse
+{
+    [JsonPropertyName("toolName")]
+    public string? ToolName { get; set; }
+    
+    [JsonPropertyName("prompts")]
+    public List<string> Prompts { get; set; } = new();
+}
+```
+
+### Why It Was Deprecated
+- **Single Use**: Only used by ExamplePromptGenerator which is deprecated
+- **Standalone Alternative**: ExamplePromptGeneratorStandalone has its own copy of this model
+- **Zero Active References**: All references are in commented-out code
+
+---
+
+## 8. Updated Conclusion
 
 **All Deprecated Functionality Status**: ✅ COMMENTED OUT IN PLACE
 
 1. `Generators/ExamplePromptGenerator.cs` - Disabled (383 lines) ✓
 2. Tool generation logic (tool pages) - Disabled (section commented out) ✓
 3. `Generators/ParamAnnotationGenerator.cs` - Disabled (235 lines) ✓
+4. `Generators/ToolFamilyPageGenerator.cs` - Disabled (250 lines) ✓
+5. `Generators/CompleteToolGenerator.cs` - Disabled (248 lines) ✓
+6. `Models/ExamplePromptsResponse.cs` - Disabled (model class) ✓
 
 **Current Build Status**: ✅ Builds successfully - all deprecated code is in place but not executed
 
 **Next Steps**: 
 - Keep deprecated code in place for backwards compatibility reference
 - Plan removal for next major version
-- Standalone packages are active replacements
+- Standalone packages are active replacements:
+  - `ExamplePromptGeneratorStandalone` → replaces ExamplePromptGenerator
+  - `ToolGeneration_Raw`, `ToolGeneration_Composed`, `ToolGeneration_Improved` → replace tool generation
+  - `ToolFamilyCleanup` → replaces ToolFamilyPageGenerator
+  - Use separate `annotations/` and `parameters/` files → replaces ParamAnnotationGenerator

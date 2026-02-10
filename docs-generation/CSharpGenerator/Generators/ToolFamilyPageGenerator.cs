@@ -11,6 +11,12 @@ using Shared;
 
 namespace CSharpGenerator.Generators;
 
+/*
+DEPRECATED: Tool family page generation has been moved to ToolFamilyCleanup package.
+Keeping code in place for reference but not used. 
+Use ToolFamilyCleanup package for tool family page generation.
+See: UNUSED-FUNCTIONALITY.md for details.
+
 /// <summary>
 /// Generates enhanced tool family pages with example prompts and annotations
 /// </summary>
@@ -247,3 +253,4 @@ public class ToolFamilyPageGenerator
         return string.Join("\n", remainingLines).TrimStart();
     }
 }
+*/

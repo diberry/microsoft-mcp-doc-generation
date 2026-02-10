@@ -273,15 +273,18 @@ public static class DocumentationGenerator
             LoadBrandMappingsAsync,
             CleanFileNameAsync,
             ExtractCommonParameters);
+        
+        // DEPRECATED: ToolFamilyPageGenerator no longer used
+        // Keeping variable declaration for backwards compatibility but disabled
+        // var toolFamilyPageGenerator = new ToolFamilyPageGenerator(
+        //     LoadBrandMappingsAsync,
+        //     CleanFileNameAsync,
+        //     ExtractCommonParameters);
             
-        var toolFamilyPageGenerator = new ToolFamilyPageGenerator(
-            LoadBrandMappingsAsync,
-            CleanFileNameAsync,
-            ExtractCommonParameters);
-            
-        var completeToolGenerator = new CompleteToolGenerator(
-            LoadBrandMappingsAsync,
-            CleanFileNameAsync);
+        // DEPRECATED: CompleteToolGenerator replaced by ToolGeneration_Composed
+        // var completeToolGenerator = new CompleteToolGenerator(
+        //     LoadBrandMappingsAsync,
+        //     CleanFileNameAsync);
             
         var reportGenerator = new ReportGenerator();
 
@@ -305,6 +308,9 @@ public static class DocumentationGenerator
         await paramAnnotationGenerator.GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
         */
 
+        // DEPRECATED: Complete tool files generation replaced by ToolGeneration_Composed
+        // Use ToolGeneration_Raw -> ToolGeneration_Composed pipeline instead
+        /*
         // Generate complete tool files if requested (at parent level)
         var toolsDir = Path.Combine(parentDir, "tools");
         if (generateCompleteTools)
@@ -330,6 +336,7 @@ public static class DocumentationGenerator
         {
             Console.WriteLine("\n⚠️  Example prompt validation requires both --complete-tools and --example-prompts flags");
         }
+        */
 
         // Setup area template (needed for index page too)
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");

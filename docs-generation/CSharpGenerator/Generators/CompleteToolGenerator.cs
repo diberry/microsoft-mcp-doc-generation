@@ -11,6 +11,20 @@ using Shared;
 
 namespace CSharpGenerator.Generators;
 
+/* DEPRECATED: CompleteToolGenerator has been replaced by ToolGeneration_Composed package
+ * 
+ * This generator was used to create complete tool documentation by:
+ * - Reading annotation, parameter, and example-prompts files
+ * - Stripping frontmatter
+ * - Embedding content into a single complete file
+ * 
+ * Replacement: Use ToolGeneration_Raw -> ToolGeneration_Composed -> ToolGeneration_Improved pipeline
+ * - ToolGeneration_Raw creates files with placeholders
+ * - ToolGeneration_Composed replaces placeholders with actual content (same functionality as this)
+ * - ToolGeneration_Improved applies AI enhancements
+ * 
+ * The new approach is more modular and separates concerns better.
+ * 
 /// <summary>
 /// Generates complete tool documentation files that combine example prompts, annotations, and parameters.
 /// Creates files in ./generated/tools/ directory with format: {tool}.complete.md
@@ -245,3 +259,4 @@ public class CompleteToolGenerator
             : content;
     }
 }
+*/
