@@ -12,6 +12,9 @@ namespace CSharpGenerator.Generators;
 /// </summary>
 public static class FrontmatterUtility
 {
+    // DEPRECATED: Only used by commented-out ExamplePromptGenerator
+    // Keeping for reference but disabled
+    /*
     /// <summary>
     /// Generates frontmatter for input prompt files (stored in example-prompts-prompts/)
     /// </summary>
@@ -42,7 +45,11 @@ userPrompt: |
 
 ";
     }
+    */
 
+    // DEPRECATED: Only used by commented-out ParamAnnotationGenerator
+    // Keeping for reference but disabled
+    /*
     /// <summary>
     /// Generates frontmatter for general documentation files
     /// </summary>
@@ -75,6 +82,7 @@ userPrompt: |
         
         return sb.ToString();
     }
+    */
 
     /// <summary>
     /// Generates frontmatter for tool annotation files

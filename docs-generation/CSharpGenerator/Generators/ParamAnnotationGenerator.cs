@@ -13,6 +13,12 @@ using static CSharpGenerator.Generators.FrontmatterUtility;
 
 namespace CSharpGenerator.Generators;
 
+/*
+DEPRECATED: Combined parameter and annotation file generation has been disabled.
+Keeping code in place for reference but not used. 
+Use separate annotations and parameters files instead (or complete tool files with --complete-tools flag).
+See: UNUSED-FUNCTIONALITY.md for details.
+
 /// <summary>
 /// Generates combined parameter and annotation files for MCP tools
 /// </summary>
@@ -232,3 +238,4 @@ public class ParamAnnotationGenerator
         return result.ToString();
     }
 }
+*/

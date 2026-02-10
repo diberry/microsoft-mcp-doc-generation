@@ -183,6 +183,9 @@ public static class DocumentationGenerator
         Directory.CreateDirectory(annotationsDir);
         var annotationTemplate = Path.Combine(templatesDir, "annotation-template.hbs");
         
+        // DEPRECATED: Example prompts generation has been moved to ExamplePromptGeneratorStandalone package
+        // Keeping code in place for reference but disabled. Use ExamplePromptGeneratorStandalone instead.
+        /*
         // Setup example prompts generation if requested
         ExamplePromptGenerator? examplePromptGenerator = null;
         string? examplePromptsDir = null;
@@ -240,6 +243,11 @@ public static class DocumentationGenerator
             Console.WriteLine("To enable example prompts generation, use the --example-prompts flag");
             Console.WriteLine("Example: dotnet run --example-prompts\n");
         }
+        */
+        
+        // Disabled: Example prompts generation. Use ExamplePromptGeneratorStandalone package instead.
+        object? examplePromptGenerator = null;
+        string? examplePromptsDir = null;
         
         // Initialize all generators with shared dependencies
         var annotationGenerator = new AnnotationGenerator(
@@ -253,25 +261,30 @@ public static class DocumentationGenerator
             LoadCompoundWordsAsync,
             CleanFileNameAsync,
             ExtractCommonParameters);
-            
-        var paramAnnotationGenerator = new ParamAnnotationGenerator(
-            LoadBrandMappingsAsync,
-            LoadCompoundWordsAsync,
-            CleanFileNameAsync);
+        
+        // DEPRECATED: ParamAnnotationGenerator no longer used
+        // Keeping variable declaration for backwards compatibility but disabled
+        // var paramAnnotationGenerator = new ParamAnnotationGenerator(
+        //     LoadBrandMappingsAsync,
+        //     LoadCompoundWordsAsync,
+        //     CleanFileNameAsync);
             
         var pageGenerator = new PageGenerator(
             LoadBrandMappingsAsync,
             CleanFileNameAsync,
             ExtractCommonParameters);
+        
+        // DEPRECATED: ToolFamilyPageGenerator no longer used
+        // Keeping variable declaration for backwards compatibility but disabled
+        // var toolFamilyPageGenerator = new ToolFamilyPageGenerator(
+        //     LoadBrandMappingsAsync,
+        //     CleanFileNameAsync,
+        //     ExtractCommonParameters);
             
-        var toolFamilyPageGenerator = new ToolFamilyPageGenerator(
-            LoadBrandMappingsAsync,
-            CleanFileNameAsync,
-            ExtractCommonParameters);
-            
-        var completeToolGenerator = new CompleteToolGenerator(
-            LoadBrandMappingsAsync,
-            CleanFileNameAsync);
+        // DEPRECATED: CompleteToolGenerator replaced by ToolGeneration_Composed
+        // var completeToolGenerator = new CompleteToolGenerator(
+        //     LoadBrandMappingsAsync,
+        //     CleanFileNameAsync);
             
         var reportGenerator = new ReportGenerator();
 
@@ -284,12 +297,20 @@ public static class DocumentationGenerator
         var parameterTemplate = Path.Combine(templatesDir, "parameter-template.hbs");
         await parameterGenerator.GenerateParameterFilesAsync(transformedData, parametersDir, parameterTemplate);
 
+        // DEPRECATED: Combined parameter and annotation files generation
+        // Keeping code in place for reference but disabled.
+        // Use separate annotations and parameters files instead (or complete tool files with --complete-tools flag)
+        /*
         // Generate combined parameter and annotation files for each tool (at parent level)
         var paramAnnotationDir = Path.Combine(parentDir, "param-and-annotation");
         Directory.CreateDirectory(paramAnnotationDir);
         var paramAnnotationTemplate = Path.Combine(templatesDir, "param-annotation-template.hbs");
         await paramAnnotationGenerator.GenerateParamAnnotationFilesAsync(transformedData, paramAnnotationDir, paramAnnotationTemplate);
+        */
 
+        // DEPRECATED: Complete tool files generation replaced by ToolGeneration_Composed
+        // Use ToolGeneration_Raw -> ToolGeneration_Composed pipeline instead
+        /*
         // Generate complete tool files if requested (at parent level)
         var toolsDir = Path.Combine(parentDir, "tools");
         if (generateCompleteTools)
@@ -315,13 +336,15 @@ public static class DocumentationGenerator
         {
             Console.WriteLine("\n⚠️  Example prompt validation requires both --complete-tools and --example-prompts flags");
         }
+        */
 
         // Setup area template (needed for index page too)
         var areaTemplate = Path.Combine(templatesDir, "area-template.hbs");
         
-        // Get tool family page template
-        var toolFamilyTemplate = Path.Combine(templatesDir, "tool-family-page.hbs");
-
+        
+        // DEPRECATED: Tool pages generation has been moved to ToolGeneration_Raw, ToolGeneration_Composed, and ToolGeneration_Improved packages
+        // Keeping code in place for reference but disabled. Use standalone packages instead.
+        /*
         // Generate area pages (skip if only generating annotations)
         if (generateToolPages && (!generateAnnotations || generateCommands || generateIndex || generateCommon))
         {
@@ -330,6 +353,7 @@ public static class DocumentationGenerator
                 await toolFamilyPageGenerator.GenerateAsync(area.Key, area.Value, transformedData, outputDir, toolFamilyTemplate);
             }
         }
+        */
 
         // Generate common tools page if requested
         if (generateCommon)
@@ -1026,7 +1050,7 @@ public static class DocumentationGenerator
     /// <summary>
     /// Generates individual annotation files for each tool.
     /// </summary>
-    private static async Task GenerateAnnotationFilesAsync(TransformedData data, string outputDir, string templateFile, ExamplePromptGenerator? examplePromptGenerator = null, string? examplePromptsDir = null)
+    private static async Task GenerateAnnotationFilesAsync(TransformedData data, string outputDir, string templateFile, object? examplePromptGenerator = null, string? examplePromptsDir = null)
     {
         try
         {
@@ -1232,12 +1256,12 @@ public static class DocumentationGenerator
 
     /// <summary>
     /// Generates a single example prompt file for a tool.
-    /// Delegates to ExamplePromptGenerator with template processor function.
+    /// DEPRECATED: Use ExamplePromptGeneratorStandalone package instead.
     /// </summary>
     /// <returns>Tuple of (successCount, failureCount) - either (1,0) or (0,1) or (0,0)</returns>
     private static async Task<(int successCount, int failureCount)> GenerateSingleExamplePromptAsync(
         Tool tool, 
-        ExamplePromptGenerator? examplePromptGenerator, 
+        object? examplePromptGenerator, 
         string? examplePromptsDir, 
         string annotationFileName, 
         string? version)
@@ -1245,13 +1269,17 @@ public static class DocumentationGenerator
         if (examplePromptGenerator == null || string.IsNullOrEmpty(examplePromptsDir))
             return (0, 0);
 
-        // Delegate to ExamplePromptGenerator, passing in the Handlebars template processor
+        // DEPRECATED: Delegate to ExamplePromptGenerator, passing in the Handlebars template processor
+        // Use ExamplePromptGeneratorStandalone package instead
+        /*
         return await examplePromptGenerator.GenerateExamplePromptFileAsync(
             tool,
             examplePromptsDir,
             annotationFileName,
             version,
             HandlebarsTemplateEngine.ProcessTemplateAsync);
+        */
+        return (0, 0);
     }
 
     /// <summary>
@@ -1360,6 +1388,10 @@ public static class DocumentationGenerator
         }
     }
 
+    // DEPRECATED: Combined parameter and annotation file generation
+    // Keeping method for reference but disabled.
+    // Use separate annotations and parameters files instead (or complete tool files with --complete-tools flag)
+    /*
     /// <summary>
     /// Generates combined parameter and annotation files for each tool.
     /// </summary>
@@ -1533,6 +1565,7 @@ public static class DocumentationGenerator
             Console.WriteLine(ex.StackTrace);
         }
     }
+    */
 
     /// <summary>
     /// Generates a comprehensive metadata report covering all tool characteristics.

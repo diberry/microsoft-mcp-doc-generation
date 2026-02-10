@@ -1,9 +1,14 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Complete tools file generator - focused on debugging tool file generation
+    DEPRECATED: Complete tools file generator - replaced by ToolGeneration pipeline
     
 .DESCRIPTION
+    DEPRECATED: This script calls CSharpGenerator with --complete-tools flag.
+    This functionality has been replaced by the ToolGeneration_Raw -> ToolGeneration_Composed -> ToolGeneration_Improved pipeline.
+    
+    Use 2-Generate-ToolGenerationAndAIImprovements.ps1 instead for the new approach.
+    
     This script runs the complete-tools generator using existing annotation and parameter files
     from the ./generated directory.
     
