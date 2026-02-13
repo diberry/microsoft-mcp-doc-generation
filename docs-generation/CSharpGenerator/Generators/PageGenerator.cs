@@ -138,6 +138,7 @@ public class PageGenerator
                         .Select(opt => new Option
                         {
                             Name = opt.Name,
+                            // IMPORTANT: Preserves ALL words including type qualifiers like "name"
                             NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
                             Type = opt.Type,
                             Required = opt.Required,
