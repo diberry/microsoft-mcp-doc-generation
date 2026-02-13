@@ -125,7 +125,10 @@ public class ParameterGenerator
                         required = opt.Required,
                         RequiredText = BuildRequiredText(opt.Required, opt.Name ?? "", conditionalParameters),
                         description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
-                    }).ToList();
+                    })
+                    .OrderByDescending(opt => opt.required) // Required parameters first
+                    .ThenBy(opt => opt.NL_Name, StringComparer.OrdinalIgnoreCase) // Then alphabetically by natural language name
+                    .ToList();
 
                 var parameterData = new Dictionary<string, object>
                 {

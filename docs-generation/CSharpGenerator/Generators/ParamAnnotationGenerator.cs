@@ -178,7 +178,10 @@ public class ParamAnnotationGenerator
                     required = opt.Required,
                     RequiredText = opt.Required == true ? "Required" : "Optional",
                     description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
-                }).ToList();
+                })
+                .OrderByDescending(opt => opt.required) // Required parameters first
+                .ThenBy(opt => opt.NL_Name, StringComparer.OrdinalIgnoreCase) // Then alphabetically by natural language name
+                .ToList();
 
                 var paramAnnotationData = new Dictionary<string, object>
                 {
