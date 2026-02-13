@@ -206,22 +206,9 @@ public class HorizontalArticleGenerator
             throw new InvalidOperationException("Invalid CLI output format");
         }
 
-        // Load version info
-        var versionPath = Path.GetFullPath(CLI_VERSION_PATH);
-        var versionContent = (await File.ReadAllTextAsync(versionPath)).Trim();
-        string cliVersion;
-        
-        // Handle both plain text version and JSON format
-        if (versionContent.StartsWith("{"))
-        {
-            var versionJson = JsonDocument.Parse(versionContent);
-            cliVersion = versionJson.RootElement.GetProperty("version").GetString() ?? "unknown";
-        }
-        else
-        {
-            // Plain text version string
-            cliVersion = versionContent;
-        }
+        // Load version info using utility
+        var baseOutputDir = Path.GetFullPath("../generated");
+        var cliVersion = await CliVersionReader.ReadCliVersionAsync(baseOutputDir);
 
         // Group tools by service area (first word of command or name)
         var toolsByService = cliData.Results

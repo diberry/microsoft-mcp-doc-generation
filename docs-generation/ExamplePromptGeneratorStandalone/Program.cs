@@ -2,6 +2,7 @@ using System.Text.Json;
 using ExamplePromptGeneratorStandalone.Generators;
 using ExamplePromptGeneratorStandalone.Models;
 using ExamplePromptGeneratorStandalone.Utilities;
+using Shared;
 
 namespace ExamplePromptGeneratorStandalone;
 
@@ -14,19 +15,29 @@ internal static class Program
         Console.WriteLine("╚═════════════════════════════════════════════╝\n");
 
         // Parse arguments
-        if (args.Length < 3)
+        if (args.Length < 2)
         {
-            Console.WriteLine("Usage: ExamplePromptGeneratorStandalone <cliOutputFile> <outputDir> <version>");
+            Console.WriteLine("Usage: ExamplePromptGeneratorStandalone <cliOutputFile> <outputDir> [version]");
             Console.WriteLine("  cliOutputFile   - Path to cli-output.json");
             Console.WriteLine("  outputDir       - Output directory for generated files");
-            Console.WriteLine("  version         - CLI version string");
+            Console.WriteLine("  version         - (Optional) CLI version string. If not provided, reads from cli-version.json");
             Console.WriteLine("\nNote: Templates and prompts are embedded in the package.");
             return 1;
         }
 
         var cliOutputFile = args[0];
         var outputDir = args[1];
-        var version = args[2];
+        
+        // Get version from arguments or read from cli-version.json
+        string version;
+        if (args.Length > 2)
+        {
+            version = args[2];
+        }
+        else
+        {
+            version = await CliVersionReader.ReadCliVersionAsync(outputDir);
+        }
         
         // Use embedded templates/prompts from package folder
         var packageRootDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..");

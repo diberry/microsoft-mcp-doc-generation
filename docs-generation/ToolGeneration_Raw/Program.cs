@@ -31,7 +31,21 @@ internal class Program
 
         var cliOutputFile = args[0];
         var outputDir = args[1];
-        var mcpCliVersion = args.Length > 2 ? args[2] : "unknown";
+        
+        // Get version from arguments or read from cli-version.json
+        string mcpCliVersion;
+        if (args.Length > 2)
+        {
+            mcpCliVersion = args[2];
+        }
+        else
+        {
+            // Extract base output directory (remove tools-raw suffix if present)
+            var baseOutputDir = outputDir.EndsWith("tools-raw") 
+                ? Path.GetDirectoryName(outputDir) ?? outputDir
+                : outputDir;
+            mcpCliVersion = await CliVersionReader.ReadCliVersionAsync(baseOutputDir);
+        }
 
         // Validate input file exists
         if (!File.Exists(cliOutputFile))
