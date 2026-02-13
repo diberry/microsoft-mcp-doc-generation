@@ -144,6 +144,8 @@ public class PageGenerator
                             RequiredText = opt.Required == true ? "Required" : "Optional",
                             Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")),
                         })
+                        .OrderByDescending(opt => opt.Required) // Required parameters first
+                        .ThenBy(opt => opt.NL_Name, StringComparer.OrdinalIgnoreCase) // Then alphabetically by natural language name
                         .ToList();
                 }
                 
