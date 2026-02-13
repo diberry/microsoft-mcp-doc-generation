@@ -37,8 +37,8 @@ public static class CliVersionReader
         {
             var versionContent = await File.ReadAllTextAsync(versionFile);
             
-            // Handle both JSON format and plain text format
-            if (versionContent.Trim().StartsWith('{'))
+            // Try parsing as JSON first, fall back to plain text
+            try
             {
                 // Try to parse as JSON
                 using var jsonDoc = JsonDocument.Parse(versionContent);
@@ -56,9 +56,9 @@ public static class CliVersionReader
                 
                 return "unknown";
             }
-            else
+            catch (JsonException)
             {
-                // Plain text version
+                // Not valid JSON, treat as plain text
                 return versionContent.Trim();
             }
         }
