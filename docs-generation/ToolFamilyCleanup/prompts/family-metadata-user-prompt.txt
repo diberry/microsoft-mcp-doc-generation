@@ -2,10 +2,11 @@ Generate the metadata section (frontmatter + H1 + introduction) for the followin
 
 **Tool Family**: {{FAMILY_NAME}}
 **Tool Count**: {{TOOL_COUNT}}
+**CLI Version**: {{CLI_VERSION}}
 **Tools in Family**: {{TOOL_LIST}}
 
 Requirements:
-- Generate frontmatter with title, description, keywords, ms.service, ms.topic, and tool_count
+- Generate frontmatter with title, description, keywords, ms.service, ms.topic, tool_count, and mcp-cli.version
 - Include H1 heading matching the title
 - Write 2 intro paragraphs describing the service and its capabilities
 - Include the parameter tip INCLUDE statement

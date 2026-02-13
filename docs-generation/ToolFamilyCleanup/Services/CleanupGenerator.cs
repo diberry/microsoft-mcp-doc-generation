@@ -5,6 +5,7 @@ using GenerativeAI;
 using System.Text.RegularExpressions;
 using ToolFamilyCleanup.Models;
 using System.Text.Json;
+using Shared;
 
 namespace ToolFamilyCleanup.Services;
 
@@ -36,6 +37,7 @@ public class CleanupGenerator
     private readonly GenerativeAIOptions _options;
     private string? _systemPrompt;
     private string? _userPromptTemplate;
+    private string? _cliVersion;
 
     private sealed class BrandMapping
     {
@@ -91,6 +93,12 @@ public class CleanupGenerator
     public async Task ProcessAllToolFamilyFiles()
     {
         Console.WriteLine("=== Tool Family Cleanup Generation ===");
+        Console.WriteLine();
+
+        // Read CLI version
+        var baseOutputDir = Path.GetFullPath("../generated");
+        _cliVersion = await CliVersionReader.ReadCliVersionAsync(baseOutputDir);
+        Console.WriteLine($"CLI Version: {_cliVersion}");
         Console.WriteLine();
 
         // Load prompts
@@ -367,6 +375,12 @@ public class CleanupGenerator
         Console.WriteLine("=== Tool Family Cleanup Generation (Multi-Phase) ===");
         Console.WriteLine();
 
+        // Read CLI version
+        var baseOutputDir = Path.GetFullPath("../generated");
+        _cliVersion = await CliVersionReader.ReadCliVersionAsync(baseOutputDir);
+        Console.WriteLine($"CLI Version: {_cliVersion}");
+        Console.WriteLine();
+
         // Create output directories (resolve relative paths)
         var metadataDir = Path.GetFullPath(_config.MetadataOutputDirectory);
         var relatedDir = Path.GetFullPath(_config.RelatedContentOutputDirectory);
@@ -441,7 +455,7 @@ public class CleanupGenerator
 
                 // Phase 2: Generate metadata
                 Console.Write($"{progress}   Phase 2: Generating metadata... ");
-                var metadata = await metadataGenerator.GenerateAsync(familyContent);
+                var metadata = await metadataGenerator.GenerateAsync(familyContent, _cliVersion ?? "unknown");
                 familyContent.Metadata = metadata;
                 
                 // Save metadata
