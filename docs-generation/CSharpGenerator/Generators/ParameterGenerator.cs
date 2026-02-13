@@ -70,6 +70,8 @@ public class ParameterGenerator
                     .Zip(parameterManifest, (opt, manifest) => new
                     {
                         name = manifest.Name,
+                        // IMPORTANT: manifest.DisplayName comes from NormalizeParameter and preserves
+                        // all words, including type qualifiers like "name" in "resource-group-name".
                         NL_Name = manifest.DisplayName,
                         type = opt.Type,
                         required = manifest.Required,
