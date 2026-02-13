@@ -1259,7 +1259,7 @@ public static class DocumentationGenerator
     /// DEPRECATED: Use ExamplePromptGeneratorStandalone package instead.
     /// </summary>
     /// <returns>Tuple of (successCount, failureCount) - either (1,0) or (0,1) or (0,0)</returns>
-    private static async Task<(int successCount, int failureCount)> GenerateSingleExamplePromptAsync(
+    private static Task<(int successCount, int failureCount)> GenerateSingleExamplePromptAsync(
         Tool tool, 
         object? examplePromptGenerator, 
         string? examplePromptsDir, 
@@ -1267,7 +1267,7 @@ public static class DocumentationGenerator
         string? version)
     {
         if (examplePromptGenerator == null || string.IsNullOrEmpty(examplePromptsDir))
-            return (0, 0);
+            return Task.FromResult((0, 0));
 
         // DEPRECATED: Delegate to ExamplePromptGenerator, passing in the Handlebars template processor
         // Use ExamplePromptGeneratorStandalone package instead
@@ -1279,7 +1279,7 @@ public static class DocumentationGenerator
             version,
             HandlebarsTemplateEngine.ProcessTemplateAsync);
         */
-        return (0, 0);
+        return Task.FromResult((0, 0));
     }
 
     /// <summary>
