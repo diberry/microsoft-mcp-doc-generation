@@ -22,12 +22,16 @@ docs-generation/
 │   ├── Generate-ToolFamilyFiles.ps1           # Complete tools + AI improvements + tool family files
 │   └── Validate.ps1                           # Validation orchestrator
 ├── Get-McpCliOutput.ps1           # CLI extraction script
-├── stop-words.json                # Stop words removed from include filenames
-├── compound-words.json            # Compound word mappings for include filenames
-├── brand-to-server-mapping.json   # Brand name to filename mappings
-├── nl-parameters.json             # Natural language parameter names
-├── static-text-replacement.json   # Text replacements
-├── config.json                    # Main configuration
+├── data/                          # Configuration and data files
+│   ├── README.md                  # Documentation for all data files
+│   ├── brand-to-server-mapping.json  # Brand name to filename mappings
+│   ├── common-parameters.json     # Common parameters definition
+│   ├── compound-words.json        # Compound word mappings for include filenames
+│   ├── config.json                # Main configuration
+│   ├── nl-parameters.json         # Natural language parameter names
+│   ├── static-text-replacement.json  # Text replacements
+│   ├── stop-words.json            # Stop words removed from include filenames
+│   └── transformation-config.json # Service brand name mappings for transformations
 ├── CSharpGenerator/               # C# console application (.NET 9.0)
 │   ├── CSharpGenerator.csproj    # Project file
 │   ├── Program.cs                # Main entry point
@@ -130,11 +134,17 @@ See `docs-generation/ToolFamilyCleanup/README.md` for detailed documentation.
 
 ## Configuration Files
 
+**Note**: All configuration files have been moved to `data/` directory as of February 2026. See `data/README.md` for comprehensive documentation.
+
 ### stop-words.json
+
+**Location**: `data/stop-words.json`
 
 Contains a list of common stop words that are removed from **include filenames only** during generation. This helps create cleaner, more concise filenames for the include files (annotations, parameters, and param-annotation files).
 
 ### `common-parameters.json`
+
+**Location**: `data/common-parameters.json`
 
 Defines the common parameters that are shared across all Azure MCP tools. These parameters are automatically filtered out of parameter tables in the generated documentation.
 
@@ -160,6 +170,8 @@ Example:
 - `param-and-annotation/azure-storage-account-get-param-annotation.md`
 
 ### compound-words.json
+
+**Location**: `data/compound-words.json`
 
 Contains mappings of compound words (smashed words) to their hyphenated equivalents for **include filenames only**. This ensures that compound words are properly separated with hyphens to pass filename validation rules.
 
@@ -197,6 +209,8 @@ The filename cleaning process (stop word removal and compound word separation) i
 - `generated/multi-page/*.md` - Area-specific tool documentation (e.g., `acr.md`, `storage.md`, `keyvault.md`)
 
 ### brand-to-server-mapping.json
+
+**Location**: `data/brand-to-server-mapping.json`
 
 Contains mappings of MCP server area names to their preferred brand-based filenames. This is the **primary** method for determining include filenames and takes precedence over other naming strategies.
 

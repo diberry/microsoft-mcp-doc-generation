@@ -231,7 +231,7 @@ try {
         Write-Warning "cli-version.json not found at $cliVersionFile - mcp-cli.version will be 'unknown'"
     }
 
-    $brandMappingPath = Join-Path $scriptDir "brand-to-server-mapping.json"
+    $brandMappingPath = Join-Path $scriptDir "data/brand-to-server-mapping.json"
     if (Test-Path $brandMappingPath) {
         Copy-Item -Path $brandMappingPath -Destination $tempDocs -Force
     }
@@ -265,7 +265,7 @@ try {
     $prefixes.Add($familyNameLower)
 
     # Try to load brand-to-server mapping for alternate filename prefixes
-    $brandMappingPath = Join-Path $scriptDir "brand-to-server-mapping.json"
+    $brandMappingPath = Join-Path $scriptDir "data/brand-to-server-mapping.json"
     if (Test-Path $brandMappingPath) {
         try {
             $brandMappings = Get-Content $brandMappingPath -Raw | ConvertFrom-Json
@@ -274,7 +274,7 @@ try {
                 $prefixes.Add($mapping.fileName.ToLower())
             }
         } catch {
-            Write-Warning "Could not read brand-to-server-mapping.json: $($_.Exception.Message)"
+            Write-Warning "Could not read data/brand-to-server-mapping.json: $($_.Exception.Message)"
         }
     }
 

@@ -37,11 +37,14 @@ public class Config
         }
         Console.WriteLine($"Config loaded from {configPath}");
 
+        // Resolve required files relative to the config file's directory
+        var configDir = Path.GetDirectoryName(Path.GetFullPath(configPath)) ?? AppContext.BaseDirectory;
+
         // Validate required files and set full paths
         for (int i = 0; i < config.RequiredFiles.Count; i++)
         {
             var file = config.RequiredFiles[i];
-            var fullPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, file));
+            var fullPath = Path.GetFullPath(Path.Combine(configDir, file));
             Console.WriteLine($"Checking file: {fullPath}");
             if (!File.Exists(fullPath))
             {

@@ -1,5 +1,17 @@
 [
   {
+    "brandName": "Azure Advisor",
+    "mcpServerName": "advisor",
+    "shortName": "Advisor",
+    "fileName": "azure-advisor"
+  },
+  {
+    "brandName": "Azure Migrate",
+    "mcpServerName": "azuremigrate",
+    "shortName": "Migrate",
+    "fileName": "azure-migrate"
+  },
+  {
     "brandName": "Azure Container Registry",
     "mcpServerName": "acr",
     "shortName": "ACR",

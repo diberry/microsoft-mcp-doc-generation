@@ -24,7 +24,7 @@ internal class HorizontalArticleProgram
         try
         {
             // Load config using existing infrastructure
-            var configPath = Path.Combine(AppContext.BaseDirectory, "../../../../config.json");
+            var configPath = Path.Combine(AppContext.BaseDirectory, "../../../../data/config.json");
             Console.WriteLine($"Loading config from: {configPath}");
             var success = Config.Load(configPath);
             if (!success)
@@ -91,7 +91,7 @@ internal class HorizontalArticleProgram
                             Console.WriteLine("Loading text transformation engine...");
                             try
                             {
-                                var transformConfigPath = Path.Combine(AppContext.BaseDirectory, "../../../../transformation-config.json");
+                                var transformConfigPath = Path.Combine(AppContext.BaseDirectory, "../../../../data/transformation-config.json");
                                 var loader = new ConfigLoader(transformConfigPath);
                                 var transformConfig = await loader.LoadAsync();
                                 transformationEngine = new TransformationEngine(transformConfig);

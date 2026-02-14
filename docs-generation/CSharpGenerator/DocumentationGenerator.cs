@@ -36,7 +36,7 @@ public static class DocumentationGenerator
         if (_stopWords != null)
             return _stopWords;
 
-        var stopWordsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "stop-words.json");
+        var stopWordsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "stop-words.json");
         var stopWordsJson = await File.ReadAllTextAsync(stopWordsFile);
         var stopWordsList = JsonSerializer.Deserialize<List<string>>(stopWordsJson) ?? new List<string>();
         _stopWords = new HashSet<string>(stopWordsList);
@@ -51,7 +51,7 @@ public static class DocumentationGenerator
         if (_compoundWords != null)
             return _compoundWords;
 
-        var compoundWordsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "compound-words.json");
+        var compoundWordsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "compound-words.json");
         var compoundWordsJson = await File.ReadAllTextAsync(compoundWordsFile);
         _compoundWords = JsonSerializer.Deserialize<Dictionary<string, string>>(compoundWordsJson) ?? new Dictionary<string, string>();
         return _compoundWords;
@@ -68,10 +68,10 @@ public static class DocumentationGenerator
         try
         {
             // Try to resolve the brand mapping relative to the assembly location first (works for dotnet run)
-            var candidateFromBin = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "brand-to-server-mapping.json");
+            var candidateFromBin = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "brand-to-server-mapping.json");
             var mappingFile = File.Exists(candidateFromBin)
                 ? candidateFromBin
-                : Path.Combine("..", "brand-to-server-mapping.json"); // Fallback for legacy invocation paths
+                : Path.Combine("..", "data", "brand-to-server-mapping.json"); // Fallback for legacy invocation paths
 
             if (!File.Exists(mappingFile))
             {
@@ -772,7 +772,7 @@ public static class DocumentationGenerator
     /// </summary>
     private static async Task<List<CommonParameter>> LoadCommonParametersFromFile()
     {
-        var commonParamsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "common-parameters.json");
+        var commonParamsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "common-parameters.json");
         
         if (!File.Exists(commonParamsFile))
         {

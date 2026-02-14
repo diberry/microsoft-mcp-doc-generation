@@ -92,10 +92,10 @@ internal class Program
         try
         {
             // Try to resolve the brand mapping relative to the assembly location
-            var candidateFromBin = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "brand-to-server-mapping.json");
+            var candidateFromBin = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "brand-to-server-mapping.json");
             var mappingFile = File.Exists(candidateFromBin)
                 ? candidateFromBin
-                : Path.Combine("..", "brand-to-server-mapping.json");
+                : Path.Combine("..", "data", "brand-to-server-mapping.json");
 
             if (!File.Exists(mappingFile))
             {

@@ -1,0 +1,25 @@
+{
+  "activitylog": "activity-log",
+  "app-lens": "app-lens",
+  "azqr": "compliance-review",
+  "bestpractices": "best-practices",
+  "consumergroup": "consumer-group",
+  "eventhub": "event-hub",
+  "fs": "file-system",
+  "healthmodels": "health-models",
+  "hostpool": "host-pool",
+  "iac": "infrastructure-as-code",
+  "kv": "key-value",
+  "monitoredresources": "monitored-resources",
+  "nodepool": "node-pool",
+  "query-and-evaluate": "query-evaluate",
+  "runtime": "run-time",
+  "stt": "operation-speech-text",
+  "subnetsize": "subnet-size",
+  "testresource": "test-resource",
+  "testrun": "test-run",
+  "tts": "operation-text-speech",
+  "webtests": "web-tests",
+  "azureaibestpractices": "azure-ai-best-practices"
+}
+
