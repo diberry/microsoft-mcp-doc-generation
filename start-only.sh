@@ -69,6 +69,21 @@ npm run --silent get:tools-namespace > "$ROOT_DIR/generated/cli/cli-namespace.js
 echo "OK: Generated CLI tool metadata"
 cd "$ROOT_DIR"
 
+# Step 0: Validate brand mappings before generation
+echo "Running brand mapping validation (Step 0)..."
+cd "$ROOT_DIR/docs-generation"
+pwsh -Command "./0-Validate-BrandMappings.ps1 -OutputPath '$ROOT_DIR/generated'"
+VALIDATION_EXIT=$?
+if [ $VALIDATION_EXIT -ne 0 ]; then
+    echo ""
+    echo "⛔ PIPELINE HALTED: Brand mapping validation failed (exit code: $VALIDATION_EXIT)"
+    echo "   Review suggestions at: $ROOT_DIR/generated/reports/brand-mapping-suggestions.json"
+    echo "   Add missing mappings to: $ROOT_DIR/docs-generation/data/brand-to-server-mapping.json"
+    echo "   Then re-run this script."
+    exit $VALIDATION_EXIT
+fi
+cd "$ROOT_DIR"
+
 mkdir -p "$ROOT_DIR/generated/common-general"
 mkdir -p "$ROOT_DIR/generated/tools"
 mkdir -p "$ROOT_DIR/generated/example-prompts"
