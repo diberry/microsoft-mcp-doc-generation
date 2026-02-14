@@ -377,10 +377,12 @@ public class CleanupGenerator
 
         // Load brand mappings from shared loader
         var brandMappingsDict = await DataFileLoader.LoadBrandMappingsAsync();
-        var brandMappings = brandMappingsDict.ToDictionary(
-            kv => kv.Key.ToLowerInvariant(),
-            kv => kv.Value.BrandName,
-            StringComparer.OrdinalIgnoreCase);
+        var brandMappings = brandMappingsDict
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Key) && !string.IsNullOrWhiteSpace(kv.Value.BrandName))
+            .ToDictionary(
+                kv => kv.Key.ToLowerInvariant(),
+                kv => kv.Value.BrandName.Trim(),
+                StringComparer.OrdinalIgnoreCase);
 
         // Phase 2 & 3 & 4: Process each family
         int successCount = 0;

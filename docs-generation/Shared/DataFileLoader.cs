@@ -88,8 +88,17 @@ public static class DataFileLoader
                 PropertyNameCaseInsensitive = true
             });
 
-            var result = mappings?.ToDictionary(m => m.McpServerName ?? "", m => m) 
-                ?? new Dictionary<string, BrandMapping>();
+            // Filter out entries with null or empty server names to avoid key collisions
+            var validMappings = mappings?
+                .Where(m => !string.IsNullOrWhiteSpace(m.McpServerName))
+                .ToList() ?? new List<BrandMapping>();
+            
+            if (validMappings.Count < (mappings?.Count ?? 0))
+            {
+                Console.WriteLine($"Warning: Skipped {(mappings?.Count ?? 0) - validMappings.Count} brand mapping(s) with null/empty server names");
+            }
+
+            var result = validMappings.ToDictionary(m => m.McpServerName, m => m);
             
             Console.WriteLine($"Loaded {result.Count} brand mappings from {mappingFile}");
             return result;
