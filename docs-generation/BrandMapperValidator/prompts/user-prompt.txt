@@ -1,0 +1,17 @@
+Generate a brand mapping JSON entry for the following Azure MCP Server namespace.
+
+Namespace: {{NAMESPACE}}
+
+Tool commands in this namespace:
+{{TOOL_COMMANDS}}
+
+Here are examples of existing brand mappings for reference:
+{{EXISTING_EXAMPLES}}
+
+Generate a single JSON object with these exact fields:
+{
+  "brandName": "<official Azure product name>",
+  "mcpServerName": "{{NAMESPACE}}",
+  "shortName": "<concise abbreviation>",
+  "fileName": "<lowercase-hyphenated-slug>"
+}
