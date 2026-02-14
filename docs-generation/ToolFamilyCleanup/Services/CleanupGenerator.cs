@@ -55,7 +55,7 @@ public class CleanupGenerator
     private static Dictionary<string, string> LoadBrandMappings()
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var mappingPath = Path.Combine(Directory.GetCurrentDirectory(), "brand-to-server-mapping.json");
+        var mappingPath = Path.Combine(Directory.GetCurrentDirectory(), "data", "brand-to-server-mapping.json");
         if (!File.Exists(mappingPath))
         {
             return result;

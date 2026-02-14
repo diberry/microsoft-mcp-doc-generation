@@ -219,7 +219,7 @@ public class HorizontalArticleGenerator
         if (_useTextTransformation)
         {
             // Load brand mappings using existing infrastructure
-            var configPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "transformation-config.json");
+            var configPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "transformation-config.json");
             var loader = new ConfigLoader(configPath);
             var config = await loader.LoadAsync();
             var engine = new TransformationEngine(config);

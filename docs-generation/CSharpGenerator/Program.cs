@@ -15,7 +15,7 @@ internal class Program
      {
 
          // Load and validate config
-         var configPath = Path.Combine(AppContext.BaseDirectory, "../../../../config.json");
+         var configPath = Path.Combine(AppContext.BaseDirectory, "../../../../data/config.json");
          Console.WriteLine($"Loading config from: {configPath}");
          var success = Config.Load(configPath);
          if (!success)
