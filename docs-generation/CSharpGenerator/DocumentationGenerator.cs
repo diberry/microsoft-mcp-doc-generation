@@ -18,85 +18,12 @@ namespace CSharpGenerator;
 /// </summary>
 public static class DocumentationGenerator
 {
-    private static Dictionary<string, BrandMapping>? _brandMappings;
-    private static HashSet<string>? _stopWords;
-    private static Dictionary<string, string>? _compoundWords;
     private static readonly Regex ConditionalRequirementRegex = new(
         @"Requires at least one[^.]*\.?",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex ParameterNameRegex = new(
         @"--[A-Za-z0-9-]+",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    /// <summary>
-    /// Loads stop words from JSON file.
-    /// </summary>
-    private static async Task<HashSet<string>> LoadStopWordsAsync()
-    {
-        if (_stopWords != null)
-            return _stopWords;
-
-        var stopWordsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "stop-words.json");
-        var stopWordsJson = await File.ReadAllTextAsync(stopWordsFile);
-        var stopWordsList = JsonSerializer.Deserialize<List<string>>(stopWordsJson) ?? new List<string>();
-        _stopWords = new HashSet<string>(stopWordsList);
-        return _stopWords;
-    }
-
-    /// <summary>
-    /// Loads compound words mappings from JSON file.
-    /// </summary>
-    private static async Task<Dictionary<string, string>> LoadCompoundWordsAsync()
-    {
-        if (_compoundWords != null)
-            return _compoundWords;
-
-        var compoundWordsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "compound-words.json");
-        var compoundWordsJson = await File.ReadAllTextAsync(compoundWordsFile);
-        _compoundWords = JsonSerializer.Deserialize<Dictionary<string, string>>(compoundWordsJson) ?? new Dictionary<string, string>();
-        return _compoundWords;
-    }
-
-    /// <summary>
-    /// Loads brand-to-server-name mappings from JSON file.
-    /// </summary>
-    private static async Task<Dictionary<string, BrandMapping>> LoadBrandMappingsAsync()
-    {
-        if (_brandMappings != null)
-            return _brandMappings;
-
-        try
-        {
-            // Try to resolve the brand mapping relative to the assembly location first (works for dotnet run)
-            var candidateFromBin = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "brand-to-server-mapping.json");
-            var mappingFile = File.Exists(candidateFromBin)
-                ? candidateFromBin
-                : Path.Combine("..", "data", "brand-to-server-mapping.json"); // Fallback for legacy invocation paths
-
-            if (!File.Exists(mappingFile))
-            {
-                Console.WriteLine($"Warning: Brand mapping file not found at {mappingFile}, using default naming");
-                return new Dictionary<string, BrandMapping>();
-            }
-
-            var json = await File.ReadAllTextAsync(mappingFile);
-            var mappings = JsonSerializer.Deserialize<List<BrandMapping>>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            _brandMappings = mappings?.ToDictionary(m => m.McpServerName ?? "", m => m) 
-                ?? new Dictionary<string, BrandMapping>();
-            
-            Console.WriteLine($"Loaded {_brandMappings.Count} brand mappings");
-            return _brandMappings;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading brand mappings: {ex.Message}");
-            return new Dictionary<string, BrandMapping>();
-        }
-    }
 
     /// <summary>
     /// Generates comprehensive documentation from CLI output data.
@@ -251,39 +178,39 @@ public static class DocumentationGenerator
         
         // Initialize all generators with shared dependencies
         var annotationGenerator = new AnnotationGenerator(
-            LoadBrandMappingsAsync,
-            LoadStopWordsAsync,
-            LoadCompoundWordsAsync,
+            DataFileLoader.LoadBrandMappingsAsync,
+            DataFileLoader.LoadStopWordsAsync,
+            DataFileLoader.LoadCompoundWordsAsync,
             CleanFileNameAsync);
             
         var parameterGenerator = new ParameterGenerator(
-            LoadBrandMappingsAsync,
-            LoadCompoundWordsAsync,
+            DataFileLoader.LoadBrandMappingsAsync,
+            DataFileLoader.LoadCompoundWordsAsync,
             CleanFileNameAsync,
             ExtractCommonParameters);
         
         // DEPRECATED: ParamAnnotationGenerator no longer used
         // Keeping variable declaration for backwards compatibility but disabled
         // var paramAnnotationGenerator = new ParamAnnotationGenerator(
-        //     LoadBrandMappingsAsync,
-        //     LoadCompoundWordsAsync,
+        //     DataFileLoader.LoadBrandMappingsAsync,
+        //     DataFileLoader.LoadCompoundWordsAsync,
         //     CleanFileNameAsync);
             
         var pageGenerator = new PageGenerator(
-            LoadBrandMappingsAsync,
+            DataFileLoader.LoadBrandMappingsAsync,
             CleanFileNameAsync,
             ExtractCommonParameters);
         
         // DEPRECATED: ToolFamilyPageGenerator no longer used
         // Keeping variable declaration for backwards compatibility but disabled
         // var toolFamilyPageGenerator = new ToolFamilyPageGenerator(
-        //     LoadBrandMappingsAsync,
+        //     DataFileLoader.LoadBrandMappingsAsync,
         //     CleanFileNameAsync,
         //     ExtractCommonParameters);
             
         // DEPRECATED: CompleteToolGenerator replaced by ToolGeneration_Composed
         // var completeToolGenerator = new CompleteToolGenerator(
-        //     LoadBrandMappingsAsync,
+        //     DataFileLoader.LoadBrandMappingsAsync,
         //     CleanFileNameAsync);
             
         var reportGenerator = new ReportGenerator();
@@ -554,7 +481,7 @@ public static class DocumentationGenerator
             var annotationsDir = Path.Combine(parentDir, "annotations");
             
             // Load brand mappings for annotation filename lookup
-            var brandMappings = await LoadBrandMappingsAsync();
+            var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
 
             // Filter out common parameters from tools for area pages and add annotation content
             var toolsWithFilteredParamsTasks = areaData.Tools.Select(async tool => 
@@ -772,21 +699,12 @@ public static class DocumentationGenerator
     /// </summary>
     private static async Task<List<CommonParameter>> LoadCommonParametersFromFile()
     {
-        var commonParamsFile = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "common-parameters.json");
-        
-        if (!File.Exists(commonParamsFile))
+        var commonParams = await DataFileLoader.LoadCommonParametersAsync();
+
+        if (commonParams.Count == 0)
         {
-            Console.WriteLine($"Warning: common-parameters.json not found at {commonParamsFile}");
             return new List<CommonParameter>();
         }
-
-        var json = await File.ReadAllTextAsync(commonParamsFile);
-        var commonParams = JsonSerializer.Deserialize<List<CommonParameterDefinition>>(json, new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        }) ?? new List<CommonParameterDefinition>();
-
-        Console.WriteLine($"Loaded {commonParams.Count} common parameters from configuration file");
 
         return commonParams.Select(p => new CommonParameter
         {
@@ -1075,7 +993,7 @@ public static class DocumentationGenerator
             var missingMappings = new Dictionary<string, List<string>>(); // area -> list of tool commands
             
             // Load brand mappings
-            var brandMappings = await LoadBrandMappingsAsync();
+            var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
             
             foreach (var tool in data.Tools)
             {
@@ -1090,7 +1008,7 @@ public static class DocumentationGenerator
                 var area = commandParts[0];
                 
                 // Load compound words for area name transformation
-                var compoundWords = await LoadCompoundWordsAsync();
+                var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
                 
                 // Get brand-based filename from mapping, or fall back to area name
                 string brandFileName;
@@ -1292,7 +1210,7 @@ public static class DocumentationGenerator
             Console.WriteLine($"Generating parameter files for {data.Tools.Count} tools...");
             
             // Load brand mappings
-            var brandMappings = await LoadBrandMappingsAsync();
+            var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
             
             foreach (var tool in data.Tools)
             {
@@ -1307,7 +1225,7 @@ public static class DocumentationGenerator
                 var area = commandParts[0];
                 
                 // Load compound words for area name transformation
-                var compoundWords = await LoadCompoundWordsAsync();
+                var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
                 
                 // Get brand-based filename from mapping, or fall back to area name
                 string brandFileName;
@@ -1402,7 +1320,7 @@ public static class DocumentationGenerator
             Console.WriteLine($"Generating parameter and annotation files for {data.Tools.Count} tools...");
             
             // Load brand mappings
-            var brandMappings = await LoadBrandMappingsAsync();
+            var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
             
             foreach (var tool in data.Tools)
             {
@@ -1417,7 +1335,7 @@ public static class DocumentationGenerator
                 var area = commandParts[0];
                 
                 // Load compound words for area name transformation
-                var compoundWords = await LoadCompoundWordsAsync();
+                var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
                 
                 // Get brand-based filename from mapping, or fall back to area name
                 string brandFileName;
@@ -1909,8 +1827,8 @@ public static class DocumentationGenerator
     private static async Task<string> CleanFileNameAsync(string fileName)
     {
         // Load stop words and compound words from JSON files
-        var stopWords = await LoadStopWordsAsync();
-        var compoundWords = await LoadCompoundWordsAsync();
+        var stopWords = await DataFileLoader.LoadStopWordsAsync();
+        var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
         
         // Split by hyphens
         var parts = fileName.Split('-');

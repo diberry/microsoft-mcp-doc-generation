@@ -56,16 +56,9 @@ internal class Program
 
             Console.WriteLine($"Found {namespaces.Count} unique namespaces in CLI output");
 
-            // Step 2: Load existing brand mappings
-            if (!File.Exists(brandMappingPath))
-            {
-                Console.Error.WriteLine($"Error: Brand mapping file not found: {brandMappingPath}");
-                return 1;
-            }
-
-            var brandJson = await File.ReadAllTextAsync(brandMappingPath);
-            var existingMappings = JsonSerializer.Deserialize<List<BrandMapping>>(brandJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<BrandMapping>();
+            // Step 2: Load existing brand mappings using shared loader
+            var existingMappingsDict = await DataFileLoader.LoadBrandMappingsAsync();
+            var existingMappings = existingMappingsDict.Values.ToList();
 
             var mappedNamespaces = new HashSet<string>(
                 existingMappings.Select(m => m.McpServerName.ToLowerInvariant()),

@@ -39,52 +39,14 @@ public class CleanupGenerator
     private string? _userPromptTemplate;
     private string? _cliVersion;
 
-    private sealed class BrandMapping
-    {
-        public string? mcpServerName { get; set; }
-        public string? brandName { get; set; }
-    }
+    // LoadBrandMappings removed - now using Shared.DataFileLoader.LoadBrandMappingsAsync()
+    // Local BrandMapping class removed - using Shared.BrandMapping
 
     public CleanupGenerator(GenerativeAIOptions options, CleanupConfiguration config)
     {
         _options = options;
         _aiClient = new GenerativeAIClient(options);
         _config = config;
-    }
-
-    private static Dictionary<string, string> LoadBrandMappings()
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        var mappingPath = Path.Combine(Directory.GetCurrentDirectory(), "data", "brand-to-server-mapping.json");
-        if (!File.Exists(mappingPath))
-        {
-            return result;
-        }
-
-        try
-        {
-            var json = File.ReadAllText(mappingPath);
-            var mappings = JsonSerializer.Deserialize<List<BrandMapping>>(json);
-            if (mappings == null)
-            {
-                return result;
-            }
-
-            foreach (var mapping in mappings)
-            {
-                if (!string.IsNullOrWhiteSpace(mapping.mcpServerName) &&
-                    !string.IsNullOrWhiteSpace(mapping.brandName))
-                {
-                    result[mapping.mcpServerName.Trim().ToLowerInvariant()] = mapping.brandName.Trim();
-                }
-            }
-        }
-        catch
-        {
-            return result;
-        }
-
-        return result;
     }
 
     /// <summary>
@@ -413,7 +375,14 @@ public class CleanupGenerator
         Console.WriteLine("✓ Generators initialized");
         Console.WriteLine();
 
-        var brandMappings = LoadBrandMappings();
+        // Load brand mappings from shared loader
+        var brandMappingsDict = await DataFileLoader.LoadBrandMappingsAsync();
+        var brandMappings = brandMappingsDict
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Key) && !string.IsNullOrWhiteSpace(kv.Value.BrandName))
+            .ToDictionary(
+                kv => kv.Key.ToLowerInvariant(),
+                kv => kv.Value.BrandName!.Trim(), // BrandName is guaranteed non-null by filter
+                StringComparer.OrdinalIgnoreCase);
 
         // Phase 2 & 3 & 4: Process each family
         int successCount = 0;
