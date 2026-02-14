@@ -381,7 +381,7 @@ public class CleanupGenerator
             .Where(kv => !string.IsNullOrWhiteSpace(kv.Key) && !string.IsNullOrWhiteSpace(kv.Value.BrandName))
             .ToDictionary(
                 kv => kv.Key.ToLowerInvariant(),
-                kv => kv.Value.BrandName.Trim(),
+                kv => kv.Value.BrandName!.Trim(), // BrandName is guaranteed non-null by filter
                 StringComparer.OrdinalIgnoreCase);
 
         // Phase 2 & 3 & 4: Process each family

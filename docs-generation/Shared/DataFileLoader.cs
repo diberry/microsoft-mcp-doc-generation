@@ -98,7 +98,8 @@ public static class DataFileLoader
                 Console.WriteLine($"Warning: Skipped {(mappings?.Count ?? 0) - validMappings.Count} brand mapping(s) with null/empty server names");
             }
 
-            var result = validMappings.ToDictionary(m => m.McpServerName, m => m);
+            // McpServerName is guaranteed non-null by the filter above
+            var result = validMappings.ToDictionary(m => m.McpServerName!, m => m);
             
             Console.WriteLine($"Loaded {result.Count} brand mappings from {mappingFile}");
             return result;
