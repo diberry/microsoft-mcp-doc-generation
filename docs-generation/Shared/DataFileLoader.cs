@@ -247,15 +247,4 @@ public static class DataFileLoader
             return new List<MappedParameter>();
         }
     }
-
-    /// <summary>
-    /// Note: Cache clearing is not supported with the thread-safe Lazy pattern.
-    /// The cache is cleared automatically when the application domain is unloaded.
-    /// For testing scenarios, consider using dependency injection or mocking instead.
-    /// </summary>
-    [Obsolete("Cache clearing is not supported with thread-safe Lazy initialization. Use dependency injection for testing.", true)]
-    public static void ClearCache()
-    {
-        throw new NotSupportedException("Cache clearing is not supported with thread-safe Lazy initialization.");
-    }
 }
