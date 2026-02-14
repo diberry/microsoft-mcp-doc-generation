@@ -97,15 +97,17 @@ var transformedOptions = allOptions
 
 ## Configuration Files
 
-### Required Configuration Files (in parent `docs-generation/` directory)
+### Required Configuration Files (in `docs-generation/data/` directory)
 
-1. **brand-to-server-mapping.json** - Maps brand names to server names and file names
-2. **compound-words.json** - Word transformations for filename generation
-3. **stop-words.json** - Words removed from include filenames
-4. **nl-parameters.json** - Natural language parameter name mappings
-5. **static-text-replacement.json** - Text replacements for descriptions
-6. **config.json** - Main configuration file
-7. **common-parameters.json** - Common parameters definition
+All configuration files have been moved to the `data/` subdirectory:
+
+1. **data/brand-to-server-mapping.json** - Maps brand names to server names and file names
+2. **data/compound-words.json** - Word transformations for filename generation
+3. **data/stop-words.json** - Words removed from include filenames
+4. **data/nl-parameters.json** - Natural language parameter name mappings
+5. **data/static-text-replacement.json** - Text replacements for descriptions
+6. **data/config.json** - Main configuration file
+7. **data/common-parameters.json** - Common parameters definition
 
 ## Command-Line Usage
 

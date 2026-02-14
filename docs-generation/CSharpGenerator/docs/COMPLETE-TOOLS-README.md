@@ -216,7 +216,7 @@ Tool annotation hints:
 The generator uses a **three-tier resolution system** (same as other generators):
 
 ### 1. Brand Mapping (Highest Priority)
-**File:** `brand-to-server-mapping.json`
+**File:** `data/brand-to-server-mapping.json`
 
 Maps MCP server names to brand filenames:
 ```json
@@ -228,7 +228,7 @@ Maps MCP server names to brand filenames:
 ```
 
 ### 2. Compound Words (Medium Priority)
-**File:** `compound-words.json`
+**File:** `data/compound-words.json`
 
 Transforms concatenated words:
 ```json
@@ -352,7 +352,7 @@ if (!File.Exists(someOtherPath))
 1. Is `--complete-tools` flag present?
 2. Do source files exist? (annotations, parameters, example-prompts)
 3. Check console output for error messages
-4. Verify `brand-to-server-mapping.json` is accessible
+4. Verify `data/brand-to-server-mapping.json` is accessible
 
 ### Issue: Wrong Filenames
 
@@ -436,7 +436,7 @@ Potential improvements:
 - **Parent README:** `../../README.md`
 - **Generator Pattern:** See other generators in `Generators/` directory
 - **Template Guide:** See other templates in `../../templates/`
-- **Configuration Files:** `../../brand-to-server-mapping.json`, `../../compound-words.json`
+- **Configuration Files:** `../../data/brand-to-server-mapping.json`, `../../data/compound-words.json`
 
 ## Summary
 
