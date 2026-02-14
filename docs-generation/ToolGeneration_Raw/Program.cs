@@ -64,7 +64,7 @@ internal class Program
         try
         {
             // Load brand mappings
-            var brandMappings = await LoadBrandMappingsAsync();
+            var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
             Console.WriteLine($"Loaded {brandMappings.Count} brand mappings");
             Console.WriteLine();
 
@@ -87,35 +87,5 @@ internal class Program
         }
     }
 
-    private static async Task<Dictionary<string, BrandMapping>> LoadBrandMappingsAsync()
-    {
-        try
-        {
-            // Try to resolve the brand mapping relative to the assembly location
-            var candidateFromBin = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "brand-to-server-mapping.json");
-            var mappingFile = File.Exists(candidateFromBin)
-                ? candidateFromBin
-                : Path.Combine("..", "data", "brand-to-server-mapping.json");
-
-            if (!File.Exists(mappingFile))
-            {
-                Console.WriteLine($"Warning: Brand mapping file not found at {mappingFile}, using default naming");
-                return new Dictionary<string, BrandMapping>();
-            }
-
-            var json = await File.ReadAllTextAsync(mappingFile);
-            var mappings = JsonSerializer.Deserialize<List<BrandMapping>>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-
-            return mappings?.ToDictionary(m => m.McpServerName ?? "", m => m) 
-                ?? new Dictionary<string, BrandMapping>();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error loading brand mappings: {ex.Message}");
-            return new Dictionary<string, BrandMapping>();
-        }
-    }
+    // LoadBrandMappingsAsync removed - now using Shared.DataFileLoader.LoadBrandMappingsAsync()
 }
