@@ -12,14 +12,18 @@ namespace Shared;
 
 /// <summary>
 /// Provides centralized loading of data files used across multiple projects.
-/// All methods use async operations with in-memory caching for performance.
+/// All methods use async operations with thread-safe in-memory caching for performance.
 /// </summary>
 public static class DataFileLoader
 {
-    private static Dictionary<string, BrandMapping>? _brandMappings;
-    private static Dictionary<string, string>? _compoundWords;
-    private static HashSet<string>? _stopWords;
-    private static List<CommonParameterDefinition>? _commonParameters;
+    private static readonly Lazy<Task<Dictionary<string, BrandMapping>>> _brandMappings = 
+        new Lazy<Task<Dictionary<string, BrandMapping>>>(LoadBrandMappingsInternalAsync);
+    private static readonly Lazy<Task<Dictionary<string, string>>> _compoundWords = 
+        new Lazy<Task<Dictionary<string, string>>>(LoadCompoundWordsInternalAsync);
+    private static readonly Lazy<Task<HashSet<string>>> _stopWords = 
+        new Lazy<Task<HashSet<string>>>(LoadStopWordsInternalAsync);
+    private static readonly Lazy<Task<List<CommonParameterDefinition>>> _commonParameters = 
+        new Lazy<Task<List<CommonParameterDefinition>>>(LoadCommonParametersInternalAsync);
 
     /// <summary>
     /// Gets the path to the data directory relative to the executing assembly.
@@ -55,14 +59,19 @@ public static class DataFileLoader
 
     /// <summary>
     /// Loads brand-to-server-name mappings from JSON file.
-    /// Results are cached in memory after first load.
+    /// Results are cached in memory after first load (thread-safe).
     /// </summary>
     /// <returns>Dictionary keyed by McpServerName</returns>
-    public static async Task<Dictionary<string, BrandMapping>> LoadBrandMappingsAsync()
+    public static Task<Dictionary<string, BrandMapping>> LoadBrandMappingsAsync()
     {
-        if (_brandMappings != null)
-            return _brandMappings;
+        return _brandMappings.Value;
+    }
 
+    /// <summary>
+    /// Internal method to load brand mappings (called once by Lazy).
+    /// </summary>
+    private static async Task<Dictionary<string, BrandMapping>> LoadBrandMappingsInternalAsync()
+    {
         try
         {
             var mappingFile = ResolveDataFilePath("brand-to-server-mapping.json");
@@ -70,8 +79,7 @@ public static class DataFileLoader
             if (!File.Exists(mappingFile))
             {
                 Console.WriteLine($"Warning: Brand mapping file not found at {mappingFile}, using default naming");
-                _brandMappings = new Dictionary<string, BrandMapping>();
-                return _brandMappings;
+                return new Dictionary<string, BrandMapping>();
             }
 
             var json = await File.ReadAllTextAsync(mappingFile);
@@ -80,30 +88,34 @@ public static class DataFileLoader
                 PropertyNameCaseInsensitive = true
             });
 
-            _brandMappings = mappings?.ToDictionary(m => m.McpServerName ?? "", m => m) 
+            var result = mappings?.ToDictionary(m => m.McpServerName ?? "", m => m) 
                 ?? new Dictionary<string, BrandMapping>();
             
-            Console.WriteLine($"Loaded {_brandMappings.Count} brand mappings from {mappingFile}");
-            return _brandMappings;
+            Console.WriteLine($"Loaded {result.Count} brand mappings from {mappingFile}");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading brand mappings: {ex.Message}");
-            _brandMappings = new Dictionary<string, BrandMapping>();
-            return _brandMappings;
+            return new Dictionary<string, BrandMapping>();
         }
     }
 
     /// <summary>
     /// Loads compound words mappings from JSON file.
-    /// Results are cached in memory after first load.
+    /// Results are cached in memory after first load (thread-safe).
     /// </summary>
     /// <returns>Dictionary mapping concatenated words to hyphenated forms</returns>
-    public static async Task<Dictionary<string, string>> LoadCompoundWordsAsync()
+    public static Task<Dictionary<string, string>> LoadCompoundWordsAsync()
     {
-        if (_compoundWords != null)
-            return _compoundWords;
+        return _compoundWords.Value;
+    }
 
+    /// <summary>
+    /// Internal method to load compound words (called once by Lazy).
+    /// </summary>
+    private static async Task<Dictionary<string, string>> LoadCompoundWordsInternalAsync()
+    {
         try
         {
             var compoundWordsFile = ResolveDataFilePath("compound-words.json");
@@ -111,35 +123,38 @@ public static class DataFileLoader
             if (!File.Exists(compoundWordsFile))
             {
                 Console.WriteLine($"Warning: Compound words file not found at {compoundWordsFile}");
-                _compoundWords = new Dictionary<string, string>();
-                return _compoundWords;
+                return new Dictionary<string, string>();
             }
 
             var compoundWordsJson = await File.ReadAllTextAsync(compoundWordsFile);
-            _compoundWords = JsonSerializer.Deserialize<Dictionary<string, string>>(compoundWordsJson) 
+            var result = JsonSerializer.Deserialize<Dictionary<string, string>>(compoundWordsJson) 
                 ?? new Dictionary<string, string>();
             
-            Console.WriteLine($"Loaded {_compoundWords.Count} compound word mappings from {compoundWordsFile}");
-            return _compoundWords;
+            Console.WriteLine($"Loaded {result.Count} compound word mappings from {compoundWordsFile}");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading compound words: {ex.Message}");
-            _compoundWords = new Dictionary<string, string>();
-            return _compoundWords;
+            return new Dictionary<string, string>();
         }
     }
 
     /// <summary>
     /// Loads stop words from JSON file.
-    /// Results are cached in memory after first load.
+    /// Results are cached in memory after first load (thread-safe).
     /// </summary>
     /// <returns>HashSet of words to exclude from filenames</returns>
-    public static async Task<HashSet<string>> LoadStopWordsAsync()
+    public static Task<HashSet<string>> LoadStopWordsAsync()
     {
-        if (_stopWords != null)
-            return _stopWords;
+        return _stopWords.Value;
+    }
 
+    /// <summary>
+    /// Internal method to load stop words (called once by Lazy).
+    /// </summary>
+    private static async Task<HashSet<string>> LoadStopWordsInternalAsync()
+    {
         try
         {
             var stopWordsFile = ResolveDataFilePath("stop-words.json");
@@ -147,35 +162,38 @@ public static class DataFileLoader
             if (!File.Exists(stopWordsFile))
             {
                 Console.WriteLine($"Warning: Stop words file not found at {stopWordsFile}");
-                _stopWords = new HashSet<string>();
-                return _stopWords;
+                return new HashSet<string>();
             }
 
             var stopWordsJson = await File.ReadAllTextAsync(stopWordsFile);
             var stopWordsList = JsonSerializer.Deserialize<List<string>>(stopWordsJson) ?? new List<string>();
-            _stopWords = new HashSet<string>(stopWordsList);
+            var result = new HashSet<string>(stopWordsList);
             
-            Console.WriteLine($"Loaded {_stopWords.Count} stop words from {stopWordsFile}");
-            return _stopWords;
+            Console.WriteLine($"Loaded {result.Count} stop words from {stopWordsFile}");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading stop words: {ex.Message}");
-            _stopWords = new HashSet<string>();
-            return _stopWords;
+            return new HashSet<string>();
         }
     }
 
     /// <summary>
     /// Loads common parameters from JSON configuration file.
-    /// Results are cached in memory after first load.
+    /// Results are cached in memory after first load (thread-safe).
     /// </summary>
     /// <returns>List of common parameter definitions</returns>
-    public static async Task<List<CommonParameterDefinition>> LoadCommonParametersAsync()
+    public static Task<List<CommonParameterDefinition>> LoadCommonParametersAsync()
     {
-        if (_commonParameters != null)
-            return _commonParameters;
+        return _commonParameters.Value;
+    }
 
+    /// <summary>
+    /// Internal method to load common parameters (called once by Lazy).
+    /// </summary>
+    private static async Task<List<CommonParameterDefinition>> LoadCommonParametersInternalAsync()
+    {
         try
         {
             var commonParamsFile = ResolveDataFilePath("common-parameters.json");
@@ -183,24 +201,22 @@ public static class DataFileLoader
             if (!File.Exists(commonParamsFile))
             {
                 Console.WriteLine($"Warning: common-parameters.json not found at {commonParamsFile}");
-                _commonParameters = new List<CommonParameterDefinition>();
-                return _commonParameters;
+                return new List<CommonParameterDefinition>();
             }
 
             var json = await File.ReadAllTextAsync(commonParamsFile);
-            _commonParameters = JsonSerializer.Deserialize<List<CommonParameterDefinition>>(json, new JsonSerializerOptions
+            var result = JsonSerializer.Deserialize<List<CommonParameterDefinition>>(json, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             }) ?? new List<CommonParameterDefinition>();
 
-            Console.WriteLine($"Loaded {_commonParameters.Count} common parameters from {commonParamsFile}");
-            return _commonParameters;
+            Console.WriteLine($"Loaded {result.Count} common parameters from {commonParamsFile}");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error loading common parameters: {ex.Message}");
-            _commonParameters = new List<CommonParameterDefinition>();
-            return _commonParameters;
+            return new List<CommonParameterDefinition>();
         }
     }
 
@@ -233,13 +249,13 @@ public static class DataFileLoader
     }
 
     /// <summary>
-    /// Clears all cached data. Useful for testing or when data files are updated.
+    /// Note: Cache clearing is not supported with the thread-safe Lazy pattern.
+    /// The cache is cleared automatically when the application domain is unloaded.
+    /// For testing scenarios, consider using dependency injection or mocking instead.
     /// </summary>
+    [Obsolete("Cache clearing is not supported with thread-safe Lazy initialization. Use dependency injection for testing.", true)]
     public static void ClearCache()
     {
-        _brandMappings = null;
-        _compoundWords = null;
-        _stopWords = null;
-        _commonParameters = null;
+        throw new NotSupportedException("Cache clearing is not supported with thread-safe Lazy initialization.");
     }
 }
