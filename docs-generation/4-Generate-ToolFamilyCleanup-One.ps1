@@ -216,10 +216,19 @@ try {
     $tempGenerated = Join-Path $tempRoot "generated"
     $tempTools = Join-Path $tempGenerated "tools"
 
-    @($tempDocs, $tempTools) | ForEach-Object {
+    $tempCli = Join-Path $tempGenerated "cli"
+    @($tempDocs, $tempTools, $tempCli) | ForEach-Object {
         if (-not (Test-Path $_)) {
             New-Item -ItemType Directory -Path $_ -Force | Out-Null
         }
+    }
+
+    # Copy cli-version.json so CliVersionReader can find it in the temp workspace
+    $cliVersionFile = Join-Path $outputDir "cli/cli-version.json"
+    if (Test-Path $cliVersionFile) {
+        Copy-Item -Path $cliVersionFile -Destination $tempCli -Force
+    } else {
+        Write-Warning "cli-version.json not found at $cliVersionFile - mcp-cli.version will be 'unknown'"
     }
 
     $brandMappingPath = Join-Path $scriptDir "brand-to-server-mapping.json"
