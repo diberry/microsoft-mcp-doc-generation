@@ -14,6 +14,7 @@ keywords: Azure, MCP Server, {service-name}, tools, {relevant-keywords}
 ms.service: azure-mcp-server
 ms.topic: concept-article
 tool_count: {NUMBER}
+mcp-cli.version: {CLI_VERSION}
 ---
 
 # Azure {ServiceName} tools for the Azure MCP Server overview
@@ -34,6 +35,7 @@ The Azure MCP Server lets you manage {service-description}, including {key-capab
    - `ms.service`: Always "azure-mcp-server"
    - `ms.topic`: Always "concept-article"
    - `tool_count`: Exact number provided in user prompt
+   - `mcp-cli.version`: CLI version string provided in user prompt
 
 2. **H1 Heading**:
    - Must match the title exactly

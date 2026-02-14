@@ -159,12 +159,17 @@ internal class Program
          
          var generateServiceOptions = !args.Contains("--no-service-options");
          
-         // Extract version if provided
+         // Extract version if provided, otherwise read from cli-version.json
          string? cliVersion = null;
          var versionIndex = Array.IndexOf(args, "--version");
          if (versionIndex >= 0 && versionIndex + 1 < args.Length)
          {
              cliVersion = args[versionIndex + 1];
+         }
+         else
+         {
+             // Read version from cli-version.json
+             cliVersion = await CliVersionReader.ReadCliVersionAsync(outputDir);
          }
 
          return await DocumentationGenerator.GenerateAsync(

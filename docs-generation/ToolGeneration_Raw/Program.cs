@@ -9,6 +9,8 @@ namespace ToolGeneration_Raw;
 
 internal class Program
 {
+    private const string ToolsRawDirectoryName = "tools-raw";
+    
     private static async Task<int> Main(string[] args)
     {
         Console.WriteLine("RawToolGenerator - Generate raw tool documentation with placeholders");
@@ -25,13 +27,27 @@ internal class Program
             Console.Error.WriteLine("  mcp-cli-version    Optional MCP CLI version (default: unknown)");
             Console.Error.WriteLine();
             Console.Error.WriteLine("Example:");
-            Console.Error.WriteLine("  RawToolGenerator ./generated/cli/cli-output.json ./generated/tools-raw 2.0.0-beta.13");
+            Console.Error.WriteLine($"  RawToolGenerator ./generated/cli/cli-output.json ./generated/{ToolsRawDirectoryName} 2.0.0-beta.13");
             return 1;
         }
 
         var cliOutputFile = args[0];
         var outputDir = args[1];
-        var mcpCliVersion = args.Length > 2 ? args[2] : "unknown";
+        
+        // Get version from arguments or read from cli-version.json
+        string mcpCliVersion;
+        if (args.Length > 2)
+        {
+            mcpCliVersion = args[2];
+        }
+        else
+        {
+            // Extract base output directory (remove tools-raw suffix if present)
+            var baseOutputDir = outputDir.EndsWith(ToolsRawDirectoryName) 
+                ? Path.GetDirectoryName(outputDir) ?? outputDir
+                : outputDir;
+            mcpCliVersion = await CliVersionReader.ReadCliVersionAsync(baseOutputDir);
+        }
 
         // Validate input file exists
         if (!File.Exists(cliOutputFile))

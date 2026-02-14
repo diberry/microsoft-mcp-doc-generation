@@ -51,8 +51,9 @@ public class FamilyMetadataGenerator
     /// Generates metadata section for a tool family.
     /// </summary>
     /// <param name="familyContent">Family content with tools list</param>
+    /// <param name="cliVersion">CLI version string</param>
     /// <returns>Metadata markdown (frontmatter + H1 + intro)</returns>
-    public async Task<string> GenerateAsync(FamilyContent familyContent)
+    public async Task<string> GenerateAsync(FamilyContent familyContent, string cliVersion = "unknown")
     {
         if (_systemPrompt == null || _userPromptTemplate == null)
         {
@@ -67,6 +68,7 @@ public class FamilyMetadataGenerator
         var userPrompt = _userPromptTemplate
             .Replace("{{FAMILY_NAME}}", familyDisplayName)
             .Replace("{{TOOL_COUNT}}", familyContent.ToolCount.ToString())
+            .Replace("{{CLI_VERSION}}", cliVersion)
             .Replace("{{TOOL_LIST}}", familyContent.ToolNamesList);
 
         // Call LLM
