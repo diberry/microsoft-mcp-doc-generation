@@ -14,9 +14,11 @@ public class GenerativeAIOptions
 
     public static GenerativeAIOptions LoadFromEnvironmentOrDotEnv(string? basePath = null)
     {
+        // Log verbose debug information to file
         LogFileHelper.WriteDebug("=== C# Environment Variable Loading ===");
         LogFileHelper.WriteDebug("Current Directory: " + Directory.GetCurrentDirectory());
         LogFileHelper.WriteDebug("AppContext.BaseDirectory: " + AppContext.BaseDirectory);
+        LogFileHelper.WriteDebug("");
         
         var opts = new GenerativeAIOptions();
         opts.ApiKey = Environment.GetEnvironmentVariable("FOUNDRY_API_KEY");
@@ -60,7 +62,7 @@ public class GenerativeAIOptions
                     var logLines = new List<string> { $"  Parsed {kv.Count} variables from .env:" };
                     foreach (var kvp in kv)
                     {
-                        var displayValue = kvp.Key.Contains("KEY") || kvp.Key.Contains("SECRET") 
+                        var displayValue = (kvp.Key.Contains("KEY") || kvp.Key.Contains("SECRET")) && !string.IsNullOrEmpty(kvp.Value)
                             ? $"{kvp.Value.Substring(0, Math.Min(20, kvp.Value.Length))}..." 
                             : kvp.Value;
                         logLines.Add($"    {kvp.Key} = {displayValue}");
