@@ -85,11 +85,15 @@ public class GenerativeAIOptions
             }
         }
         
-        // Minimal console output - just success indicator
+        // Minimal console output - just success or failure indicator
         var hasAllRequired = !string.IsNullOrEmpty(opts.ApiKey) && !string.IsNullOrEmpty(opts.Endpoint) && !string.IsNullOrEmpty(opts.Deployment);
         if (hasAllRequired)
         {
             Console.WriteLine("✓ Azure OpenAI credentials loaded");
+        }
+        else
+        {
+            Console.WriteLine("⚠ Azure OpenAI credentials incomplete - check debug logs");
         }
         
         return opts;

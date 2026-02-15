@@ -43,10 +43,14 @@ public static class LogFileHelper
             {
                 var fullPath = Path.GetFullPath(path);
                 var parentDir = Path.GetDirectoryName(fullPath);
-                if (parentDir != null && (Directory.Exists(parentDir) || Directory.Exists(Path.GetDirectoryName(parentDir)!)))
+                if (parentDir != null)
                 {
-                    logDir = fullPath;
-                    break;
+                    var grandParentDir = Path.GetDirectoryName(parentDir);
+                    if (Directory.Exists(parentDir) || (grandParentDir != null && Directory.Exists(grandParentDir)))
+                    {
+                        logDir = fullPath;
+                        break;
+                    }
                 }
             }
             
@@ -89,6 +93,7 @@ public static class LogFileHelper
     /// <summary>
     /// Writes multiple debug messages to the log file.
     /// More efficient than multiple WriteDebug calls.
+    /// Note: All messages receive the same timestamp since they're part of a batch write.
     /// </summary>
     public static void WriteDebugLines(IEnumerable<string> messages)
     {

@@ -52,12 +52,10 @@ public class LogFileHelperTests
             Assert.DoesNotContain("Current Directory:", consoleOutput);
             Assert.DoesNotContain("AppContext.BaseDirectory:", consoleOutput);
             
-            // Should only contain success message if credentials loaded
-            // (This may or may not be present depending on environment)
-            if (consoleOutput.Trim().Length > 0)
-            {
-                Assert.Contains("✓", consoleOutput);
-            }
+            // Should contain either success (✓) or warning (⚠) indicator
+            Assert.True(
+                consoleOutput.Contains("✓") || consoleOutput.Contains("⚠"), 
+                "Console should show either success (✓) or warning (⚠) indicator");
         }
         finally
         {
