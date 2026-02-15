@@ -290,8 +290,22 @@ try {
         $commandSegments = $singleToolCommand -split ' '
         $baseFileName = $commandSegments -join '-'
         
-        $composedToolFile = Join-Path $outputDir "tools-composed/$baseFileName.md"
-        $improvedToolFile = Join-Path $outputDir "tools/$baseFileName.md"
+        $composedToolFile = Join-Path $outputDir "tools-composed/azure-$baseFileName.md"
+        $improvedToolFile = Join-Path $outputDir "tools/azure-$baseFileName.md"
+        
+        # Check for files with and without "azure-" prefix (fallback for different naming patterns)
+        if (-not (Test-Path $composedToolFile)) {
+            $composedToolFileFallback = Join-Path $outputDir "tools-composed/$baseFileName.md"
+            if (Test-Path $composedToolFileFallback) {
+                $composedToolFile = $composedToolFileFallback
+            }
+        }
+        if (-not (Test-Path $improvedToolFile)) {
+            $improvedToolFileFallback = Join-Path $outputDir "tools/$baseFileName.md"
+            if (Test-Path $improvedToolFileFallback) {
+                $improvedToolFile = $improvedToolFileFallback
+            }
+        }
         
         if (Test-Path $composedToolFile) {
             Write-Success "✓ Composed tool: $composedToolFile"

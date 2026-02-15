@@ -25,6 +25,10 @@
 .PARAMETER HtmlOnly
     Generate Markdown report only, skip console output (default: $false)
 
+.PARAMETER SkipBuild
+    Skip building the CliAnalyzer project (default: $false).
+    Set to $true when the orchestrator has already built the solution.
+
 .EXAMPLE
     ./Invoke-CliAnalyzer.ps1
     # Runs full analysis with console output and HTML report
@@ -44,7 +48,8 @@ param(
     [string]$HtmlOutputPath = "../generated/reports/cli-analysis-report.md",
     [string]$Namespace,
     [string]$Tool,
-    [bool]$HtmlOnly = $false
+    [bool]$HtmlOnly = $false,
+    [bool]$SkipBuild = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -123,16 +128,18 @@ try {
     Write-Info "Running CLI Analyzer..."
     Write-Info "Command: dotnet $($analyzerArgs -join ' ')"
     
-    # Build the analyzer project first
-    Write-Info "Building CLI Analyzer project..."
-    Push-Location $repoRoot
-    try {
-        & dotnet build docs-generation/CliAnalyzer --configuration Release 2>&1 | ForEach-Object { Write-Info $_ }
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Build warnings/messages occurred (exit code: $LASTEXITCODE)"
+    # Build the analyzer project first (unless skipped)
+    if (-not $SkipBuild) {
+        Write-Info "Building CLI Analyzer project..."
+        Push-Location $repoRoot
+        try {
+            & dotnet build docs-generation/CliAnalyzer --configuration Release 2>&1 | ForEach-Object { Write-Info $_ }
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "Build warnings/messages occurred (exit code: $LASTEXITCODE)"
+            }
+        } finally {
+            Pop-Location
         }
-    } finally {
-        Pop-Location
     }
     
     Write-Info ""

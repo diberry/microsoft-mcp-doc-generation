@@ -22,21 +22,30 @@ This separation enables:
 **Purpose**: Generate documentation for all tool families in the catalog
 
 **What it does**:
-1. Cleans previous generation output
-2. Generates CLI metadata once (cli-output.json, cli-namespace.json, cli-version.json)
-3. Runs brand mapping validation once (Step 0)
-4. Creates output directory structure
-5. Extracts all 52 namespaces from cli-namespace.json
-6. Iterates over each namespace, calling `start-only.sh`
-7. Tracks and reports success/failure statistics
+1. Calls `docs-generation/scripts/preflight.ps1` which performs:
+   - Validates .env file exists with required AI credentials
+   - Cleans previous generation output
+   - Creates output directory structure
+   - Builds .NET solution (all generator projects)
+   - Generates CLI metadata once (cli-output.json, cli-namespace.json, cli-version.json)
+   - Runs brand mapping validation once (Step 0)
+2. Extracts all 52 namespaces from cli-namespace.json
+3. Iterates over each namespace, calling `start-only.sh`
+4. Tracks and reports success/failure statistics
 
 **Usage**:
 ```bash
 # Run all steps for all namespaces
 ./start.sh
 
+# Run all steps for a single namespace
+./start.sh advisor
+
 # Run specific steps for all namespaces
 ./start.sh 1,2,3
+
+# Run specific steps for a single namespace
+./start.sh advisor 1,2,3
 ```
 
 **Exit Codes**:
@@ -50,6 +59,8 @@ This separation enables:
 
 ### start-only.sh (Worker)
 
+**Location**: `docs-generation/scripts/start-only.sh`
+
 **Purpose**: Generate documentation for a single tool family/namespace
 
 **What it does**:
@@ -60,14 +71,14 @@ This separation enables:
 
 **Usage**:
 ```bash
-# Generate documentation for advisor namespace
-./start-only.sh advisor
+# From repository root - called by start.sh orchestrator
+./docs-generation/scripts/start-only.sh advisor
 
 # Generate with specific steps
-./start-only.sh advisor 1,2,3
+./docs-generation/scripts/start-only.sh advisor 1,2,3
 
 # Run only step 1
-./start-only.sh advisor 1
+./docs-generation/scripts/start-only.sh advisor 1
 ```
 
 **Prerequisites**:
@@ -86,13 +97,17 @@ This separation enables:
 ```
 start.sh (Orchestrator)
 │
-├─ Generate CLI metadata (ONCE)
-│  ├─ cli-version.json
-│  ├─ cli-output.json
-│  └─ cli-namespace.json
-│
-├─ Run validation (ONCE)
-│  └─ Brand mapping validation
+├─ preflight.ps1 (ONCE)
+│  ├─ Validate .env file
+│  ├─ Clean ./generated
+│  ├─ Create output directories
+│  ├─ Build .NET solution
+│  ├─ Generate CLI metadata
+│  │  ├─ cli-version.json
+│  │  ├─ cli-output.json
+│  │  └─ cli-namespace.json
+│  └─ Run validation (Step 0)
+│     └─ Brand mapping validation
 │
 └─ For each namespace (52 total):
    │
@@ -135,8 +150,13 @@ start.sh (Orchestrator)
 ```bash
 # New behavior - efficient
 ./start.sh
-  ├─ Generate CLI metadata (ONCE)    # Shared by all
-  ├─ Run validation (ONCE)           # Shared by all
+  ├─ preflight.ps1 (ONCE)          # Shared setup
+  │  ├─ Validate .env file        # Shared by all
+  │  ├─ Clean ./generated         # Shared by all
+  │  ├─ Create directories        # Shared by all
+  │  ├─ Build .NET solution       # Shared by all
+  │  ├─ Generate CLI metadata     # Shared by all
+  │  └─ Run validation           # Shared by all
   └─ For each namespace:
      └─ ./start-only.sh <namespace>  # Uses shared CLI files
 ```
@@ -205,13 +225,39 @@ Both scripts support step-based generation (default: `1,2,3,4,5`):
 - Required for building generator projects
 - Used by: C# generators in `docs-generation/`
 
-### Azure OpenAI (Optional)
-- Required for Steps 2, 3, 4, 5
-- Not required for Step 1 (base generation)
-- Environment variables:
-  - `FOUNDRY_API_KEY`
-  - `FOUNDRY_ENDPOINT`
-  - `FOUNDRY_MODEL_NAME`
+### Azure OpenAI Configuration (.env file)
+
+**Required for**: Steps 2, 3, 4, 5 (AI-based generation)  
+**Not required for**: Step 1 (base generation only)
+
+**Setup**:
+1. Copy the sample environment file:
+   ```bash
+   cp docs-generation/sample.env docs-generation/.env
+   ```
+
+2. Edit `.env` and configure your Azure OpenAI credentials:
+   ```bash
+   FOUNDRY_API_KEY="your-api-key-here"              # Required
+   FOUNDRY_ENDPOINT="your-endpoint-url"             # Required
+   FOUNDRY_MODEL_NAME="gpt-4o-mini"                 # Required
+   FOUNDRY_MODEL_API_VERSION="2025-01-01-preview"   # Optional but recommended
+   ```
+
+**Validation**:
+- Preflight script validates .env file exists and contains required variables
+- Pipeline halts if credentials are missing/empty
+- You can still run Step 1 without AI credentials
+
+**Required Variables**:
+- `FOUNDRY_API_KEY` - Azure OpenAI API key
+- `FOUNDRY_ENDPOINT` - Azure OpenAI endpoint URL (e.g., https://your-resource.openai.azure.com/)
+- `FOUNDRY_MODEL_NAME` - Deployment name for your model (e.g., gpt-4o-mini)
+
+**Optional Variables**:
+- `FOUNDRY_MODEL_API_VERSION` - API version (recommended: 2025-01-01-preview)
+- `TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME` - Specific model for cleanup step
+- `TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION` - API version for cleanup model
 
 ## Testing
 

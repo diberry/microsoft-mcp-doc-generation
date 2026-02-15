@@ -215,13 +215,18 @@ generated/
 **NEW**: Root-level scripts for full catalog generation
 
 **start.sh (Orchestrator)**:
-- Generates CLI metadata ONCE for all namespaces
-- Runs validation ONCE
-- Iterates over all 52 namespaces
-- Calls `start-only.sh` for each namespace
+- Calls `docs-generation/scripts/preflight.ps1` ONCE which:
+  - Validates .env file exists with required AI credentials (STOPS if missing/invalid)
+  - Cleans previous generation output  
+  - Creates output directory structure
+  - Builds .NET solution (all generator projects)
+  - Generates CLI metadata for all namespaces
+  - Runs brand mapping validation (Step 0)
+- Iterates over all 52 namespaces (or single specified namespace)
+- Calls `docs-generation/scripts/start-only.sh` for each namespace
 - Tracks success/failure and reports summary
 
-**start-only.sh (Worker)**:
+**start-only.sh (Worker)** (located at `docs-generation/scripts/start-only.sh`):
 - Takes a single namespace parameter
 - Uses existing CLI metadata files (no regeneration)
 - Generates documentation for that namespace only
@@ -234,13 +239,20 @@ generated/
 ./start.sh 1                    # Step 1 only (fast, no AI)
 ./start.sh 1,2,3                # Steps 1-3
 
-# Single namespace generation
-./start-only.sh advisor         # All steps for advisor
-./start-only.sh advisor 1       # Step 1 only for advisor
-./start-only.sh advisor 1,2,3   # Steps 1-3 for advisor
+# Single namespace generation via orchestrator
+./start.sh advisor              # All steps for advisor only
+./start.sh advisor 1            # Step 1 only for advisor
+./start.sh advisor 1,2,3        # Steps 1-3 for advisor
+
+# Direct worker call (requires preflight setup first)
+./docs-generation/scripts/start-only.sh advisor         # All steps for advisor
+./docs-generation/scripts/start-only.sh advisor 1       # Step 1 only for advisor
+./docs-generation/scripts/start-only.sh advisor 1,2,3   # Steps 1-3 for advisor
 ```
 
 **Benefits**:
+- ✅ Preflight setup (validation, build, CLI, validation) runs once
+- ✅ .NET solution built early, before any tool-specific work
 - ✅ CLI metadata generated once, shared by all namespaces
 - ✅ Validation runs once, not 52 times
 - ✅ Non-destructive worker (can run on existing output)
@@ -351,6 +363,13 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
 4. **Configuration**: Brand mapping > Compound words > Original name
 5. **File naming**: Lowercase with hyphens for include files
 6. **Console Output**: Never buffer dotnet output - stream in real-time for visibility
+7. **Modularization**: Isolate new features into separate modules when possible
+   - PowerShell: Create separate `.ps1` files for distinct functionality (e.g., `validate-env.ps1`, `preflight.ps1`)
+   - Bash: Create separate `.sh` files for reusable scripts
+   - C#: Create separate projects or packages in `docs-generation/` (e.g., `GenerativeAI`, `Shared`)
+   - Node.js: Create separate npm packages when appropriate
+   - Benefits: Testability, reusability, maintainability, clear separation of concerns
+   - Example: Environment validation extracted to `validate-env.ps1` instead of inline in preflight script
 
 ## When Helping with Code
 
@@ -358,6 +377,10 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
 - Consider both container and local environments
 - Use `Push-Location` / `Pop-Location` for directory navigation
 - Check `$env:MCP_SERVER_PATH` for container detection
+- **Modularization**: Extract distinct functionality into separate `.ps1` files
+  - Example: Environment validation → `validate-env.ps1`
+  - Example: Preflight setup → `preflight.ps1`
+  - Makes scripts testable, reusable, and maintainable
 - **Critical**: Never capture dotnet output with `$var = & dotnet ... 2>&1`
   - This buffers ALL output until completion, making long-running tasks appear frozen
   - Instead use: `& dotnet ...` (streams output in real-time)

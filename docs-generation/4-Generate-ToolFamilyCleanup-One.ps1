@@ -339,14 +339,10 @@ try {
     Write-Host ""
     
     if ($matchingTools.Count -eq 1) {
-        # Single tool
-        $singleToolCommand = $matchingTools[0].command
-        $commandSegments = $singleToolCommand -split ' '
-        $baseFileName = $commandSegments -join '-'
-        
-        $metadataFile = Join-Path $metadataOutputDir "$baseFileName-metadata.md"
-        $relatedFile = Join-Path $relatedOutputDir "$baseFileName-related.md"
-        $finalFile = Join-Path $finalOutputDir "$baseFileName.md"
+        # Single tool - files are named by FAMILY, not by tool
+        $metadataFile = Join-Path $metadataOutputDir "$familyName-metadata.md"
+        $relatedFile = Join-Path $relatedOutputDir "$familyName-related.md"
+        $finalFile = Join-Path $finalOutputDir "$familyName.md"
         
         if (Test-Path $metadataFile) {
             Write-Success "✓ Metadata: $metadataFile"

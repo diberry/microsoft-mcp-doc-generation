@@ -168,7 +168,7 @@ try {
     Write-Divider
 
     # Step 4: Show generated file
-    $articleFile = Join-Path $outputDir "horizontal-articles/$ServiceArea.md"
+    $articleFile = Join-Path $outputDir "horizontal-articles/horizontal-article-$ServiceArea.md"
     $errorFile = Join-Path $outputDir "horizontal-articles/error-$ServiceArea.txt"
     
     Write-Progress "Generated Files:"

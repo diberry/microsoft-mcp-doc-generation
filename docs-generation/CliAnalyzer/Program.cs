@@ -5,7 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.CommandLine;
 using CliAnalyzer.Analyzers;
-// using CliAnalyzer.Reports; // TODO: Reports namespace not found, commenting out unused import
+using CliAnalyzer.Reports;
 using CliAnalyzer.Services;
 
 var rootCommand = new RootCommand("CLI JSON visual analyzer for Azure MCP tools");

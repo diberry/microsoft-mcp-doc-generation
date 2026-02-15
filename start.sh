@@ -2,89 +2,99 @@
 # Start: Orchestrator script to generate documentation for all tool families.
 #
 # Usage:
-#   ./start.sh [steps]
-#   ./start.sh           # Run all steps for all namespaces
-#   ./start.sh 1,2,3     # Run steps 1,2,3 for all namespaces
+#   ./start.sh [namespace] [steps]
+#   ./start.sh                # Run all steps for all namespaces
+#   ./start.sh advisor        # Run all steps for advisor namespace only
+#   ./start.sh advisor 1,2,3  # Run steps 1,2,3 for advisor namespace
+#   ./start.sh 1,2,3          # Run steps 1,2,3 for all namespaces
 #
-# What it does:
-#   1) Clears ./generated
-#   2) Generates MCP CLI metadata once (cli-output.json, cli-namespace.json, cli-version.json)
-#   3) Runs validation once (Step 0)
-#   4) Creates output directories
-#   5) Iterates over all namespaces, calling start-only.sh for each
-#   6) Runs verification and summary
+# Preflight Actions (run once before all namespaces):
+#   Delegates to ./docs-generation/scripts/preflight.ps1 which performs:
+#   - Validate .env file exists with required AI credentials (STOPS if missing/invalid)
+#   - Clean ./generated directory
+#   - Create output directories
+#   - Build .NET solution (all generator projects)
+#   - Generate MCP CLI metadata (cli-output.json, cli-namespace.json, cli-version.json)
+#   - Step 0: Brand mapping validation (STOPS if missing branding, outputs required fixes)
+#
+# Generation Steps (for each namespace):
+#   Step 1: Generate annotations and parameters (raw extraction)
+#   Step 2: Generate example prompts (with AI)
+#   Step 3: Generate tool improvements (AI-enhanced descriptions)
+#   Step 4: Generate tool family cleanup (formatting/structure)
+#   Step 5: Generate horizontal articles (cross-cutting documentation)
 #
 # Prerequisites:
 #   - Node.js + npm (for MCP CLI metadata)
 #   - PowerShell (pwsh)
 #   - .NET SDK (for generator projects)
-#   - Azure OpenAI env vars for AI steps (if required)
+#   - Azure OpenAI env vars (for Steps 2, 3, 5)
 
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-STEPS="${1:-1,2,3,4,5}"
+
+# Parse arguments: determine if first arg is namespace or steps
+NAMESPACE_ARG=""
+STEPS_ARG="1,2,3,4,5"
+
+if [[ $# -gt 0 ]]; then
+    # Check if first arg looks like steps (contains comma or is 1-5)
+    if [[ "$1" =~ ^[1-5](,[1-5])*$ ]]; then
+        STEPS_ARG="$1"
+    else
+        NAMESPACE_ARG="$1"
+        if [[ $# -gt 1 ]]; then
+            STEPS_ARG="$2"
+        fi
+    fi
+fi
+
+STEPS="$STEPS_ARG"
 
 echo "==================================================================="
 echo "Start: Documentation Generation Orchestrator"
 echo "==================================================================="
 echo ""
 
-# Clean up last run
-echo "Cleaning previous run..."
-rm -rf "$ROOT_DIR/generated/"
+# =================================================================== 
+# PREFLIGHT: Global actions (run once before all namespaces)
+# =================================================================== 
 
-# Create output directories
-mkdir -p "$ROOT_DIR/generated/"
-mkdir -p "$ROOT_DIR/generated/cli"
-
-# Generate tool metadata from MCP CLI (ONCE for all namespaces)
-cd "$ROOT_DIR/test-npm-azure-mcp"
-echo "Installing npm dependencies..."
-npm install --silent
-echo "Generating CLI tool metadata..."
-npm run --silent get:version > "$ROOT_DIR/generated/cli/cli-version.json"
-npm run --silent get:tools-json > "$ROOT_DIR/generated/cli/cli-output.json"
-npm run --silent get:tools-namespace > "$ROOT_DIR/generated/cli/cli-namespace.json"
-echo "✓ Generated CLI tool metadata"
-cd "$ROOT_DIR"
-
-# Step 0: Validate brand mappings before generation (ONCE for all namespaces)
-echo ""
-echo "Running brand mapping validation (Step 0)..."
-cd "$ROOT_DIR/docs-generation"
-pwsh -Command "./0-Validate-BrandMappings.ps1 -OutputPath '$ROOT_DIR/generated'"
-VALIDATION_EXIT=$?
-if [ $VALIDATION_EXIT -ne 0 ]; then
+# Run preflight setup script
+pwsh "$ROOT_DIR/docs-generation/scripts/preflight.ps1" -OutputPath "$ROOT_DIR/generated"
+PREFLIGHT_EXIT=$?
+if [ $PREFLIGHT_EXIT -ne 0 ]; then
     echo ""
-    echo "⛔ PIPELINE HALTED: Brand mapping validation failed (exit code: $VALIDATION_EXIT)"
-    echo "   Review suggestions at: $ROOT_DIR/generated/reports/brand-mapping-suggestions.json"
-    echo "   Add missing mappings to: $ROOT_DIR/docs-generation/data/brand-to-server-mapping.json"
-    echo "   Then re-run this script."
-    exit $VALIDATION_EXIT
+    echo "⛔ PIPELINE HALTED: Preflight setup failed (exit code: $PREFLIGHT_EXIT)"
+    exit $PREFLIGHT_EXIT
 fi
-echo "✓ Brand mapping validation passed"
-cd "$ROOT_DIR"
 
-# Create output directories
-mkdir -p "$ROOT_DIR/generated/common-general"
-mkdir -p "$ROOT_DIR/generated/tools"
-mkdir -p "$ROOT_DIR/generated/example-prompts"
-mkdir -p "$ROOT_DIR/generated/annotations"
-mkdir -p "$ROOT_DIR/generated/logs"
-mkdir -p "$ROOT_DIR/generated/tool-family"
+# =================================================================== 
+# GENERATION: Process namespaces with steps 1-5
+# ===================================================================
 
 # Extract namespaces from cli-namespace.json
 echo ""
-echo "Extracting namespaces from CLI metadata..."
-NAMESPACES=$(jq -r '.results[].name' "$ROOT_DIR/generated/cli/cli-namespace.json")
-NAMESPACE_COUNT=$(echo "$NAMESPACES" | wc -l)
-echo "✓ Found $NAMESPACE_COUNT namespaces"
+if [[ -n "$NAMESPACE_ARG" ]]; then
+    echo "Processing single namespace: $NAMESPACE_ARG"
+    NAMESPACES="$NAMESPACE_ARG"
+    NAMESPACE_COUNT=1
+else
+    echo "Extracting namespaces from CLI metadata..."
+    NAMESPACES=$(jq -r '.results[].name' "$ROOT_DIR/generated/cli/cli-namespace.json")
+    NAMESPACE_COUNT=$(echo "$NAMESPACES" | wc -l)
+    echo "✓ Found $NAMESPACE_COUNT namespaces"
+fi
 
-# Iterate over all namespaces
+# Iterate over all namespaces (or single namespace)
 echo ""
 echo "==================================================================="
-echo "Processing all $NAMESPACE_COUNT namespaces (steps: $STEPS)"
+if [[ -n "$NAMESPACE_ARG" ]]; then
+    echo "Processing namespace: $NAMESPACE_ARG (steps: $STEPS)"
+else
+    echo "Processing all $NAMESPACE_COUNT namespaces (steps: $STEPS)"
+fi
 echo "==================================================================="
 echo ""
 
@@ -98,7 +108,7 @@ for NAMESPACE in $NAMESPACES; do
     echo "-------------------------------------------------------------------"
     
     # Call start-only.sh for each namespace
-    if ./start-only.sh "$NAMESPACE" "$STEPS"; then
+    if ./docs-generation/scripts/start-only.sh "$NAMESPACE" "$STEPS"; then
         echo "✓ Successfully generated documentation for: $NAMESPACE"
     else
         echo "✗ Failed to generate documentation for: $NAMESPACE"
@@ -107,7 +117,10 @@ for NAMESPACE in $NAMESPACES; do
     echo ""
 done
 
-# Report results
+# =================================================================== 
+# SUMMARY: Report results
+# ===================================================================
+
 echo ""
 echo "==================================================================="
 echo "Summary"

@@ -25,5 +25,5 @@ STEPS="${2:-1,2,3,4,5}"
 # Convert comma-separated steps to PowerShell array syntax
 STEPS_ARRAY="@($(echo $STEPS | tr ',' ','))"
 
-# Run the PowerShell script
-pwsh -Command "./Generate-ToolFamily.ps1 -ToolFamily '$TOOL_FAMILY' -Steps $STEPS_ARRAY"
+# Run the PowerShell script with SkipBuild (build should be done by orchestrator)
+pwsh -Command "./Generate-ToolFamily.ps1 -ToolFamily '$TOOL_FAMILY' -Steps $STEPS_ARRAY -SkipBuild \$true"
