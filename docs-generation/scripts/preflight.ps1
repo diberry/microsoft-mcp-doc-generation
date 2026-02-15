@@ -81,6 +81,9 @@ Write-Host ""
 Write-Host "Building .NET solution..." -ForegroundColor Yellow
 $solutionFile = Join-Path $repoRoot "docs-generation.sln"
 if (Test-Path $solutionFile) {
+    # Clean stale obj/bin artifacts to prevent NuGet target conflicts
+    Write-Host "  Cleaning previous build artifacts..." -ForegroundColor Gray
+    & dotnet clean $solutionFile --configuration Release --verbosity quiet 2>&1 | Out-Null
     & dotnet build $solutionFile --configuration Release --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
         Write-Host "⛔ PIPELINE HALTED: .NET build failed" -ForegroundColor Red
