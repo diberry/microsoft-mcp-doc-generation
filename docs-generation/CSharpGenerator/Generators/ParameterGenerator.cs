@@ -120,6 +120,8 @@ public class ParameterGenerator
                     .Select(opt => new
                     {
                         name = opt.Name,
+                        // IMPORTANT: NormalizeParameter preserves ALL words including type qualifiers like "name"
+                        // Example: "resource-group-name" => "Resource group name" (NOT "Resource group")
                         NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
                         type = opt.Type,
                         required = opt.Required,

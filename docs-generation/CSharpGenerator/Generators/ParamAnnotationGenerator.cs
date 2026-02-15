@@ -173,6 +173,7 @@ public class ParamAnnotationGenerator
                 var transformedOptions = tool.Option?.Select(opt => new
                 {
                     name = opt.Name,
+                    // IMPORTANT: Preserves ALL words including type qualifiers like "name"
                     NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
                     type = opt.Type,
                     required = opt.Required,

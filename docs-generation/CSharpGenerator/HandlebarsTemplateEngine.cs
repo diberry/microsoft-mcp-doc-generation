@@ -322,6 +322,8 @@ public static class HandlebarsTemplateEngine
         });
         
         // Format parameter name to natural language
+        // IMPORTANT: This helper preserves ALL words in parameter names, including type qualifiers
+        // like "name". Example: "resource-group-name" => "Resource group name" (NOT "Resource group")
         handlebars.RegisterHelper("formatNaturalLanguage", (context, arguments) =>
         {
             if (arguments.Length == 0 || arguments[0] == null)
@@ -336,7 +338,8 @@ public static class HandlebarsTemplateEngine
             // Split by hyphens
             var wordsList = paramName.Split('-').Where(w => !string.IsNullOrEmpty(w)).ToList();
             
-            // Process words: Capitalize only the first word, handle acronyms
+            // Process ALL words: Capitalize only the first word, handle acronyms
+            // DO NOT remove any words - all parts of the parameter name are significant
             for (int i = 0; i < wordsList.Count; i++)
             {
                 string word = wordsList[i];
@@ -381,6 +384,7 @@ public static class HandlebarsTemplateEngine
                 }
             }
             
+            // Join ALL words - DO NOT skip or filter any words
             return string.Join(" ", wordsList);
         });
         

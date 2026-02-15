@@ -210,6 +210,13 @@ public static class TextCleanup
         };
     }
 
+    /// <summary>
+    /// Normalizes a programmatic parameter name to natural language format.
+    /// IMPORTANT: This method preserves ALL words in the parameter name, including type qualifiers
+    /// like "name". For example, "resource-group-name" becomes "Resource group name" (NOT "Resource group").
+    /// </summary>
+    /// <param name="programmaticName">The programmatic parameter name (e.g., "resource-group-name")</param>
+    /// <returns>Natural language parameter name with all words preserved (e.g., "Resource group name")</returns>
     public static string NormalizeParameter(string programmaticName)
     {
         if (string.IsNullOrEmpty(programmaticName))
@@ -234,6 +241,8 @@ public static class TextCleanup
         // Word isn't in list - break it apart and fix it
         var words = SplitAndTransformProgrammaticName(programmaticName);
 
+        // IMPORTANT: Process ALL words - do NOT remove any suffix words like "name", "id", etc.
+        // These qualifiers are essential to the parameter's meaning.
         for (int i = 0; i < words.Length; i++)
         {
             // Don't call ReplaceStaticText here as it adds periods to each word
@@ -247,7 +256,8 @@ public static class TextCleanup
             }
         }
 
-        // Join words with spaces, not periods
+        // Join ALL words with spaces, not periods
+        // DO NOT skip or remove any words - all parts of the parameter name are significant
         var result = string.Join(" ", words);
         
         // Remove any periods in the output to avoid "Resource. group." format
