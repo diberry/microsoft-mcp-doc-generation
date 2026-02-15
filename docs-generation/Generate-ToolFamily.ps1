@@ -65,6 +65,10 @@
 .PARAMETER UseTextTransformation
     Apply text transformations to horizontal article output (default: $true)
 
+.PARAMETER SkipBuild
+    Skip building the .NET solution (default: $false). 
+    Set to $true when the orchestrator (start.sh) has already built the solution.
+
 .PARAMETER Steps
     Array of step numbers to run (default: @(1,2,3,4,5) - all steps)
     Example: -Steps @(1,3) to run only steps 1 and 3
@@ -159,6 +163,8 @@ param(
 
     [bool]$UseTextTransformation = $true,
     
+    [bool]$SkipBuild = $false,
+    
     [int[]]$Steps = @(1, 2, 3, 4, 5),
     
     [switch]$Step1Only = $false,
@@ -242,19 +248,21 @@ try {
     Write-Info "Output directory: $outputDir"
     Write-Host ""
 
-    # Build .NET packages before running generation steps
-    Write-Progress "Building .NET packages..."
-    $solutionFile = Join-Path (Split-Path $scriptDir -Parent) "docs-generation.sln"
-    if (Test-Path $solutionFile) {
-        & dotnet build $solutionFile --configuration Release --verbosity quiet
-        if ($LASTEXITCODE -ne 0) {
-            throw ".NET build failed"
+    # Build .NET packages before running generation steps (unless skipped)
+    if (-not $SkipBuild) {
+        Write-Progress "Building .NET packages..."
+        $solutionFile = Join-Path (Split-Path $scriptDir -Parent) "docs-generation.sln"
+        if (Test-Path $solutionFile) {
+            & dotnet build $solutionFile --configuration Release --verbosity quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw ".NET build failed"
+            }
+            Write-Success "✓ Build succeeded"
+        } else {
+            Write-Warning "Solution file not found: $solutionFile"
         }
-        Write-Success "✓ Build succeeded"
-    } else {
-        Write-Warning "Solution file not found: $solutionFile"
+        Write-Host ""
     }
-    Write-Host ""
 
     # Run CLI analyzer for visual analysis
     Write-Divider
@@ -262,7 +270,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    & "$PSScriptRoot\scripts\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true
+    & "$PSScriptRoot\scripts\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true -SkipBuild $SkipBuild
     Write-Host ""
 
     # ========================================================================
@@ -457,7 +465,7 @@ try {
     # Check for generated files
     $familyFileName = "$ToolFamily.md"
     $familyFile = Join-Path $outputDir "tool-family/$familyFileName"
-    $horizontalFile = Join-Path $outputDir "horizontal-articles/$ToolFamily.md"
+    $horizontalFile = Join-Path $outputDir "horizontal-articles/horizontal-article-$ToolFamily.md"
 
     if (Test-Path $familyFile) {
         $fileSize = [math]::Round((Get-Item $familyFile).Length / 1KB, 1)

@@ -265,13 +265,26 @@ try {
         $commandSegments = $singleToolCommand -split ' '
         $baseFileName = $commandSegments -join '-'
         
+        # Check for annotations file with or without "azure-" prefix
         $annotationsFile = Join-Path $outputDir "annotations/$baseFileName-annotations.md"
         $azureAnnotationsFile = Join-Path $outputDir "annotations/azure-$baseFileName-annotations.md"
         if (-not (Test-Path $annotationsFile) -and (Test-Path $azureAnnotationsFile)) {
             $annotationsFile = $azureAnnotationsFile
         }
+        
+        # Check for parameters file with or without "azure-" prefix
         $parametersFile = Join-Path $outputDir "parameters/$baseFileName-parameters.md"
+        $azureParametersFile = Join-Path $outputDir "parameters/azure-$baseFileName-parameters.md"
+        if (-not (Test-Path $parametersFile) -and (Test-Path $azureParametersFile)) {
+            $parametersFile = $azureParametersFile
+        }
+        
+        # Check for raw tool file with or without "azure-" prefix
         $rawToolFile = Join-Path $outputDir "tools-raw/$baseFileName.md"
+        $azureRawToolFile = Join-Path $outputDir "tools-raw/azure-$baseFileName.md"
+        if (-not (Test-Path $rawToolFile) -and (Test-Path $azureRawToolFile)) {
+            $rawToolFile = $azureRawToolFile
+        }
     } else {
         # Multiple tools in family - show first few
         $annotationsFile = "(multiple files)"
