@@ -26,7 +26,7 @@ public static class TextCleanup
         {
             if (RequiredFiles == null || RequiredFiles.Count == 0)
             {
-                Console.WriteLine("Warning: RequiredFiles list is null or empty. Returning null.");
+                LogFileHelper.WriteWarning("RequiredFiles list is null or empty. Returning null.");
                 return false;
             }
 
@@ -56,7 +56,7 @@ public static class TextCleanup
             }
             else
             {
-                Console.WriteLine($"Warning: nl-parameters.json file not found at '{nlParametersPath}'.");
+                LogFileHelper.WriteWarning($"nl-parameters.json file not found at '{nlParametersPath}'.");
             }
 
             if (File.Exists(textReplacerParametersPath))
@@ -69,7 +69,7 @@ public static class TextCleanup
             }
             else
             {
-                Console.WriteLine($"Warning: static-text-replacement.json file not found at '{textReplacerParametersPath}'.");
+                LogFileHelper.WriteWarning($"static-text-replacement.json file not found at '{textReplacerParametersPath}'.");
             }
 
             // Combine and deduplicate parameters based on the 'Parameter' property
@@ -112,7 +112,7 @@ public static class TextCleanup
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading parameters: {ex.Message}");
+            LogFileHelper.WriteError($"Error loading parameters: {ex.Message}");
             return false;
         }
     }
@@ -121,7 +121,7 @@ public static class TextCleanup
     {
         if (string.IsNullOrEmpty(programmaticName))
         {
-            Console.WriteLine($"Warning: Empty programmatic name provided to SplitAndTransformProgrammaticName");
+            LogFileHelper.WriteWarning("Empty programmatic name provided to SplitAndTransformProgrammaticName");
             return new string[] { "Unknown" };
         }
         
@@ -138,7 +138,7 @@ public static class TextCleanup
             
             if (words.Length == 0 || words[0].Length == 0)
             {
-                Console.WriteLine($"Warning: Invalid programmatic name format: '{programmaticName}'");
+                LogFileHelper.WriteWarning($"Invalid programmatic name format: '{programmaticName}'");
                 return new string[] { "Unknown" };
             }
 
@@ -167,7 +167,7 @@ public static class TextCleanup
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error processing programmatic name '{programmaticName}': {ex.Message}");
+            LogFileHelper.WriteError($"Error processing programmatic name '{programmaticName}': {ex.Message}");
             return new string[] { "Unknown" };
         }
     }
@@ -214,7 +214,7 @@ public static class TextCleanup
     {
         if (string.IsNullOrEmpty(programmaticName))
         {
-            Console.WriteLine("Warning: Empty parameter name provided to NormalizeParameter");
+            LogFileHelper.WriteWarning("Empty parameter name provided to NormalizeParameter");
             return "Unknown";
         }
 
@@ -227,7 +227,7 @@ public static class TextCleanup
         // Check if we have a direct mapping in our dictionary
         if (mappedParametersDict != null && mappedParametersDict.TryGetValue(programmaticName, out var naturalLanguageName))
         {
-            Console.WriteLine($"Found natural language name for '{programmaticName}': {naturalLanguageName}");
+            LogFileHelper.WriteDebug($"Found natural language name for '{programmaticName}': {naturalLanguageName}");
             return naturalLanguageName;
         }
 
@@ -253,7 +253,7 @@ public static class TextCleanup
         // Remove any periods in the output to avoid "Resource. group." format
         result = result.Replace(".", "");
         
-        Console.WriteLine($"Converted '{programmaticName}' to natural language: {result}");
+        LogFileHelper.WriteDebug($"Converted '{programmaticName}' to natural language: {result}");
 
         return result;
     }
