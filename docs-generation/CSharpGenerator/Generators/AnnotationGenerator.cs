@@ -49,21 +49,22 @@ public class AnnotationGenerator
     {
         try
         {
+            // Only show essential progress on console
             Console.WriteLine($"Generating annotation files for {data.Tools.Count} tools...");
             
             int examplePromptsGenerated = 0;
             int examplePromptsFailed = 0;
             
-            // Log example prompts configuration
-            Console.WriteLine($"DEBUG: examplePromptGenerator is {(examplePromptGenerator == null ? "NULL" : "initialized")}");
-            Console.WriteLine($"DEBUG: examplePromptsDir = '{examplePromptsDir ?? "NULL"}'");
+            // Log example prompts configuration to file
+            LogFileHelper.WriteDebug($"examplePromptGenerator is {(examplePromptGenerator == null ? "NULL" : "initialized")}");
+            LogFileHelper.WriteDebug($"examplePromptsDir = '{examplePromptsDir ?? "NULL"}'");
             if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
             {
-                Console.WriteLine($"DEBUG: Example prompts WILL be generated for each tool");
+                LogFileHelper.WriteDebug("Example prompts WILL be generated for each tool");
             }
             else
             {
-                Console.WriteLine($"DEBUG: Example prompts WILL NOT be generated (missing generator or directory)");
+                LogFileHelper.WriteDebug("Example prompts WILL NOT be generated (missing generator or directory)");
             }
             
             // Track missing brand mappings/compound words
@@ -100,12 +101,12 @@ public class AnnotationGenerator
                     if (compoundWords.TryGetValue(areaLower, out var compoundReplacement))
                     {
                         brandFileName = compoundReplacement;
-                        Console.WriteLine($"Applied compound word transformation for '{area}': '{areaLower}' -> '{brandFileName}'");
+                        LogFileHelper.WriteInfo($"Applied compound word transformation for '{area}': '{areaLower}' -> '{brandFileName}'");
                     }
                     else
                     {
                         brandFileName = areaLower;
-                        Console.WriteLine($"Warning: No brand mapping or compound word found for area '{area}', using '{brandFileName}'");
+                        LogFileHelper.WriteWarning($"No brand mapping or compound word found for area '{area}', using '{brandFileName}'");
                         
                         // Track missing mapping
                         if (!missingMappings.ContainsKey(area))
@@ -242,15 +243,17 @@ public class AnnotationGenerator
                 */
             }
             
-            Console.WriteLine($"Generated {data.Tools.Count} annotation files in {outputDir}");
+            Console.WriteLine($"✓ Generated {data.Tools.Count} annotation files");
             
+            // Log example prompts summary to file
             if (examplePromptGenerator != null)
             {
-                Console.WriteLine($"\n=== Example Prompts Summary ===");
-                Console.WriteLine($"  Total tools processed: {data.Tools.Count}");
-                Console.WriteLine($"  Successfully generated: {examplePromptsGenerated}");
-                Console.WriteLine($"  Failed: {examplePromptsFailed}");
-                Console.WriteLine($"  Output directory: {examplePromptsDir}");
+                LogFileHelper.WriteInfo("");
+                LogFileHelper.WriteInfo("=== Example Prompts Summary ===");
+                LogFileHelper.WriteInfo($"  Total tools processed: {data.Tools.Count}");
+                LogFileHelper.WriteInfo($"  Successfully generated: {examplePromptsGenerated}");
+                LogFileHelper.WriteInfo($"  Failed: {examplePromptsFailed}");
+                LogFileHelper.WriteInfo($"  Output directory: {examplePromptsDir}");
             }
             
             // Generate missing mappings report if there are any
@@ -261,8 +264,8 @@ public class AnnotationGenerator
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating annotation files: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            LogFileHelper.WriteError($"Error generating annotation files: {ex.Message}");
+            LogFileHelper.WriteError(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }
@@ -356,11 +359,11 @@ public class AnnotationGenerator
             var outputFile = Path.Combine(outputDir, "tool-annotations.md");
             await File.WriteAllTextAsync(outputFile, result);
             
-            Console.WriteLine($"Generated tool annotations summary at {outputFile}");
+            LogFileHelper.WriteInfo($"Generated tool annotations summary at {outputFile}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating tool annotations summary: {ex.Message}");
+            LogFileHelper.WriteError($"Error generating tool annotations summary: {ex.Message}");
             throw;
         }
     }
@@ -401,11 +404,11 @@ public class AnnotationGenerator
             lines.Add("3. Otherwise, the default lowercase area name will be used");
 
             await File.WriteAllLinesAsync(reportPath, lines);
-            Console.WriteLine($"\n⚠️  Generated missing mappings report: {reportPath}");
+            LogFileHelper.WriteWarning($"Generated missing mappings report: {reportPath}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Warning: Failed to generate missing mappings report: {ex.Message}");
+            LogFileHelper.WriteWarning($"Failed to generate missing mappings report: {ex.Message}");
         }
     }
 

@@ -85,7 +85,7 @@ public static class DocumentationGenerator
         if (!string.IsNullOrWhiteSpace(cliVersion))
         {
             transformedData.Version = cliVersion;
-            Console.WriteLine($"Using CLI version: {cliVersion}");
+            LogFileHelper.WriteInfo($"Using CLI version: {cliVersion}");
         }
 
         // Load common parameters from JSON file
@@ -351,25 +351,26 @@ public static class DocumentationGenerator
             : ExtractCommonParameters(transformedData.Tools);
         var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
         
+        // Log detailed area breakdown to file
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
             var totalParams = area.Value.Tools.Sum(t => t.Option?.Count ?? 0);
-            Console.WriteLine($"  {area.Key}: {area.Value.ToolCount} tools ({totalParams} parameters)");
+            LogFileHelper.WriteInfo($"  {area.Key}: {area.Value.ToolCount} tools ({totalParams} parameters)");
         }
         
-        // Print tool list at the end after all files have been generated
-        Console.WriteLine();
-        Console.WriteLine("Tool List by Service Area:");
-        Console.WriteLine("=" + new string('=', 29));
-        Console.WriteLine();
-        Console.WriteLine("Legend: [A] = Annotation file, [P] = Parameter file, [E] = Example prompts file");
-        Console.WriteLine();
+        // Log detailed tool list to file, not console
+        LogFileHelper.WriteInfo("");
+        LogFileHelper.WriteInfo("Tool List by Service Area:");
+        LogFileHelper.WriteInfo("=" + new string('=', 29));
+        LogFileHelper.WriteInfo("");
+        LogFileHelper.WriteInfo("Legend: [A] = Annotation file, [P] = Parameter file, [E] = Example prompts file");
+        LogFileHelper.WriteInfo("");
         
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
-            Console.WriteLine();
-            Console.WriteLine($"{area.Key} ({area.Value.ToolCount} tools):");
-            Console.WriteLine(new string('-', area.Key.Length + $" ({area.Value.ToolCount} tools):".Length));
+            LogFileHelper.WriteInfo("");
+            LogFileHelper.WriteInfo($"{area.Key} ({area.Value.ToolCount} tools):");
+            LogFileHelper.WriteInfo(new string('-', area.Key.Length + $" ({area.Value.ToolCount} tools):".Length));
             
             foreach (var tool in area.Value.Tools.OrderBy(t => t.Command))
             {
@@ -384,7 +385,7 @@ public static class DocumentationGenerator
                 if (tool.HasExamplePrompts) indicators.Add("E");
                 var indicatorStr = indicators.Count > 0 ? $" [{string.Join(",", indicators)}]" : "";
                 
-                Console.WriteLine($"  • {tool.Command,-50} - {tool.Name,-20} [{nonCommonParamCount,2} params]{indicatorStr}");
+                LogFileHelper.WriteInfo($"  • {tool.Command,-50} - {tool.Name,-20} [{nonCommonParamCount,2} params]{indicatorStr}");
             }
         }
 
@@ -405,16 +406,16 @@ public static class DocumentationGenerator
             {
                 if (string.IsNullOrEmpty(tool.Command))
                 {
-                    Console.WriteLine($"Warning: Tool has empty command, skipping.");
+                    LogFileHelper.WriteWarning($"Tool has empty command, skipping.");
                     continue;
                 }
             
                 var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                Console.WriteLine($"Debug: Processing command: {tool.Command}, parts: {commandParts.Length}");
+                LogFileHelper.WriteDebug($"Processing command: {tool.Command}, parts: {commandParts.Length}");
                 
                 if (commandParts.Length < 1)
                 {
-                    Console.WriteLine($"Warning: Command '{tool.Command}' has no parts, skipping.");
+                    LogFileHelper.WriteWarning($"Command '{tool.Command}' has no parts, skipping.");
                     continue;
                 }
                 
@@ -446,7 +447,7 @@ public static class DocumentationGenerator
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error processing tool command '{tool.Command}': {ex.Message}");
+                LogFileHelper.WriteError($"Error processing tool command '{tool.Command}': {ex.Message}");
             }
         }
 

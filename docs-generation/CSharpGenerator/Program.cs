@@ -14,9 +14,8 @@ internal class Program
      private static async Task<int> Main(string[] args)
      {
 
-         // Load and validate config
+         // Load and validate config (verbose output goes to logs, not console)
          var configPath = Path.Combine(AppContext.BaseDirectory, "../../../../data/config.json");
-         Console.WriteLine($"Loading config from: {configPath}");
          var success = Config.Load(configPath);
          if (!success)
          {
@@ -122,13 +121,6 @@ internal class Program
 
      private static async Task<int> GenerateDocumentation(string[] args)
      {
-         // DEBUG: Print all arguments
-         Console.WriteLine($"DEBUG: GenerateDocumentation received {args.Length} arguments:");
-         for (int i = 0; i < args.Length; i++)
-         {
-             Console.WriteLine($"  args[{i}] = '{args[i]}'");
-         }
-         
          if (args.Length < 2)
          {
              Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations] [--example-prompts] [--complete-tools] [--no-service-options] [--validate-prompts] [--version <version>]");
@@ -137,6 +129,17 @@ internal class Program
 
          var cliOutputFile = args[0];
          var outputDir = args[1];
+         
+         // Initialize log file helper early
+         LogFileHelper.Initialize(outputDir, "csharp-generator");
+         
+         // Log all arguments to file (not console)
+         LogFileHelper.WriteDebug($"GenerateDocumentation received {args.Length} arguments:");
+         for (int i = 0; i < args.Length; i++)
+         {
+             LogFileHelper.WriteDebug($"  args[{i}] = '{args[i]}'");
+         }
+         
          var generateToolPages = args.Contains("--tool-pages");
          var generateIndex = args.Contains("--index");
          var generateCommon = args.Contains("--common");
@@ -146,16 +149,16 @@ internal class Program
          var generateCompleteTools = args.Contains("--complete-tools");
          var validatePrompts = args.Contains("--validate-prompts");
          
-         // DEBUG: Print flag values
-         Console.WriteLine($"DEBUG: Flag values:");
-         Console.WriteLine($"  generateToolPages: {generateToolPages}");
-         Console.WriteLine($"  generateIndex: {generateIndex}");
-         Console.WriteLine($"  generateCommon: {generateCommon}");
-         Console.WriteLine($"  generateCommands: {generateCommands}");
-         Console.WriteLine($"  generateAnnotations: {generateAnnotations}");
-         Console.WriteLine($"  generateExamplePrompts: {generateExamplePrompts}");
-         Console.WriteLine($"  generateCompleteTools: {generateCompleteTools}");
-         Console.WriteLine($"  validatePrompts: {validatePrompts}");
+         // Log flag values to file (not console)
+         LogFileHelper.WriteDebug("Flag values:");
+         LogFileHelper.WriteDebug($"  generateToolPages: {generateToolPages}");
+         LogFileHelper.WriteDebug($"  generateIndex: {generateIndex}");
+         LogFileHelper.WriteDebug($"  generateCommon: {generateCommon}");
+         LogFileHelper.WriteDebug($"  generateCommands: {generateCommands}");
+         LogFileHelper.WriteDebug($"  generateAnnotations: {generateAnnotations}");
+         LogFileHelper.WriteDebug($"  generateExamplePrompts: {generateExamplePrompts}");
+         LogFileHelper.WriteDebug($"  generateCompleteTools: {generateCompleteTools}");
+         LogFileHelper.WriteDebug($"  validatePrompts: {validatePrompts}");
          
          var generateServiceOptions = !args.Contains("--no-service-options");
          

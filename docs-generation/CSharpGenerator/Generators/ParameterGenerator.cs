@@ -153,12 +153,12 @@ public class ParameterGenerator
                 tool.HasParameters = true;
             }
             
-            Console.WriteLine($"Generated {data.Tools.Count} parameter files in {outputDir}");
+            Console.WriteLine($"✓ Generated {data.Tools.Count} parameter files");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating parameter files: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            LogFileHelper.WriteError($"Error generating parameter files: {ex.Message}");
+            LogFileHelper.WriteError(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }
