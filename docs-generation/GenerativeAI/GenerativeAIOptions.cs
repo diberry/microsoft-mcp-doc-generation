@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Shared;
 
 namespace GenerativeAI;
 
@@ -13,10 +14,11 @@ public class GenerativeAIOptions
 
     public static GenerativeAIOptions LoadFromEnvironmentOrDotEnv(string? basePath = null)
     {
-        Console.WriteLine("=== C# Environment Variable Loading ===");
-        Console.WriteLine("Current Directory: " + Directory.GetCurrentDirectory());
-        Console.WriteLine("AppContext.BaseDirectory: " + AppContext.BaseDirectory);
-        Console.WriteLine("");
+        // Log verbose debug information to file
+        LogFileHelper.WriteDebug("=== C# Environment Variable Loading ===");
+        LogFileHelper.WriteDebug("Current Directory: " + Directory.GetCurrentDirectory());
+        LogFileHelper.WriteDebug("AppContext.BaseDirectory: " + AppContext.BaseDirectory);
+        LogFileHelper.WriteDebug("");
         
         var opts = new GenerativeAIOptions();
         opts.ApiKey = Environment.GetEnvironmentVariable("FOUNDRY_API_KEY");
@@ -24,12 +26,12 @@ public class GenerativeAIOptions
         opts.Deployment = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_NAME") ?? Environment.GetEnvironmentVariable("FOUNDRY_MODEL") ?? Environment.GetEnvironmentVariable("FOUNDRY_INSTANCE");
         opts.ApiVersion = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_API_VERSION");
         
-        Console.WriteLine("Environment variables read from process:");
-        Console.WriteLine($"  FOUNDRY_API_KEY: {(string.IsNullOrEmpty(opts.ApiKey) ? "NOT SET" : $"SET ({opts.ApiKey.Length} chars) - {opts.ApiKey.Substring(0, Math.Min(20, opts.ApiKey.Length))}...")}");
-        Console.WriteLine($"  FOUNDRY_ENDPOINT: {opts.Endpoint ?? "NOT SET"}");
-        Console.WriteLine($"  FOUNDRY_MODEL_NAME: {opts.Deployment ?? "NOT SET"}");
-        Console.WriteLine($"  FOUNDRY_MODEL_API_VERSION: {opts.ApiVersion ?? "NOT SET"}");
-        Console.WriteLine("");
+        LogFileHelper.WriteDebug("Environment variables read from process:");
+        LogFileHelper.WriteDebug($"  FOUNDRY_API_KEY: {(string.IsNullOrEmpty(opts.ApiKey) ? "NOT SET" : $"SET ({opts.ApiKey.Length} chars) - {opts.ApiKey.Substring(0, Math.Min(20, opts.ApiKey.Length))}...")}");
+        LogFileHelper.WriteDebug($"  FOUNDRY_ENDPOINT: {opts.Endpoint ?? "NOT SET"}");
+        LogFileHelper.WriteDebug($"  FOUNDRY_MODEL_NAME: {opts.Deployment ?? "NOT SET"}");
+        LogFileHelper.WriteDebug($"  FOUNDRY_MODEL_API_VERSION: {opts.ApiVersion ?? "NOT SET"}");
+        LogFileHelper.WriteDebug("");
 
         if (string.IsNullOrEmpty(opts.ApiKey) || string.IsNullOrEmpty(opts.Endpoint) || string.IsNullOrEmpty(opts.Deployment))
         {
@@ -43,45 +45,57 @@ public class GenerativeAIOptions
                 basePath ?? Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..")        // From bin/Release/net9.0 via AppContext
             };
 
-            Console.WriteLine("Attempting to load from .env file (fallback)...");
+            LogFileHelper.WriteDebug("Attempting to load from .env file (fallback)...");
             foreach (var path in searchPaths)
             {
                 var envPath = Path.GetFullPath(Path.Combine(path, DotEnvFileName));
-                Console.WriteLine($"  Checking: {envPath}");
+                LogFileHelper.WriteDebug($"  Checking: {envPath}");
                 if (File.Exists(envPath))
                 {
-                    Console.WriteLine($"  ✅ Found .env file at: {envPath}");
+                    LogFileHelper.WriteDebug($"  ✅ Found .env file at: {envPath}");
                     var content = File.ReadAllText(envPath);
-                    Console.WriteLine($"  📄 .env file contents ({content.Length} chars):");
-                    Console.WriteLine(content);
-                    Console.WriteLine("");
+                    LogFileHelper.WriteDebug($"  📄 .env file contents ({content.Length} chars):");
+                    LogFileHelper.WriteDebug(content);
+                    LogFileHelper.WriteDebug("");
                     
                     var kv = ParseDotEnv(content);
-                    Console.WriteLine($"  Parsed {kv.Count} variables from .env:");
+                    LogFileHelper.WriteDebug($"  Parsed {kv.Count} variables from .env:");
                     foreach (var kvp in kv)
                     {
-                        var displayValue = kvp.Key.Contains("KEY") || kvp.Key.Contains("SECRET") 
+                        var displayValue = (kvp.Key.Contains("KEY") || kvp.Key.Contains("SECRET")) && !string.IsNullOrEmpty(kvp.Value)
                             ? $"{kvp.Value.Substring(0, Math.Min(20, kvp.Value.Length))}..." 
-                            : kvp.Value;
-                        Console.WriteLine($"    {kvp.Key} = {displayValue}");
+                            : (kvp.Value ?? "NULL");
+                        LogFileHelper.WriteDebug($"    {kvp.Key} = {displayValue}");
                     }
-                    Console.WriteLine("");
+                    LogFileHelper.WriteDebug("");
                     
                     opts.ApiKey ??= TryGet(kv, "FOUNDRY_API_KEY");
                     opts.Endpoint ??= TryGet(kv, "FOUNDRY_ENDPOINT");
                     opts.Deployment ??= TryGet(kv, "FOUNDRY_MODEL_NAME") ?? TryGet(kv, "FOUNDRY_MODEL") ?? TryGet(kv, "FOUNDRY_INSTANCE");
                     opts.ApiVersion ??= TryGet(kv, "FOUNDRY_MODEL_API_VERSION");
                     
-                    Console.WriteLine("  Final values after .env fallback:");
-                    Console.WriteLine($"    FOUNDRY_API_KEY: {(string.IsNullOrEmpty(opts.ApiKey) ? "NOT SET" : $"SET ({opts.ApiKey.Length} chars)")}");
-                    Console.WriteLine($"    FOUNDRY_ENDPOINT: {opts.Endpoint ?? "NOT SET"}");
-                    Console.WriteLine($"    FOUNDRY_MODEL_NAME: {opts.Deployment ?? "NOT SET"}");
-                    Console.WriteLine($"    FOUNDRY_MODEL_API_VERSION: {opts.ApiVersion ?? "NOT SET"}");
-                    Console.WriteLine("");
+                    LogFileHelper.WriteDebug("  Final values after .env fallback:");
+                    LogFileHelper.WriteDebug($"    FOUNDRY_API_KEY: {(string.IsNullOrEmpty(opts.ApiKey) ? "NOT SET" : $"SET ({opts.ApiKey.Length} chars)")}");
+                    LogFileHelper.WriteDebug($"    FOUNDRY_ENDPOINT: {opts.Endpoint ?? "NOT SET"}");
+                    LogFileHelper.WriteDebug($"    FOUNDRY_MODEL_NAME: {opts.Deployment ?? "NOT SET"}");
+                    LogFileHelper.WriteDebug($"    FOUNDRY_MODEL_API_VERSION: {opts.ApiVersion ?? "NOT SET"}");
+                    LogFileHelper.WriteDebug("");
                     break; // Found the file, stop searching
                 }
             }
         }
+        
+        // Minimal console output - just success or failure indicator
+        var hasAllRequired = !string.IsNullOrEmpty(opts.ApiKey) && !string.IsNullOrEmpty(opts.Endpoint) && !string.IsNullOrEmpty(opts.Deployment);
+        if (hasAllRequired)
+        {
+            Console.WriteLine("✓ Azure OpenAI credentials loaded");
+        }
+        else
+        {
+            Console.WriteLine("⚠ Azure OpenAI credentials incomplete - check debug logs");
+        }
+        
         return opts;
     }
 
