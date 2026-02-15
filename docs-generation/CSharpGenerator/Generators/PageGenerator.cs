@@ -16,17 +16,11 @@ namespace CSharpGenerator.Generators;
 /// </summary>
 public class PageGenerator
 {
-    private readonly Func<Task<Dictionary<string, BrandMapping>>> _loadBrandMappings;
-    private readonly Func<string, Task<string>> _cleanFileName;
     private readonly Func<List<Tool>, List<CommonParameter>> _extractCommonParameters;
 
     public PageGenerator(
-        Func<Task<Dictionary<string, BrandMapping>>> loadBrandMappings,
-        Func<string, Task<string>> cleanFileName,
         Func<List<Tool>, List<CommonParameter>> extractCommonParameters)
     {
-        _loadBrandMappings = loadBrandMappings;
-        _cleanFileName = cleanFileName;
         _extractCommonParameters = extractCommonParameters;
     }
 
@@ -57,8 +51,8 @@ public class PageGenerator
             var parentDir = string.IsNullOrWhiteSpace(parentDirCandidate) ? outputDir : parentDirCandidate;
             var annotationsDir = Path.Combine(parentDir, "annotations");
             
-            // Load brand mappings for annotation filename lookup
-            var brandMappings = await _loadBrandMappings();
+            // Load shared data files for filename generation
+            var nameContext = await FileNameContext.CreateAsync();
 
             // Filter out common parameters from tools for area pages and add annotation content
             var toolsWithFilteredParamsTasks = areaData.Tools.Select(async tool => 
@@ -76,57 +70,22 @@ public class PageGenerator
                 // Read annotation file content if it exists
                 if (!string.IsNullOrEmpty(tool.Command))
                 {
-                    // Parse command to get brand-based filename
-                    var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (commandParts.Length > 0)
+                    // Use shared deterministic filename builder
+                    var annotationFileName = ToolFileNameBuilder.BuildAnnotationFileName(
+                        tool.Command, nameContext);
+                    var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
+                    
+                    if (File.Exists(annotationFilePath))
                     {
-                        var area = commandParts[0];
-                        
-                        // Get brand-based filename from mapping
-                        string brandFileName;
-                        if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
+                        try
                         {
-                            brandFileName = mapping.FileName;
+                            filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
+                            filteredTool.AnnotationFileName = annotationFileName;
                         }
-                        else
+                        catch
                         {
-                            brandFileName = area.ToLowerInvariant();
-                        }
-
-                        // Ensure prefix 'azure-'
-                        if (!brandFileName.StartsWith("azure-", StringComparison.OrdinalIgnoreCase))
-                        {
-                            brandFileName = $"azure-{brandFileName}";
-                        }
-
-                        // Build remaining parts
-                        var remainingParts = commandParts.Length > 1 
-                            ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
-                            : "";
-
-                        // Clean the filename to match the annotation file generation
-                        var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
-                            ? await _cleanFileName(remainingParts) 
-                            : "";
-
-                        var annotationFileName = !string.IsNullOrEmpty(cleanedRemainingParts)
-                            ? $"{brandFileName}-{cleanedRemainingParts}-annotations.md"
-                            : $"{brandFileName}-annotations.md";
-                        
-                        var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
-                        
-                        if (File.Exists(annotationFilePath))
-                        {
-                            try
-                            {
-                                filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
-                                filteredTool.AnnotationFileName = annotationFileName;
-                            }
-                            catch
-                            {
-                                // Silently ignore if annotation file can't be read
-                                filteredTool.AnnotationContent = "";
-                            }
+                            // Silently ignore if annotation file can't be read
+                            filteredTool.AnnotationContent = "";
                         }
                     }
                 }

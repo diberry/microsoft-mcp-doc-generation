@@ -2,18 +2,24 @@
 // Licensed under the MIT License.
 
 using System.Text;
+using System.Text.RegularExpressions;
+using Shared;
 using ToolGeneration_Composed.Models;
 
 namespace ToolGeneration_Composed.Services;
 
 /// <summary>
-/// Service that composes tool documentation by replacing placeholders with actual content
+/// Service that composes tool documentation by replacing placeholders with actual content.
+/// Uses ToolFileNameBuilder for deterministic filename resolution (no fuzzy matching).
 /// </summary>
 public class ComposedToolGeneratorService
 {
     private const string ExamplePromptsPlaceholder = "{{EXAMPLE_PROMPTS_CONTENT}}";
     private const string ParametersPlaceholder = "{{PARAMETERS_CONTENT}}";
     private const string AnnotationsPlaceholder = "{{ANNOTATIONS_CONTENT}}";
+
+    private static readonly Regex McpCliCommentRegex = new(
+        @"<!--\s*@mcpcli\s+(.+?)\s*-->", RegexOptions.Compiled);
 
     /// <summary>
     /// Generates composed tool files by replacing placeholders in raw files with actual content
@@ -100,6 +106,9 @@ public class ComposedToolGeneratorService
         Console.WriteLine($"  Found {rawFiles.Length} raw tool files to process");
         Console.WriteLine();
 
+        // Load shared data files for deterministic filename resolution
+        var nameContext = await FileNameContext.CreateAsync();
+
         int successCount = 0;
         int skippedCount = 0;
         var missingContent = new Dictionary<string, List<string>>();
@@ -113,17 +122,37 @@ public class ComposedToolGeneratorService
                 // Load raw file content
                 var rawContent = await File.ReadAllTextAsync(rawFilePath);
 
-                // Find and load corresponding content files
-                var baseFileName = Path.GetFileNameWithoutExtension(fileName);
-                
-                var examplePromptsContent = await LoadContentFileAsync(
-                    examplePromptsDir, baseFileName, "example-prompts", missingContent);
-                    
-                var parametersContent = await LoadContentFileAsync(
-                    parametersDir, baseFileName, "parameters", missingContent);
-                    
-                var annotationsContent = await LoadContentFileAsync(
-                    annotationsDir, baseFileName, "annotations", missingContent);
+                // Extract command from <!-- @mcpcli ... --> comment for deterministic filename resolution
+                var command = ExtractCommand(rawContent);
+
+                string examplePromptsContent, parametersContent, annotationsContent;
+
+                if (!string.IsNullOrEmpty(command))
+                {
+                    // Use ToolFileNameBuilder for exact filename derivation
+                    var examplePromptsFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(
+                        command, nameContext);
+                    var parametersFileName = ToolFileNameBuilder.BuildParameterFileName(
+                        command, nameContext);
+                    var annotationsFileName = ToolFileNameBuilder.BuildAnnotationFileName(
+                        command, nameContext);
+
+                    examplePromptsContent = await LoadExactFileAsync(
+                        examplePromptsDir, examplePromptsFileName, "example-prompts", fileName, missingContent);
+                    parametersContent = await LoadExactFileAsync(
+                        parametersDir, parametersFileName, "parameters", fileName, missingContent);
+                    annotationsContent = await LoadExactFileAsync(
+                        annotationsDir, annotationsFileName, "annotations", fileName, missingContent);
+                }
+                else
+                {
+                    // No command found in raw file - warn on console and track
+                    Console.WriteLine($"  ⚠ No @mcpcli comment found in {fileName}");
+                    LogFileHelper.WriteDebug($"No @mcpcli comment found in {fileName}");
+                    examplePromptsContent = "<!-- Content not found: example-prompts (no @mcpcli command) -->";
+                    parametersContent = "<!-- Content not found: parameters (no @mcpcli command) -->";
+                    annotationsContent = "<!-- Content not found: annotations (no @mcpcli command) -->";
+                }
 
                 // Compose the final content
                 var composedContent = ComposeContent(
@@ -172,54 +201,35 @@ public class ComposedToolGeneratorService
         return 0;
     }
 
-    private async Task<string> LoadContentFileAsync(
+    /// <summary>
+    /// Extracts the CLI command from the raw file's &lt;!-- @mcpcli ... --&gt; comment.
+    /// </summary>
+    private static string? ExtractCommand(string rawContent)
+    {
+        var match = McpCliCommentRegex.Match(rawContent);
+        return match.Success ? match.Groups[1].Value.Trim() : null;
+    }
+
+    /// <summary>
+    /// Loads a content file by exact filename (no fuzzy matching).
+    /// </summary>
+    private static async Task<string> LoadExactFileAsync(
         string contentDir,
-        string baseFileName,
+        string exactFileName,
         string contentType,
+        string rawFileName,
         Dictionary<string, List<string>> missingContent)
     {
-        // Try to find the content file - it might have variations
-        var possibleFiles = new[]
+        if (!Directory.Exists(contentDir))
         {
-            // Exact match with suffix
-            Path.Combine(contentDir, $"{baseFileName}-{contentType}.md"),
-            // Without suffix
-            Path.Combine(contentDir, $"{baseFileName}.md"),
-            // With azure- prefix (from Step 1 generation)
-            Path.Combine(contentDir, $"azure-{baseFileName}-{contentType}.md"),
-            // List all files in the directory and try fuzzy match as last resort
-        };
-
-        foreach (var filePath in possibleFiles)
-        {
-            if (File.Exists(filePath))
-            {
-                var content = await File.ReadAllTextAsync(filePath);
-                return StripFrontmatter(content);
-            }
+            return $"<!-- Content not found: {contentType} (directory missing) -->";
         }
 
-        // If exact matches fail, search for files containing the base name
-        try
+        var filePath = Path.Combine(contentDir, exactFileName);
+        if (File.Exists(filePath))
         {
-            var allFiles = Directory.GetFiles(contentDir, "*.md");
-            var matchingFiles = allFiles.Where(f => 
-            {
-                var fileName = Path.GetFileName(f);
-                // Look for files that contain the base name and content type
-                return fileName.Contains(baseFileName.Split('-').Last(), StringComparison.OrdinalIgnoreCase) && 
-                       fileName.Contains(contentType, StringComparison.OrdinalIgnoreCase);
-            }).ToArray();
-
-            if (matchingFiles.Length > 0)
-            {
-                var content = await File.ReadAllTextAsync(matchingFiles[0]);
-                return StripFrontmatter(content);
-            }
-        }
-        catch
-        {
-            // Ignore errors during fallback search
+            var content = await File.ReadAllTextAsync(filePath);
+            return StripFrontmatter(content);
         }
 
         // Content file not found - track it
@@ -227,12 +237,12 @@ public class ComposedToolGeneratorService
         {
             missingContent[contentType] = new List<string>();
         }
-        missingContent[contentType].Add(baseFileName);
+        missingContent[contentType].Add($"{rawFileName} -> {exactFileName}");
 
         return $"<!-- Content not found: {contentType} -->";
     }
 
-    private string StripFrontmatter(string content)
+    private static string StripFrontmatter(string content)
     {
         if (string.IsNullOrEmpty(content))
             return content;
@@ -274,7 +284,7 @@ public class ComposedToolGeneratorService
         return content;
     }
 
-    private string ComposeContent(
+    private static string ComposeContent(
         string rawContent,
         string examplePromptsContent,
         string parametersContent,

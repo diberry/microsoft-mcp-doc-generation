@@ -121,6 +121,9 @@ internal static class Program
         Console.WriteLine($"⏱️  Estimated time: {estimatedMinMinutes}-{estimatedMaxMinutes} minutes for {toolCount} tools");
         Console.WriteLine($"    (You can safely cancel with Ctrl+C after a few successes to verify setup)\n");
 
+        // Load shared data files for deterministic filename generation
+        var nameContext = await FileNameContext.CreateAsync();
+
         var successCount = 0;
         var failureCount = 0;
 
@@ -139,19 +142,17 @@ internal static class Program
 
             var (userPrompt, promptsResponse, rawResponse) = result.Value;
 
-            // Derive filenames from tool command
-            var commandSegments = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var baseFileName = string.Join("-", commandSegments);
-
-            // Save input prompt file
-            var inputPromptFileName = $"{baseFileName}-input-prompt.md";
+            // Use shared deterministic filename builder
+            var inputPromptFileName = ToolFileNameBuilder.BuildInputPromptFileName(
+                tool.Command, nameContext);
             var inputPromptPath = Path.Combine(outputDir, "example-prompts-prompts", inputPromptFileName);
             var inputContent = FrontmatterUtility.GenerateInputPromptFrontmatter(
                 tool.Command, version, inputPromptFileName, userPrompt);
             await File.WriteAllTextAsync(inputPromptPath, inputContent);
 
             // Save raw AI response (extract just the JSON for clarity)
-            var rawOutputFileName = $"{baseFileName}-raw-output.txt";
+            var rawOutputFileName = ToolFileNameBuilder.BuildRawOutputFileName(
+                tool.Command, nameContext);
             var rawOutputPath = Path.Combine(outputDir, "example-prompts-raw-output", rawOutputFileName);
             var jsonOnlyContent = ExtractJsonFromResponse(rawResponse);
             await File.WriteAllTextAsync(rawOutputPath, jsonOnlyContent);
@@ -166,7 +167,8 @@ internal static class Program
             successCount++;
 
             // Generate example prompts markdown
-            var examplePromptFileName = $"{baseFileName}-example-prompts.md";
+            var examplePromptFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(
+                tool.Command, nameContext);
             var examplePromptPath = Path.Combine(outputDir, "example-prompts", examplePromptFileName);
 
             var templatePath = Path.Combine(templatesDir, "example-prompts-template.hbs");

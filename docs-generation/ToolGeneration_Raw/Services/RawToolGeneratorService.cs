@@ -14,10 +14,17 @@ namespace ToolGeneration_Raw.Services;
 public class RawToolGeneratorService
 {
     private readonly Dictionary<string, BrandMapping> _brandMappings;
+    private readonly Dictionary<string, string> _compoundWords;
+    private readonly HashSet<string> _stopWords;
 
-    public RawToolGeneratorService(Dictionary<string, BrandMapping> brandMappings)
+    public RawToolGeneratorService(
+        Dictionary<string, BrandMapping> brandMappings,
+        Dictionary<string, string> compoundWords,
+        HashSet<string> stopWords)
     {
         _brandMappings = brandMappings;
+        _compoundWords = compoundWords;
+        _stopWords = stopWords;
     }
 
     /// <summary>
@@ -117,44 +124,8 @@ public class RawToolGeneratorService
 
     private string GenerateFileName(Tool tool)
     {
-        if (string.IsNullOrEmpty(tool.Command))
-        {
-            return "unknown.md";
-        }
-
-        var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (commandParts.Length == 0)
-        {
-            return "unknown.md";
-        }
-
-        var area = commandParts[0];
-
-        // Get brand-based filename from mapping
-        string brandFileName;
-        if (_brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
-        {
-            brandFileName = mapping.FileName;
-        }
-        else
-        {
-            brandFileName = area.ToLowerInvariant();
-        }
-
-        // Build remaining parts
-        var remainingParts = commandParts.Length > 1 
-            ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
-            : "";
-
-        // Build the filename
-        var baseFileName = string.IsNullOrEmpty(remainingParts)
-            ? brandFileName
-            : $"{brandFileName}-{remainingParts}";
-
-        // Simple filename cleaning (remove special characters, normalize)
-        var cleanedFileName = CleanFileName(baseFileName);
-
-        return $"{cleanedFileName}.md";
+        return ToolFileNameBuilder.BuildToolFileName(
+            tool.Command ?? "", _brandMappings, _compoundWords, _stopWords);
     }
 
     private RawToolData CreateRawToolData(Tool tool, string fileName, string mcpCliVersion)
@@ -173,36 +144,6 @@ public class RawToolGeneratorService
             ParametersPlaceholder = "{{PARAMETERS_CONTENT}}",
             AnnotationsPlaceholder = "{{ANNOTATIONS_CONTENT}}"
         };
-    }
-
-    private string CleanFileName(string fileName)
-    {
-        if (string.IsNullOrEmpty(fileName))
-            return "unknown";
-
-        // Remove special characters and normalize
-        fileName = fileName.ToLowerInvariant();
-        fileName = fileName.Replace(" ", "-");
-        fileName = fileName.Replace("_", "-");
-        
-        // Remove any characters that aren't alphanumeric or hyphens
-        var cleaned = new StringBuilder();
-        foreach (var c in fileName)
-        {
-            if (char.IsLetterOrDigit(c) || c == '-')
-            {
-                cleaned.Append(c);
-            }
-        }
-        
-        // Remove consecutive hyphens and trim
-        var result = cleaned.ToString();
-        while (result.Contains("--"))
-        {
-            result = result.Replace("--", "-");
-        }
-        
-        return result.Trim('-');
     }
 
     private string GenerateRawToolContent(RawToolData data)

@@ -63,13 +63,15 @@ internal class Program
 
         try
         {
-            // Load brand mappings
+            // Load shared data files for filename generation
             var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
+            var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
+            var stopWords = await DataFileLoader.LoadStopWordsAsync();
             Console.WriteLine($"Loaded {brandMappings.Count} brand mappings");
             Console.WriteLine();
 
             // Create generator service
-            var generator = new RawToolGeneratorService(brandMappings);
+            var generator = new RawToolGeneratorService(brandMappings, compoundWords, stopWords);
 
             // Generate raw tool files
             var result = await generator.GenerateRawToolFilesAsync(cliOutputFile, outputDir, mcpCliVersion);
