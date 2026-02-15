@@ -210,6 +210,45 @@ generated/
 
 ## Development Workflows
 
+### Start Scripts (Orchestrator/Worker Pattern)
+
+**NEW**: Root-level scripts for full catalog generation
+
+**start.sh (Orchestrator)**:
+- Generates CLI metadata ONCE for all namespaces
+- Runs validation ONCE
+- Iterates over all 52 namespaces
+- Calls `start-only.sh` for each namespace
+- Tracks success/failure and reports summary
+
+**start-only.sh (Worker)**:
+- Takes a single namespace parameter
+- Uses existing CLI metadata files (no regeneration)
+- Generates documentation for that namespace only
+- Designed to be called by start.sh orchestrator
+
+**Usage**:
+```bash
+# Full catalog generation (all 52 namespaces)
+./start.sh                      # All steps
+./start.sh 1                    # Step 1 only (fast, no AI)
+./start.sh 1,2,3                # Steps 1-3
+
+# Single namespace generation
+./start-only.sh advisor         # All steps for advisor
+./start-only.sh advisor 1       # Step 1 only for advisor
+./start-only.sh advisor 1,2,3   # Steps 1-3 for advisor
+```
+
+**Benefits**:
+- ✅ CLI metadata generated once, shared by all namespaces
+- ✅ Validation runs once, not 52 times
+- ✅ Non-destructive worker (can run on existing output)
+- ✅ Clear orchestration point for full catalog generation
+- ✅ Can process individual namespaces independently
+
+**Documentation**: See `docs/START-SCRIPTS.md` for complete details
+
 ### Local Development
 ```bash
 cd docs-generation
