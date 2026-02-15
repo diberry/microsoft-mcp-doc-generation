@@ -101,12 +101,12 @@ public class AnnotationGenerator
                     if (compoundWords.TryGetValue(areaLower, out var compoundReplacement))
                     {
                         brandFileName = compoundReplacement;
-                        LogFileHelper.WriteInfo($"Applied compound word transformation for '{area}': '{areaLower}' -> '{brandFileName}'");
+                        LogFileHelper.WriteDebug($"Applied compound word transformation for '{area}': '{areaLower}' -> '{brandFileName}'");
                     }
                     else
                     {
                         brandFileName = areaLower;
-                        LogFileHelper.WriteWarning($"No brand mapping or compound word found for area '{area}', using '{brandFileName}'");
+                        LogFileHelper.WriteDebug($"No brand mapping or compound word found for area '{area}', using '{brandFileName}'");
                         
                         // Track missing mapping
                         if (!missingMappings.ContainsKey(area))
@@ -248,12 +248,12 @@ public class AnnotationGenerator
             // Log example prompts summary to file
             if (examplePromptGenerator != null)
             {
-                LogFileHelper.WriteInfo("");
-                LogFileHelper.WriteInfo("=== Example Prompts Summary ===");
-                LogFileHelper.WriteInfo($"  Total tools processed: {data.Tools.Count}");
-                LogFileHelper.WriteInfo($"  Successfully generated: {examplePromptsGenerated}");
-                LogFileHelper.WriteInfo($"  Failed: {examplePromptsFailed}");
-                LogFileHelper.WriteInfo($"  Output directory: {examplePromptsDir}");
+                LogFileHelper.WriteDebug("");
+                LogFileHelper.WriteDebug("=== Example Prompts Summary ===");
+                LogFileHelper.WriteDebug($"  Total tools processed: {data.Tools.Count}");
+                LogFileHelper.WriteDebug($"  Successfully generated: {examplePromptsGenerated}");
+                LogFileHelper.WriteDebug($"  Failed: {examplePromptsFailed}");
+                LogFileHelper.WriteDebug($"  Output directory: {examplePromptsDir}");
             }
             
             // Generate missing mappings report if there are any
@@ -264,8 +264,8 @@ public class AnnotationGenerator
         }
         catch (Exception ex)
         {
-            LogFileHelper.WriteError($"Error generating annotation files: {ex.Message}");
-            LogFileHelper.WriteError(ex.StackTrace ?? "No stack trace");
+            LogFileHelper.WriteDebug($"Error generating annotation files: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }
@@ -359,11 +359,11 @@ public class AnnotationGenerator
             var outputFile = Path.Combine(outputDir, "tool-annotations.md");
             await File.WriteAllTextAsync(outputFile, result);
             
-            LogFileHelper.WriteInfo($"Generated tool annotations summary at {outputFile}");
+            LogFileHelper.WriteDebug($"Generated tool annotations summary at {outputFile}");
         }
         catch (Exception ex)
         {
-            LogFileHelper.WriteError($"Error generating tool annotations summary: {ex.Message}");
+            LogFileHelper.WriteDebug($"Error generating tool annotations summary: {ex.Message}");
             throw;
         }
     }
@@ -404,11 +404,11 @@ public class AnnotationGenerator
             lines.Add("3. Otherwise, the default lowercase area name will be used");
 
             await File.WriteAllLinesAsync(reportPath, lines);
-            LogFileHelper.WriteWarning($"Generated missing mappings report: {reportPath}");
+            LogFileHelper.WriteDebug($"Generated missing mappings report: {reportPath}");
         }
         catch (Exception ex)
         {
-            LogFileHelper.WriteWarning($"Failed to generate missing mappings report: {ex.Message}");
+            LogFileHelper.WriteDebug($"Failed to generate missing mappings report: {ex.Message}");
         }
     }
 

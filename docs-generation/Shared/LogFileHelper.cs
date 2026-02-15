@@ -1,144 +1,127 @@
-// Copyright (c) Microsoft Corporation.
-// Licensed under the MIT License.
-
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Threading;
+using System.Text;
 
 namespace Shared;
 
 /// <summary>
-/// Provides thread-safe file logging for verbose debug output.
-/// Logs are written to ./generated/logs/ directory to keep console output clean.
+/// Helper for writing debug output to log files in the generated/logs directory.
+/// Provides centralized logging for verbose debug information that should not clutter console output.
 /// </summary>
 public static class LogFileHelper
 {
     private static readonly object _lock = new object();
-    private static string _logFilePath;
-    private static bool _isInitialized = false;
-
+    private static string? _logFilePath;
+    
     /// <summary>
-    /// Initializes the log file with a timestamp-based filename.
-    /// Should be called once at the start of the application.
+    /// Gets or creates the log file path for debug output.
+    /// Default location: {outputPath}/logs/debug-{timestamp}.log
     /// </summary>
-    /// <param name="outputDir">Base output directory (e.g., ./generated)</param>
-    /// <param name="logFilePrefix">Prefix for the log file name (default: "csharp-generator")</param>
-    public static void Initialize(string outputDir, string logFilePrefix = "csharp-generator")
+    private static string GetLogFilePath()
     {
+        if (_logFilePath != null)
+            return _logFilePath;
+            
         lock (_lock)
         {
-            if (_isInitialized)
-                return;
-
-            var logsDir = Path.Combine(outputDir, "logs");
-            Directory.CreateDirectory(logsDir);
-
+            if (_logFilePath != null)
+                return _logFilePath;
+                
+            // Try to determine output directory from common locations
+            var currentDir = Directory.GetCurrentDirectory();
+            var searchPaths = new[]
+            {
+                Path.Combine(currentDir, "..", "..", "generated", "logs"),  // From bin/Debug or bin/Release
+                Path.Combine(currentDir, "..", "generated", "logs"),         // From docs-generation subdirectory
+                Path.Combine(currentDir, "generated", "logs"),               // From docs-generation root
+                Path.Combine(currentDir, "..", "..", "..", "generated", "logs") // From deeper nested paths
+            };
+            
+            string? logDir = null;
+            foreach (var path in searchPaths)
+            {
+                var fullPath = Path.GetFullPath(path);
+                var parentDir = Path.GetDirectoryName(fullPath);
+                // Check if parent directory exists, or if its parent exists (to handle paths like ../generated/logs)
+                if (parentDir != null && Directory.Exists(parentDir))
+                {
+                    logDir = fullPath;
+                    break;
+                }
+            }
+            
+            // Fallback to current directory if we can't find generated/logs
+            logDir ??= Path.Combine(currentDir, "logs");
+            
+            // Ensure directory exists
+            Directory.CreateDirectory(logDir);
+            
             var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            _logFilePath = Path.Combine(logsDir, $"{logFilePrefix}-{timestamp}.log");
-
-            // Write header
-            WriteToFile($"=== Log Started: {DateTime.Now:yyyy-MM-dd HH:mm:ss} ===");
-            WriteToFile($"Log file: {_logFilePath}");
-            WriteToFile("");
-
-            _isInitialized = true;
+            _logFilePath = Path.Combine(logDir, $"debug-{timestamp}.log");
+            
+            return _logFilePath;
         }
     }
-
+    
     /// <summary>
-    /// Writes a debug message to the log file.
-    /// If not initialized, the message is silently dropped.
+    /// Writes a debug message to the log file with a timestamp.
+    /// Thread-safe for concurrent writes.
     /// </summary>
     public static void WriteDebug(string message)
     {
-        if (!_isInitialized)
-            return;
-
-        WriteToFile($"[DEBUG] {message}");
+        try
+        {
+            var logPath = GetLogFilePath();
+            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var logEntry = $"[{timestamp}] {message}\n";
+            
+            lock (_lock)
+            {
+                File.AppendAllText(logPath, logEntry, Encoding.UTF8);
+            }
+        }
+        catch
+        {
+            // Silently fail if we can't write to log - don't break the generation process
+        }
     }
-
+    
     /// <summary>
-    /// Writes an info message to the log file.
-    /// If not initialized, the message is silently dropped.
+    /// Writes multiple debug messages to the log file.
+    /// More efficient than multiple WriteDebug calls.
+    /// Note: All messages receive the same timestamp since they're part of a batch write.
     /// </summary>
-    public static void WriteInfo(string message)
+    public static void WriteDebugLines(IEnumerable<string> messages)
     {
-        if (!_isInitialized)
-            return;
-
-        WriteToFile($"[INFO] {message}");
+        try
+        {
+            var logPath = GetLogFilePath();
+            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+            var sb = new StringBuilder();
+            
+            foreach (var message in messages)
+            {
+                sb.AppendLine($"[{timestamp}] {message}");
+            }
+            
+            lock (_lock)
+            {
+                File.AppendAllText(logPath, sb.ToString(), Encoding.UTF8);
+            }
+        }
+        catch
+        {
+            // Silently fail if we can't write to log - don't break the generation process
+        }
     }
-
+    
     /// <summary>
-    /// Writes a warning message to the log file.
-    /// If not initialized, the message is silently dropped.
+    /// Gets the current log file path (for displaying to user).
+    /// Returns null if no log file has been created yet.
     /// </summary>
-    public static void WriteWarning(string message)
-    {
-        if (!_isInitialized)
-            return;
-
-        WriteToFile($"[WARN] {message}");
-    }
-
-    /// <summary>
-    /// Writes an error message to the log file.
-    /// If not initialized, the message is silently dropped.
-    /// </summary>
-    public static void WriteError(string message)
-    {
-        if (!_isInitialized)
-            return;
-
-        WriteToFile($"[ERROR] {message}");
-    }
-
-    /// <summary>
-    /// Returns the current log file path, or null if not initialized.
-    /// </summary>
-    public static string GetLogFilePath()
+    public static string? GetCurrentLogFilePath()
     {
         return _logFilePath;
-    }
-
-    /// <summary>
-    /// Returns whether the logger has been initialized.
-    /// </summary>
-    public static bool IsInitialized()
-    {
-        return _isInitialized;
-    }
-
-    /// <summary>
-    /// Thread-safe file write operation.
-    /// </summary>
-    private static void WriteToFile(string message)
-    {
-        if (string.IsNullOrEmpty(_logFilePath))
-            return;
-
-        lock (_lock)
-        {
-            try
-            {
-                File.AppendAllText(_logFilePath, message + Environment.NewLine);
-            }
-            catch
-            {
-                // Silently fail to avoid disrupting the main application
-            }
-        }
-    }
-
-    /// <summary>
-    /// Resets the logger state (useful for testing).
-    /// </summary>
-    public static void Reset()
-    {
-        lock (_lock)
-        {
-            _logFilePath = null;
-            _isInitialized = false;
-        }
     }
 }

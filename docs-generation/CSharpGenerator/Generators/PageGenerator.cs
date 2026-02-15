@@ -167,12 +167,12 @@ public class PageGenerator
             var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, areaPageData);
 
             await File.WriteAllTextAsync(outputFile, result);
-            LogFileHelper.WriteInfo($"Generated area page: {fileName}");
+            LogFileHelper.WriteDebug($"Generated area page: {fileName}");
         }
         catch (Exception ex)
         {
-            LogFileHelper.WriteError($"Error generating area page for {areaName}: {ex.Message}");
-            LogFileHelper.WriteError(ex.StackTrace ?? "No stack trace");
+            LogFileHelper.WriteDebug($"Error generating area page for {areaName}: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }
@@ -204,7 +204,7 @@ public class PageGenerator
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "common-tools.md");
         await File.WriteAllTextAsync(outputFile, result);
-        LogFileHelper.WriteInfo("Generated common tools page: common-general/common-tools.md");
+        LogFileHelper.WriteDebug("Generated common tools page: common-general/common-tools.md");
     }
 
     /// <summary>
@@ -231,7 +231,7 @@ public class PageGenerator
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "index.md");
         await File.WriteAllTextAsync(outputFile, result);
-        LogFileHelper.WriteInfo("Generated index page: common-general/index.md");
+        LogFileHelper.WriteDebug("Generated index page: common-general/index.md");
     }
 
     /// <summary>
@@ -263,7 +263,7 @@ public class PageGenerator
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
         await File.WriteAllTextAsync(outputFile, result);
-        LogFileHelper.WriteInfo("Generated commands page: common-general/azmcp-commands.md");
+        LogFileHelper.WriteDebug("Generated commands page: common-general/azmcp-commands.md");
     }
 
     /// <summary>
@@ -293,12 +293,12 @@ public class PageGenerator
             Directory.CreateDirectory(commonGeneralDir);
             var outputFile = Path.Combine(commonGeneralDir, "service-start-option.md");
             await File.WriteAllTextAsync(outputFile, result);
-            LogFileHelper.WriteInfo("Generated service options page: common-general/service-start-option.md");
+            LogFileHelper.WriteDebug("Generated service options page: common-general/service-start-option.md");
         }
         catch (Exception ex)
         {
-            LogFileHelper.WriteError($"Error generating service options page: {ex.Message}");
-            LogFileHelper.WriteError(ex.StackTrace ?? "No stack trace");
+            LogFileHelper.WriteDebug($"Error generating service options page: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }

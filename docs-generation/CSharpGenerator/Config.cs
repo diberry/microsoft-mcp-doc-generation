@@ -37,8 +37,8 @@ public class Config
         }
         
         // Log config details to file, not console
-        LogFileHelper.WriteInfo($"Loading config from: {configPath}");
-        LogFileHelper.WriteInfo($"Config loaded from {configPath}");
+        LogFileHelper.WriteDebug($"Loading config from: {configPath}");
+        LogFileHelper.WriteDebug($"Config loaded from {configPath}");
 
         // Resolve required files relative to the config file's directory
         var configDir = Path.GetDirectoryName(Path.GetFullPath(configPath)) ?? AppContext.BaseDirectory;

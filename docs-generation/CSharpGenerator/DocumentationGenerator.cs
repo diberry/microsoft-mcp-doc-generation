@@ -85,7 +85,7 @@ public static class DocumentationGenerator
         if (!string.IsNullOrWhiteSpace(cliVersion))
         {
             transformedData.Version = cliVersion;
-            LogFileHelper.WriteInfo($"Using CLI version: {cliVersion}");
+            LogFileHelper.WriteDebug($"Using CLI version: {cliVersion}");
         }
 
         // Load common parameters from JSON file
@@ -355,22 +355,22 @@ public static class DocumentationGenerator
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
             var totalParams = area.Value.Tools.Sum(t => t.Option?.Count ?? 0);
-            LogFileHelper.WriteInfo($"  {area.Key}: {area.Value.ToolCount} tools ({totalParams} parameters)");
+            LogFileHelper.WriteDebug($"  {area.Key}: {area.Value.ToolCount} tools ({totalParams} parameters)");
         }
         
         // Log detailed tool list to file, not console
-        LogFileHelper.WriteInfo("");
-        LogFileHelper.WriteInfo("Tool List by Service Area:");
-        LogFileHelper.WriteInfo("=" + new string('=', 29));
-        LogFileHelper.WriteInfo("");
-        LogFileHelper.WriteInfo("Legend: [A] = Annotation file, [P] = Parameter file, [E] = Example prompts file");
-        LogFileHelper.WriteInfo("");
+        LogFileHelper.WriteDebug("");
+        LogFileHelper.WriteDebug("Tool List by Service Area:");
+        LogFileHelper.WriteDebug("=" + new string('=', 29));
+        LogFileHelper.WriteDebug("");
+        LogFileHelper.WriteDebug("Legend: [A] = Annotation file, [P] = Parameter file, [E] = Example prompts file");
+        LogFileHelper.WriteDebug("");
         
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
-            LogFileHelper.WriteInfo("");
-            LogFileHelper.WriteInfo($"{area.Key} ({area.Value.ToolCount} tools):");
-            LogFileHelper.WriteInfo(new string('-', area.Key.Length + $" ({area.Value.ToolCount} tools):".Length));
+            LogFileHelper.WriteDebug("");
+            LogFileHelper.WriteDebug($"{area.Key} ({area.Value.ToolCount} tools):");
+            LogFileHelper.WriteDebug(new string('-', area.Key.Length + $" ({area.Value.ToolCount} tools):".Length));
             
             foreach (var tool in area.Value.Tools.OrderBy(t => t.Command))
             {
@@ -385,7 +385,7 @@ public static class DocumentationGenerator
                 if (tool.HasExamplePrompts) indicators.Add("E");
                 var indicatorStr = indicators.Count > 0 ? $" [{string.Join(",", indicators)}]" : "";
                 
-                LogFileHelper.WriteInfo($"  • {tool.Command,-50} - {tool.Name,-20} [{nonCommonParamCount,2} params]{indicatorStr}");
+                LogFileHelper.WriteDebug($"  • {tool.Command,-50} - {tool.Name,-20} [{nonCommonParamCount,2} params]{indicatorStr}");
             }
         }
 
@@ -406,7 +406,7 @@ public static class DocumentationGenerator
             {
                 if (string.IsNullOrEmpty(tool.Command))
                 {
-                    LogFileHelper.WriteWarning($"Tool has empty command, skipping.");
+                    LogFileHelper.WriteDebug($"Tool has empty command, skipping.");
                     continue;
                 }
             
@@ -415,7 +415,7 @@ public static class DocumentationGenerator
                 
                 if (commandParts.Length < 1)
                 {
-                    LogFileHelper.WriteWarning($"Command '{tool.Command}' has no parts, skipping.");
+                    LogFileHelper.WriteDebug($"Command '{tool.Command}' has no parts, skipping.");
                     continue;
                 }
                 
@@ -447,7 +447,7 @@ public static class DocumentationGenerator
             }
             catch (Exception ex)
             {
-                LogFileHelper.WriteError($"Error processing tool command '{tool.Command}': {ex.Message}");
+                LogFileHelper.WriteDebug($"Error processing tool command '{tool.Command}': {ex.Message}");
             }
         }
 

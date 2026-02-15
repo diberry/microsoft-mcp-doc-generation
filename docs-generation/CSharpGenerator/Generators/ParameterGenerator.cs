@@ -157,8 +157,8 @@ public class ParameterGenerator
         }
         catch (Exception ex)
         {
-            LogFileHelper.WriteError($"Error generating parameter files: {ex.Message}");
-            LogFileHelper.WriteError(ex.StackTrace ?? "No stack trace");
+            LogFileHelper.WriteDebug($"Error generating parameter files: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }

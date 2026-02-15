@@ -130,9 +130,6 @@ internal class Program
          var cliOutputFile = args[0];
          var outputDir = args[1];
          
-         // Initialize log file helper early
-         LogFileHelper.Initialize(outputDir, "csharp-generator");
-         
          // Log all arguments to file (not console)
          LogFileHelper.WriteDebug($"GenerateDocumentation received {args.Length} arguments:");
          for (int i = 0; i < args.Length; i++)

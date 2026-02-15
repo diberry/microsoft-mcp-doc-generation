@@ -27,14 +27,14 @@ public static class ServiceOptionsDiscovery
             if (File.Exists(path))
             {
                 serviceOptionDefinitionsPath = path;
-                LogFileHelper.WriteInfo($"Found ServiceOptionDefinitions.cs at: {serviceOptionDefinitionsPath}");
+                LogFileHelper.WriteDebug($"Found ServiceOptionDefinitions.cs at: {serviceOptionDefinitionsPath}");
                 break;
             }
         }
 
         if (serviceOptionDefinitionsPath == null)
         {
-            LogFileHelper.WriteWarning("ServiceOptionDefinitions.cs not found in expected locations");
+            LogFileHelper.WriteDebug("ServiceOptionDefinitions.cs not found in expected locations");
             Console.WriteLine("  ⚠️  ServiceOptionDefinitions.cs not found in expected locations");
             return serviceOptions;
         }
