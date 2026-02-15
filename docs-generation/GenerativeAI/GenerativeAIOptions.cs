@@ -62,9 +62,9 @@ public class GenerativeAIOptions
                     LogFileHelper.WriteDebug($"  Parsed {kv.Count} variables from .env:");
                     foreach (var kvp in kv)
                     {
-                        var displayValue = kvp.Key.Contains("KEY") || kvp.Key.Contains("SECRET") 
+                        var displayValue = (kvp.Key.Contains("KEY") || kvp.Key.Contains("SECRET")) && !string.IsNullOrEmpty(kvp.Value)
                             ? $"{kvp.Value.Substring(0, Math.Min(20, kvp.Value.Length))}..." 
-                            : kvp.Value;
+                            : (kvp.Value ?? "NULL");
                         LogFileHelper.WriteDebug($"    {kvp.Key} = {displayValue}");
                     }
                     LogFileHelper.WriteDebug("");

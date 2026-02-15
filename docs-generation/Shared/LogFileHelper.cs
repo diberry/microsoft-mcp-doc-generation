@@ -43,14 +43,11 @@ public static class LogFileHelper
             {
                 var fullPath = Path.GetFullPath(path);
                 var parentDir = Path.GetDirectoryName(fullPath);
-                if (parentDir != null)
+                // Check if parent directory exists, or if its parent exists (to handle paths like ../generated/logs)
+                if (parentDir != null && Directory.Exists(parentDir))
                 {
-                    var grandParentDir = Path.GetDirectoryName(parentDir);
-                    if (Directory.Exists(parentDir) || (grandParentDir != null && Directory.Exists(grandParentDir)))
-                    {
-                        logDir = fullPath;
-                        break;
-                    }
+                    logDir = fullPath;
+                    break;
                 }
             }
             
