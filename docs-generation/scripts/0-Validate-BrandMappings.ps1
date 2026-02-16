@@ -29,7 +29,8 @@
 param(
     [string]$OutputPath = "../../generated",
     [string]$CliOutputPath = "",
-    [string]$BrandMappingPath = ""
+    [string]$BrandMappingPath = "",
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -86,17 +87,21 @@ if (-not (Test-Path $projectFile)) {
     exit 1
 }
 
-Write-Info "Building BrandMapperValidator..."
-Push-Location $projectDir
-try {
-    & dotnet build --configuration Release --verbosity quiet
-    if ($LASTEXITCODE -ne 0) {
-        Write-Err "Failed to build BrandMapperValidator"
-        exit 1
+if (-not $SkipBuild) {
+    Write-Info "Building BrandMapperValidator..."
+    Push-Location $projectDir
+    try {
+        & dotnet build --configuration Release --verbosity quiet
+        if ($LASTEXITCODE -ne 0) {
+            Write-Err "Failed to build BrandMapperValidator"
+            exit 1
+        }
+        Write-Success "Build successful"
+    } finally {
+        Pop-Location
     }
-    Write-Success "Build successful"
-} finally {
-    Pop-Location
+} else {
+    Write-Info "Skipping build (already built by preflight)"
 }
 
 Write-Host ""

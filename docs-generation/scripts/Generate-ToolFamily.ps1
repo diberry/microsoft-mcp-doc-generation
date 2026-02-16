@@ -296,7 +296,7 @@ try {
             throw "Step 1 script not found: $step1Script"
         }
 
-        & $step1Script -ToolCommand $ToolFamily -OutputPath $OutputPath -SkipValidation:$SkipValidation
+        & $step1Script -ToolCommand $ToolFamily -OutputPath $OutputPath -SkipValidation:$SkipValidation -SkipBuild:$SkipBuild
         if ($LASTEXITCODE -ne 0) {
             throw "Step 1 failed: Annotations, parameters, and raw tools generation"
         }
@@ -323,7 +323,7 @@ try {
             Write-Warning "Step 2 script not found: $step2Script"
             Write-Warning "Skipping example prompt generation"
         } else {
-            & $step2Script -ToolCommand $ToolFamily -OutputPath $OutputPath -SkipValidation:$SkipValidation
+            & $step2Script -ToolCommand $ToolFamily -OutputPath $OutputPath -SkipValidation:$SkipValidation -SkipBuild:$SkipBuild
             if ($LASTEXITCODE -ne 0) {
                 Write-Warning "Step 2 reported issues: Example prompt generation (continuing...)"
             } else {
@@ -363,6 +363,10 @@ try {
 
         if ($SkipAIImprovements) {
             $step3Params.SkipImproved = $true
+        }
+
+        if ($SkipBuild) {
+            $step3Params.SkipBuild = $true
         }
 
         & $step3Script @step3Params
@@ -407,6 +411,10 @@ try {
             $step4Params.SkipValidation = $true
         }
 
+        if ($SkipBuild) {
+            $step4Params.SkipBuild = $true
+        }
+
         Write-Info "Invoking: & $step4Script @step4Params"
         $step4StartTime = Get-Date
         & $step4Script @step4Params
@@ -447,6 +455,10 @@ try {
             
             if ($SkipValidation) {
                 $step5Params.SkipValidation = $true
+            }
+
+            if ($SkipBuild) {
+                $step5Params.SkipBuild = $true
             }
 
             & $step5Script @step5Params
