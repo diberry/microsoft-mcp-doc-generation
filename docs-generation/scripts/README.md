@@ -81,6 +81,8 @@ Individual generator scripts for running a single generation step directly. Usef
 | `GenerateToolFamilyCleanup-multifile.ps1` | Multi-phase tool family assembly with AI metadata |
 | `Validate.ps1` | Final validation checking all expected files were generated |
 | `Validate-ExamplePrompts-RequiredParams.ps1` | Validates example prompts contain required parameters (regex, no LLM) |
+| `verify-annotation-hints.js` | Verifies that annotation INCLUDE statements have required "Tool annotation hints" line before them |
+| `verify-annotation-references.js` | Verifies annotation files are properly referenced in tool files (no orphans, no duplicates, no missing files) |
 
 ## utilities/
 
