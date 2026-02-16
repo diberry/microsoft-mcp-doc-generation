@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Directory containing tool files
-const toolsDir = path.join(__dirname, '..', 'articles', 'azure-mcp-server', 'tools');
+const toolsDir = path.join(__dirname, '..', '..', '..', 'articles', 'azure-mcp-server', 'tools');
 
 // Get all tool files (exclude index.md)
 const toolFiles = fs.readdirSync(toolsDir)

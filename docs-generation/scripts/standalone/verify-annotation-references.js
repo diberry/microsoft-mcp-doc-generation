@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Directories
-const toolsDir = path.join(__dirname, '..', 'articles', 'azure-mcp-server', 'tools');
-const annotationsDir = path.join(__dirname, '..', 'articles', 'azure-mcp-server', 'includes', 'tools', 'annotations');
+const toolsDir = path.join(__dirname, '..', '..', '..', 'articles', 'azure-mcp-server', 'tools');
+const annotationsDir = path.join(__dirname, '..', '..', '..', 'articles', 'azure-mcp-server', 'includes', 'tools', 'annotations');
 
 // Get all annotation files (exclude index.md if it exists)
 const annotationFiles = fs.readdirSync(annotationsDir)
