@@ -166,6 +166,40 @@ pwsh ./scripts/2-Generate-ExamplePrompts-One.ps1 -ToolCommand "storage account l
 pwsh ./scripts/2-Generate-ExamplePrompts-One.ps1 -ToolCommand "storage account list" -SkipValidation
 ```
 
+## Validation Scripts
+
+Additional validation scripts are available in `docs-generation/scripts/standalone/` for verifying annotation files:
+
+### Annotation Hints Verification (`verify-annotation-hints.js`)
+
+Verifies that annotation INCLUDE statements have the required "Tool annotation hints" line immediately before them.
+
+**Usage**:
+```bash
+cd docs-generation/scripts/standalone
+node verify-annotation-hints.js
+```
+
+**Outputs**:
+- `annotation-hints-report.md` - Detailed report of all annotation INCLUDE statements
+- Console summary with pass/fail status
+
+### Annotation References Verification (`verify-annotation-references.js`)
+
+Verifies annotation files are properly referenced in tool files (no orphans, no duplicates, no missing files).
+
+**Usage**:
+```bash
+cd docs-generation/scripts/standalone
+node verify-annotation-references.js
+```
+
+**Outputs**:
+- `annotation-reference-report.md` - Detailed report of annotation file references
+- Console summary with statistics
+
+Both scripts exit with status code 1 if issues are found, making them suitable for CI/CD pipelines.
+
 ## Migration Notes
 
 **Old Names → New Names:**

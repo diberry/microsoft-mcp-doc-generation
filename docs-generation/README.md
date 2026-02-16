@@ -107,6 +107,26 @@ Validates documentation quantity and completeness:
 pwsh ./scripts/Validate.ps1 -OutputPath ../generated
 ```
 
+### 5) Annotation Validation (Node.js)
+
+Additional validation scripts for verifying annotation files are located in `scripts/standalone/`:
+
+#### Verify Annotation Hints
+Checks that annotation INCLUDE statements have the required "Tool annotation hints" line:
+```bash
+cd scripts/standalone
+node verify-annotation-hints.js
+```
+
+#### Verify Annotation References
+Checks for orphaned, duplicated, or missing annotation files:
+```bash
+cd scripts/standalone
+node verify-annotation-references.js
+```
+
+Both scripts generate detailed markdown reports and exit with status code 1 if issues are found.
+
 ## Tool Family Cleanup (New)
 
 The **ToolFamilyCleanup** package is an independent tool that applies Microsoft style guide standards to generated tool family documentation using LLM-based processing.

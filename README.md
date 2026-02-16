@@ -102,6 +102,10 @@ microsoft-mcp-doc-generation/
 │
 ├── docs-generation/             # Generation system
 │   ├── scripts/                 # PowerShell/bash orchestration
+│   │   ├── standalone/          # Individual generator scripts and validation tools
+│   │   ├── batch/               # All-namespace orchestrators
+│   │   ├── utilities/           # Dev, debug, testing, and CI helpers
+│   │   └── legacy/              # Superseded scripts
 │   ├── data/                    # Configuration files (JSON)
 │   ├── prompts/                 # AI prompt templates (see below)
 │   ├── templates/               # Handlebars templates
