@@ -44,7 +44,7 @@ Quick reference for understanding the Azure MCP Documentation Generator architec
 
 ### Layer 1: Orchestration (PowerShell)
 
-**File**: `docs-generation/Generate.ps1`
+**File**: `docs-generation/scripts/Generate.ps1`
 
 **Responsibilities**:
 - Environment detection (container vs local)
