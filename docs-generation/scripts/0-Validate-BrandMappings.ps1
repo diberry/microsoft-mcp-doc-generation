@@ -27,7 +27,7 @@
 #>
 
 param(
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     [string]$CliOutputPath = "",
     [string]$BrandMappingPath = ""
 )
@@ -41,6 +41,7 @@ function Write-Err { param([string]$Message) Write-Host "ERROR: $Message" -Foreg
 
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = Get-Location }
+$docsGenDir = Split-Path -Parent $scriptDir
 
 # Resolve paths
 $resolvedOutput = if ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $scriptDir $OutputPath }
@@ -50,7 +51,7 @@ if ([string]::IsNullOrWhiteSpace($CliOutputPath)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($BrandMappingPath)) {
-    $BrandMappingPath = Join-Path $scriptDir "data" "brand-to-server-mapping.json"
+    $BrandMappingPath = Join-Path $docsGenDir "data" "brand-to-server-mapping.json"
 }
 
 Write-Host ""
@@ -77,7 +78,7 @@ Write-Info "Brand mapping: $BrandMappingPath"
 Write-Host ""
 
 # Build the BrandMapperValidator project
-$projectDir = Join-Path $scriptDir "BrandMapperValidator"
+$projectDir = Join-Path $docsGenDir "BrandMapperValidator"
 $projectFile = Join-Path $projectDir "BrandMapperValidator.csproj"
 
 if (-not (Test-Path $projectFile)) {

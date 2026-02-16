@@ -216,9 +216,12 @@ public class HorizontalArticleGenerator
             .GroupBy(tool => (tool.Command ?? tool.Name)!.Split(' ')[0])
             .ToDictionary(g => g.Key, g => g.ToList());
 
+        // Load brand mappings from brand-to-server-mapping.json (comprehensive, all services)
+        var sharedBrandMappings = await DataFileLoader.LoadBrandMappingsAsync();
+
         if (_useTextTransformation)
         {
-            // Load brand mappings using existing infrastructure
+            // Load transformation config for additional mappings
             var configPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "transformation-config.json");
             var loader = new ConfigLoader(configPath);
             var config = await loader.LoadAsync();
@@ -226,17 +229,35 @@ public class HorizontalArticleGenerator
 
             foreach (var (serviceArea, tools) in toolsByService)
             {
-                // Get brand name from transformation config
-                var brandMapping = engine.Config.Services.Mappings
+                // Get brand name: transformation config > brand-to-server-mapping > fallback
+                var transformMapping = engine.Config.Services.Mappings
                     .FirstOrDefault(m => m.McpName == serviceArea);
+
+                string serviceBrandName;
+                string toolsRefFile;
+                if (transformMapping?.BrandName != null)
+                {
+                    serviceBrandName = transformMapping.BrandName;
+                    toolsRefFile = transformMapping.Filename ?? serviceArea;
+                }
+                else if (sharedBrandMappings.TryGetValue(serviceArea, out var brandMap))
+                {
+                    serviceBrandName = brandMap.BrandName ?? FormatServiceName(serviceArea);
+                    toolsRefFile = serviceArea;
+                }
+                else
+                {
+                    serviceBrandName = FormatServiceName(serviceArea);
+                    toolsRefFile = serviceArea;
+                }
 
                 var staticData = new StaticArticleData
                 {
-                    ServiceBrandName = brandMapping?.BrandName ?? FormatServiceName(serviceArea),
+                    ServiceBrandName = serviceBrandName,
                     ServiceIdentifier = serviceArea,
                     GeneratedAt = DateTime.UtcNow.ToString("o"),
                     Version = cliVersion,
-                    ToolsReferenceLink = $"../tools/{brandMapping?.Filename ?? serviceArea}.md",
+                    ToolsReferenceLink = $"../tools/{toolsRefFile}.md",
                     Tools = tools.Select(tool => new HorizontalToolSummary
                     {
                         Command = tool.Command ?? tool.Name ?? "",
@@ -252,12 +273,22 @@ public class HorizontalArticleGenerator
         }
         else
         {
-            // Use tool family/category name for filename and brand name
+            // Use brand-to-server-mapping.json for brand names, fallback to formatting
             foreach (var (serviceArea, tools) in toolsByService)
             {
+                string serviceBrandName;
+                if (sharedBrandMappings.TryGetValue(serviceArea, out var brandMap))
+                {
+                    serviceBrandName = brandMap.BrandName ?? FormatServiceName(serviceArea);
+                }
+                else
+                {
+                    serviceBrandName = FormatServiceName(serviceArea);
+                }
+
                 var staticData = new StaticArticleData
                 {
-                    ServiceBrandName = FormatServiceName(serviceArea),
+                    ServiceBrandName = serviceBrandName,
                     ServiceIdentifier = serviceArea,
                     GeneratedAt = DateTime.UtcNow.ToString("o"),
                     Version = cliVersion,

@@ -44,8 +44,8 @@
 #>
 
 param(
-    [string]$OutputPath = "../generated",
-    [string]$HtmlOutputPath = "../generated/reports/cli-analysis-report.md",
+    [string]$OutputPath = "../../generated",
+    [string]$HtmlOutputPath = "../../generated/reports/cli-analysis-report.md",
     [string]$Namespace,
     [string]$Tool,
     [bool]$HtmlOnly = $false,
@@ -60,26 +60,25 @@ function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" 
 function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -ForegroundColor Red }
 
 try {
-    # Resolve paths from docs-generation directory
-    $scriptDir = Split-Path -Parent $PSScriptRoot
-    $repoRoot = Split-Path -Parent $scriptDir
+    # Resolve paths from script location
+    $scriptDir = $PSScriptRoot                        # docs-generation/scripts/
+    $docsGenDir = Split-Path -Parent $scriptDir       # docs-generation/
+    $repoRoot = Split-Path -Parent $docsGenDir        # repo root
     
-    # Resolve output path (relative to docs-generation directory)
+    # Resolve output path (relative to script directory)
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) { 
         $OutputPath 
     } else { 
-        Join-Path $scriptDir $OutputPath
+        [System.IO.Path]::GetFullPath((Join-Path $scriptDir $OutputPath))
     }
     
     $cliJsonPath = Join-Path $outputDir "cli/cli-output.json"
     
-    # Resolve HTML output path (relative to docs-generation or repo root)
+    # Resolve HTML output path
     $htmlReportPath = if ([System.IO.Path]::IsPathRooted($HtmlOutputPath)) {
         $HtmlOutputPath
-    } elseif ($HtmlOutputPath.StartsWith("../")) {
-        Join-Path $scriptDir $HtmlOutputPath
     } else {
-        Join-Path $scriptDir $HtmlOutputPath
+        [System.IO.Path]::GetFullPath((Join-Path $scriptDir $HtmlOutputPath))
     }
     
     # Ensure reports directory exists

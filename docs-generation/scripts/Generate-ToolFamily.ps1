@@ -149,7 +149,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$ToolFamily,
     
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     
     [int]$MaxTokens = 8000,
     
@@ -163,9 +163,10 @@ param(
 
     [bool]$UseTextTransformation = $true,
     
-    [bool]$SkipBuild = $false,
+    [switch]$SkipBuild,
     
-    [int[]]$Steps = @(1, 2, 3, 4, 5),
+    # Accepts int array @(1,2,3) or comma-separated string "1,2,3" (for bash -File invocation)
+    $Steps = @(1, 2, 3, 4, 5),
     
     [switch]$Step1Only = $false,
     
@@ -177,6 +178,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Normalize $Steps: accept string "1,2,3" (from bash -File) or int[] @(1,2,3) (from PowerShell)
+if ($Steps -is [string]) {
+    $Steps = $Steps -split ',' | ForEach-Object { [int]$_.Trim() }
+} elseif ($Steps -isnot [array]) {
+    $Steps = @([int]$Steps)
+}
 
 # Determine which steps to run
 # Priority: If any legacy switch is used, use that; otherwise use $Steps array
@@ -238,6 +246,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
+    $docsGenDir = Split-Path -Parent $scriptDir
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
         $OutputPath
     } else {
@@ -251,7 +260,7 @@ try {
     # Build .NET packages before running generation steps (unless skipped)
     if (-not $SkipBuild) {
         Write-Progress "Building .NET packages..."
-        $solutionFile = Join-Path (Split-Path $scriptDir -Parent) "docs-generation.sln"
+        $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
         if (Test-Path $solutionFile) {
             & dotnet build $solutionFile --configuration Release --verbosity quiet
             if ($LASTEXITCODE -ne 0) {

@@ -40,9 +40,10 @@ function Clear-PreviousOutput {
 }
 
 # Set paths and variables
-$rootDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$cliOutputPath = Join-Path $PSScriptRoot "generated/cli/cli-output.json"
-$outputDir = Join-Path $PSScriptRoot "generated"
+$docsGenDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$rootDir = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$cliOutputPath = Join-Path $rootDir "generated/cli/cli-output.json"
+$outputDir = Join-Path $rootDir "generated"
 
 Write-Progress "Starting Azure MCP Multi-Page Documentation Generation..."
 
@@ -73,7 +74,7 @@ if (Test-Path $cliOutputPath) {
 # Step 2: Build C# generator
 Write-Progress "Step 2: Building C# generator..."
 
-Push-Location (Join-Path $PSScriptRoot "CSharpGenerator")
+Push-Location (Join-Path $docsGenDir "CSharpGenerator")
 & dotnet build --configuration Debug
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to build C# generator"

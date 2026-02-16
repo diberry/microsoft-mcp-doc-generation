@@ -38,7 +38,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$ServiceArea,
     
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     
     [switch]$SkipValidation = $false,
 
@@ -63,6 +63,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
+    $docsGenDir = Split-Path -Parent $scriptDir
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
         $OutputPath
     } else {
@@ -132,7 +133,7 @@ try {
     # Step 2: Build the horizontal article generator
     Write-Progress "Step 2: Building horizontal article generator..."
     
-    Push-Location $scriptDir
+    Push-Location $docsGenDir
     try {
         & dotnet build HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --nologo --verbosity quiet
         if ($LASTEXITCODE -ne 0) {
@@ -150,7 +151,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    Push-Location $scriptDir
+    Push-Location $docsGenDir
     try {
         # Run with single service flag
         $transformArg = if ($UseTextTransformation) { "--transform" } else { "" }
