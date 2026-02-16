@@ -42,7 +42,9 @@ param(
     
     [switch]$SkipValidation = $false,
 
-    [bool]$UseTextTransformation = $true
+    [bool]$UseTextTransformation = $true,
+
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -130,20 +132,24 @@ try {
     Write-Info "Created filtered CLI output: $filteredOutputFile ($($serviceTools.Count) tools)"
     Write-Host ""
 
-    # Step 2: Build the horizontal article generator
-    Write-Progress "Step 2: Building horizontal article generator..."
-    
-    Push-Location $docsGenDir
-    try {
-        & dotnet build HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --nologo --verbosity quiet
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to build horizontal article generator (exit code: $LASTEXITCODE)"
+    # Step 2: Build the horizontal article generator (skip if already built by preflight)
+    if (-not $SkipBuild) {
+        Write-Progress "Step 2: Building horizontal article generator..."
+        
+        Push-Location $docsGenDir
+        try {
+            & dotnet build HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --nologo --verbosity quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to build horizontal article generator (exit code: $LASTEXITCODE)"
+            }
+            Write-Success "✓ Build successful"
+        } finally {
+            Pop-Location
         }
-        Write-Success "✓ Build successful"
-    } finally {
-        Pop-Location
+        Write-Host ""
+    } else {
+        Write-Info "Skipping build (already built by preflight)"
     }
-    Write-Host ""
 
     # Step 3: Run the generator for the single service
     Write-Divider

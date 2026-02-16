@@ -50,7 +50,9 @@ param(
     [switch]$SkipMetadata = $false,
     [switch]$SkipRelated = $false,
     [switch]$SkipStitch = $false,
-    [switch]$SkipValidation
+    [switch]$SkipValidation,
+
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -150,17 +152,21 @@ try {
     Write-Info "Created filtered CLI output: $filteredOutputFile"
     Write-Host ""
 
-    # Build .NET packages
-    Write-Progress "Building .NET packages..."
-    $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
-    if (Test-Path $solutionFile) {
-        & dotnet build $solutionFile --configuration Release --verbosity quiet
-        if ($LASTEXITCODE -ne 0) {
-            throw ".NET build failed"
+    # Build .NET packages (skip if already built by preflight)
+    if (-not $SkipBuild) {
+        Write-Progress "Building .NET packages..."
+        $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
+        if (Test-Path $solutionFile) {
+            & dotnet build $solutionFile --configuration Release --verbosity quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw ".NET build failed"
+            }
+            Write-Success "✓ Build succeeded"
         }
-        Write-Success "✓ Build succeeded"
+        Write-Host ""
+    } else {
+        Write-Info "Skipping build (already built by preflight)"
     }
-    Write-Host ""
 
     # Setup directories
     $toolsInputDir = Join-Path $outputDir "tools"
@@ -190,20 +196,24 @@ try {
     
     Write-Info "Using tools from: $toolsInputDir ($($toolFiles.Count) files)"
 
-    # Build ToolFamilyCleanup
-    Write-Progress "Building ToolFamilyCleanup..."
-    $toolFamilyDir = Join-Path $docsGenDir "ToolFamilyCleanup"
-    Push-Location $toolFamilyDir
-    try {
-        & dotnet build --configuration Release --verbosity quiet
-        if ($LASTEXITCODE -ne 0) {
-            throw "ToolFamilyCleanup build failed"
+    # Build ToolFamilyCleanup (skip if already built by preflight)
+    if (-not $SkipBuild) {
+        Write-Progress "Building ToolFamilyCleanup..."
+        $toolFamilyDir = Join-Path $docsGenDir "ToolFamilyCleanup"
+        Push-Location $toolFamilyDir
+        try {
+            & dotnet build --configuration Release --verbosity quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw "ToolFamilyCleanup build failed"
+            }
+            Write-Success "✓ Build succeeded"
+        } finally {
+            Pop-Location
         }
-        Write-Success "✓ Build succeeded"
-    } finally {
-        Pop-Location
+        Write-Host ""
+    } else {
+        $toolFamilyDir = Join-Path $docsGenDir "ToolFamilyCleanup"
     }
-    Write-Host ""
 
     # Run Tool Family Cleanup (multi-phase) in a temporary workspace to limit to this family
     Write-Divider

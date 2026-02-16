@@ -35,7 +35,9 @@ param(
     
     [string]$OutputPath = "../../generated",
     
-    [switch]$SkipValidation
+    [switch]$SkipValidation,
+
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
@@ -141,17 +143,21 @@ try {
     Write-Info "Created filtered CLI output: $filteredOutputFile"
     Write-Host ""
 
-    # Build .NET packages
-    Write-Progress "Building .NET packages..."
-    $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
-    if (Test-Path $solutionFile) {
-        & dotnet build $solutionFile --configuration Release --verbosity quiet
-        if ($LASTEXITCODE -ne 0) {
-            throw ".NET build failed"
+    # Build .NET packages (skip if already built by preflight)
+    if (-not $SkipBuild) {
+        Write-Progress "Building .NET packages..."
+        $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
+        if (Test-Path $solutionFile) {
+            & dotnet build $solutionFile --configuration Release --verbosity quiet
+            if ($LASTEXITCODE -ne 0) {
+                throw ".NET build failed"
+            }
+            Write-Success "✓ Build succeeded"
         }
-        Write-Success "✓ Build succeeded"
+        Write-Host ""
+    } else {
+        Write-Info "Skipping build (already built by preflight)"
     }
-    Write-Host ""
 
     # Run ExamplePromptGeneratorStandalone
     Write-Divider
@@ -160,7 +166,8 @@ try {
     Write-Host ""
     
     $generatorProject = Join-Path $docsGenDir "ExamplePromptGeneratorStandalone"
-    & dotnet run --project $generatorProject --configuration Release -- $filteredOutputFile $outputDir $cliVersion
+    $noBuildArg = if ($SkipBuild) { "--no-build" } else { "" }
+    & dotnet run --project $generatorProject --configuration Release $noBuildArg -- $filteredOutputFile $outputDir $cliVersion
     
     if ($LASTEXITCODE -ne 0) {
         throw "Example prompts generation failed"
