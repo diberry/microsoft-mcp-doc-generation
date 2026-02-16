@@ -45,7 +45,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$ToolCommand,
     
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     
     [switch]$SkipComposed = $false,
     [switch]$SkipImproved = $false,
@@ -82,6 +82,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
+    $docsGenDir = Split-Path -Parent $scriptDir
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
         $OutputPath
     } else {
@@ -166,7 +167,7 @@ try {
 
     # Build .NET packages
     Write-Progress "Building .NET packages..."
-    $solutionFile = Join-Path (Split-Path $scriptDir -Parent) "docs-generation.sln"
+    $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
     if (Test-Path $solutionFile) {
         & dotnet build $solutionFile --configuration Release --verbosity quiet
         if ($LASTEXITCODE -ne 0) {
@@ -210,7 +211,7 @@ try {
             Write-Host ""
         }
 
-        Push-Location $scriptDir
+        Push-Location $docsGenDir
         try {
             $composedArgs = @(
                 "--project", "ToolGeneration_Composed",
@@ -254,7 +255,7 @@ try {
             Write-Host "  Run Step 3 without -SkipComposed to generate composed tools first."
             Write-Host ""
         } else {
-            Push-Location $scriptDir
+            Push-Location $docsGenDir
             try {
                 $improvedArgs = @(
                     "--project", "ToolGeneration_Improved",

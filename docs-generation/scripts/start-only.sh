@@ -57,7 +57,7 @@ mkdir -p "$ROOT_DIR/generated/logs"
 mkdir -p "$ROOT_DIR/generated/tool-family"
 
 echo "Running tool family pipeline for: $TOOL_FAMILY (steps: $STEPS)"
-cd "$ROOT_DIR/docs-generation"
+cd "$SCRIPT_DIR"
 ./generate-tool-family.sh "$TOOL_FAMILY" "$STEPS"
 
 echo "OK: Tool family file generated at: $ROOT_DIR/generated/tool-family/$TOOL_FAMILY.md"

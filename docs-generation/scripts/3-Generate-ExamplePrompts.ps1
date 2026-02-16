@@ -37,6 +37,7 @@ try {
     Write-Info ""
 
     $scriptDir = $PSScriptRoot
+    $docsGenDir = Split-Path -Parent $scriptDir
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
         $OutputPath
     } else {
@@ -83,7 +84,7 @@ try {
     if ($existingPrompts -eq 0) {
         # Build .NET packages before running
         Write-Progress "Building .NET packages..."
-        $solutionFile = Join-Path (Split-Path $scriptDir -Parent) "docs-generation.sln"
+        $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
         if (Test-Path $solutionFile) {
             & dotnet build $solutionFile --configuration Release
             if ($LASTEXITCODE -ne 0) {
@@ -106,7 +107,7 @@ try {
             throw "CLI output file not found: $cliOutputFile"
         }
 
-        $generatorProject = Join-Path $scriptDir "ExamplePromptGeneratorStandalone"
+        $generatorProject = Join-Path $docsGenDir "ExamplePromptGeneratorStandalone"
         & dotnet run --project $generatorProject --configuration Release -- $cliOutputFile $outputDir $cliVersion
         
         if ($LASTEXITCODE -ne 0) {
@@ -132,7 +133,7 @@ try {
     # Purpose: Uses Azure OpenAI to validate that all required parameters are present in generated prompts
     Write-Info ""
     Write-Progress "Validating example prompts (required params only)..."
-    & "$scriptDir\ExamplePromptValidator\scripts\Validate-ExamplePrompts-RequiredParams.ps1" -OutputPath $OutputPath
+    & "$docsGenDir\ExamplePromptValidator\scripts\Validate-ExamplePrompts-RequiredParams.ps1" -OutputPath $OutputPath
 
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Example prompt validation completed with issues"

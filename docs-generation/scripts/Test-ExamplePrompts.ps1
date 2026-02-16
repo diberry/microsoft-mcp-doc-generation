@@ -7,7 +7,7 @@
 #>
 
 param(
-    [string]$OutputPath = "../generated"
+    [string]$OutputPath = "../../generated"
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +24,7 @@ try {
     
     # Resolve paths
     $scriptDir = $PSScriptRoot
+    $docsGenDir = Split-Path -Parent $scriptDir
     $outputDir = Join-Path $scriptDir $OutputPath | Resolve-Path
     
     Write-Info "Script directory: $scriptDir"
@@ -58,7 +59,7 @@ try {
     Write-Info "Existing example prompt files: $($existingFiles.Count)"
     
     # Navigate to CSharpGenerator
-    $generatorDir = Join-Path $scriptDir "CSharpGenerator"
+    $generatorDir = Join-Path $docsGenDir "CSharpGenerator"
     if (-not (Test-Path $generatorDir)) {
         throw "Generator directory not found: $generatorDir"
     }

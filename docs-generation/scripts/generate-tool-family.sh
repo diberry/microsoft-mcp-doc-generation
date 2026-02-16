@@ -25,5 +25,9 @@ STEPS="${2:-1,2,3,4,5}"
 # Convert comma-separated steps to PowerShell array syntax
 STEPS_ARRAY="@($(echo $STEPS | tr ',' ','))"
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Run the PowerShell script with SkipBuild (build should be done by orchestrator)
-pwsh -Command "./Generate-ToolFamily.ps1 -ToolFamily '$TOOL_FAMILY' -Steps $STEPS_ARRAY -SkipBuild \$true"
+# Use -File instead of -Command to avoid Unix-style path issues in Git Bash on Windows
+pwsh -File "$SCRIPT_DIR/Generate-ToolFamily.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS" -SkipBuild

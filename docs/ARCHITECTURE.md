@@ -44,7 +44,7 @@ Quick reference for understanding the Azure MCP Documentation Generator architec
 
 ### Layer 1: Orchestration (PowerShell)
 
-**File**: `docs-generation/Generate.ps1`
+**File**: `docs-generation/scripts/Generate.ps1`
 
 **Responsibilities**:
 - Environment detection (container vs local)
@@ -332,12 +332,12 @@ Project files reference without version:
 
 1. Edit `.hbs` file in `templates/`
 2. Rebuild generator: `dotnet build CSharpGenerator/`
-3. Regenerate: `pwsh ./Generate.ps1`
+3. Regenerate: `pwsh ./scripts/Generate.ps1`
 4. Verify output in `generated/multi-page/`
 
 ### Debugging
 
-1. Run debug script: `pwsh ./Debug-MultiPageDocs.ps1`
+1. Run debug script: `pwsh ./scripts/Debug-MultiPageDocs.ps1`
 2. Attach VS Code debugger: F5 → "Debug Generate Docs"
 3. Set breakpoints in CSharpGenerator/*
 4. Step through code execution
@@ -378,7 +378,7 @@ Project files reference without version:
 
 **Start local generation**:
 ```bash
-pwsh docs-generation/Generate.ps1
+pwsh docs-generation/scripts/Generate.ps1
 ```
 
 **Start Docker generation**:
@@ -388,7 +388,7 @@ pwsh docs-generation/Generate.ps1
 
 **Debug in VS Code**:
 ```bash
-pwsh docs-generation/Debug-MultiPageDocs.ps1
+pwsh docs-generation/scripts/Debug-MultiPageDocs.ps1
 # Then F5 in VS Code
 ```
 

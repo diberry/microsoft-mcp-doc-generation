@@ -35,7 +35,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$ToolCommand,
     
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     
     [switch]$SkipValidation
 )
@@ -91,6 +91,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
+    $docsGenDir = Split-Path -Parent $scriptDir
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
         $OutputPath
     } else {
@@ -179,7 +180,7 @@ try {
 
     # Build .NET packages
     Write-Progress "Building .NET packages..."
-    $solutionFile = Join-Path (Split-Path $scriptDir -Parent) "docs-generation.sln"
+    $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
     if (Test-Path $solutionFile) {
         & dotnet build $solutionFile --configuration Release --verbosity quiet
         if ($LASTEXITCODE -ne 0) {
@@ -195,7 +196,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    $csharpGeneratorDir = Join-Path $scriptDir "CSharpGenerator"
+    $csharpGeneratorDir = Join-Path $docsGenDir "CSharpGenerator"
     Push-Location $csharpGeneratorDir
     try {
         & dotnet run --configuration Release -- generate-docs $filteredOutputFile $outputDir --annotations --version $cliVersion
@@ -235,7 +236,7 @@ try {
     Write-Host ""
 
     $rawToolsDir = Join-Path $outputDir "tools-raw"
-    Push-Location $scriptDir
+    Push-Location $docsGenDir
     try {
         $rawArgs = @(
             "--project", "ToolGeneration_Raw",

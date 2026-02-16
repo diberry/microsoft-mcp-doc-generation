@@ -108,7 +108,7 @@ for NAMESPACE in $NAMESPACES; do
     echo "-------------------------------------------------------------------"
     
     # Call start-only.sh for each namespace
-    if ./docs-generation/scripts/start-only.sh "$NAMESPACE" "$STEPS"; then
+    if "$ROOT_DIR/docs-generation/scripts/start-only.sh" "$NAMESPACE" "$STEPS"; then
         echo "✓ Successfully generated documentation for: $NAMESPACE"
     else
         echo "✗ Failed to generate documentation for: $NAMESPACE"

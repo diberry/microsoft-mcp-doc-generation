@@ -6,6 +6,17 @@ This file provides instructions to GitHub Copilot for working with this codebase
 
 This is the Azure MCP Documentation Generator - an automated system that generates 590+ markdown documentation files for Microsoft Azure Model Context Protocol (MCP) server tools using a containerized Docker solution.
 
+## ⚠️ CRITICAL: Never Edit Generated Markdown Files
+
+Files under `generated/` and `generated-*/` directories are **programmatically generated output**. Do NOT modify these files directly unless the user explicitly requests it. Instead, fix the **source code** that generates them:
+
+- **Templates** (`docs-generation/templates/*.hbs`, project-specific `templates/` dirs)
+- **C# generators** (`docs-generation/CSharpGenerator/`, `ToolGeneration_Raw/`, `ToolGeneration_Composed/`, `ToolGeneration_Improved/`, `ToolFamilyCleanup/`, `HorizontalArticleGenerator/`, `ExamplePromptGeneratorStandalone/`)
+- **Configuration files** (`docs-generation/data/*.json`)
+- **AI prompts** (`docs-generation/prompts/`, project-specific `prompts/` dirs)
+
+After fixing the source, the user will regenerate the output with `bash start.sh <namespace>`.
+
 ## Architecture
 
 ### Three-Tier System
@@ -370,6 +381,7 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
    - Node.js: Create separate npm packages when appropriate
    - Benefits: Testability, reusability, maintainability, clear separation of concerns
    - Example: Environment validation extracted to `validate-env.ps1` instead of inline in preflight script
+8. **Cross-platform (bash ↔ PowerShell)**: See "Cross-Platform Script Interop" section below
 
 ## When Helping with Code
 
@@ -386,6 +398,81 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
   - Instead use: `& dotnet ...` (streams output in real-time)
   - Applies to: `Generate-MultiPageDocs.ps1`, `Generate-CompleteTools.ps1`, all orchestration scripts
   - Exception: Short commands where you need to parse output immediately
+
+### Cross-Platform Script Interop (Bash ↔ PowerShell)
+
+**All scripts must work on Windows (Git Bash/MSYS2), macOS, and Linux.**
+
+#### Calling PowerShell from Bash — ALWAYS use `pwsh -File`
+
+```bash
+# ✅ CORRECT — pwsh -File lets the shell handle path translation
+pwsh -File "$SCRIPT_DIR/MyScript.ps1" -Param1 "value" -SwitchParam
+
+# ❌ WRONG — pwsh -Command receives MSYS/Unix paths that PowerShell can't resolve
+pwsh -Command "$SCRIPT_DIR/MyScript.ps1 -Param1 'value'"
+# Fails on Windows Git Bash: '/c/Users/...' is not recognized as a cmdlet
+```
+
+**Why**: Git Bash on Windows translates paths for executables but NOT inside string arguments.
+With `-Command`, the entire string is passed as-is to PowerShell, which doesn't understand `/c/Users/...`.
+With `-File`, bash resolves the path before invoking pwsh.
+
+#### PowerShell parameter types for `-File` compatibility
+
+When a `.ps1` script is called via `pwsh -File` from bash:
+
+- **Use `[switch]` NOT `[bool]`** for flag parameters:
+  ```powershell
+  # ✅ CORRECT — works with: pwsh -File script.ps1 -SkipBuild
+  [switch]$SkipBuild
+  
+  # ❌ WRONG — pwsh -File requires explicit value: -SkipBuild $true (awkward from bash)
+  [bool]$SkipBuild = $false
+  ```
+
+- **Don't use `[int[]]` or `[string[]]` for array params passed from bash** — bash cannot construct PowerShell array syntax. Accept a string and parse it:
+  ```powershell
+  # ✅ CORRECT — accepts both "1,2,3" (from bash) and @(1,2,3) (from PowerShell)
+  $Steps = @(1, 2, 3, 4, 5)
+  # Then normalize after param():
+  if ($Steps -is [string]) {
+      $Steps = $Steps -split ',' | ForEach-Object { [int]$_.Trim() }
+  }
+  
+  # ❌ WRONG — bash can't pass @(1,2,3) syntax via -File
+  [int[]]$Steps = @(1, 2, 3, 4, 5)
+  ```
+
+#### Script directory and path resolution
+
+All `.ps1` scripts live in `docs-generation/scripts/`. When referencing sibling directories:
+
+```powershell
+$scriptDir = $PSScriptRoot                    # → docs-generation/scripts/
+$docsGenDir = Split-Path -Parent $scriptDir   # → docs-generation/
+
+# Reference project directories via $docsGenDir, NOT $scriptDir
+$csharpGen = Join-Path $docsGenDir "CSharpGenerator"      # ✅
+$brandMap  = Join-Path $docsGenDir "data/brand-to-server-mapping.json"  # ✅
+$sln       = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"  # ✅
+
+# Reference sibling scripts via $scriptDir
+& "$scriptDir\Generate-Annotations.ps1"  # ✅
+
+# Default OutputPath should account for script depth (scripts/ → docs-generation/ → repo root)
+[string]$OutputPath = "../../generated"  # ✅ (relative to $scriptDir)
+```
+
+**Key rule**: `$docsGenDir` must always be defined at the top level of the script (not inside an `if` block) so it's available everywhere.
+
+#### Bash wrapper scripts (.sh calling .ps1)
+
+Pattern for bash wrapper scripts (e.g., `generate-tool-family.sh`):
+```bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+pwsh -File "$SCRIPT_DIR/MyScript.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS" -SkipBuild
+```
 
 ### For C# Changes
 - Follow .NET 9.0 patterns

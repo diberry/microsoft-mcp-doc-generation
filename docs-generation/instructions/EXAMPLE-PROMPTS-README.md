@@ -33,7 +33,7 @@ The feature is **enabled by default** via the `-ExamplePrompts $true` parameter.
 
 To explicitly disable it:
 ```bash
-pwsh ./docs-generation/Generate-MultiPageDocs.ps1 -ExamplePrompts $false
+pwsh ./docs-generation/scripts/Generate.ps1 -ExamplePrompts $false
 ```
 
 ## Edit Prompt Templates

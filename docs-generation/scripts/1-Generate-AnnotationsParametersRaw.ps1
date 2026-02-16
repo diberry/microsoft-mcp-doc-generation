@@ -206,31 +206,31 @@ try {
     Write-Info ""
 
     Write-Progress "Step 1: Generating annotation include files..."
-    & "$scriptDir\scripts\Generate-Annotations.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
+    & "$scriptDir\Generate-Annotations.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
     if ($LASTEXITCODE -ne 0) {
         throw "Annotations generation failed"
     }
 
     Write-Progress "Step 2: Generating parameter include files..."
-    & "$scriptDir\scripts\Generate-Parameters.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
+    & "$scriptDir\Generate-Parameters.ps1" -OutputPath $OutputPath -CliVersion $cliVersion
     if ($LASTEXITCODE -ne 0) {
         throw "Parameters generation failed"
     }
 
     Write-Progress "Step 3: Generating raw tool files..."
-    & "$scriptDir\scripts\Generate-RawTools.ps1" -OutputPath $OutputPath
+    & "$scriptDir\Generate-RawTools.ps1" -OutputPath $OutputPath
     if ($LASTEXITCODE -ne 0) {
         throw "Raw tool generation failed"
     }
 
     Write-Progress "Step 4: Generating commands page..."
-    & "$scriptDir\scripts\Generate-Commands.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
+    & "$scriptDir\Generate-Commands.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
     if ($LASTEXITCODE -ne 0) {
         throw "Commands generation failed"
     }
 
     Write-Progress "Step 5: Generating common tools page..."
-    & "$scriptDir\scripts\Generate-Common.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
+    & "$scriptDir\Generate-Common.ps1" -OutputPath $OutputPath -CliVersion $cliVersion -CreateServiceOptions $CreateServiceOptions
     if ($LASTEXITCODE -ne 0) {
         throw "Common tools generation failed"
     }

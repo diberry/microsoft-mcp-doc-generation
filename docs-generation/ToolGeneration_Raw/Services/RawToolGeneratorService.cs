@@ -175,8 +175,7 @@ public class RawToolGeneratorService
         }
 
         // Add example prompts section with placeholder
-        sb.AppendLine("Example prompts include:");
-        sb.AppendLine();
+        // Note: The example-prompts content already contains "Example prompts include:" label
         sb.AppendLine(data.ExamplePromptsPlaceholder);
         sb.AppendLine();
 

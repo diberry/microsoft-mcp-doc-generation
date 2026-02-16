@@ -6,7 +6,7 @@ This project automatically generates multi-page documentation for Azure MCP (Mod
 
 The documentation generation system consists of:
 
-- **PowerShell Orchestrator** (`Generate-MultiPageDocs.ps1`) - Main entry point that coordinates the generation process
+- **PowerShell Orchestrator** (`scripts/Generate.ps1`) - Main entry point that coordinates the generation process
 - **Modular Scripts** (`scripts/`) - Independent scripts for annotations/parameters/raw tools, example prompts, tool family files, and validation
 - **C# Generator** (`CSharpGenerator/`) - .NET 9.0 console application that processes CLI output and generates documentation using Handlebars templates
 - **Handlebars Templates** (`templates/`) - Template files that define the structure and format of generated documentation
@@ -15,13 +15,16 @@ The documentation generation system consists of:
 
 ```
 docs-generation/
-├── Generate-MultiPageDocs.ps1     # Main orchestration script
-├── scripts/                       # Modular generation scripts
-│   ├── Generate-AnnotationsParametersRaw.ps1  # Annotations + parameters + raw tools
-│   ├── Generate-ExamplePrompts.ps1            # Example prompts generation
-│   ├── Generate-ToolFamilyFiles.ps1           # Complete tools + AI improvements + tool family files
-│   └── Validate.ps1                           # Validation orchestrator
-├── Get-McpCliOutput.ps1           # CLI extraction script
+├── scripts/                           # All orchestration and generation scripts
+│   ├── Generate.ps1                   # Main orchestration script
+│   ├── Generate-ToolFamily.ps1        # Tool family documentation generator
+│   ├── 1-Generate-AnnotationsParametersRaw.ps1  # Annotations + parameters + raw tools
+│   ├── 2-Generate-ExamplePrompts-One.ps1        # Example prompts for single tool
+│   ├── 3-Generate-ExamplePrompts.ps1            # Example prompts generation
+│   ├── 4-Generate-ToolFamilyFiles.ps1           # Complete tools + AI improvements + tool family files
+│   ├── 5-Validate-total-tool-count-and-family.ps1  # Validation
+│   ├── generate-tool-family.sh        # Bash wrapper for Generate-ToolFamily.ps1
+│   └── Validate.ps1                   # Validation orchestrator
 ├── data/                          # Configuration and data files
 │   ├── README.md                  # Documentation for all data files
 │   ├── brand-to-server-mapping.json  # Brand name to filename mappings
@@ -118,7 +121,7 @@ The **ToolFamilyCleanup** package is an independent tool that applies Microsoft 
 ### Quick Start
 ```bash
 cd docs-generation
-pwsh ./Generate-ToolFamilyCleanup.ps1
+pwsh ./scripts/GenerateToolFamilyCleanup-multifile.ps1
 ```
 
 ### Customizing Prompts for Azure MCP Style
@@ -352,7 +355,7 @@ When updating `brand-to-server-mapping.json` or `compound-words.json`:
    ```
 2. Regenerate documentation:
    ```powershell
-   pwsh ./Generate-MultiPageDocs.ps1
+   pwsh ./scripts/Generate.ps1
    ```
 3. Verify new filenames match expected patterns
 4. Commit changes with descriptive message explaining filename updates
@@ -366,7 +369,7 @@ When updating `brand-to-server-mapping.json` or `compound-words.json`:
 4. **Version Capture**: Captures MCP server version with `--version` flag
 5. **Output**: Saves to `generated/cli/` (cli-output.json, cli-namespace.json, mcp-version.txt)
 
-### Stage 2: Markdown Generation (`Generate-MultiPageDocs.ps1` via `run-content-generation-output.sh`)
+### Stage 2: Markdown Generation (`scripts/Generate.ps1` via `run-content-generation-output.sh`)
 1. **Configuration Loading**: Loads brand mappings, compound words, stop words, NL parameters
 2. **Generator Build**: Compiles C# generator projects (CSharpGenerator, NaturalLanguageGenerator, Shared)
 3. **Data Processing**: Parses CLI JSON output (181 tools across 44 service areas)
@@ -377,7 +380,7 @@ When updating `brand-to-server-mapping.json` or `compound-words.json`:
    - Include files: annotations/, parameters/, param-and-annotation/
    - Index files: index.md, common-tools.md, azmcp-commands.md
 
-### Stage 3: AI Example Prompts (`Generate-ExamplePrompts.sh` via `run-generative-ai-output.sh`)
+### Stage 3: AI Example Prompts (`scripts/Generate-ExamplePrompts.sh` via `run-generative-ai-output.sh`)
 1. **Environment Setup**: Loads `.env` file with AI service credentials
 2. **AI Integration**: Uses Azure OpenAI or GitHub Models to generate example prompts
 3. **Prompt Generation**: Creates realistic usage examples for each tool
@@ -419,23 +422,20 @@ The version is centrally managed in `Directory.Packages.props`:
 Run in a PowerShell terminal.
 
 ```powershell
-pwsh ./Generate-MultiPageDocs.ps1
+pwsh ./scripts/Generate.ps1
 ```
 
 ### Advanced Options
 
 ```powershell
 # Generate only JSON format (YAML not yet implemented)
-./Generate-MultiPageDocs.ps1 -Format json
+./scripts/Generate.ps1 -Format json
 
 # Skip index page generation
-./Generate-MultiPageDocs.ps1 -CreateIndex $false
+./scripts/Generate.ps1 -CreateIndex $false
 
 # Skip common tools page generation
-./Generate-MultiPageDocs.ps1 -CreateCommon $false
-
-# Generate example prompts
-./Generate-MultiPageDocs.ps1 -GenerateExamplePrompts $true
+./scripts/Generate.ps1 -CreateCommon $false
 ```
 
 ## Generated Output
@@ -543,7 +543,7 @@ dotnet run --project CSharpMapParameterName/CSharpMapParameterName.csproj
 ## 3. Generate docs
 
 ```
-pwsh ./Generate-MultiPageDocs.ps1
+pwsh ./scripts/Generate.ps1
 ```
 
 ## 4. Search for `TBD`
@@ -607,7 +607,7 @@ The tool extracts the following metadata for each tool:
 
 ## VS Code Debugging
 
-The project includes debugging support for VS Code to help you debug the documentation generation process. You can use the `Debug-MultiPageDocs.ps1` script to prepare the environment and then attach the VS Code debugger.
+The project includes debugging support for VS Code to help you debug the documentation generation process. You can use the `scripts/Debug-MultiPageDocs.ps1` script to prepare the environment and then attach the VS Code debugger.
 
 ### Steps to Debug in VS Code
 
@@ -659,7 +659,7 @@ The project includes debugging support for VS Code to help you debug the documen
 
    ```bash
    cd docs-generation
-   pwsh ./Debug-MultiPageDocs.ps1
+   pwsh ./scripts/Debug-MultiPageDocs.ps1
    ```
 
    This script will:

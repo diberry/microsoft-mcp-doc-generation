@@ -45,7 +45,7 @@ param(
     [Parameter(Mandatory=$true)]
     [string]$ToolCommand,
     
-    [string]$OutputPath = "../generated",
+    [string]$OutputPath = "../../generated",
     
     [switch]$SkipMetadata = $false,
     [switch]$SkipRelated = $false,
@@ -82,6 +82,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
+    $docsGenDir = Split-Path -Parent $scriptDir
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
         $OutputPath
     } else {
@@ -151,7 +152,7 @@ try {
 
     # Build .NET packages
     Write-Progress "Building .NET packages..."
-    $solutionFile = Join-Path (Split-Path $scriptDir -Parent) "docs-generation.sln"
+    $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
     if (Test-Path $solutionFile) {
         & dotnet build $solutionFile --configuration Release --verbosity quiet
         if ($LASTEXITCODE -ne 0) {
@@ -191,7 +192,7 @@ try {
 
     # Build ToolFamilyCleanup
     Write-Progress "Building ToolFamilyCleanup..."
-    $toolFamilyDir = Join-Path $scriptDir "ToolFamilyCleanup"
+    $toolFamilyDir = Join-Path $docsGenDir "ToolFamilyCleanup"
     Push-Location $toolFamilyDir
     try {
         & dotnet build --configuration Release --verbosity quiet
@@ -231,7 +232,7 @@ try {
         Write-Warning "cli-version.json not found at $cliVersionFile - mcp-cli.version will be 'unknown'"
     }
 
-    $brandMappingPath = Join-Path $scriptDir "data/brand-to-server-mapping.json"
+    $brandMappingPath = Join-Path $docsGenDir "data/brand-to-server-mapping.json"
     if (Test-Path $brandMappingPath) {
         Copy-Item -Path $brandMappingPath -Destination $tempDocs -Force
     }
@@ -265,7 +266,7 @@ try {
     $prefixes.Add($familyNameLower)
 
     # Try to load brand-to-server mapping for alternate filename prefixes
-    $brandMappingPath = Join-Path $scriptDir "data/brand-to-server-mapping.json"
+    $brandMappingPath = Join-Path $docsGenDir "data/brand-to-server-mapping.json"
     if (Test-Path $brandMappingPath) {
         try {
             $brandMappings = Get-Content $brandMappingPath -Raw | ConvertFrom-Json

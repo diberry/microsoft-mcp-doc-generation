@@ -124,7 +124,7 @@ Write-Host ""
 Write-Host "Running brand mapping validation..." -ForegroundColor Yellow
 Push-Location $docsGenDir
 try {
-    $validationScript = Join-Path $docsGenDir "0-Validate-BrandMappings.ps1"
+    $validationScript = Join-Path $scriptDir "0-Validate-BrandMappings.ps1"
     & $validationScript -OutputPath $OutputPath
     
     if ($LASTEXITCODE -ne 0) {

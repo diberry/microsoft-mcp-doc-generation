@@ -155,7 +155,7 @@ try {
     # Step 1.1: Run CLI analyzer for visual analysis
     Write-Progress "Step 8: Running CLI Analyzer..."
     Write-Info ""
-    & "$PSScriptRoot\scripts\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true
+    & "$PSScriptRoot\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true
     Write-Info ""
 
     # Generate example prompts and validate them
@@ -383,7 +383,7 @@ try {
     # Step 7: Run validation orchestrator
     Write-Progress "Step 7: Running Validation Checks..."
     Write-Info ""
-    & "$PSScriptRoot\scripts\Validate.ps1" -OutputPath $OutputPath
+    & "$PSScriptRoot\Validate.ps1" -OutputPath $OutputPath
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Validation checks reported issues"
     }
