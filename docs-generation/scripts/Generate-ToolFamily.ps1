@@ -270,7 +270,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    & "$PSScriptRoot\scripts\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true -SkipBuild $SkipBuild
+    & "$PSScriptRoot\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true -SkipBuild $SkipBuild
     Write-Host ""
 
     # ========================================================================
