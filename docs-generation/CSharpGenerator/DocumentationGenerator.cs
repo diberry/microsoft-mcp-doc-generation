@@ -429,6 +429,13 @@ public static class DocumentationGenerator
                 // Add area property to tool for compatibility
                 tool.Area = area;
 
+                // Sort parameters once: required first, then alphabetical by name.
+                // All downstream generators inherit this order.
+                if (tool.Option != null)
+                {
+                    tool.Option = ParameterSorting.SortByRequiredThenName(tool.Option).ToList();
+                }
+
                 var conditionalRequirement = ExtractConditionalRequirement(tool.Description ?? "");
                 if (conditionalRequirement.Parameters.Count > 0)
                 {
@@ -450,113 +457,6 @@ public static class DocumentationGenerator
             Areas = areaGroups,
             GeneratedAt = DateTime.UtcNow
         };
-    }
-
-    /// <summary>
-    /// Generates documentation page for a specific area.
-    /// </summary>
-    private static async Task GenerateAreaPageAsync(string areaName, AreaData areaData, TransformedData data, string outputDir, string templateFile)
-    {
-        try
-        {
-            var areaNameForFile = areaName.ToLowerInvariant().Replace(" ", "-");
-            var fileName = $"{areaNameForFile}.md";
-            var outputFile = Path.Combine(outputDir, fileName);
-
-            // Get common parameter names to filter them out - use source-discovered if available
-            var commonParameters = data.SourceDiscoveredCommonParams.Any() 
-                ? data.SourceDiscoveredCommonParams 
-                : ExtractCommonParameters(data.Tools);
-            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
-
-            // Annotations directory path (at parent level)
-            var parentDir = Path.GetDirectoryName(outputDir) ?? outputDir;
-            var annotationsDir = Path.Combine(parentDir, "annotations");
-            
-            // Load shared context for filename generation
-            var nameContext = await FileNameContext.CreateAsync();
-
-            // Filter out common parameters from tools for area pages and add annotation content
-            var toolsWithFilteredParamsTasks = areaData.Tools.Select(async tool => 
-            {
-                var filteredTool = new Tool
-                {
-                    Name = tool.Name,
-                    Command = tool.Command,
-                    Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(tool.Description ?? "")),
-                    SourceFile = tool.SourceFile,
-                    Area = tool.Area,
-                    Metadata = tool.Metadata // Include metadata from CLI output
-                };
-                
-                // Read annotation file content if it exists
-                if (!string.IsNullOrEmpty(tool.Command))
-                {
-                    // Use shared deterministic filename builder
-                    var annotationFileName = ToolFileNameBuilder.BuildAnnotationFileName(
-                        tool.Command, nameContext);
-                    var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
-                    
-                    if (File.Exists(annotationFilePath))
-                    {
-                        try
-                        {
-                            filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
-                            filteredTool.AnnotationFileName = annotationFileName;
-                        }
-                        catch
-                        {
-                            // Silently ignore if annotation file can't be read
-                            filteredTool.AnnotationContent = "";
-                        }
-                    }
-                }
-                
-                if (tool.Option != null)
-                {
-                    filteredTool.Option = tool.Option
-                        .Where(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name))
-                        .Select(opt => new Option
-                        {
-                            // Handle CLI-style parameter names
-                            Name = opt.Name,
-                            // Generate natural language name from parameter name
-                            NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
-                            Type = opt.Type,
-                            Required = opt.Required,
-                            RequiredText = opt.Required == true ? "Required" : "Optional",
-                            Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")),
-                    })
-                    .ToList();
-            }
-            
-            // Add parameter count for template use
-            // TODO: This property doesn't exist on Tool class, needs to be added or removed
-            // filteredTool.ParameterCount = filteredTool.Option?.Count ?? 0;
-            
-            return filteredTool;
-        });            var toolsWithFilteredParams = (await Task.WhenAll(toolsWithFilteredParamsTasks)).ToList();
-
-            var areaPageData = new Dictionary<string, object>
-            {
-                ["areaName"] = areaName,
-                ["areaData"] = areaData,
-                ["tools"] = toolsWithFilteredParams,
-                ["version"] = data.Version,
-                ["generatedAt"] = data.GeneratedAt,
-                ["generateAreaPage"] = true
-            };
-
-            var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, areaPageData);
-
-            await File.WriteAllTextAsync(outputFile, result);
-            Console.WriteLine($"Generated area page: {fileName}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error generating area page for {areaName}: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
-        }
     }
 
     /// <summary>
@@ -1130,70 +1030,6 @@ public static class DocumentationGenerator
             HandlebarsTemplateEngine.ProcessTemplateAsync);
         */
         return Task.FromResult((0, 0));
-    }
-
-    /// <summary>
-    /// Generates individual parameter files for each tool.
-    /// </summary>
-    private static async Task GenerateParameterFilesAsync(TransformedData data, string outputDir, string templateFile)
-    {
-        try
-        {
-            Console.WriteLine($"Generating parameter files for {data.Tools.Count} tools...");
-            
-            // Load shared context for filename generation
-            var nameContext = await FileNameContext.CreateAsync();
-            
-            foreach (var tool in data.Tools)
-            {
-                if (string.IsNullOrEmpty(tool.Command))
-                    continue;
-
-                // Use shared deterministic filename builder
-                var fileName = ToolFileNameBuilder.BuildParameterFileName(
-                    tool.Command, nameContext);
-                var outputFile = Path.Combine(outputDir, fileName);
-
-                // Transform options to include RequiredText
-                var transformedOptions = tool.Option?.Select(opt => new
-                {
-                    name = opt.Name,
-                    NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
-                    type = opt.Type,
-                    required = opt.Required,
-                    RequiredText = opt.Required == true ? "Required" : "Optional",
-                    description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
-                }).ToList();
-
-                var parameterData = new Dictionary<string, object>
-                {
-                    ["tool"] = tool,
-                    ["command"] = tool.Command ?? "",
-                    ["area"] = tool.Area ?? "",
-                    ["option"] = (object?)transformedOptions ?? new List<object>(),
-                    ["generateParameter"] = true,
-                    ["generatedAt"] = data.GeneratedAt,
-                    ["version"] = data.Version ?? "unknown",
-                    ["parameterFileName"] = fileName
-                };
-
-                var templateResult = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, parameterData);
-                var frontmatter = FrontmatterUtility.GenerateParameterFrontmatter(
-                    tool.Command ?? "unknown",
-                    data.Version,
-                    fileName);
-                var result = frontmatter + templateResult;
-                await File.WriteAllTextAsync(outputFile, result);
-                tool.HasParameters = true;
-            }
-            
-            Console.WriteLine($"Generated {data.Tools.Count} parameter files in {outputDir}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error generating parameter files: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
-        }
     }
 
     // DEPRECATED: Combined parameter and annotation file generation

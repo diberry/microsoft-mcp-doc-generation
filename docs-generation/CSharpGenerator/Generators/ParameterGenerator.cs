@@ -55,9 +55,11 @@ public class ParameterGenerator
                     tool.ConditionalRequiredParameters ?? new List<string>(),
                     StringComparer.OrdinalIgnoreCase);
 
-                var transformedOptions = allOptions
+                var filteredOptions = allOptions
                     .Where(opt => !string.IsNullOrEmpty(opt.Name) && 
-                                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true))
+                                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true));
+
+                var transformedOptions = filteredOptions
                     .Select(opt => new
                     {
                         name = opt.Name,
@@ -67,8 +69,6 @@ public class ParameterGenerator
                         RequiredText = BuildRequiredText(opt.Required, opt.Name ?? "", conditionalParameters),
                         description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
                     })
-                    .OrderByDescending(opt => opt.required) // Required parameters first
-                    .ThenBy(opt => opt.NL_Name, StringComparer.OrdinalIgnoreCase) // Then alphabetically by natural language name
                     .ToList();
 
                 var parameterData = new Dictionary<string, object>

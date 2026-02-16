@@ -92,8 +92,10 @@ public class PageGenerator
                 
                 if (tool.Option != null)
                 {
-                    filteredTool.Option = tool.Option
-                        .Where(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name))
+                    var filteredOptions = tool.Option
+                        .Where(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name));
+
+                    filteredTool.Option = filteredOptions
                         .Select(opt => new Option
                         {
                             Name = opt.Name,
@@ -103,8 +105,6 @@ public class PageGenerator
                             RequiredText = opt.Required == true ? "Required" : "Optional",
                             Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")),
                         })
-                        .OrderByDescending(opt => opt.Required) // Required parameters first
-                        .ThenBy(opt => opt.NL_Name, StringComparer.OrdinalIgnoreCase) // Then alphabetically by natural language name
                         .ToList();
                 }
                 
