@@ -27,13 +27,14 @@ public static class ServiceOptionsDiscovery
             if (File.Exists(path))
             {
                 serviceOptionDefinitionsPath = path;
-                Console.WriteLine($"Found ServiceOptionDefinitions.cs at: {serviceOptionDefinitionsPath}");
+                LogFileHelper.WriteDebug($"Found ServiceOptionDefinitions.cs at: {serviceOptionDefinitionsPath}");
                 break;
             }
         }
 
         if (serviceOptionDefinitionsPath == null)
         {
+            LogFileHelper.WriteDebug("ServiceOptionDefinitions.cs not found in expected locations");
             Console.WriteLine("  ⚠️  ServiceOptionDefinitions.cs not found in expected locations");
             return serviceOptions;
         }
@@ -42,7 +43,7 @@ public static class ServiceOptionsDiscovery
 
         // Extract service options from the class
         serviceOptions = ExtractServiceOptions(serviceOptionDefinitionsSource);
-        Console.WriteLine($"Debug: Found {serviceOptions.Count} service option definitions");
+        LogFileHelper.WriteDebug($"Found {serviceOptions.Count} service option definitions");
 
         return serviceOptions.OrderBy(p => p.Name).ToList();
     }
@@ -61,7 +62,7 @@ public static class ServiceOptionsDiscovery
             var constName = constMatch.Groups[1].Value;
             var paramName = constMatch.Groups[2].Value;
             constantMap[constName] = paramName;
-            Console.WriteLine($"Debug: Found constant {constName} = {paramName}");
+            LogFileHelper.WriteDebug($"Found constant {constName} = {paramName}");
         }
 
         // Step 2: Use a simple pattern to find option definitions, then parse them individually
@@ -157,8 +158,8 @@ public static class ServiceOptionsDiscovery
                 description = $"Parameter for {propertyName}";
             }
 
-            Console.WriteLine($"Debug: Found service option: {propertyName} -> {paramName} ({type})");
-            Console.WriteLine($"Debug: Description: {description.Substring(0, Math.Min(50, description.Length))}...");
+            LogFileHelper.WriteDebug($"Found service option: {propertyName} -> {paramName} ({type})");
+            LogFileHelper.WriteDebug($"Description: {description.Substring(0, Math.Min(50, description.Length))}...");
 
             options.Add(new ServiceOption
             {

@@ -35,7 +35,10 @@ public class Config
         {
             throw new InvalidDataException("Invalid or empty config file.");
         }
-        Console.WriteLine($"Config loaded from {configPath}");
+        
+        // Log config details to file, not console
+        LogFileHelper.WriteDebug($"Loading config from: {configPath}");
+        LogFileHelper.WriteDebug($"Config loaded from {configPath}");
 
         // Resolve required files relative to the config file's directory
         var configDir = Path.GetDirectoryName(Path.GetFullPath(configPath)) ?? AppContext.BaseDirectory;
@@ -45,7 +48,7 @@ public class Config
         {
             var file = config.RequiredFiles[i];
             var fullPath = Path.GetFullPath(Path.Combine(configDir, file));
-            Console.WriteLine($"Checking file: {fullPath}");
+            LogFileHelper.WriteDebug($"Checking file: {fullPath}");
             if (!File.Exists(fullPath))
             {
                 throw new FileNotFoundException($"Required file not found: {fullPath}");
@@ -69,10 +72,9 @@ public class Config
             throw new InvalidDataException("One or more required files are missing in the config.");
         }
 
-        Console.WriteLine($"NLParametersPath: {NLParametersPath}");
-        Console.WriteLine($"TextReplacerParametersPath: {TextReplacerParametersPath}");
-
-        Console.WriteLine($"RequiredFiles: {JsonSerializer.Serialize(config.RequiredFiles, new JsonSerializerOptions { WriteIndented = true })}");
+        LogFileHelper.WriteDebug($"NLParametersPath: {NLParametersPath}");
+        LogFileHelper.WriteDebug($"TextReplacerParametersPath: {TextReplacerParametersPath}");
+        LogFileHelper.WriteDebug($"RequiredFiles: {JsonSerializer.Serialize(config.RequiredFiles, new JsonSerializerOptions { WriteIndented = true })}");
 
         var success = TextCleanup.LoadFiles(config.RequiredFiles);
         if (!success)

@@ -18,22 +18,6 @@ namespace CSharpGenerator.Generators;
 /// </summary>
 public class AnnotationGenerator
 {
-    private readonly Func<Task<Dictionary<string, BrandMapping>>> _loadBrandMappings;
-    private readonly Func<Task<HashSet<string>>> _loadStopWords;
-    private readonly Func<Task<Dictionary<string, string>>> _loadCompoundWords;
-    private readonly Func<string, Task<string>> _cleanFileName;
-
-    public AnnotationGenerator(
-        Func<Task<Dictionary<string, BrandMapping>>> loadBrandMappings,
-        Func<Task<HashSet<string>>> loadStopWords,
-        Func<Task<Dictionary<string, string>>> loadCompoundWords,
-        Func<string, Task<string>> cleanFileName)
-    {
-        _loadBrandMappings = loadBrandMappings;
-        _loadStopWords = loadStopWords;
-        _loadCompoundWords = loadCompoundWords;
-        _cleanFileName = cleanFileName;
-    }
 
     /// <summary>
     /// Generates annotation files for all tools
@@ -49,94 +33,59 @@ public class AnnotationGenerator
     {
         try
         {
+            // Only show essential progress on console
             Console.WriteLine($"Generating annotation files for {data.Tools.Count} tools...");
             
             int examplePromptsGenerated = 0;
             int examplePromptsFailed = 0;
             
-            // Log example prompts configuration
-            Console.WriteLine($"DEBUG: examplePromptGenerator is {(examplePromptGenerator == null ? "NULL" : "initialized")}");
-            Console.WriteLine($"DEBUG: examplePromptsDir = '{examplePromptsDir ?? "NULL"}'");
+            // Log example prompts configuration to file
+            LogFileHelper.WriteDebug($"examplePromptGenerator is {(examplePromptGenerator == null ? "NULL" : "initialized")}");
+            LogFileHelper.WriteDebug($"examplePromptsDir = '{examplePromptsDir ?? "NULL"}'");
             if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
             {
-                Console.WriteLine($"DEBUG: Example prompts WILL be generated for each tool");
+                LogFileHelper.WriteDebug("Example prompts WILL be generated for each tool");
             }
             else
             {
-                Console.WriteLine($"DEBUG: Example prompts WILL NOT be generated (missing generator or directory)");
+                LogFileHelper.WriteDebug("Example prompts WILL NOT be generated (missing generator or directory)");
             }
             
             // Track missing brand mappings/compound words
             var missingMappings = new Dictionary<string, List<string>>(); // area -> list of tool commands
             
-            // Load brand mappings
-            var brandMappings = await _loadBrandMappings();
-            
+            // Load shared context for filename generation and missing mapping tracking
+            var nameContext = await FileNameContext.CreateAsync();
+
             foreach (var tool in data.Tools)
             {
                 if (string.IsNullOrEmpty(tool.Command))
                     continue;
 
-                // Parse command to extract area (first part)
-                var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (commandParts.Length == 0)
-                    continue;
+                var command = tool.Command;
 
-                var area = commandParts[0];
-                
-                // Load compound words for area name transformation
-                var compoundWords = await _loadCompoundWords();
-                
-                // Get brand-based filename from mapping, or fall back to area name
-                string brandFileName;
-                if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
+                // Track missing brand mappings
+                var area = command.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0];
+                if (!nameContext.BrandMappings.ContainsKey(area) || string.IsNullOrEmpty(nameContext.BrandMappings[area].FileName))
                 {
-                    brandFileName = mapping.FileName;
-                }
-                else
-                {
-                    // Fallback: use area name, but check compound words first
                     var areaLower = area.ToLowerInvariant();
-                    if (compoundWords.TryGetValue(areaLower, out var compoundReplacement))
+                    if (!nameContext.CompoundWords.ContainsKey(areaLower))
                     {
-                        brandFileName = compoundReplacement;
-                        Console.WriteLine($"Applied compound word transformation for '{area}': '{areaLower}' -> '{brandFileName}'");
-                    }
-                    else
-                    {
-                        brandFileName = areaLower;
-                        Console.WriteLine($"Warning: No brand mapping or compound word found for area '{area}', using '{brandFileName}'");
-                        
-                        // Track missing mapping
+                        LogFileHelper.WriteDebug($"No brand mapping or compound word found for area '{area}', using '{areaLower}'");
                         if (!missingMappings.ContainsKey(area))
                         {
                             missingMappings[area] = new List<string>();
                         }
-                        missingMappings[area].Add(tool.Command ?? "unknown");
+                        missingMappings[area].Add(command);
+                    }
+                    else
+                    {
+                        LogFileHelper.WriteDebug($"Applied compound word transformation for '{area}': '{areaLower}' -> '{nameContext.CompoundWords[areaLower]}'");
                     }
                 }
 
-                // Build remaining parts of command (tool family and operation)
-                var remainingParts = commandParts.Length > 1 
-                    ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
-                    : "";
-
-                // Clean the filename to remove stop words and separate smashed words
-                var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
-                    ? await _cleanFileName(remainingParts) 
-                    : "";
-
-                // Ensure brand filename is prefixed with 'azure-'
-                if (!brandFileName.StartsWith("azure-", StringComparison.OrdinalIgnoreCase))
-                {
-                    brandFileName = $"azure-{brandFileName}";
-                }
-
-                // Create filename: {brand-filename}-{tool-family}-{operation}-annotations.md
-                var fileName = !string.IsNullOrEmpty(cleanedRemainingParts)
-                    ? $"{brandFileName}-{cleanedRemainingParts}-annotations.md"
-                    : $"{brandFileName}-annotations.md";
-                
+                // Use shared deterministic filename builder
+                var fileName = ToolFileNameBuilder.BuildAnnotationFileName(command, nameContext);
                 var outputFile = Path.Combine(outputDir, fileName);
 
                 // Format metadata with display names for each property
@@ -242,15 +191,17 @@ public class AnnotationGenerator
                 */
             }
             
-            Console.WriteLine($"Generated {data.Tools.Count} annotation files in {outputDir}");
+            Console.WriteLine($"✓ Generated {data.Tools.Count} annotation files");
             
+            // Log example prompts summary to file
             if (examplePromptGenerator != null)
             {
-                Console.WriteLine($"\n=== Example Prompts Summary ===");
-                Console.WriteLine($"  Total tools processed: {data.Tools.Count}");
-                Console.WriteLine($"  Successfully generated: {examplePromptsGenerated}");
-                Console.WriteLine($"  Failed: {examplePromptsFailed}");
-                Console.WriteLine($"  Output directory: {examplePromptsDir}");
+                LogFileHelper.WriteDebug("");
+                LogFileHelper.WriteDebug("=== Example Prompts Summary ===");
+                LogFileHelper.WriteDebug($"  Total tools processed: {data.Tools.Count}");
+                LogFileHelper.WriteDebug($"  Successfully generated: {examplePromptsGenerated}");
+                LogFileHelper.WriteDebug($"  Failed: {examplePromptsFailed}");
+                LogFileHelper.WriteDebug($"  Output directory: {examplePromptsDir}");
             }
             
             // Generate missing mappings report if there are any
@@ -261,8 +212,8 @@ public class AnnotationGenerator
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating annotation files: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            LogFileHelper.WriteDebug($"Error generating annotation files: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }
@@ -278,9 +229,8 @@ public class AnnotationGenerator
     {
         try
         {
-            // Load mappings and helpers to compute consistent filenames
-            var brandMappings = await _loadBrandMappings();
-            var compoundWords = await _loadCompoundWords();
+            // Load shared data files for filename generation
+            var nameContext = await FileNameContext.CreateAsync();
 
             // Collect all tools from all areas
             var allTools = new List<object>();
@@ -289,42 +239,9 @@ public class AnnotationGenerator
             {
                 foreach (var tool in area.Value.Tools)
                 {
-                    // Compute annotation filename using same logic as generation
-                    // Parse command
-                    var commandText = tool.Command ?? string.Empty;
-                    var commandParts = commandText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    string areaName = commandParts.Length > 0 ? commandParts[0] : string.Empty;
-                    string brandFileName;
-                    if (!string.IsNullOrEmpty(areaName) && brandMappings.TryGetValue(areaName, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
-                    {
-                        brandFileName = mapping.FileName!;
-                    }
-                    else if (!string.IsNullOrEmpty(areaName) && compoundWords.TryGetValue(areaName.ToLowerInvariant(), out var compoundReplacement))
-                    {
-                        brandFileName = compoundReplacement;
-                    }
-                    else
-                    {
-                        brandFileName = areaName.ToLowerInvariant();
-                    }
-
-                    // Ensure prefix 'azure-'
-                    if (!brandFileName.StartsWith("azure-", StringComparison.OrdinalIgnoreCase))
-                    {
-                        brandFileName = $"azure-{brandFileName}";
-                    }
-
-                    // Remaining parts
-                    var remainingParts = commandParts.Length > 1
-                        ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
-                        : string.Empty;
-                    var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts)
-                        ? await _cleanFileName(remainingParts)
-                        : string.Empty;
-
-                    var annotationFileName = !string.IsNullOrEmpty(cleanedRemainingParts)
-                        ? $"{brandFileName}-{cleanedRemainingParts}-annotations.md"
-                        : $"{brandFileName}-annotations.md";
+                    // Use shared deterministic filename builder
+                    var annotationFileName = ToolFileNameBuilder.BuildAnnotationFileName(
+                        tool.Command ?? "", nameContext);
                     var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
                     
                     string? annotationContent = null;
@@ -356,11 +273,11 @@ public class AnnotationGenerator
             var outputFile = Path.Combine(outputDir, "tool-annotations.md");
             await File.WriteAllTextAsync(outputFile, result);
             
-            Console.WriteLine($"Generated tool annotations summary at {outputFile}");
+            LogFileHelper.WriteDebug($"Generated tool annotations summary at {outputFile}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating tool annotations summary: {ex.Message}");
+            LogFileHelper.WriteDebug($"Error generating tool annotations summary: {ex.Message}");
             throw;
         }
     }
@@ -401,11 +318,11 @@ public class AnnotationGenerator
             lines.Add("3. Otherwise, the default lowercase area name will be used");
 
             await File.WriteAllLinesAsync(reportPath, lines);
-            Console.WriteLine($"\n⚠️  Generated missing mappings report: {reportPath}");
+            LogFileHelper.WriteDebug($"Generated missing mappings report: {reportPath}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Warning: Failed to generate missing mappings report: {ex.Message}");
+            LogFileHelper.WriteDebug($"Failed to generate missing mappings report: {ex.Message}");
         }
     }
 

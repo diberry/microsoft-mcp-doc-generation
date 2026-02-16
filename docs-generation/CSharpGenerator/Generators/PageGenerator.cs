@@ -16,17 +16,11 @@ namespace CSharpGenerator.Generators;
 /// </summary>
 public class PageGenerator
 {
-    private readonly Func<Task<Dictionary<string, BrandMapping>>> _loadBrandMappings;
-    private readonly Func<string, Task<string>> _cleanFileName;
     private readonly Func<List<Tool>, List<CommonParameter>> _extractCommonParameters;
 
     public PageGenerator(
-        Func<Task<Dictionary<string, BrandMapping>>> loadBrandMappings,
-        Func<string, Task<string>> cleanFileName,
         Func<List<Tool>, List<CommonParameter>> extractCommonParameters)
     {
-        _loadBrandMappings = loadBrandMappings;
-        _cleanFileName = cleanFileName;
         _extractCommonParameters = extractCommonParameters;
     }
 
@@ -57,8 +51,8 @@ public class PageGenerator
             var parentDir = string.IsNullOrWhiteSpace(parentDirCandidate) ? outputDir : parentDirCandidate;
             var annotationsDir = Path.Combine(parentDir, "annotations");
             
-            // Load brand mappings for annotation filename lookup
-            var brandMappings = await _loadBrandMappings();
+            // Load shared data files for filename generation
+            var nameContext = await FileNameContext.CreateAsync();
 
             // Filter out common parameters from tools for area pages and add annotation content
             var toolsWithFilteredParamsTasks = areaData.Tools.Select(async tool => 
@@ -76,65 +70,32 @@ public class PageGenerator
                 // Read annotation file content if it exists
                 if (!string.IsNullOrEmpty(tool.Command))
                 {
-                    // Parse command to get brand-based filename
-                    var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                    if (commandParts.Length > 0)
+                    // Use shared deterministic filename builder
+                    var annotationFileName = ToolFileNameBuilder.BuildAnnotationFileName(
+                        tool.Command, nameContext);
+                    var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
+                    
+                    if (File.Exists(annotationFilePath))
                     {
-                        var area = commandParts[0];
-                        
-                        // Get brand-based filename from mapping
-                        string brandFileName;
-                        if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
+                        try
                         {
-                            brandFileName = mapping.FileName;
+                            filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
+                            filteredTool.AnnotationFileName = annotationFileName;
                         }
-                        else
+                        catch
                         {
-                            brandFileName = area.ToLowerInvariant();
-                        }
-
-                        // Ensure prefix 'azure-'
-                        if (!brandFileName.StartsWith("azure-", StringComparison.OrdinalIgnoreCase))
-                        {
-                            brandFileName = $"azure-{brandFileName}";
-                        }
-
-                        // Build remaining parts
-                        var remainingParts = commandParts.Length > 1 
-                            ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
-                            : "";
-
-                        // Clean the filename to match the annotation file generation
-                        var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
-                            ? await _cleanFileName(remainingParts) 
-                            : "";
-
-                        var annotationFileName = !string.IsNullOrEmpty(cleanedRemainingParts)
-                            ? $"{brandFileName}-{cleanedRemainingParts}-annotations.md"
-                            : $"{brandFileName}-annotations.md";
-                        
-                        var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
-                        
-                        if (File.Exists(annotationFilePath))
-                        {
-                            try
-                            {
-                                filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
-                                filteredTool.AnnotationFileName = annotationFileName;
-                            }
-                            catch
-                            {
-                                // Silently ignore if annotation file can't be read
-                                filteredTool.AnnotationContent = "";
-                            }
+                            // Silently ignore if annotation file can't be read
+                            filteredTool.AnnotationContent = "";
                         }
                     }
                 }
                 
                 if (tool.Option != null)
                 {
-                    filteredTool.Option = tool.Option
-                        .Where(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name))
+                    var filteredOptions = tool.Option
+                        .Where(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name));
+
+                    filteredTool.Option = filteredOptions
                         .Select(opt => new Option
                         {
                             Name = opt.Name,
@@ -144,8 +105,6 @@ public class PageGenerator
                             RequiredText = opt.Required == true ? "Required" : "Optional",
                             Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")),
                         })
-                        .OrderByDescending(opt => opt.Required) // Required parameters first
-                        .ThenBy(opt => opt.NL_Name, StringComparer.OrdinalIgnoreCase) // Then alphabetically by natural language name
                         .ToList();
                 }
                 
@@ -167,12 +126,12 @@ public class PageGenerator
             var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, areaPageData);
 
             await File.WriteAllTextAsync(outputFile, result);
-            Console.WriteLine($"Generated area page: {fileName}");
+            LogFileHelper.WriteDebug($"Generated area page: {fileName}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating area page for {areaName}: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            LogFileHelper.WriteDebug($"Error generating area page for {areaName}: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }
@@ -204,7 +163,7 @@ public class PageGenerator
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "common-tools.md");
         await File.WriteAllTextAsync(outputFile, result);
-        Console.WriteLine($"Generated common tools page: common-general/common-tools.md");
+        LogFileHelper.WriteDebug("Generated common tools page: common-general/common-tools.md");
     }
 
     /// <summary>
@@ -231,7 +190,7 @@ public class PageGenerator
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "index.md");
         await File.WriteAllTextAsync(outputFile, result);
-        Console.WriteLine($"Generated index page: common-general/index.md");
+        LogFileHelper.WriteDebug("Generated index page: common-general/index.md");
     }
 
     /// <summary>
@@ -263,7 +222,7 @@ public class PageGenerator
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
         await File.WriteAllTextAsync(outputFile, result);
-        Console.WriteLine($"Generated commands page: common-general/azmcp-commands.md");
+        LogFileHelper.WriteDebug("Generated commands page: common-general/azmcp-commands.md");
     }
 
     /// <summary>
@@ -293,12 +252,12 @@ public class PageGenerator
             Directory.CreateDirectory(commonGeneralDir);
             var outputFile = Path.Combine(commonGeneralDir, "service-start-option.md");
             await File.WriteAllTextAsync(outputFile, result);
-            Console.WriteLine($"Generated service options page: common-general/service-start-option.md");
+            LogFileHelper.WriteDebug("Generated service options page: common-general/service-start-option.md");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating service options page: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            LogFileHelper.WriteDebug($"Error generating service options page: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }

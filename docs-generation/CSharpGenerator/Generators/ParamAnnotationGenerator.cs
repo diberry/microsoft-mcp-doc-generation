@@ -169,19 +169,19 @@ public class ParamAnnotationGenerator
                     };
                 }
 
-                // Transform options to include RequiredText
-                var transformedOptions = tool.Option?.Select(opt => new
-                {
-                    name = opt.Name,
-                    NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
-                    type = opt.Type,
-                    required = opt.Required,
-                    RequiredText = opt.Required == true ? "Required" : "Optional",
-                    description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
-                })
-                .OrderByDescending(opt => opt.required) // Required parameters first
-                .ThenBy(opt => opt.NL_Name, StringComparer.OrdinalIgnoreCase) // Then alphabetically by natural language name
-                .ToList();
+                // Transform options to include RequiredText (already sorted required-first by TransformCliOutput)
+                var sourceOptions = tool.Option ?? new List<Option>();
+                var transformedOptions = sourceOptions
+                    .Select(opt => new
+                    {
+                        name = opt.Name,
+                        NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
+                        type = opt.Type,
+                        required = opt.Required,
+                        RequiredText = opt.Required == true ? "Required" : "Optional",
+                        description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
+                    })
+                    .ToList();
 
                 var paramAnnotationData = new Dictionary<string, object>
                 {

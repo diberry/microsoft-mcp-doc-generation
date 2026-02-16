@@ -78,7 +78,7 @@ public static class DataFileLoader
 
             if (!File.Exists(mappingFile))
             {
-                Console.WriteLine($"Warning: Brand mapping file not found at {mappingFile}, using default naming");
+                LogFileHelper.WriteDebug($"Brand mapping file not found at {mappingFile}, using default naming");
                 return new Dictionary<string, BrandMapping>();
             }
 
@@ -95,18 +95,18 @@ public static class DataFileLoader
             
             if (validMappings.Count < (mappings?.Count ?? 0))
             {
-                Console.WriteLine($"Warning: Skipped {(mappings?.Count ?? 0) - validMappings.Count} brand mapping(s) with null/empty server names");
+                LogFileHelper.WriteDebug($"Skipped {(mappings?.Count ?? 0) - validMappings.Count} brand mapping(s) with null/empty server names");
             }
 
             // McpServerName is guaranteed non-null by the filter above
             var result = validMappings.ToDictionary(m => m.McpServerName!, m => m);
             
-            Console.WriteLine($"Loaded {result.Count} brand mappings from {mappingFile}");
+            LogFileHelper.WriteDebug($"Loaded {result.Count} brand mappings from {mappingFile}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading brand mappings: {ex.Message}");
+            LogFileHelper.WriteDebug($"Error loading brand mappings: {ex.Message}");
             return new Dictionary<string, BrandMapping>();
         }
     }
@@ -132,7 +132,7 @@ public static class DataFileLoader
             
             if (!File.Exists(compoundWordsFile))
             {
-                Console.WriteLine($"Warning: Compound words file not found at {compoundWordsFile}");
+                LogFileHelper.WriteDebug($"Compound words file not found at {compoundWordsFile}");
                 return new Dictionary<string, string>();
             }
 
@@ -140,12 +140,12 @@ public static class DataFileLoader
             var result = JsonSerializer.Deserialize<Dictionary<string, string>>(compoundWordsJson) 
                 ?? new Dictionary<string, string>();
             
-            Console.WriteLine($"Loaded {result.Count} compound word mappings from {compoundWordsFile}");
+            LogFileHelper.WriteDebug($"Loaded {result.Count} compound word mappings from {compoundWordsFile}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading compound words: {ex.Message}");
+            LogFileHelper.WriteDebug($"Error loading compound words: {ex.Message}");
             return new Dictionary<string, string>();
         }
     }
@@ -171,7 +171,7 @@ public static class DataFileLoader
             
             if (!File.Exists(stopWordsFile))
             {
-                Console.WriteLine($"Warning: Stop words file not found at {stopWordsFile}");
+                LogFileHelper.WriteDebug($"Stop words file not found at {stopWordsFile}");
                 return new HashSet<string>();
             }
 
@@ -179,12 +179,12 @@ public static class DataFileLoader
             var stopWordsList = JsonSerializer.Deserialize<List<string>>(stopWordsJson) ?? new List<string>();
             var result = new HashSet<string>(stopWordsList);
             
-            Console.WriteLine($"Loaded {result.Count} stop words from {stopWordsFile}");
+            LogFileHelper.WriteDebug($"Loaded {result.Count} stop words from {stopWordsFile}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading stop words: {ex.Message}");
+            LogFileHelper.WriteDebug($"Error loading stop words: {ex.Message}");
             return new HashSet<string>();
         }
     }
@@ -210,7 +210,7 @@ public static class DataFileLoader
             
             if (!File.Exists(commonParamsFile))
             {
-                Console.WriteLine($"Warning: common-parameters.json not found at {commonParamsFile}");
+                LogFileHelper.WriteDebug($"common-parameters.json not found at {commonParamsFile}");
                 return new List<CommonParameterDefinition>();
             }
 
@@ -220,12 +220,12 @@ public static class DataFileLoader
                 PropertyNameCaseInsensitive = true
             }) ?? new List<CommonParameterDefinition>();
 
-            Console.WriteLine($"Loaded {result.Count} common parameters from {commonParamsFile}");
+            LogFileHelper.WriteDebug($"Loaded {result.Count} common parameters from {commonParamsFile}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading common parameters: {ex.Message}");
+            LogFileHelper.WriteDebug($"Error loading common parameters: {ex.Message}");
             return new List<CommonParameterDefinition>();
         }
     }
@@ -240,7 +240,7 @@ public static class DataFileLoader
     {
         if (!File.Exists(filePath))
         {
-            Console.WriteLine($"Warning: Parameter mapping file not found at '{filePath}'");
+            LogFileHelper.WriteDebug($"Parameter mapping file not found at '{filePath}'");
             return new List<MappedParameter>();
         }
 
@@ -248,12 +248,12 @@ public static class DataFileLoader
         {
             var json = await File.ReadAllTextAsync(filePath);
             var mappings = JsonSerializer.Deserialize<List<MappedParameter>>(json) ?? new List<MappedParameter>();
-            Console.WriteLine($"Loaded {mappings.Count} parameter mappings from {Path.GetFileName(filePath)}");
+            LogFileHelper.WriteDebug($"Loaded {mappings.Count} parameter mappings from {Path.GetFileName(filePath)}");
             return mappings;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading parameter mappings from {filePath}: {ex.Message}");
+            LogFileHelper.WriteDebug($"Error loading parameter mappings from {filePath}: {ex.Message}");
             return new List<MappedParameter>();
         }
     }

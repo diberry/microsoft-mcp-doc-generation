@@ -18,23 +18,6 @@ namespace CSharpGenerator.Generators;
 /// </summary>
 public class ParameterGenerator
 {
-    private readonly Func<Task<Dictionary<string, BrandMapping>>> _loadBrandMappings;
-    private readonly Func<Task<Dictionary<string, string>>> _loadCompoundWords;
-    private readonly Func<string, Task<string>> _cleanFileName;
-    private readonly Func<List<Tool>, List<CommonParameter>> _extractCommonParameters;
-
-    public ParameterGenerator(
-        Func<Task<Dictionary<string, BrandMapping>>> loadBrandMappings,
-        Func<Task<Dictionary<string, string>>> loadCompoundWords,
-        Func<string, Task<string>> cleanFileName,
-        Func<List<Tool>, List<CommonParameter>> extractCommonParameters)
-    {
-        _loadBrandMappings = loadBrandMappings;
-        _loadCompoundWords = loadCompoundWords;
-        _cleanFileName = cleanFileName;
-        _extractCommonParameters = extractCommonParameters;
-    }
-
     /// <summary>
     /// Generates parameter files for all tools
     /// </summary>
@@ -47,8 +30,8 @@ public class ParameterGenerator
         {
             Console.WriteLine($"Generating parameter files for {data.Tools.Count} tools...");
             
-            // Load brand mappings
-            var brandMappings = await _loadBrandMappings();
+            // Load shared data files for filename generation
+            var nameContext = await FileNameContext.CreateAsync();
             
             // Get common parameters from CLI data only
             var commonParameters = data.SourceDiscoveredCommonParams;
@@ -59,51 +42,9 @@ public class ParameterGenerator
                 if (string.IsNullOrEmpty(tool.Command))
                     continue;
 
-                // Parse command to extract area (first part)
-                var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (commandParts.Length == 0)
-                    continue;
-
-                var area = commandParts[0];
-                
-                // Load compound words for area name transformation
-                var compoundWords = await _loadCompoundWords();
-                
-                // Get brand-based filename from mapping, or fall back to area name
-                string brandFileName;
-                if (brandMappings.TryGetValue(area, out var mapping) && !string.IsNullOrEmpty(mapping.FileName))
-                {
-                    brandFileName = mapping.FileName;
-                }
-                else
-                {
-                    // Fallback: use area name, but check compound words first
-                    var areaLower = area.ToLowerInvariant();
-                    if (compoundWords.TryGetValue(areaLower, out var compoundReplacement))
-                    {
-                        brandFileName = compoundReplacement;
-                    }
-                    else
-                    {
-                        brandFileName = areaLower;
-                    }
-                }
-
-                // Build remaining parts of command (tool family and operation)
-                var remainingParts = commandParts.Length > 1 
-                    ? string.Join("-", commandParts.Skip(1)).ToLowerInvariant()
-                    : "";
-
-                // Clean the filename to remove stop words and separate smashed words
-                var cleanedRemainingParts = !string.IsNullOrEmpty(remainingParts) 
-                    ? await _cleanFileName(remainingParts) 
-                    : "";
-
-                // Create filename: {brand-filename}-{tool-family}-{operation}-parameters.md
-                var fileName = !string.IsNullOrEmpty(cleanedRemainingParts)
-                    ? $"{brandFileName}-{cleanedRemainingParts}-parameters.md"
-                    : $"{brandFileName}-parameters.md";
-                
+                // Use shared deterministic filename builder
+                var fileName = ToolFileNameBuilder.BuildParameterFileName(
+                    tool.Command, nameContext);
                 var outputFile = Path.Combine(outputDir, fileName);
 
                 // Filter out common parameters unless they are required for this specific tool
@@ -114,9 +55,11 @@ public class ParameterGenerator
                     tool.ConditionalRequiredParameters ?? new List<string>(),
                     StringComparer.OrdinalIgnoreCase);
 
-                var transformedOptions = allOptions
+                var filteredOptions = allOptions
                     .Where(opt => !string.IsNullOrEmpty(opt.Name) && 
-                                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true))
+                                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true));
+
+                var transformedOptions = filteredOptions
                     .Select(opt => new
                     {
                         name = opt.Name,
@@ -126,8 +69,6 @@ public class ParameterGenerator
                         RequiredText = BuildRequiredText(opt.Required, opt.Name ?? "", conditionalParameters),
                         description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
                     })
-                    .OrderByDescending(opt => opt.required) // Required parameters first
-                    .ThenBy(opt => opt.NL_Name, StringComparer.OrdinalIgnoreCase) // Then alphabetically by natural language name
                     .ToList();
 
                 var parameterData = new Dictionary<string, object>
@@ -153,12 +94,12 @@ public class ParameterGenerator
                 tool.HasParameters = true;
             }
             
-            Console.WriteLine($"Generated {data.Tools.Count} parameter files in {outputDir}");
+            Console.WriteLine($"✓ Generated {data.Tools.Count} parameter files");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error generating parameter files: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
+            LogFileHelper.WriteDebug($"Error generating parameter files: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
     }
