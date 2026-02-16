@@ -25,7 +25,7 @@ Generate with specific steps only:
 ./start.sh advisor 1,2    # advisor only, steps 1-2
 ```
 
-### Generation Steps
+### Generation Steps for entire tool set
 
 | Step | Description | Duration | AI Required |
 |------|-------------|----------|-------------|
@@ -37,13 +37,24 @@ Generate with specific steps only:
 
 **Note**: Steps 2-5 require Azure OpenAI credentials configured in `docs-generation/.env`. See [docs/START-SCRIPTS.md](docs/START-SCRIPTS.md) for details.
 
+**Example `.env` configuration**:
+
+```ini
+FOUNDRY_API_KEY="your-api-key-here"
+FOUNDRY_ENDPOINT="https://your-resource.openai.azure.com/"
+FOUNDRY_MODEL_NAME="gpt-4o-mini"
+FOUNDRY_MODEL_API_VERSION="2025-01-01-preview"
+TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME="gpt-4o"
+TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION="2025-01-01-preview"
+```
+
 ## Critical Outputs
 
 The generator produces two main types of documentation:
 
 ### 1. Tool Family Files (`./generated/tool-family/`)
 
-Service-specific documentation files (52 total) - one per Azure namespace:
+Service-specific documentation files (52 total) - one per Azure namespace. These appear in 1P docs under the tools node.
 
 ```
 ./generated/tool-family/
@@ -63,7 +74,7 @@ Each file contains complete documentation for all tools in that service family, 
 
 ### 2. Horizontal Articles (`./generated/horizontal-articles/`)
 
-Cross-cutting "how-to" guides that explain how to use Azure MCP with specific services:
+Cross-cutting "how-to" guides that explain how to use Azure MCP with specific services. These appear in 1P docs under the services node.
 
 ```
 ./generated/horizontal-articles/
@@ -109,6 +120,7 @@ microsoft-mcp-doc-generation/
 │   ├── annotations/             # Tool annotation includes
 │   ├── parameters/              # Parameter documentation
 │   ├── example-prompts/         # AI-generated examples
+│   ├── reports/                 # Validation and analysis reports
 │   └── logs/                    # Generation logs
 │
 ├── test-npm-azure-mcp/          # MCP CLI metadata extractor
@@ -211,7 +223,7 @@ To modify AI-generated content quality or style:
 ### Required
 - **Node.js + npm** - For MCP CLI metadata extraction
 - **PowerShell (pwsh)** - For orchestration scripts
-- **.NET 9.0 SDK** - For C# generator projects
+- **.NET SDK** - For C# generator projects (projects use .NET 9.0)
 
 ### Optional (for AI-enhanced steps)
 - **Azure OpenAI** - For steps 2-5 (example prompts, improvements, horizontal articles)
@@ -251,6 +263,7 @@ generated/
 ├── example-prompts/             # AI-generated example prompts
 ├── example-prompts-prompts/     # Prompts sent to AI (for review)
 ├── horizontal-article-prompts/  # Prompts sent to AI (for review)
+├── reports/                     # Validation and analysis reports
 └── logs/                        # Generation logs
 ```
 
