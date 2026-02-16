@@ -7,19 +7,19 @@ This document explains the numbered generation scripts and their execution order
 All generation scripts are now numbered to indicate their execution order:
 
 ```
-docs-generation/
+docs-generation/scripts/
 ├── Generate.ps1                                    # Main orchestrator (runs all steps)
 ├── 1-Generate-AnnotationsParametersRaw.ps1        # Step 1: Base content
 ├── 2-Generate-ToolGenerationAndAIImprovements.ps1 # Step 2: Tool pages with AI
 ├── 3-Generate-ExamplePrompts.ps1                   # Step 3: Example prompts
 ├── 4-Generate-ToolFamilyFiles.ps1                  # Step 4: Tool families
 ├── 5-Validate-total-tool-count-and-family.ps1     # Step 5: Validation & reports
-└── GenerateExamplePrompt-One.ps1                   # Utility: Test single tool
+└── 2-Generate-ExamplePrompts-One.ps1              # Utility: Test single tool
 ```
 
 ## Execution Order
 
-### 1. Base Content Generation (`1-Generate-AnnotationsParametersRaw.ps1`)
+### 1. Base Content Generation (`scripts/1-Generate-AnnotationsParametersRaw.ps1`)
 
 **Purpose**: Generates foundational include files and raw tool documentation
 
@@ -32,10 +32,10 @@ docs-generation/
 
 **Usage**:
 ```bash
-pwsh ./1-Generate-AnnotationsParametersRaw.ps1 -OutputPath ../generated
+pwsh ./scripts/1-Generate-AnnotationsParametersRaw.ps1 -OutputPath ../generated
 ```
 
-### 2. Tool Generation with AI Improvements (`2-Generate-ToolGenerationAndAIImprovements.ps1`)
+### 2. Tool Generation with AI Improvements (`scripts/2-Generate-ToolGenerationAndAIImprovements.ps1`)
 
 **Purpose**: 3-phase tool page generation with AI enhancements
 
@@ -51,12 +51,12 @@ pwsh ./1-Generate-AnnotationsParametersRaw.ps1 -OutputPath ../generated
 
 **Usage**:
 ```bash
-pwsh ./2-Generate-ToolGenerationAndAIImprovements.ps1 -OutputPath ../generated
-pwsh ./2-Generate-ToolGenerationAndAIImprovements.ps1 -SkipRaw  # Use existing raw files
-pwsh ./2-Generate-ToolGenerationAndAIImprovements.ps1 -SkipImproved  # Skip AI improvements
+pwsh ./scripts/2-Generate-ToolGenerationAndAIImprovements.ps1 -OutputPath ../generated
+pwsh ./scripts/2-Generate-ToolGenerationAndAIImprovements.ps1 -SkipRaw  # Use existing raw files
+pwsh ./scripts/2-Generate-ToolGenerationAndAIImprovements.ps1 -SkipImproved  # Skip AI improvements
 ```
 
-### 3. Example Prompts Generation (`3-Generate-ExamplePrompts.ps1`)
+### 3. Example Prompts Generation (`scripts/3-Generate-ExamplePrompts.ps1`)
 
 **Purpose**: Generate and validate natural language example prompts using Azure OpenAI
 
@@ -68,15 +68,15 @@ pwsh ./2-Generate-ToolGenerationAndAIImprovements.ps1 -SkipImproved  # Skip AI i
 
 **Usage**:
 ```bash
-pwsh ./3-Generate-ExamplePrompts.ps1 -OutputPath ../generated
+pwsh ./scripts/3-Generate-ExamplePrompts.ps1 -OutputPath ../generated
 ```
 
 **Testing Single Tool**:
 ```bash
-pwsh ./GenerateExamplePrompt-One.ps1 -ToolCommand "keyvault secret create" -OutputPath "../generated"
+pwsh ./scripts/2-Generate-ExamplePrompts-One.ps1 -ToolCommand "keyvault secret create" -OutputPath "../generated"
 ```
 
-### 4. Tool Family Generation (`4-Generate-ToolFamilyFiles.ps1`)
+### 4. Tool Family Generation (`scripts/4-Generate-ToolFamilyFiles.ps1`)
 
 **Purpose**: Generate complete tool documentation and tool family cleanup
 
@@ -86,10 +86,10 @@ pwsh ./GenerateExamplePrompt-One.ps1 -ToolCommand "keyvault secret create" -Outp
 
 **Usage**:
 ```bash
-pwsh ./4-Generate-ToolFamilyFiles.ps1 -OutputPath ../generated
+pwsh ./scripts/4-Generate-ToolFamilyFiles.ps1 -OutputPath ../generated
 ```
 
-### 5. Validation and Reporting (`5-Validate-total-tool-count-and-family.ps1`)
+### 5. Validation and Reporting (`scripts/5-Validate-total-tool-count-and-family.ps1`)
 
 **Purpose**: Validate tool counts between sources and generate comparison reports
 
@@ -100,7 +100,7 @@ pwsh ./4-Generate-ToolFamilyFiles.ps1 -OutputPath ../generated
 
 **Usage**:
 ```bash
-pwsh ./5-Validate-total-tool-count-and-family.ps1 -OutputPath ../generated
+pwsh ./scripts/5-Validate-total-tool-count-and-family.ps1 -OutputPath ../generated
 ```
 
 **Validates**:
@@ -108,14 +108,14 @@ pwsh ./5-Validate-total-tool-count-and-family.ps1 -OutputPath ../generated
 - Identifies missing or extra tools between sources
 - Generates comparison reports for analysis
 
-## Main Orchestrator (`Generate.ps1`)
+## Main Orchestrator (`scripts/Generate.ps1`)
 
 The main entry point that runs all generation steps in order.
 
 **Usage**:
 ```bash
 cd docs-generation
-pwsh ./Generate.ps1 -OutputPath ../generated
+pwsh ./scripts/Generate.ps1 -OutputPath ../generated
 ```
 
 **Options**:
@@ -142,28 +142,28 @@ pwsh ./Generate.ps1 -OutputPath ../generated
 ### Full Generation
 ```bash
 cd docs-generation
-pwsh ./Generate.ps1 -OutputPath ../generated
+pwsh ./scripts/Generate.ps1 -OutputPath ../generated
 ```
 
 ### Partial Generation (Skip Steps)
 ```bash
 # Skip example prompts (faster for testing)
-pwsh ./Generate.ps1 -ExamplePrompts $false
+pwsh ./scripts/Generate.ps1 -ExamplePrompts $false
 
 # Run individual steps
-pwsh ./1-Generate-AnnotationsParametersRaw.ps1 -OutputPath ../generated
-pwsh ./2-Generate-ToolGenerationAndAIImprovements.ps1 -OutputPath ../generated
-pwsh ./3-Generate-ExamplePrompts.ps1 -OutputPath ../generated
-pwsh ./4-Generate-ToolFamilyFiles.ps1 -OutputPath ../generated
+pwsh ./scripts/1-Generate-AnnotationsParametersRaw.ps1 -OutputPath ../generated
+pwsh ./scripts/2-Generate-ToolGenerationAndAIImprovements.ps1 -OutputPath ../generated
+pwsh ./scripts/3-Generate-ExamplePrompts.ps1 -OutputPath ../generated
+pwsh ./scripts/4-Generate-ToolFamilyFiles.ps1 -OutputPath ../generated
 ```
 
 ### Testing Changes
 ```bash
 # Test a single tool's example prompt generation
-pwsh ./GenerateExamplePrompt-One.ps1 -ToolCommand "storage account list"
+pwsh ./scripts/2-Generate-ExamplePrompts-One.ps1 -ToolCommand "storage account list"
 
 # Test without validation
-pwsh ./GenerateExamplePrompt-One.ps1 -ToolCommand "storage account list" -SkipValidation
+pwsh ./scripts/2-Generate-ExamplePrompts-One.ps1 -ToolCommand "storage account list" -SkipValidation
 ```
 
 ## Migration Notes

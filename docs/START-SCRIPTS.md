@@ -66,7 +66,7 @@ This separation enables:
 **What it does**:
 1. Verifies CLI metadata files exist (fails if not found)
 2. Ensures output directory structure exists
-3. Calls `docs-generation/generate-tool-family.sh` for the specified namespace
+3. Calls `docs-generation/scripts/generate-tool-family.sh` for the specified namespace
 4. Generates namespace-specific documentation
 
 **Usage**:
@@ -112,15 +112,15 @@ start.sh (Orchestrator)
 └─ For each namespace (52 total):
    │
    ├─ start-only.sh acr
-   │  └─ generate-tool-family.sh acr
+   │  └─ scripts/generate-tool-family.sh acr
    │     └─ generated/tool-family/acr.md
    │
    ├─ start-only.sh advisor
-   │  └─ generate-tool-family.sh advisor
+   │  └─ scripts/generate-tool-family.sh advisor
    │     └─ generated/tool-family/advisor.md
    │
    ├─ start-only.sh aks
-   │  └─ generate-tool-family.sh aks
+   │  └─ scripts/generate-tool-family.sh aks
    │     └─ generated/tool-family/aks.md
    │
    └─ ... (49 more namespaces)
@@ -219,7 +219,7 @@ Both scripts support step-based generation (default: `1,2,3,4,5`):
 
 ### PowerShell
 - Required for all generation steps
-- Used by: `docs-generation/Generate-ToolFamily.ps1` and related scripts
+- Used by: `docs-generation/scripts/Generate-ToolFamily.ps1` and related scripts
 
 ### .NET SDK
 - Required for building generator projects
