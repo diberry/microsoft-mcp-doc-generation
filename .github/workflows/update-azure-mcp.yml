@@ -109,29 +109,99 @@ jobs:
           npx azmcp --help
           echo "✅ Installation test passed"
 
-      - name: Generate CLI JSON
+      - name: Capture CLI version and generate tools list
         if: steps.version-check.outputs.needs_update == 'true'
+        id: cli-snapshot
         working-directory: ./test-npm-azure-mcp
         run: |
-          echo "Generating CLI tools list JSON..."
-          FILENAME="cli-tools-${{ steps.version-check.outputs.latest_version }}.json"
-          npx azmcp tools list > "$FILENAME" 2>/dev/null
+          # Get the CLI version string from the binary itself
+          CLI_VERSION=$(npx azmcp --version | tr -d '[:space:]')
+          echo "CLI version: $CLI_VERSION"
+          echo "cli_version=$CLI_VERSION" >> $GITHUB_OUTPUT
           
-          # Validate the output is valid JSON
-          if ! node -e "JSON.parse(require('fs').readFileSync('$FILENAME','utf8'))" 2>/dev/null; then
-            echo "::error::CLI output is not valid JSON"
-            cat "$FILENAME"
-            exit 1
+          VERSION_DIR="./$CLI_VERSION"
+          
+          # Check if this version's folder already exists in the repo
+          if [ -d "$VERSION_DIR" ]; then
+            echo "is_new=false" >> $GITHUB_OUTPUT
+            echo "✅ Folder $VERSION_DIR already exists — skipping snapshot"
+          else
+            echo "is_new=true" >> $GITHUB_OUTPUT
+            mkdir -p "$VERSION_DIR"
+            
+            # Generate and validate the tools list
+            npx azmcp tools list > "$VERSION_DIR/tools-list.json" 2>/dev/null
+            if ! node -e "JSON.parse(require('fs').readFileSync('$VERSION_DIR/tools-list.json','utf8'))" 2>/dev/null; then
+              echo "::error::CLI output is not valid JSON"
+              cat "$VERSION_DIR/tools-list.json"
+              exit 1
+            fi
+            
+            TOOL_COUNT=$(node -p "JSON.parse(require('fs').readFileSync('$VERSION_DIR/tools-list.json','utf8')).results?.length ?? 0")
+            echo "✅ Snapshot created: $VERSION_DIR/tools-list.json ($TOOL_COUNT tools)"
           fi
-          echo "✅ CLI JSON generated and validated"
 
-      - name: Upload CLI JSON Artifact
-        if: steps.version-check.outputs.needs_update == 'true'
+      - name: Diff against previous version
+        if: steps.cli-snapshot.outputs.is_new == 'true'
+        id: diff-check
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          CLI_VERSION="${{ steps.cli-snapshot.outputs.cli_version }}"
+          
+          # Find all existing version folders (excluding the one we just created)
+          # Sort by version using sort -V for natural version ordering
+          PREV_VERSION=$(ls -d */ 2>/dev/null \
+            | sed 's|/||' \
+            | grep -v "^${CLI_VERSION}$" \
+            | grep -v 'node_modules' \
+            | sort -V \
+            | tail -1)
+          
+          DIFF_FILE="diff-${PREV_VERSION:-none}-to-${CLI_VERSION}.txt"
+          
+          if [ -n "$PREV_VERSION" ] && [ -f "$PREV_VERSION/tools-list.json" ]; then
+            echo "Diffing $PREV_VERSION → $CLI_VERSION"
+            echo "previous_version=$PREV_VERSION" >> $GITHUB_OUTPUT
+            
+            # Generate the diff (|| true because diff exits 1 when files differ)
+            diff -u "$PREV_VERSION/tools-list.json" "$CLI_VERSION/tools-list.json" > "$DIFF_FILE" || true
+            
+            # Count changed lines (additions + deletions, excluding diff headers)
+            ADDED=$(grep -c '^+[^+]' "$DIFF_FILE" || echo 0)
+            REMOVED=$(grep -c '^-[^-]' "$DIFF_FILE" || echo 0)
+            TOTAL=$((ADDED + REMOVED))
+            
+            echo "lines_added=$ADDED" >> $GITHUB_OUTPUT
+            echo "lines_removed=$REMOVED" >> $GITHUB_OUTPUT
+            echo "lines_changed=$TOTAL" >> $GITHUB_OUTPUT
+            
+            # Prepend a summary header to the diff file
+            {
+              echo "# CLI Tools Diff: $PREV_VERSION → $CLI_VERSION"
+              echo "# Lines added:   $ADDED"
+              echo "# Lines removed: $REMOVED"
+              echo "# Total changed: $TOTAL"
+              echo "#"
+              cat "$DIFF_FILE"
+            } > "${DIFF_FILE}.tmp" && mv "${DIFF_FILE}.tmp" "$DIFF_FILE"
+            
+            echo "✅ Diff generated: $TOTAL lines changed (+$ADDED / -$REMOVED)"
+          else
+            echo "previous_version=" >> $GITHUB_OUTPUT
+            echo "lines_changed=0" >> $GITHUB_OUTPUT
+            echo "# No previous version found to diff against" > "$DIFF_FILE"
+            echo "⚠️ No previous version folder found — skipping diff"
+          fi
+          
+          echo "diff_file=$DIFF_FILE" >> $GITHUB_OUTPUT
+
+      - name: Upload diff artifact
+        if: steps.cli-snapshot.outputs.is_new == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: cli-tools-${{ steps.version-check.outputs.latest_version }}
-          path: test-npm-azure-mcp/cli-tools-${{ steps.version-check.outputs.latest_version }}.json
-          retention-days: 30
+          name: cli-diff-${{ steps.cli-snapshot.outputs.cli_version }}
+          path: test-npm-azure-mcp/${{ steps.diff-check.outputs.diff_file }}
+          retention-days: 90
 
       - name: Check for breaking changes
         if: steps.version-check.outputs.needs_update == 'true'
@@ -193,20 +263,25 @@ jobs:
             - **Package**: `@azure/mcp`
             - **Current Version**: `${{ steps.version-check.outputs.current_version }}`
             - **New Version**: `${{ steps.version-check.outputs.latest_version }}`
+            - **CLI Version**: `${{ steps.cli-snapshot.outputs.cli_version }}`
             ${{ steps.breaking-check.outputs.breaking == 'true' && '- **⚠️ Major Version Change**: Review for breaking changes' || '' }}
             
             ### Files Updated
             - `test-npm-azure-mcp/package.json`
             - `test-npm-azure-mcp/package-lock.json`
+            ${{ steps.cli-snapshot.outputs.is_new == 'true' && format('- `test-npm-azure-mcp/{0}/tools-list.json` (new CLI snapshot)', steps.cli-snapshot.outputs.cli_version) || '' }}
             
-            ### Artifacts
-            - CLI tools JSON: `cli-tools-${{ steps.version-check.outputs.latest_version }}.json`
+            ### CLI Diff
+            ${{ steps.diff-check.outputs.previous_version && format('Compared against previous version `{0}`: **{1} lines changed** (+{2} / -{3})', steps.diff-check.outputs.previous_version, steps.diff-check.outputs.lines_changed, steps.diff-check.outputs.lines_added, steps.diff-check.outputs.lines_removed) || 'No previous version to diff against.' }}
+            
+            > Download the full diff from the workflow artifacts.
             
             ### Verification Steps
             Please verify that:
             - [ ] The package installs correctly
             - [ ] All scripts in package.json still work
             - [ ] The Azure MCP CLI commands function as expected
+            - [ ] The CLI tools diff looks reasonable
             
             ### Release Notes
             Check the release notes for breaking changes: https://www.npmjs.com/package/@azure/mcp?activeTab=versions
@@ -258,6 +333,16 @@ jobs:
           else
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "✅ No update needed — already using the latest version" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ steps.cli-snapshot.outputs.is_new }}" == "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### CLI Snapshot" >> $GITHUB_STEP_SUMMARY
+            echo "- **CLI Version**: ${{ steps.cli-snapshot.outputs.cli_version }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Snapshot**: \`test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json\`" >> $GITHUB_STEP_SUMMARY
+            if [ -n "${{ steps.diff-check.outputs.previous_version }}" ]; then
+              echo "- **Diff**: ${{ steps.diff-check.outputs.previous_version }} → ${{ steps.cli-snapshot.outputs.cli_version }} — **${{ steps.diff-check.outputs.lines_changed }} lines changed**" >> $GITHUB_STEP_SUMMARY
+            fi
           fi
 
       - name: Notify on Failure
