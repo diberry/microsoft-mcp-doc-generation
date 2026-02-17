@@ -30,34 +30,37 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 if [[ $# -lt 1 ]]; then
-	echo "Usage: $0 <tool-family> [steps]"
+	echo "Usage: $0 <tool-family> [steps] [output-dir]"
 	echo "Example: $0 advisor"
 	echo "Example: $0 advisor 1        (run only step 1)"
+	echo "Example: $0 advisor 1,2,3 /path/to/output        (custom output directory)"
 	exit 1
 fi
 
 TOOL_FAMILY="$1"
 STEPS="${2:-1,2,3,4,5}"
+OUTPUT_DIR="${3:-$ROOT_DIR/generated}"
 
 # Verify CLI metadata files exist
-if [[ ! -f "$ROOT_DIR/generated/cli/cli-version.json" ]] || \
-   [[ ! -f "$ROOT_DIR/generated/cli/cli-output.json" ]] || \
-   [[ ! -f "$ROOT_DIR/generated/cli/cli-namespace.json" ]]; then
-    echo "ERROR: CLI metadata files not found in ./generated/cli/"
+if [[ ! -f "$OUTPUT_DIR/cli/cli-version.json" ]] || \
+   [[ ! -f "$OUTPUT_DIR/cli/cli-output.json" ]] || \
+   [[ ! -f "$OUTPUT_DIR/cli/cli-namespace.json" ]]; then
+    echo "ERROR: CLI metadata files not found in $OUTPUT_DIR/cli/"
     echo "       Please run start.sh first to generate CLI metadata."
     exit 1
 fi
 
 # Ensure output directories exist
-mkdir -p "$ROOT_DIR/generated/common-general"
-mkdir -p "$ROOT_DIR/generated/tools"
-mkdir -p "$ROOT_DIR/generated/example-prompts"
-mkdir -p "$ROOT_DIR/generated/annotations"
-mkdir -p "$ROOT_DIR/generated/logs"
-mkdir -p "$ROOT_DIR/generated/tool-family"
+mkdir -p "$OUTPUT_DIR/common-general"
+mkdir -p "$OUTPUT_DIR/tools"
+mkdir -p "$OUTPUT_DIR/example-prompts"
+mkdir -p "$OUTPUT_DIR/annotations"
+mkdir -p "$OUTPUT_DIR/logs"
+mkdir -p "$OUTPUT_DIR/tool-family"
 
 echo "Running tool family pipeline for: $TOOL_FAMILY (steps: $STEPS)"
+echo "Output directory: $OUTPUT_DIR"
 cd "$SCRIPT_DIR"
-./generate-tool-family.sh "$TOOL_FAMILY" "$STEPS"
+./generate-tool-family.sh "$TOOL_FAMILY" "$STEPS" "$OUTPUT_DIR"
 
-echo "OK: Tool family file generated at: $ROOT_DIR/generated/tool-family/$TOOL_FAMILY.md"
+echo "OK: Tool family file generated at: $OUTPUT_DIR/tool-family/$TOOL_FAMILY.md"
