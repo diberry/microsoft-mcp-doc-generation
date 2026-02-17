@@ -3,15 +3,19 @@
 #
 # Usage:
 #   ./start.sh [namespace] [steps]
-#   ./start.sh                # Run all steps for all namespaces
-#   ./start.sh advisor        # Run all steps for advisor namespace only
-#   ./start.sh advisor 1,2,3  # Run steps 1,2,3 for advisor namespace
-#   ./start.sh 1,2,3          # Run steps 1,2,3 for all namespaces
+#   ./start.sh                # Run all steps for all namespaces (output: ./generated/)
+#   ./start.sh advisor        # Run all steps for advisor namespace only (output: ./generated-advisor/)
+#   ./start.sh advisor 1,2,3  # Run steps 1,2,3 for advisor namespace (output: ./generated-advisor/)
+#   ./start.sh 1,2,3          # Run steps 1,2,3 for all namespaces (output: ./generated/)
+#
+# Output Directory:
+#   - When a specific namespace is provided: ./generated-<namespace>/
+#   - When processing all namespaces: ./generated/
 #
 # Preflight Actions (run once before all namespaces):
 #   Delegates to ./docs-generation/scripts/preflight.ps1 which performs:
 #   - Validate .env file exists with required AI credentials (STOPS if missing/invalid)
-#   - Clean ./generated directory
+#   - Clean output directory
 #   - Create output directories
 #   - Build .NET solution (all generator projects)
 #   - Generate MCP CLI metadata (cli-output.json, cli-namespace.json, cli-version.json)

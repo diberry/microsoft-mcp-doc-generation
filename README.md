@@ -12,7 +12,7 @@ Generate documentation for all Azure services (52 namespaces):
 ./start.sh
 ```
 
-Generate for a single service:
+Generate for a single service (outputs to `./generated-advisor/`):
 
 ```bash
 ./start.sh advisor
@@ -21,9 +21,11 @@ Generate for a single service:
 Generate with specific steps only:
 
 ```bash
-./start.sh 1,2,3          # All services, steps 1-3
-./start.sh advisor 1,2    # advisor only, steps 1-2
+./start.sh 1,2,3          # All services, steps 1-3 (output: ./generated/)
+./start.sh advisor 1,2    # advisor only, steps 1-2 (output: ./generated-advisor/)
 ```
+
+**Note**: When a specific namespace is provided, output goes to `./generated-<namespace>/` instead of `./generated/`. This allows you to work on a single service without affecting the full documentation set.
 
 ### Generation Steps for entire tool set
 
@@ -50,9 +52,11 @@ TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION="2025-01-01-preview"
 
 ## Critical Outputs
 
-The generator produces two main types of documentation:
+The generator produces two main types of documentation. Output location depends on usage:
+- **Full catalog** (`./start.sh`): `./generated/`
+- **Single namespace** (`./start.sh advisor`): `./generated-advisor/`
 
-### 1. Tool Family Files (`./generated/tool-family/`)
+### 1. Tool Family Files (`./generated/tool-family/` or `./generated-<namespace>/tool-family/`)
 
 Service-specific documentation files (52 total) - one per Azure namespace. These appear in 1P docs under the tools node.
 
