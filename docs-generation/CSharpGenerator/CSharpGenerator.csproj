@@ -16,12 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="../NaturalLanguageGenerator/NaturalLanguageGenerator.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../GenerativeAI/GenerativeAI.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="../ExamplePromptValidator/ExamplePromptValidator.csproj" />
-  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="../TemplateEngine/TemplateEngine.csproj" />
   </ItemGroup>

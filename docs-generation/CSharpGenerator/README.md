@@ -4,12 +4,12 @@
 
 ## What it does
 
-CSharpGenerator is called during **Step 1** of the generation pipeline (`1-Generate-AnnotationsParametersRaw-One.ps1`) with two distinct invocations:
+CSharpGenerator is called during **Step 1** of the generation pipeline (`1-Generate-AnnotationsParametersRaw-One.ps1`). Both annotation and parameter files are generated unconditionally on every invocation — the `--annotations` flag controls only the tool-annotations summary output.
 
-1. **`generate-docs <cli-json> <output-dir> --annotations`** — generates per-tool annotation include files (metadata: destructive, idempotent, read-only, secret, local-consent)
-2. **`generate-docs <cli-json> <output-dir> --parameters`** — generates per-tool parameter include files (CLI options in a markdown table)
+The pipeline calls it with:
 
-Both invocations also produce security and metadata summary reports.
+1. **`generate-docs <cli-json> <output-dir> --annotations --version <v>`** — generates annotations, parameters, and the annotations summary
+2. **`generate-docs <cli-json> <output-dir> --version <v>`** — generates annotations and parameters (summary skipped)
 
 ### Secondary modes (rarely used directly)
 
@@ -29,6 +29,7 @@ Program.cs                          CLI entry point, argument parsing
 ├── DocumentationGenerator.cs       Orchestrates generation across all tools
 │   ├── AnnotationGenerator         Per-tool annotation .md files
 │   ├── ParameterGenerator          Per-tool parameter table .md files
+│   ├── ParameterSorting            Sorts params: required first, then alphabetical
 │   ├── PageGenerator               Area/index/commands/common pages
 │   └── FrontmatterUtility          YAML frontmatter generation
 └── OptionsDiscovery.cs             Discovers common params from MCP source
@@ -69,8 +70,7 @@ DocumentationGenerator.TransformCliOutput()
 | `TemplateEngine` | Handlebars template rendering and custom helpers |
 | `Shared` | File naming utilities, brand mapping loader, logging |
 | `NaturalLanguageGenerator` | Text cleanup and normalization |
-| `GenerativeAI` | Azure OpenAI client (referenced but only used by deprecated generators) |
-| `ExamplePromptValidator` | Prompt validation (referenced but only used by deprecated code paths) |
+
 
 ## Models
 
@@ -83,6 +83,7 @@ DocumentationGenerator.TransformCliOutput()
 | `ToolMetadata` | Annotation flags: destructive, idempotent, readOnly, secret, localRequired |
 | `CommonParameter` | A shared parameter filtered from tool-specific tables |
 | `AreaData` | Tools grouped under a service area |
+| `MetadataValue` | Key-value metadata attached to tools |
 
 ## Configuration
 
@@ -106,20 +107,19 @@ Several generators were previously in this codebase but have been deleted. They 
 | `ServiceOptionsDiscovery` | N/A (unused by pipeline) | Service options page |
 | `ExamplePromptsResponse` | `ExamplePromptGeneratorStandalone` | AI response model |
 
-See [docs/UNUSED-FUNCTIONALITY.md](docs/UNUSED-FUNCTIONALITY.md) for full history.
+See [docs/README.md](docs/README.md) for detailed component documentation.
 
 ## Usage
 
 ```bash
-# Annotations (called by Step 1)
+# Annotations + parameters (called by Step 1)
 dotnet run --project CSharpGenerator --configuration Release -- \
   generate-docs cli-output.json ../generated --annotations --version 2.0.0
-
-# Parameters (called by Step 1)
-dotnet run --project CSharpGenerator --configuration Release -- \
-  generate-docs cli-output.json ../generated --parameters --version 2.0.0
 
 # Template mode (standalone)
 dotnet run --project CSharpGenerator --configuration Release -- \
   template templates/my-template.hbs data.json output.md
+
+# Run all tests
+dotnet test docs-generation.sln
 ```

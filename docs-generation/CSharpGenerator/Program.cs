@@ -124,7 +124,7 @@ internal class Program
      {
          if (args.Length < 2)
          {
-             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations] [--example-prompts] [--complete-tools] [--validate-prompts] [--version <version>]");
+             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--version <version>]");
              return 1;
          }
 
@@ -138,25 +138,17 @@ internal class Program
              LogFileHelper.WriteDebug($"  args[{i}] = '{args[i]}'");
          }
          
-         var generateToolPages = args.Contains("--tool-pages");
          var generateIndex = args.Contains("--index");
          var generateCommon = args.Contains("--common");
          var generateCommands = args.Contains("--commands");
          var generateAnnotations = args.Contains("--annotations");
-         var generateExamplePrompts = args.Contains("--example-prompts");
-         var generateCompleteTools = args.Contains("--complete-tools");
-         var validatePrompts = args.Contains("--validate-prompts");
          
          // Log flag values to file (not console)
          LogFileHelper.WriteDebug("Flag values:");
-         LogFileHelper.WriteDebug($"  generateToolPages: {generateToolPages}");
          LogFileHelper.WriteDebug($"  generateIndex: {generateIndex}");
          LogFileHelper.WriteDebug($"  generateCommon: {generateCommon}");
          LogFileHelper.WriteDebug($"  generateCommands: {generateCommands}");
          LogFileHelper.WriteDebug($"  generateAnnotations: {generateAnnotations}");
-         LogFileHelper.WriteDebug($"  generateExamplePrompts: {generateExamplePrompts}");
-         LogFileHelper.WriteDebug($"  generateCompleteTools: {generateCompleteTools}");
-         LogFileHelper.WriteDebug($"  validatePrompts: {validatePrompts}");
          
          // Extract version if provided, otherwise read from cli-version.json
          string? cliVersion = null;
@@ -174,15 +166,11 @@ internal class Program
          return await DocumentationGenerator.GenerateAsync(
              cliOutputFile,
              outputDir,
-             generateToolPages,
              generateIndex,
              generateCommon,
              generateCommands,
              generateAnnotations,
-             cliVersion,
-             generateExamplePrompts,
-             generateCompleteTools,
-             validatePrompts);
+             cliVersion);
      }
 }
 
