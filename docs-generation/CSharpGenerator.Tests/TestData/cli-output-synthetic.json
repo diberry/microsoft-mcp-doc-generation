@@ -1,0 +1,88 @@
+{
+  "Results": [
+    {
+      "Name": "azmcp storage account list",
+      "Command": "storage account list",
+      "Description": "List all storage accounts in a subscription.",
+      "Option": [
+        { "Name": "--subscription", "Type": "string", "Required": false, "Description": "The subscription ID." },
+        { "Name": "--resource-group", "Type": "string", "Required": false, "Description": "The resource group name." },
+        { "Name": "--tenant", "Type": "string", "Required": false, "Description": "The tenant ID." },
+        { "Name": "--auth-method", "Type": "string", "Required": false, "Description": "The authentication method." },
+        { "Name": "--output-format", "Type": "string", "Required": false, "Description": "The output format (json, table)." }
+      ],
+      "Metadata": {
+        "destructive": { "value": false, "description": "This operation does not modify resources." },
+        "idempotent": { "value": true, "description": "Can be called multiple times." },
+        "readOnly": { "value": true, "description": "Only reads data." }
+      }
+    },
+    {
+      "Name": "azmcp storage account get",
+      "Command": "storage account get",
+      "Description": "Get a specific storage account. Requires at least one of --account-name or --account-id.",
+      "Option": [
+        { "Name": "--subscription", "Type": "string", "Required": false, "Description": "The subscription ID." },
+        { "Name": "--resource-group", "Type": "string", "Required": true, "Description": "The resource group name." },
+        { "Name": "--account-name", "Type": "string", "Required": false, "Description": "The storage account name." },
+        { "Name": "--account-id", "Type": "string", "Required": false, "Description": "The storage account ID." },
+        { "Name": "--tenant", "Type": "string", "Required": false, "Description": "The tenant ID." },
+        { "Name": "--auth-method", "Type": "string", "Required": false, "Description": "The authentication method." }
+      ],
+      "Metadata": {
+        "destructive": { "value": false, "description": "This operation does not modify resources." },
+        "readOnly": { "value": true, "description": "Only reads data." },
+        "openWorld": { "value": false, "description": "Requires specific parameters." }
+      }
+    },
+    {
+      "Name": "azmcp storage blob upload",
+      "Command": "storage blob upload",
+      "Description": "Upload a blob to a container.",
+      "Option": [
+        { "Name": "--subscription", "Type": "string", "Required": false, "Description": "The subscription ID." },
+        { "Name": "--resource-group", "Type": "string", "Required": true, "Description": "The resource group name." },
+        { "Name": "--account-name", "Type": "string", "Required": true, "Description": "The storage account name." },
+        { "Name": "--container-name", "Type": "string", "Required": true, "Description": "The container name." },
+        { "Name": "--blob-name", "Type": "string", "Required": true, "Description": "The blob name." },
+        { "Name": "--tenant", "Type": "string", "Required": false, "Description": "The tenant ID." },
+        { "Name": "--auth-method", "Type": "string", "Required": false, "Description": "The authentication method." }
+      ],
+      "Metadata": {
+        "destructive": { "value": true, "description": "This operation may overwrite existing blobs." },
+        "idempotent": { "value": true, "description": "Uploading the same blob again produces the same result." }
+      }
+    },
+    {
+      "Name": "azmcp keyvault secret list",
+      "Command": "keyvault secret list",
+      "Description": "List all secrets in a key vault.",
+      "Option": [
+        { "Name": "--vault-name", "Type": "string", "Required": true, "Description": "The key vault name." },
+        { "Name": "--subscription", "Type": "string", "Required": false, "Description": "The subscription ID." },
+        { "Name": "--tenant", "Type": "string", "Required": false, "Description": "The tenant ID." },
+        { "Name": "--auth-method", "Type": "string", "Required": false, "Description": "The authentication method." }
+      ],
+      "Metadata": {
+        "readOnly": { "value": true, "description": "Only reads data." },
+        "secret": { "value": true, "description": "Accesses secret data." }
+      }
+    },
+    {
+      "Name": "azmcp keyvault secret get",
+      "Command": "keyvault secret get",
+      "Description": "Get a specific secret from a key vault.",
+      "Option": [
+        { "Name": "--vault-name", "Type": "string", "Required": true, "Description": "The key vault name." },
+        { "Name": "--secret-name", "Type": "string", "Required": true, "Description": "The secret name." },
+        { "Name": "--subscription", "Type": "string", "Required": false, "Description": "The subscription ID." },
+        { "Name": "--tenant", "Type": "string", "Required": false, "Description": "The tenant ID." },
+        { "Name": "--auth-method", "Type": "string", "Required": false, "Description": "The authentication method." }
+      ],
+      "Metadata": {
+        "readOnly": { "value": true, "description": "Only reads data." },
+        "secret": { "value": true, "description": "Accesses secret data." }
+      }
+    }
+  ]
+}

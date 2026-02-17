@@ -105,7 +105,7 @@ public class ParameterGenerator
         }
     }
 
-    private static string BuildRequiredText(bool required, string parameterName, HashSet<string> conditionalParameters)
+    internal static string BuildRequiredText(bool required, string parameterName, HashSet<string> conditionalParameters)
     {
         var baseText = required ? "Required" : "Optional";
         if (conditionalParameters.Contains(parameterName))

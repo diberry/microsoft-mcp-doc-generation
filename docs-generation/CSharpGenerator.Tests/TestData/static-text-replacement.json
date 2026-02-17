@@ -1,0 +1,35 @@
+[
+    {
+        "Parameter": "e.g.",
+        "NaturalLanguage": "for example"
+    },
+    {
+        "Parameter": "i.e.",
+        "NaturalLanguage": "in other words"
+    },
+    {
+        "Parameter": "id",
+        "NaturalLanguage": "ID"
+    },
+    {
+        "Parameter": "uri",
+        "NaturalLanguage": "URI"
+    },
+    {
+        "Parameter": "url",
+        "NaturalLanguage": "URL"
+    },
+    {
+        "Parameter": "ai",
+        "NaturalLanguage": "AI"
+    },
+    {
+        "Parameter": "sku",
+        "NaturalLanguage": "SKU"
+    },
+    {
+        "Parameter": "VMSS",
+        "NaturalLanguage": "Virtual machine scale set (VMSS)"
+    }
+
+]

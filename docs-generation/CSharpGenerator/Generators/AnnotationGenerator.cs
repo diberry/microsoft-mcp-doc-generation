@@ -283,7 +283,7 @@ public class AnnotationGenerator
     /// <summary>
     /// Converts camelCase to Title Case
     /// </summary>
-    private static string ConvertCamelCaseToTitleCase(string input)
+    internal static string ConvertCamelCaseToTitleCase(string input)
     {
         if (string.IsNullOrEmpty(input)) return input;
         

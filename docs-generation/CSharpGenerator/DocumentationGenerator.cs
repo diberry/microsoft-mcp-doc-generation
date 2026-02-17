@@ -224,7 +224,7 @@ public static class DocumentationGenerator
     /// <summary>
     /// Transforms CLI output into the expected documentation format.
     /// </summary>
-    private static TransformedData TransformCliOutput(CliOutput cliOutput)
+    internal static TransformedData TransformCliOutput(CliOutput cliOutput)
     {
         var tools = cliOutput.Results;
         var areaGroups = new Dictionary<string, AreaData>();
@@ -322,7 +322,7 @@ public static class DocumentationGenerator
         Console.WriteLine($"Generated common tools page: common-general/common-tools.md");
     }
 
-    private static (string? Note, List<string> Parameters) ExtractConditionalRequirement(string description)
+    internal static (string? Note, List<string> Parameters) ExtractConditionalRequirement(string description)
     {
         if (string.IsNullOrWhiteSpace(description))
         {
@@ -424,7 +424,7 @@ public static class DocumentationGenerator
     /// <summary>
     /// Extracts common parameters from a collection of tools based on usage frequency.
     /// </summary>
-    private static List<CommonParameter> ExtractCommonParameters(List<Tool> tools)
+    internal static List<CommonParameter> ExtractCommonParameters(List<Tool> tools)
     {
         var parameterCounts = new Dictionary<string, int>();
         var parameterDetails = new Dictionary<string, Option>();
@@ -474,7 +474,7 @@ public static class DocumentationGenerator
     /// <summary>
     /// Merges CLI-discovered parameters with source-discovered parameters, prioritizing source data.
     /// </summary>
-    private static TransformedData MergeCommonParameters(TransformedData data, List<CommonParameter> sourceCommonParams)
+    internal static TransformedData MergeCommonParameters(TransformedData data, List<CommonParameter> sourceCommonParams)
     {
         // Get existing common parameters from CLI discovery
         var cliCommonParams = ExtractCommonParameters(data.Tools);
@@ -614,7 +614,7 @@ public static class DocumentationGenerator
     /// Converts a camelCase property name to Title Case with spaces.
     /// Example: "openWorld" -> "Open World", "readOnly" -> "Read Only"
     /// </summary>
-    private static string ConvertCamelCaseToTitleCase(string propertyName)
+    internal static string ConvertCamelCaseToTitleCase(string propertyName)
     {
         if (string.IsNullOrEmpty(propertyName))
             return propertyName;
