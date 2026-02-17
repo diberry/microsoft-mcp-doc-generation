@@ -485,6 +485,7 @@ pwsh -File "$SCRIPT_DIR/MyScript.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS"
 - Use Central Package Management (no versions in .csproj)
 - Update `Config.cs` for new configuration files
 - Test with `dotnet build` before running
+- **Zero warnings policy**: The CI build uses `--configuration Release` which treats warnings as errors. All compiler warnings (nullable, unused variables, etc.) must be resolved before pushing. Run `dotnet build docs-generation.sln --configuration Release` locally and fix any warnings.
 - **For new .NET projects**: Always add to `docs-generation.sln` (`dotnet sln add`) and verify the full solution builds (`dotnet build docs-generation.sln`). This ensures the project is included in CI build and test via `.github/workflows/build-and-test.yml`. If the project includes tests, add a corresponding `.Tests` project to the solution as well.
 - **For new generators**: Place in `Generators/` directory, follow existing patterns
   - Use dependency injection for shared functions (brand mapping, filename cleaning)
