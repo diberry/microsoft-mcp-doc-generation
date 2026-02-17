@@ -34,7 +34,18 @@ This feature modifies the documentation generation pipeline to use namespace-spe
    - Conditionally passes `-OutputPath` to PowerShell script when `OUTPUT_DIR` is set
    - Maintains backward compatibility when no output directory is specified
 
-4. **README.md**
+4. **docs-generation/scripts/Invoke-CliAnalyzer.ps1** (CLI Analyzer script)
+   - Changed `HtmlOutputPath` default from hardcoded path to empty string
+   - Computes `HtmlOutputPath` from `OutputPath` when not explicitly provided
+   - Reports directory now respects namespace-specific output directory
+
+5. **docs-generation/Shared/LogFileHelper.cs** (Logging utility)
+   - Enhanced auto-discovery to find any `generated*/logs` directory
+   - Searches parent directory for `generated*` patterns
+   - Uses most recently modified directory when multiple exist
+   - Supports both `generated/` and `generated-<namespace>/` patterns
+
+6. **README.md**
    - Added note about namespace-specific output directories in Quick Start section
    - Updated Critical Outputs section to mention both output locations
    - Added examples showing the output directory in command comments
@@ -42,10 +53,11 @@ This feature modifies the documentation generation pipeline to use namespace-spe
 ### Files Added
 
 1. **test-output-directory.sh**
-   - Integration test suite with 4 test cases
+   - Integration test suite with 5 test cases
    - Verifies OUTPUT_DIR logic in all modified scripts
    - Checks parameter passing through the chain
    - Validates output messages use dynamic paths
+   - Verifies Invoke-CliAnalyzer.ps1 reports path logic
 
 2. **demo-output-directory-feature.sh**
    - Demonstration script showing feature usage and benefits
@@ -62,6 +74,7 @@ $ bash test-output-directory.sh
 ✓ PASS: start-only.sh accepts OUTPUT_DIR as third parameter
 ✓ PASS: generate-tool-family.sh accepts and uses OUTPUT_DIR
 ✓ PASS: start.sh output message uses dynamic OUTPUT_DIR
+✓ PASS: Invoke-CliAnalyzer.ps1 computes HtmlOutputPath from outputDir
 ```
 
 ## Benefits

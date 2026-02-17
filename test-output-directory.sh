@@ -111,6 +111,22 @@ else
 fi
 echo ""
 
+# Test 5: Verify Invoke-CliAnalyzer.ps1 computes HtmlOutputPath from OutputPath
+echo "Test 5: Verify Invoke-CliAnalyzer.ps1 uses dynamic HtmlOutputPath"
+if grep -q 'HtmlOutputPath = ""' "$ROOT_DIR/docs-generation/scripts/Invoke-CliAnalyzer.ps1"; then
+    if grep -q 'Join-Path.*outputDir.*"reports' "$ROOT_DIR/docs-generation/scripts/Invoke-CliAnalyzer.ps1"; then
+        echo -e "${GREEN}✓ PASS: Invoke-CliAnalyzer.ps1 computes HtmlOutputPath from outputDir${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${RED}✗ FAIL: Invoke-CliAnalyzer.ps1 doesn't compute HtmlOutputPath from outputDir${NC}"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+else
+    echo -e "${RED}✗ FAIL: Invoke-CliAnalyzer.ps1 still has hardcoded HtmlOutputPath default${NC}"
+    TESTS_FAILED=$((TESTS_FAILED + 1))
+fi
+echo ""
+
 # Summary
 echo "=================================================================="
 echo "Test Summary"

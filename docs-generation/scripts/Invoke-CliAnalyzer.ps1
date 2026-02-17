@@ -14,7 +14,7 @@
     Path to the generated directory containing cli-output.json (default: ../generated)
 
 .PARAMETER HtmlOutputPath
-    Path and filename for Markdown report output (default: cli-analysis-report.md in generated/reports)
+    Path and filename for Markdown report output (default: {OutputPath}/reports/cli-analysis-report.md)
 
 .PARAMETER Namespace
     Optional: Analyze specific namespace only (e.g., "sql", "keyvault")
@@ -45,7 +45,7 @@
 
 param(
     [string]$OutputPath = "../../generated",
-    [string]$HtmlOutputPath = "../../generated/reports/cli-analysis-report.md",
+    [string]$HtmlOutputPath = "",
     [string]$Namespace,
     [string]$Tool,
     [bool]$HtmlOnly = $false,
@@ -74,11 +74,13 @@ try {
     
     $cliJsonPath = Join-Path $outputDir "cli/cli-output.json"
     
-    # Resolve HTML output path
-    $htmlReportPath = if ([System.IO.Path]::IsPathRooted($HtmlOutputPath)) {
-        $HtmlOutputPath
+    # Resolve HTML output path - if not provided, use reports directory under OutputPath
+    if ([string]::IsNullOrWhiteSpace($HtmlOutputPath)) {
+        $htmlReportPath = Join-Path $outputDir "reports/cli-analysis-report.md"
+    } elseif ([System.IO.Path]::IsPathRooted($HtmlOutputPath)) {
+        $htmlReportPath = $HtmlOutputPath
     } else {
-        [System.IO.Path]::GetFullPath((Join-Path $scriptDir $HtmlOutputPath))
+        $htmlReportPath = [System.IO.Path]::GetFullPath((Join-Path $scriptDir $HtmlOutputPath))
     }
     
     # Ensure reports directory exists
