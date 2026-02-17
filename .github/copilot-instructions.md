@@ -59,10 +59,16 @@ Key files:
 - `Program.cs` - Entry point
 - `DocumentationGenerator.cs` - Core logic
   - **Parameter Count**: The parameter count displayed in console output and `generation-summary.md` represents the count of **non-common parameters only** (those shown in the parameter tables). Common parameters are defined in `docs-generation/common-parameters.json` and are filtered out to match what users see in the documentation.
-- `HandlebarsTemplateEngine.cs` - Template processing
 - `Config.cs` - Configuration loader
 - `Generators/CompleteToolGenerator.cs` - Complete tool documentation generator (NEW)
   - See `Generators/COMPLETE-TOOLS-README.md` for detailed documentation
+
+### TemplateEngine (shared library)
+**Directory**: `docs-generation/TemplateEngine/`
+
+Shared Handlebars template rendering library used by CSharpGenerator, HorizontalArticleGenerator, and ExamplePromptGeneratorStandalone. Wraps `Handlebars.Net` with custom helpers split into:
+- `Helpers/CoreHelpers.cs` - Generic helpers (dates, strings, math)
+- `Helpers/McpHelpers.cs` - MCP command structure helpers
 
 ### Configuration Files
 
@@ -479,6 +485,7 @@ pwsh -File "$SCRIPT_DIR/MyScript.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS"
 - Use Central Package Management (no versions in .csproj)
 - Update `Config.cs` for new configuration files
 - Test with `dotnet build` before running
+- **For new .NET projects**: Always add to `docs-generation.sln` (`dotnet sln add`) and verify the full solution builds (`dotnet build docs-generation.sln`). This ensures the project is included in CI build and test via `.github/workflows/build-and-test.yml`. If the project includes tests, add a corresponding `.Tests` project to the solution as well.
 - **For new generators**: Place in `Generators/` directory, follow existing patterns
   - Use dependency injection for shared functions (brand mapping, filename cleaning)
   - Filter common parameters using `ExtractCommonParameters` unless they're required

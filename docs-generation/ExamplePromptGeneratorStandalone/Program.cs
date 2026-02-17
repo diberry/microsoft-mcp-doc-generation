@@ -2,6 +2,7 @@ using System.Text.Json;
 using ExamplePromptGeneratorStandalone.Generators;
 using ExamplePromptGeneratorStandalone.Models;
 using ExamplePromptGeneratorStandalone.Utilities;
+using TemplateEngine;
 using Shared;
 
 namespace ExamplePromptGeneratorStandalone;
@@ -192,7 +193,7 @@ internal static class Program
                     ["requiredParamNames"] = requiredParamNames
                 };
 
-                var templateOutput = await TemplateEngine.ProcessAsync(templatePath, templateContext);
+                var templateOutput = await HandlebarsTemplateEngine.ProcessTemplateAsync(templatePath, templateContext);
                 exampleContent = templateOutput;
             }
             else

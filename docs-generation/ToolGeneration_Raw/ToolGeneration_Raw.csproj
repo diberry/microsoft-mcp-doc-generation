@@ -15,8 +15,4 @@
     <ProjectReference Include="../NaturalLanguageGenerator/NaturalLanguageGenerator.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Handlebars.Net" />
-  </ItemGroup>
-
 </Project>

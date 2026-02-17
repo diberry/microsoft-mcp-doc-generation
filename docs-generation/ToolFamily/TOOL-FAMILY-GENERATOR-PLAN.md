@@ -21,7 +21,7 @@ docs-generation/
 │   ├── Services/
 │   │   ├── ToolFamilyResolver.cs           (determine families from CLI data)
 │   │   ├── AnnotationLoader.cs             (load annotation content)
-│   │   └── HandlebarsTemplateEngine.cs     (shared with other generators)
+│   │   └── (uses TemplateEngine shared library)
 │   └── Templates/
 │       └── tool-family-template.hbs        (Handlebars template)
 ```
@@ -306,7 +306,7 @@ dotnet run -- generate-tool-families <cli-namespace-json> <cli-output-json> <out
 
 ### Phase 2: Template & Rendering
 - [ ] Create `tool-family-template.hbs`
-- [ ] Copy/adapt `HandlebarsTemplateEngine.cs` from CSharpGenerator
+- [ ] Add ProjectReference to `TemplateEngine` shared library
 - [ ] Implement `ToolFamilyDocumentationGenerator.cs`
 - [ ] Test template rendering with sample data
 
@@ -350,7 +350,7 @@ Structure (from your `final-tool-family-file.md`):
 | **Tool Family Grouping** | By service area from CLI output + brand mapping |
 | **Resource Grouping** | Automatic (derived from tool command structure) or config-based |
 | **Parameter Extraction** | From annotations OR from CLI if available |
-| **Template Engine** | Handlebars.Net (shared with CSharpGenerator) |
+| **Template Engine** | TemplateEngine shared library (wraps Handlebars.Net) |
 | **Configuration** | JSON file (`tool-family-config.json`) for metadata |
 | **Independence** | No cross-dependencies; can run standalone |
 | **Output Location** | `generated/tool-families/` |

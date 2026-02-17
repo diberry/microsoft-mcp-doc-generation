@@ -11,7 +11,6 @@ CSharpGenerator processes CLI output from the Azure MCP server and generates str
 ### Core Files
 - **Program.cs** - Entry point and command-line argument parsing
 - **DocumentationGenerator.cs** - Main generation orchestration logic
-- **HandlebarsTemplateEngine.cs** - Template processing engine
 - **Config.cs** - Configuration file loader
 
 ### Generators (`Generators/`)
@@ -164,7 +163,7 @@ generated/
 ## Dependencies
 
 - **.NET 9.0 SDK**
-- **Handlebars.Net 2.1.6** - Template engine
+- **TemplateEngine** - Shared Handlebars template rendering library (wraps Handlebars.Net 2.1.6)
 - **NaturalLanguageGenerator** - Text processing utilities
 - **Shared** - Common utilities
 - **GenerativeAI** - Azure OpenAI integration (optional)

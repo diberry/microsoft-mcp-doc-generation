@@ -16,11 +16,7 @@
     <ProjectReference Include="..\GenerativeAI\GenerativeAI.csproj" />
     <ProjectReference Include="..\NaturalLanguageGenerator\NaturalLanguageGenerator.csproj" />
     <ProjectReference Include="..\TextTransformation\TextTransformation.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Inherit Central Package Management versions -->
-    <PackageReference Include="Handlebars.Net" />
+    <ProjectReference Include="..\TemplateEngine\TemplateEngine.csproj" />
   </ItemGroup>
 
   <!-- All .cs files in this directory and subdirectories are automatically included -->

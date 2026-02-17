@@ -39,8 +39,13 @@ docs-generation/
 │   ├── CSharpGenerator.csproj    # Project file
 │   ├── Program.cs                # Main entry point
 │   ├── DocumentationGenerator.cs # Core generation logic
-│   ├── HandlebarsTemplateEngine.cs # Template processor
 │   └── Config.cs                 # Configuration loader
+├── TemplateEngine/                # Shared Handlebars template library
+│   ├── TemplateEngine.csproj     # References Handlebars.Net via CPM
+│   ├── HandlebarsTemplateEngine.cs # Template rendering API
+│   └── Helpers/                  # Custom Handlebars helpers
+│       ├── CoreHelpers.cs        # Generic helpers (dates, strings, math)
+│       └── McpHelpers.cs         # MCP command structure helpers
 ├── NaturalLanguageGenerator/      # Natural language processing
 │   └── TextCleanup.cs            # Text normalization
 ├── GenerativeAI/                  # AI integration for example prompts
@@ -374,7 +379,7 @@ When updating `brand-to-server-mapping.json` or `compound-words.json`:
 2. **Generator Build**: Compiles C# generator projects (CSharpGenerator, NaturalLanguageGenerator, Shared)
 3. **Data Processing**: Parses CLI JSON output (181 tools across 44 service areas)
 4. **Filename Resolution**: Applies 3-tier resolution (brand → compound words → original name)
-5. **Template Processing**: Uses Handlebars.Net to process .hbs templates with tool data
+5. **Template Processing**: Uses TemplateEngine (shared Handlebars.Net library) to process .hbs templates with tool data
 6. **Documentation Generation**: Writes 591 markdown files to `generated/multi-page/`
    - Main service docs: acr.md, aks.md, storage.md, etc.
    - Include files: annotations/, parameters/, param-and-annotation/
@@ -393,21 +398,17 @@ The ToolMetadataExtractor can be used separately to extract ToolMetadata propert
 
 ### Global Dependencies (Central Package Management)
 
-This project uses Central Package Management (CPM) as configured in the solution's `Directory.Packages.props`. The following dependency must be defined globally:
+This project uses Central Package Management (CPM) as configured in the solution's `Directory.Packages.props`.
 
-- **Handlebars.Net** (currently version 2.1.6) - Required for template processing in the C# generator
+- **Handlebars.Net** (version 2.1.6) - Referenced only by the `TemplateEngine` shared library; no other project references it directly
 
-**Important**: When using CPM, package versions must be defined in `Directory.Packages.props`, not in individual project files. The `CSharpGenerator.csproj` contains only the package reference without a version number:
-
-```xml
-<PackageReference Include="Handlebars.Net" />
-```
-
-The version is centrally managed in `Directory.Packages.props`:
+**Important**: When using CPM, package versions are defined in `Directory.Packages.props`, not in individual project files:
 
 ```xml
 <PackageVersion Include="Handlebars.Net" Version="2.1.6" />
 ```
+
+Projects that need template rendering add a `ProjectReference` to `TemplateEngine` instead of referencing `Handlebars.Net` directly.
 
 ### Local Dependencies
 

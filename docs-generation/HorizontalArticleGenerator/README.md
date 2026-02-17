@@ -172,7 +172,7 @@ var maxTokens = Math.Clamp(calculatedTokens, 2500, 12000);  // Adjust bounds
 
 - **.NET 9.0** - Runtime
 - **GenerativeAI** (shared project) - Azure OpenAI client wrapper
-- **Handlebars.Net** - Template rendering
+- **TemplateEngine** (shared project) - Handlebars template rendering
 - **Shared** (shared project) - Configuration utilities
 
 ## Related Files

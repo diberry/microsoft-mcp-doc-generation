@@ -80,7 +80,7 @@ Example prompts include:
 
 - **Shared** - Common utilities and models
 - **NaturalLanguageGenerator** - Text cleanup and filename sanitization
-- **Handlebars.Net** - Template processing (via Central Package Management)
+- **Shared** - Common utilities (Handlebars.Net dependency removed — not used by this project)
 
 ## Design Notes
 

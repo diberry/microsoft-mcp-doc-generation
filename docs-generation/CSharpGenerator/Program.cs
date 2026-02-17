@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.IO;
 using Shared;
 using CSharpGenerator.Models;
+using TemplateEngine;
 
 namespace CSharpGenerator;
 

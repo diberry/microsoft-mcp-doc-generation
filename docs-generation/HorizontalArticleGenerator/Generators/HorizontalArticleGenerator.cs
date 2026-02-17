@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using GenerativeAI;
-using CSharpGenerator;
 using CSharpGenerator.Models;
 using HorizontalArticleGenerator.Models;
+using TemplateEngine;
 using Shared;
 using Azure.Mcp.TextTransformation.Models;
 using Azure.Mcp.TextTransformation.Services;
