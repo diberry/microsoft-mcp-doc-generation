@@ -36,7 +36,6 @@ public static class DocumentationGenerator
         bool generateIndex = false,
         bool generateCommon = false,
         bool generateCommands = false,
-        bool generateServiceOptions = true,
         bool generateAnnotations = false,
         string? cliVersion = null,
         bool generateExamplePrompts = false,
@@ -293,13 +292,6 @@ public static class DocumentationGenerator
             await pageGenerator.GenerateCommandsPageAsync(transformedData, outputDir, commandsTemplate);
         }
         
-        // Generate service options page
-        if (generateServiceOptions)
-        {
-            var serviceOptionsTemplate = Path.Combine(templatesDir, "service-start-option.hbs");
-            await pageGenerator.GenerateServiceOptionsPageAsync(transformedData, outputDir, serviceOptionsTemplate);
-        }
-
         // Generate tool annotations summary file if annotations are enabled (but not in annotations-only mode)
         if (generateAnnotations && (generateCommands || generateIndex || generateCommon))
         {
@@ -651,38 +643,6 @@ public static class DocumentationGenerator
         data.SourceDiscoveredCommonParams = allCommonParams.Values.OrderBy(p => p.Name).ToList();
         
         return data;
-    }
-
-    /// <summary>
-    /// Generates the service options documentation page.
-    /// </summary>
-    private static async Task GenerateServiceOptionsPageAsync(TransformedData data, string outputDir, string templateFile)
-    {
-        try
-        {
-            // Get service options from source
-            var serviceOptions = await ServiceOptionsDiscovery.DiscoverServiceStartOptionsFromSource();
-            
-            var serviceOptionsPageData = new Dictionary<string, object>
-            {
-                ["version"] = data.Version,
-                ["generatedAt"] = data.GeneratedAt,
-                ["serviceOptions"] = serviceOptions
-            };
-
-            var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, serviceOptionsPageData);
-
-            // Generate in common-general directory
-            var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
-            var outputFile = Path.Combine(commonGeneralDir, "service-start-option.md");
-            await File.WriteAllTextAsync(outputFile, result);
-            Console.WriteLine($"Generated service options page: common-general/service-start-option.md");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error generating service options page: {ex.Message}");
-            Console.WriteLine(ex.StackTrace);
-        }
     }
 
     /// <summary>

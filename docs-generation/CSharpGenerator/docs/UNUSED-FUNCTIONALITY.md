@@ -199,9 +199,8 @@ $generatorProject = Join-Path $scriptDir "ExamplePromptGeneratorStandalone"
 - **Status**: **STILL USED** - Active in orchestration
 
 ### 5.4 Service Options Discovery
-- **Flag**: `--no-service-options` (inverted logic)
-- **File**: `ServiceOptionsDiscovery.cs`
-- **Status**: **STILL USED** - Active in `Generate.ps1`
+- **Removed** — `ServiceOptionsDiscovery.cs` deleted; `--no-service-options` flag removed
+- Was never called by the active pipeline (`1-Generate-AnnotationsParametersRaw-One.ps1`)
 
 ---
 
