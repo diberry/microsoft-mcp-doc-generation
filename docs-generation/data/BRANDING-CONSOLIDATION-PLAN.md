@@ -34,7 +34,7 @@ This document analyzes the duplication between `brand-to-server-mapping.json` an
   ```json
   {
     "mcpName": "azure-ai-foundry-agents",
-    "brandName": "Azure AI Foundry Agents",
+    "brandName": "Microsoft Foundry Agents",
     "filename": "azure-ai-foundry-agents"
   }
   ```

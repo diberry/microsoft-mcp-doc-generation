@@ -120,9 +120,9 @@
     "fileName": "azure-extension"
   },
   {
-    "brandName": "Azure AI Foundry",
+    "brandName": "Microsoft Foundry",
     "mcpServerName": "foundry",
-    "shortName": "AI Foundry",
+    "shortName": "Foundry",
     "fileName": "azure-ai-foundry"
   },
   {
