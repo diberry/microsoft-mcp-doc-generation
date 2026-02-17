@@ -30,7 +30,6 @@ Program.cs                          CLI entry point, argument parsing
 │   ├── AnnotationGenerator         Per-tool annotation .md files
 │   ├── ParameterGenerator          Per-tool parameter table .md files
 │   ├── PageGenerator               Area/index/commands/common pages
-│   ├── ReportGenerator             Security and metadata summary reports
 │   └── FrontmatterUtility          YAML frontmatter generation
 ├── OptionsDiscovery.cs             Discovers common params from MCP source
 └── ServiceOptionsDiscovery.cs      Discovers service start options from MCP source
@@ -54,7 +53,6 @@ DocumentationGenerator.TransformCliOutput()
 │ AnnotationGenerator             │──▶ generated/annotations/*.md
 │ ParameterGenerator              │──▶ generated/parameters/*.md
 │ PageGenerator                   │──▶ generated/common-general/*.md
-│ ReportGenerator                 │──▶ generated/reports/*.md
 └─────────────────────────────────┘
 ```
 

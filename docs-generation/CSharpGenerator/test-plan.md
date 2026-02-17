@@ -86,19 +86,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 6. ReportGenerator
-
-**Target**: `Generators/ReportGenerator.cs`
-
-| Test | Description |
-|---|---|
-| `GenerateSecurityReport_ListsDestructiveTools` | Report identifies tools with destructive annotation |
-| `GenerateMetadataReport_ListsAllTools` | Report contains one row per tool |
-| `Generate_CreatesReportDirectory` | `reports/` directory is created if absent |
-
----
-
-## 7. FrontmatterUtility
+## 6. FrontmatterUtility
 
 **Target**: `Generators/FrontmatterUtility.cs`
 
@@ -111,7 +99,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 8. ParameterSorting
+## 7. ParameterSorting
 
 **Target**: `Generators/ParameterSorting.cs`
 
@@ -125,7 +113,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 9. HandlebarsTemplateEngine
+## 8. HandlebarsTemplateEngine
 
 **Target**: `TemplateEngine/HandlebarsTemplateEngine.cs` (shared library)
 
@@ -140,7 +128,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 10. OptionsDiscovery
+## 9. OptionsDiscovery
 
 **Target**: `OptionsDiscovery.cs`
 
@@ -154,7 +142,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 11. ServiceOptionsDiscovery
+## 10. ServiceOptionsDiscovery
 
 **Target**: `ServiceOptionsDiscovery.cs`
 
@@ -165,7 +153,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 12. Config
+## 11. Config
 
 **Target**: `Config.cs`
 
@@ -177,7 +165,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 13. Program (CLI argument parsing)
+## 12. Program (CLI argument parsing)
 
 **Target**: `Program.cs`
 
@@ -193,7 +181,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 14. Integration tests
+## 13. Integration tests
 
 End-to-end tests that verify the full pipeline with fixture data.
 
@@ -228,5 +216,5 @@ End-to-end tests that verify the full pipeline with fixture data.
 | **P2** | PageGenerator | Currently not called by pipeline |
 | **P2** | OptionsDiscovery, ServiceOptionsDiscovery | Regex-based parsing, fragile to upstream changes |
 | **P2** | Config, Program CLI parsing | Low complexity |
-| **P3** | ReportGenerator | Informational output only |
+
 | **P3** | Integration tests | Build after unit tests stabilize |
