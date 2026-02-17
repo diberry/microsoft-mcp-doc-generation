@@ -1,0 +1,301 @@
+name: Update @azure/mcp Version
+
+on:
+  # Run nightly at 9:00 AM UTC
+  schedule:
+    - cron: '0 9 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-azure-mcp
+  cancel-in-progress: false
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Check current and latest versions
+        id: version-check
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          echo "Checking @azure/mcp version..."
+          
+          # Install current dependencies to resolve the actual installed version
+          npm ci --ignore-scripts
+          
+          # Get the actual installed version (handles ^, ~, ranges correctly)
+          CURRENT_VERSION=$(npm ls @azure/mcp --json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).dependencies['@azure/mcp'].version")
+          echo "Current version: $CURRENT_VERSION"
+          
+          # Detect if current version is a pre-release (beta, alpha, rc, etc.)
+          SPEC=$(node -p "require('./package.json').dependencies['@azure/mcp']")
+          if echo "$SPEC" | grep -qiE 'beta|alpha|rc|preview|next'; then
+            # Track the pre-release channel — get the latest version with a matching pre-release tag
+            PRE_TAG=$(echo "$SPEC" | grep -oiE 'beta|alpha|rc|preview|next' | head -1)
+            LATEST_VERSION=$(npm view @azure/mcp versions --json | node -p "
+              JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))
+                .filter(v => v.includes('$PRE_TAG'))
+                .pop() || ''")
+            # Fall back to latest stable if no matching pre-release found
+            if [ -z "$LATEST_VERSION" ]; then
+              LATEST_VERSION=$(npm view @azure/mcp version)
+            fi
+            echo "Pre-release channel detected: $PRE_TAG"
+          else
+            # Track latest stable
+            LATEST_VERSION=$(npm view @azure/mcp version)
+          fi
+          echo "Latest version: $LATEST_VERSION"
+          
+          # Export for use in other steps
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          
+          # Sanitize version for branch name (replace dots and special chars with dashes)
+          BRANCH_VERSION=$(echo "$LATEST_VERSION" | sed 's/[^a-zA-Z0-9-]/-/g')
+          echo "branch_version=$BRANCH_VERSION" >> $GITHUB_OUTPUT
+          
+          # Check if update is needed
+          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "✅ Update available: $CURRENT_VERSION → $LATEST_VERSION"
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+            echo "✅ Already up to date at version $CURRENT_VERSION"
+          fi
+
+      - name: Update package to latest version
+        if: steps.version-check.outputs.needs_update == 'true'
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          echo "Updating @azure/mcp to version ${{ steps.version-check.outputs.latest_version }}..."
+          
+          # Update to the exact target version
+          npm install @azure/mcp@${{ steps.version-check.outputs.latest_version }}
+          
+          # Verify the update succeeded using the actual installed version
+          NEW_VERSION=$(npm ls @azure/mcp --json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).dependencies['@azure/mcp'].version")
+          echo "Updated to version: $NEW_VERSION"
+          
+          # Validate version matches expected
+          if [ "$NEW_VERSION" != "${{ steps.version-check.outputs.latest_version }}" ]; then
+            echo "::error::Version mismatch after update. Expected ${{ steps.version-check.outputs.latest_version }}, got $NEW_VERSION"
+            exit 1
+          fi
+          
+          echo "✅ Version verified successfully"
+
+      - name: Test installation
+        if: steps.version-check.outputs.needs_update == 'true'
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          echo "Testing @azure/mcp installation..."
+          npx azmcp --version
+          npx azmcp --help
+          echo "✅ Installation test passed"
+
+      - name: Generate CLI JSON
+        if: steps.version-check.outputs.needs_update == 'true'
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          echo "Generating CLI tools list JSON..."
+          FILENAME="cli-tools-${{ steps.version-check.outputs.latest_version }}.json"
+          npx azmcp tools list > "$FILENAME" 2>/dev/null
+          
+          # Validate the output is valid JSON
+          if ! node -e "JSON.parse(require('fs').readFileSync('$FILENAME','utf8'))" 2>/dev/null; then
+            echo "::error::CLI output is not valid JSON"
+            cat "$FILENAME"
+            exit 1
+          fi
+          echo "✅ CLI JSON generated and validated"
+
+      - name: Upload CLI JSON Artifact
+        if: steps.version-check.outputs.needs_update == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-tools-${{ steps.version-check.outputs.latest_version }}
+          path: test-npm-azure-mcp/cli-tools-${{ steps.version-check.outputs.latest_version }}.json
+          retention-days: 30
+
+      - name: Check for breaking changes
+        if: steps.version-check.outputs.needs_update == 'true'
+        id: breaking-check
+        run: |
+          CURRENT_MAJOR=$(echo "${{ steps.version-check.outputs.current_version }}" | cut -d. -f1 | sed 's/[^0-9]//g')
+          LATEST_MAJOR=$(echo "${{ steps.version-check.outputs.latest_version }}" | cut -d. -f1 | sed 's/[^0-9]//g')
+          
+          if [ "$CURRENT_MAJOR" != "$LATEST_MAJOR" ]; then
+            echo "breaking=true" >> $GITHUB_OUTPUT
+            echo "⚠️ MAJOR VERSION CHANGE DETECTED - Review breaking changes!"
+          else
+            echo "breaking=false" >> $GITHUB_OUTPUT
+            echo "✅ No major version change"
+          fi
+
+      - name: Run npm audit
+        if: steps.version-check.outputs.needs_update == 'true'
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          echo "Running npm audit..."
+          npm audit --audit-level=high
+
+      - name: Close previous automated PRs
+        if: steps.version-check.outputs.needs_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Checking for existing automated PRs..."
+          
+          # Find all open PRs with the 'automated' label created by this workflow
+          EXISTING_PRS=$(gh pr list --label "automated" --label "dependencies" --json number,headRefName,title --jq '.[] | select(.headRefName | startswith("update-azure-mcp-")) | .number')
+          
+          if [ -n "$EXISTING_PRS" ]; then
+            echo "Found existing automated PR(s) to close:"
+            for PR_NUMBER in $EXISTING_PRS; do
+              echo "  Closing PR #$PR_NUMBER"
+              gh pr close $PR_NUMBER --comment "Closing this PR as a newer version update is available." --delete-branch || true
+            done
+            echo "✅ Closed previous automated PRs"
+          else
+            echo "No existing automated PRs found"
+          fi
+
+      - name: Create Pull Request
+        if: steps.version-check.outputs.needs_update == 'true'
+        id: create-pr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update @azure/mcp to ${{ steps.version-check.outputs.latest_version }}'
+          title: 'chore(deps): update @azure/mcp to ${{ steps.version-check.outputs.latest_version }}'
+          body: |
+            ${{ steps.breaking-check.outputs.breaking == 'true' && '⚠️ **MAJOR VERSION CHANGE - BREAKING CHANGES LIKELY**\n\n' || '' }}## Automated Dependency Update
+            
+            This PR updates `@azure/mcp` in the `test-npm-azure-mcp` directory to the latest version.
+            
+            ### Changes
+            - **Package**: `@azure/mcp`
+            - **Current Version**: `${{ steps.version-check.outputs.current_version }}`
+            - **New Version**: `${{ steps.version-check.outputs.latest_version }}`
+            ${{ steps.breaking-check.outputs.breaking == 'true' && '- **⚠️ Major Version Change**: Review for breaking changes' || '' }}
+            
+            ### Files Updated
+            - `test-npm-azure-mcp/package.json`
+            - `test-npm-azure-mcp/package-lock.json`
+            
+            ### Artifacts
+            - CLI tools JSON: `cli-tools-${{ steps.version-check.outputs.latest_version }}.json`
+            
+            ### Verification Steps
+            Please verify that:
+            - [ ] The package installs correctly
+            - [ ] All scripts in package.json still work
+            - [ ] The Azure MCP CLI commands function as expected
+            
+            ### Release Notes
+            Check the release notes for breaking changes: https://www.npmjs.com/package/@azure/mcp?activeTab=versions
+            
+            ---
+            
+            🤖 This PR was automatically generated by the `update-azure-mcp` workflow.
+          branch: update-azure-mcp-${{ steps.version-check.outputs.branch_version }}
+          delete-branch: true
+          labels: |
+            dependencies
+            automated
+          assignees: ${{ github.repository_owner }}
+
+      - name: PR Created Info
+        if: steps.version-check.outputs.needs_update == 'true' && steps.create-pr.outputs.pull-request-number
+        run: |
+          echo "✅ Pull Request created successfully!"
+          echo "PR Number: ${{ steps.create-pr.outputs.pull-request-number }}"
+          echo "PR URL: ${{ steps.create-pr.outputs.pull-request-url }}"
+
+      - name: Enable Auto-merge
+        if: steps.create-pr.outputs.pull-request-number && steps.breaking-check.outputs.breaking != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Enabling auto-merge for PR #${{ steps.create-pr.outputs.pull-request-number }}..."
+          if ! gh pr merge --auto --squash ${{ steps.create-pr.outputs.pull-request-number }}; then
+            echo "::warning::Auto-merge not enabled - this repo may need branch protection rules configured"
+          else
+            echo "✅ Auto-merge enabled (will merge when checks pass)"
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Update Check Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Current Version**: ${{ steps.version-check.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Latest Version**: ${{ steps.version-check.outputs.latest_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Update Needed**: ${{ steps.version-check.outputs.needs_update }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ steps.create-pr.outputs.pull-request-number }}" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ PR #${{ steps.create-pr.outputs.pull-request-number }} created to update @azure/mcp" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.version-check.outputs.needs_update }}" == "true" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Update was needed but PR creation failed — check logs" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ No update needed — already using the latest version" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "::error::@azure/mcp update workflow failed - check logs for details"
+
+      - name: Create Issue on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueTitle = '❌ @azure/mcp Update Workflow Failed';
+            const workflowUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            
+            // Check for existing open issue to avoid duplicates
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'bug,automated',
+              state: 'open',
+              per_page: 10
+            });
+            const duplicate = existingIssues.find(i => i.title === issueTitle);
+            if (duplicate) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: duplicate.number,
+                body: `Workflow failed again.\n\n**Workflow Run:** ${workflowUrl}`
+              });
+              return;
+            }
+            
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: issueTitle,
+              body: `The automated @azure/mcp update workflow failed.\n\n**Workflow Run:** ${workflowUrl}\n\nPlease check the logs for details.`,
+              labels: ['bug', 'automated']
+            });
