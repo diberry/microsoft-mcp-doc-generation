@@ -29,7 +29,7 @@ internal class Program
              Console.Error.WriteLine("Usage: CSharpGenerator <mode> [arguments...]");
              Console.Error.WriteLine("Modes:");
              Console.Error.WriteLine("  template <template-file> <data-file> <output-file> [additional-context-json]");
-             Console.Error.WriteLine("  generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations] [--no-service-options]");
+             Console.Error.WriteLine("  generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations]");
              return 1;
          }
 
@@ -124,7 +124,7 @@ internal class Program
      {
          if (args.Length < 2)
          {
-             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations] [--example-prompts] [--complete-tools] [--no-service-options] [--validate-prompts] [--version <version>]");
+             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations] [--example-prompts] [--complete-tools] [--validate-prompts] [--version <version>]");
              return 1;
          }
 
@@ -158,8 +158,6 @@ internal class Program
          LogFileHelper.WriteDebug($"  generateCompleteTools: {generateCompleteTools}");
          LogFileHelper.WriteDebug($"  validatePrompts: {validatePrompts}");
          
-         var generateServiceOptions = !args.Contains("--no-service-options");
-         
          // Extract version if provided, otherwise read from cli-version.json
          string? cliVersion = null;
          var versionIndex = Array.IndexOf(args, "--version");
@@ -180,7 +178,6 @@ internal class Program
              generateIndex,
              generateCommon,
              generateCommands,
-             generateServiceOptions,
              generateAnnotations,
              cliVersion,
              generateExamplePrompts,

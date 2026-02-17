@@ -122,7 +122,6 @@ dotnet run --project CSharpGenerator -- generate-docs <cli-output-json> <output-
 - `--example-prompts` - Generate example prompts (requires Azure OpenAI)
 - `--complete-tools` - Generate complete tool documentation files
 - `--validate-prompts` - Validate example prompts with LLM
-- `--no-service-options` - Skip service options page generation
 - `--version <version>` - Specify CLI version string
 
 ## Build and Run

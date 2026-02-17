@@ -142,18 +142,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 10. ServiceOptionsDiscovery
-
-**Target**: `ServiceOptionsDiscovery.cs`
-
-| Test | Description |
-|---|---|
-| `DiscoverServiceOptions_ParsesValidSource` | Parses a mock `ServiceOptionDefinitions.cs` file |
-| `DiscoverServiceOptions_MissingFile` | Returns empty list when source file does not exist |
-
----
-
-## 11. Config
+## 10. Config
 
 **Target**: `Config.cs`
 
@@ -165,7 +154,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 12. Program (CLI argument parsing)
+## 11. Program (CLI argument parsing)
 
 **Target**: `Program.cs`
 
@@ -181,7 +170,7 @@ Tests cover only **active** code paths. Deprecated generators (`CompleteToolGene
 
 ---
 
-## 13. Integration tests
+## 12. Integration tests
 
 End-to-end tests that verify the full pipeline with fixture data.
 
@@ -214,7 +203,7 @@ End-to-end tests that verify the full pipeline with fixture data.
 | **P1** | FrontmatterUtility | Every file depends on correct frontmatter |
 | **P1** | HandlebarsTemplateEngine (TemplateEngine project) | Template rendering correctness |
 | **P2** | PageGenerator | Currently not called by pipeline |
-| **P2** | OptionsDiscovery, ServiceOptionsDiscovery | Regex-based parsing, fragile to upstream changes |
+| **P2** | OptionsDiscovery | Regex-based parsing, fragile to upstream changes |
 | **P2** | Config, Program CLI parsing | Low complexity |
 
 | **P3** | Integration tests | Build after unit tests stabilize |

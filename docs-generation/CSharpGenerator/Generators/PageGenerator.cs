@@ -225,41 +225,4 @@ public class PageGenerator
         await File.WriteAllTextAsync(outputFile, result);
         LogFileHelper.WriteDebug("Generated commands page: common-general/azmcp-commands.md");
     }
-
-    /// <summary>
-    /// Generates the service options documentation page
-    /// </summary>
-    public async Task GenerateServiceOptionsPageAsync(
-        TransformedData data, 
-        string outputDir, 
-        string templateFile)
-    {
-        try
-        {
-            // Get service options from source
-            var serviceOptions = await ServiceOptionsDiscovery.DiscoverServiceStartOptionsFromSource();
-            
-            var serviceOptionsPageData = new Dictionary<string, object>
-            {
-                ["version"] = data.Version,
-                ["generatedAt"] = data.GeneratedAt,
-                ["serviceOptions"] = serviceOptions
-            };
-
-            var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, serviceOptionsPageData);
-
-            // Generate in common-general directory under the provided output folder
-            var commonGeneralDir = Path.Combine(outputDir, "common-general");
-            Directory.CreateDirectory(commonGeneralDir);
-            var outputFile = Path.Combine(commonGeneralDir, "service-start-option.md");
-            await File.WriteAllTextAsync(outputFile, result);
-            LogFileHelper.WriteDebug("Generated service options page: common-general/service-start-option.md");
-        }
-        catch (Exception ex)
-        {
-            LogFileHelper.WriteDebug($"Error generating service options page: {ex.Message}");
-            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
-            throw;
-        }
-    }
 }

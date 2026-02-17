@@ -13,7 +13,7 @@ Both invocations also produce security and metadata summary reports.
 
 ### Secondary modes (rarely used directly)
 
-The `generate-docs` command also supports `--index`, `--common`, `--commands`, and `--no-service-options` flags for generating aggregate pages. These are not currently invoked by the pipeline.
+The `generate-docs` command also supports `--index`, `--common`, and `--commands` flags for generating aggregate pages. These are not currently invoked by the pipeline.
 
 A standalone `template` mode renders any Handlebars template with arbitrary JSON data:
 
@@ -31,8 +31,7 @@ Program.cs                          CLI entry point, argument parsing
 │   ├── ParameterGenerator          Per-tool parameter table .md files
 │   ├── PageGenerator               Area/index/commands/common pages
 │   └── FrontmatterUtility          YAML frontmatter generation
-├── OptionsDiscovery.cs             Discovers common params from MCP source
-└── ServiceOptionsDiscovery.cs      Discovers service start options from MCP source
+└── OptionsDiscovery.cs             Discovers common params from MCP source
 
 External:
 └── TemplateEngine                  Handlebars compilation + custom helpers (shared library)
