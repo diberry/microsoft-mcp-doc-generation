@@ -20,7 +20,6 @@ CSharpGenerator processes CLI output from the Azure MCP server and generates str
 - **PageGenerator.cs** - Area and index pages
 - **ToolFamilyPageGenerator.cs** - Tool family documentation pages
 - **CompleteToolGenerator.cs** - Complete tool documentation
-- **ReportGenerator.cs** - Metadata and security reports
 
 ### Models (`Models/`)
 - **CliOutput.cs** - CLI output structure
