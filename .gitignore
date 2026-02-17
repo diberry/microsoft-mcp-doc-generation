@@ -29,3 +29,4 @@ generated*
 
 **/reports/
 ./reports/
+!docs-generation/CliAnalyzer/Reports/

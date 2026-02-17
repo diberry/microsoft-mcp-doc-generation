@@ -3,9 +3,9 @@
 
 using System.Text.Json;
 using GenerativeAI;
-using CSharpGenerator;
 using CSharpGenerator.Models;
 using HorizontalArticleGenerator.Models;
+using TemplateEngine;
 using Shared;
 using Azure.Mcp.TextTransformation.Models;
 using Azure.Mcp.TextTransformation.Services;
@@ -547,11 +547,11 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             ["genai-capabilities"] = templateData.Capabilities,
             ["genai-serviceSpecificPrerequisites"] = templateData.ServiceSpecificPrerequisites,
             ["genai-scenarios"] = templateData.Scenarios,
-            ["genai-aiSpecificScenarios"] = templateData.AISpecificScenarios,
+            ["genai-aiSpecificScenarios"] = templateData.AISpecificScenarios ?? (object)new List<AIScenario>(),
             ["genai-requiredRoles"] = templateData.RequiredRoles,
-            ["genai-authenticationNotes"] = templateData.AuthenticationNotes,
-            ["genai-commonIssues"] = templateData.CommonIssues,
-            ["genai-bestPractices"] = templateData.BestPractices,
+            ["genai-authenticationNotes"] = templateData.AuthenticationNotes ?? string.Empty,
+            ["genai-commonIssues"] = templateData.CommonIssues ?? (object)new List<CommonIssue>(),
+            ["genai-bestPractices"] = templateData.BestPractices ?? (object)new List<BestPractice>(),
             ["genai-serviceDocLink"] = templateData.ServiceDocLink,
             ["genai-additionalLinks"] = templateData.AdditionalLinks,
             

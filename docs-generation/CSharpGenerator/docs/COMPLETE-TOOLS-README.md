@@ -366,7 +366,7 @@ if (!File.Exists(someOtherPath))
 **Check:**
 1. Handlebars syntax in `tool-complete-template.hbs`
 2. Variable names match between generator and template
-3. Helper functions registered in `HandlebarsTemplateEngine.cs`
+3. Helper functions registered in `TemplateEngine/Helpers/CoreHelpers.cs` and `TemplateEngine/Helpers/McpHelpers.cs`
 
 ### Issue: Missing [!INCLUDE] Files
 

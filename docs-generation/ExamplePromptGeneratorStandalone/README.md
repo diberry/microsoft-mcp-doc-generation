@@ -125,7 +125,8 @@ dotnet run --project ExamplePromptGeneratorStandalone -- \
 
 - **Models**: Tool, Option, CliOutput, ExamplePromptsResponse
 - **Generators**: ExamplePromptGenerator (AI generation + JSON parsing)
-- **Utilities**: FrontmatterUtility, TemplateEngine
+- **Utilities**: FrontmatterUtility
+- **TemplateEngine** (shared library) - Handlebars template rendering
 - **Program**: Command-line entry point with argument parsing
 
 ## Notes

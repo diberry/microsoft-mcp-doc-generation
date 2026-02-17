@@ -9,6 +9,7 @@ using Shared;
 using CSharpGenerator.Models;
 using CSharpGenerator.Generators;
 using static CSharpGenerator.Generators.FrontmatterUtility;
+using TemplateEngine;
 
 namespace CSharpGenerator;
 

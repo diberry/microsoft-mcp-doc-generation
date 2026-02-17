@@ -1,0 +1,37 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs-generation/**'
+      - 'docs-generation.sln'
+      - '.github/workflows/build-and-test.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs-generation/**'
+      - 'docs-generation.sln'
+      - '.github/workflows/build-and-test.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup .NET 9.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore docs-generation.sln
+
+      - name: Build solution
+        run: dotnet build docs-generation.sln --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test docs-generation.sln --no-build --configuration Release --verbosity normal
