@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace CSharpGenerator.Generators;
@@ -12,77 +10,6 @@ namespace CSharpGenerator.Generators;
 /// </summary>
 public static class FrontmatterUtility
 {
-    // DEPRECATED: Only used by commented-out ExamplePromptGenerator
-    // Keeping for reference but disabled
-    /*
-    /// <summary>
-    /// Generates frontmatter for input prompt files (stored in example-prompts-prompts/)
-    /// </summary>
-    /// <param name="toolCommand">The tool command (e.g., "azmcp storage account create")</param>
-    /// <param name="version">The CLI version</param>
-    /// <param name="inputPromptFileName">The input prompt filename</param>
-    /// <param name="userPrompt">The user prompt used to generate the examples</param>
-    /// <returns>Formatted frontmatter string with opening and closing "---" markers and userPrompt content</returns>
-    public static string GenerateInputPromptFrontmatter(
-        string toolCommand,
-        string? version,
-        string inputPromptFileName,
-        string userPrompt)
-    {
-        var indentedUserPrompt = string.Join("\n", 
-            userPrompt.Split('\n').Select(line => "  " + line));
-
-        return $@"---
-ms.topic: include
-ms.date: {DateTime.UtcNow:yyyy-MM-dd}
-mcp-cli.version: {version ?? "unknown"}
-generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
-# [!INCLUDE [{toolCommand}](../includes/tools/example-prompts-prompts/{inputPromptFileName})]
-# azmcp {toolCommand}
-userPrompt: |
-{indentedUserPrompt}
----
-
-";
-    }
-    */
-
-    // DEPRECATED: Only used by commented-out ParamAnnotationGenerator
-    // Keeping for reference but disabled
-    /*
-    /// <summary>
-    /// Generates frontmatter for general documentation files
-    /// </summary>
-    /// <param name="topic">The MS topic type (e.g., "include", "article")</param>
-    /// <param name="version">The CLI version</param>
-    /// <param name="additionalMetadata">Optional additional metadata fields</param>
-    /// <returns>Formatted frontmatter string with opening and closing "---" markers</returns>
-    public static string GenerateGenericFrontmatter(
-        string topic,
-        string? version,
-        Dictionary<string, string>? additionalMetadata = null)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("---");
-        sb.AppendLine($"ms.topic: {topic}");
-        sb.AppendLine($"ms.date: {DateTime.UtcNow:yyyy-MM-dd}");
-        sb.AppendLine($"mcp-cli.version: {version ?? "unknown"}");
-        sb.AppendLine($"generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
-        
-        if (additionalMetadata != null)
-        {
-            foreach (var kvp in additionalMetadata)
-            {
-                sb.AppendLine($"{kvp.Key}: {kvp.Value}");
-            }
-        }
-        
-        sb.AppendLine("---");
-        sb.AppendLine();
-        
-        return sb.ToString();
-    }
-    */
 
     /// <summary>
     /// Generates frontmatter for tool annotation files

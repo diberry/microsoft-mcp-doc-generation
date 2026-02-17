@@ -23,34 +23,15 @@ public class AnnotationGenerator
     /// <summary>
     /// Generates annotation files for all tools
     /// </summary>
-    // NOTE: examplePromptGenerator parameter is deprecated and kept for backwards compatibility only
-    // Use ExamplePromptGeneratorStandalone package instead
     public async Task GenerateAnnotationFilesAsync(
         TransformedData data, 
         string outputDir, 
-        string templateFile, 
-        object? examplePromptGenerator = null, 
-        string? examplePromptsDir = null)
+        string templateFile)
     {
         try
         {
             // Only show essential progress on console
             Console.WriteLine($"Generating annotation files for {data.Tools.Count} tools...");
-            
-            int examplePromptsGenerated = 0;
-            int examplePromptsFailed = 0;
-            
-            // Log example prompts configuration to file
-            LogFileHelper.WriteDebug($"examplePromptGenerator is {(examplePromptGenerator == null ? "NULL" : "initialized")}");
-            LogFileHelper.WriteDebug($"examplePromptsDir = '{examplePromptsDir ?? "NULL"}'");
-            if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
-            {
-                LogFileHelper.WriteDebug("Example prompts WILL be generated for each tool");
-            }
-            else
-            {
-                LogFileHelper.WriteDebug("Example prompts WILL NOT be generated (missing generator or directory)");
-            }
             
             // Track missing brand mappings/compound words
             var missingMappings = new Dictionary<string, List<string>>(); // area -> list of tool commands
@@ -173,37 +154,9 @@ public class AnnotationGenerator
                 var result = frontmatter + templateResult;
                 await File.WriteAllTextAsync(outputFile, result);
                 tool.HasAnnotation = true;
-                
-                // Generate example prompts if requested
-                // DEPRECATED: Example prompts generation moved to ExamplePromptGeneratorStandalone package
-                // Keeping reference for backwards compatibility but disabled
-                /*
-                if (examplePromptGenerator != null && !string.IsNullOrEmpty(examplePromptsDir))
-                {
-                    var (successCount, failureCount) = await examplePromptGenerator.GenerateExamplePromptFileAsync(
-                        tool,
-                        examplePromptsDir,
-                        fileName,
-                        data.Version,
-                        HandlebarsTemplateEngine.ProcessTemplateAsync);
-                    examplePromptsGenerated += successCount;
-                    examplePromptsFailed += failureCount;
-                }
-                */
             }
             
             Console.WriteLine($"✓ Generated {data.Tools.Count} annotation files");
-            
-            // Log example prompts summary to file
-            if (examplePromptGenerator != null)
-            {
-                LogFileHelper.WriteDebug("");
-                LogFileHelper.WriteDebug("=== Example Prompts Summary ===");
-                LogFileHelper.WriteDebug($"  Total tools processed: {data.Tools.Count}");
-                LogFileHelper.WriteDebug($"  Successfully generated: {examplePromptsGenerated}");
-                LogFileHelper.WriteDebug($"  Failed: {examplePromptsFailed}");
-                LogFileHelper.WriteDebug($"  Output directory: {examplePromptsDir}");
-            }
             
             // Generate missing mappings report if there are any
             if (missingMappings.Any())

@@ -4,7 +4,7 @@ This document outlines the test plan for the `CSharpGenerator` project. Tests sh
 
 ## Scope
 
-Tests cover only **active** code paths. Deprecated generators (`CompleteToolGenerator`, `ExamplePromptGenerator`, `ToolFamilyPageGenerator`, `ParamAnnotationGenerator`) are excluded.
+Tests cover only **active** code paths. Deprecated generators have been deleted from the codebase (see [docs/UNUSED-FUNCTIONALITY.md](docs/UNUSED-FUNCTIONALITY.md)).
 
 ---
 

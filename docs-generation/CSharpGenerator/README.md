@@ -92,18 +92,21 @@ Loaded from `docs-generation/data/config.json` at startup. Points to:
 - `static-text-replacement.json` — text replacement rules
 - Required data files validated on startup
 
-## Deprecated functionality
+## Removed deprecated functionality
 
-Several generators remain in the codebase but are no longer called by the pipeline. They have been superseded by dedicated packages:
+Several generators were previously in this codebase but have been deleted. They were superseded by dedicated packages:
 
-| Deprecated generator | Superseded by | Details |
+| Removed generator | Superseded by | Details |
 |---|---|---|
 | `CompleteToolGenerator` | `ToolGeneration_Composed` | Single-file tool docs |
 | `ExamplePromptGenerator` | `ExamplePromptGeneratorStandalone` | AI example prompts |
 | `ToolFamilyPageGenerator` | `ToolFamilyCleanup` | Tool family assembly |
 | `ParamAnnotationGenerator` | Separate annotation + parameter files | Combined includes |
+| `ReportGenerator` | N/A (informational only) | Security reports |
+| `ServiceOptionsDiscovery` | N/A (unused by pipeline) | Service options page |
+| `ExamplePromptsResponse` | `ExamplePromptGeneratorStandalone` | AI response model |
 
-See [docs/UNUSED-FUNCTIONALITY.md](docs/UNUSED-FUNCTIONALITY.md) for full analysis.
+See [docs/UNUSED-FUNCTIONALITY.md](docs/UNUSED-FUNCTIONALITY.md) for full history.
 
 ## Usage
 
