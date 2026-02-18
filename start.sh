@@ -3,15 +3,19 @@
 #
 # Usage:
 #   ./start.sh [namespace] [steps]
-#   ./start.sh                # Run all steps for all namespaces
-#   ./start.sh advisor        # Run all steps for advisor namespace only
-#   ./start.sh advisor 1,2,3  # Run steps 1,2,3 for advisor namespace
-#   ./start.sh 1,2,3          # Run steps 1,2,3 for all namespaces
+#   ./start.sh                # Run all steps for all namespaces (output: ./generated/)
+#   ./start.sh advisor        # Run all steps for advisor namespace only (output: ./generated-advisor/)
+#   ./start.sh advisor 1,2,3  # Run steps 1,2,3 for advisor namespace (output: ./generated-advisor/)
+#   ./start.sh 1,2,3          # Run steps 1,2,3 for all namespaces (output: ./generated/)
+#
+# Output Directory:
+#   - When a specific namespace is provided: ./generated-<namespace>/
+#   - When processing all namespaces: ./generated/
 #
 # Preflight Actions (run once before all namespaces):
 #   Delegates to ./docs-generation/scripts/preflight.ps1 which performs:
 #   - Validate .env file exists with required AI credentials (STOPS if missing/invalid)
-#   - Clean ./generated directory
+#   - Clean output directory
 #   - Create output directories
 #   - Build .NET solution (all generator projects)
 #   - Generate MCP CLI metadata (cli-output.json, cli-namespace.json, cli-version.json)
@@ -52,6 +56,13 @@ fi
 
 STEPS="$STEPS_ARG"
 
+# Determine output directory based on whether a specific namespace was provided
+if [[ -n "$NAMESPACE_ARG" ]]; then
+    OUTPUT_DIR="$ROOT_DIR/generated-$NAMESPACE_ARG"
+else
+    OUTPUT_DIR="$ROOT_DIR/generated"
+fi
+
 echo "==================================================================="
 echo "Start: Documentation Generation Orchestrator"
 echo "==================================================================="
@@ -62,7 +73,7 @@ echo ""
 # =================================================================== 
 
 # Run preflight setup script
-pwsh "$ROOT_DIR/docs-generation/scripts/preflight.ps1" -OutputPath "$ROOT_DIR/generated"
+pwsh "$ROOT_DIR/docs-generation/scripts/preflight.ps1" -OutputPath "$OUTPUT_DIR"
 PREFLIGHT_EXIT=$?
 if [ $PREFLIGHT_EXIT -ne 0 ]; then
     echo ""
@@ -78,11 +89,12 @@ fi
 echo ""
 if [[ -n "$NAMESPACE_ARG" ]]; then
     echo "Processing single namespace: $NAMESPACE_ARG"
+    echo "Output directory: $OUTPUT_DIR"
     NAMESPACES="$NAMESPACE_ARG"
     NAMESPACE_COUNT=1
 else
     echo "Extracting namespaces from CLI metadata..."
-    NAMESPACES=$(jq -r '.results[].name' "$ROOT_DIR/generated/cli/cli-namespace.json")
+    NAMESPACES=$(jq -r '.results[].name' "$OUTPUT_DIR/cli/cli-namespace.json")
     NAMESPACE_COUNT=$(echo "$NAMESPACES" | wc -l)
     echo "✓ Found $NAMESPACE_COUNT namespaces"
 fi
@@ -107,8 +119,8 @@ for NAMESPACE in $NAMESPACES; do
     echo "[$CURRENT/$NAMESPACE_COUNT] Processing namespace: $NAMESPACE"
     echo "-------------------------------------------------------------------"
     
-    # Call start-only.sh for each namespace
-    if "$ROOT_DIR/docs-generation/scripts/start-only.sh" "$NAMESPACE" "$STEPS"; then
+    # Call start-only.sh for each namespace with output directory
+    if "$ROOT_DIR/docs-generation/scripts/start-only.sh" "$NAMESPACE" "$STEPS" "$OUTPUT_DIR"; then
         echo "✓ Successfully generated documentation for: $NAMESPACE"
     else
         echo "✗ Failed to generate documentation for: $NAMESPACE"
@@ -139,4 +151,4 @@ fi
 
 echo ""
 echo "✓ Documentation generation complete!"
-echo "   Output: $ROOT_DIR/generated/tool-family/"
+echo "   Output: $OUTPUT_DIR/tool-family/"

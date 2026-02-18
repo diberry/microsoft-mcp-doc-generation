@@ -75,10 +75,11 @@ public class HorizontalArticleGenerator
             return false;
         }
     }
-    private const string CLI_OUTPUT_PATH = "../generated/cli/cli-output.json";
-    private const string CLI_VERSION_PATH = "../generated/cli/cli-version.json";
-    private const string OUTPUT_DIR = "../generated/horizontal-articles";
-    private const string PROMPT_OUTPUT_DIR = "../generated/horizontal-article-prompts";
+    private static string DefaultOutputBase => Path.GetFullPath("../generated");
+    private readonly string _cliOutputPath;
+    private readonly string _outputDir;
+    private readonly string _promptOutputDir;
+    private readonly string _outputBasePath;
     private const string SYSTEM_PROMPT_PATH = "./HorizontalArticleGenerator/prompts/horizontal-article-system-prompt.txt";
     private const string USER_PROMPT_PATH = "./HorizontalArticleGenerator/prompts/horizontal-article-user-prompt.txt";
     private const string TEMPLATE_PATH = "./HorizontalArticleGenerator/templates/horizontal-article-template.hbs";
@@ -88,7 +89,7 @@ public class HorizontalArticleGenerator
     private readonly bool _generateAllArticles;
     private readonly TransformationEngine? _transformationEngine;
 
-    public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, TransformationEngine? transformationEngine = null)
+    public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, TransformationEngine? transformationEngine = null, string? outputBasePath = null)
     {
         if (string.IsNullOrEmpty(options.ApiKey)) throw new InvalidOperationException("FOUNDRY_API_KEY not set");
         if (string.IsNullOrEmpty(options.Endpoint)) throw new InvalidOperationException("FOUNDRY_ENDPOINT not set");
@@ -98,6 +99,10 @@ public class HorizontalArticleGenerator
         _useTextTransformation = useTextTransformation;
         _generateAllArticles = generateAllArticles;
         _transformationEngine = transformationEngine;
+        _outputBasePath = outputBasePath != null ? Path.GetFullPath(outputBasePath) : DefaultOutputBase;
+        _cliOutputPath = Path.Combine(_outputBasePath, "cli", "cli-output.json");
+        _outputDir = Path.Combine(_outputBasePath, "horizontal-articles");
+        _promptOutputDir = Path.Combine(_outputBasePath, "horizontal-article-prompts");
     }
     
     /// <summary>
@@ -114,9 +119,8 @@ public class HorizontalArticleGenerator
         Console.WriteLine($"✓ Found {staticDataList.Count} services");
         Console.WriteLine();
         // Create output directory
-        var outputDir = Path.GetFullPath(OUTPUT_DIR);
-        Directory.CreateDirectory(outputDir);
-        Console.WriteLine($"Output directory: {outputDir}");
+        Directory.CreateDirectory(_outputDir);
+        Console.WriteLine($"Output directory: {_outputDir}");
         Console.WriteLine();
         // Phase 2 & 3: Generate AI content and render for each service
         Console.WriteLine("Phase 2-3: Generating AI content and rendering articles...");
@@ -130,7 +134,7 @@ public class HorizontalArticleGenerator
             {
                 var staticData = staticDataList[i];
                 var progress = $"[{i + 1}/{staticDataList.Count}]";
-                bool result = await GenerateSingleArticleAsync(staticData, outputDir, progress);
+                bool result = await GenerateSingleArticleAsync(staticData, _outputDir, progress);
                 if (result) successCount++;
                 else failureCount++;
             }
@@ -142,7 +146,7 @@ public class HorizontalArticleGenerator
             {
                 var staticData = staticDataList[0];
                 var progress = "[1/1]";
-                bool result = await GenerateSingleArticleAsync(staticData, outputDir, progress);
+                bool result = await GenerateSingleArticleAsync(staticData, _outputDir, progress);
                 if (result) successCount++;
                 else failureCount++;
             }
@@ -169,11 +173,10 @@ public class HorizontalArticleGenerator
         }
         
         // Create output directory
-        var outputDir = Path.GetFullPath(OUTPUT_DIR);
-        Directory.CreateDirectory(outputDir);
+        Directory.CreateDirectory(_outputDir);
         
         // Generate the article
-        bool result = await GenerateSingleArticleAsync(targetService, outputDir, "[1/1]");
+        bool result = await GenerateSingleArticleAsync(targetService, _outputDir, "[1/1]");
         
         if (!result)
         {
@@ -189,7 +192,7 @@ public class HorizontalArticleGenerator
         var serviceDataList = new List<StaticArticleData>();
 
         // Load CLI output
-        var cliOutputPath = Path.GetFullPath(CLI_OUTPUT_PATH);
+        var cliOutputPath = _cliOutputPath;
         if (!File.Exists(cliOutputPath))
         {
             throw new FileNotFoundException($"CLI output not found: {cliOutputPath}");
@@ -207,8 +210,7 @@ public class HorizontalArticleGenerator
         }
 
         // Load version info using utility
-        var baseOutputDir = Path.GetFullPath("../generated");
-        var cliVersion = await CliVersionReader.ReadCliVersionAsync(baseOutputDir);
+        var cliVersion = await CliVersionReader.ReadCliVersionAsync(_outputBasePath);
 
         // Group tools by service area (first word of command or name)
         var toolsByService = cliData.Results
@@ -387,11 +389,10 @@ public class HorizontalArticleGenerator
         var userPrompt = userPromptCompiled(promptContext);
 
         // Save prompts to output directory
-        var promptDir = Path.GetFullPath(PROMPT_OUTPUT_DIR);
-        Directory.CreateDirectory(promptDir);
+        Directory.CreateDirectory(_promptOutputDir);
         
         var promptFileName = $"horizontal-article-{staticData.ServiceIdentifier}-prompt.md";
-        var promptFilePath = Path.Combine(promptDir, promptFileName);
+        var promptFilePath = Path.Combine(_promptOutputDir, promptFileName);
         var promptContent = $"""
 # Horizontal Article Prompt: {staticData.ServiceBrandName}
 
@@ -567,9 +568,8 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         var renderedContent = await HandlebarsTemplateEngine.ProcessTemplateAsync(templatePath, data);
         
         // Save to file
-        var outputDir = Path.GetFullPath(OUTPUT_DIR);
         var filename = $"horizontal-article-{templateData.ServiceIdentifier}.md";
-        var outputPath = Path.Combine(outputDir, filename);
+        var outputPath = Path.Combine(_outputDir, filename);
         
         await File.WriteAllTextAsync(outputPath, renderedContent);
     }

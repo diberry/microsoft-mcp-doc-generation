@@ -61,11 +61,16 @@ internal class HorizontalArticleProgram
             bool generateAllArticles = !args.Contains("--single"); // Default to all, use --single for testing
             bool useTextTransformation = args.Contains("--transform");
             string? singleService = null;
+            string? outputBasePath = null;
             for (int i = 0; i < args.Length; i++)
             {
                 if (args[i] == "--single-service" && i + 1 < args.Length)
                 {
                     singleService = args[i + 1];
+                }
+                else if (args[i] == "--output-path" && i + 1 < args.Length)
+                {
+                    outputBasePath = args[i + 1];
                 }
             }
             
@@ -106,7 +111,7 @@ internal class HorizontalArticleProgram
                         Console.WriteLine();
             
                         // Run generator
-                        var generator = new Generators.HorizontalArticleGenerator(aiOptions, useTextTransformation, generateAllArticles, transformationEngine);
+                        var generator = new Generators.HorizontalArticleGenerator(aiOptions, useTextTransformation, generateAllArticles, transformationEngine, outputBasePath);
                         
                         if (singleService != null)
                         {

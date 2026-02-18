@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Shared;
@@ -17,6 +18,7 @@ public static class LogFileHelper
     /// <summary>
     /// Gets or creates the log file path for debug output.
     /// Default location: {outputPath}/logs/debug-{timestamp}.log
+    /// Searches for generated*/logs directories to support namespace-specific output directories.
     /// </summary>
     private static string GetLogFilePath()
     {
@@ -30,24 +32,46 @@ public static class LogFileHelper
                 
             // Try to determine output directory from common locations
             var currentDir = Directory.GetCurrentDirectory();
-            var searchPaths = new[]
-            {
-                Path.Combine(currentDir, "..", "..", "generated", "logs"),  // From bin/Debug or bin/Release
-                Path.Combine(currentDir, "..", "generated", "logs"),         // From docs-generation subdirectory
-                Path.Combine(currentDir, "generated", "logs"),               // From docs-generation root
-                Path.Combine(currentDir, "..", "..", "..", "generated", "logs") // From deeper nested paths
-            };
             
+            // First, try to find any generated*/logs directory that exists
+            // This supports both generated/ and generated-<namespace>/ patterns
+            var parentDir = Path.GetFullPath(Path.Combine(currentDir, ".."));
             string? logDir = null;
-            foreach (var path in searchPaths)
+            
+            if (Directory.Exists(parentDir))
             {
-                var fullPath = Path.GetFullPath(path);
-                var parentDir = Path.GetDirectoryName(fullPath);
-                // Check if parent directory exists, or if its parent exists (to handle paths like ../generated/logs)
-                if (parentDir != null && Directory.Exists(parentDir))
+                var generatedDirs = Directory.GetDirectories(parentDir, "generated*")
+                    .Where(d => Directory.Exists(Path.Combine(d, "logs")))
+                    .OrderByDescending(d => Directory.GetLastWriteTime(d)) // Use most recently modified
+                    .ToList();
+                    
+                if (generatedDirs.Any())
                 {
-                    logDir = fullPath;
-                    break;
+                    logDir = Path.Combine(generatedDirs.First(), "logs");
+                }
+            }
+            
+            // Fallback to traditional search paths if no generated*/logs found
+            if (logDir == null)
+            {
+                var searchPaths = new[]
+                {
+                    Path.Combine(currentDir, "..", "..", "generated", "logs"),  // From bin/Debug or bin/Release
+                    Path.Combine(currentDir, "..", "generated", "logs"),         // From docs-generation subdirectory
+                    Path.Combine(currentDir, "generated", "logs"),               // From docs-generation root
+                    Path.Combine(currentDir, "..", "..", "..", "generated", "logs") // From deeper nested paths
+                };
+                
+                foreach (var path in searchPaths)
+                {
+                    var fullPath = Path.GetFullPath(path);
+                    var parentDirOfPath = Path.GetDirectoryName(fullPath);
+                    // Check if parent directory exists, or if its parent exists (to handle paths like ../generated/logs)
+                    if (parentDirOfPath != null && Directory.Exists(parentDirOfPath))
+                    {
+                        logDir = fullPath;
+                        break;
+                    }
                 }
             }
             
