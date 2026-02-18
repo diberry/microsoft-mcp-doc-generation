@@ -15,7 +15,7 @@ public class FamilyContent
     public required string FamilyName { get; init; }
 
     /// <summary>
-    /// Brand display name (e.g., "Azure AI Foundry") used in metadata
+    /// Brand display name (e.g., "Microsoft Foundry") used in metadata
     /// </summary>
     public string? DisplayName { get; set; }
     

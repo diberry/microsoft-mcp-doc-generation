@@ -54,6 +54,12 @@
     "fileName": "azure-terraform-best-practices"
   },
   {
+    "brandName": "Azure Best Practices",
+    "mcpServerName": "get_azure_bestpractices",
+    "shortName": "Best Practices",
+    "fileName": "azure-best-practices"
+  },
+  {
     "brandName": "Azure Bicep Schema",
     "mcpServerName": "bicepschema",
     "shortName": "Bicep",
@@ -120,9 +126,9 @@
     "fileName": "azure-extension"
   },
   {
-    "brandName": "Azure AI Foundry",
+    "brandName": "Microsoft Foundry",
     "mcpServerName": "foundry",
-    "shortName": "AI Foundry",
+    "shortName": "Foundry",
     "fileName": "azure-ai-foundry"
   },
   {
@@ -240,7 +246,7 @@
     "fileName": "azure-signalr-service"
   },
   {
-    "brandName": "Azure AI Services Speech",
+    "brandName": "Azure Speech in Foundry",
     "mcpServerName": "speech",
     "shortName": "Speech",
     "fileName": "azure-ai-services-speech"
