@@ -18,6 +18,6 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@azure/mcp": "^2.0.0-beta.19"
+    "@azure/mcp": "^2.0.0-beta.20"
   }
 }
