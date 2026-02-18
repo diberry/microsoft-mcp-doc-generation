@@ -228,6 +228,12 @@
     "fileName": "azure-role-based-access-control"
   },
   {
+    "brandName": "Azure Service Fabric",
+    "mcpServerName": "servicefabric",
+    "shortName": "Service Fabric",
+    "fileName": "azure-service-fabric"
+  },
+  {
     "brandName": "Azure AI Search",
     "mcpServerName": "search",
     "shortName": "AI Search",

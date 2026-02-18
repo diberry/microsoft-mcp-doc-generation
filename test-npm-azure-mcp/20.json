@@ -1863,6 +1863,90 @@
       }
     },
     {
+      "id": "01ab6f7e-2b27-4d6e-b0cc-b29043efac8e",
+      "name": "get",
+      "description": "Retrieves detailed information about Azure managed disks. Can list all disks under a subscription, resrouce group, or details about a specific disk. Supports wildcard patterns in disk names (e.g., 'win_OsDisk*'). When disk name is provided without resource group, searches across the entire subscription. When resource group is specified, scopes the search to that resource group. Both parameters are optional.",
+      "command": "compute disk get",
+      "option": [
+        {
+          "name": "--tenant",
+          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
+          "type": "string"
+        },
+        {
+          "name": "--auth-method",
+          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-delay",
+          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-delay",
+          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-retries",
+          "description": "Maximum number of retry attempts for failed operations before giving up.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-mode",
+          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-network-timeout",
+          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
+          "type": "string"
+        },
+        {
+          "name": "--subscription",
+          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
+          "type": "string"
+        },
+        {
+          "name": "--resource-group",
+          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
+          "type": "string"
+        },
+        {
+          "name": "--disk",
+          "description": "The name of the disk",
+          "type": "string"
+        }
+      ],
+      "metadata": {
+        "destructive": {
+          "value": false,
+          "description": "This tool performs only additive updates without deleting or modifying existing resources."
+        },
+        "idempotent": {
+          "value": true,
+          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
+        },
+        "openWorld": {
+          "value": false,
+          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
+        },
+        "readOnly": {
+          "value": true,
+          "description": "This tool only performs read operations without modifying any state or data."
+        },
+        "secret": {
+          "value": false,
+          "description": "This tool does not handle sensitive or secret information."
+        },
+        "localRequired": {
+          "value": false,
+          "description": "This tool is available in both local and remote server modes."
+        }
+      }
+    },
+    {
       "id": "c1a8b3e5-4f2d-4a6e-8c7b-9d2e3f4a5b6c",
       "name": "get",
       "description": "List or get Azure Virtual Machines (VMs) in a subscription or resource group. Returns VM details including name, location, size, provisioning state, OS type, and instance view with runtime status and power state.",
@@ -7715,7 +7799,7 @@
     {
       "id": "0e898126-0c5e-44b8-9eef-51ddeed6327f",
       "name": "get",
-      "description": "Get/retrieve/show details for a single certificate in a Key Vault (latest version). Not for listing multiple certificates or importing existing ones. Required: --vault <vault>, --certificate <certificate> --subscription <subscription>. Optional: --tenant <tenant>. Returns: name, id, keyId, secretId, cer, thumbprint, enabled, notBefore, expiresOn, createdOn, updatedOn, subject, issuer.",
+      "description": "List all certificates in your Key Vault or get a specific certificate by name. Shows all certificate names in the vault, or retrieves full certificate details including key ID, secret ID, thumbprint, and policy information.",
       "command": "keyvault certificate get",
       "option": [
         {
@@ -7767,8 +7851,7 @@
         {
           "name": "--certificate",
           "description": "The name of the certificate.",
-          "type": "string",
-          "required": true
+          "type": "string"
         }
       ],
       "metadata": {
@@ -7896,86 +7979,6 @@
       }
     },
     {
-      "id": "6403bdef-adfd-46ae-a1fa-fcc57c391068",
-      "name": "list",
-      "description": "List/enumerate all certificates in an Azure Key Vault. Not for fetching a single certificate.",
-      "command": "keyvault certificate list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--vault",
-          "description": "The name of the Key Vault.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
       "id": "ef27bda9-8a1f-4288-b68b-12308ab8e607",
       "name": "create",
       "description": "Create a new key in an Azure Key Vault. This command creates a key with the specified name and type in the given vault. Supports types: RSA, RSA-HSM, EC, EC-HSM, oct, oct-HSM. Required: --vault <vault>, --key <key> --key-type <key-type> --subscription <subscription>. Optional: --tenant <tenant>. Returns: Returns: name, id, keyId, keyType, enabled, notBefore, expiresOn, createdOn, updatedOn. Creates a new key version if it already exists.",
@@ -8070,7 +8073,7 @@
     {
       "id": "c19a45a0-b963-427d-a087-35560a7f4e5b",
       "name": "get",
-      "description": "Get/retrieve/show details for a single key in a Key Vault (latest version). Not for listing multiple keys. Required: --vault <vault>, --key <key> --subscription <subscription>. Optional: --tenant <tenant>. Returns: name, id, keyId, keyType, enabled, notBefore, expiresOn, createdOn, updatedOn.",
+      "description": "List all keys in your Key Vault or get a specific key by name. Shows all key names in the vault, or retrieves full key details including type, enabled status, and expiration dates. Use --include-managed to show managed keys.",
       "command": "keyvault key get",
       "option": [
         {
@@ -8122,88 +8125,7 @@
         {
           "name": "--key",
           "description": "The name of the key to retrieve/modify from the Key Vault.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "efa3d435-44af-47c1-a2ce-76ac56d575e5",
-      "name": "list",
-      "description": "List/enumerate all keys in an Azure Key Vault. Not for fetching a single key.",
-      "command": "keyvault key list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
           "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--vault",
-          "description": "The name of the Key Vault.",
-          "type": "string",
-          "required": true
         },
         {
           "name": "--include-managed",
@@ -8333,7 +8255,7 @@
     {
       "id": "933bcb29-87e6-4f78-94ad-8ad0c8c60002",
       "name": "get",
-      "description": "Get/retrieve/show details for a single secret in an Azure Key Vault (latest version). Not for listing multiple secrets. Required: --vault <vault>, --secret <secret> --subscription <subscription>. Optional: --tenant <tenant>. Returns: name, value, id, contentType, enabled, notBefore, expiresOn, createdOn, updatedOn, tags.",
+      "description": "List all secrets in your Key Vault or get a specific secret by name. Shows all secret names in the vault (without values), or retrieves the secret value and full details including enabled status and expiration dates.",
       "command": "keyvault secret get",
       "option": [
         {
@@ -8385,8 +8307,7 @@
         {
           "name": "--secret",
           "description": "The name of the secret.",
-          "type": "string",
-          "required": true
+          "type": "string"
         }
       ],
       "metadata": {
@@ -8409,86 +8330,6 @@
         "secret": {
           "value": true,
           "description": "This tool handles sensitive data such as secrets, credentials, keys, or other confidential information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "5ecf1460-a896-4930-964a-570e7b1c33ab",
-      "name": "list",
-      "description": "List/enumerate all secrets in a Key Vault. Not for fetching a single secret.",
-      "command": "keyvault secret list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--vault",
-          "description": "The name of the Key Vault.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
         },
         "localRequired": {
           "value": false,
@@ -9497,10 +9338,10 @@
       }
     },
     {
-      "id": "68e34111-358e-4b56-8747-89e65f16ddc5",
-      "name": "create",
-      "description": "Creates a test run for a specified test in the selected load testing resource. This command triggers a new test run and does not modify the test plan or create a new test or resource. Use this to execute performance or functional tests based on an existing test configuration.",
-      "command": "loadtesting testrun create",
+      "id": "0e3c8f2c-57ce-49c0-bff4-27c9573e7049",
+      "name": "createorupdate",
+      "description": "Create or update a load test run execution.\r\nCreates a new test run for a specified test in the load testing resource, or updates metadata and display properties of an existing test run.\r\nWhen creating: Triggers a new test run execution based on the existing test configuration. Use testrun ID to specify the new run identifier. Create operations are NOT idempotent - each call starts a new test run with unique timestamps and execution state.\r\nWhen updating: Modifies descriptive information (display name, description) of a completed or in-progress test run for better organization and documentation. Update operations are idempotent - repeated calls with same values produce the same result.\r\nThis does not modify the test plan configuration or create a new test/resource - only manages test run executions.",
+      "command": "loadtesting testrun createorupdate",
       "option": [
         {
           "name": "--tenant",
@@ -9609,7 +9450,7 @@
     {
       "id": "713313ec-b9a5-4a71-9953-5b2d4a7b5d7b",
       "name": "get",
-      "description": "Get details for a specific test run by testrun ID.\r\nUse this to retrieve a single run's execution details (not a list). Returns status, start/end times, progress, aggregated metrics, and available artifacts (logs/traces). \r\nDoes NOT return the test plan/configuration or the test resource. Only the test run details. Also it is used to get details of SINGLE testrun based on its id. For a list of runs use testrun list command instead.",
+      "description": "Get load test run details by testrun ID, or list all test runs by test ID.\r\nReturns execution details including status, start/end times, progress, metrics, and artifacts.\r\nDoes not return test configuration or resource details.",
       "command": "loadtesting testrun get",
       "option": [
         {
@@ -9666,6 +9507,11 @@
           "name": "--testrun-id",
           "description": "The ID of the load test run for which you want to fetch the details.",
           "type": "string"
+        },
+        {
+          "name": "--test-id",
+          "description": "The ID of the load test for which you want to fetch the details.",
+          "type": "string"
         }
       ],
       "metadata": {
@@ -9684,201 +9530,6 @@
         "readOnly": {
           "value": true,
           "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "425c843c-a435-4a01-a8ff-5dffab398591",
-      "name": "list",
-      "description": "Retrieves a comprehensive list of all test run executions for a specific load test. We get the test ID from the user and all the associated test runs are fetched. It is a one to many relationship.\r\nEach test run only stores data corresponding to that particular run associated for that test. This does NOT return the test configuration or plan. For that use the test command. This is only for testruns.",
-      "command": "loadtesting testrun list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--test-resource-name",
-          "description": "The name of the load test resource for which you want to fetch the details.",
-          "type": "string"
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string"
-        },
-        {
-          "name": "--test-id",
-          "description": "The ID of the load test for which you want to fetch the details.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "0e3c8f2c-57ce-49c0-bff4-27c9573e7049",
-      "name": "update",
-      "description": "Updates the metadata and display properties of a completed or in-progress load test run execution.\r\nThis command allows you to modify descriptive information for better organization, documentation, and identification of test runs without affecting the actual test execution or results. \r\nThis will only update a test run for the selected test in the load test resource. It does not help in changing the test plan configuration. \r\nThis will NOT create a test and also NOT update a test resource. Only for the specified test, it will update a test run.",
-      "command": "loadtesting testrun update",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--test-resource-name",
-          "description": "The name of the load test resource for which you want to fetch the details.",
-          "type": "string"
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string"
-        },
-        {
-          "name": "--testrun-id",
-          "description": "The ID of the load test run for which you want to fetch the details.",
-          "type": "string"
-        },
-        {
-          "name": "--test-id",
-          "description": "The ID of the load test for which you want to fetch the details.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--display-name",
-          "description": "The display name for the load test run. This is a user-friendly name to identify the test run.",
-          "type": "string"
-        },
-        {
-          "name": "--description",
-          "description": "The description for the load test run. This provides additional context about the test run.",
-          "type": "string"
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": true,
-          "description": "This tool may delete or modify existing resources in its environment."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": false,
-          "description": "This tool may modify its environment and perform write operations (create, update, delete)."
         },
         "secret": {
           "value": false,
@@ -12624,9 +12275,9 @@
     },
     {
       "id": "aa5a22bc-6a04-4bc0-a963-b6e462b5cdc4",
-      "name": "create",
-      "description": "Creates a new standard web test in Azure Monitor. Ping/Multstep web tests are deprecated and are not supported.\r\nReturns the created web test details.",
-      "command": "monitor webtests create",
+      "name": "createorupdate",
+      "description": "Create or update a standard web test in Azure Monitor to monitor endpoint availability.\r\nUse this to set up new web tests or modify existing ones with monitoring configurations like URL, frequency, locations, and expected responses.\r\nAutomatically creates a new test if it doesn't exist, or updates an existing test with new settings.",
+      "command": "monitor webtests createorupdate",
       "option": [
         {
           "name": "--tenant",
@@ -12675,34 +12326,30 @@
           "required": true
         },
         {
-          "name": "--appinsights-component",
-          "description": "The resource id of the Application Insights component to associate with the web test.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--location",
-          "description": "The location where the web test resource is created. This should be the same as the AppInsights component location.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--webtest-locations",
-          "description": "List of locations to run the test from (comma-separated values). Location refers to the geo-location population tag specific to Availability Tests.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--request-url",
-          "description": "The absolute URL to test",
-          "type": "string",
-          "required": true
-        },
-        {
           "name": "--resource-group",
           "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
           "type": "string",
           "required": true
+        },
+        {
+          "name": "--appinsights-component",
+          "description": "The resource id of the Application Insights component to associate with the web test.",
+          "type": "string"
+        },
+        {
+          "name": "--location",
+          "description": "The location where the web test resource is created. This should be the same as the AppInsights component location.",
+          "type": "string"
+        },
+        {
+          "name": "--webtest-locations",
+          "description": "List of locations to run the test from (comma-separated values). Location refers to the geo-location population tag specific to Availability Tests.",
+          "type": "string"
+        },
+        {
+          "name": "--request-url",
+          "description": "The absolute URL to test",
+          "type": "string"
         },
         {
           "name": "--webtest",
@@ -12786,8 +12433,8 @@
           "description": "This tool may delete or modify existing resources in its environment."
         },
         "idempotent": {
-          "value": false,
-          "description": "Running this operation multiple times with the same arguments may have additional effects or produce different results."
+          "value": true,
+          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
         },
         "openWorld": {
           "value": false,
@@ -12810,7 +12457,7 @@
     {
       "id": "c9897ba5-445c-43dc-9902-e8454dbdc243",
       "name": "get",
-      "description": "Gets details for a specific web test in the provided resource group based on webtest resource name.\r\nReturns detailed information about a single web test.",
+      "description": "Gets details for a specific web test or lists all web tests.\r\nWhen --webtest-resource is provided, returns detailed information about a single web test.\r\nWhen --webtest-resource is omitted, returns a list of all web tests in the subscription (optionally filtered by resource group).",
       "command": "monitor webtests get",
       "option": [
         {
@@ -12856,87 +12503,6 @@
         {
           "name": "--webtest-resource",
           "description": "The name of the Web Test resource to operate on.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "3ce06ce4-015f-43c8-a756-a712f9b800c8",
-      "name": "list",
-      "description": "Lists all web tests in a specified subscription and optionally, a resource group.\r\nReturns a list of web tests.",
-      "command": "monitor webtests list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
           "type": "string"
         },
         {
@@ -12961,187 +12527,6 @@
         "readOnly": {
           "value": true,
           "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "5d7d322b-0e38-412c-982f-17d84554844b",
-      "name": "update",
-      "description": "Updates an existing standard web test in Azure Monitor. Ping/Multstep web tests are deprecated and are not supported.\r\nReturns the updated web test details.",
-      "command": "monitor webtests update",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--webtest-resource",
-          "description": "The name of the Web Test resource to operate on.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--appinsights-component",
-          "description": "The resource id of the Application Insights component to associate with the web test.",
-          "type": "string"
-        },
-        {
-          "name": "--location",
-          "description": "The location where the web test resource is created. This should be the same as the AppInsights component location.",
-          "type": "string"
-        },
-        {
-          "name": "--webtest-locations",
-          "description": "List of locations to run the test from (comma-separated values). Location refers to the geo-location population tag specific to Availability Tests.",
-          "type": "string"
-        },
-        {
-          "name": "--request-url",
-          "description": "The absolute URL to test",
-          "type": "string"
-        },
-        {
-          "name": "--webtest",
-          "description": "The name of the test in web test resource",
-          "type": "string"
-        },
-        {
-          "name": "--description",
-          "description": "The description of the web test",
-          "type": "string"
-        },
-        {
-          "name": "--enabled",
-          "description": "Whether the web test is enabled",
-          "type": "string"
-        },
-        {
-          "name": "--expected-status-code",
-          "description": "Expected HTTP status code",
-          "type": "string"
-        },
-        {
-          "name": "--follow-redirects",
-          "description": "Whether to follow redirects",
-          "type": "string"
-        },
-        {
-          "name": "--frequency",
-          "description": "Test frequency in seconds. Supported values 300, 600, 900 seconds.",
-          "type": "string"
-        },
-        {
-          "name": "--headers",
-          "description": "HTTP headers to include in the request. Comma-separated KEY=VALUE",
-          "type": "string"
-        },
-        {
-          "name": "--http-verb",
-          "description": "HTTP method (get, post, etc.)",
-          "type": "string"
-        },
-        {
-          "name": "--ignore-status-code",
-          "description": "Whether to ignore the status code validation",
-          "type": "string"
-        },
-        {
-          "name": "--parse-requests",
-          "description": "Whether to parse dependent requests",
-          "type": "string"
-        },
-        {
-          "name": "--request-body",
-          "description": "The body of the request",
-          "type": "string"
-        },
-        {
-          "name": "--retry-enabled",
-          "description": "Whether retries are enabled",
-          "type": "string"
-        },
-        {
-          "name": "--ssl-check",
-          "description": "Whether to check SSL certificates",
-          "type": "string"
-        },
-        {
-          "name": "--ssl-lifetime-check",
-          "description": "Number of days to check SSL certificate lifetime",
-          "type": "string"
-        },
-        {
-          "name": "--timeout",
-          "description": "Request timeout in seconds (max 2 minutes). Supported values: 30, 60, 90, 120 seconds",
-          "type": "string"
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": true,
-          "description": "This tool may delete or modify existing resources in its environment."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": false,
-          "description": "This tool may modify its environment and perform write operations (create, update, delete)."
         },
         "secret": {
           "value": false,
@@ -13336,98 +12721,6 @@
       }
     },
     {
-      "id": "5941c89c-1406-4657-8828-eec3531e64ec",
-      "name": "list",
-      "description": "Retrieves a comprehensive list of all databases available on the specified Azure Database for MySQL Flexible Server instance. This command provides visibility into the database structure and helps identify available databases for connection and querying operations.",
-      "command": "mysql database list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--user",
-          "description": "The user name to access MySQL server.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--server",
-          "description": "The MySQL server to be accessed.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
       "id": "b73afaa5-4c3f-41e8-9ef3-c54e75215a97",
       "name": "query",
       "description": "Executes a safe, read-only SQL SELECT query against a database on Azure Database for MySQL Flexible Server. Use this tool to explore or retrieve table data without modifying it. Rejects non-SELECT statements (INSERT/UPDATE/DELETE/REPLACE/MERGE/TRUNCATE/ALTER/CREATE/DROP), multi-statements, comments hiding writes, transaction control (BEGIN/COMMIT/ROLLBACK), INTO OUTFILE, and other destructive keywords. Only a single SELECT is executed to ensure data integrity. Best practices: List needed columns (avoid SELECT *), add WHERE filters, use LIMIT/OFFSET for paging, ORDER BY for deterministic results, and avoid unnecessary sensitive data. Example: SELECT id, name, status FROM customers WHERE status = 'Active' ORDER BY name LIMIT 50;",
@@ -13532,6 +12825,102 @@
       }
     },
     {
+      "id": "77e60b50-5c16-4879-96b1-6a40d9c08a37",
+      "name": "list",
+      "description": "List MySQL servers, databases, or tables in your subscription. Returns all servers by default. Specify --server to list databases on that server, or --server and --database to list tables in a specific database.",
+      "command": "mysql list",
+      "option": [
+        {
+          "name": "--tenant",
+          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
+          "type": "string"
+        },
+        {
+          "name": "--auth-method",
+          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-delay",
+          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-delay",
+          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-retries",
+          "description": "Maximum number of retry attempts for failed operations before giving up.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-mode",
+          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-network-timeout",
+          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
+          "type": "string"
+        },
+        {
+          "name": "--subscription",
+          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
+          "type": "string"
+        },
+        {
+          "name": "--resource-group",
+          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--user",
+          "description": "The user name to access MySQL server.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--server",
+          "description": "The MySQL server to list databases from (optional).",
+          "type": "string"
+        },
+        {
+          "name": "--database",
+          "description": "The MySQL database to list tables from (optional, requires --server).",
+          "type": "string"
+        }
+      ],
+      "metadata": {
+        "destructive": {
+          "value": false,
+          "description": "This tool performs only additive updates without deleting or modifying existing resources."
+        },
+        "idempotent": {
+          "value": true,
+          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
+        },
+        "openWorld": {
+          "value": false,
+          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
+        },
+        "readOnly": {
+          "value": true,
+          "description": "This tool only performs read operations without modifying any state or data."
+        },
+        "secret": {
+          "value": false,
+          "description": "This tool does not handle sensitive or secret information."
+        },
+        "localRequired": {
+          "value": false,
+          "description": "This tool is available in both local and remote server modes."
+        }
+      }
+    },
+    {
       "id": "677cef4f-0eb1-4665-a3a2-89301a75c201",
       "name": "get",
       "description": "Retrieves comprehensive configuration details for the specified Azure Database for MySQL Flexible Server instance. This command provides insights into server settings, performance parameters, security configurations, and operational characteristics essential for database administration and optimization. Returns configuration data in JSON format including ServerName, Location, Version, SKU, StorageSizeGB, BackupRetentionDays, and GeoRedundantBackup properties.",
@@ -13592,92 +12981,6 @@
         {
           "name": "--server",
           "description": "The MySQL server to be accessed.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "0d66df82-8ec7-4716-9bed-fe3dfb8e825c",
-      "name": "list",
-      "description": "Discovers and lists all Azure Database for MySQL Flexible Server instances within the specified resource group. This command provides an inventory of available MySQL server resources, including their names and current status, enabling efficient server management and resource planning.",
-      "command": "mysql server list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--user",
-          "description": "The user name to access MySQL server.",
           "type": "string",
           "required": true
         }
@@ -13912,104 +13215,6 @@
       }
     },
     {
-      "id": "f12a9e5a-d8ae-4208-8c4c-fe6fe3b3c42e",
-      "name": "list",
-      "description": "Enumerates all tables within a specified database on an Azure Database for MySQL Flexible Server instance. This command provides a complete inventory of table objects, facilitating database exploration, schema analysis, and data architecture understanding for development tasks.",
-      "command": "mysql table list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--user",
-          "description": "The user name to access MySQL server.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--server",
-          "description": "The MySQL server to be accessed.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--database",
-          "description": "The MySQL database to be accessed.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
       "id": "1c8d2584-fa52-4641-85f9-fb67a8f5c7c9",
       "name": "get",
       "description": "Retrieves detailed schema information for a specific table within an Azure Database for MySQL Flexible Server database. This command provides comprehensive metadata including column definitions, data types, constraints, indexes, and relationships, essential for understanding table structure and supporting application development.",
@@ -14193,108 +13398,6 @@
       }
     },
     {
-      "id": "cbb8a347-99a2-41d1-a3e1-f4d748c0538b",
-      "name": "list",
-      "description": "Lists all databases in the PostgreSQL server.",
-      "command": "postgres database list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--user",
-          "description": "The user name to access PostgreSQL server.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--server",
-          "description": "The PostgreSQL server to be accessed.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--auth-type",
-          "description": "The authentication type to access PostgreSQL server. Supported values are 'MicrosoftEntra' or 'PostgreSQL'. By default 'MicrosoftEntra' is used.",
-          "type": "string"
-        },
-        {
-          "name": "--password",
-          "description": "The user password to access PostgreSQL server, Only required if 'auth-type' is set to 'PostgreSQL' authentication, not needed for 'MicrosoftEntra' authentication.",
-          "type": "string"
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
       "id": "81a28bca-014c-4738-9e1a-654d77cb2dd8",
       "name": "query",
       "description": "Executes a SQL query on an Azure Database for PostgreSQL server to search for specific terms, retrieve records, or perform SELECT operations.",
@@ -14409,6 +13512,112 @@
       }
     },
     {
+      "id": "8a12c3f4-2e5d-4b3a-9f2c-5e6d7f8a9b0c",
+      "name": "list",
+      "description": "List PostgreSQL servers, databases, or tables in your subscription. Returns all servers by default. Specify --server to list databases on that server, or --server and --database to list tables in a specific database.",
+      "command": "postgres list",
+      "option": [
+        {
+          "name": "--tenant",
+          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
+          "type": "string"
+        },
+        {
+          "name": "--auth-method",
+          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-delay",
+          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-delay",
+          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-retries",
+          "description": "Maximum number of retry attempts for failed operations before giving up.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-mode",
+          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-network-timeout",
+          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
+          "type": "string"
+        },
+        {
+          "name": "--subscription",
+          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
+          "type": "string"
+        },
+        {
+          "name": "--resource-group",
+          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--user",
+          "description": "The user name to access PostgreSQL server.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--server",
+          "description": "The PostgreSQL server to list databases from (optional).",
+          "type": "string"
+        },
+        {
+          "name": "--database",
+          "description": "The PostgreSQL database to list tables from (optional, requires --server).",
+          "type": "string"
+        },
+        {
+          "name": "--auth-type",
+          "description": "The authentication type to access PostgreSQL server. Supported values are 'MicrosoftEntra' or 'PostgreSQL'. By default 'MicrosoftEntra' is used.",
+          "type": "string"
+        },
+        {
+          "name": "--password",
+          "description": "The user password to access PostgreSQL server, Only required if 'auth-type' is set to 'PostgreSQL' authentication, not needed for 'MicrosoftEntra' authentication.",
+          "type": "string"
+        }
+      ],
+      "metadata": {
+        "destructive": {
+          "value": false,
+          "description": "This tool performs only additive updates without deleting or modifying existing resources."
+        },
+        "idempotent": {
+          "value": true,
+          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
+        },
+        "openWorld": {
+          "value": false,
+          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
+        },
+        "readOnly": {
+          "value": true,
+          "description": "This tool only performs read operations without modifying any state or data."
+        },
+        "secret": {
+          "value": false,
+          "description": "This tool does not handle sensitive or secret information."
+        },
+        "localRequired": {
+          "value": false,
+          "description": "This tool is available in both local and remote server modes."
+        }
+      }
+    },
+    {
       "id": "049a0d10-0a6e-4278-a0a3-15ce6b2e5ee1",
       "name": "get",
       "description": "Retrieve the configuration of a PostgreSQL server.",
@@ -14469,92 +13678,6 @@
         {
           "name": "--server",
           "description": "The PostgreSQL server to be accessed.",
-          "type": "string",
-          "required": true
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "4d9f78e1-38f2-4229-a8c7-b631c192a0ff",
-      "name": "list",
-      "description": "Lists all PostgreSQL servers in the specified subscription.",
-      "command": "postgres server list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--user",
-          "description": "The user name to access PostgreSQL server.",
           "type": "string",
           "required": true
         }
@@ -14777,114 +13900,6 @@
         "readOnly": {
           "value": false,
           "description": "This tool may modify its environment and perform write operations (create, update, delete)."
-        },
-        "secret": {
-          "value": false,
-          "description": "This tool does not handle sensitive or secret information."
-        },
-        "localRequired": {
-          "value": false,
-          "description": "This tool is available in both local and remote server modes."
-        }
-      }
-    },
-    {
-      "id": "625af363-9894-4b24-a6d9-62032e62a940",
-      "name": "list",
-      "description": "Lists all tables in the PostgreSQL database.",
-      "command": "postgres table list",
-      "option": [
-        {
-          "name": "--tenant",
-          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
-          "type": "string"
-        },
-        {
-          "name": "--auth-method",
-          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-delay",
-          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-delay",
-          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-max-retries",
-          "description": "Maximum number of retry attempts for failed operations before giving up.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-mode",
-          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
-          "type": "string"
-        },
-        {
-          "name": "--retry-network-timeout",
-          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
-          "type": "string"
-        },
-        {
-          "name": "--subscription",
-          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-          "type": "string"
-        },
-        {
-          "name": "--resource-group",
-          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--user",
-          "description": "The user name to access PostgreSQL server.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--server",
-          "description": "The PostgreSQL server to be accessed.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--database",
-          "description": "The PostgreSQL database to be accessed.",
-          "type": "string",
-          "required": true
-        },
-        {
-          "name": "--auth-type",
-          "description": "The authentication type to access PostgreSQL server. Supported values are 'MicrosoftEntra' or 'PostgreSQL'. By default 'MicrosoftEntra' is used.",
-          "type": "string"
-        },
-        {
-          "name": "--password",
-          "description": "The user password to access PostgreSQL server, Only required if 'auth-type' is set to 'PostgreSQL' authentication, not needed for 'MicrosoftEntra' authentication.",
-          "type": "string"
-        }
-      ],
-      "metadata": {
-        "destructive": {
-          "value": false,
-          "description": "This tool performs only additive updates without deleting or modifying existing resources."
-        },
-        "idempotent": {
-          "value": true,
-          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
-        },
-        "openWorld": {
-          "value": false,
-          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
-        },
-        "readOnly": {
-          "value": true,
-          "description": "This tool only performs read operations without modifying any state or data."
         },
         "secret": {
           "value": false,
@@ -16569,6 +15584,200 @@
         "readOnly": {
           "value": true,
           "description": "This tool only performs read operations without modifying any state or data."
+        },
+        "secret": {
+          "value": false,
+          "description": "This tool does not handle sensitive or secret information."
+        },
+        "localRequired": {
+          "value": false,
+          "description": "This tool is available in both local and remote server modes."
+        }
+      }
+    },
+    {
+      "id": "a3f1b2c4-d5e6-47f8-9a0b-1c2d3e4f5a6b",
+      "name": "get",
+      "description": "Get nodes for a Service Fabric managed cluster. Returns all nodes by default or a single node when a node name is specified. Includes name, node type, status, IP address, fault domain, upgrade domain, health state, and seed node status.",
+      "command": "servicefabric managedcluster node get",
+      "option": [
+        {
+          "name": "--tenant",
+          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
+          "type": "string"
+        },
+        {
+          "name": "--auth-method",
+          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-delay",
+          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-delay",
+          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-retries",
+          "description": "Maximum number of retry attempts for failed operations before giving up.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-mode",
+          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-network-timeout",
+          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
+          "type": "string"
+        },
+        {
+          "name": "--subscription",
+          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
+          "type": "string"
+        },
+        {
+          "name": "--resource-group",
+          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--cluster",
+          "description": "Service Fabric managed cluster name.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--node",
+          "description": "The node name. When specified, returns a single node instead of all nodes.",
+          "type": "string"
+        }
+      ],
+      "metadata": {
+        "destructive": {
+          "value": false,
+          "description": "This tool performs only additive updates without deleting or modifying existing resources."
+        },
+        "idempotent": {
+          "value": true,
+          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
+        },
+        "openWorld": {
+          "value": false,
+          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
+        },
+        "readOnly": {
+          "value": true,
+          "description": "This tool only performs read operations without modifying any state or data."
+        },
+        "secret": {
+          "value": false,
+          "description": "This tool does not handle sensitive or secret information."
+        },
+        "localRequired": {
+          "value": false,
+          "description": "This tool is available in both local and remote server modes."
+        }
+      }
+    },
+    {
+      "id": "b4f2c3d5-e6f7-48a9-8b1c-2d3e4f5a6b7c",
+      "name": "restart",
+      "description": "Restart nodes of a specific node type in a Service Fabric managed cluster. Requires the cluster name, node type, and list of node names to restart. Optionally specify the update type (Default or ByUpgradeDomain).",
+      "command": "servicefabric managedcluster nodetype restart",
+      "option": [
+        {
+          "name": "--tenant",
+          "description": "The Microsoft Entra ID tenant ID or name. This can be either the GUID identifier or the display name of your Entra ID tenant.",
+          "type": "string"
+        },
+        {
+          "name": "--auth-method",
+          "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-delay",
+          "description": "Initial delay in seconds between retry attempts. For exponential backoff, this value is used as the base.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-delay",
+          "description": "Maximum delay in seconds between retries, regardless of the retry strategy.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-max-retries",
+          "description": "Maximum number of retry attempts for failed operations before giving up.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-mode",
+          "description": "Retry strategy to use. 'fixed' uses consistent delays, 'exponential' increases delay between attempts.",
+          "type": "string"
+        },
+        {
+          "name": "--retry-network-timeout",
+          "description": "Network operation timeout in seconds. Operations taking longer than this will be cancelled.",
+          "type": "string"
+        },
+        {
+          "name": "--subscription",
+          "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
+          "type": "string"
+        },
+        {
+          "name": "--resource-group",
+          "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--cluster",
+          "description": "Service Fabric managed cluster name.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--node-type",
+          "description": "The node type name within the managed cluster.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--nodes",
+          "description": "The list of node names to restart. Multiple node names can be provided.",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "--update-type",
+          "description": "The update type for the restart operation. Valid values: Default, ByUpgradeDomain.",
+          "type": "string"
+        }
+      ],
+      "metadata": {
+        "destructive": {
+          "value": true,
+          "description": "This tool may delete or modify existing resources in its environment."
+        },
+        "idempotent": {
+          "value": true,
+          "description": "Running this operation multiple times with the same arguments produces the same result without additional effects."
+        },
+        "openWorld": {
+          "value": false,
+          "description": "This tool's domain of interaction is closed and well-defined, limited to a specific set of entities (like memory access)."
+        },
+        "readOnly": {
+          "value": false,
+          "description": "This tool may modify its environment and perform write operations (create, update, delete)."
         },
         "secret": {
           "value": false,
@@ -21466,5 +20675,5 @@
       }
     }
   ],
-  "duration": 88
+  "duration": 93
 }
