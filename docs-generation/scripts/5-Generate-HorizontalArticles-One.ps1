@@ -159,9 +159,9 @@ try {
     
     Push-Location $docsGenDir
     try {
-        # Run with single service flag
+        # Run with single service flag and output path
         $transformArg = if ($UseTextTransformation) { "--transform" } else { "" }
-        & dotnet run --project HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --no-build -- --single-service $ServiceArea $transformArg
+        & dotnet run --project HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --no-build -- --single-service $ServiceArea --output-path $outputDir $transformArg
         $exitCode = $LASTEXITCODE
     } finally {
         Pop-Location
