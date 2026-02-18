@@ -1,0 +1,25 @@
+{
+  "status": 0,
+  "results": [
+    {
+      "name": "advisor-list-recommendations",
+      "command": "advisor list recommendations",
+      "description": "List Azure Advisor recommendations"
+    },
+    {
+      "name": "advisor-get-recommendation",
+      "command": "advisor get recommendation",
+      "description": "Get specific Azure Advisor recommendation"
+    },
+    {
+      "name": "storage-create-account",
+      "command": "storage create account",
+      "description": "Create a storage account"
+    },
+    {
+      "name": "newservice-list",
+      "command": "newservice list",
+      "description": "List resources for new service without mapping"
+    }
+  ]
+}
