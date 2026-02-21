@@ -170,6 +170,42 @@ Other configs:
 - If only 15-20 files generate, rate limits are being hit (retry logic should handle this)
 - If JSON parsing fails, AI may be returning unexpected format (check raw response in logs)
 
+### Horizontal Article Generation (HorizontalArticleGenerator)
+**Purpose**: Generates one overview article per tool family (namespace) using Azure OpenAI. Each article covers capabilities, scenarios, prerequisites, RBAC roles, and best practices for all tools in that family.
+
+**Key Components**:
+- `HorizontalArticleGenerator/` - Standalone .NET console application
+- `Generators/HorizontalArticleGenerator.cs` - Main generator orchestrating the AI → validate → transform → render pipeline
+- `Generators/ArticleContentProcessor.cs` - Public class for validation and transformation of AI-generated content
+- `TextTransformation/` - Shared library for text transformations (static replacements, trailing period management)
+- `prompts/horizontal-article-system-prompt.txt` - System prompt defining JSON schema and content rules
+- `prompts/horizontal-article-user-prompt.txt` - User prompt template (Handlebars) with tool data
+- `templates/horizontal-article-template.hbs` - Handlebars template for final markdown rendering
+- Output: `./generated-{namespace}/horizontal-articles/{family}.md`
+
+**Pipeline Order**: AI response → JSON parse → `Validate()` → `ApplyTransformations()` → Merge → Render
+
+**ArticleContentProcessor Validations** (all service-agnostic):
+- Strip trailing periods from titles, capabilities, short descriptions
+- Fix broken sentences (period-before-lowercase)
+- Strip `learn.microsoft.com` prefix from links
+- Remove fabricated `/docs` URL patterns
+- Deduplicate additional links that match serviceDocLink
+- Detect fabricated RBAC roles via pattern matching ("Administrator" suffix, generic prefixes)
+- Validate capability-to-tool ratio
+- Validate best practice count minimums
+
+**TextTransformation**:
+- `TransformText()` - Static replacements only (e.g., "Azure Active Directory" → "Microsoft Entra ID"). Used for titles, capabilities, short descriptions — fields that must NOT end with a period
+- `TransformDescription()` - Static replacements + `EnsureEndsPeriod()`. Used for full sentences (descriptions, overviews)
+
+**⚠️ CRITICAL - Universal Design Principle**:
+All validations, transformations, prompts, and tests in the HorizontalArticleGenerator MUST be **universal** — they must work correctly for ALL 52 namespaces and ALL Azure services, tools, and products. Never add service-specific logic, hardcoded service names, or service-specific test data. Instead:
+- Use **pattern-based detection** (e.g., regex, suffix checks) instead of hardcoded blocklists
+- Use **varied Azure service examples** across tests (Storage, Key Vault, Cosmos DB, Speech, Monitor, etc.) — never concentrate all test data on one service
+- Prompts should describe rules generically, not through service-specific examples
+- If a validation catches a problem in one service's output, the fix must be a generic pattern that catches the same class of problem across all services
+
 ### Adding New Service Area
 1. Add to `brand-to-server-mapping.json` if needs brand name
 2. Add to `compound-words.json` if has concatenated words
@@ -583,6 +619,18 @@ For comprehensive architecture details, workflows, and troubleshooting:
 - **Logs**: Check `generated/logs/generation-*.log` for transcript
 - **Verify output**: Count files in `generated/example-prompts/` (should match tool count)
 
+## ⚠️ Universal Design Principle
+
+All generators, validators, transformations, prompts, templates, and tests MUST be **service-agnostic**. They must produce correct output for every one of the 52 Azure MCP namespaces without service-specific logic.
+
+- **No hardcoded service names** in validation logic — use pattern-based detection
+- **No service-specific tests** — use varied Azure service examples across test cases
+- **No service-specific prompt examples** — describe rules generically or use diverse service examples
+- **No service-specific blocklists** — detect fabrication patterns structurally (e.g., role name suffix, URL path patterns)
+- **Test across services** — when writing tests, draw examples from Storage, Key Vault, Cosmos DB, Speech, Monitor, AKS, SQL, and other services to ensure coverage
+
+If a bug is found in one service's generated output, the fix MUST be a generic rule that catches the same class of problem across all services.
+
 ## Last Updated
 
-February 6, 2026
+February 21, 2026
