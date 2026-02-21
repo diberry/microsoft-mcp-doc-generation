@@ -1,4 +1,4 @@
-Generate JSON data for a how-to article about using Azure MCP Server with {{serviceBrandName}}.
+Generate JSON data for a how-to article about managing {{serviceBrandName}} with Azure MCP Server.
 
 ## Input Data Provided
 
@@ -34,44 +34,42 @@ Characteristics:
 - Best practices and security recommendations
 - Common use cases and scenarios
 
-**THEN**: Analyze the tool descriptions above and generate a JSON object following the structure defined in the system prompt. Focus on:
+**THEN**: Generate a JSON object following the system prompt schema. Focus on:
 
 1. **Service Understanding**: Based on **official Azure documentation** and the tool commands/descriptions, determine:
-   - What this Azure service does (serviceShortDescription)
-   - Its main value proposition (serviceOverview)
-   - Core capabilities accessible through MCP (capabilities)
-   - **Primary plane focus**: Does this service primarily provide data plane operations (working with data in existing resources) or management plane operations (provisioning and configuring resources)? Default to data plane if unclear.
+   - A noun phrase describing what users manage (genai-serviceShortDescription). MUST NOT end with a period. Must read naturally after "Manage" — e.g., "keys, secrets, and certificates" or "web applications and database connections"
+   - A 2-3 sentence service description starting with "is a..." or "provides..." (genai-serviceOverview)
+   - Capabilities derived directly from the tool descriptions above (genai-capabilities). Each capability must be a rephrasing of one tool's description into an action phrase. 1 tool = 1 capability. Do NOT add capabilities beyond the provided tools
+   - **Primary plane focus**: Data plane (default) or management plane
 
-2. **Tool Summaries**: For each tool, create a concise 10-15 word description (genai-shortDescription) that captures its purpose without technical jargon
-   - Clarify whether it's a data operation or resource management operation if needed for context
+2. **Tool Summaries**: For each tool, create a concise 10-15 word description (genai-shortDescription)
 
-3. **Realistic Scenarios**: Create 3-5 practical scenarios based on common workflows with these tools. Each scenario needs:
-   - A clear title indicating the user's goal (business-focused)
-   - Context about when/why someone would do this (real-world motivation)
-   - 3-5 natural language commands a user could say to an AI assistant
-     - **Important**: Phrase as natural conversation: "Create a storage account named 'myapp-data' in East US" not "storage account create myapp-data eastus"
-     - Include specific values: resource names, regions, SKUs, configurations
-     - Vary from simple to complex commands
-     - **For data plane**: Assume resources exist. Example: "Get secret 'db-password' from key vault 'prod-secrets'"
-     - **For management plane**: Focus on provisioning. Example: "Create a new key vault named 'prod-secrets' in East US"
-   - The expected result they'll see (user-facing outcome, not internal state)
+3. **Get Started Scenarios**: Create 3-5 scenarios. The **first example from each scenario** appears in the article's "Get started" section, so:
+   - Make each scenario's first example the most representative and specific prompt
+   - **Every scenario must map to a specific tool command from the input** — do NOT suggest operations that no provided tool supports (e.g., don't suggest "update" if only an "add" tool exists)
+   - If only 1 tool exists, create 2-3 scenarios that all use that same tool with different parameters/contexts
+   - Cover different tools across scenarios for diversity (when multiple tools exist)
+   - Use natural conversational phrasing with real resource names, regions, and configurations
+   - **Use service-specific terminology** (e.g., actual feature names, SKU values, configuration options)
+   - **For data plane**: Assume resources exist. Example: "Get secret 'db-password' from key vault 'prod-secrets'"
+   - **For management plane**: Focus on provisioning. Example: "Create a new key vault named 'prod-secrets' in East US"
 
-4. **AI Service Detection**: Determine if this is an AI-related service (contains keywords: AI, Foundry, OpenAI, Speech, Search with AI features, etc.). If yes, create AI-specific scenarios
+4. **Permissions**: Look up official Azure RBAC built-in roles ONLY from https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles. Search that page for the service name. Every role you output must be verifiable on that page. If unsure, use fallback defaults from system prompt (e.g., "Cognitive Services Contributor" for AI services, "Contributor" for general resources)
 
-5. **Permissions**: Search Azure documentation for the service's access control/RBAC page. Based on tool characteristics (destructive, read-only) and official documentation, determine appropriate Azure RBAC roles needed
-   - **Critical**: Match roles to the plane of operation
-   - **Data plane tools**: Suggest data plane roles (e.g., "Storage Blob Data Reader", "Key Vault Secrets User")
-   - **Management plane tools**: Suggest management roles (e.g., "Storage Account Contributor", "Key Vault Contributor")
-   - Don't assume management plane roles unless tools explicitly manage resource lifecycle
+5. **Best Practices**: 3-5 practices covering security, reliability, cost, and performance. Every best practice must satisfy TWO grounding requirements: (1) it must relate to operations the available tools support, and (2) it should be supported by official Azure documentation for this service. No trailing periods on titles. Do NOT recommend general service features (scaling, monitoring, backup) unless a tool exists for those operations.
 
-6. **Best Practices**: Search Azure documentation for the service's best practices guide. Adapt official Azure recommendations to the MCP/AI assistant context:
-   - **Prioritize**: Security, reliability, cost optimization, operational excellence, performance
-   - **MCP-specific**: How to phrase commands for safety, when to confirm destructive operations, resource naming for clarity
-   - **Azure Well-Architected**: Align with the 5 pillars when relevant to natural language interaction
+6. **Resources**: Provide documentation links with `/azure/...` paths (remove `https://learn.microsoft.com/en-us` prefix). Use `/azure/ai-services/` instead of retired `/azure/cognitive-services/`. **If you are not confident a URL path is correct, leave the `url` field as an empty string** — an empty link is better than a fabricated 404 link.
 
-7. **Resources**: Search for and provide:
-   - genai-serviceDocLink: URL to the official "What is {{serviceBrandName}}?" or service overview page
-   - genai-additionalLinks: URLs to quickstarts, tutorials, security best practices, pricing information
+## Key Constraints
+
+- **Universality**: This prompt runs for ALL 52 Azure MCP namespaces. Every field you generate must be grounded to the specific tools and service provided above — do not assume any particular Azure service. Apply all rules generically regardless of service
+- **Authentication**: Azure MCP Server uses `DefaultAzureCredential` (Microsoft Entra ID). Do not mention API keys anywhere
+- **Naming**: Use "Microsoft Entra ID" instead of "Azure Active Directory" (renamed in 2023)
+- **Tool grounding**: Capabilities, scenarios, and example prompts must ONLY reference operations the provided MCP tools support. Do NOT invent additional features
+- **Prerequisites**: Do NOT include "Azure subscription" as a service-specific prerequisite — it is already in the template
+- **Tool links**: Do not generate `moreInfoLink` values — pre-computed by build system
+- **Omit**: Do NOT generate `genai-aiSpecificScenarios`, `genai-authenticationNotes`, or `genai-commonIssues` fields
+- **No trailing periods**: genai-serviceShortDescription, capability strings, best practice titles, prerequisite titles, and scenario titles must NEVER end with a period. A trailing period on genai-serviceShortDescription breaks 3 template locations.
 
 ## Output Format
 
