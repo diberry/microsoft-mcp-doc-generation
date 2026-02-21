@@ -141,7 +141,21 @@ try {
 }
 Write-Host ""
 
-# Step 6: Create additional output directories
+# Step 6: Download and parse e2e test prompts from upstream
+Write-Host "Downloading and parsing e2e test prompts..." -ForegroundColor Yellow
+$e2eOutputDir = Join-Path $OutputPath "e2e-test-prompts"
+New-Item -ItemType Directory -Path $e2eOutputDir -Force | Out-Null
+$e2eOutputFile = Join-Path $e2eOutputDir "parsed.json"
+$e2eProject = Join-Path $docsGenDir "E2eTestPromptParser/E2eTestPromptParser.csproj"
+& dotnet run --project $e2eProject --configuration Release --no-build -- $e2eOutputFile
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠ WARNING: E2e test prompt parsing failed (non-blocking)" -ForegroundColor Yellow
+} else {
+    Write-Host "✓ E2e test prompts parsed" -ForegroundColor Green
+}
+Write-Host ""
+
+# Step 7: Create additional output directories
 Write-Host "Creating generation output directories..." -ForegroundColor Yellow
 $directories = @(
     "common-general",
