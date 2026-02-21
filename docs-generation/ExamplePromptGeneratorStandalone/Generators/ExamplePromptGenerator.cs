@@ -53,8 +53,11 @@ public sealed class ExamplePromptGenerator
 
     /// <summary>
     /// Generates example prompts for a tool using Azure OpenAI.
+    /// When e2e reference prompts are provided, they are injected as few-shot examples
+    /// and the prompt count matches the e2e count (the tool authority's intent).
     /// </summary>
-    public async Task<(string userPrompt, ExamplePromptsResponse? response, string rawResponse)?> GenerateAsync(Tool tool)
+    public async Task<(string userPrompt, ExamplePromptsResponse? response, string rawResponse)?> GenerateAsync(
+        Tool tool, List<string>? referencePrompts = null)
     {
         if (!IsInitialized || tool == null)
             return null;
@@ -66,6 +69,9 @@ public sealed class ExamplePromptGenerator
             var serviceArea = commandParts.Length > 0 ? commandParts[0].ToLowerInvariant() : string.Empty;
             var actionVerb = commandParts.Length > 1 ? commandParts[^1] : "manage";
             var resourceType = commandParts.Length > 1 ? string.Join(" ", commandParts[1..^1]) : "resource";
+
+            // Determine prompt count: match e2e count or default to 5
+            var promptCount = referencePrompts?.Count ?? 5;
 
             // Build parameters section
             var parametersBuilder = new StringBuilder();
@@ -87,7 +93,8 @@ public sealed class ExamplePromptGenerator
                 .Replace("{TOOL_COMMAND}", tool.Command ?? "unknown")
                 .Replace("{TOOL_DESCRIPTION}", tool.Description ?? "No description available")
                 .Replace("{ACTION_VERB}", actionVerb)
-                .Replace("{RESOURCE_TYPE}", resourceType);
+                .Replace("{RESOURCE_TYPE}", resourceType)
+                .Replace("{PROMPT_COUNT}", promptCount.ToString());
             
             // Replace the handlebars {{#each PARAMETERS}} block with actual parameters
             // Use regex to handle different line endings
@@ -98,6 +105,42 @@ public sealed class ExamplePromptGenerator
                 parametersBuilder.ToString().TrimEnd(),
                 System.Text.RegularExpressions.RegexOptions.Singleline | System.Text.RegularExpressions.RegexOptions.IgnoreCase
             );
+
+            // Inject e2e reference prompts as few-shot examples
+            if (referencePrompts != null && referencePrompts.Count > 0)
+            {
+                // Detect style patterns from reference prompts
+                var hasTrailingPunctuation = referencePrompts.Any(p => p.EndsWith('.') || p.EndsWith('?') || p.EndsWith('!'));
+                var usesAngleBrackets = referencePrompts.Any(p => p.Contains('<') && p.Contains('>'));
+
+                var refBuilder = new StringBuilder();
+                refBuilder.AppendLine();
+                refBuilder.AppendLine("## Reference prompts from the tool authority (e2e tests)");
+                refBuilder.AppendLine();
+                refBuilder.AppendLine($"The following {referencePrompts.Count} prompts were written by the tool's developers as end-to-end test prompts.");
+                refBuilder.AppendLine("These are the AUTHORITATIVE source for style, phrasing, complexity, and parameter usage.");
+                refBuilder.AppendLine($"Generate exactly {promptCount} prompts (matching the reference count).");
+                refBuilder.AppendLine();
+                refBuilder.AppendLine("**MANDATORY STYLE RULES derived from these references:**");
+                if (!hasTrailingPunctuation)
+                {
+                    refBuilder.AppendLine("- NO trailing punctuation (no periods, question marks, or exclamation marks at the end)");
+                }
+                if (usesAngleBrackets)
+                {
+                    refBuilder.AppendLine("- Use <angle-bracket> placeholders for parameter values (NOT quoted fake values)");
+                }
+                refBuilder.AppendLine("- Match the brevity and directness of the references — do NOT over-embellish");
+                refBuilder.AppendLine("- Use the same terminology (e.g., if references say 'Advisor' not 'Azure Advisor', follow that)");
+                refBuilder.AppendLine("- Do NOT add parameters the references deliberately omit");
+                refBuilder.AppendLine();
+                refBuilder.AppendLine("Reference prompts:");
+                for (int i = 0; i < referencePrompts.Count; i++)
+                {
+                    refBuilder.AppendLine($"{i + 1}. \"{referencePrompts[i]}\"");
+                }
+                userPrompt += refBuilder.ToString();
+            }
 
             userPrompt += "\n\nGenerate the prompts now.";
 
