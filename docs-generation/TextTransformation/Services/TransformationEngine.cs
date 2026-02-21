@@ -66,6 +66,7 @@ public class TransformationEngine
 
     /// <summary>
     /// Transforms a description text (applies replacements and ensures period).
+    /// Use for full sentences and paragraphs.
     /// </summary>
     public string TransformDescription(string description)
     {
@@ -76,6 +77,21 @@ public class TransformationEngine
 
         var transformed = _textNormalizer.ReplaceStaticText(description);
         return _textNormalizer.EnsureEndsPeriod(transformed);
+    }
+
+    /// <summary>
+    /// Transforms text with static replacements only (no trailing period enforcement).
+    /// Use for titles, short descriptions, and capability strings that are interpolated
+    /// mid-sentence or rendered as bullet items without trailing punctuation.
+    /// </summary>
+    public string TransformText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        return _textNormalizer.ReplaceStaticText(text);
     }
 
     /// <summary>
