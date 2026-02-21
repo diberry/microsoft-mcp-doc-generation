@@ -339,7 +339,7 @@ internal static class Program
     /// Extracts JSON from LLM response that may contain reasoning/preamble.
     /// Prioritizes finding the last JSON object, as LLM often puts final answer at the end.
     /// </summary>
-    private static string ExtractJsonFromResponse(string response)
+    internal static string ExtractJsonFromResponse(string response)
     {
         if (string.IsNullOrEmpty(response))
             return string.Empty;

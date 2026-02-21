@@ -174,7 +174,7 @@ public sealed class ExamplePromptGenerator
     /// Parses JSON response from LLM, extracting first dictionary entry's prompts.
     /// Uses ExtractJsonFromLLMResponse to isolate the JSON from any preamble/reasoning.
     /// </summary>
-    private static ExamplePromptsResponse? ParseJsonResponse(string response)
+    internal static ExamplePromptsResponse? ParseJsonResponse(string response)
     {
         try
         {
@@ -231,7 +231,7 @@ public sealed class ExamplePromptGenerator
     /// Returns: Pure JSON string, or empty if no JSON found
     /// ═══════════════════════════════════════════════════════════════
     /// </summary>
-    private static string ExtractJsonFromLLMResponse(string response)
+    internal static string ExtractJsonFromLLMResponse(string response)
     {
         if (string.IsNullOrEmpty(response))
             return string.Empty;
@@ -307,7 +307,7 @@ public sealed class ExamplePromptGenerator
     /// <summary>
     /// Cleans AI-generated text: smart quotes → straight quotes, HTML entities → plain text.
     /// </summary>
-    private static string CleanAIGeneratedText(string text)
+    internal static string CleanAIGeneratedText(string text)
     {
         if (string.IsNullOrEmpty(text))
             return text;
