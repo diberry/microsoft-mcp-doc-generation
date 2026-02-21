@@ -1,0 +1,14 @@
+{
+  "advisor": {
+    "mcpServerName": "advisor",
+    "brandName": "Azure Advisor",
+    "shortName": "Advisor",
+    "fileName": "azure-advisor"
+  },
+  "storage": {
+    "mcpServerName": "storage",
+    "brandName": "Azure Storage",
+    "shortName": "Storage",
+    "fileName": "azure-storage"
+  }
+}
