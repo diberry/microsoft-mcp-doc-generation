@@ -109,6 +109,8 @@ try {
         "--project",
         "docs-generation/CliAnalyzer",
         "--",
+        "--file",
+        $cliJsonPath,
         "--output",
         $htmlReportPath
     )
