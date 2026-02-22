@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using ToolGeneration_Composed.Services;
+using Shared;
 
 namespace ToolGeneration_Composed;
 
@@ -33,6 +34,8 @@ internal class Program
             Console.Error.WriteLine("    ./generated/multi-page/example-prompts");
             return 1;
         }
+
+        LogFileHelper.Initialize("composed-tool-generator");
 
         var rawToolsDir = args[0];
         var outputDir = args[1];

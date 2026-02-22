@@ -230,15 +230,14 @@ if ($SkipExamplePrompts) {
     $runStep2 = $false
 }
 
-function Write-Info { param([string]$Message) Write-Host "INFO: $Message" -ForegroundColor Cyan }
-function Write-Success { param([string]$Message) Write-Host "SUCCESS: $Message" -ForegroundColor Green }
-function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" -ForegroundColor Yellow }
-function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -ForegroundColor Red }
-function Write-Progress { param([string]$Message) Write-Host "PROGRESS: $Message" -ForegroundColor Magenta }
-function Write-Divider { Write-Host ("═" * 80) -ForegroundColor DarkGray }
+# Import shared logging and normalization helpers
+. "$PSScriptRoot\Shared-Functions.ps1"
 
 try {
-    # On Windows, bash may pass \r from jq output; trim CR characters
+    # Strip \r on Windows (jq in Git Bash) and trim whitespace.
+    # Note: Do NOT convert underscores to spaces here — $ToolFamily is used as-is
+    # for file paths (e.g. tool-family/$ToolFamily.md). The step scripts normalize
+    # internally when matching against CLI tool commands.
     if ($IsWindows -or $env:OS -eq 'Windows_NT') {
         $ToolFamily = $ToolFamily -replace '\r', ''
     }
@@ -527,8 +526,8 @@ try {
 } catch {
     Write-Host ""
     Write-Divider
-    Write-Error "Generation failed: $($_.Exception.Message)"
-    Write-Error $_.ScriptStackTrace
+    Write-ErrorMessage "Generation failed: $($_.Exception.Message)"
+    Write-ErrorMessage $_.ScriptStackTrace
     Write-Divider
     
     exit 1

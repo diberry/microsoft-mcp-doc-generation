@@ -14,7 +14,6 @@ internal class Program
 {
      private static async Task<int> Main(string[] args)
      {
-
          // Load and validate config (verbose output goes to logs, not console)
          var configPath = Path.Combine(AppContext.BaseDirectory, "../../../../data/config.json");
          var success = Config.Load(configPath);
@@ -130,6 +129,12 @@ internal class Program
 
          var cliOutputFile = args[0];
          var outputDir = args[1];
+         
+         // Determine specific operation for log filename
+         var isAnnotations = args.Contains("--annotations");
+         var isParameters = args.Contains("--parameters");
+         var operation = isAnnotations ? "annotations" : isParameters ? "parameters" : "docs";
+         LogFileHelper.Initialize($"{operation}-generator");
          
          // Log all arguments to file (not console)
          LogFileHelper.WriteDebug($"GenerateDocumentation received {args.Length} arguments:");

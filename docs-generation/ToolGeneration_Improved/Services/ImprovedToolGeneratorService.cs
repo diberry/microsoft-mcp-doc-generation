@@ -15,7 +15,7 @@ public class ImprovedToolGeneratorService
     private readonly GenerativeAIClient _aiClient;
     private readonly string _systemPrompt;
     private readonly string _userPromptTemplate;
-    private static readonly string[] TemplateLabels =
+    internal static readonly string[] TemplateLabels =
     [
         "Example prompts include:",
         "Example prompts:",
@@ -29,6 +29,14 @@ public class ImprovedToolGeneratorService
         "[Tool annotation hints](../index.md#tool-annotations-for-azure-mcp-server):",
         "[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):"
     ];
+
+    /// <summary>
+    /// Regex that detects leaked placeholder tokens in output content.
+    /// Matches the current format (<<<TPL_LABEL_N>>>) and the old format (__TPL_LABEL_N__ or **TPL_LABEL_N**).
+    /// </summary>
+    private static readonly System.Text.RegularExpressions.Regex LeakedTokenRegex = new(
+        @"(<<<TPL_LABEL_\d+>>>|__TPL_LABEL_\d+__|\*\*TPL_LABEL_\d+\*\*)",
+        System.Text.RegularExpressions.RegexOptions.Compiled);
 
     public ImprovedToolGeneratorService(GenerativeAIClient aiClient, string systemPrompt, string userPromptTemplate)
     {
@@ -112,6 +120,15 @@ public class ImprovedToolGeneratorService
                 var restoredContent = RestoreTemplateLabels(improvedContent, labelMap);
                 restoredContent = NormalizeTemplateLabels(restoredContent);
 
+                // Validate no leaked placeholder tokens remain
+                var leakedTokens = ValidateRestoredContent(restoredContent);
+                if (leakedTokens.Count > 0)
+                {
+                    Console.WriteLine($" ⚠ Leaked tokens detected: {string.Join(", ", leakedTokens)}");
+                    Console.WriteLine($"      Falling back to original content");
+                    restoredContent = originalContent;
+                }
+
                 // Save improved content
                 var outputPath = Path.Combine(outputDir, fileName);
                 await File.WriteAllTextAsync(outputPath, restoredContent);
@@ -168,7 +185,24 @@ public class ImprovedToolGeneratorService
         return errorCount > 0 ? 1 : 0;
     }
 
-    private static string ProtectTemplateLabels(string content, out Dictionary<string, string> labelMap)
+    /// <summary>
+    /// Validates that no placeholder tokens leaked into the restored content.
+    /// Returns a list of leaked token strings found (empty if valid).
+    /// </summary>
+    internal static List<string> ValidateRestoredContent(string content)
+    {
+        var leaked = new List<string>();
+        if (string.IsNullOrEmpty(content)) return leaked;
+
+        foreach (System.Text.RegularExpressions.Match match in LeakedTokenRegex.Matches(content))
+        {
+            leaked.Add(match.Value);
+        }
+
+        return leaked;
+    }
+
+    internal static string ProtectTemplateLabels(string content, out Dictionary<string, string> labelMap)
     {
         var map = new Dictionary<string, string>();
         if (string.IsNullOrEmpty(content))
@@ -185,7 +219,9 @@ public class ImprovedToolGeneratorService
         var index = 0;
         var protectedContent = regex.Replace(content, match =>
         {
-            var token = $"__TPL_LABEL_{index++}__";
+            // Use angle-bracket fences so the AI won't reformat the token.
+            // Double-underscore (__x__) gets interpreted as markdown bold (**x**).
+            var token = $"<<<TPL_LABEL_{index++}>>>";
             map[token] = match.Value;
             return token;
         });
@@ -194,7 +230,7 @@ public class ImprovedToolGeneratorService
         return protectedContent;
     }
 
-    private static string RestoreTemplateLabels(string content, Dictionary<string, string> labelMap)
+    internal static string RestoreTemplateLabels(string content, Dictionary<string, string> labelMap)
     {
         if (string.IsNullOrEmpty(content) || labelMap.Count == 0)
         {
@@ -210,7 +246,7 @@ public class ImprovedToolGeneratorService
         return restored;
     }
 
-    private static string NormalizeTemplateLabels(string content)
+    internal static string NormalizeTemplateLabels(string content)
     {
         if (string.IsNullOrEmpty(content))
         {

@@ -57,23 +57,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Write-Info { param([string]$Message) Write-Host "INFO: $Message" -ForegroundColor Cyan }
-function Write-Success { param([string]$Message) Write-Host "SUCCESS: $Message" -ForegroundColor Green }
-function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" -ForegroundColor Yellow }
-function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -ForegroundColor Red }
-function Write-Progress { param([string]$Message) Write-Host "PROGRESS: $Message" -ForegroundColor Magenta }
-function Write-Divider { Write-Host ("═" * 80) -ForegroundColor DarkGray }
-
-function Normalize-Command {
-    param([string]$Command)
-
-    if ([string]::IsNullOrWhiteSpace($Command)) {
-        return $null
-    }
-
-    $normalized = ($Command -replace "\s+", " ").Trim().ToLowerInvariant()
-    return $normalized
-}
+# Import shared logging and normalization helpers
+. "$PSScriptRoot\Shared-Functions.ps1"
 
 try {
     Write-Divider
@@ -121,11 +106,8 @@ try {
     $allTools = $cliOutput.results
     Write-Info "Total tools in CLI output: $($allTools.Count)"
 
-    # On Windows, bash may pass \r from jq output; trim CR characters
-    if ($IsWindows -or $env:OS -eq 'Windows_NT') {
-        $ToolCommand = $ToolCommand -replace '\r', ''
-    }
-    $ToolCommand = $ToolCommand.Trim()
+    # Normalize: strip \r on Windows, trim, convert underscores to spaces
+    $ToolCommand = Normalize-ToolCommand $ToolCommand
 
     # Find tool(s) - either exact command match or family prefix match
     $matchingTools = @($allTools | Where-Object { 
@@ -133,7 +115,7 @@ try {
     })
     
     if ($matchingTools.Count -eq 0) {
-        Write-Error "No tools found matching: $ToolCommand"
+        Write-ErrorMessage "No tools found matching: $ToolCommand"
         Write-Info "Available tools (first 10):"
         $allTools | Select-Object -First 10 -ExpandProperty command | ForEach-Object { Write-Info "  - $_" }
         exit 1
@@ -306,25 +288,10 @@ try {
     if ($matchingTools.Count -eq 1) {
         # Single tool
         $singleToolCommand = $matchingTools[0].command
-        $commandSegments = $singleToolCommand -split ' '
-        $baseFileName = $commandSegments -join '-'
+        $baseFileName = Get-ToolBaseFileName $singleToolCommand
         
-        $composedToolFile = Join-Path $outputDir "tools-composed/azure-$baseFileName.md"
-        $improvedToolFile = Join-Path $outputDir "tools/azure-$baseFileName.md"
-        
-        # Check for files with and without "azure-" prefix (fallback for different naming patterns)
-        if (-not (Test-Path $composedToolFile)) {
-            $composedToolFileFallback = Join-Path $outputDir "tools-composed/$baseFileName.md"
-            if (Test-Path $composedToolFileFallback) {
-                $composedToolFile = $composedToolFileFallback
-            }
-        }
-        if (-not (Test-Path $improvedToolFile)) {
-            $improvedToolFileFallback = Join-Path $outputDir "tools/$baseFileName.md"
-            if (Test-Path $improvedToolFileFallback) {
-                $improvedToolFile = $improvedToolFileFallback
-            }
-        }
+        $composedToolFile = Join-Path $outputDir "tools-composed/$baseFileName.md"
+        $improvedToolFile = Join-Path $outputDir "tools/$baseFileName.md"
         
         if (Test-Path $composedToolFile) {
             Write-Success "✓ Composed tool: $composedToolFile"
@@ -426,8 +393,8 @@ try {
 } catch {
     Write-Host ""
     Write-Divider
-    Write-Error "Test failed: $($_.Exception.Message)"
-    Write-Error $_.ScriptStackTrace
+    Write-ErrorMessage "Test failed: $($_.Exception.Message)"
+    Write-ErrorMessage $_.ScriptStackTrace
     Write-Divider
     
     # Cleanup temp directory

@@ -74,6 +74,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "E2eTestPromptParser.Tests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExamplePromptGeneratorStandalone.Tests", "docs-generation\ExamplePromptGeneratorStandalone.Tests\ExamplePromptGeneratorStandalone.Tests.csproj", "{54D09A06-6641-4288-92EB-2994FE8F6E52}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToolGeneration_Improved.Tests", "docs-generation\ToolGeneration_Improved.Tests\ToolGeneration_Improved.Tests.csproj", "{B89DF90C-0902-452D-94AA-7E50C3F2629C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -408,6 +410,18 @@ Global
 		{54D09A06-6641-4288-92EB-2994FE8F6E52}.Release|x64.Build.0 = Release|Any CPU
 		{54D09A06-6641-4288-92EB-2994FE8F6E52}.Release|x86.ActiveCfg = Release|Any CPU
 		{54D09A06-6641-4288-92EB-2994FE8F6E52}.Release|x86.Build.0 = Release|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Debug|x64.Build.0 = Debug|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Debug|x86.Build.0 = Debug|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Release|x64.ActiveCfg = Release|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Release|x64.Build.0 = Release|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Release|x86.ActiveCfg = Release|Any CPU
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -423,5 +437,6 @@ Global
 		{1929FC1F-9906-4586-88E8-295C87A16AD3} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{1F8ECF79-6194-491E-88DA-EF7EACC087E1} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{54D09A06-6641-4288-92EB-2994FE8F6E52} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
+		{B89DF90C-0902-452D-94AA-7E50C3F2629C} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 	EndGlobalSection
 EndGlobal

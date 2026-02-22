@@ -30,6 +30,7 @@ internal static class Program
 
         var cliOutputFile = args[0];
         var outputDir = args[1];
+        LogFileHelper.Initialize("example-prompts");
         string? e2ePromptsPath = null;
 
         // Scan for named flags first (they can appear anywhere after positional args)
@@ -313,6 +314,15 @@ internal static class Program
             var logPath = Path.Combine(logDir, "example-prompt-e2e-coverage.log");
 
             var logBuilder = new StringBuilder();
+
+            // Append a separator if the log file already exists (multi-namespace runs)
+            if (File.Exists(logPath))
+            {
+                logBuilder.AppendLine();
+                logBuilder.AppendLine($"# ═══════════════════════════════════════════════════════════════════════");
+                logBuilder.AppendLine();
+            }
+
             logBuilder.AppendLine($"# Example Prompt E2e Coverage Report");
             logBuilder.AppendLine($"# Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
             logBuilder.AppendLine($"# E2e source: {(e2ePromptsPath != null ? Path.GetFullPath(e2ePromptsPath) : "(none)")}");
@@ -328,7 +338,7 @@ internal static class Program
                 logBuilder.AppendLine(entry);
             }
 
-            await File.WriteAllTextAsync(logPath, logBuilder.ToString());
+            await File.AppendAllTextAsync(logPath, logBuilder.ToString());
             Console.WriteLine($"  📋 E2e log:   {Path.GetFullPath(logPath)}");
         }
 

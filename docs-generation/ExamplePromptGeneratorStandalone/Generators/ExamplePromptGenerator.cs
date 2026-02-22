@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using ExamplePromptGeneratorStandalone.Models;
+using ExamplePromptGeneratorStandalone.Utilities;
 using GenerativeAI;
 
 namespace ExamplePromptGeneratorStandalone.Generators;
@@ -143,6 +144,13 @@ public sealed class ExamplePromptGenerator
             }
 
             userPrompt += "\n\nGenerate the prompts now.";
+
+            // Validate all template placeholders have been replaced
+            if (!PromptTemplateValidator.ValidateAndLog(userPrompt, tool.Command ?? "unknown"))
+            {
+                Console.WriteLine($"  ❌ Skipping LLM call for '{tool.Command}' — prompt has unreplaced template tokens");
+                return null;
+            }
 
             // Call Azure OpenAI
             var responseText = await _openAIClient!.GetChatCompletionAsync(_systemPrompt, userPrompt);
