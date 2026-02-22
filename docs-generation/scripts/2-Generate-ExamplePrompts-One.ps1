@@ -95,6 +95,12 @@ try {
     $allTools = $cliOutput.results
     Write-Info "Total tools in CLI output: $($allTools.Count)"
 
+    # On Windows, bash may pass \r from jq output; trim CR characters
+    if ($IsWindows -or $env:OS -eq 'Windows_NT') {
+        $ToolCommand = $ToolCommand -replace '\r', ''
+    }
+    $ToolCommand = $ToolCommand.Trim()
+
     # Find tool(s) - either exact command match or family prefix match
     $matchingTools = @($allTools | Where-Object { 
         $_.command -eq $ToolCommand -or $_.command -like "$ToolCommand *"
