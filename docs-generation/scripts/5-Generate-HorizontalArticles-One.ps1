@@ -62,93 +62,38 @@ try {
 
     $scriptDir = $PSScriptRoot
     $docsGenDir = Split-Path -Parent $scriptDir
-    $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
-        $OutputPath
-    } else {
-        $absPath = Join-Path $scriptDir $OutputPath
-        [System.IO.Path]::GetFullPath($absPath)
-    }
+    $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"
     Write-Host ""
 
-    # Step 1: Validate CLI output files
-    Write-Progress "Step 1: Validating CLI output files..."
-    
-    $cliOutputPath = Join-Path $outputDir "cli/cli-output.json"
-    $cliVersionPath = Join-Path $outputDir "cli/cli-version.json"
-    
+    # Validate CLI version file exists
     if (-not $SkipValidation) {
-        if (-not (Test-Path $cliOutputPath)) {
-            throw "CLI output not found at: $cliOutputPath"
-        }
-        
+        $cliVersionPath = Join-Path $outputDir "cli/cli-version.json"
         if (-not (Test-Path $cliVersionPath)) {
             throw "CLI version file not found at: $cliVersionPath"
         }
-        
         Write-Success "✓ CLI output files validated"
     } else {
         Write-Warning "Skipping validation (--SkipValidation)"
     }
     Write-Host ""
 
-    # Load CLI output and filter by service
-    Write-Progress "Loading CLI output..."
-    $cliOutput = Get-Content $cliOutputPath -Raw | ConvertFrom-Json
-    $allTools = $cliOutput.results
-    Write-Info "Total tools in CLI output: $($allTools.Count)"
+    # Load full CLI output
+    $cli = Get-CliOutput $outputDir
 
-    # Normalize: strip \r on Windows, trim, convert underscores to spaces
+    # Normalize and find matching tools
     $ServiceArea = Normalize-ToolCommand $ServiceArea
-
-    # Filter tools by service area
-    $serviceTools = @($allTools | Where-Object { 
-        $_.command -like "$ServiceArea *" 
-    })
-    
-    if ($serviceTools.Count -eq 0) {
-        Write-ErrorMessage "No tools found for service: $ServiceArea"
-        Write-Info "Available service areas (first 10):"
-        $allTools | ForEach-Object { $_.command -split ' ' | Select-Object -First 1 } | Sort-Object -Unique | Select-Object -First 10 | ForEach-Object { Write-Info "  - $_" }
-        exit 1
-    }
-
-    Write-Success "✓ Found $($serviceTools.Count) tools for service: $ServiceArea"
+    $matchingTools = Find-MatchingTools $cli.AllTools $ServiceArea
     Write-Host ""
 
-    # Create a filtered CLI output with just these tools
-    $tempDir = Join-Path $scriptDir "temp-horizontal"
-    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-    
-    $filteredOutput = @{
-        version = $cliOutput.version
-        results = $serviceTools
-    }
-    
-    $filteredOutputFile = Join-Path $tempDir "cli-output-filtered.json"
-    $filteredOutput | ConvertTo-Json -Depth 10 | Set-Content $filteredOutputFile -Encoding UTF8
-    Write-Info "Created filtered CLI output: $filteredOutputFile ($($serviceTools.Count) tools)"
+    # Create filtered CLI file in temp directory
+    $temp = New-FilteredCliFile $cli.CliOutput $matchingTools "temp-horizontal"
+    $tempDir = $temp.TempDir
     Write-Host ""
 
-    # Step 2: Build the horizontal article generator (skip if already built by preflight)
-    if (-not $SkipBuild) {
-        Write-Progress "Step 2: Building horizontal article generator..."
-        
-        Push-Location $docsGenDir
-        try {
-            & dotnet build HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --nologo --verbosity quiet
-            if ($LASTEXITCODE -ne 0) {
-                throw "Failed to build horizontal article generator (exit code: $LASTEXITCODE)"
-            }
-            Write-Success "✓ Build successful"
-        } finally {
-            Pop-Location
-        }
-        Write-Host ""
-    } else {
-        Write-Info "Skipping build (already built by preflight)"
-    }
+    # Build .NET packages (skip if already built by preflight)
+    Invoke-DotnetBuild -SkipBuild:$SkipBuild
 
     # Step 3: Run the generator for the single service
     Write-Divider
@@ -204,7 +149,7 @@ try {
     Write-Host ""
     
     # Cleanup temp directory
-    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-TempDir $tempDir
 
 } catch {
     Write-Host ""
@@ -214,8 +159,7 @@ try {
     Write-Divider
     
     # Cleanup temp directory
-    $tempDir = Join-Path $scriptDir "temp-horizontal"
-    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-TempDir (Join-Path $PSScriptRoot "temp-horizontal")
     
     exit 1
 }

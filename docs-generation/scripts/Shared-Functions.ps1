@@ -180,3 +180,218 @@ function Get-ToolBaseFileName {
     $cleanedStr = $cleaned -join '-'
     if ($cleanedStr) { return "$brandPrefix-$cleanedStr" } else { return $brandPrefix }
 }
+
+# ═══════════════════════════════════════════════════════════════
+# Step script initialization helpers
+# ═══════════════════════════════════════════════════════════════
+
+<#
+.SYNOPSIS
+    Resolves OutputPath to an absolute directory path.
+
+.DESCRIPTION
+    If OutputPath is already rooted, returns it as-is.
+    Otherwise resolves it relative to the calling script's directory ($PSScriptRoot).
+
+.NOTES
+    Uses $PSScriptRoot which, when dot-sourced, refers to the CALLER's directory.
+    All callers must reside in the same scripts/ directory for correct resolution.
+#>
+function Resolve-OutputDir {
+    param([string]$OutputPath)
+
+    if ([System.IO.Path]::IsPathRooted($OutputPath)) {
+        return $OutputPath
+    }
+
+    $absPath = Join-Path $PSScriptRoot $OutputPath
+    return [System.IO.Path]::GetFullPath($absPath)
+}
+
+<#
+.SYNOPSIS
+    Reads the CLI version string from cli-version.json.
+
+.PARAMETER OutputDir
+    Absolute path to the generated output directory.
+
+.OUTPUTS
+    CLI version string (e.g., "2.0.0-beta.21+..."), or "unknown" if not found.
+#>
+function Get-CliVersion {
+    param([string]$OutputDir)
+
+    $versionFile = Join-Path $OutputDir "cli/cli-version.json"
+    if (-not (Test-Path $versionFile)) { return "unknown" }
+
+    $content = Get-Content $versionFile -Raw
+    if ($content.Trim().StartsWith('{')) {
+        $data = $content | ConvertFrom-Json
+        return ($data.version ?? $data.Version ?? "unknown")
+    }
+
+    return $content.Trim()
+}
+
+<#
+.SYNOPSIS
+    Loads CLI output JSON and returns the parsed object and tools array.
+
+.PARAMETER OutputDir
+    Absolute path to the generated output directory.
+
+.OUTPUTS
+    Hashtable with keys: CliOutput (parsed JSON), AllTools (results array), FilePath.
+    Throws if cli-output.json is not found.
+#>
+function Get-CliOutput {
+    param([string]$OutputDir)
+
+    $cliOutputFile = Join-Path $OutputDir "cli/cli-output.json"
+    if (-not (Test-Path $cliOutputFile)) {
+        throw "CLI output file not found: $cliOutputFile"
+    }
+
+    Write-Progress "Loading CLI output..."
+    $cliOutput = Get-Content $cliOutputFile -Raw | ConvertFrom-Json
+    $allTools = $cliOutput.results
+    Write-Info "Total tools in CLI output: $($allTools.Count)"
+
+    return @{
+        CliOutput = $cliOutput
+        AllTools  = $allTools
+        FilePath  = $cliOutputFile
+    }
+}
+
+<#
+.SYNOPSIS
+    Finds tools matching a command or family prefix in the CLI output.
+
+.PARAMETER AllTools
+    Array of tool objects from CLI output.
+
+.PARAMETER ToolCommand
+    The normalized tool command or family prefix to match.
+
+.OUTPUTS
+    Array of matching tool objects. Exits with code 1 if no matches found.
+#>
+function Find-MatchingTools {
+    param(
+        [array]$AllTools,
+        [string]$ToolCommand
+    )
+
+    $matching = @($AllTools | Where-Object {
+        $_.command -eq $ToolCommand -or $_.command -like "$ToolCommand *"
+    })
+
+    if ($matching.Count -eq 0) {
+        Write-ErrorMessage "No tools found matching: $ToolCommand"
+        Write-Info "Available tools (first 10):"
+        $AllTools | Select-Object -First 10 -ExpandProperty command | ForEach-Object { Write-Info "  - $_" }
+        exit 1
+    }
+
+    if ($matching.Count -eq 1) {
+        $tool = $matching[0]
+        Write-Success "✓ Found tool: $($tool.name)"
+        Write-Info "  Command: $($tool.command)"
+        Write-Info "  Description: $($tool.description)"
+    } else {
+        Write-Success "✓ Found $($matching.Count) tools in family: $ToolCommand"
+        foreach ($t in $matching | Select-Object -First 5) {
+            Write-Info "  - $($t.command)"
+        }
+        if ($matching.Count -gt 5) {
+            Write-Info "  ... and $($matching.Count - 5) more"
+        }
+    }
+
+    return $matching
+}
+
+<#
+.SYNOPSIS
+    Creates a temp directory with a filtered CLI output JSON containing only the matching tools.
+
+.PARAMETER CliOutput
+    The full parsed CLI output object (with .version and .results).
+
+.PARAMETER MatchingTools
+    Array of matching tool objects to include.
+
+.PARAMETER TempDirName
+    Name of the temp directory to create under $PSScriptRoot (default: "temp").
+
+.OUTPUTS
+    Hashtable with keys: TempDir (path), FilteredFile (path to JSON file).
+#>
+function New-FilteredCliFile {
+    param(
+        [object]$CliOutput,
+        [array]$MatchingTools,
+        [string]$TempDirName = "temp"
+    )
+
+    $tempDir = Join-Path $PSScriptRoot $TempDirName
+    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
+
+    $filtered = @{
+        version = $CliOutput.version
+        results = @($MatchingTools)
+    }
+
+    $filteredFile = Join-Path $tempDir "cli-output-single-tool.json"
+    $filtered | ConvertTo-Json -Depth 10 | Set-Content $filteredFile -Encoding UTF8
+    Write-Info "Created filtered CLI output: $filteredFile"
+
+    return @{
+        TempDir      = $tempDir
+        FilteredFile = $filteredFile
+    }
+}
+
+<#
+.SYNOPSIS
+    Builds the .NET solution if not already built.
+
+.PARAMETER SkipBuild
+    If true, skip the build step (already built by preflight).
+#>
+function Invoke-DotnetBuild {
+    param([switch]$SkipBuild)
+
+    if ($SkipBuild) {
+        Write-Info "Skipping build (already built by preflight)"
+        return
+    }
+
+    Write-Progress "Building .NET packages..."
+    $docsGenDir = Split-Path -Parent $PSScriptRoot
+    $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
+    if (Test-Path $solutionFile) {
+        & dotnet build $solutionFile --configuration Release --verbosity quiet
+        if ($LASTEXITCODE -ne 0) {
+            throw ".NET build failed"
+        }
+        Write-Success "✓ Build succeeded"
+    }
+    Write-Host ""
+}
+
+<#
+.SYNOPSIS
+    Removes a temp directory if it exists.
+
+.PARAMETER TempDir
+    Path to the temp directory to remove.
+#>
+function Remove-TempDir {
+    param([string]$TempDir)
+
+    if ($TempDir -and (Test-Path $TempDir)) {
+        Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}

@@ -36,5 +36,5 @@ test-npm-azure-mcp/diff-*.txt
 # Local-only orchestration scripts (not committed)
 start-with-*.sh
 
-# Local test fixture (not committed)
-docs-generation/scripts/temp/cli-output-single-tool.json
+# Temp directories created by step scripts during generation
+docs-generation/scripts/temp*/

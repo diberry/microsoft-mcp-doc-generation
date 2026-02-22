@@ -510,9 +510,10 @@ $sln       = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"  #
 
 #### Bash wrapper scripts (.sh calling .ps1)
 
-Pattern for bash wrapper scripts (e.g., `generate-tool-family.sh`):
+Pattern for bash scripts calling PowerShell (e.g., `start-only.sh`):
 ```bash
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/bash-common.sh"
 pwsh -File "$SCRIPT_DIR/MyScript.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS" -SkipBuild
 ```
 

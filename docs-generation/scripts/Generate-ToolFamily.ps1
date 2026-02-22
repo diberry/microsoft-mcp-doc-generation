@@ -83,18 +83,6 @@
       @(1,2,3,4) - Add family file (~20-25 min)
       @(1,2,3,4,5) - Add everything (~25-30 min) - FULL PIPELINE
 
-.PARAMETER Step1Only
-    (Legacy) Run only Step 1 - use -Steps @(1) instead
-
-.PARAMETER Step1And2
-    (Legacy) Run only Steps 1-2 - use -Steps @(1,2) instead
-
-.PARAMETER Step1To3
-    (Legacy) Run only Steps 1-3 - use -Steps @(1,2,3) instead
-
-.PARAMETER Step1To4
-    (Legacy) Run only Steps 1-4 - use -Steps @(1,2,3,4) instead
-
 .EXAMPLE
     # PowerShell: Full pipeline (all 5 steps, default)
     ./Generate-ToolFamily.ps1 -ToolFamily "keyvault"
@@ -126,23 +114,10 @@
     # PowerShell: Skip horizontal article generation
     ./Generate-ToolFamily.ps1 -ToolFamily "aks" -GenerateHorizontalArticle $false
     
-    # Bash wrapper: Run all steps (default) - RECOMMENDED
-    ./generate-tool-family.sh advisor
-    
-    # Bash wrapper: Run only step 1 (fast test, ~1 minute)
-    ./generate-tool-family.sh advisor 1
-    
-    # Bash wrapper: Run steps 1 and 2 (with prompts, ~10-15 minutes)
-    ./generate-tool-family.sh advisor 1,2
-    
-    # Bash wrapper: Run steps 1, 2, and 3 (complete tools, ~15-20 minutes) - RECOMMENDED MINIMUM
-    ./generate-tool-family.sh advisor 1,2,3
-    
-    # Bash wrapper: Run all steps (all 5, ~25-30 minutes) - RECOMMENDED FOR FULL PIPELINE
-    ./generate-tool-family.sh advisor 1,2,3,4,5
-    
-    # Bash wrapper: Run steps 1, 3, and 5 (will have incomplete output!)
-    ./generate-tool-family.sh advisor 1,3,5
+    # From bash (via start-only.sh or start.sh):
+    #   bash start.sh compute 1          # Single namespace, step 1
+    #   bash start.sh compute 1,2,3      # Single namespace, steps 1-3
+    #   bash start.sh                    # All namespaces, all steps
 #>
 
 param(
@@ -166,15 +141,7 @@ param(
     [switch]$SkipBuild,
     
     # Accepts int array @(1,2,3) or comma-separated string "1,2,3" (for bash -File invocation)
-    $Steps = @(1, 2, 3, 4, 5),
-    
-    [switch]$Step1Only = $false,
-    
-    [switch]$Step1And2 = $false,
-    
-    [switch]$Step1To3 = $false,
-    
-    [switch]$Step1To4 = $false
+    $Steps = @(1, 2, 3, 4, 5)
 )
 
 $ErrorActionPreference = "Stop"
@@ -186,39 +153,12 @@ if ($Steps -is [string]) {
     $Steps = @([int]$Steps)
 }
 
-# Determine which steps to run
-# Priority: If any legacy switch is used, use that; otherwise use $Steps array
-$runStep1 = $false
-$runStep2 = $false
-$runStep3 = $false
-$runStep4 = $false
-$runStep5 = $false
-
-if ($Step1Only -or $Step1And2 -or $Step1To3 -or $Step1To4) {
-    # Legacy switch-based approach
-    if ($Step1Only) {
-        $runStep1 = $true
-    } elseif ($Step1And2) {
-        $runStep1 = $true
-        $runStep2 = $true
-    } elseif ($Step1To3) {
-        $runStep1 = $true
-        $runStep2 = $true
-        $runStep3 = $true
-    } elseif ($Step1To4) {
-        $runStep1 = $true
-        $runStep2 = $true
-        $runStep3 = $true
-        $runStep4 = $true
-    }
-} else {
-    # Array-based approach (new preferred method)
-    if (1 -in $Steps) { $runStep1 = $true }
-    if (2 -in $Steps) { $runStep2 = $true }
-    if (3 -in $Steps) { $runStep3 = $true }
-    if (4 -in $Steps) { $runStep4 = $true }
-    if (5 -in $Steps) { $runStep5 = $true }
-}
+# Determine which steps to run from $Steps array
+$runStep1 = 1 -in $Steps
+$runStep2 = 2 -in $Steps
+$runStep3 = 3 -in $Steps
+$runStep4 = 4 -in $Steps
+$runStep5 = 5 -in $Steps
 
 # Override Step 5 if user explicitly set GenerateHorizontalArticle to false
 if (-not $GenerateHorizontalArticle) {
@@ -252,31 +192,13 @@ try {
 
     $scriptDir = $PSScriptRoot
     $docsGenDir = Split-Path -Parent $scriptDir
-    $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
-        $OutputPath
-    } else {
-        $absPath = Join-Path $scriptDir $OutputPath
-        [System.IO.Path]::GetFullPath($absPath)
-    }
+    $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"
     Write-Host ""
 
     # Build .NET packages before running generation steps (unless skipped)
-    if (-not $SkipBuild) {
-        Write-Progress "Building .NET packages..."
-        $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
-        if (Test-Path $solutionFile) {
-            & dotnet build $solutionFile --configuration Release --verbosity quiet
-            if ($LASTEXITCODE -ne 0) {
-                throw ".NET build failed"
-            }
-            Write-Success "✓ Build succeeded"
-        } else {
-            Write-Warning "Solution file not found: $solutionFile"
-        }
-        Write-Host ""
-    }
+    Invoke-DotnetBuild -SkipBuild:$SkipBuild
 
     # Run CLI analyzer for visual analysis
     Write-Divider

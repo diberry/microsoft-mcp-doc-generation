@@ -37,21 +37,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Detect OS: Windows Git Bash (MSYS/MINGW/CYGWIN) adds \r to command output
-IS_WINDOWS=false
-case "$(uname -s)" in
-    MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=true ;;
-esac
-
-# Strip \r from string on Windows, no-op on Unix
-strip_cr() {
-    if $IS_WINDOWS; then
-        tr -d '\r'
-    else
-        cat
-    fi
-}
+source "$ROOT_DIR/docs-generation/scripts/bash-common.sh"
 
 # Parse arguments: determine if first arg is namespace or steps
 NAMESPACE_ARG=""
