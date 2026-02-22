@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using ExamplePromptGeneratorStandalone.Generators;
 using ExamplePromptGeneratorStandalone.Models;
@@ -18,27 +19,35 @@ internal static class Program
         // Parse arguments
         if (args.Length < 2)
         {
-            Console.WriteLine("Usage: ExamplePromptGeneratorStandalone <cliOutputFile> <outputDir> [version]");
-            Console.WriteLine("  cliOutputFile   - Path to cli-output.json");
-            Console.WriteLine("  outputDir       - Output directory for generated files");
-            Console.WriteLine("  version         - (Optional) CLI version string. If not provided, reads from cli-version.json");
+            Console.WriteLine("Usage: ExamplePromptGeneratorStandalone <cliOutputFile> <outputDir> [version] [--e2e-prompts <path>]");
+            Console.WriteLine("  cliOutputFile    - Path to cli-output.json");
+            Console.WriteLine("  outputDir        - Output directory for generated files");
+            Console.WriteLine("  version          - (Optional) CLI version string. If not provided, reads from cli-version.json");
+            Console.WriteLine("  --e2e-prompts    - (Optional) Path to parsed.json from E2eTestPromptParser");
             Console.WriteLine("\nNote: Templates and prompts are embedded in the package.");
             return 1;
         }
 
         var cliOutputFile = args[0];
         var outputDir = args[1];
-        
+        string? e2ePromptsPath = null;
+
+        // Scan for named flags first (they can appear anywhere after positional args)
+        string? versionArg = null;
+        for (int i = 2; i < args.Length; i++)
+        {
+            if (args[i] == "--e2e-prompts" && i + 1 < args.Length)
+            {
+                e2ePromptsPath = args[++i];
+            }
+            else if (versionArg == null && !args[i].StartsWith("--"))
+            {
+                versionArg = args[i];
+            }
+        }
+
         // Get version from arguments or read from cli-version.json
-        string version;
-        if (args.Length > 2)
-        {
-            version = args[2];
-        }
-        else
-        {
-            version = await CliVersionReader.ReadCliVersionAsync(outputDir);
-        }
+        string version = versionArg ?? await CliVersionReader.ReadCliVersionAsync(outputDir);
         
         // Use embedded templates/prompts from package folder
         var packageRootDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..");
@@ -70,11 +79,39 @@ internal static class Program
         Directory.CreateDirectory(Path.Combine(outputDir, "example-prompts-prompts"));
         Directory.CreateDirectory(Path.Combine(outputDir, "example-prompts-raw-output"));
 
-        Console.WriteLine($"📂 CLI output: {Path.GetFullPath(cliOutputFile)}");
-        Console.WriteLine($"📂 Output dir: {Path.GetFullPath(outputDir)}");
-        Console.WriteLine($"📂 Templates:  {Path.GetFullPath(templatesDir)}");
-        Console.WriteLine($"📂 Prompts:    {Path.GetFullPath(promptsDir)}");
-        Console.WriteLine($"📌 Version:    {version}\n");
+        // Load e2e test prompts if provided
+        Dictionary<string, List<string>>? e2eLookup = null;
+        if (!string.IsNullOrEmpty(e2ePromptsPath))
+        {
+            if (File.Exists(e2ePromptsPath))
+            {
+                try
+                {
+                    var e2eJson = await File.ReadAllTextAsync(e2ePromptsPath);
+                    var e2eData = JsonSerializer.Deserialize<E2eTestPromptsData>(e2eJson);
+                    if (e2eData != null)
+                    {
+                        e2eLookup = E2eTestPromptsLookup.BuildLookup(e2eData);
+                        Console.WriteLine($"✅ Loaded e2e test prompts: {e2eLookup.Count} tools, {e2eLookup.Values.Sum(v => v.Count)} prompts");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️  Failed to load e2e prompts (falling back to default): {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"⚠️  e2e prompts file not found (falling back to default): {e2ePromptsPath}");
+            }
+        }
+
+        Console.WriteLine($"📂 CLI output:  {Path.GetFullPath(cliOutputFile)}");
+        Console.WriteLine($"📂 Output dir:  {Path.GetFullPath(outputDir)}");
+        Console.WriteLine($"📂 Templates:   {Path.GetFullPath(templatesDir)}");
+        Console.WriteLine($"📂 Prompts:     {Path.GetFullPath(promptsDir)}");
+        Console.WriteLine($"📂 E2e prompts: {(e2ePromptsPath != null ? Path.GetFullPath(e2ePromptsPath) : "(none)")}");
+        Console.WriteLine($"📌 Version:     {version}\n");
 
         // Load CLI output
         Console.WriteLine("Loading CLI tools...");
@@ -127,13 +164,57 @@ internal static class Program
 
         var successCount = 0;
         var failureCount = 0;
+        var e2eMatchCount = 0;
+        var e2eMissCount = 0;
+        var e2eLogEntries = new List<string>();
+
+        // Create e2e error log directory if e2e prompts are loaded
+        var e2eErrorLogDir = Path.Combine(outputDir, "example-prompts-e2e-errors");
+        if (e2eLookup != null)
+        {
+            Directory.CreateDirectory(e2eErrorLogDir);
+        }
 
         foreach (var tool in cliOutput.Results)
         {
             if (string.IsNullOrEmpty(tool.Command))
                 continue;
 
-            var result = await generator.GenerateAsync(tool);
+            // Look up e2e reference prompts for this tool
+            List<string>? referencePrompts = null;
+            e2eLookup?.TryGetValue(tool.Command!, out referencePrompts);
+
+            // Track e2e coverage
+            if (e2eLookup != null)
+            {
+                if (referencePrompts != null && referencePrompts.Count > 0)
+                {
+                    e2eMatchCount++;
+                    e2eLogEntries.Add($"MATCH  | {tool.Command,-55} | {referencePrompts.Count} reference prompts");
+                }
+                else
+                {
+                    e2eMissCount++;
+                    e2eLogEntries.Add($"MISS   | {tool.Command,-55} | no e2e entry — using default (5 prompts)");
+                    Console.WriteLine($"  ⚠️  No e2e reference for: {tool.Command} (using default)");
+
+                    // Write individual error file per missing tool
+                    var toolSlug = tool.Command!.Replace(' ', '-');
+                    var errorFilePath = Path.Combine(e2eErrorLogDir, $"{toolSlug}-error.log");
+                    var errorContent = $"Tool command: {tool.Command}\n"
+                        + $"Tool name:    {tool.Name}\n"
+                        + $"Timestamp:    {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC\n"
+                        + $"\n"
+                        + $"This tool has no entry in the e2e test prompts (parsed.json).\n"
+                        + $"The example prompt generator fell back to default behavior (5 AI-generated prompts).\n"
+                        + $"\n"
+                        + $"To fix: Add this tool to the upstream e2eTestPrompts.md in the microsoft/mcp repo,\n"
+                        + $"then re-run E2eTestPromptParser to regenerate parsed.json.\n";
+                    await File.WriteAllTextAsync(errorFilePath, errorContent);
+                }
+            }
+
+            var result = await generator.GenerateAsync(tool, referencePrompts);
             if (!result.HasValue)
             {
                 failureCount++;
@@ -217,7 +298,39 @@ internal static class Program
         Console.WriteLine($"\n📊 Summary:");
         Console.WriteLine($"  ✅ Generated: {successCount}");
         Console.WriteLine($"  ❌ Failed:    {failureCount}");
+        if (e2eLookup != null)
+        {
+            Console.WriteLine($"  📋 E2e match: {e2eMatchCount}");
+            Console.WriteLine($"  ⚠️  E2e miss: {e2eMissCount}");
+        }
         Console.WriteLine($"  📁 Output:    {Path.GetFullPath(outputDir)}\n");
+
+        // Write e2e coverage log
+        if (e2eLookup != null && e2eLogEntries.Count > 0)
+        {
+            var logDir = Path.Combine(outputDir, "logs");
+            Directory.CreateDirectory(logDir);
+            var logPath = Path.Combine(logDir, "example-prompt-e2e-coverage.log");
+
+            var logBuilder = new StringBuilder();
+            logBuilder.AppendLine($"# Example Prompt E2e Coverage Report");
+            logBuilder.AppendLine($"# Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
+            logBuilder.AppendLine($"# E2e source: {(e2ePromptsPath != null ? Path.GetFullPath(e2ePromptsPath) : "(none)")}");
+            logBuilder.AppendLine($"#");
+            logBuilder.AppendLine($"# MATCH: {e2eMatchCount} tools had e2e reference prompts");
+            logBuilder.AppendLine($"# MISS:  {e2eMissCount} tools had NO e2e reference prompts (used default 5)");
+            logBuilder.AppendLine($"# TOTAL: {e2eMatchCount + e2eMissCount} tools processed");
+            logBuilder.AppendLine($"#");
+            logBuilder.AppendLine($"# STATUS | {"TOOL COMMAND",-55} | DETAILS");
+            logBuilder.AppendLine($"# {new string('-', 80)}");
+            foreach (var entry in e2eLogEntries)
+            {
+                logBuilder.AppendLine(entry);
+            }
+
+            await File.WriteAllTextAsync(logPath, logBuilder.ToString());
+            Console.WriteLine($"  📋 E2e log:   {Path.GetFullPath(logPath)}");
+        }
 
         return failureCount > 0 ? 1 : 0;
     }
@@ -226,7 +339,7 @@ internal static class Program
     /// Extracts JSON from LLM response that may contain reasoning/preamble.
     /// Prioritizes finding the last JSON object, as LLM often puts final answer at the end.
     /// </summary>
-    private static string ExtractJsonFromResponse(string response)
+    internal static string ExtractJsonFromResponse(string response)
     {
         if (string.IsNullOrEmpty(response))
             return string.Empty;

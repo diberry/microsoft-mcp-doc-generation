@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ExamplePromptGeneratorStandalone.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\GenerativeAI\GenerativeAI.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
     <ProjectReference Include="..\TemplateEngine\TemplateEngine.csproj" />
