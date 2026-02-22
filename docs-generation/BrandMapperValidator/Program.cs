@@ -25,6 +25,8 @@ internal class Program
         {
             // Parse arguments
             var (cliOutputPath, brandMappingPath, outputPath) = ParseArguments(args);
+            
+            LogFileHelper.Initialize("brand-mapper-validator");
 
             Console.WriteLine($"CLI output:     {cliOutputPath}");
             Console.WriteLine($"Brand mapping:  {brandMappingPath}");

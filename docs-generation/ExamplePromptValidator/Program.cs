@@ -3,6 +3,7 @@
 
 using System.Text;
 using ExamplePromptValidator;
+using Shared;
 
 namespace ExamplePromptValidatorCli;
 
@@ -117,6 +118,9 @@ internal static class Program
         var validationDir = Path.Combine(generatedDir, "example-prompts-validation");
         Directory.CreateDirectory(validationDir);
 
+        // Load shared data files for deterministic filename generation (matches ExamplePromptGeneratorStandalone)
+        var nameContext = await FileNameContext.CreateAsync();
+
         async Task WriteValidationFileAsync(string baseName, string content)
         {
             var validationPath = Path.Combine(validationDir, $"{baseName}-validation.md");
@@ -134,9 +138,10 @@ internal static class Program
             // Debug: Check if we're processing this command multiple times
             var toolId = toolElement.TryGetProperty("id", out var idElem) ? idElem.GetString() : "no-id";
             
-            // Command format: "service subservice action" → filename: "service-subservice-action-example-prompts.md"
-            var baseName = command.Replace(" ", "-");
-            var examplePromptFile = Path.Combine(examplePromptsDir, $"{baseName}-example-prompts.md");
+            // Use shared filename builder to match ExamplePromptGeneratorStandalone naming
+            var baseName = ToolFileNameBuilder.BuildBaseFileName(command, nameContext);
+            var examplePromptFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext);
+            var examplePromptFile = Path.Combine(examplePromptsDir, examplePromptFileName);
 
             if (!File.Exists(examplePromptFile))
             {

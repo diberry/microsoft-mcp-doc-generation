@@ -57,23 +57,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Write-Info { param([string]$Message) Write-Host "INFO: $Message" -ForegroundColor Cyan }
-function Write-Success { param([string]$Message) Write-Host "SUCCESS: $Message" -ForegroundColor Green }
-function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" -ForegroundColor Yellow }
-function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -ForegroundColor Red }
-function Write-Progress { param([string]$Message) Write-Host "PROGRESS: $Message" -ForegroundColor Magenta }
-function Write-Divider { Write-Host ("═" * 80) -ForegroundColor DarkGray }
-
-function Normalize-Command {
-    param([string]$Command)
-
-    if ([string]::IsNullOrWhiteSpace($Command)) {
-        return $null
-    }
-
-    $normalized = ($Command -replace "\s+", " ").Trim().ToLowerInvariant()
-    return $normalized
-}
+# Import shared logging and normalization helpers
+. "$PSScriptRoot\Shared-Functions.ps1"
 
 try {
     Write-Divider
@@ -106,11 +91,8 @@ try {
     $allTools = $cliOutput.results
     Write-Info "Total tools in CLI output: $($allTools.Count)"
 
-    # On Windows, bash may pass \r from jq output; trim CR characters
-    if ($IsWindows -or $env:OS -eq 'Windows_NT') {
-        $ToolCommand = $ToolCommand -replace '\r', ''
-    }
-    $ToolCommand = $ToolCommand.Trim()
+    # Normalize: strip \r on Windows, trim, convert underscores to spaces
+    $ToolCommand = Normalize-ToolCommand $ToolCommand
 
     # Find tool(s) - either exact command match or family prefix match
     $matchingTools = @($allTools | Where-Object { 
@@ -118,7 +100,7 @@ try {
     })
     
     if ($matchingTools.Count -eq 0) {
-        Write-Error "No tools found matching: $ToolCommand"
+        Write-ErrorMessage "No tools found matching: $ToolCommand"
         Write-Info "Available tools (first 10):"
         $allTools | Select-Object -First 10 -ExpandProperty command | ForEach-Object { Write-Info "  - $_" }
         exit 1
@@ -188,14 +170,14 @@ try {
 
     # Check if tools directory exists and has files
     if (-not (Test-Path $toolsInputDir)) {
-        Write-Error "Tools directory not found: $toolsInputDir"
+        Write-ErrorMessage "Tools directory not found: $toolsInputDir"
         Write-Host "  Run Step 3 to generate tool files first."
         throw "Tools directory not found"
     }
     
     $toolFiles = Get-ChildItem $toolsInputDir -Filter "*.md" -ErrorAction SilentlyContinue
     if ($toolFiles.Count -eq 0) {
-        Write-Error "No tool files found in: $toolsInputDir"
+        Write-ErrorMessage "No tool files found in: $toolsInputDir"
         Write-Host "  Run Step 3 to generate tool files first."
         throw "No tool files found"
     }
@@ -481,8 +463,8 @@ try {
 } catch {
     Write-Host ""
     Write-Divider
-    Write-Error "Test failed: $($_.Exception.Message)"
-    Write-Error $_.ScriptStackTrace
+    Write-ErrorMessage "Test failed: $($_.Exception.Message)"
+    Write-ErrorMessage $_.ScriptStackTrace
     Write-Divider
     
     # Cleanup temp directories

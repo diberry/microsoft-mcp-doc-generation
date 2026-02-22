@@ -49,12 +49,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Write-Info { param([string]$Message) Write-Host "INFO: $Message" -ForegroundColor Cyan }
-function Write-Success { param([string]$Message) Write-Host "SUCCESS: $Message" -ForegroundColor Green }
-function Write-Warning { param([string]$Message) Write-Host "WARNING: $Message" -ForegroundColor Yellow }
-function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -ForegroundColor Red }
-function Write-Progress { param([string]$Message) Write-Host "PROGRESS: $Message" -ForegroundColor Magenta }
-function Write-Divider { Write-Host ("═" * 80) -ForegroundColor DarkGray }
+# Import shared logging and normalization helpers
+. "$PSScriptRoot\Shared-Functions.ps1"
 
 try {
     Write-Divider
@@ -103,13 +99,16 @@ try {
     $allTools = $cliOutput.results
     Write-Info "Total tools in CLI output: $($allTools.Count)"
 
+    # Normalize: strip \r on Windows, trim, convert underscores to spaces
+    $ServiceArea = Normalize-ToolCommand $ServiceArea
+
     # Filter tools by service area
     $serviceTools = @($allTools | Where-Object { 
         $_.command -like "$ServiceArea *" 
     })
     
     if ($serviceTools.Count -eq 0) {
-        Write-Error "No tools found for service: $ServiceArea"
+        Write-ErrorMessage "No tools found for service: $ServiceArea"
         Write-Info "Available service areas (first 10):"
         $allTools | ForEach-Object { $_.command -split ' ' | Select-Object -First 1 } | Sort-Object -Unique | Select-Object -First 10 | ForEach-Object { Write-Info "  - $_" }
         exit 1
@@ -210,8 +209,8 @@ try {
 } catch {
     Write-Host ""
     Write-Divider
-    Write-Error "Test failed: $($_.Exception.Message)"
-    Write-Error $_.ScriptStackTrace
+    Write-ErrorMessage "Test failed: $($_.Exception.Message)"
+    Write-ErrorMessage $_.ScriptStackTrace
     Write-Divider
     
     # Cleanup temp directory

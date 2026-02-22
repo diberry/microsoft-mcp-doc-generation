@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ToolGeneration_Improved.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Shared/Shared.csproj" />
     <ProjectReference Include="../GenerativeAI/GenerativeAI.csproj" />
   </ItemGroup>

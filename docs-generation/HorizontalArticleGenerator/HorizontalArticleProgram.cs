@@ -74,6 +74,8 @@ internal class HorizontalArticleProgram
                 }
             }
             
+            LogFileHelper.Initialize("horizontal-article-generator");
+            
             if (singleService != null)
             {
                 Console.WriteLine($"Mode: Generating SINGLE article for {singleService}");

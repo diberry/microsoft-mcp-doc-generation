@@ -33,6 +33,7 @@ internal class Program
 
         var cliOutputFile = args[0];
         var outputDir = args[1];
+        LogFileHelper.Initialize("raw-tool-generator");
         
         // Get version from arguments or read from cli-version.json
         string mcpCliVersion;
