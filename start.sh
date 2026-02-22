@@ -38,6 +38,21 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Detect OS: Windows Git Bash (MSYS/MINGW/CYGWIN) adds \r to command output
+IS_WINDOWS=false
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=true ;;
+esac
+
+# Strip \r from string on Windows, no-op on Unix
+strip_cr() {
+    if $IS_WINDOWS; then
+        tr -d '\r'
+    else
+        cat
+    fi
+}
+
 # Parse arguments: determine if first arg is namespace or steps
 NAMESPACE_ARG=""
 STEPS_ARG="1,2,3,4,5"
@@ -94,7 +109,7 @@ if [[ -n "$NAMESPACE_ARG" ]]; then
     NAMESPACE_COUNT=1
 else
     echo "Extracting namespaces from CLI metadata..."
-    NAMESPACES=$(jq -r '.results[].name' "$OUTPUT_DIR/cli/cli-namespace.json")
+    NAMESPACES=$(jq -r '.results[].name' "$OUTPUT_DIR/cli/cli-namespace.json" | strip_cr)
     NAMESPACE_COUNT=$(echo "$NAMESPACES" | wc -l)
     echo "✓ Found $NAMESPACE_COUNT namespaces"
 fi

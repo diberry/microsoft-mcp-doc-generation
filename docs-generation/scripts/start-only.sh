@@ -29,6 +29,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# Detect OS: Windows Git Bash (MSYS/MINGW/CYGWIN) adds \r to command output
+IS_WINDOWS=false
+case "$(uname -s)" in
+    MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=true ;;
+esac
+
+# Strip \r from string on Windows, no-op on Unix
+strip_cr() {
+    if $IS_WINDOWS; then
+        tr -d '\r'
+    else
+        cat
+    fi
+}
+
 if [[ $# -lt 1 ]]; then
 	echo "Usage: $0 <tool-family> [steps] [output-dir]"
 	echo "Example: $0 advisor"
@@ -37,7 +52,7 @@ if [[ $# -lt 1 ]]; then
 	exit 1
 fi
 
-TOOL_FAMILY="$1"
+TOOL_FAMILY="$(echo "$1" | strip_cr)"
 STEPS="${2:-1,2,3,4,5}"
 OUTPUT_DIR="${3:-$ROOT_DIR/generated}"
 

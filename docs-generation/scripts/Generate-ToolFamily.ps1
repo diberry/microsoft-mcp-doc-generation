@@ -238,6 +238,12 @@ function Write-Progress { param([string]$Message) Write-Host "PROGRESS: $Message
 function Write-Divider { Write-Host ("═" * 80) -ForegroundColor DarkGray }
 
 try {
+    # On Windows, bash may pass \r from jq output; trim CR characters
+    if ($IsWindows -or $env:OS -eq 'Windows_NT') {
+        $ToolFamily = $ToolFamily -replace '\r', ''
+    }
+    $ToolFamily = $ToolFamily.Trim()
+
     Write-Divider
     Write-Progress "Complete Tool Family Documentation Generator"
     Write-Info "Tool Family: $ToolFamily"
