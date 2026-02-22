@@ -70,91 +70,30 @@ try {
 
     $scriptDir = $PSScriptRoot
     $docsGenDir = Split-Path -Parent $scriptDir
-    $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
-        $OutputPath
-    } else {
-        $absPath = Join-Path $scriptDir $OutputPath
-        [System.IO.Path]::GetFullPath($absPath)
-    }
+    $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"
     Write-Host ""
 
     # Load full CLI output
-    $cliOutputFile = Join-Path $outputDir "cli/cli-output.json"
-    if (-not (Test-Path $cliOutputFile)) {
-        throw "CLI output file not found: $cliOutputFile"
-    }
+    $cli = Get-CliOutput $outputDir
 
-    Write-Progress "Loading CLI output..."
-    $cliOutput = Get-Content $cliOutputFile -Raw | ConvertFrom-Json
-    $allTools = $cliOutput.results
-    Write-Info "Total tools in CLI output: $($allTools.Count)"
-
-    # Normalize: strip \r on Windows, trim, convert underscores to spaces
+    # Normalize and find matching tools
     $ToolCommand = Normalize-ToolCommand $ToolCommand
-
-    # Find tool(s) - either exact command match or family prefix match
-    $matchingTools = @($allTools | Where-Object { 
-        $_.command -eq $ToolCommand -or $_.command -like "$ToolCommand *"
-    })
-    
-    if ($matchingTools.Count -eq 0) {
-        Write-ErrorMessage "No tools found matching: $ToolCommand"
-        Write-Info "Available tools (first 10):"
-        $allTools | Select-Object -First 10 -ExpandProperty command | ForEach-Object { Write-Info "  - $_" }
-        exit 1
-    }
-
-    if ($matchingTools.Count -eq 1) {
-        # Single tool match
-        $tool = $matchingTools[0]
-        Write-Success "✓ Found tool: $($tool.name)"
-        Write-Info "  Command: $($tool.command)"
-        Write-Info "  Description: $($tool.description)"
-    } else {
-        # Family match - multiple tools
-        Write-Success "✓ Found $($matchingTools.Count) tools in family: $ToolCommand"
-        foreach ($t in $matchingTools | Select-Object -First 5) {
-            Write-Info "  - $($t.command)"
-        }
-        if ($matchingTools.Count -gt 5) {
-            Write-Info "  ... and $($matchingTools.Count - 5) more"
-        }
-    }
+    $matchingTools = Find-MatchingTools $cli.AllTools $ToolCommand
     Write-Host ""
 
     # Extract family name from first matching tool
     $familyName = ($matchingTools[0].command -split ' ')[0]
-    
-    $tempDir = Join-Path $scriptDir "temp-family"
-    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
-    $filteredOutput = @{
-        version = $cliOutput.version
-        results = @($matchingTools)
-    }
-    
-    $filteredOutputFile = Join-Path $tempDir "cli-output-single-tool.json"
-    $filteredOutput | ConvertTo-Json -Depth 10 | Set-Content $filteredOutputFile -Encoding UTF8
-    Write-Info "Created filtered CLI output: $filteredOutputFile"
+    # Create filtered CLI file in temp directory
+    $temp = New-FilteredCliFile $cli.CliOutput $matchingTools "temp-family"
+    $tempDir = $temp.TempDir
+    $filteredOutputFile = $temp.FilteredFile
     Write-Host ""
 
     # Build .NET packages (skip if already built by preflight)
-    if (-not $SkipBuild) {
-        Write-Progress "Building .NET packages..."
-        $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
-        if (Test-Path $solutionFile) {
-            & dotnet build $solutionFile --configuration Release --verbosity quiet
-            if ($LASTEXITCODE -ne 0) {
-                throw ".NET build failed"
-            }
-            Write-Success "✓ Build succeeded"
-        }
-        Write-Host ""
-    } else {
-        Write-Info "Skipping build (already built by preflight)"
-    }
+    Invoke-DotnetBuild -SkipBuild:$SkipBuild
 
     # Setup directories
     $toolsInputDir = Join-Path $outputDir "tools"
@@ -184,24 +123,7 @@ try {
     
     Write-Info "Using tools from: $toolsInputDir ($($toolFiles.Count) files)"
 
-    # Build ToolFamilyCleanup (skip if already built by preflight)
-    if (-not $SkipBuild) {
-        Write-Progress "Building ToolFamilyCleanup..."
-        $toolFamilyDir = Join-Path $docsGenDir "ToolFamilyCleanup"
-        Push-Location $toolFamilyDir
-        try {
-            & dotnet build --configuration Release --verbosity quiet
-            if ($LASTEXITCODE -ne 0) {
-                throw "ToolFamilyCleanup build failed"
-            }
-            Write-Success "✓ Build succeeded"
-        } finally {
-            Pop-Location
-        }
-        Write-Host ""
-    } else {
-        $toolFamilyDir = Join-Path $docsGenDir "ToolFamilyCleanup"
-    }
+    $toolFamilyDir = Join-Path $docsGenDir "ToolFamilyCleanup"
 
     # Run Tool Family Cleanup (multi-phase) in a temporary workspace to limit to this family
     Write-Divider
@@ -457,8 +379,8 @@ try {
     Write-Host ""
     
     # Cleanup temp directories
-    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-TempDir $tempDir
+    Remove-TempDir $tempRoot
 
 } catch {
     Write-Host ""
@@ -468,10 +390,8 @@ try {
     Write-Divider
     
     # Cleanup temp directories
-    $tempDir = Join-Path $scriptDir "temp-family"
-    $tempRoot = Join-Path $scriptDir "temp-family-run"
-    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-TempDir (Join-Path $PSScriptRoot "temp-family")
+    Remove-TempDir (Join-Path $PSScriptRoot "temp-family-run")
     
     exit 1
 }

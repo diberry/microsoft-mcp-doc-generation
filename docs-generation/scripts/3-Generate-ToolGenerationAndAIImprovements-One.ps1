@@ -70,106 +70,32 @@ try {
 
     $scriptDir = $PSScriptRoot
     $docsGenDir = Split-Path -Parent $scriptDir
-    $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) {
-        $OutputPath
-    } else {
-        $absPath = Join-Path $scriptDir $OutputPath
-        [System.IO.Path]::GetFullPath($absPath)
-    }
+    $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"
     Write-Host ""
 
     # Get CLI version
-    $versionOutputFile = Join-Path $outputDir "cli/cli-version.json"
-    $cliVersion = "unknown"
-    if (Test-Path $versionOutputFile) {
-        $versionContent = Get-Content $versionOutputFile -Raw
-        if ($versionContent.Trim().StartsWith('{')) {
-            $versionData = $versionContent | ConvertFrom-Json
-            $cliVersion = $versionData.version ?? $versionData.Version ?? "unknown"
-        } else {
-            $cliVersion = $versionContent.Trim()
-        }
-    }
+    $cliVersion = Get-CliVersion $outputDir
     Write-Info "CLI Version: $cliVersion"
     Write-Host ""
 
     # Load full CLI output
-    $cliOutputFile = Join-Path $outputDir "cli/cli-output.json"
-    if (-not (Test-Path $cliOutputFile)) {
-        throw "CLI output file not found: $cliOutputFile"
-    }
+    $cli = Get-CliOutput $outputDir
 
-    Write-Progress "Loading CLI output..."
-    $cliOutput = Get-Content $cliOutputFile -Raw | ConvertFrom-Json
-    $allTools = $cliOutput.results
-    Write-Info "Total tools in CLI output: $($allTools.Count)"
-
-    # Normalize: strip \r on Windows, trim, convert underscores to spaces
+    # Normalize and find matching tools
     $ToolCommand = Normalize-ToolCommand $ToolCommand
-
-    # Find tool(s) - either exact command match or family prefix match
-    $matchingTools = @($allTools | Where-Object { 
-        $_.command -eq $ToolCommand -or $_.command -like "$ToolCommand *"
-    })
-    
-    if ($matchingTools.Count -eq 0) {
-        Write-ErrorMessage "No tools found matching: $ToolCommand"
-        Write-Info "Available tools (first 10):"
-        $allTools | Select-Object -First 10 -ExpandProperty command | ForEach-Object { Write-Info "  - $_" }
-        exit 1
-    }
-
-    if ($matchingTools.Count -eq 1) {
-        # Single tool match
-        $tool = $matchingTools[0]
-        Write-Success "✓ Found tool: $($tool.name)"
-        Write-Info "  Command: $($tool.command)"
-        Write-Info "  Description: $($tool.description)"
-        $requiredParams = @($tool.option | Where-Object { $_.required })
-        Write-Info "  Required parameters: $($requiredParams.Count)"
-    } else {
-        # Family match - multiple tools
-        Write-Success "✓ Found $($matchingTools.Count) tools in family: $ToolCommand"
-        foreach ($t in $matchingTools | Select-Object -First 5) {
-            Write-Info "  - $($t.command)"
-        }
-        if ($matchingTools.Count -gt 5) {
-            Write-Info "  ... and $($matchingTools.Count - 5) more"
-        }
-    }
+    $matchingTools = Find-MatchingTools $cli.AllTools $ToolCommand
     Write-Host ""
 
-    # Create a filtered CLI output with just this tool
-    $tempDir = Join-Path $scriptDir "temp"
-    New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-    
-    $filteredOutput = @{
-        version = $cliOutput.version
-        results = @($matchingTools)
-    }
-    
-    $filteredOutputFile = Join-Path $tempDir "cli-output-single-tool.json"
-    $filteredOutput | ConvertTo-Json -Depth 10 | Set-Content $filteredOutputFile -Encoding UTF8
-    Write-Info "Created filtered CLI output: $filteredOutputFile"
+    # Create filtered CLI file in temp directory
+    $temp = New-FilteredCliFile $cli.CliOutput $matchingTools
+    $tempDir = $temp.TempDir
+    $filteredOutputFile = $temp.FilteredFile
     Write-Host ""
 
     # Build .NET packages (skip if already built by preflight)
-    if (-not $SkipBuild) {
-        Write-Progress "Building .NET packages..."
-        $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"
-        if (Test-Path $solutionFile) {
-            & dotnet build $solutionFile --configuration Release --verbosity quiet
-            if ($LASTEXITCODE -ne 0) {
-                throw ".NET build failed"
-            }
-            Write-Success "✓ Build succeeded"
-        }
-        Write-Host ""
-    } else {
-        Write-Info "Skipping build (already built by preflight)"
-    }
+    Invoke-DotnetBuild -SkipBuild:$SkipBuild
 
     # Run Composed tool generation
     if (-not $SkipComposed) {
@@ -388,7 +314,7 @@ try {
     Write-Host ""
     
     # Cleanup temp directory
-    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-TempDir $tempDir
 
 } catch {
     Write-Host ""
@@ -398,8 +324,7 @@ try {
     Write-Divider
     
     # Cleanup temp directory
-    $tempDir = Join-Path $scriptDir "temp"
-    Remove-Item -Path $tempDir -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-TempDir (Join-Path $PSScriptRoot "temp")
     
     exit 1
 }

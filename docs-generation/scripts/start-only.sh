@@ -7,7 +7,7 @@
 #   ./start-only.sh advisor 1,2,3
 #
 # What it does:
-#   - Runs docs-generation/generate-tool-family.sh with specified steps
+#   - Runs Generate-ToolFamily.ps1 via pwsh for the specified namespace
 #   - Produces ./generated/tool-family/<tool-family>.md
 #   - Uses existing CLI metadata files (does NOT regenerate them)
 #
@@ -28,21 +28,7 @@ set -euo pipefail
 # Get repository root (two levels up from this script's location)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
-# Detect OS: Windows Git Bash (MSYS/MINGW/CYGWIN) adds \r to command output
-IS_WINDOWS=false
-case "$(uname -s)" in
-    MINGW*|MSYS*|CYGWIN*) IS_WINDOWS=true ;;
-esac
-
-# Strip \r from string on Windows, no-op on Unix
-strip_cr() {
-    if $IS_WINDOWS; then
-        tr -d '\r'
-    else
-        cat
-    fi
-}
+source "$SCRIPT_DIR/bash-common.sh"
 
 if [[ $# -lt 1 ]]; then
 	echo "Usage: $0 <tool-family> [steps] [output-dir]"
@@ -75,7 +61,8 @@ mkdir -p "$OUTPUT_DIR/tool-family"
 
 echo "Running tool family pipeline for: $TOOL_FAMILY (steps: $STEPS)"
 echo "Output directory: $OUTPUT_DIR"
-cd "$SCRIPT_DIR"
-./generate-tool-family.sh "$TOOL_FAMILY" "$STEPS" "$OUTPUT_DIR"
+
+# Call PowerShell orchestrator directly (pwsh -File for cross-platform path handling)
+pwsh -File "$SCRIPT_DIR/Generate-ToolFamily.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS" -SkipBuild -OutputPath "$OUTPUT_DIR"
 
 echo "OK: Tool family file generated at: $OUTPUT_DIR/tool-family/$TOOL_FAMILY.md"

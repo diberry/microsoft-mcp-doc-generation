@@ -23,7 +23,6 @@ docs-generation/
 │   ├── 3-Generate-ExamplePrompts.ps1            # Example prompts generation
 │   ├── 4-Generate-ToolFamilyFiles.ps1           # Complete tools + AI improvements + tool family files
 │   ├── 5-Validate-total-tool-count-and-family.ps1  # Validation
-│   ├── generate-tool-family.sh        # Bash wrapper for Generate-ToolFamily.ps1
 │   └── Validate.ps1                   # Validation orchestrator
 ├── data/                          # Configuration and data files
 │   ├── README.md                  # Documentation for all data files
