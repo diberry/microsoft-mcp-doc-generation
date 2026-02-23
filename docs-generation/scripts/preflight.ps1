@@ -11,6 +11,7 @@
     - Builds .NET solution (all generator projects)
     - Generates MCP CLI metadata (cli-output.json, cli-namespace.json, cli-version.json)
     - Validates brand mappings (Step 0) - STOPS if missing branding
+    - Parses azmcp-commands.md into structured JSON (cli/azmcp-commands.json)
     
     This script is designed to be called once by the orchestrator (start.sh) before
     processing any namespaces. It should NOT be run by worker scripts (start-only.sh).
@@ -155,7 +156,20 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host ""
 
-# Step 7: Create additional output directories
+# Step 7: Parse azmcp-commands.md into structured JSON
+Write-Host "Parsing azmcp-commands.md..." -ForegroundColor Yellow
+$azmcpSourceFile = Join-Path $docsGenDir "azure-mcp/azmcp-commands.md"
+$azmcpOutputFile = Join-Path $OutputPath "cli/azmcp-commands.json"
+$azmcpProject = Join-Path $docsGenDir "AzmcpCommandParser/AzmcpCommandParser.csproj"
+& dotnet run --project $azmcpProject --configuration Release --no-build -- --file $azmcpSourceFile --output $azmcpOutputFile
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⚠ WARNING: azmcp-commands.md parsing failed (non-blocking)" -ForegroundColor Yellow
+} else {
+    Write-Host "✓ azmcp-commands.md parsed" -ForegroundColor Green
+}
+Write-Host ""
+
+# Step 8: Create additional output directories
 Write-Host "Creating generation output directories..." -ForegroundColor Yellow
 $directories = @(
     "common-general",
