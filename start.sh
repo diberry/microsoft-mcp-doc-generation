@@ -19,6 +19,7 @@
 #   - Create output directories
 #   - Build .NET solution (all generator projects)
 #   - Generate MCP CLI metadata (cli-output.json, cli-namespace.json, cli-version.json)
+#   - Parse azmcp-commands.md into structured JSON (cli/azmcp-commands.json)
 #   - Step 0: Brand mapping validation (STOPS if missing branding, outputs required fixes)
 #
 # Generation Steps (for each namespace):

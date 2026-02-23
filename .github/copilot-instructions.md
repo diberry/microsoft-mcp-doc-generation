@@ -424,6 +424,7 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
    - Benefits: Testability, reusability, maintainability, clear separation of concerns
    - Example: Environment validation extracted to `validate-env.ps1` instead of inline in preflight script
 8. **Cross-platform (bash ↔ PowerShell)**: See "Cross-Platform Script Interop" section below
+9. **Project README**: Every .NET project and standalone package in `docs-generation/` MUST have a `README.md` in its project root directory. When creating a new project, include a README covering: purpose, usage, architecture/key files, dependencies, and how to run tests. When modifying an existing project (adding features, changing behavior, updating CLI options, etc.), review the project's README and update it if the changes affect anything documented there.
 
 ## When Helping with Code
 
@@ -523,7 +524,8 @@ pwsh -File "$SCRIPT_DIR/MyScript.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS"
 - Update `Config.cs` for new configuration files
 - Test with `dotnet build` before running
 - **Zero warnings policy**: The CI build uses `--configuration Release` which treats warnings as errors. All compiler warnings (nullable, unused variables, etc.) must be resolved before pushing. Run `dotnet build docs-generation.sln --configuration Release` locally and fix any warnings.
-- **For new .NET projects**: Always add to `docs-generation.sln` (`dotnet sln add`) and verify the full solution builds (`dotnet build docs-generation.sln`). This ensures the project is included in CI build and test via `.github/workflows/build-and-test.yml`. If the project includes tests, add a corresponding `.Tests` project to the solution as well.
+- **For new .NET projects**: Always add to `docs-generation.sln` (`dotnet sln add`) and verify the full solution builds (`dotnet build docs-generation.sln`). This ensures the project is included in CI build and test via `.github/workflows/build-and-test.yml`. If the project includes tests, add a corresponding `.Tests` project to the solution as well. **Every new project MUST include a `README.md`** in its directory covering purpose, usage, architecture, and dependencies.
+- **When modifying existing projects**: Review the project's `README.md` and update it if the changes affect documented behavior, CLI options, architecture, dependencies, or usage patterns.
 - **Every bug fix MUST include tests**: When fixing a bug or error, add one or more unit tests that reproduce the bug and verify the fix. Tests must be placed in a `.Tests` project that is part of `docs-generation.sln` so that CI (`dotnet test docs-generation.sln`) runs them automatically. If no `.Tests` project exists for the affected project, create one (xunit, CPM, added to the solution). If the code under test has `private` methods that need testing, change them to `internal` and add `<InternalsVisibleTo Include="ProjectName.Tests" />` to the source project's `.csproj`.
 - **For new generators**: Place in `Generators/` directory, follow existing patterns
   - Use dependency injection for shared functions (brand mapping, filename cleaning)
@@ -635,4 +637,4 @@ If a bug is found in one service's generated output, the fix MUST be a generic r
 
 ## Last Updated
 
-February 21, 2026
+February 22, 2026
