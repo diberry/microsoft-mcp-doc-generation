@@ -14,6 +14,9 @@ namespace SkillsRelevance.Services;
 /// </summary>
 public class GitHubSkillsFetcher
 {
+    // Static HttpClient is the recommended pattern for console apps with short lifetimes.
+    // It avoids socket exhaustion from repeated creation/disposal and is safe here
+    // because authorization is set per-request (not on DefaultRequestHeaders).
     private static readonly HttpClient _httpClient = new();
     private readonly string? _githubToken;
     private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };

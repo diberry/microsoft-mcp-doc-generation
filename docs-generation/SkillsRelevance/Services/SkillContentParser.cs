@@ -99,7 +99,7 @@ public static class SkillContentParser
 
             // Body is everything after frontmatter
             var bodyStart = frontmatterMatch.Length;
-            var body = content.Substring(bodyStart).TrimStart();
+            var body = content[bodyStart..].TrimStart();
             ExtractMarkdownBody(skill, body);
         }
         else
@@ -292,7 +292,7 @@ public static class SkillContentParser
         {
             // If JSON parsing fails, treat as plain text
             if (string.IsNullOrEmpty(skill.Description))
-                skill.Description = content.Length > 200 ? content.Substring(0, 200) + "..." : content;
+                skill.Description = content.Length > 200 ? content[..200] + "..." : content;
         }
     }
 
