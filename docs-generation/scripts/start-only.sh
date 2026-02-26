@@ -39,7 +39,7 @@ if [[ $# -lt 1 ]]; then
 fi
 
 TOOL_FAMILY="$(echo "$1" | strip_cr)"
-STEPS="${2:-1,2,3,4,5}"
+STEPS="${2:-1,2,3,4,5,6}"
 OUTPUT_DIR="${3:-$ROOT_DIR/generated}"
 
 # Verify CLI metadata files exist
