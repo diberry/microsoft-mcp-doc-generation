@@ -62,15 +62,29 @@ Avery designs the approach, Sage writes the prompts and AI integration.
 
 ## Two Ways to Use SQUAD
 
-### 1. VS Code Copilot Chat (interactive)
+### 1. VS Code Copilot Chat (interactive, local)
 - Opens `.github/agents/squad.agent.md` automatically
+- Use `@squad` to address the coordinator directly
 - Squad coordinates the team and spawns specialists
 - Best for: new features, design discussions, multi-step work
 
-### 2. GitHub Copilot Coding Agent (automated, issue → PR)
-- Reads `.squad/decisions.md`, `.squad/routing.md`, and agent files in `.squad/agents/`
-- Cannot read `.github/agents/squad.agent.md` (security restriction)
-- Best for: filing an issue and letting the agent implement it autonomously
+### 2. GitHub Browser — Create an Issue, Assign to Copilot (automated)
+
+**Yes, Squad knowledge works here too.** When you file a GitHub issue and assign it to Copilot, the automated coding agent reads all the `.squad/` files before starting work:
+
+- `.squad/decisions.md` — architectural decisions the agent respects
+- `.squad/routing.md` — tells the agent which domain each file type belongs to
+- `.squad/agents/*/charter.md` and `history.md` — specialist knowledge for the relevant domain
+
+**What the agent CANNOT access** from the browser: `.github/agents/squad.agent.md` (security restriction — the coding agent cannot read its own instruction files). The coordinator prompt is VS Code only.
+
+**What this means in practice:**
+
+| Scenario | What to do |
+|----------|------------|
+| Design discussion, architecture question | Use VS Code Copilot Chat with `@squad` |
+| Implement a feature / fix a bug | Create a GitHub issue, assign to Copilot — agent uses `.squad/` knowledge automatically |
+| Both | Discuss in VS Code first, then file the issue for automated implementation |
 
 Both modes benefit from the SQUAD files — `.squad/` is accessible to both.
 
