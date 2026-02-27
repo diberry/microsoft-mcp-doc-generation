@@ -1,0 +1,35 @@
+{
+  "version": "0.5.2",
+  "agents": [
+    {
+      "name": "Avery",
+      "role": "lead",
+      "charter": ".squad/agents/avery/charter.md"
+    },
+    {
+      "name": "Morgan",
+      "role": "generator-developer",
+      "charter": ".squad/agents/morgan/charter.md"
+    },
+    {
+      "name": "Quinn",
+      "role": "devops-engineer",
+      "charter": ".squad/agents/quinn/charter.md"
+    },
+    {
+      "name": "Sage",
+      "role": "ai-engineer",
+      "charter": ".squad/agents/sage/charter.md"
+    },
+    {
+      "name": "Parker",
+      "role": "tester",
+      "charter": ".squad/agents/parker/charter.md"
+    },
+    {
+      "name": "Reeve",
+      "role": "scribe",
+      "charter": ".squad/agents/reeve/charter.md"
+    }
+  ]
+}

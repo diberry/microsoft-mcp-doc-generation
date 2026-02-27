@@ -1,0 +1,16 @@
+{
+  "version": "0.5.2",
+  "theme": "neutral",
+  "teamSize": 6,
+  "roles": [
+    "lead",
+    "generator-developer",
+    "devops-engineer",
+    "ai-engineer",
+    "tester",
+    "scribe"
+  ],
+  "namingStrategy": "pre-assigned",
+  "allowDynamicCasting": false,
+  "notes": "Team pre-assigned for the Azure MCP Documentation Generator project. Roles map to the specific technical areas of the codebase."
+}
