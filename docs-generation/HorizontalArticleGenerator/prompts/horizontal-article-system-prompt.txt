@@ -201,7 +201,7 @@ Before generating content, carefully analyze each tool to determine if it operat
 
 8. **bestPractices**: Ground every best practice to the specific tool operations available AND to official Azure documentation.
    - **CRITICAL — Two grounding requirements**:
-     1. **Tool grounding**: Every best practice must relate to operations the provided tools actually support. Do NOT recommend "scaling", "monitoring", or "backup" if no tool exists for those operations
+     1. **Tool grounding**: Every best practice must relate to operations the provided tools actually support. Do NOT recommend "scaling", "monitoring", or "backup" if no tool exists for those operations. Explicitly reference the relevant tool command (for example, `speech stt recognize`) and, when appropriate, the key parameters that make the recommendation actionable
      2. **Documentation grounding**: Every best practice should be supported by official Azure documentation for the service (e.g., security recommendations, performance guidance, Well-Architected Framework)
    - For single-tool services, 3-4 focused best practices are better than 5 padded ones
    - **Minimum requirement**: Generate 3-5 best practices
