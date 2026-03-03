@@ -60,8 +60,10 @@ To use the Azure MCP Server with {{serviceBrandName}}, you need:
 
 Azure MCP Server provides the following tools for {{serviceBrandName}} operations:
 
+| Tool command | Description |
+| --- | --- |
 {{#each tools}}
-- **[{{command}}]({{moreInfoLink}})** - {{genai-shortDescription}}
+| `{{command}}` | {{#if moreInfoLink}}[{{genai-shortDescription}}]({{moreInfoLink}}){{else}}{{genai-shortDescription}}{{/if}} |
 {{/each}}
 
 For detailed information about each tool, including parameters and examples, see [{{serviceBrandName}} tools for Azure MCP Server]({{toolsReferenceLink}}).
