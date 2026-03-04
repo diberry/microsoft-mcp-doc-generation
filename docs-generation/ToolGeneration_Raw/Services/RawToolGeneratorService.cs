@@ -151,13 +151,8 @@ public class RawToolGeneratorService
         var sb = new StringBuilder();
 
         // Add frontmatter
-        sb.AppendLine("---");
-        sb.AppendLine("ms.topic: reference");
-        sb.AppendLine($"ms.date: {data.GeneratedDate}");
-        sb.AppendLine($"mcp-cli.version: {data.McpCliVersion}");
-        sb.AppendLine($"generated: {data.GeneratedDate}");
-        sb.AppendLine("---");
-        sb.AppendLine();
+        sb.Append(Shared.FrontmatterUtility.GenerateRawToolFrontmatter(
+            data.McpCliVersion, data.GeneratedDate));
 
         // Add title
         sb.AppendLine($"# {data.ToolName}");
