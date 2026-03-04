@@ -42,7 +42,7 @@ Characteristics:
    - Capabilities derived directly from the tool descriptions above (genai-capabilities). Each capability must be a rephrasing of one tool's description into an action phrase. 1 tool = 1 capability. Do NOT add capabilities beyond the provided tools
    - **Primary plane focus**: Data plane (default) or management plane
 
-2. **Tool Summaries**: For each tool, create a concise 10-15 word description (genai-shortDescription)
+2. **Tool Summaries**: For each tool, create a concise 10-15 word description (genai-shortDescription). Order the tools in the `tools` array with **management plane tools first** (create, delete, update, provision, configure), then **data plane tools** (get, list, query, set, read, write). Determine the plane by analyzing each tool's command verb and description. Within each group, maintain alphabetical order by command name
 
 3. **Get Started Scenarios**: Create 3-5 scenarios. The **first example from each scenario** appears in the article's "Get started" section, so:
    - Make each scenario's first example the most representative and specific prompt
@@ -54,9 +54,9 @@ Characteristics:
    - **For data plane**: Assume resources exist. Example: "Get secret 'db-password' from key vault 'prod-secrets'"
    - **For management plane**: Focus on provisioning. Example: "Create a new key vault named 'prod-secrets' in East US"
 
-4. **Permissions**: Look up official Azure RBAC built-in roles ONLY from https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles. Search that page for the service name. Every role you output must be verifiable on that page. If unsure, use fallback defaults from system prompt (e.g., "Cognitive Services Contributor" for AI services, "Contributor" for general resources)
+4. **Permissions**: First, analyze each tool's `readOnly` metadata and operation type (list/get = read, create/set/delete = write) to determine the **minimum privilege level** needed. Then look up official Azure RBAC built-in roles ONLY from https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles. Search that page for the service name. Every role you output must be verifiable on that page. Select the **narrowest role** that covers the actual tool operations — if all tools are read-only, only suggest Reader-level roles. The `purpose` field for each role must reference the specific tool operations that require it. If unsure, use fallback defaults from system prompt (e.g., "Cognitive Services Contributor" for AI services, "Contributor" for general resources)
 
-5. **Best Practices**: 3-5 practices covering security, reliability, cost, and performance. Every best practice must satisfy TWO grounding requirements: (1) it must relate to operations the available tools support, and (2) it should be supported by official Azure documentation for this service. No trailing periods on titles. Do NOT recommend general service features (scaling, monitoring, backup) unless a tool exists for those operations.
+5. **Best Practices**: 2-5 practices scoped strictly to using the provided MCP tools. Every best practice must name a specific tool command and explain how to use it effectively. Do NOT include general Azure service administration advice (scaling, monitoring, backup, disaster recovery) unless a tool directly supports that operation. No trailing periods on titles. Fewer, tool-specific practices are better than padded generic ones
 
 6. **Resources**: Provide documentation links with `/azure/...` paths (remove `https://learn.microsoft.com/en-us` prefix). Use `/azure/ai-services/` instead of retired `/azure/cognitive-services/`. **If you are not confident a URL path is correct, leave the `url` field as an empty string** — an empty link is better than a fabricated 404 link.
 

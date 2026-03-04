@@ -501,19 +501,47 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         StaticArticleData staticData, 
         AIGeneratedArticleData aiData)
     {
-        // Merge tools: match by command name
-        var mergedTools = staticData.Tools.Select(staticTool =>
+        // Merge tools: use AI-returned order (management plane first, then data plane)
+        // Fall back to static order if AI tools are unavailable
+        List<MergedTool> mergedTools;
+        if (aiData.Tools?.Count > 0)
         {
-            var aiTool = aiData.Tools?.FirstOrDefault(
-                t => t.Command == staticTool.Command);
+            mergedTools = aiData.Tools.Select(aiTool =>
+            {
+                var staticTool = staticData.Tools.FirstOrDefault(
+                    t => t.Command == aiTool.Command);
+                
+                return new MergedTool
+                {
+                    Command = aiTool.Command,
+                    MoreInfoLink = staticTool?.MoreInfoLink ?? "",
+                    ShortDescription = aiTool.ShortDescription
+                };
+            }).ToList();
             
-            return new MergedTool
+            // Append any static tools not in the AI response
+            foreach (var staticTool in staticData.Tools)
+            {
+                if (!mergedTools.Any(m => m.Command == staticTool.Command))
+                {
+                    mergedTools.Add(new MergedTool
+                    {
+                        Command = staticTool.Command,
+                        MoreInfoLink = staticTool.MoreInfoLink,
+                        ShortDescription = staticTool.Description
+                    });
+                }
+            }
+        }
+        else
+        {
+            mergedTools = staticData.Tools.Select(staticTool => new MergedTool
             {
                 Command = staticTool.Command,
                 MoreInfoLink = staticTool.MoreInfoLink,
-                ShortDescription = aiTool?.ShortDescription ?? staticTool.Description
-            };
-        }).ToList();
+                ShortDescription = staticTool.Description
+            }).ToList();
+        }
         
         return new HorizontalArticleTemplateData
         {

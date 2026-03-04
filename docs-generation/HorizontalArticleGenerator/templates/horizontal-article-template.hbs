@@ -35,8 +35,6 @@ For {{serviceBrandName}} users, this means you can:
 
 To use the Azure MCP Server with {{serviceBrandName}}, you need:
 
-### Azure requirements
-
 - **Azure subscription**: An active Azure subscription. [Create one for free](https://azure.microsoft.com/free/).
 {{#if genai-serviceSpecificPrerequisites}}
 {{#each genai-serviceSpecificPrerequisites}}
@@ -60,10 +58,10 @@ To use the Azure MCP Server with {{serviceBrandName}}, you need:
 
 Azure MCP Server provides the following tools for {{serviceBrandName}} operations:
 
-| Tool command | Description |
+| Tool | Description |
 | --- | --- |
 {{#each tools}}
-| `{{command}}` | {{#if moreInfoLink}}[{{genai-shortDescription}}]({{moreInfoLink}}){{else}}{{genai-shortDescription}}{{/if}} |
+| `{{command}}` | {{genai-shortDescription}} |
 {{/each}}
 
 For detailed information about each tool, including parameters and examples, see [{{serviceBrandName}} tools for Azure MCP Server]({{toolsReferenceLink}}).
