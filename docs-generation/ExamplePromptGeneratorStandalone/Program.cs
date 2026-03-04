@@ -229,7 +229,7 @@ internal static class Program
             var inputPromptFileName = ToolFileNameBuilder.BuildInputPromptFileName(
                 tool.Command, nameContext);
             var inputPromptPath = Path.Combine(outputDir, "example-prompts-prompts", inputPromptFileName);
-            var inputContent = FrontmatterUtility.GenerateInputPromptFrontmatter(
+            var inputContent = ExamplePromptGeneratorStandalone.Utilities.FrontmatterUtility.GenerateInputPromptFrontmatter(
                 tool.Command, version, inputPromptFileName, userPrompt);
             await File.WriteAllTextAsync(inputPromptPath, inputContent);
 
@@ -255,7 +255,7 @@ internal static class Program
             var examplePromptPath = Path.Combine(outputDir, "example-prompts", examplePromptFileName);
 
             var templatePath = Path.Combine(templatesDir, "example-prompts-template.hbs");
-            var frontmatter = FrontmatterUtility.GenerateExamplePromptsFrontmatter(version);
+            var frontmatter = ExamplePromptGeneratorStandalone.Utilities.FrontmatterUtility.GenerateExamplePromptsFrontmatter(version);
             var promptsList = promptsResponse.Prompts.Select(p => new { prompt = p }).ToList();
 
             // Get required parameters for the template comment

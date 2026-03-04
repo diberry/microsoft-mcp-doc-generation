@@ -13,10 +13,10 @@ This file is the team's shared brain. Every agent reads this before starting wor
 
 ## Architecture Decisions
 
-### AD-001: Never Edit Generated Output Files
-**Date**: Project inception  
-**Decision**: Files under `generated/` and `generated-*/` are programmatic output. They must NEVER be edited directly. Fix the source generators (C# code, templates, prompts, data files) instead.  
-**Rationale**: Generated files are overwritten on every run. Manual edits would be lost.  
+### AD-001: Never Edit Generated Output Files — Fix at the Right Layer
+**Date**: Project inception (updated March 2026)  
+**Decision**: Files under `generated/` and `generated-*/` are programmatic output. They must NEVER be edited directly. Fix the source generators instead. When fixing generators, prefer fixing the **prompt or template** over hardcoding string fixes in C# code. If the AI is producing wrong content, fix the prompt. If the layout is wrong, fix the template. Only use C# string manipulation for structural concerns (parsing, file I/O, data plumbing) — not for content corrections that belong in the AI or template layer.  
+**Rationale**: Generated files are overwritten on every run. Hardcoded C# string fixes become brittle and don't scale across 52 namespaces — prompts and templates are the right abstraction for content fixes.  
 **Enforced by**: All agents
 
 ---
@@ -119,6 +119,14 @@ This file is the team's shared brain. Every agent reads this before starting wor
 **Date**: 2026  
 **Decision**: When calling PowerShell scripts from bash, always use `pwsh -File "path/to/script.ps1" -Param value`, never `pwsh -Command`. Use `[switch]` not `[bool]` for flag parameters.  
 **Rationale**: `pwsh -Command` fails on Windows Git Bash because MSYS paths (`/c/Users/...`) aren't translated inside string arguments.
+
+---
+
+### AD-016: Centralized Frontmatter Generation in Shared
+**Date**: March 2026  
+**Decision**: All YAML frontmatter generation is centralized in `Shared/FrontmatterUtility.cs`. CSharpGenerator and ExamplePromptGeneratorStandalone retain thin forwarding wrappers for backward compatibility. ToolGeneration_Raw calls `Shared.FrontmatterUtility` directly.  
+**Rationale**: Three independent implementations had inconsistent date formats and duplicated logic. Centralizing in Shared follows the established pattern (DataFileLoader, LogFileHelper, CliVersionReader) and ensures consistency.  
+**Files**: `Shared/FrontmatterUtility.cs`, `CSharpGenerator/Generators/FrontmatterUtility.cs` (wrapper), `ExamplePromptGeneratorStandalone/Utilities/FrontmatterUtility.cs` (wrapper), `ToolGeneration_Raw/Services/RawToolGeneratorService.cs`
 
 ---
 

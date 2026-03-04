@@ -12,7 +12,7 @@ Generate a JSON object with the following structure. All fields prefixed with "g
   "genai-capabilities": ["array of 1-6 action-oriented strings (MUST NOT end with periods) — what users can do via MCP. ONLY include capabilities the provided tools actually support. Do NOT invent operations beyond requested tools. For services with only 1-2 tools, 1-2 capabilities is acceptable — do NOT pad with fabricated operations."],
   "genai-serviceSpecificPrerequisites": [
     {
-      "title": "string - Prerequisite name (no trailing period)",
+      "title": "string - Short resource or service name only (no trailing period, no verbs or state words like 'existing' or 'provisioned')",
       "description": "string - Why it's needed and how to get it"
     }
   ],
@@ -87,7 +87,7 @@ Before generating content, carefully analyze each tool to determine if it operat
 **Default Assumption**: If the tool's purpose is ambiguous, **assume it is a data plane operation** unless the tool name explicitly includes resource lifecycle verbs like "create", "delete", "provision", or clearly manages resource configuration.
 
 **Impact on Article Content**:
-- For **data plane focused services**: Emphasize working with existing resources, data operations, and assume resources are already provisioned. Prerequisites should include "existing [resource] already created".
+- For **data plane focused services**: Emphasize working with existing resources, data operations, and assume resources are already provisioned. Prerequisites title should be the service/resource name only; the description should explain it must already be provisioned.
 - For **management plane focused services**: Focus on resource lifecycle management, provisioning, and configuration.
 - For **mixed services**: Clearly distinguish between management operations (provisioning) and data operations (using the service) in scenarios and capabilities.
 
@@ -129,15 +129,19 @@ Before generating content, carefully analyze each tool to determine if it operat
 4. **serviceSpecificPrerequisites**: Only list prerequisites that are truly service-specific and required. 
    - **Do NOT include "Azure subscription"** — the template already lists it as a generic prerequisite
    - Don't repeat generic Azure requirements (those are in the template)
-   - Examples: "Existing Azure OpenAI resource", "Approved access to GPT-4", "Virtual network configured"
+   - Examples: "Azure OpenAI resource", "GPT-4 access approval", "Virtual network"
    - Each prerequisite should explain WHY it's needed, not just WHAT it is
-   - **For data plane services**: Include "Existing [resource] already provisioned" as a prerequisite since data plane assumes resources exist
+   - **Prerequisite titles must be short resource/service names only** — no verbs, adjectives, or state descriptions. Move context like "already provisioned" or "already created" into the description field
+     - ✅ GOOD: `"title": "Azure AI Search service", "description": "An existing service instance is required to manage indexes and knowledge bases."`
+     - ❌ BAD: `"title": "Existing Azure AI Search service already provisioned", "description": "You need a service instance..."`
+   - **For data plane services**: Include the resource as a prerequisite with the description explaining it must already exist
    - **For management plane services**: Focus on subscription access and permissions to create resources
 
 5. **tools.genai-shortDescription**: Condense the full tool description to its essential action and target. Remove technical details but keep the core purpose
    - **Target length**: 8-12 words (max 15 words)
    - **Be specific**: Include what data/details are retrieved, not just "get details"
   - **Conditional requirements**: If the tool description includes a sentence starting with "Requires at least one", include a brief clause reflecting that requirement
+   - **Tool ordering**: In the `tools` array, list **management plane tools first** (create, delete, update, provision, configure resources), then **data plane tools** (get, list, query, set, upload, execute, read, write). Within each group, maintain alphabetical order by command name. Determine the plane by analyzing the tool's command verb and description — not by `readOnly` metadata alone
    - **Examples of GOOD descriptions**:
      - "Retrieve index schema, field definitions, and scoring profiles" (not "Get details of indexes")
      - "Execute full-text search with filters, facets, and scoring" (not "Query indexes for data")
@@ -158,7 +162,20 @@ Before generating content, carefully analyze each tool to determine if it operat
    - **For data plane scenarios**: Assume resources already exist. Examples: "Get the secret 'api-key' from my key vault 'prod-kv'"
    - **For management plane scenarios**: Focus on provisioning and configuration. Examples: "Create a new storage account in East US"
 
-7. **requiredRoles**: Look up the service's RBAC roles from the **single authoritative source**:
+7. **requiredRoles**: Analyze the tool operations to determine the **minimum RBAC roles** needed, then look up roles from the **single authoritative source**:
+   - **⚠️ CRITICAL - MINIMUM PRIVILEGE ANALYSIS**:
+     - Before selecting roles, analyze each tool's operation type:
+       - **Read-only tools** (list, get, query, show): Require only Reader/Data Reader roles
+       - **Write tools** (create, set, update, add, upload): Require Contributor/Data Contributor roles
+       - **Delete tools** (delete, remove, purge): Require Contributor or Owner roles
+       - **Execute tools** (run, execute, invoke): Require Operator or specific action roles
+     - Select the **narrowest role** that covers the operations the tools actually perform
+     - If ALL tools are read-only, do NOT suggest a Contributor role — a Reader role is sufficient
+     - If tools include BOTH read and write operations, suggest separate roles: one read-only for read scenarios and one contributor for write scenarios
+     - **Explain the mapping in the role purpose**: The `purpose` field must state which specific tool operations require that role (e.g., "Required for list and get operations on blob containers" not just "Read access to storage")
+     - ❌ DO NOT suggest overly broad roles (e.g., "Contributor" or "Owner") when a narrower service-specific role exists
+     - ❌ DO NOT suggest write roles when all tools are read-only
+     - ✅ DO suggest the least-privileged role that covers the tool's actions
    - **AUTHORITATIVE SOURCE (ONLY)**: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
    - Every role name you output MUST appear on that page. If you cannot confirm a role exists on that page, do NOT use it
    - Search that page for the service name (e.g., "Storage", "Key Vault", "Cosmos DB") to find all official built-in roles
@@ -186,7 +203,7 @@ Before generating content, carefully analyze each tool to determine if it operat
      - When in doubt: Consult the official Microsoft Learn RBAC roles page above
      - If you cannot find a role on the official page: Use the generic service-level role instead (e.g., "Search Service Contributor")
      - GENERATION WILL BE BLOCKED if invented roles are detected - this is a critical error
-   - **For data plane services**: Prioritize data plane roles (e.g., "Storage Blob Data Contributor", "Key Vault Secrets User", "Cosmos DB Data Reader", "Search Index Data Reader")
+   - **For data plane services**: Prioritize data plane roles (e.g., "Storage Blob Data Reader" for read-only tools, "Storage Blob Data Contributor" only when write tools exist)
    - **For management plane services**: Prioritize resource management roles (e.g., "Storage Account Contributor", "Key Vault Contributor", "Cosmos DB Account Contributor")
    - **Match the tool operations**: If tools are primarily data-focused, don't suggest management roles unless explicitly needed
    - **Minimum requirement**: Suggest at least 2 roles (one read-only, one contributor/admin) based on tool capabilities
@@ -201,26 +218,23 @@ Before generating content, carefully analyze each tool to determine if it operat
 
 8. **bestPractices**: Ground every best practice to the specific tool operations available AND to official Azure documentation.
    - **CRITICAL — Two grounding requirements**:
-     1. **Tool grounding**: Every best practice must relate to operations the provided tools actually support. Do NOT recommend "scaling", "monitoring", or "backup" if no tool exists for those operations. Explicitly reference the relevant tool command (for example, `speech stt recognize`) and, when appropriate, the key parameters that make the recommendation actionable
-     2. **Documentation grounding**: Every best practice should be supported by official Azure documentation for the service (e.g., security recommendations, performance guidance, Well-Architected Framework)
-   - For single-tool services, 3-4 focused best practices are better than 5 padded ones
-   - **Minimum requirement**: Generate 3-5 best practices
-   - **How to find**: Search for "Azure [Service Name] best practices" and "Azure [Service Name] security recommendations" in official documentation
-   - **Priority order**: Security first, then reliability, cost optimization, operational excellence, and performance
-   - **Required coverage**: At least one practice from each category:
-     1. **Security**: ✅ Authentication method (prefer Entra ID over API keys), role assignments, network security, data encryption
-        - ❌ AVOID: "Secure your API keys" (outdated - recommend Entra ID instead)
-     2. **Reliability**: Redundancy, backup, disaster recovery, health monitoring, geo-replication
-     3. **Cost**: Right-sizing, tier selection, query optimization, reserved capacity, monitoring usage
-     4. **Performance**: Caching, partitioning, indexing strategies, query patterns, scaling limits
-   - **Focus on**: Azure Well-Architected Framework principles adapted for natural language interaction
+     1. **Tool grounding**: Every best practice must directly relate to how a user should use the provided tools. Reference the specific tool command and, when appropriate, the key parameters that make the recommendation actionable. If no tool exists for an operation (scaling, monitoring, backup, etc.), do NOT generate a best practice for it
+     2. **Practical scope**: Best practices must be advice for using the MCP tools effectively — not general Azure service administration advice. For example, "Use read-only list commands to audit your resources before making changes" is good because it references tool behavior. "Enable geo-replication for disaster recovery" is bad if no tool supports configuring replication
+   - For single-tool services, 2-3 focused best practices are better than 5 padded ones
+   - **Minimum requirement**: Generate 2-5 best practices (fewer is fine if only a few tools exist)
+   - **Priority order**: Security (authentication/RBAC for tool access), then safe usage patterns (read before write, confirm destructive operations), then efficiency (batching queries, filtering results)
+   - **Suggested categories** (only include if relevant tools exist):
+     1. **Security**: RBAC role assignments for tool access, prefer least-privilege roles, use Entra ID authentication
+     2. **Safe usage**: Use read-only tools to verify state before running write/delete tools, review destructive operation results
+     3. **Efficiency**: Use specific parameters to narrow results, combine list and get operations for complete picture
+     4. **Service-specific**: Only if a tool directly supports a service-specific feature (e.g., query optimization for a search tool, key rotation for a key vault set tool)
    - **MCP-specific considerations**:
      - How to phrase commands for destructive operations (confirmation patterns)
      - When to use read-only operations vs. modifications
-     - Resource naming conventions for clarity in conversation
      - How to leverage AI assistant context across multiple operations
-   - **Avoid generic advice**: ❌ "Use descriptive names", "Test before production", "Optimize strategies" (too obvious, not service-specific)
-   - **Be specific**: Each practice should reference actual service features or configurations
+   - ❌ **DO NOT generate best practices about**: scaling, monitoring, backup, disaster recovery, geo-replication, tier selection, reserved capacity, caching strategies, or any other service capability unless a specific tool in the input supports that operation
+   - ❌ **Avoid generic advice**: "Use descriptive names", "Test before production", "Optimize strategies", "Follow the Well-Architected Framework" (too obvious, not tool-specific)
+   - ✅ **Be specific**: Each practice should name a tool command and explain how to use it effectively
 
 ## Writing Style (Microsoft Learn Guidelines)
 - **Tone**: Professional, clear, action-oriented, and customer-focused
@@ -280,8 +294,11 @@ Before generating content, carefully analyze each tool to determine if it operat
 - [ ] Service name is consistent (official Azure name used throughout)
 - [ ] All RBAC role names match Azure's standard patterns (check against examples above)
 - [ ] No generic fabricated RBAC roles like "Database Contributor", "Database Reader", or any role ending in "Administrator"
+- [ ] RBAC roles are the minimum privilege needed — read-only tools get Reader roles, not Contributor roles
+- [ ] Each role's `purpose` field references the specific tool operations that require it
 - [ ] Tool descriptions are 8-12 words and specific (not "get details" or "manage resources")
-- [ ] Best practices include 3-5 items, ALL grounded to operations the available tools support
+- [ ] Best practices include 2-5 items, each naming a specific tool command and explaining how to use it effectively
+- [ ] No best practice recommends a service capability (scaling, monitoring, backup) without a corresponding tool
 - [ ] Capability count matches tool count 1:1 (1 tool → 1 capability, each derived from a tool description)
 - [ ] First example in each scenario is the most representative prompt for that scenario
 - [ ] Natural language examples use service-specific terminology and real parameter values
