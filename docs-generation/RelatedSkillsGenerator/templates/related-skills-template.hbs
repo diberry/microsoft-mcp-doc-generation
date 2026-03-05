@@ -1,0 +1,58 @@
+---
+title: Related Agent Skills for {{brandName}} - Azure MCP Server
+description: Curated Agent Skills that enhance AI coding assistants with {{brandName}} expertise, including troubleshooting guides, best practices, and architecture patterns.
+author: diberry
+ms.author: diberry
+ms.service: azure-mcp-server
+ms.topic: concept-article
+ms.date: {{formatDate generatedAt}}
+content_well_notification:
+  - AI-contribution
+ai-usage: ai-generated
+ms.custom: build-2025
+
+#customer intent: As a developer using {{brandName}} with Azure MCP Server, I want to discover related Agent Skills so that I can enhance my AI coding assistant with curated {{brandName}} expertise.
+
+---
+
+# Related Agent Skills for {{brandName}}
+
+Enhance your AI coding assistant with curated [Agent Skills](https://github.com/MicrosoftDocs/Agent-Skills) for {{brandName}}. These skills provide expert-level guidance drawn from official Microsoft documentation.
+
+## Skills
+
+| Skill | Category | Description |
+|-------|----------|-------------|
+{{#each skills}}
+| [{{{name}}}]({{{skillUrl}}}) | {{{category}}} | {{{description}}} |
+{{/each}}
+
+{{#if bundles}}
+## Bundles
+
+These [curated skill bundles](https://github.com/MicrosoftDocs/Agent-Skills/blob/main/docs/BUNDLES.md) include skills related to {{brandName}}.
+
+| Bundle | Description |
+|--------|-------------|
+{{#each bundles}}
+| [{{{name}}}]({{{bundleUrl}}}) | {{{description}}} |
+{{/each}}
+
+{{/if}}
+## Install Agent Skills
+
+To use these skills with your AI coding assistant:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/MicrosoftDocs/Agent-Skills.git
+   ```
+
+2. Copy skills to your assistant's skills path. See the [Agent Skills README](https://github.com/MicrosoftDocs/Agent-Skills#%EF%B8%8F-installation) for platform-specific paths.
+
+## Related content
+
+* [{{brandName}} tools reference](../tool-family/{{mcpNamespace}}.md)
+* [Azure MCP Server overview](../overview.md)
+* [Agent Skills catalog](https://github.com/MicrosoftDocs/Agent-Skills/blob/main/docs/CATALOG.md)
+* [Agent Skills bundles](https://github.com/MicrosoftDocs/Agent-Skills/blob/main/docs/BUNDLES.md)
