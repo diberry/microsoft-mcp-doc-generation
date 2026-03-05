@@ -28,6 +28,7 @@
 #   Step 3: Generate tool improvements (AI-enhanced descriptions)
 #   Step 4: Generate tool family cleanup (formatting/structure)
 #   Step 5: Generate horizontal articles (cross-cutting documentation)
+#   Step 6: Generate related skills (links to Agent Skills)
 #
 # Prerequisites:
 #   - Node.js + npm (for MCP CLI metadata)
@@ -42,11 +43,11 @@ source "$ROOT_DIR/docs-generation/scripts/bash-common.sh"
 
 # Parse arguments: determine if first arg is namespace or steps
 NAMESPACE_ARG=""
-STEPS_ARG="1,2,3,4,5"
+STEPS_ARG="1,2,3,4,5,6"
 
 if [[ $# -gt 0 ]]; then
-    # Check if first arg looks like steps (contains comma or is 1-5)
-    if [[ "$1" =~ ^[1-5](,[1-5])*$ ]]; then
+    # Check if first arg looks like steps (contains comma or is 1-6)
+    if [[ "$1" =~ ^[1-6](,[1-6])*$ ]]; then
         STEPS_ARG="$1"
     else
         NAMESPACE_ARG="$1"
@@ -86,6 +87,15 @@ fi
 # =================================================================== 
 # GENERATION: Process namespaces with steps 1-5
 # ===================================================================
+
+# Generate global skill list catalog (runs once, not per-namespace)
+echo ""
+echo "Generating skill list catalog..."
+if bash "$ROOT_DIR/docs-generation/scripts/generate-skill-list.sh" "$OUTPUT_DIR"; then
+    echo "✓ Skill list catalog generated"
+else
+    echo "⚠ Skill list generation failed (non-blocking)"
+fi
 
 # Extract namespaces from cli-namespace.json
 echo ""

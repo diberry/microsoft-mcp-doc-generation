@@ -153,6 +153,21 @@ public static class CoreHelpers
 
             return str.Replace(oldValue, newValue);
         });
+
+        // Array/list length helper
+        handlebars.RegisterHelper("arrayLength", (context, arguments) =>
+        {
+            if (arguments.Length == 0 || arguments[0] == null)
+                return 0;
+
+            if (arguments[0] is System.Collections.ICollection collection)
+                return collection.Count;
+
+            if (arguments[0] is System.Collections.IEnumerable enumerable)
+                return enumerable.Cast<object>().Count();
+
+            return 0;
+        });
     }
 
     /// <summary>

@@ -12,6 +12,7 @@
     3. Generates composed and AI-improved tool files
     4. Generates tool family metadata, related content, and final file
     5. Optionally generates horizontal article
+    6. Optionally generates related skills page
     
     The result is a complete, standalone documentation file for the tool family
     with all content integrated and AI-enhanced.
@@ -34,6 +35,9 @@
     
     - Step 5 (Horizontal Articles): Can run independently but should follow other steps
                                     Output: horizontal-articles/
+    
+    - Step 6 (Related Skills): Independent. Links MCP namespaces to Agent Skills.
+                               Output: related-skills/
     
     To get complete output, run at minimum: Steps 1, 2, 3
     To get everything: Steps 1, 2, 3, 4 (and optionally 5)
@@ -70,7 +74,7 @@
     Set to $true when the orchestrator (start.sh) has already built the solution.
 
 .PARAMETER Steps
-    Array of step numbers to run (default: @(1,2,3,4,5) - all steps)
+    Array of step numbers to run (default: @(1,2,3,4,5,6) - all steps)
     Example: -Steps @(1,3) to run only steps 1 and 3
     Example: -Steps @(1) to run only step 1
     Example: -Steps @(1,2,3) to run steps 1 through 3
@@ -81,10 +85,11 @@
       @(1,2) - Add example prompts (~10-15 min)
       @(1,2,3) - Add composed/improved tools (~15-20 min) - RECOMMENDED minimum
       @(1,2,3,4) - Add family file (~20-25 min)
-      @(1,2,3,4,5) - Add everything (~25-30 min) - FULL PIPELINE
+      @(1,2,3,4,5) - Add horizontal articles (~25-30 min)
+      @(1,2,3,4,5,6) - Add related skills (~25-30 min) - FULL PIPELINE
 
 .EXAMPLE
-    # PowerShell: Full pipeline (all 5 steps, default)
+    # PowerShell: Full pipeline (all 6 steps, default)
     ./Generate-ToolFamily.ps1 -ToolFamily "keyvault"
     
     # PowerShell: Full pipeline with custom token limit
@@ -102,11 +107,14 @@
     # PowerShell: Run Steps 1-4 (adds family assembly, ~20-25 minutes)
     ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,2,3,4)
     
-    # PowerShell: Run all steps (all 5, ~25-30 minutes)
-    ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,2,3,4,5)
+    # PowerShell: Run all steps (all 6, ~25-30 minutes)
+    ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,2,3,4,5,6)
     
     # PowerShell: Run specific steps (e.g., only steps 1 and 4) - Will have incomplete output!
     ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,4)
+    
+    # PowerShell: Run only Step 6 (related skills, requires skills-source/)
+    ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(6)
     
     # PowerShell: Skip AI improvements, only generate composed versions
     ./Generate-ToolFamily.ps1 -ToolFamily "acr" -SkipAIImprovements
@@ -141,7 +149,7 @@ param(
     [switch]$SkipBuild,
     
     # Accepts int array @(1,2,3) or comma-separated string "1,2,3" (for bash -File invocation)
-    $Steps = @(1, 2, 3, 4, 5)
+    $Steps = @(1, 2, 3, 4, 5, 6)
 )
 
 $ErrorActionPreference = "Stop"
@@ -159,6 +167,7 @@ $runStep2 = 2 -in $Steps
 $runStep3 = 3 -in $Steps
 $runStep4 = 4 -in $Steps
 $runStep5 = 5 -in $Steps
+$runStep6 = 6 -in $Steps
 
 # Override Step 5 if user explicitly set GenerateHorizontalArticle to false
 if (-not $GenerateHorizontalArticle) {
@@ -399,6 +408,43 @@ try {
         }
     } else {
         Write-Warning "⊘ Step 5 skipped"
+        Write-Host ""
+    }
+
+    # ========================================================================
+    # Step 6: Generate related skills (optional, non-fatal)
+    # ========================================================================
+    if ($runStep6) {
+        Write-Divider
+        Write-Progress "Step 6: Related Skills (Optional)"
+        Write-Divider
+        Write-Host ""
+
+        $step6Script = Join-Path $scriptDir "6-Generate-RelatedSkills-One.ps1"
+        if (-not (Test-Path $step6Script)) {
+            Write-Warning "Step 6 script not found: $step6Script"
+            Write-Warning "Skipping related skills generation"
+        } else {
+            $step6Params = @{
+                ServiceArea = $ToolFamily
+                OutputPath = $OutputPath
+            }
+
+            if ($SkipBuild) {
+                $step6Params.SkipBuild = $true
+            }
+
+            & $step6Script @step6Params
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "Step 6 reported issues: Related skills generation (continuing...)"
+            } else {
+                Write-Host ""
+                Write-Success "✓ Step 6 completed: Related skills"
+                Write-Host ""
+            }
+        }
+    } else {
+        Write-Warning "⊘ Step 6 skipped"
         Write-Host ""
     }
 

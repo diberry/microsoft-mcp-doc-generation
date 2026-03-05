@@ -464,8 +464,9 @@ public class ArticleContentProcessor
     }
 
     /// <summary>
-    /// Warn when capabilities significantly outnumber available tools,
-    /// which suggests fabricated capabilities beyond what tools support.
+    /// Validate that capability count covers all tools.
+    /// Warn when fewer capabilities than tools (incomplete coverage)
+    /// or when capabilities vastly exceed tools (likely fabricated).
     /// </summary>
     private static void ValidateCapabilityToolRatio(AIGeneratedArticleData aiData, ValidationResult result)
     {
@@ -476,15 +477,20 @@ public class ArticleContentProcessor
 
         if (toolCount == 0) return;
 
-        // Capabilities should map 1:1 to tools.
-        // For single-tool services, more than 1 capability is suspicious.
-        // For multi-tool services, more than tool count is suspicious.
-        var maxReasonable = toolCount;
+        // Every tool should produce at least one capability.
+        // Multi-operation tools may produce more, so allow up to 2× tool count.
+        if (capCount < toolCount)
+        {
+            result.Warnings.Add($"Capabilities ({capCount}) are fewer than tool count ({toolCount}). " +
+                $"Every tool must be represented by at least one capability.");
+        }
 
+        // Allow up to 2× tool count for multi-operation tools, but flag anything beyond that.
+        var maxReasonable = toolCount * 2;
         if (capCount > maxReasonable)
         {
-            result.Warnings.Add($"Capabilities ({capCount}) exceed tool count ({toolCount}). " +
-                $"Each capability should map 1:1 to a tool description. Some capabilities might be fabricated.");
+            result.Warnings.Add($"Capabilities ({capCount}) significantly exceed tool count ({toolCount}). " +
+                $"Some capabilities might be fabricated beyond what tools support.");
         }
     }
 

@@ -9,7 +9,7 @@ Generate a JSON object with the following structure. All fields prefixed with "g
 {
   "genai-serviceShortDescription": "string - Brief noun phrase (NEVER end with a period) describing what users manage. This value is interpolated mid-sentence in 3 template locations — a trailing period WILL create broken sentences like 'manage APIs. through AI-powered'. MUST read naturally after 'Manage'. Examples: 'keys, secrets, and certificates', 'web applications and database connections'. Keep under 8 words.",
   "genai-serviceOverview": "string - 2-3 sentence service description. Start with 'is a...' or 'provides...' (template prepends service name as a link). Include what problem it solves and key capabilities.",
-  "genai-capabilities": ["array of 1-6 action-oriented strings (MUST NOT end with periods) — what users can do via MCP. ONLY include capabilities the provided tools actually support. Do NOT invent operations beyond requested tools. For services with only 1-2 tools, 1-2 capabilities is acceptable — do NOT pad with fabricated operations."],
+  "genai-capabilities": ["array of action-oriented strings (MUST NOT end with periods) — what users can do via MCP. MINIMUM: one capability per tool. If a tool supports multiple distinct operations (e.g., 'create or update', 'list and get'), list each operation as a separate capability. ONLY include capabilities the provided tools actually support — do NOT invent operations beyond the tools."],
   "genai-serviceSpecificPrerequisites": [
     {
       "title": "string - Short resource or service name only (no trailing period, no verbs or state words like 'existing' or 'provisioned')",
@@ -111,20 +111,22 @@ Before generating content, carefully analyze each tool to determine if it operat
    - **For data plane services**: Emphasize working with existing resources and data operations
    - **For management plane services**: Focus on resource lifecycle and configuration management
 
-3. **capabilities**: Derive capabilities directly from the tool descriptions provided in the input data. Each capability must be a rephrasing of what an actual tool does — do NOT invent capabilities beyond the tool descriptions.
-   - Read each tool's `description` field from the input and transform it into a user-facing action phrase
-   - Start with action verbs: "Create and configure", "Monitor and diagnose", "Deploy and scale"
+3. **capabilities**: Derive capabilities directly from the tool descriptions provided in the input data. Every tool MUST produce at least one capability. Do NOT invent capabilities beyond the tool descriptions.
+   - Read each tool's `command` and `description` fields from the input
+   - Transform each tool's description into one or more user-facing action phrases
+   - Start with action verbs: "Create and configure", "Retrieve", "Update", "List"
    - **No trailing periods** on capability strings
    - Focus on business outcomes, not technical implementation
-   - Group related operations logically
    - **Align with plane**: Data plane capabilities focus on "Access", "Query", "Store", "Retrieve", "Execute". Management plane focuses on "Create", "Configure", "Delete", "Manage"
-   - **CRITICAL — Match capability count to tool count**:
-     - 1 tool → 1 capability (do NOT pad to 2+)
-     - 2-3 tools → 2-3 capabilities
-     - 4+ tools → 4-6 capabilities
-     - Each capability must map 1:1 to an actual tool's description — do NOT invent "Configure", "Update", "Monitor" capabilities if no tool supports those verbs
+   - **CRITICAL — Every tool must be represented**:
+     - **Minimum**: One capability per tool. If there are 5 tools, there must be at least 5 capabilities
+     - **Multi-operation tools**: If a single tool covers multiple distinct operations (e.g., "create or update", "list and get", "add and configure"), produce a separate capability for each distinct operation
+     - Do NOT collapse multiple tools into a single generic capability
+     - Do NOT invent "Configure", "Update", "Monitor" capabilities if no tool supports those verbs
+     - ❌ BAD (5 tools collapsed to 1): "Manage web apps and database connections" — hides 4 tools
      - ❌ BAD (for single tool `keyvault secret set`): "Configure secret attributes", "Specify secret details" — these are parameter descriptions, not separate capabilities
      - ✅ GOOD (for single tool `keyvault secret set`): "Store and update secrets in a key vault"
+     - ✅ GOOD (for 5 appservice tools): "Add database connections for web apps", "Retrieve deployment details for web apps", "Get detailed information about web apps", "Retrieve application settings for web apps", "Update application settings for web apps"
 
 4. **serviceSpecificPrerequisites**: Only list prerequisites that are truly service-specific and required. 
    - **Do NOT include "Azure subscription"** — the template already lists it as a generic prerequisite
@@ -299,7 +301,7 @@ Before generating content, carefully analyze each tool to determine if it operat
 - [ ] Tool descriptions are 8-12 words and specific (not "get details" or "manage resources")
 - [ ] Best practices include 2-5 items, each naming a specific tool command and explaining how to use it effectively
 - [ ] No best practice recommends a service capability (scaling, monitoring, backup) without a corresponding tool
-- [ ] Capability count matches tool count 1:1 (1 tool → 1 capability, each derived from a tool description)
+- [ ] At least one capability per tool — tools with multiple operations should have multiple capabilities. Do NOT collapse tools into generic capabilities
 - [ ] First example in each scenario is the most representative prompt for that scenario
 - [ ] Natural language examples use service-specific terminology and real parameter values
 - [ ] All RBAC roles are verifiable at https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles

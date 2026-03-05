@@ -1,0 +1,1073 @@
+[
+  {
+    "mcpNamespace": "advisor",
+    "brandName": "Azure Advisor",
+    "skills": [
+      {
+        "name": "azure-advisor",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "azuremigrate",
+    "brandName": "Azure Migrate",
+    "skills": [
+      {
+        "name": "azure-migrate",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "acr",
+    "brandName": "Azure Container Registry",
+    "skills": [
+      {
+        "name": "azure-container-registry",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "aks",
+    "brandName": "Azure Kubernetes Service",
+    "skills": [
+      {
+        "name": "azure-kubernetes-service",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "appconfig",
+    "brandName": "Azure App Configuration",
+    "skills": [
+      {
+        "name": "azure-app-configuration",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "applens",
+    "brandName": "Azure AppLens",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "applicationinsights",
+    "brandName": "Azure Application Insights",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "appservice",
+    "brandName": "Azure App Service",
+    "skills": [
+      {
+        "name": "azure-app-service",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "azureterraformbestpractices",
+    "brandName": "Azure Terraform Best Practices",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "get_azure_bestpractices",
+    "brandName": "Azure Best Practices",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "bicepschema",
+    "brandName": "Azure Bicep Schema",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "cloudarchitect",
+    "brandName": "Azure Cloud Architect",
+    "skills": [
+      {
+        "name": "azure-architecture",
+        "relationship": "primary"
+      },
+      {
+        "name": "azure-well-architected",
+        "relationship": "related"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "communication",
+    "brandName": "Azure Communication Services",
+    "skills": [
+      {
+        "name": "azure-communication-services",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "confidentialledger",
+    "brandName": "Azure Confidential Ledger",
+    "skills": [
+      {
+        "name": "azure-confidential-ledger",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "cosmos",
+    "brandName": "Azure Cosmos DB",
+    "skills": [
+      {
+        "name": "azure-cosmos-db",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "compute",
+    "brandName": "Azure Compute",
+    "skills": [
+      {
+        "name": "azure-virtual-machines",
+        "relationship": "primary"
+      },
+      {
+        "name": "azure-vm-scalesets",
+        "relationship": "related"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "datadog",
+    "brandName": "Azure Datadog",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "deploy",
+    "brandName": "Azure Deploy",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "eventgrid",
+    "brandName": "Azure Event Grid",
+    "skills": [
+      {
+        "name": "azure-event-grid",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "eventhubs",
+    "brandName": "Azure Event Hubs",
+    "skills": [
+      {
+        "name": "azure-event-hubs",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "extension",
+    "brandName": "Azure Extension",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "foundry",
+    "brandName": "Microsoft Foundry",
+    "skills": [
+      {
+        "name": "azure-microsoft-foundry",
+        "relationship": "primary"
+      },
+      {
+        "name": "azure-ai-foundry-local",
+        "relationship": "related"
+      },
+      {
+        "name": "azure-foundry-classic",
+        "relationship": "related"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "functionapp",
+    "brandName": "Azure Functions",
+    "skills": [
+      {
+        "name": "azure-functions",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "get",
+    "brandName": "Azure Get",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "grafana",
+    "brandName": "Azure Managed Grafana",
+    "skills": [
+      {
+        "name": "azure-managed-grafana",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "group",
+    "brandName": "Azure Resource Group",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "keyvault",
+    "brandName": "Azure Key Vault",
+    "skills": [
+      {
+        "name": "azure-key-vault",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "kusto",
+    "brandName": "Azure Data Explorer",
+    "skills": [
+      {
+        "name": "azure-data-explorer",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "loadtesting",
+    "brandName": "Azure Load Testing",
+    "skills": [
+      {
+        "name": "azure-playwright-workspaces",
+        "relationship": "related"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "managedlustre",
+    "brandName": "Azure Managed Lustre",
+    "skills": [
+      {
+        "name": "azure-managed-lustre",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "marketplace",
+    "brandName": "Azure Marketplace",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "monitor",
+    "brandName": "Azure Monitor",
+    "skills": [
+      {
+        "name": "azure-monitor",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "mysql",
+    "brandName": "Azure Database for MySQL",
+    "skills": [
+      {
+        "name": "azure-database-mysql",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "postgres",
+    "brandName": "Azure Database for PostgreSQL",
+    "skills": [
+      {
+        "name": "azure-database-postgresql",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "quota",
+    "brandName": "Azure Quota",
+    "skills": [
+      {
+        "name": "azure-quotas",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "redis",
+    "brandName": "Azure Managed Redis",
+    "skills": [
+      {
+        "name": "azure-managed-redis",
+        "relationship": "primary"
+      },
+      {
+        "name": "azure-cache-redis",
+        "relationship": "related"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "resourcehealth",
+    "brandName": "Azure Resource Health",
+    "skills": [
+      {
+        "name": "azure-service-health",
+        "relationship": "related"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "role",
+    "brandName": "Azure Role-Based Access Control",
+    "skills": [
+      {
+        "name": "azure-rbac",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "servicefabric",
+    "brandName": "Azure Service Fabric",
+    "skills": [
+      {
+        "name": "azure-service-fabric",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "search",
+    "brandName": "Azure AI Search",
+    "skills": [
+      {
+        "name": "azure-cognitive-search",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "servicebus",
+    "brandName": "Azure Service Bus",
+    "skills": [
+      {
+        "name": "azure-service-bus",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "signalr",
+    "brandName": "Azure SignalR Service",
+    "skills": [
+      {
+        "name": "azure-signalr-service",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "speech",
+    "brandName": "Azure Speech in Foundry",
+    "skills": [
+      {
+        "name": "azure-speech",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "sql",
+    "brandName": "Azure SQL Database",
+    "skills": [
+      {
+        "name": "azure-sql-database",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "storage",
+    "brandName": "Azure Storage",
+    "skills": [
+      {
+        "name": "azure-blob-storage",
+        "relationship": "primary"
+      },
+      {
+        "name": "azure-container-storage",
+        "relationship": "related"
+      },
+      {
+        "name": "azure-queue-storage",
+        "relationship": "related"
+      },
+      {
+        "name": "azure-table-storage",
+        "relationship": "related"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "subscription",
+    "brandName": "Azure Subscription",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "virtualdesktop",
+    "brandName": "Azure Virtual Desktop",
+    "skills": [
+      {
+        "name": "azure-virtual-desktop",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "workbooks",
+    "brandName": "Azure Workbooks",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "fileshares",
+    "brandName": "Azure File Shares",
+    "skills": [
+      {
+        "name": "azure-files",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "storagesync",
+    "brandName": "Azure Storage Sync",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "policy",
+    "brandName": "Azure Policy",
+    "skills": [
+      {
+        "name": "azure-policy",
+        "relationship": "primary"
+      }
+    ]
+  },
+  {
+    "mcpNamespace": "pricing",
+    "brandName": "Azure Pricing",
+    "skills": []
+  },
+  {
+    "mcpNamespace": "other",
+    "brandName": "Other Azure Services",
+    "skills": [
+      {
+        "name": "azure-active-directory-b2c",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-ai-services",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-ai-vision",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-aks-edge-essentials",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-analysis-services",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-anomaly-detector",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-api-center",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-api-management",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-app-testing",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-application-gateway",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-arc",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-artifact-signing",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-artifacts",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-attestation",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-automation",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-backup",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-baremetal-infrastructure",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-bastion",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-batch",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-blueprints",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-boards",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-bot-service",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-business-process-tracking",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-carbon-optimization",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-chaos-studio",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-cloud-adoption-framework",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-cloud-hsm",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-cloud-services",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-cloud-shell",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-confidential-computing",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-container-apps",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-container-instances",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-content-safety",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-copilot",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-cost-management",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-custom-vision",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-cyclecloud",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-data-api-builder",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-data-box-family",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-data-factory",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-data-manager-for-agri",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-data-science-vm",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-data-share",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-database-migration",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-databricks",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-ddos-protection",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-dedicated-hsm",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-defender-for-cloud",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-defender-for-iot",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-deployment-environments",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-dev-box",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-devops",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-devtest-labs",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-digital-twins",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-dns",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-document-intelligence",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-education-hub",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-elastic-san",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-energy-data-services",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-expressroute",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-extended-zones",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-external-attack-surface-management",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-firewall",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-firewall-manager",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-firmware-analysis",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-fluid-relay",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-front-door",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-hdinsight",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-health-bot",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-health-data-services",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-hpc-cache",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-immersive-reader",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-impact-reporting",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-import-export",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-industry",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-information-protection",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-internet-peering",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-iot",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-iot-central",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-iot-edge",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-iot-hub",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-iot-operations",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-lab-services",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-language-service",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-large-instances",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-lighthouse",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-load-balancer",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-local",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-logic-apps",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-machine-learning",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-managed-applications",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-maps",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-metrics-advisor",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-nat-gateway",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-netapp-files",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-network-function-manager",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-network-watcher",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-networking",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-notification-hubs",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-open-datasets",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-operator-nexus",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-operator-service-manager",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-oracle",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-osconfig",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-partner-solutions",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-payment-hsm",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-peering-service",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-personalizer",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-pipelines",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-planetary-computer-pro",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-portal",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-private-link",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-quantum",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-redhat-openshift",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-relay",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-reliability",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-repos",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-resiliency",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-resource-graph",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-resource-manager",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-route-server",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-sap",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-security",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-sentinel",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-service-connector",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-site-recovery",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-sovereign-us",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-spring-apps",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-sql-managed-instance",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-sql-virtual-machines",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-sre-agent",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-stack-edge",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-static-web-apps",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-stream-analytics",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-synapse-analytics",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-test-plans",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-traffic-manager",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-translator",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-update-manager",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-video-indexer",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-virtual-network",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-virtual-network-manager",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-virtual-wan",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-vmware-solution",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-vpn-gateway",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-web-application-firewall",
+        "relationship": "standalone"
+      },
+      {
+        "name": "azure-web-pubsub",
+        "relationship": "standalone"
+      }
+    ]
+  }
+]

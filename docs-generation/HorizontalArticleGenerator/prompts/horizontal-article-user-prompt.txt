@@ -39,7 +39,7 @@ Characteristics:
 1. **Service Understanding**: Based on **official Azure documentation** and the tool commands/descriptions, determine:
    - A noun phrase describing what users manage (genai-serviceShortDescription). MUST NOT end with a period. Must read naturally after "Manage" — e.g., "keys, secrets, and certificates" or "web applications and database connections"
    - A 2-3 sentence service description starting with "is a..." or "provides..." (genai-serviceOverview)
-   - Capabilities derived directly from the tool descriptions above (genai-capabilities). Each capability must be a rephrasing of one tool's description into an action phrase. 1 tool = 1 capability. Do NOT add capabilities beyond the provided tools
+   - Capabilities derived directly from the tool descriptions above (genai-capabilities). Every tool MUST produce at least one capability. If a tool covers multiple distinct operations (e.g., "create or update", "list and get"), produce a separate capability for each operation. Do NOT collapse multiple tools into a single generic capability. Do NOT add capabilities beyond what the provided tools support
    - **Primary plane focus**: Data plane (default) or management plane
 
 2. **Tool Summaries**: For each tool, create a concise 10-15 word description (genai-shortDescription). Order the tools in the `tools` array with **management plane tools first** (create, delete, update, provision, configure), then **data plane tools** (get, list, query, set, read, write). Determine the plane by analyzing each tool's command verb and description. Within each group, maintain alphabetical order by command name

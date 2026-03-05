@@ -1,0 +1,55 @@
+---
+title: Azure Agent Skills catalog - Azure MCP Server
+description: Complete catalog of Azure Agent Skills that enhance AI coding assistants with expert-level Azure service guidance.
+author: diberry
+ms.author: diberry
+ms.service: azure-mcp-server
+ms.topic: concept-article
+ms.date: {{formatDate generatedAt}}
+content_well_notification:
+  - AI-contribution
+ai-usage: ai-generated
+ms.custom: build-2025
+
+#customer intent: As a developer, I want to browse all available Azure Agent Skills so that I can enhance my AI coding assistant with expert-level Azure guidance.
+
+---
+
+# Azure Agent Skills catalog
+
+Browse the complete catalog of [Azure Agent Skills](https://github.com/MicrosoftDocs/Agent-Skills) — curated, production-ready skills that enhance AI coding assistants with expert-level Azure service guidance drawn from official Microsoft documentation.
+
+**{{totalSkills}}** skills available | **{{totalWithMcpMapping}}** linked to Azure MCP Server namespaces
+
+## Skills
+
+| Skill | Related products | Category | Description |
+|-------|-----------------|----------|-------------|
+{{#each skills}}
+| [{{{name}}}]({{{skillUrl}}}) | {{#if relatedProducts}}{{#each relatedProducts}}{{#unless @first}}, {{/unless}}{{{this}}}{{/each}}{{else}}—{{/if}} | {{{category}}} | {{{description}}} |
+{{/each}}
+
+## Install Agent Skills
+
+To use these skills with your AI coding assistant:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/MicrosoftDocs/Agent-Skills.git
+   ```
+
+2. Copy skills to your assistant's skills path. See the [Agent Skills README](https://github.com/MicrosoftDocs/Agent-Skills#%EF%B8%8F-installation) for platform-specific paths.
+
+| AI Assistant | Skills Path |
+|---|---|
+| **GitHub Copilot** | `.github/skills/` or `~/.copilot/skills/` |
+| **Claude Code** | `.claude/skills/` or `~/.claude/skills/` |
+| **OpenAI Codex** | `.codex/skills/` or `~/.codex/skills/` |
+| **Cursor** | `.cursor/skills/` |
+| **Gemini CLI** | `.gemini/skills/` |
+
+## Related content
+
+* [Azure MCP Server overview](../overview.md)
+* [Agent Skills repository](https://github.com/MicrosoftDocs/Agent-Skills)
+* [Agent Skills specification](https://agentskills.io/)

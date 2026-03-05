@@ -130,6 +130,14 @@ This file is the team's shared brain. Every agent reads this before starting wor
 
 ---
 
+### AD-017: Agent Skills Integration as Step 6
+**Date**: March 2026  
+**Decision**: Azure Agent Skills from `MicrosoftDocs/Agent-Skills` are ingested via a sync script, mapped to MCP namespaces via a curated JSON, and generate a "Related Skills" markdown file per namespace as Step 6 in the pipeline. Skills with no MCP namespace match are placed in an "Other" category. No AI is used for v1 — content is parsed directly from SKILL.md files.  
+**Rationale**: Agent Skills provide curated Microsoft Learn documentation (troubleshooting, best practices, architecture patterns) that enriches MCP tool documentation. The sync→map→generate pipeline mirrors the existing CLI→parse→generate pattern.  
+**Files**: `scripts/sync-agent-skills.sh`, `scripts/generate-skills-mapping.sh`, `scripts/6-Generate-RelatedSkills-One.ps1`, `RelatedSkillsGenerator/`, `data/skills-to-namespace-mapping.json`
+
+---
+
 ## Open Questions
 
 *(None currently)*

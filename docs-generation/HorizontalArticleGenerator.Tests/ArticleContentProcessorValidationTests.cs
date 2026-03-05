@@ -582,7 +582,7 @@ public class ArticleContentProcessorValidationTests
     // ===== Capability-to-Tool Ratio Validation =====
 
     [Test]
-    public void Validate_WarnsWhenCapabilitiesExceedToolCount()
+    public void Validate_WarnsWhenCapabilitiesSignificantlyExceedToolCount()
     {
         var data = CreateMinimalData();
         data.Tools = new List<ToolWithAIDescription>
@@ -592,12 +592,35 @@ public class ArticleContentProcessorValidationTests
         data.Capabilities = new List<string>
         {
             "Store secrets in a key vault",
-            "Configure secret attributes"
+            "Configure secret attributes",
+            "Manage secret expiration policies"
         };
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.Some.Contains("Capabilities (2) exceed tool count (1)"));
+        Assert.That(result.Warnings, Has.Some.Contains("Capabilities (3) significantly exceed tool count (1)"));
+    }
+
+    [Test]
+    public void Validate_WarnsWhenCapabilitiesFewerThanToolCount()
+    {
+        var data = CreateMinimalData();
+        data.Tools = new List<ToolWithAIDescription>
+        {
+            new() { Command = "appservice database add", ShortDescription = "Add a database connection." },
+            new() { Command = "appservice webapp deployment get", ShortDescription = "Retrieve deployment info." },
+            new() { Command = "appservice webapp get", ShortDescription = "Fetch web app info." },
+            new() { Command = "appservice webapp settings get-appsettings", ShortDescription = "Get app settings." },
+            new() { Command = "appservice webapp settings update-appsettings", ShortDescription = "Update app settings." }
+        };
+        data.Capabilities = new List<string>
+        {
+            "Add database connections using connection strings for your web apps"
+        };
+
+        var result = _processor.Validate(data, "Test");
+
+        Assert.That(result.Warnings, Has.Some.Contains("Capabilities (1) are fewer than tool count (5)"));
     }
 
     [Test]
@@ -620,6 +643,7 @@ public class ArticleContentProcessorValidationTests
         var result = _processor.Validate(data, "Test");
 
         Assert.That(result.Warnings, Has.None.Contains("exceed tool count"));
+        Assert.That(result.Warnings, Has.None.Contains("fewer than tool count"));
     }
 
     [Test]
@@ -638,6 +662,30 @@ public class ArticleContentProcessorValidationTests
         var result = _processor.Validate(data, "Test");
 
         Assert.That(result.Warnings, Has.None.Contains("exceed tool count"));
+        Assert.That(result.Warnings, Has.None.Contains("fewer than tool count"));
+    }
+
+    [Test]
+    public void Validate_NoWarningWhenMultiOperationToolProducesExtraCapabilities()
+    {
+        var data = CreateMinimalData();
+        data.Tools = new List<ToolWithAIDescription>
+        {
+            new() { Command = "cosmos container create-or-update", ShortDescription = "Create or update a Cosmos DB container." },
+            new() { Command = "cosmos query execute", ShortDescription = "Execute a SQL query against a container." }
+        };
+        data.Capabilities = new List<string>
+        {
+            "Create new Cosmos DB containers",
+            "Update existing Cosmos DB container configurations",
+            "Execute SQL queries against Cosmos DB containers"
+        };
+
+        var result = _processor.Validate(data, "Test");
+
+        // 3 capabilities for 2 tools is fine (within 2× threshold)
+        Assert.That(result.Warnings, Has.None.Contains("exceed tool count"));
+        Assert.That(result.Warnings, Has.None.Contains("fewer than tool count"));
     }
 
     // ===== Empty URL Link Removal =====
