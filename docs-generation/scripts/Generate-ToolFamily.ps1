@@ -32,7 +32,10 @@
     - Step 4 (Family Assembly): REQUIRES Step 3 outputs
                                 Output: tool-family/
     
-    - Step 5 (Horizontal Articles): Can run independently but should follow other steps
+    - Step 5 (Skills Relevance): Fetches GitHub Copilot skills and ranks by relevance. Non-fatal.
+                                Output: skills-relevance/
+    
+    - Step 6 (Horizontal Articles): Can run independently but should follow other steps
                                     Output: horizontal-articles/
     
     To get complete output, run at minimum: Steps 1, 2, 3
@@ -70,7 +73,7 @@
     Set to $true when the orchestrator (start.sh) has already built the solution.
 
 .PARAMETER Steps
-    Array of step numbers to run (default: @(1,2,3,4,5) - all steps)
+    Array of step numbers to run (default: @(1,2,3,4,5,6) - all steps)
     Example: -Steps @(1,3) to run only steps 1 and 3
     Example: -Steps @(1) to run only step 1
     Example: -Steps @(1,2,3) to run steps 1 through 3
@@ -81,7 +84,7 @@
       @(1,2) - Add example prompts (~10-15 min)
       @(1,2,3) - Add composed/improved tools (~15-20 min) - RECOMMENDED minimum
       @(1,2,3,4) - Add family file (~20-25 min)
-      @(1,2,3,4,5) - Add everything (~25-30 min) - FULL PIPELINE
+      @(1,2,3,4,5,6) - Add everything (~25-30 min) - FULL PIPELINE
 
 .EXAMPLE
     # PowerShell: Full pipeline (all 5 steps, default)
@@ -102,8 +105,8 @@
     # PowerShell: Run Steps 1-4 (adds family assembly, ~20-25 minutes)
     ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,2,3,4)
     
-    # PowerShell: Run all steps (all 5, ~25-30 minutes)
-    ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,2,3,4,5)
+    # PowerShell: Run all steps (all 6, ~25-30 minutes)
+    ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,2,3,4,5,6)
     
     # PowerShell: Run specific steps (e.g., only steps 1 and 4) - Will have incomplete output!
     ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,4)
@@ -141,7 +144,7 @@ param(
     [switch]$SkipBuild,
     
     # Accepts int array @(1,2,3) or comma-separated string "1,2,3" (for bash -File invocation)
-    $Steps = @(1, 2, 3, 4, 5)
+    $Steps = @(1, 2, 3, 4, 5, 6)
 )
 
 $ErrorActionPreference = "Stop"
@@ -159,10 +162,11 @@ $runStep2 = 2 -in $Steps
 $runStep3 = 3 -in $Steps
 $runStep4 = 4 -in $Steps
 $runStep5 = 5 -in $Steps
+$runStep6 = 6 -in $Steps
 
-# Override Step 5 if user explicitly set GenerateHorizontalArticle to false
+# Override Step 6 if user explicitly set GenerateHorizontalArticle to false
 if (-not $GenerateHorizontalArticle) {
-    $runStep5 = $false
+    $runStep6 = $false
 }
 
 # Override Step 2 if user explicitly set SkipExamplePrompts to true
@@ -361,27 +365,22 @@ try {
     }
 
     # ========================================================================
-    # Step 5: Generate horizontal article (optional)
+    # Step 5: Generate GitHub Copilot skills relevance report (optional)
     # ========================================================================
-    if ($runStep5) {
-        Write-Divider
-        Write-Progress "Step 5: Horizontal Article (Optional)"
-        Write-Divider
-        Write-Host ""
+    Write-Divider
+    Write-Progress "Step 5: GitHub Copilot Skills Relevance"
+    Write-Divider
+    Write-Host ""
 
-        $step5Script = Join-Path $scriptDir "5-Generate-HorizontalArticles-One.ps1"
+    if ($runStep5) {
+        $step5Script = Join-Path $scriptDir "5-Generate-SkillsRelevance-One.ps1"
         if (-not (Test-Path $step5Script)) {
             Write-Warning "Step 5 script not found: $step5Script"
-            Write-Warning "Skipping horizontal article generation"
+            Write-Warning "Skipping skills relevance generation"
         } else {
             $step5Params = @{
                 ServiceArea = $ToolFamily
-                OutputPath = $OutputPath
-                UseTextTransformation = $UseTextTransformation
-            }
-            
-            if ($SkipValidation) {
-                $step5Params.SkipValidation = $true
+                OutputPath  = $OutputPath
             }
 
             if ($SkipBuild) {
@@ -390,15 +389,57 @@ try {
 
             & $step5Script @step5Params
             if ($LASTEXITCODE -ne 0) {
-                Write-Warning "Step 5 reported issues: Horizontal article generation (continuing...)"
+                Write-Warning "Step 5 reported issues: Skills relevance generation (continuing...)"
             } else {
                 Write-Host ""
-                Write-Success "✓ Step 5 completed: Horizontal article"
+                Write-Success "✓ Step 5 completed: GitHub Copilot skills relevance"
                 Write-Host ""
             }
         }
     } else {
         Write-Warning "⊘ Step 5 skipped"
+        Write-Host ""
+    }
+
+    # ========================================================================
+    # Step 6: Generate horizontal article (optional)
+    # ========================================================================
+    if ($runStep6) {
+        Write-Divider
+        Write-Progress "Step 6: Horizontal Article (Optional)"
+        Write-Divider
+        Write-Host ""
+
+        $step6Script = Join-Path $scriptDir "6-Generate-HorizontalArticles-One.ps1"
+        if (-not (Test-Path $step6Script)) {
+            Write-Warning "Step 6 script not found: $step6Script"
+            Write-Warning "Skipping horizontal article generation"
+        } else {
+            $step6Params = @{
+                ServiceArea = $ToolFamily
+                OutputPath = $OutputPath
+                UseTextTransformation = $UseTextTransformation
+            }
+            
+            if ($SkipValidation) {
+                $step6Params.SkipValidation = $true
+            }
+
+            if ($SkipBuild) {
+                $step6Params.SkipBuild = $true
+            }
+
+            & $step6Script @step6Params
+            if ($LASTEXITCODE -ne 0) {
+                Write-Warning "Step 6 reported issues: Horizontal article generation (continuing...)"
+            } else {
+                Write-Host ""
+                Write-Success "✓ Step 6 completed: Horizontal article"
+                Write-Host ""
+            }
+        }
+    } else {
+        Write-Warning "⊘ Step 6 skipped"
         Write-Host ""
     }
 
@@ -414,6 +455,7 @@ try {
     $familyFileName = "$ToolFamily.md"
     $familyFile = Join-Path $outputDir "tool-family/$familyFileName"
     $horizontalFile = Join-Path $outputDir "horizontal-articles/horizontal-article-$ToolFamily.md"
+    $skillsFile = Join-Path $outputDir "skills-relevance/$ToolFamily-skills-relevance.md"
 
     if (Test-Path $familyFile) {
         $fileSize = [math]::Round((Get-Item $familyFile).Length / 1KB, 1)
@@ -423,6 +465,16 @@ try {
         Write-Info "  Lines: $lineCount"
     } else {
         Write-Warning "✗ Tool Family File not found: $familyFile"
+    }
+
+    if ($runStep5 -and (Test-Path $skillsFile)) {
+        $fileSize = [math]::Round((Get-Item $skillsFile).Length / 1KB, 1)
+        $lineCount = (Get-Content $skillsFile | Measure-Object -Line).Lines
+        Write-Success "✓ Skills Relevance: $skillsFile"
+        Write-Info "  Size: ${fileSize}KB"
+        Write-Info "  Lines: $lineCount"
+    } elseif ($runStep5) {
+        Write-Warning "✗ Skills Relevance file not found: $skillsFile"
     }
 
     if ($GenerateHorizontalArticle -and (Test-Path $horizontalFile)) {
