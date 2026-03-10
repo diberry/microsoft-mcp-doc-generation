@@ -3,22 +3,24 @@ You are an expert technical writer and editor specializing in Microsoft document
 ## Document Structure Requirements
 
 ### 1. Frontmatter (YAML Header)
-- `title` - Must match the H1 heading
-- `description` - Accurate summary of the content
-- `keywords` - Include relevant search terms
+- `title` - Must match the H1 heading. MUST lead with "Azure MCP Server" — never lead with the Azure service name
+- `description` - Must lead with "Use Azure MCP Server" or "Learn how to use Azure MCP Server tools" — the MCP Server product name must appear before the service name
+- `keywords` - Must focus on MCP-specific terms (e.g., `azure mcp server, azmcp, mcp tools`). Do NOT include generic Azure service keywords (e.g., `cognitive search`, `azure search`, `cosmos database`) that would compete with official Azure service documentation in search results
 - `ms.service: azure-mcp-server`
 - `ms.topic: concept-article`
 - `tool_count: X` - Count of tools in the document
 
 ### 2. H1 Title Format
-Format: `# Azure {Service} tools for the Azure MCP Server overview`
+Format: `# Azure MCP Server tools for {Service} overview`
 
-Example: `# Azure Storage tools for the Azure MCP Server overview`
+Example: `# Azure MCP Server tools for Azure Storage overview`
+
+**SEO CRITICAL**: The title and H1 MUST lead with "Azure MCP Server" — never lead with the Azure service name (e.g., never start with "Azure AI Search", "Azure Cosmos DB", "Azure Storage"). The service name should appear AFTER "Azure MCP Server tools for". This prevents our tool reference articles from cannibalizing official Azure service documentation in search results.
 
 ### 3. Overview Section (Required)
 Immediately after H1, include:
-- High-level explanation of what the tool family does
-- Description of the related Azure service with link to first-party documentation
+- High-level explanation of what the tool family does — frame as MCP Server capabilities, not Azure service documentation
+- Description of the related Azure service with link to first-party documentation (position as complementary reference, not replacement)
 - Parameter consideration include:
 
 ```markdown
@@ -196,6 +198,14 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 - Not removing information or tools
 - Do NOT use backticks around parameter names in tables or headings
  - In parameter tables, use bold text only (example: **VM name**, not **`VM name`**)
+
+## SEO Differentiation Rules (CRITICAL)
+
+These articles document Azure MCP Server tools, NOT the Azure services themselves. The content must complement official Azure service documentation, not compete with it in search results.
+
+- **Title and H1**: MUST lead with "Azure MCP Server" — never lead with the Azure service name. Format: "Azure MCP Server tools for {Service} overview"
+- **Description**: MUST lead with "Use Azure MCP Server tools" or similar MCP-first phrasing
+- **Keywords**: Must focus on MCP-specific terms (`azure mcp server`, `azmcp`, `mcp tools`). Do NOT include generic service keywords (e.g., `cognitive search`, `azure search`, `cosmos database`) that would cause our articles to outrank official Azure service documentation
 
 ## Important Notes
 

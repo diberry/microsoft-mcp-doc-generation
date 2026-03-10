@@ -8,16 +8,16 @@ Generate EXACTLY this structure:
 
 ```markdown
 ---
-title: Azure {ServiceName} tools for the Azure MCP Server overview
-description: Learn about the tools available in Azure {ServiceName} for managing {brief-service-description} as part of the Azure MCP Server.
-keywords: Azure, MCP Server, {service-name}, tools, {relevant-keywords}
+title: Azure MCP Server tools for {ServiceName} overview
+description: Use Azure MCP Server tools to manage {brief-service-description} with natural language prompts from your IDE.
+keywords: azure mcp server, azmcp, mcp tools, {service-name} tools, {1-2 MCP-specific terms}
 ms.service: azure-mcp-server
 ms.topic: concept-article
 tool_count: {NUMBER}
 mcp-cli.version: {CLI_VERSION}
 ---
 
-# Azure {ServiceName} tools for the Azure MCP Server overview
+# Azure MCP Server tools for {ServiceName} overview
 
 The Azure MCP Server lets you manage {service-description}, including {key-capabilities}, with natural language prompts.
 
@@ -26,12 +26,20 @@ The Azure MCP Server lets you manage {service-description}, including {key-capab
 [!INCLUDE [tip-about-params](../includes/tools/parameter-consideration.md)]
 ```
 
+## SEO Differentiation Rules (CRITICAL)
+
+These articles document Azure MCP Server tools, NOT the Azure services themselves. The content must complement official Azure service docs, never compete with them.
+
+- **Title and H1**: MUST lead with "Azure MCP Server" — never lead with the Azure service name (e.g., never "Azure AI Search tools for..." — always "Azure MCP Server tools for Azure AI Search...")
+- **Description**: MUST lead with "Use Azure MCP Server tools" or similar MCP-first phrasing
+- **Keywords**: Must focus on MCP-specific terms (`azure mcp server`, `azmcp`, `mcp tools`). Do NOT include generic service keywords like `cognitive search`, `azure search`, `cosmos database`, `nosql database` that belong to official Azure service documentation
+
 ## Requirements
 
 1. **Frontmatter**:
-   - `title`: Must follow pattern "Azure {ServiceName} tools for the Azure MCP Server overview"
-   - `description`: Brief description mentioning the service and MCP Server
-   - `keywords`: Comma-separated, include Azure, MCP Server, service name, and 2-3 relevant terms
+   - `title`: Must follow pattern "Azure MCP Server tools for {ServiceName} overview"
+   - `description`: Must lead with "Use Azure MCP Server tools to..." — MCP Server product name must appear before the service name
+   - `keywords`: Comma-separated. Must include `azure mcp server, azmcp, mcp tools`. Add 1-2 service-specific MCP terms (e.g., `storage mcp tools`). Do NOT include generic Azure service keywords that would compete with official Azure service documentation
    - `ms.service`: Always "azure-mcp-server"
    - `ms.topic`: Always "concept-article"
    - `tool_count`: Exact number provided in user prompt
@@ -39,7 +47,7 @@ The Azure MCP Server lets you manage {service-description}, including {key-capab
 
 2. **H1 Heading**:
    - Must match the title exactly
-   - Format: "Azure {ServiceName} tools for the Azure MCP Server overview"
+   - Format: "Azure MCP Server tools for {ServiceName} overview"
 
 3. **Introduction Paragraph 1**:
    - Start with "The Azure MCP Server lets you manage..."

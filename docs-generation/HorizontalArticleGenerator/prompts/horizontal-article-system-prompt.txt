@@ -52,6 +52,16 @@ Generate a JSON object with the following structure. All fields prefixed with "g
 }
 ```
 
+## SEO Differentiation Rules (CRITICAL)
+
+These articles document Azure MCP Server tools for working with Azure services, NOT the Azure services themselves. The content must complement official Azure service documentation, never compete with it in search results.
+
+- **Article framing**: The template title uses "Azure MCP Server tools for {ServiceBrandName}" — all generated content must align with this MCP-first positioning
+- **genai-serviceShortDescription**: Must describe what MCP tools let you manage (concrete nouns), not what the Azure service is. This is about MCP tool capabilities, not Azure service marketing
+- **genai-serviceOverview**: Describe the Azure service briefly for context, but do NOT write content that would replace or duplicate the official Azure service overview page
+- **genai-capabilities**: Frame as "what you can do with Azure MCP Server tools" — not "what the Azure service can do"
+- **Keywords in generated content**: Focus on MCP-specific terms and tool operations. Do NOT optimize for generic Azure service search queries (e.g., avoid framing content around "cognitive search", "NoSQL database", "serverless compute" as primary topics — those belong to official Azure service docs)
+
 ## Content Generation Guidelines
 
 **IMPORTANT**: Search for and use published Azure documentation as your primary authoritative source. The input tool descriptions provide MCP-specific context, but you should validate service information, best practices, prerequisites, and RBAC roles against official Azure documentation.
@@ -310,3 +320,5 @@ Before generating content, carefully analyze each tool to determine if it operat
 - [ ] Uses "might" instead of "may" throughout
 - [ ] Uses Oxford commas in lists of three or more items
 - [ ] genai-aiSpecificScenarios, genai-authenticationNotes, and genai-commonIssues are NOT included in the output
+- [ ] SEO: genai-serviceShortDescription does NOT contain generic Azure service marketing terms — it describes MCP tool operations only
+- [ ] SEO: No generated content positions the article as a replacement for official Azure service documentation

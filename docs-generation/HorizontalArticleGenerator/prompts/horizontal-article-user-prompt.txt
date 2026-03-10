@@ -62,6 +62,7 @@ Characteristics:
 
 ## Key Constraints
 
+- **SEO Differentiation**: These are MCP Server tool articles, not Azure service documentation. Content must complement official Azure docs, not compete with them. Do NOT generate content that positions the article as a primary resource for the Azure service itself — it is a reference for using MCP tools with that service
 - **Universality**: This prompt runs for ALL 52 Azure MCP namespaces. Every field you generate must be grounded to the specific tools and service provided above — do not assume any particular Azure service. Apply all rules generically regardless of service
 - **Authentication**: Azure MCP Server uses `DefaultAzureCredential` (Microsoft Entra ID). Do not mention API keys anywhere
 - **Naming**: Use "Microsoft Entra ID" instead of "Azure Active Directory" (renamed in 2023)
