@@ -15,5 +15,7 @@ Focus on:
    - Do NOT add parameter narratives or "Valid values" text after the table
 8. Enhancing example prompts to be more realistic
 9. Making descriptions conversational and user-focused
+10. **Convert any `--switch-name` references in description text to natural language** (e.g., `--resource-group` → "resource group") unless the switch name is a parameter keyword in the parameter table
+11. **Remove LLM-specific tool-calling guidance** from descriptions — strip "Use this tool when...", "Do not use this tool to...", "equivalent to `az ...`", tool disambiguation hints, and parameter-passing instructions aimed at AI agents. Rewrite to focus on what a human user can accomplish.
 
 Return only the improved markdown content, maintaining the same structure and format.

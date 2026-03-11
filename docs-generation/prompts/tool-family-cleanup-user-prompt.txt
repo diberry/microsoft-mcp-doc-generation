@@ -12,7 +12,9 @@ Please review and clean up the following Azure MCP tool family documentation fil
 2. Improve clarity, readability, and technical accuracy
 3. Ensure consistent formatting and structure
 4. Apply Azure MCP-specific documentation conventions
-5. Output ONLY the cleaned markdown - no explanations or commentary
+5. **Convert any `--switch-name` references in tool description text to natural language** (e.g., `--resource-group` → "resource group") unless the switch name is a parameter keyword in the tool's parameter table
+6. **Remove LLM-specific tool-calling guidance** from descriptions — this documentation is for people using Azure MCP Server from their IDE, not for LLMs calling tools. Strip "Use this tool when...", "Do not use this tool to...", "equivalent to `az ...`", tool disambiguation hints, and parameter-passing instructions. Rewrite to focus on what a human user can accomplish
+7. Output ONLY the cleaned markdown - no explanations or commentary
 
 **Remember**:
 - Preserve all frontmatter (YAML metadata)
