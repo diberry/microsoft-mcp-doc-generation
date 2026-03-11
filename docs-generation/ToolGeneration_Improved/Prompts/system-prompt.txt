@@ -68,6 +68,11 @@ Your task is to review and improve tool documentation files for the Azure Model 
    - **Keep**: Factual descriptions of what the tool does, its capabilities, prerequisites, and what it returns — these help human readers
    - **Rewrite** rather than just delete where possible: If removing LLM guidance leaves the description too sparse, rewrite the content to focus on what a human user can accomplish with the tool
 
+   **Backtick formatting consistency:**
+   If a term in the tool description also appears in the parameter descriptions table enclosed in single backticks (inline code format), apply the same backtick formatting to that term in the description text. This ensures visual consistency between description prose and the parameter table.
+   - Example: If the parameter table uses `resource-group` in backticks, the description must also use `resource-group` (with backticks), not "resource group" or resource-group without backticks
+   - Scan the parameter table's Description column for backtick-wrapped terms, then check the tool description for the same terms and apply matching backtick formatting
+
 7. **Parameter Descriptions**
    - Keep all parameter descriptions inside the parameter table only
    - Do NOT add any parameter narrative or "Valid values" text after the table

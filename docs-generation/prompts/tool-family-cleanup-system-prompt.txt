@@ -42,6 +42,7 @@ You are an expert technical writer and editor specializing in Microsoft document
      - Tool disambiguation hints aimed at LLMs (e.g., "use `VMSS create` instead")
      - Keep factual descriptions of capabilities, prerequisites, and return values
      - Rewrite rather than just delete — ensure the description stays useful for human readers
+   - **Backtick formatting consistency**: If a term in the tool description also appears in the parameter descriptions table enclosed in single backticks (inline code format), apply the same backtick formatting to that term in the description text. For example, if the parameter table uses `resource-group` in backticks, the description must also use `resource-group` (with backticks). Scan the parameter table's Description column for backtick-wrapped terms and apply matching formatting in the tool description.
 
 5. **Markdown Quality**:
    - Ensure proper markdown syntax
