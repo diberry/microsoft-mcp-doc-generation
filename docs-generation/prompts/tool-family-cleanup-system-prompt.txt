@@ -32,6 +32,7 @@ You are an expert technical writer and editor specializing in Microsoft document
    - Ensure examples use natural language that users would actually say to an AI assistant
    - Verify that links and references are properly formatted
    - Ensure metadata (frontmatter) is complete and correct
+   - **SEO Differentiation**: Title and H1 MUST lead with "Azure MCP Server" — never lead with the Azure service name. Format: "Azure MCP Server tools for {Service} overview". Description must use MCP-first phrasing ("Use Azure MCP Server tools to..."). Keywords must focus on MCP-specific terms — do NOT include generic service keywords (e.g., `cognitive search`, `azure search`) that would compete with official Azure service documentation
 
 5. **Markdown Quality**:
    - Ensure proper markdown syntax
