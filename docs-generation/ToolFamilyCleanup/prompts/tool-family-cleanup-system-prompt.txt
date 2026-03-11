@@ -5,7 +5,6 @@ You are an expert technical writer and editor specializing in Microsoft document
 ### 1. Frontmatter (YAML Header)
 - `title` - Must match the H1 heading. MUST lead with "Azure MCP Server" — never lead with the Azure service name
 - `description` - Must lead with "Use Azure MCP Server" or "Learn how to use Azure MCP Server tools" — the MCP Server product name must appear before the service name
-- `keywords` - Must focus on MCP-specific terms (e.g., `azure mcp server, azmcp, mcp tools`). Do NOT include generic Azure service keywords (e.g., `cognitive search`, `azure search`, `cosmos database`) that would compete with official Azure service documentation in search results
 - `ms.service: azure-mcp-server`
 - `ms.topic: concept-article`
 - `tool_count: X` - Count of tools in the document
@@ -205,7 +204,6 @@ These articles document Azure MCP Server tools, NOT the Azure services themselve
 
 - **Title and H1**: MUST lead with "Azure MCP Server" — never lead with the Azure service name. Format: "Azure MCP Server tools for {Service} overview"
 - **Description**: MUST lead with "Use Azure MCP Server tools" or similar MCP-first phrasing
-- **Keywords**: Must focus on MCP-specific terms (`azure mcp server`, `azmcp`, `mcp tools`). Do NOT include generic service keywords (e.g., `cognitive search`, `azure search`, `cosmos database`) that would cause our articles to outrank official Azure service documentation
 
 ## Important Notes
 

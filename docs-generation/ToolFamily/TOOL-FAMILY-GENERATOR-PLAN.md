@@ -101,7 +101,6 @@ public class ToolFamilyData
     public string FamilyKey { get; set; }               // e.g., "azure-storage" (brand-mapped, used for filename)
     public string Title { get; set; }                   // e.g., "Azure Storage tools..."
     public string Description { get; set; }             // From namespace.description
-    public List<string> Keywords { get; set; }          // SEO keywords (from config or derived)
     public string Author { get; set; }                  // Default: "diberry"
     public string ServiceUrl { get; set; }              // Link to Azure service docs (from config)
     public List<ToolGroup> Groups { get; set; }         // Grouped by resource type (alphabetized)
@@ -145,7 +144,6 @@ Create `docs-generation/tool-family-config.json` for optional customization:
   "families": [
     {
       "namespace": "storage",
-      "keywords": ["azure mcp server", "azmcp", "storage account", "blob storage"],
       "serviceUrl": "https://learn.microsoft.com/azure/storage/common/storage-introduction",
       "relatedContent": [
         "[What are the Azure MCP Server tools?](index.md)",
@@ -155,7 +153,6 @@ Create `docs-generation/tool-family-config.json` for optional customization:
     },
     {
       "namespace": "aks",
-      "keywords": ["azure mcp server", "aks", "kubernetes"],
       "serviceUrl": "https://learn.microsoft.com/azure/aks/",
       ...
     }
@@ -165,7 +162,7 @@ Create `docs-generation/tool-family-config.json` for optional customization:
 
 **Notes**: 
 - Config is keyed by `namespace` (e.g., "storage", "aks") to match cli-namespace.json entries
-- If config entry is missing for a namespace, defaults apply (derived keywords, generic related content)
+- If config entry is missing for a namespace, defaults apply (generic related content)
 - Brand mapping via `brand-to-server-mapping.json` is required; if a namespace is not in the mapping, fallback to `azure-{namespace}` format
 
 ### 4.2 Resource Type Mapping
@@ -180,7 +177,6 @@ Derive from CLI tool names automatically or from above config.
 ---
 title: {{title}}
 description: "{{description}}"
-keywords: {{#each keywords}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}
 author: {{author}}
 ms.author: {{author}}
 ms.date: {{date}}
