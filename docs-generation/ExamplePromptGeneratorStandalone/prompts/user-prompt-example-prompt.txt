@@ -11,8 +11,19 @@ Parameters:
 - {{name}} ({{#if required}}Required{{else}}Optional{{/if}}): {{description}}
 {{/each}}
 
+**CRITICAL REQUIREMENT: ALL required parameters MUST be covered**
+- **EVERY example prompt MUST include ALL parameters marked as "Required" above**
+- At minimum, the FIRST example prompt MUST demonstrate ALL required parameters together
+- Represent required parameters as natural language (NOT as --switch format):
+  - `--location` becomes "in East US" or "in the <location> region" or "located in <location>"
+  - `--admin-username` becomes "with admin user '<admin-username>'" or "admin user <admin-username>"
+  - `--vmss-name` becomes "named '<vmss-name>'" or "called <vmss-name>" or "VMSS '<vmss-name>'"
+  - `--resource-group` becomes "in resource group '<resource-group>'" or "in <resource-group>"
+- Required parameters should appear in ALL {PROMPT_COUNT} example prompts when possible
+- Vary HOW you express them (word order, phrasing) but they MUST all be present
+
 Rules for optional parameters:
-- If `resource-group` is Required, include it. If Optional, omit it.
+- If `resource-group` is Required, include it (as stated above). If Optional, omit it.
 - If a parameter is marked Optional, include it only when truly necessary for the action.
 - **For optional resource-identifying parameters** (like resource name, item ID, etc. that specify which specific item to get):
   - Generate examples both WITHOUT and WITH the parameter when appropriate
