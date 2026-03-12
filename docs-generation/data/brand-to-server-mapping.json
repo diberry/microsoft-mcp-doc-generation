@@ -129,7 +129,13 @@
     "brandName": "Microsoft Foundry",
     "mcpServerName": "foundry",
     "shortName": "Foundry",
-    "fileName": "azure-ai-foundry"
+    "fileName": "microsoft-foundry"
+  },
+  {
+    "brandName": "Microsoft Foundry Extensions",
+    "mcpServerName": "foundryextensions",
+    "shortName": "Foundry Extensions",
+    "fileName": "microsoft-foundry-extensions"
   },
   {
     "brandName": "Azure Functions",
@@ -310,5 +316,11 @@
     "mcpServerName": "pricing",
     "shortName": "Pricing",
     "fileName": "azure-pricing"
+  },
+  {
+    "brandName": "Azure Well-Architected Framework",
+    "mcpServerName": "wellarchitectedframework",
+    "shortName": "Well-Architected Framework",
+    "fileName": "azure-well-architected-framework"
   }
 ]
