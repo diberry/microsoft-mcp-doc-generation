@@ -105,6 +105,22 @@ public class ParameterGenerator
         }
     }
 
+    /// <summary>
+    /// Builds the "Required or optional" column text for a parameter.
+    /// 
+    /// Parameters can be both optional and conditional. The requirement level is
+    /// a combination of the base level (Required/Optional) and a conditional modifier (*).
+    /// Possible outputs:
+    ///   - "Required"  — always required.
+    ///   - "Optional"  — never required.
+    ///   - "Required*" — required, and part of a conditional group.
+    ///   - "Optional*" — optional by default, but conditionally required depending on
+    ///                    how other parameters in the group are used.
+    /// 
+    /// The asterisk (*) pairs with a footnote in the rendered parameter table that
+    /// explains the conditional relationship (e.g., "At least one of the parameters
+    /// marked with * is required").
+    /// </summary>
     internal static string BuildRequiredText(bool required, string parameterName, HashSet<string> conditionalParameters)
     {
         var baseText = required ? "Required" : "Optional";

@@ -191,6 +191,7 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 - Every single tool section from the original document
 - Any conditional requirement sentence that starts with "Requires at least one" (keep verbatim)
 - Asterisks in the "Required or optional" column and the footnote explaining the asterisk
+- Parameters can be both optional AND conditional. A parameter marked "Optional*" is optional by default but becomes conditionally required depending on other parameters. Do NOT simplify "Optional*" to "Optional" or "Required*" to "Required" — the asterisk and footnote are semantically meaningful.
 
 **Focus on**:
 - Style, clarity, and correctness improvements
