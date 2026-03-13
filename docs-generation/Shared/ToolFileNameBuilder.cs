@@ -144,6 +144,10 @@ public static class ToolFileNameBuilder
     public static string BuildParameterFileName(string command, FileNameContext ctx)
         => $"{BuildBaseFileName(command, ctx)}-parameters.md";
 
+    /// <summary>Builds the full filename for a parameter manifest file.</summary>
+    public static string BuildParameterManifestFileName(string command, FileNameContext ctx)
+        => $"{BuildBaseFileName(command, ctx)}-params.json";
+
     /// <summary>Builds the full filename for an example prompts file.</summary>
     public static string BuildExamplePromptsFileName(string command, FileNameContext ctx)
         => $"{BuildBaseFileName(command, ctx)}-example-prompts.md";
@@ -177,6 +181,14 @@ public static class ToolFileNameBuilder
         Dictionary<string, string> compoundWords,
         HashSet<string> stopWords)
         => $"{BuildBaseFileName(command, brandMappings, compoundWords, stopWords)}-parameters.md";
+
+    /// <summary>Builds the full filename for a parameter manifest file.</summary>
+    public static string BuildParameterManifestFileName(
+        string command,
+        Dictionary<string, BrandMapping> brandMappings,
+        Dictionary<string, string> compoundWords,
+        HashSet<string> stopWords)
+        => $"{BuildBaseFileName(command, brandMappings, compoundWords, stopWords)}-params.json";
 
     /// <summary>Builds the full filename for an example prompts file.</summary>
     public static string BuildExamplePromptsFileName(

@@ -19,11 +19,12 @@ internal static class Program
         // Parse arguments
         if (args.Length < 2)
         {
-            Console.WriteLine("Usage: ExamplePromptGeneratorStandalone <cliOutputFile> <outputDir> [version] [--e2e-prompts <path>]");
-            Console.WriteLine("  cliOutputFile    - Path to cli-output.json");
-            Console.WriteLine("  outputDir        - Output directory for generated files");
-            Console.WriteLine("  version          - (Optional) CLI version string. If not provided, reads from cli-version.json");
-            Console.WriteLine("  --e2e-prompts    - (Optional) Path to parsed.json from E2eTestPromptParser");
+            Console.WriteLine("Usage: ExamplePromptGeneratorStandalone <cliOutputFile> <outputDir> [version] [--e2e-prompts <path>] [--param-manifests <dir>]");
+            Console.WriteLine("  cliOutputFile      - Path to cli-output.json");
+            Console.WriteLine("  outputDir          - Output directory for generated files");
+            Console.WriteLine("  version            - (Optional) CLI version string. If not provided, reads from cli-version.json");
+            Console.WriteLine("  --e2e-prompts      - (Optional) Path to parsed.json from E2eTestPromptParser");
+            Console.WriteLine("  --param-manifests  - (Optional) Directory containing per-tool parameter manifest JSON files");
             Console.WriteLine("\nNote: Templates and prompts are embedded in the package.");
             return 1;
         }
@@ -32,6 +33,7 @@ internal static class Program
         var outputDir = args[1];
         LogFileHelper.Initialize("example-prompts");
         string? e2ePromptsPath = null;
+        string? paramManifestsDir = null;
 
         // Scan for named flags first (they can appear anywhere after positional args)
         string? versionArg = null;
@@ -40,6 +42,10 @@ internal static class Program
             if (args[i] == "--e2e-prompts" && i + 1 < args.Length)
             {
                 e2ePromptsPath = args[++i];
+            }
+            else if (args[i] == "--param-manifests" && i + 1 < args.Length)
+            {
+                paramManifestsDir = args[++i];
             }
             else if (versionArg == null && !args[i].StartsWith("--"))
             {
@@ -107,12 +113,19 @@ internal static class Program
             }
         }
 
-        Console.WriteLine($"📂 CLI output:  {Path.GetFullPath(cliOutputFile)}");
-        Console.WriteLine($"📂 Output dir:  {Path.GetFullPath(outputDir)}");
-        Console.WriteLine($"📂 Templates:   {Path.GetFullPath(templatesDir)}");
-        Console.WriteLine($"📂 Prompts:     {Path.GetFullPath(promptsDir)}");
-        Console.WriteLine($"📂 E2e prompts: {(e2ePromptsPath != null ? Path.GetFullPath(e2ePromptsPath) : "(none)")}");
-        Console.WriteLine($"📌 Version:     {version}\n");
+        if (!string.IsNullOrEmpty(paramManifestsDir) && !Directory.Exists(paramManifestsDir))
+        {
+            Console.WriteLine($"⚠️  Parameter manifests directory not found (falling back to CLI JSON): {paramManifestsDir}");
+            paramManifestsDir = null;
+        }
+
+        Console.WriteLine($"📂 CLI output:       {Path.GetFullPath(cliOutputFile)}");
+        Console.WriteLine($"📂 Output dir:       {Path.GetFullPath(outputDir)}");
+        Console.WriteLine($"📂 Templates:        {Path.GetFullPath(templatesDir)}");
+        Console.WriteLine($"📂 Prompts:          {Path.GetFullPath(promptsDir)}");
+        Console.WriteLine($"📂 E2e prompts:      {(e2ePromptsPath != null ? Path.GetFullPath(e2ePromptsPath) : "(none)")}");
+        Console.WriteLine($"📂 Param manifests:  {(paramManifestsDir != null ? Path.GetFullPath(paramManifestsDir) : "(none)")}");
+        Console.WriteLine($"📌 Version:          {version}\n");
 
         // Load CLI output
         Console.WriteLine("Loading CLI tools...");
@@ -215,7 +228,8 @@ internal static class Program
                 }
             }
 
-            var result = await generator.GenerateAsync(tool, referencePrompts);
+            var parameterManifest = await LoadParameterManifestAsync(tool.Command, paramManifestsDir, nameContext);
+            var result = await generator.GenerateAsync(tool, referencePrompts, parameterManifest);
             if (!result.HasValue)
             {
                 failureCount++;
@@ -259,7 +273,8 @@ internal static class Program
             var promptsList = promptsResponse.Prompts.Select(p => new { prompt = p }).ToList();
 
             // Get required parameters for the template comment
-            var requiredParams = tool.Option?.Where(o => o.Required).ToList() ?? new List<Models.Option>();
+            var promptParameters = ExamplePromptGenerator.GetPromptParameters(tool, parameterManifest);
+            var requiredParams = promptParameters.Where(p => p.IsRequired).ToList();
             var requiredParamNames = string.Join(", ", requiredParams.Select(p => $"'{p.Name}'"));
 
             string exampleContent;
@@ -343,6 +358,38 @@ internal static class Program
         }
 
         return failureCount > 0 ? 1 : 0;
+    }
+
+    internal static async Task<List<ParameterManifestParameter>?> LoadParameterManifestAsync(
+        string? toolCommand,
+        string? paramManifestsDir,
+        FileNameContext nameContext)
+    {
+        if (string.IsNullOrWhiteSpace(toolCommand) || string.IsNullOrWhiteSpace(paramManifestsDir))
+        {
+            return null;
+        }
+
+        var manifestFileName = ToolFileNameBuilder.BuildParameterManifestFileName(toolCommand, nameContext);
+        var manifestPath = Path.Combine(paramManifestsDir, manifestFileName);
+        if (!File.Exists(manifestPath))
+        {
+            return null;
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(manifestPath);
+            return JsonSerializer.Deserialize<List<ParameterManifestParameter>>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠️  Failed to load parameter manifest for '{toolCommand}' (falling back to CLI JSON): {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>

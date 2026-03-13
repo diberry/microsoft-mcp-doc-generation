@@ -46,7 +46,10 @@ public class ParameterGenerator
                 // Use shared deterministic filename builder
                 var fileName = ToolFileNameBuilder.BuildParameterFileName(
                     tool.Command, nameContext);
+                var manifestFileName = ToolFileNameBuilder.BuildParameterManifestFileName(
+                    tool.Command, nameContext);
                 var outputFile = Path.Combine(outputDir, fileName);
+                var manifestOutputFile = Path.Combine(outputDir, manifestFileName);
 
                 // Filter out common parameters unless they are required for this specific tool
                 var allOptions = tool.Option ?? new List<Option>();
@@ -58,17 +61,20 @@ public class ParameterGenerator
 
                 var filteredOptions = allOptions
                     .Where(opt => !string.IsNullOrEmpty(opt.Name) && 
-                                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true));
+                                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true))
+                    .ToList();
+
+                var parameterManifest = BuildParameterManifest(filteredOptions, conditionalParameters);
 
                 var transformedOptions = filteredOptions
-                    .Select(opt => new
+                    .Zip(parameterManifest, (opt, manifest) => new
                     {
-                        name = opt.Name,
-                        NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
+                        name = manifest.Name,
+                        NL_Name = manifest.DisplayName,
                         type = opt.Type,
-                        required = opt.Required,
-                        RequiredText = BuildRequiredText(opt.Required, opt.Name ?? "", conditionalParameters),
-                        description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))
+                        required = manifest.Required,
+                        RequiredText = manifest.RequiredText,
+                        description = manifest.Description
                     })
                     .ToList();
 
@@ -92,6 +98,13 @@ public class ParameterGenerator
                     fileName);
                 var result = frontmatter + templateResult;
                 await File.WriteAllTextAsync(outputFile, result);
+                await File.WriteAllTextAsync(
+                    manifestOutputFile,
+                    JsonSerializer.Serialize(parameterManifest, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                        WriteIndented = true
+                    }));
                 tool.HasParameters = true;
             }
             
@@ -103,6 +116,27 @@ public class ParameterGenerator
             LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
             throw;
         }
+    }
+
+    internal static List<ParameterManifestEntry> BuildParameterManifest(
+        IEnumerable<Option> options,
+        HashSet<string> conditionalParameters)
+    {
+        return options
+            .Select(opt =>
+            {
+                var parameterName = opt.Name ?? string.Empty;
+                return new ParameterManifestEntry
+                {
+                    Name = parameterName,
+                    DisplayName = TextCleanup.NormalizeParameter(parameterName),
+                    Required = opt.Required,
+                    RequiredText = BuildRequiredText(opt.Required, parameterName, conditionalParameters),
+                    IsConditionalRequired = conditionalParameters.Contains(parameterName),
+                    Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? string.Empty))
+                };
+            })
+            .ToList();
     }
 
     /// <summary>
@@ -130,5 +164,15 @@ public class ParameterGenerator
         }
 
         return baseText;
+    }
+
+    internal sealed class ParameterManifestEntry
+    {
+        public string Name { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public bool Required { get; set; }
+        public string RequiredText { get; set; } = string.Empty;
+        public bool IsConditionalRequired { get; set; }
+        public string Description { get; set; } = string.Empty;
     }
 }

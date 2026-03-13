@@ -58,7 +58,9 @@ public sealed class ExamplePromptGenerator
     /// and the prompt count matches the e2e count (the tool authority's intent).
     /// </summary>
     public async Task<(string userPrompt, ExamplePromptsResponse? response, string rawResponse)?> GenerateAsync(
-        Tool tool, List<string>? referencePrompts = null)
+        Tool tool,
+        List<string>? referencePrompts = null,
+        IReadOnlyList<ParameterManifestParameter>? parameterManifest = null)
     {
         if (!IsInitialized || tool == null)
             return null;
@@ -75,18 +77,8 @@ public sealed class ExamplePromptGenerator
             var promptCount = referencePrompts?.Count ?? 5;
 
             // Build parameters section
-            var parametersBuilder = new StringBuilder();
-            var requiredParams = tool.Option?.Where(o => o.Required).ToList() ?? new List<Option>();
-            var optionalParams = tool.Option?.Where(o => !o.Required).ToList() ?? new List<Option>();
-
-            foreach (var param in requiredParams)
-            {
-                parametersBuilder.AppendLine($"- {param.Name} (Required): {param.Description ?? "No description"}");
-            }
-            foreach (var param in optionalParams)
-            {
-                parametersBuilder.AppendLine($"- {param.Name} (Optional): {param.Description ?? "No description"}");
-            }
+            var promptParameters = GetPromptParameters(tool, parameterManifest);
+            var parametersBuilder = new StringBuilder(BuildParametersSection(promptParameters));
 
             // Fill user prompt template - use regex to replace handlebars block
             var userPrompt = _userPromptTemplate
@@ -176,6 +168,53 @@ public sealed class ExamplePromptGenerator
             Console.WriteLine($"  ❌ Generation failed for '{tool.Command}': {ex.Message}");
             return null;
         }
+    }
+
+    internal static List<(string Name, string RequirementText, string Description, bool IsRequired)> GetPromptParameters(
+        Tool tool,
+        IReadOnlyList<ParameterManifestParameter>? parameterManifest = null)
+    {
+        if (parameterManifest != null)
+        {
+            return parameterManifest
+                .Where(p => !string.IsNullOrWhiteSpace(p.Name) || !string.IsNullOrWhiteSpace(p.DisplayName))
+                .Select(p =>
+                {
+                    var requirementText = string.IsNullOrWhiteSpace(p.RequiredText)
+                        ? (p.Required ? "Required" : "Optional")
+                        : p.RequiredText!;
+
+                    return (
+                        Name: string.IsNullOrWhiteSpace(p.DisplayName) ? p.Name ?? "Unknown" : p.DisplayName!,
+                        RequirementText: requirementText,
+                        Description: string.IsNullOrWhiteSpace(p.Description) ? "No description" : p.Description!,
+                        IsRequired: requirementText.StartsWith("Required", StringComparison.OrdinalIgnoreCase));
+                })
+                .OrderByDescending(p => p.IsRequired)
+                .ToList();
+        }
+
+        return (tool.Option ?? new List<Option>())
+            .Where(o => !string.IsNullOrWhiteSpace(o.Name))
+            .Select(o => (
+                Name: o.Name!,
+                RequirementText: o.Required ? "Required" : "Optional",
+                Description: string.IsNullOrWhiteSpace(o.Description) ? "No description" : o.Description!,
+                IsRequired: o.Required))
+            .OrderByDescending(p => p.IsRequired)
+            .ToList();
+    }
+
+    internal static string BuildParametersSection(
+        IEnumerable<(string Name, string RequirementText, string Description, bool IsRequired)> parameters)
+    {
+        var parametersBuilder = new StringBuilder();
+        foreach (var parameter in parameters)
+        {
+            parametersBuilder.AppendLine($"- {parameter.Name} ({parameter.RequirementText}): {parameter.Description}");
+        }
+
+        return parametersBuilder.ToString().TrimEnd();
     }
 
     /// <summary>

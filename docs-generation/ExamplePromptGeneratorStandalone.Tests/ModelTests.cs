@@ -67,6 +67,44 @@ public class ModelTests
     }
 
     // ─────────────────────────────────────────────────
+    // ParameterManifestParameter model
+    // ─────────────────────────────────────────────────
+
+    [Fact]
+    public void ParameterManifestParameter_DefaultValues()
+    {
+        var parameter = new ParameterManifestParameter();
+
+        Assert.Null(parameter.Name);
+        Assert.Null(parameter.DisplayName);
+        Assert.False(parameter.Required);
+        Assert.Null(parameter.RequiredText);
+        Assert.False(parameter.IsConditionalRequired);
+        Assert.Null(parameter.Description);
+    }
+
+    [Fact]
+    public void ParameterManifestParameter_SetProperties()
+    {
+        var parameter = new ParameterManifestParameter
+        {
+            Name = "--vault-name",
+            DisplayName = "Vault name",
+            Required = false,
+            RequiredText = "Optional*",
+            IsConditionalRequired = true,
+            Description = "Provide vault name."
+        };
+
+        Assert.Equal("--vault-name", parameter.Name);
+        Assert.Equal("Vault name", parameter.DisplayName);
+        Assert.False(parameter.Required);
+        Assert.Equal("Optional*", parameter.RequiredText);
+        Assert.True(parameter.IsConditionalRequired);
+        Assert.Equal("Provide vault name.", parameter.Description);
+    }
+
+    // ─────────────────────────────────────────────────
     // ExamplePromptsResponse model
     // ─────────────────────────────────────────────────
 

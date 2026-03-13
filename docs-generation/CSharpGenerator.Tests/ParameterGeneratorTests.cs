@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 using CSharpGenerator.Generators;
+using CSharpGenerator.Models;
 using Xunit;
 
 namespace CSharpGenerator.Tests;
@@ -92,5 +93,30 @@ public class ParameterGeneratorTests
             false, "--account-name", conditionals);
 
         Assert.Equal("Optional", result);
+    }
+
+    [Fact]
+    public void BuildParameterManifest_AppliesPromptTableTransforms()
+    {
+        var options = new List<Option>
+        {
+            new()
+            {
+                Name = "--vault-name",
+                Required = false,
+                Description = "Provide vault name"
+            }
+        };
+        var conditionals = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "--vault-name" };
+
+        var manifest = ParameterGenerator.BuildParameterManifest(options, conditionals);
+
+        var parameter = Assert.Single(manifest);
+        Assert.Equal("--vault-name", parameter.Name);
+        Assert.Equal("Vault name", parameter.DisplayName);
+        Assert.False(parameter.Required);
+        Assert.Equal("Optional*", parameter.RequiredText);
+        Assert.True(parameter.IsConditionalRequired);
+        Assert.Equal("Provide vault name.", parameter.Description);
     }
 }
