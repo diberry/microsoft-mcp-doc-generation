@@ -139,6 +139,13 @@ public class ToolFileNameBuilderTests
     }
 
     [Fact]
+    public void BuildParameterManifestFileName_AppendsSuffix()
+    {
+        var result = ToolFileNameBuilder.BuildParameterManifestFileName("aks nodepool get", Ctx);
+        Assert.Equal("azure-kubernetes-service-node-pool-get-params.json", result);
+    }
+
+    [Fact]
     public void BuildExamplePromptsFileName_AppendsSuffix()
     {
         var result = ToolFileNameBuilder.BuildExamplePromptsFileName("aks nodepool get", Ctx);

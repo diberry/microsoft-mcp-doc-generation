@@ -11,7 +11,7 @@
     Steps:
     1. Filters cli-output.json to include only the specified tool
     2. Generates annotations for that tool
-    3. Generates parameters for that tool
+    3. Generates parameters and parameter manifests for that tool
     4. Generates raw tool file for that tool
     5. Shows all output files
 
@@ -188,11 +188,13 @@ try {
         
         $annotationsFile = Join-Path $outputDir "annotations/$baseFileName-annotations.md"
         $parametersFile = Join-Path $outputDir "parameters/$baseFileName-parameters.md"
+        $parameterManifestFile = Join-Path $outputDir "parameters/$baseFileName-params.json"
         $rawToolFile = Join-Path $outputDir "tools-raw/$baseFileName.md"
     } else {
         # Multiple tools in family - show first few
         $annotationsFile = "(multiple files)"
         $parametersFile = "(multiple files)"
+        $parameterManifestFile = "(multiple files)"
         $rawToolFile = "(multiple files)"
     }
     
@@ -216,6 +218,12 @@ try {
         } else {
             Write-Warning "✗ Parameters not found: $parametersFile"
         }
+
+        if (Test-Path $parameterManifestFile) {
+            Write-Success "✓ Parameter manifest: $parameterManifestFile"
+        } else {
+            Write-Warning "✗ Parameter manifest not found: $parameterManifestFile"
+        }
         
         if (Test-Path $rawToolFile) {
             Write-Success "✓ Raw tool: $rawToolFile"
@@ -231,7 +239,8 @@ try {
         $rawToolsDir = Join-Path $outputDir "tools-raw"
         
         $annotationsCount = if (Test-Path $annotationsDir) { (Get-ChildItem $annotationsDir -Filter "*.md" | Measure-Object).Count } else { 0 }
-        $parametersCount = if (Test-Path $parametersDir) { (Get-ChildItem $parametersDir -Filter "*.md" | Measure-Object).Count } else { 0 }
+        $parametersCount = if (Test-Path $parametersDir) { (Get-ChildItem $parametersDir -Filter "*-parameters.md" | Measure-Object).Count } else { 0 }
+        $parameterManifestCount = if (Test-Path $parametersDir) { (Get-ChildItem $parametersDir -Filter "*-params.json" | Measure-Object).Count } else { 0 }
         $rawToolCount = if (Test-Path $rawToolsDir) { (Get-ChildItem $rawToolsDir -Filter "*.md" | Measure-Object).Count } else { 0 }
         
         if ($annotationsCount -gt 0) {
@@ -244,6 +253,12 @@ try {
             Write-Success "✓ Parameters: $parametersCount files in $parametersDir"
         } else {
             Write-Warning "✗ No parameters found"
+        }
+
+        if ($parameterManifestCount -gt 0) {
+            Write-Success "✓ Parameter manifests: $parameterManifestCount files in $parametersDir"
+        } else {
+            Write-Warning "✗ No parameter manifests found"
         }
         
         if ($rawToolCount -gt 0) {
@@ -278,6 +293,13 @@ try {
             } else {
                 Write-Success "✓ Parameters file exists"
             }
+
+            if (-not (Test-Path $parameterManifestFile)) {
+                Write-Warning "✗ Parameter manifest file not found"
+                $allFound = $false
+            } else {
+                Write-Success "✓ Parameter manifest file exists"
+            }
             
             if (-not (Test-Path $rawToolFile)) {
                 Write-Warning "✗ Raw tool file not found"
@@ -293,7 +315,7 @@ try {
             }
         } else {
             # Multiple tools validation
-            Write-Success "✓ Generated $($matchingTools.Count) annotation, parameter, and raw tool files"
+            Write-Success "✓ Generated $($matchingTools.Count) annotation, parameter, parameter manifest, and raw tool files"
             Write-Info "  Verify files in:"
             Write-Info "    - $annotationsDir"
             Write-Info "    - $parametersDir"

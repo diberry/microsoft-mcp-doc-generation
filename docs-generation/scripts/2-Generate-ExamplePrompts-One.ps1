@@ -101,7 +101,11 @@ try {
         Write-Warning "No e2e reference prompts found at: $e2ePromptsFile (using default prompt count)"
     }
 
-    & dotnet run --project $generatorProject --configuration Release $noBuildArg -- $filteredOutputFile $outputDir $cliVersion @e2eArgs
+    $parameterManifestDir = Join-Path $outputDir "parameters"
+    $paramManifestArgs = @("--param-manifests", $parameterManifestDir)
+    Write-Info "Using parameter manifests directory: $parameterManifestDir"
+
+    & dotnet run --project $generatorProject --configuration Release $noBuildArg -- $filteredOutputFile $outputDir $cliVersion @e2eArgs @paramManifestArgs
     
     if ($LASTEXITCODE -ne 0) {
         throw "Example prompts generation failed"
