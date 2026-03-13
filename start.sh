@@ -27,6 +27,7 @@
 #   Step 2: Generate example prompts (with AI)
 #   Step 3: Generate tool improvements (AI-enhanced descriptions)
 #   Step 4: Generate tool family cleanup (formatting/structure)
+#           Post-assembly validation runs automatically after Step 4 and fails on missing tools/count mismatches
 #   Step 5: Generate GitHub Copilot skills relevance reports
 #   Step 6: Generate horizontal articles (cross-cutting documentation)
 #
