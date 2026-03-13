@@ -1,21 +1,15 @@
 [
   {
-    "brandName": "Azure Advisor",
-    "mcpServerName": "advisor",
-    "shortName": "Advisor",
-    "fileName": "azure-advisor"
-  },
-  {
-    "brandName": "Azure Migrate",
-    "mcpServerName": "azuremigrate",
-    "shortName": "Migrate",
-    "fileName": "azure-migrate"
-  },
-  {
     "brandName": "Azure Container Registry",
     "mcpServerName": "acr",
     "shortName": "ACR",
     "fileName": "azure-container-registry"
+  },
+  {
+    "brandName": "Azure Advisor",
+    "mcpServerName": "advisor",
+    "shortName": "Advisor",
+    "fileName": "azure-advisor"
   },
   {
     "brandName": "Azure Kubernetes Service",
@@ -48,16 +42,16 @@
     "fileName": "azure-app-service"
   },
   {
+    "brandName": "Azure Migrate",
+    "mcpServerName": "azuremigrate",
+    "shortName": "Migrate",
+    "fileName": "azure-migrate"
+  },
+  {
     "brandName": "Azure Terraform Best Practices",
     "mcpServerName": "azureterraformbestpractices",
     "shortName": "Terraform",
     "fileName": "azure-terraform-best-practices"
-  },
-  {
-    "brandName": "Azure Best Practices",
-    "mcpServerName": "get_azure_bestpractices",
-    "shortName": "Best Practices",
-    "fileName": "azure-best-practices"
   },
   {
     "brandName": "Azure Bicep Schema",
@@ -78,6 +72,12 @@
     "fileName": "azure-communication-services"
   },
   {
+    "brandName": "Azure Compute",
+    "mcpServerName": "compute",
+    "shortName": "Compute",
+    "fileName": "azure-compute"
+  },
+  {
     "brandName": "Azure Confidential Ledger",
     "mcpServerName": "confidentialledger",
     "shortName": "Confidential Ledger",
@@ -90,12 +90,6 @@
     "fileName": "azure-cosmos-db"
   },
   {
-    "brandName": "Azure Compute",
-    "mcpServerName": "compute",
-    "shortName": "Compute",
-    "fileName": "azure-compute"
-  },
-  {
     "brandName": "Azure Datadog",
     "mcpServerName": "datadog",
     "shortName": "Datadog",
@@ -106,6 +100,12 @@
     "mcpServerName": "deploy",
     "shortName": "Deploy",
     "fileName": "azure-deploy"
+  },
+  {
+    "brandName": "Azure Device Registry",
+    "mcpServerName": "deviceregistry",
+    "shortName": "Device Registry",
+    "fileName": "azure-device-registry"
   },
   {
     "brandName": "Azure Event Grid",
@@ -126,10 +126,22 @@
     "fileName": "azure-extension"
   },
   {
+    "brandName": "Azure File Shares",
+    "mcpServerName": "fileshares",
+    "shortName": "File Shares",
+    "fileName": "azure-fileshares"
+  },
+  {
     "brandName": "Microsoft Foundry",
     "mcpServerName": "foundry",
     "shortName": "Foundry",
-    "fileName": "azure-ai-foundry"
+    "fileName": "microsoft-foundry"
+  },
+  {
+    "brandName": "Microsoft Foundry Extensions",
+    "mcpServerName": "foundryextensions",
+    "shortName": "Foundry Extensions",
+    "fileName": "microsoft-foundry-extensions"
   },
   {
     "brandName": "Azure Functions",
@@ -138,10 +150,22 @@
     "fileName": "azure-functions"
   },
   {
+    "brandName": "Azure Functions",
+    "mcpServerName": "functions",
+    "shortName": "Functions",
+    "fileName": "azure-functions-development"
+  },
+  {
     "brandName": "Azure Get",
     "mcpServerName": "get",
     "shortName": "Get",
     "fileName": "azure-get"
+  },
+  {
+    "brandName": "Azure Best Practices",
+    "mcpServerName": "get_azure_bestpractices",
+    "shortName": "Best Practices",
+    "fileName": "azure-best-practices"
   },
   {
     "brandName": "Azure Managed Grafana",
@@ -198,10 +222,22 @@
     "fileName": "azure-database-for-mysql"
   },
   {
+    "brandName": "Azure Policy",
+    "mcpServerName": "policy",
+    "shortName": "Policy",
+    "fileName": "azure-policy"
+  },
+  {
     "brandName": "Azure Database for PostgreSQL",
     "mcpServerName": "postgres",
     "shortName": "PostgreSQL",
     "fileName": "azure-database-for-postgresql"
+  },
+  {
+    "brandName": "Azure Pricing",
+    "mcpServerName": "pricing",
+    "shortName": "Pricing",
+    "fileName": "azure-pricing"
   },
   {
     "brandName": "Azure Quota",
@@ -228,12 +264,6 @@
     "fileName": "azure-role-based-access-control"
   },
   {
-    "brandName": "Azure Service Fabric",
-    "mcpServerName": "servicefabric",
-    "shortName": "Service Fabric",
-    "fileName": "azure-service-fabric"
-  },
-  {
     "brandName": "Azure AI Search",
     "mcpServerName": "search",
     "shortName": "AI Search",
@@ -244,6 +274,12 @@
     "mcpServerName": "servicebus",
     "shortName": "Service Bus",
     "fileName": "azure-service-bus"
+  },
+  {
+    "brandName": "Azure Service Fabric",
+    "mcpServerName": "servicefabric",
+    "shortName": "Service Fabric",
+    "fileName": "azure-service-fabric"
   },
   {
     "brandName": "Azure SignalR Service",
@@ -270,6 +306,12 @@
     "fileName": "azure-storage"
   },
   {
+    "brandName": "Azure Storage Sync",
+    "mcpServerName": "storagesync",
+    "shortName": "Storage Sync",
+    "fileName": "azure-storage-sync"
+  },
+  {
     "brandName": "Azure Subscription",
     "mcpServerName": "subscription",
     "shortName": "Subscription",
@@ -282,33 +324,15 @@
     "fileName": "azure-virtual-desktop"
   },
   {
+    "brandName": "Azure Well-Architected Framework",
+    "mcpServerName": "wellarchitectedframework",
+    "shortName": "Well-Architected Framework",
+    "fileName": "azure-well-architected-framework"
+  },
+  {
     "brandName": "Azure Workbooks",
     "mcpServerName": "workbooks",
     "shortName": "Workbooks",
     "fileName": "azure-workbooks"
-  },
-  {
-    "brandName": "Azure File Shares",
-    "mcpServerName": "fileshares",
-    "shortName": "File Shares",
-    "fileName": "azure-fileshares"
-  },
-  {
-    "brandName": "Azure Storage Sync",
-    "mcpServerName": "storagesync",
-    "shortName": "Storage Sync",
-    "fileName": "azure-storage-sync"
-  },
-  {
-    "brandName": "Azure Policy",
-    "mcpServerName": "policy",
-    "shortName": "Policy",
-    "fileName": "azure-policy"
-  },
-  {
-    "brandName": "Azure Pricing",
-    "mcpServerName": "pricing",
-    "shortName": "Pricing",
-    "fileName": "azure-pricing"
   }
 ]
