@@ -213,7 +213,7 @@ public class ImprovedToolGeneratorService
 
         var labelPattern = string.Join("|", TemplateLabels.Select(label => System.Text.RegularExpressions.Regex.Escape(label)));
         var regex = new System.Text.RegularExpressions.Regex(
-            $@"^(\s*)({labelPattern})\s*$",
+            $@"^(\s*)({labelPattern})\s*\r?\n",
             System.Text.RegularExpressions.RegexOptions.Multiline);
 
         var index = 0;

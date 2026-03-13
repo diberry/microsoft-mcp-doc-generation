@@ -272,4 +272,195 @@ public class TemplateLabelProtectionTests
     {
         Assert.Empty(ImprovedToolGeneratorService.NormalizeTemplateLabels(""));
     }
+
+    // ── PR #108: Annotation Spacing Bug Regression Tests ──────────────
+
+    [Fact]
+    public void ProtectTemplateLabels_PreservesBlankLineAfterAnnotationLabel()
+    {
+        // Bug: The old regex pattern "\s*$" matched trailing whitespace but didn't capture
+        // the newline itself, causing the blank line after the label to collapse when
+        // AI processed the protected tokens.
+        // Fix: Changed to "\s*\r?\n" to explicitly capture the newline character.
+
+        var content = """
+            [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+
+            Destructive: ❌ | Idempotent: ✅ | Open world: ❌
+            """;
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // The content should roundtrip perfectly - blank line preserved
+        Assert.Equal(content, restored);
+        
+        // The map should contain the label WITH its trailing newline
+        var mapValue = map.Values.First();
+        Assert.EndsWith("\n", mapValue);
+    }
+
+    [Fact]
+    public void ProtectTemplateLabels_PreservesBlankLineAfterExamplePromptsLabel()
+    {
+        var content = """
+            Example prompts include:
+
+            - "List all recommendations"
+            - "Show advisor recommendations"
+            """;
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // The content should roundtrip perfectly - blank line preserved
+        Assert.Equal(content, restored);
+        
+        // The map should contain the label WITH its trailing newline
+        var mapValue = map.Values.First();
+        Assert.EndsWith("\n", mapValue);
+    }
+
+    [Fact]
+    public void ProtectTemplateLabels_PreservesBlankLineAfterRequiredParametersLabel()
+    {
+        var content = """
+            Required parameters:
+
+            --subscription  The subscription ID
+            --resource-group  The resource group name
+            """;
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // The content should roundtrip perfectly - blank line preserved
+        Assert.Equal(content, restored);
+        
+        // The map should contain the label WITH its trailing newline
+        var mapValue = map.Values.First();
+        Assert.EndsWith("\n", mapValue);
+    }
+
+    [Fact]
+    public void ProtectTemplateLabels_PreservesBlankLineAfterOptionalParametersLabel()
+    {
+        var content = """
+            Optional parameters:
+
+            --filter  Filter expression
+            --output  Output format
+            """;
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // The content should roundtrip perfectly - blank line preserved
+        Assert.Equal(content, restored);
+        
+        // The map should contain the label WITH its trailing newline
+        var mapValue = map.Values.First();
+        Assert.EndsWith("\n", mapValue);
+    }
+
+    [Fact]
+    public void ProtectTemplateLabels_PreservesBlankLineAfterPrerequisitesLabel()
+    {
+        var content = """
+            **Prerequisites**:
+
+            - Azure CLI installed
+            - Valid Azure subscription
+            """;
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // The content should roundtrip perfectly - blank line preserved
+        Assert.Equal(content, restored);
+        
+        // The map should contain the label WITH its trailing newline
+        var mapValue = map.Values.First();
+        Assert.EndsWith("\n", mapValue);
+    }
+
+    [Fact]
+    public void ProtectTemplateLabels_PreservesAllBlankLinesInMultiLabelDocument()
+    {
+        // Comprehensive test covering the full tool file structure
+        var content = """
+            # advisor recommendation list
+
+            List Azure Advisor recommendations.
+
+            Example prompts include:
+
+            - "List all recommendations"
+            - "Show advisor recommendations"
+
+            Required parameters:
+
+            --subscription  The subscription ID
+
+            Optional parameters:
+
+            --filter  Filter expression
+
+            **Prerequisites**:
+
+            - Azure CLI installed
+
+            [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+
+            Destructive: ❌ | Idempotent: ✅ | Open world: ❌
+            """;
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // The content should roundtrip perfectly - all blank lines preserved
+        Assert.Equal(content, restored);
+        
+        // All map values should end with newlines
+        Assert.All(map.Values, value => Assert.EndsWith("\n", value));
+    }
+
+    [Fact]
+    public void ProtectTemplateLabels_WindowsLineEndings_PreservesBlankLine()
+    {
+        // Test with Windows-style \r\n line endings
+        var content = "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\r\n\r\nDestructive: ❌";
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // The content should roundtrip perfectly with Windows line endings
+        Assert.Equal(content, restored);
+    }
+
+    [Fact]
+    public void ProtectTemplateLabels_UnixLineEndings_PreservesBlankLine()
+    {
+        // Test with Unix-style \n line endings
+        var content = "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\n\nDestructive: ❌";
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // The content should roundtrip perfectly with Unix line endings
+        Assert.Equal(content, restored);
+    }
+
+    [Fact]
+    public void ProtectTemplateLabels_LabelWithoutBlankLine_StillWorks()
+    {
+        // Edge case: label immediately followed by content (no blank line)
+        var content = "Example prompts include:\n- \"List items\"";
+
+        var protectedContent = ImprovedToolGeneratorService.ProtectTemplateLabels(content, out var map);
+        var restored = ImprovedToolGeneratorService.RestoreTemplateLabels(protectedContent, map);
+
+        // Should still work correctly even without a blank line
+        Assert.Equal(content, restored);
+    }
 }
