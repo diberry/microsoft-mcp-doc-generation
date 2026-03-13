@@ -84,6 +84,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkillsRelevance", "docs-gen
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkillsRelevance.Tests", "docs-generation\SkillsRelevance.Tests\SkillsRelevance.Tests.csproj", "{DB501205-966C-4579-91BE-BFBFB4DA45AF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToolFamilyValidator.Tests", "docs-generation\ToolFamilyValidator.Tests\ToolFamilyValidator.Tests.csproj", "{4C045BAF-00BD-47F2-9516-DCD35321DA77}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -478,6 +480,18 @@ Global
 		{DB501205-966C-4579-91BE-BFBFB4DA45AF}.Release|x64.Build.0 = Release|Any CPU
 		{DB501205-966C-4579-91BE-BFBFB4DA45AF}.Release|x86.ActiveCfg = Release|Any CPU
 		{DB501205-966C-4579-91BE-BFBFB4DA45AF}.Release|x86.Build.0 = Release|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Debug|x64.Build.0 = Debug|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Debug|x86.Build.0 = Debug|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Release|x64.ActiveCfg = Release|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Release|x64.Build.0 = Release|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Release|x86.ActiveCfg = Release|Any CPU
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -498,5 +512,6 @@ Global
 		{693A2803-C981-4237-AC62-67725163AFFF} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{8024475A-78F2-4FA5-BB83-47B15FF1F868} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{DB501205-966C-4579-91BE-BFBFB4DA45AF} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
+		{4C045BAF-00BD-47F2-9516-DCD35321DA77} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 	EndGlobalSection
 EndGlobal
