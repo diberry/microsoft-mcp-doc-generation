@@ -365,7 +365,18 @@ try {
             Write-Info "    - $relatedOutputDir ($relatedCount files)"
             Write-Info "    - $finalOutputDir ($finalCount files)"
         }
-        
+
+        $validationScript = Join-Path $scriptDir "5-Validate-ToolFamily.ps1"
+        if (-not (Test-Path $validationScript)) {
+            throw "Validation script not found: $validationScript"
+        }
+
+        Write-Info "Running post-assembly validation for tool-family article..."
+        & $validationScript -Namespace $familyNameLower -OutputPath $outputDir
+        if ($LASTEXITCODE -ne 0) {
+            throw "Tool-family validation failed for namespace '$familyNameLower'"
+        }
+
         Write-Host ""
     } else {
         Write-Warning "Skipped validation (use without -SkipValidation to validate)"

@@ -21,7 +21,7 @@
 #   - This script is designed to be called by start.sh orchestrator
 #   - Does NOT clean ./generated directory
 #   - Does NOT regenerate CLI metadata
-#   - Does NOT run validation (should be done once by orchestrator)
+#   - Runs the normal pipeline, including post-assembly tool-family validation in Step 4
 
 set -euo pipefail
 

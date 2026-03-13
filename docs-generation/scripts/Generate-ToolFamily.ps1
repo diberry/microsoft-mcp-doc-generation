@@ -10,7 +10,7 @@
     1. Generates annotations, parameters, and raw tool files
     2. Generates example prompts for each tool
     3. Generates composed and AI-improved tool files
-    4. Generates tool family metadata, related content, and final file
+    4. Generates tool family metadata, related content, final file, and post-assembly validation
     5. Optionally generates horizontal article
     
     The result is a complete, standalone documentation file for the tool family
@@ -29,8 +29,8 @@
     - Step 3 (Composed/Improved): REQUIRES Step 1 (annotations, parameters) + Step 2 (prompts)
                                   Output: tools-composed/, tools-ai-improved/
     
-    - Step 4 (Family Assembly): REQUIRES Step 3 outputs
-                                Output: tool-family/
+    - Step 4 (Family Assembly + Validation): REQUIRES Step 3 outputs
+                                             Output: tool-family/ + validation report
     
     - Step 5 (Skills Relevance): Fetches GitHub Copilot skills and ranks by relevance. Non-fatal.
                                 Output: skills-relevance/
@@ -317,7 +317,7 @@ try {
     # Step 4: Generate tool family metadata, related content, and final file
     # ========================================================================
     Write-Divider
-    Write-Progress "Step 4: Tool Family File Assembly"
+    Write-Progress "Step 4: Tool Family File Assembly + Validation"
     Write-Divider
     Write-Host ""
 
@@ -357,7 +357,7 @@ try {
         }
 
         Write-Host ""
-        Write-Success "✓ Step 4 completed: Tool family file assembly"
+        Write-Success "✓ Step 4 completed: Tool family file assembly + validation"
         Write-Host ""
     } else {
         Write-Warning "⊘ Step 4 skipped"
