@@ -27,13 +27,14 @@
 #   Step 2: Generate example prompts (with AI)
 #   Step 3: Generate tool improvements (AI-enhanced descriptions)
 #   Step 4: Generate tool family cleanup (formatting/structure)
-#   Step 5: Generate horizontal articles (cross-cutting documentation)
+#   Step 5: Generate GitHub Copilot skills relevance reports
+#   Step 6: Generate horizontal articles (cross-cutting documentation)
 #
 # Prerequisites:
 #   - Node.js + npm (for MCP CLI metadata)
 #   - PowerShell (pwsh)
 #   - .NET SDK (for generator projects)
-#   - Azure OpenAI env vars (for Steps 2, 3, 5)
+#   - Azure OpenAI env vars (for Steps 2, 3, 6)
 
 set -euo pipefail
 
@@ -42,11 +43,11 @@ source "$ROOT_DIR/docs-generation/scripts/bash-common.sh"
 
 # Parse arguments: determine if first arg is namespace or steps
 NAMESPACE_ARG=""
-STEPS_ARG="1,2,3,4,5"
+STEPS_ARG="1,2,3,4,5,6"
 
 if [[ $# -gt 0 ]]; then
-    # Check if first arg looks like steps (contains comma or is 1-5)
-    if [[ "$1" =~ ^[1-5](,[1-5])*$ ]]; then
+    # Check if first arg looks like steps (contains comma or is 1-6)
+    if [[ "$1" =~ ^[1-6](,[1-6])*$ ]]; then
         STEPS_ARG="$1"
     else
         NAMESPACE_ARG="$1"
@@ -84,7 +85,7 @@ if [ $PREFLIGHT_EXIT -ne 0 ]; then
 fi
 
 # =================================================================== 
-# GENERATION: Process namespaces with steps 1-5
+# GENERATION: Process namespaces with steps 1-6
 # ===================================================================
 
 # Extract namespaces from cli-namespace.json
