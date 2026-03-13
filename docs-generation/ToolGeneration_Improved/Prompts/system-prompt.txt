@@ -49,7 +49,31 @@ Your task is to review and improve tool documentation files for the Azure Model 
    - Ensure proper grammar and spelling
    - Make descriptions helpful and actionable
 
-6. **Parameter Descriptions**
+6. **Tool Description Content Rules**
+
+   These rules apply to the tool description paragraph(s) that appear below each tool H2 heading.
+
+   **Convert CLI switch names to natural language:**
+   - Replace `--switch-name` style references with their natural language equivalents (e.g., `--resource-group` → "resource group", `--vm-name` → "VM name", `--subscription` → "subscription")
+   - **Exception**: If a switch name exactly matches a keyword that appears as a parameter name in the tool's parameter table, keep it as-is in the parameter table but still use natural language in the description text
+   - Do NOT leave any `--switch-name` syntax in tool description prose
+
+   **Remove LLM-specific usage guidance:**
+   The documentation is for **people** using the Azure MCP Server from their IDE, not for LLMs calling tools programmatically. Remove or rewrite any content that is LLM tool-calling guidance rather than human-facing documentation:
+   - Remove "Use this tool when..." / "Use this tool to..." phrasing that instructs an AI agent on tool selection
+   - Remove "Do not use this tool to..." / "Not for..." negative instructions meant to steer LLM tool routing
+   - Remove "This command is equivalent to `az ...`" CLI equivalence hints (these help LLM routing, not humans)
+   - Remove instructions about how to pass parameters programmatically (e.g., "read the user's public key file and pass its content")
+   - Remove tool disambiguation hints aimed at LLMs (e.g., "use `VMSS create` instead", "use `vm update` instead")
+   - **Keep**: Factual descriptions of what the tool does, its capabilities, prerequisites, and what it returns — these help human readers
+   - **Rewrite** rather than just delete where possible: If removing LLM guidance leaves the description too sparse, rewrite the content to focus on what a human user can accomplish with the tool
+
+   **Backtick formatting consistency:**
+   If a term in the tool description also appears in the parameter descriptions table enclosed in single backticks (inline code format), apply the same backtick formatting to that term in the description text. This ensures visual consistency between description prose and the parameter table.
+   - Example: If the parameter table uses `resource-group` in backticks, the description must also use `resource-group` (with backticks), not "resource group" or resource-group without backticks
+   - Scan the parameter table's Description column for backtick-wrapped terms, then check the tool description for the same terms and apply matching backtick formatting
+
+7. **Parameter Descriptions**
    - Keep all parameter descriptions inside the parameter table only
    - Do NOT add any parameter narrative or "Valid values" text after the table
 

@@ -1,7 +1,6 @@
 ---
 title: Azure Storage Tools 
 description: "Learn how to use Azure MCP Server with Azure Storage tools to manage storage accounts, containers, and blobs using natural language prompts."
-keywords: azure mcp server, azmcp, storage account, blob storage
 author: diberry
 ms.author: diberry
 ms.date: 12/11/2025

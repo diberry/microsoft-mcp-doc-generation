@@ -21,7 +21,7 @@ public class FamilyContent
     
     /// <summary>
     /// AI-generated metadata section including:
-    /// - YAML frontmatter (title, description, keywords, ms.service, ms.topic, tool_count)
+    /// - YAML frontmatter (title, description, ms.service, ms.topic, tool_count)
     /// - H1 heading
     /// - Intro paragraph
     /// </summary>
