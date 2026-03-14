@@ -42,6 +42,8 @@ public class DryRunIntegrationTests
             Assert.Empty(processRunner.Invocations);
             Assert.Contains(reportWriter.Messages, message => message.Contains("Dry run plan", StringComparison.Ordinal));
             Assert.Contains(reportWriter.Messages, message => message.Contains("Step 1", StringComparison.Ordinal));
+            Assert.Contains(reportWriter.Messages, message => message.Contains("Step 4: Generate tool-family article [Namespace, Fatal, Typed]", StringComparison.Ordinal));
+            Assert.Contains(reportWriter.Messages, message => message.Contains("Post-validators: ToolFamilyPostAssemblyValidator", StringComparison.Ordinal));
             Assert.Contains(reportWriter.Messages, message => message.Contains("Dependency check: passed", StringComparison.Ordinal));
         }
         finally
