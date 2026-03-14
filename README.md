@@ -27,17 +27,33 @@ Generate with specific steps only:
 
 **Note**: When a specific namespace is provided, output goes to `./generated-<namespace>/` instead of `./generated/`. This allows you to work on a single service without affecting the full documentation set.
 
-### Generation Steps for entire tool set
+### Pipeline Steps
 
-| Step | Description | Duration | AI Required |
-|------|-------------|----------|-------------|
-| 1 | Annotations, parameters, raw tools | ~1 min | No |
-| 2 | Example prompts (AI-generated) | ~10-15 min | Yes |
-| 3 | Composed and AI-improved tools | ~5-10 min | Yes |
-| 4 | Tool family metadata and assembly | ~3-5 min | Yes |
-| 5 | Horizontal articles (how-to guides) | ~5-10 min | Yes |
+`start.sh` runs one preflight phase, then the per-namespace pipeline below:
 
-**Note**: Steps 2-5 require Azure OpenAI credentials configured in `docs-generation/.env`. See [docs/START-SCRIPTS.md](docs/START-SCRIPTS.md) for details.
+| Phase | Description | Typical output | AI Required |
+|------|-------------|----------------|-------------|
+| Preflight | Validate `.env`, clean/create output folders, build the solution, extract MCP CLI metadata, and validate brand mappings | `cli/`, build artifacts, brand validation output | No |
+| 1 | Generate annotations, parameter files, and raw tool markdown | `annotations/`, `parameters/`, `tools-raw/` | No |
+| 2 | Generate example prompts for each tool | `example-prompts/`, `example-prompts-prompts/` | Yes |
+| 3 | Generate composed and AI-improved tool files | `tools/` | Yes |
+| 4 | Assemble the tool-family article and related metadata | `tool-family/{namespace}.md` | Yes |
+| Validation | Run post-assembly validation immediately after Step 4; blocking issues fail the namespace | `reports/tool-family-validation-{namespace}.txt` | No |
+| 5 | Generate GitHub Copilot skills relevance reports (supplementary, non-fatal) | `skills-relevance/{namespace}-skills-relevance.md` | No |
+| 6 | Generate horizontal articles | `horizontal-articles/horizontal-article-{namespace}.md` | Yes |
+
+**Note**: Steps 2, 3, 4, and 6 require Azure OpenAI credentials configured in `docs-generation/.env`. See [docs/START-SCRIPTS.md](docs/START-SCRIPTS.md) for details.
+
+## Key Paths
+
+- **Entry point:** `start.sh`
+- **Worker/orchestration scripts:** `docs-generation/scripts/`
+- **C#/.NET generators:** `docs-generation/CSharpGenerator/`, `docs-generation/ExamplePromptGeneratorStandalone/`, `docs-generation/HorizontalArticleGenerator/`, `docs-generation/ToolFamilyCleanup/`, `docs-generation/GenerativeAI/`, `docs-generation/TemplateEngine/`
+- **Prompt templates:** `docs-generation/prompts/`
+- **Handlebars templates:** `docs-generation/templates/`
+- **Configuration data:** `docs-generation/data/`
+- **MCP CLI metadata extraction:** `test-npm-azure-mcp/`
+- **Generated output:** `generated/` or `generated-<namespace>/`
 
 **Example `.env` configuration**:
 
@@ -50,49 +66,60 @@ TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME="gpt-4o"
 TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION="2025-01-01-preview"
 ```
 
-## Critical Outputs
+## Output Artifacts
 
-The generator produces two main types of documentation. Output location depends on usage:
+Output location depends on how you run the pipeline:
 - **Full catalog** (`./start.sh`): `./generated/`
 - **Single namespace** (`./start.sh advisor`): `./generated-advisor/`
 
-### 1. Tool Family Files (`./generated/tool-family/` or `./generated-<namespace>/tool-family/`)
+### 1. Tool family articles
 
-Service-specific documentation files (52 total) - one per Azure namespace. These appear in 1P docs under the tools node.
+Primary publishable output for each namespace:
 
 ```
 ./generated/tool-family/
-├── acr.md              # Azure Container Registry
-├── advisor.md          # Azure Advisor
-├── aks.md              # Azure Kubernetes Service
-├── storage.md          # Azure Storage
-├── keyvault.md         # Azure Key Vault
-└── ... (47 more)
+├── acr.md
+├── advisor.md
+├── aks.md
+├── storage.md
+├── keyvault.md
+└── ...
 ```
 
-Each file contains complete documentation for all tools in that service family, including:
-- Tool commands and descriptions
-- Parameters with natural language names
-- Code examples and usage patterns
-- Annotations and best practices
+Each file assembles the namespace into one article with tool descriptions, parameter tables, example prompts, annotations, and related content.
 
-### 2. Horizontal Articles (`./generated/horizontal-articles/`)
+### 2. Validation reports
 
-Cross-cutting "how-to" guides that explain how to use Azure MCP with specific services. These appear in 1P docs under the services node.
+Post-assembly validation now writes one report per namespace and blocks the pipeline on missing-tool or tool-count mismatches.
+
+```
+./generated/reports/
+└── tool-family-validation-{namespace}.txt
+```
+
+Warning-only checks in the same report cover required-parameter coverage in example prompts, standard example headers, annotation marker counts, and basic branding drift.
+
+### 3. Horizontal articles
+
+Cross-cutting "how-to" guides for service-level scenarios:
 
 ```
 ./generated/horizontal-articles/
 ├── horizontal-article-acr.md
 ├── horizontal-article-storage.md
 ├── horizontal-article-keyvault.md
-└── ... (one per service with tools)
+└── ...
 ```
 
-These articles provide:
-- Getting started guides
-- Common scenarios and workflows
-- Integration patterns
-- Best practices
+### 4. Supporting artifacts for review/debugging
+
+- `tools/` - composed tool markdown used to assemble the final family article
+- `tools-raw/` - raw tool markdown from initial extraction
+- `annotations/` and `parameters/` - reusable partial content
+- `example-prompts/` and `example-prompts-prompts/` - generated prompts plus the exact AI input used to create them
+- `skills-relevance/` - supplementary GitHub Copilot skills relevance reports
+- `cli/` - MCP CLI metadata snapshots (`cli-output.json`, `cli-namespace.json`, `cli-version.json`, `azmcp-commands.json`)
+- `logs/` - run logs and diagnostics
 
 ## Folder Organization
 
@@ -106,10 +133,17 @@ microsoft-mcp-doc-generation/
 │
 ├── docs-generation/             # Generation system
 │   ├── scripts/                 # PowerShell/bash orchestration
-│   │   ├── standalone/          # Individual generator scripts and validation tools
-│   │   ├── batch/               # All-namespace orchestrators
-│   │   ├── utilities/           # Dev, debug, testing, and CI helpers
-│   │   └── legacy/              # Superseded scripts
+│   │   ├── preflight.ps1        # Preflight validation, build, and CLI extraction
+│   │   ├── Generate-ToolFamily.ps1
+│   │   ├── 1-Generate-AnnotationsParametersRaw-One.ps1
+│   │   ├── 2-Generate-ExamplePrompts-One.ps1
+│   │   ├── 3-Generate-ToolGenerationAndAIImprovements-One.ps1
+│   │   ├── 4-Generate-ToolFamilyCleanup-One.ps1
+│   │   ├── 5-Validate-ToolFamily.ps1
+│   │   ├── 5-Generate-SkillsRelevance-One.ps1
+│   │   ├── 6-Generate-HorizontalArticles-One.ps1
+│   │   ├── standalone/          # Supporting validation/dev scripts
+│   │   └── utilities/           # Shared helpers and utilities
 │   ├── data/                    # Configuration files (JSON)
 │   ├── prompts/                 # AI prompt templates (see below)
 │   ├── templates/               # Handlebars templates
@@ -123,12 +157,15 @@ microsoft-mcp-doc-generation/
 │
 ├── generated/                   # Output directory (created during generation)
 │   ├── tool-family/             # Main output: service documentation
-│   ├── horizontal-articles/     # Main output: how-to guides
-│   ├── tools/                   # Individual tool files
+│   ├── horizontal-articles/     # Service-level how-to guides
+│   ├── tools/                   # Composed/AI-improved tool files
+│   ├── tools-raw/               # Raw tool files from step 1
 │   ├── annotations/             # Tool annotation includes
 │   ├── parameters/              # Parameter documentation
 │   ├── example-prompts/         # AI-generated examples
-│   ├── reports/                 # Validation and analysis reports
+│   ├── example-prompts-prompts/ # Prompt captures for example generation
+│   ├── skills-relevance/        # GitHub Copilot skills reports
+│   ├── reports/                 # Validation reports
 │   └── logs/                    # Generation logs
 │
 ├── test-npm-azure-mcp/          # MCP CLI metadata extractor
@@ -234,11 +271,11 @@ To modify AI-generated content quality or style:
 - **.NET SDK** - For C# generator projects (projects use .NET 9.0)
 
 ### Optional (for AI-enhanced steps)
-- **Azure OpenAI** - For steps 2-5 (example prompts, improvements, horizontal articles)
+- **Azure OpenAI** - For steps 2, 3, 4, and 6 (example prompts, improvements, assembly cleanup, horizontal articles)
 
 ### Configuration
 
-For AI-enhanced generation (steps 2-5), configure Azure OpenAI credentials:
+For AI-enhanced generation (steps 2, 3, 4, and 6), configure Azure OpenAI credentials:
 
 ```bash
 # Copy sample environment file
@@ -257,21 +294,25 @@ generated/
 ├── cli/                         # MCP CLI metadata (shared by all)
 │   ├── cli-version.json
 │   ├── cli-output.json
-│   └── cli-namespace.json
+│   ├── cli-namespace.json
+│   └── azmcp-commands.json
 │
 ├── tool-family/                 # ⭐ Main output: service documentation
-│   └── {namespace}.md (52 files)
+│   └── {namespace}.md
 │
-├── horizontal-articles/         # ⭐ Main output: how-to guides  
-│   └── horizontal-article-{service}.md
+├── horizontal-articles/         # ⭐ Service-level how-to guides
+│   └── horizontal-article-{namespace}.md
 │
-├── tools/                       # Individual tool documentation
+├── tools/                       # Composed and AI-improved tool markdown
+├── tools-raw/                   # Raw extracted tool markdown
 ├── annotations/                 # Tool annotation includes
 ├── parameters/                  # Parameter documentation
 ├── example-prompts/             # AI-generated example prompts
 ├── example-prompts-prompts/     # Prompts sent to AI (for review)
 ├── horizontal-article-prompts/  # Prompts sent to AI (for review)
+├── skills-relevance/            # GitHub Copilot skills relevance reports
 ├── reports/                     # Validation and analysis reports
+│   └── tool-family-validation-{namespace}.txt
 └── logs/                        # Generation logs
 ```
 
@@ -296,5 +337,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 ---
 
-**Last Updated**: February 2026  
+**Last Updated**: March 2026  
 **Maintained By**: @diberry
