@@ -29,7 +29,9 @@
 #>
 
 param(
-    [string]$OutputPath = ""
+    [string]$OutputPath = "",
+    [switch]$SkipBuild,
+    [switch]$SkipEnvValidation
 )
 
 $ErrorActionPreference = "Stop"
@@ -54,12 +56,16 @@ Write-Host "==================================================================="
 Write-Host ""
 
 # Step 0: Validate .env file and AI configuration
-$validateEnvScript = Join-Path $scriptDir "validate-env.ps1"
-& $validateEnvScript -DocsGenDir $docsGenDir
+if ($SkipEnvValidation) {
+    Write-Host "Skipping .env validation (handled by PipelineRunner)..." -ForegroundColor Yellow
+} else {
+    $validateEnvScript = Join-Path $scriptDir "validate-env.ps1"
+    & $validateEnvScript -DocsGenDir $docsGenDir
 
-if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
-    Write-Host "⛔ PIPELINE HALTED: .env validation failed" -ForegroundColor Red
-    exit 1
+    if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
+        Write-Host "⛔ PIPELINE HALTED: .env validation failed" -ForegroundColor Red
+        exit 1
+    }
 }
 Write-Host ""
 
@@ -81,7 +87,9 @@ Write-Host ""
 # Step 3: Build .NET solution
 Write-Host "Building .NET solution..." -ForegroundColor Yellow
 $solutionFile = Join-Path $repoRoot "docs-generation.sln"
-if (Test-Path $solutionFile) {
+if ($SkipBuild) {
+    Write-Host "Skipping .NET build (handled by PipelineRunner or caller)" -ForegroundColor Yellow
+} elseif (Test-Path $solutionFile) {
     # Clean stale obj/bin artifacts to prevent NuGet target conflicts
     Write-Host "  Cleaning previous build artifacts..." -ForegroundColor Gray
     & dotnet clean $solutionFile --configuration Release --verbosity quiet 2>&1 | Out-Null
