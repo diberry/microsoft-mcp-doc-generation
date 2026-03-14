@@ -20,4 +20,8 @@ public class ExitCodeMappingTests
     [Fact]
     public void MapStepFailureExitCode_WarnFailure_ReturnsSuccess()
         => Assert.Equal(0, global::PipelineRunner.PipelineRunner.MapStepFailureExitCode(FailurePolicy.Warn, stepSucceeded: false));
+
+    [Fact]
+    public void MapStepFailureExitCode_HumanReviewOverride_ReturnsHumanReview()
+        => Assert.Equal(2, global::PipelineRunner.PipelineRunner.MapStepFailureExitCode(FailurePolicy.Fatal, stepSucceeded: false, exitCodeOverride: 2));
 }

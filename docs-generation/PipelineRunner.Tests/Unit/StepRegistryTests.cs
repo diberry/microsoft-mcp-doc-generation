@@ -18,17 +18,18 @@ public class StepRegistryTests
     }
 
     [Fact]
-    public void GetOrderedSteps_ReturnsStepsSortedById()
+    public void GetOrderedSteps_PrependsGlobalStepsBeforeRequestedNamespaceSteps()
     {
         var registry = new StepRegistry([
             new FakeStep(4, "fourth"),
+            new FakeStep(0, "bootstrap", StepScope.Global),
             new FakeStep(2, "second"),
             new FakeStep(1, "first"),
         ]);
 
         var steps = registry.GetOrderedSteps([4, 1, 2]);
 
-        Assert.Equal(new[] { 1, 2, 4 }, steps.Select(step => step.Id));
+        Assert.Equal(new[] { 0, 1, 2, 4 }, steps.Select(step => step.Id));
     }
 
     [Fact]
@@ -53,6 +54,7 @@ public class StepRegistryTests
         {
             var registry = StepRegistry.CreateDefault(scriptsRoot);
 
+            Assert.IsType<BootstrapStep>(registry.GetStep(0));
             Assert.IsType<AnnotationsParametersRawStep>(registry.GetStep(1));
             Assert.IsType<ExamplePromptsStep>(registry.GetStep(2));
             Assert.IsType<ToolGenerationStep>(registry.GetStep(3));
@@ -69,17 +71,18 @@ public class StepRegistryTests
 
     private sealed class FakeStep : IPipelineStep
     {
-        public FakeStep(int id, string name)
+        public FakeStep(int id, string name, StepScope scope = StepScope.Namespace)
         {
             Id = id;
             Name = name;
+            Scope = scope;
         }
 
         public int Id { get; }
 
         public string Name { get; }
 
-        public StepScope Scope => StepScope.Namespace;
+        public StepScope Scope { get; }
 
         public FailurePolicy FailurePolicy => FailurePolicy.Fatal;
 

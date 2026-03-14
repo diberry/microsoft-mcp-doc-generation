@@ -29,11 +29,11 @@ Generate with specific steps only:
 
 ### Pipeline Steps
 
-`start.sh` runs one preflight phase, then the per-namespace pipeline below:
+`start.sh` now runs typed `BootstrapStep` (Step 0) once, then the per-namespace pipeline below:
 
 | Phase | Description | Typical output | AI Required |
 |------|-------------|----------------|-------------|
-| Preflight | Validate `.env`, clean/create output folders, build the solution, extract MCP CLI metadata, and validate brand mappings | `cli/`, build artifacts, brand validation output | No |
+| 0 | Typed bootstrap: validate Azure OpenAI config when needed, clean/create output folders, build the solution, extract MCP CLI metadata, validate brand mappings, and run shared parsers | `cli/`, `e2e-test-prompts/`, build artifacts, brand validation output | No |
 | 1 | Generate annotations, parameter files, and raw tool markdown | `annotations/`, `parameters/`, `tools-raw/` | No |
 | 2 | Generate example prompts for each tool | `example-prompts/`, `example-prompts-prompts/` | Yes |
 | 3 | Generate composed and AI-improved tool files | `tools/` | Yes |
@@ -41,7 +41,7 @@ Generate with specific steps only:
 | 5 | Generate GitHub Copilot skills relevance reports (supplementary, non-fatal) | `skills-relevance/{namespace}-skills-relevance.md` | No |
 | 6 | Generate horizontal articles | `horizontal-articles/horizontal-article-{namespace}.md` | Yes |
 
-**Note**: Steps 2, 3, 4, and 6 require Azure OpenAI credentials configured in `docs-generation/.env`. See [docs/START-SCRIPTS.md](docs/START-SCRIPTS.md) for details.
+**Note**: Steps 2, 3, 4, and 6 require Azure OpenAI credentials configured in `docs-generation/.env`. See [docs-generation/scripts/README.md](docs-generation/scripts/README.md) for details.
 
 ## Key Paths
 
@@ -131,8 +131,9 @@ microsoft-mcp-doc-generation/
 │   └── ARCHITECTURE.md          # System architecture
 │
 ├── docs-generation/             # Generation system
-│   ├── scripts/                 # PowerShell/bash orchestration
-│   │   ├── preflight.ps1        # Preflight validation, build, and CLI extraction
+│   ├── PipelineRunner/          # Typed orchestrator including BootstrapStep + Steps 1-6
+│   ├── scripts/                 # Legacy/fallback PowerShell/bash orchestration helpers
+│   │   ├── preflight.ps1        # Legacy bootstrap fallback; standard path uses BootstrapStep
 │   │   ├── Generate-ToolFamily.ps1
 │   │   ├── 1-Generate-AnnotationsParametersRaw-One.ps1
 │   │   ├── 2-Generate-ExamplePrompts-One.ps1
@@ -266,7 +267,7 @@ To modify AI-generated content quality or style:
 
 ### Required
 - **Node.js + npm** - For MCP CLI metadata extraction
-- **PowerShell (pwsh)** - For orchestration scripts
+- **PowerShell (pwsh)** - Optional for legacy/manual fallback scripts; the standard `start.sh` path no longer depends on PowerShell
 - **.NET SDK** - For C# generator projects (projects use .NET 9.0)
 
 ### Optional (for AI-enhanced steps)

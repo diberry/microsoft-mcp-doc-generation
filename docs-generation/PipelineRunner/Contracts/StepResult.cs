@@ -6,7 +6,8 @@ public sealed record StepResult(
     TimeSpan Duration,
     IReadOnlyList<string> Outputs,
     IReadOnlyList<string> ProcessInvocations,
-    IReadOnlyList<ValidatorResult> ValidatorResults)
+    IReadOnlyList<ValidatorResult> ValidatorResults,
+    int? ExitCodeOverride = null)
 {
     public static StepResult DryRun(IEnumerable<string> outputs)
         => new(true, Array.Empty<string>(), TimeSpan.Zero, outputs.ToArray(), Array.Empty<string>(), Array.Empty<ValidatorResult>());

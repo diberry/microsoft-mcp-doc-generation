@@ -146,6 +146,8 @@ public class PipelineRunnerPostValidatorTests
 
         public bool CliOutputExists(string outputPath) => true;
 
+        public bool CliVersionExists(string outputPath) => true;
+
         public bool NamespaceMetadataExists(string outputPath) => true;
 
         public ValueTask<CliMetadataSnapshot> LoadCliOutputAsync(string outputPath, CancellationToken cancellationToken)

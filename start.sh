@@ -3,10 +3,12 @@
 #
 # Usage:
 #   ./start.sh [namespace] [steps]
-#   ./start.sh                # Run all steps for all namespaces (output: ./generated/)
-#   ./start.sh advisor        # Run all steps for advisor namespace only (output: ./generated-advisor/)
-#   ./start.sh advisor 1,2,3  # Run steps 1,2,3 for advisor namespace (output: ./generated-advisor/)
-#   ./start.sh 1,2,3          # Run steps 1,2,3 for all namespaces (output: ./generated/)
+#   ./start.sh                # Run bootstrap + steps 1-6 for all namespaces (output: ./generated/)
+#   ./start.sh advisor        # Run bootstrap + steps 1-6 for advisor namespace only (output: ./generated-advisor/)
+#   ./start.sh advisor 1,2,3  # Run bootstrap + steps 1,2,3 for advisor namespace (output: ./generated-advisor/)
+#   ./start.sh 1,2,3          # Run bootstrap + steps 1,2,3 for all namespaces (output: ./generated/)
+#
+# Bootstrap step 0 always runs inside PipelineRunner; start.sh is only a thin wrapper.
 
 set -euo pipefail
 

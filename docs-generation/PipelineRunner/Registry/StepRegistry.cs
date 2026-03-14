@@ -26,6 +26,7 @@ public sealed class StepRegistry
 
     public static StepRegistry CreateDefault(string scriptsRoot)
         => new([
+            new BootstrapStep(),
             new AnnotationsParametersRawStep(),
             new ExamplePromptsStep(),
             new ToolGenerationStep(),
@@ -38,7 +39,13 @@ public sealed class StepRegistry
         => _steps.Values.OrderBy(step => step.Id).ToArray();
 
     public IReadOnlyList<IPipelineStep> GetOrderedSteps(IEnumerable<int> stepIds)
-        => stepIds.Select(GetStep).OrderBy(step => step.Id).ToArray();
+        => GetAllSteps()
+            .Where(step => step.Scope == StepScope.Global)
+            .Concat(stepIds.Select(GetStep))
+            .GroupBy(step => step.Id)
+            .Select(group => group.First())
+            .OrderBy(step => step.Id)
+            .ToArray();
 
     public IPipelineStep GetStep(int stepId)
         => _steps.TryGetValue(stepId, out var step)

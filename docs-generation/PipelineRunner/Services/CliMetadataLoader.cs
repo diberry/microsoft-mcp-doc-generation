@@ -12,6 +12,9 @@ public sealed class CliMetadataLoader : ICliMetadataLoader
     public bool CliOutputExists(string outputPath)
         => File.Exists(GetCliOutputPath(outputPath));
 
+    public bool CliVersionExists(string outputPath)
+        => File.Exists(GetCliVersionPath(outputPath));
+
     public bool NamespaceMetadataExists(string outputPath)
         => File.Exists(GetNamespacePath(outputPath));
 
@@ -92,6 +95,9 @@ public sealed class CliMetadataLoader : ICliMetadataLoader
 
     private static string GetCliOutputPath(string outputPath)
         => Path.Combine(NormalizeOutputPath(outputPath), "cli", "cli-output.json");
+
+    private static string GetCliVersionPath(string outputPath)
+        => Path.Combine(NormalizeOutputPath(outputPath), "cli", "cli-version.json");
 
     private static string GetNamespacePath(string outputPath)
         => Path.Combine(NormalizeOutputPath(outputPath), "cli", "cli-namespace.json");

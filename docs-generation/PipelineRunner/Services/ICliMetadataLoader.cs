@@ -10,6 +10,8 @@ public interface ICliMetadataLoader
 {
     bool CliOutputExists(string outputPath);
 
+    bool CliVersionExists(string outputPath);
+
     bool NamespaceMetadataExists(string outputPath);
 
     ValueTask<CliMetadataSnapshot> LoadCliOutputAsync(string outputPath, CancellationToken cancellationToken);

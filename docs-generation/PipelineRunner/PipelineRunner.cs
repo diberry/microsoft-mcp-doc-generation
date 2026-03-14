@@ -63,6 +63,7 @@ public sealed class PipelineRunner
 
         var context = await _contextFactory.CreateAsync(request, cancellationToken);
         var selectedSteps = _stepRegistry.GetOrderedSteps(request.Steps);
+        context.PlannedSteps = selectedSteps;
         var dependencyErrors = ValidateDependencies(selectedSteps);
 
         if (request.DryRun)
@@ -81,67 +82,56 @@ public sealed class PipelineRunner
             return InvalidArgumentsExitCode;
         }
 
-        var bootstrapExitCode = await BootstrapAsync(context, selectedSteps, cancellationToken);
-        if (bootstrapExitCode != SuccessExitCode)
+        var warnings = new List<string>();
+        var globalSteps = selectedSteps.Where(step => step.Scope == StepScope.Global).ToArray();
+        var namespaceSteps = selectedSteps.Where(step => step.Scope == StepScope.Namespace).ToArray();
+
+        foreach (var step in globalSteps)
         {
-            return bootstrapExitCode;
+            var stepExitCode = await ExecuteStepAsync(context, step, warnings, cancellationToken);
+            if (stepExitCode != SuccessExitCode)
+            {
+                context.Workspaces.DeleteAll();
+                return stepExitCode;
+            }
         }
 
-        context.CliOutput = await context.CliMetadataLoader.LoadCliOutputAsync(context.OutputPath, cancellationToken);
-        context.CliVersion = await context.CliMetadataLoader.LoadCliVersionAsync(context.OutputPath, cancellationToken);
+        context.CliOutput ??= await context.CliMetadataLoader.LoadCliOutputAsync(context.OutputPath, cancellationToken);
+        context.CliVersion ??= await context.CliMetadataLoader.LoadCliVersionAsync(context.OutputPath, cancellationToken);
 
         var availableNamespaces = await context.CliMetadataLoader.LoadNamespacesAsync(context.OutputPath, cancellationToken);
         if (!ResolveNamespaces(context, availableNamespaces, out var resolvedNamespaces, out var namespaceError))
         {
             context.Reports.Error(namespaceError!);
+            context.Workspaces.DeleteAll();
             return InvalidArgumentsExitCode;
         }
 
         context.SelectedNamespaces = resolvedNamespaces;
         context.Reports.Info($"Running {selectedSteps.Count} step(s) for {resolvedNamespaces.Count} namespace(s).");
 
-        var warnings = new List<string>();
+        if (namespaceSteps.Length == 0)
+        {
+            return CompleteRun(context, warnings);
+        }
+
         foreach (var namespaceName in resolvedNamespaces)
         {
             context.Reports.Info($"Namespace: {namespaceName}");
             context.Items["Namespace"] = namespaceName;
 
-            foreach (var step in selectedSteps)
+            foreach (var step in namespaceSteps)
             {
-                context.Reports.Info($"  Step {step.Id}: {step.Name}");
-                var result = await step.ExecuteAsync(context, cancellationToken);
-                if (result.Success && !context.Request.SkipValidation && step.PostValidators.Count > 0)
-                {
-                    result = await RunPostValidatorsAsync(context, step, result, cancellationToken);
-                }
-
-                foreach (var warning in result.Warnings)
-                {
-                    warnings.Add(warning);
-                    context.Reports.Warning(warning);
-                }
-
-                var stepExitCode = MapStepFailureExitCode(step.FailurePolicy, result.Success);
+                var stepExitCode = await ExecuteStepAsync(context, step, warnings, cancellationToken);
                 if (stepExitCode != SuccessExitCode)
                 {
-                    context.Reports.Error($"Step {step.Id} failed.");
                     context.Workspaces.DeleteAll();
                     return stepExitCode;
                 }
             }
         }
 
-        if (warnings.Count > 0)
-        {
-            context.Reports.Info($"Pipeline completed with {warnings.Count} warning(s).");
-        }
-        else
-        {
-            context.Reports.Info("Pipeline completed successfully.");
-        }
-
-        context.Workspaces.DeleteAll();
-        return SuccessExitCode;
+        return CompleteRun(context, warnings);
     }
 
     public static int MapBootstrapExitCode(int exitCode)
@@ -152,70 +142,18 @@ public sealed class PipelineRunner
             _ => FatalExitCode,
         };
 
-    public static int MapStepFailureExitCode(FailurePolicy failurePolicy, bool stepSucceeded)
+    public static int MapStepFailureExitCode(FailurePolicy failurePolicy, bool stepSucceeded, int? exitCodeOverride = null)
     {
         if (stepSucceeded || failurePolicy == FailurePolicy.Warn)
         {
             return SuccessExitCode;
         }
 
-        return FatalExitCode;
-    }
-
-    private async Task<int> BootstrapAsync(
-        PipelineContext context,
-        IReadOnlyList<IPipelineStep> selectedSteps,
-        CancellationToken cancellationToken)
-    {
-        var selectedDefinitions = selectedSteps.OfType<StepDefinition>().ToArray();
-        if (selectedDefinitions.Any(step => step.RequiresAiConfiguration))
+        return exitCodeOverride switch
         {
-            var probeResult = await context.AiCapabilityProbe.ProbeAsync(context.DocsGenerationRoot, cancellationToken);
-            if (!probeResult.IsConfigured)
-            {
-                foreach (var missingKey in probeResult.MissingKeys)
-                {
-                    context.Reports.Error($"Missing required AI configuration: {missingKey}");
-                }
-
-                return FatalExitCode;
-            }
-
-            context.AiConfigured = true;
-        }
-
-        await context.BuildCoordinator.EnsureReadyAsync(
-            Path.Combine(context.RepoRoot, "docs-generation.sln"),
-            context.Request.SkipBuild,
-            GetRequiredArtifacts(context.DocsGenerationRoot, selectedDefinitions),
-            cancellationToken);
-
-        var preflightScriptPath = Path.Combine(context.DocsGenerationRoot, "scripts", "preflight.ps1");
-        var preflightArguments = new List<string>
-        {
-            "-OutputPath",
-            context.OutputPath,
-            "-SkipBuild",
-            "-SkipEnvValidation",
+            HumanReviewExitCode => HumanReviewExitCode,
+            _ => FatalExitCode,
         };
-
-        var preflightResult = await context.ProcessRunner.RunPowerShellScriptAsync(
-            preflightScriptPath,
-            preflightArguments,
-            context.RepoRoot,
-            cancellationToken);
-
-        if (!preflightResult.Succeeded)
-        {
-            if (!string.IsNullOrWhiteSpace(preflightResult.StandardError))
-            {
-                context.Reports.Error(preflightResult.StandardError.Trim());
-            }
-
-            return MapBootstrapExitCode(preflightResult.ExitCode);
-        }
-
-        return SuccessExitCode;
     }
 
     private static async Task<StepResult> RunPostValidatorsAsync(
@@ -256,6 +194,49 @@ public sealed class PipelineRunner
             Warnings = warnings,
             ValidatorResults = validatorResults,
         };
+    }
+
+    private static async Task<int> ExecuteStepAsync(
+        PipelineContext context,
+        IPipelineStep step,
+        ICollection<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        context.Reports.Info($"  Step {step.Id}: {step.Name}");
+        var result = await step.ExecuteAsync(context, cancellationToken);
+        if (result.Success && !context.Request.SkipValidation && step.PostValidators.Count > 0)
+        {
+            result = await RunPostValidatorsAsync(context, step, result, cancellationToken);
+        }
+
+        foreach (var warning in result.Warnings)
+        {
+            warnings.Add(warning);
+            context.Reports.Warning(warning);
+        }
+
+        var stepExitCode = MapStepFailureExitCode(step.FailurePolicy, result.Success, result.ExitCodeOverride);
+        if (stepExitCode != SuccessExitCode)
+        {
+            context.Reports.Error($"Step {step.Id} failed.");
+        }
+
+        return stepExitCode;
+    }
+
+    private static int CompleteRun(PipelineContext context, IReadOnlyCollection<string> warnings)
+    {
+        if (warnings.Count > 0)
+        {
+            context.Reports.Info($"Pipeline completed with {warnings.Count} warning(s).");
+        }
+        else
+        {
+            context.Reports.Info("Pipeline completed successfully.");
+        }
+
+        context.Workspaces.DeleteAll();
+        return SuccessExitCode;
     }
 
     private static IReadOnlyList<string> ValidateDependencies(IReadOnlyList<IPipelineStep> selectedSteps)
@@ -302,36 +283,6 @@ public sealed class PipelineRunner
         return true;
     }
 
-    private static IReadOnlyList<string> GetRequiredArtifacts(string docsGenerationRoot, IReadOnlyList<StepDefinition> selectedSteps)
-    {
-        var requiredProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "BrandMapperValidator",
-            "E2eTestPromptParser",
-            "AzmcpCommandParser",
-        };
-
-        foreach (var step in selectedSteps)
-        {
-            foreach (var project in step.Id switch
-            {
-                1 => ["CSharpGenerator", "ToolGeneration_Raw"],
-                2 => ["ExamplePromptGeneratorStandalone", "ExamplePromptValidator"],
-                3 => ["ToolGeneration_Composed", "ToolGeneration_Improved"],
-                4 => ["ToolFamilyCleanup"],
-                5 => ["SkillsRelevance"],
-                6 => ["HorizontalArticleGenerator"],
-                _ => Array.Empty<string>(),
-            })
-            {
-                requiredProjects.Add(project);
-            }
-        }
-
-        return requiredProjects
-            .Select(project => Path.Combine(docsGenerationRoot, project, "bin", "Release", "net9.0", $"{project}.dll"))
-            .ToArray();
-    }
 
     private static void WriteDryRunPlan(
         PipelineContext context,

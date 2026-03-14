@@ -16,6 +16,7 @@ public static class PipelineCli
         rootCommand.AddOption(options.Output);
         rootCommand.AddOption(options.SkipBuild);
         rootCommand.AddOption(options.SkipValidation);
+        rootCommand.AddOption(options.SkipEnvValidation);
         rootCommand.AddOption(options.DryRun);
         return rootCommand;
     }
@@ -51,7 +52,8 @@ public static class PipelineCli
             outputValue,
             parseResult.GetValueForOption(options.SkipBuild),
             parseResult.GetValueForOption(options.SkipValidation),
-            parseResult.GetValueForOption(options.DryRun));
+            parseResult.GetValueForOption(options.DryRun),
+            parseResult.GetValueForOption(options.SkipEnvValidation));
 
         var validationErrors = request.Validate();
         return validationErrors.Count > 0
@@ -101,6 +103,7 @@ public static class PipelineCli
         rootCommand.AddOption(options.Output);
         rootCommand.AddOption(options.SkipBuild);
         rootCommand.AddOption(options.SkipValidation);
+        rootCommand.AddOption(options.SkipEnvValidation);
         rootCommand.AddOption(options.DryRun);
         return rootCommand;
     }
@@ -111,7 +114,8 @@ public static class PipelineCli
             new Option<string>("--steps", () => string.Join(',', PipelineRequest.DefaultSteps), "Comma-separated list of step identifiers to run."),
             new Option<string?>("--output", "Output directory. Defaults to .\\generated or .\\generated-<namespace>."),
             new Option<bool>("--skip-build", "Skip build work and require existing Release outputs."),
-            new Option<bool>("--skip-validation", "Skip validation flags passed through to shim scripts."),
+            new Option<bool>("--skip-validation", "Skip validation checks executed by the typed runner."),
+            new Option<bool>("--skip-env-validation", "Skip Azure OpenAI environment validation during bootstrap."),
             new Option<bool>("--dry-run", "Print the resolved execution plan without running bootstrap or steps."));
 
     private sealed record CliOptions(
@@ -120,5 +124,6 @@ public static class PipelineCli
         Option<string?> Output,
         Option<bool> SkipBuild,
         Option<bool> SkipValidation,
+        Option<bool> SkipEnvValidation,
         Option<bool> DryRun);
 }
