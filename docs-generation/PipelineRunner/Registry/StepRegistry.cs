@@ -30,7 +30,7 @@ public sealed class StepRegistry
             new ExamplePromptsStep(),
             new ToolGenerationStep(),
             new ToolFamilyCleanupStep(),
-            new ShimStep(5, "Generate skills relevance", FailurePolicy.Warn, Path.Combine(scriptsRoot, "5-Generate-SkillsRelevance-One.ps1"), "ServiceArea", expectedOutputs: ["skills-relevance"]),
+            new SkillsRelevanceStep(),
             new HorizontalArticlesStep(),
         ]);
 

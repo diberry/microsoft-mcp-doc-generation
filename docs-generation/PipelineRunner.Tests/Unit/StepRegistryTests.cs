@@ -44,7 +44,7 @@ public class StepRegistryTests
     }
 
     [Fact]
-    public void CreateDefault_RegistersTypedPhaseThreeSteps()
+    public void CreateDefault_RegistersAllStandardStepsAsTypedImplementations()
     {
         var scriptsRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-scripts-{Guid.NewGuid():N}");
         Directory.CreateDirectory(scriptsRoot);
@@ -57,8 +57,9 @@ public class StepRegistryTests
             Assert.IsType<ExamplePromptsStep>(registry.GetStep(2));
             Assert.IsType<ToolGenerationStep>(registry.GetStep(3));
             Assert.IsType<ToolFamilyCleanupStep>(registry.GetStep(4));
-            Assert.IsType<ShimStep>(registry.GetStep(5));
+            Assert.IsType<SkillsRelevanceStep>(registry.GetStep(5));
             Assert.IsType<HorizontalArticlesStep>(registry.GetStep(6));
+            Assert.DoesNotContain(registry.GetAllSteps(), step => step is ShimStep);
         }
         finally
         {
