@@ -8,13 +8,14 @@ public class CliArgumentParsingTests
     [Fact]
     public void Parse_NamedArguments_ReturnsExpectedRequest()
     {
-        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "1,2", "--skip-build", "--skip-validation", "--dry-run"]);
+        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "1,2", "--skip-build", "--skip-validation", "--skip-env-validation", "--dry-run"]);
 
         Assert.NotNull(result.Request);
         Assert.Equal("compute", result.Request!.Namespace);
         Assert.Equal(new[] { 1, 2 }, result.Request.Steps);
         Assert.True(result.Request.SkipBuild);
         Assert.True(result.Request.SkipValidation);
+        Assert.True(result.Request.SkipEnvValidation);
         Assert.True(result.Request.DryRun);
     }
 

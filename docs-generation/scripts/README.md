@@ -18,7 +18,7 @@ The standard pipeline path is now:
 ```
 start.sh
 └── docs-generation/PipelineRunner/PipelineRunner.csproj
-    ├── preflight.ps1                                # bootstrap: env, build, CLI metadata, brand validation
+    ├── BootstrapStep                                # Step 0 global bootstrap: env, build, CLI metadata, brand validation, parsers
     └── typed C# namespace steps (Steps 1-6)
         ├── AnnotationsParametersRawStep             # Step 1
         ├── ExamplePromptsStep                       # Step 2
@@ -28,13 +28,15 @@ start.sh
         └── HorizontalArticlesStep                   # Step 6
 ```
 
-All six standard steps are now typed C# classes under `docs-generation/PipelineRunner/Steps/Namespace/`.
+`start.sh` is now a thin wrapper around `dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj`.
+`BootstrapStep` plus all six standard namespace steps are typed C# classes under `docs-generation/PipelineRunner/Steps/`.
 The numbered `*-One.ps1` scripts remain in the repo as reference, fallback, and ad-hoc/manual execution helpers, but they are no longer in the standard `start.sh` execution path.
 
 ### Typed standard steps
 
 | Step | Typed class | Generator(s) invoked | Failure policy | Primary outputs |
 |---|---|---|---|---|
+| 0 | `BootstrapStep` | npm CLI metadata extraction, `BrandMapperValidator`, `E2eTestPromptParser`, `AzmcpCommandParser` | Fatal | `cli/`, `e2e-test-prompts/`, shared bootstrap outputs |
 | 1 | `AnnotationsParametersRawStep` | `CSharpGenerator`, `ToolGeneration_Raw` | Fatal | `annotations/`, `parameters/`, `tools-raw/` |
 | 2 | `ExamplePromptsStep` | `ExamplePromptGeneratorStandalone`, `ExamplePromptValidator` | Fatal | `example-prompts/`, `example-prompts-prompts/`, `example-prompts-raw-output/` |
 | 3 | `ToolGenerationStep` | `ToolGeneration_Composed`, `ToolGeneration_Improved` | Fatal | `tools-composed/`, `tools/` |
@@ -61,6 +63,7 @@ dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj -- --n
 | `--output <path>` | Output directory. Defaults to `./generated` or `./generated-<namespace>`. |
 | `--skip-build` | Reuse existing Release outputs and skip build work. |
 | `--skip-validation` | Skip validation behavior that is modeled in the runner/steps. |
+| `--skip-env-validation` | Skip Azure OpenAI environment validation during `BootstrapStep`. |
 | `--dry-run` | Print the resolved plan, including step names, scopes, failure policies, and implementation type, without running bootstrap or generators. |
 
 ### Example commands
@@ -90,6 +93,7 @@ dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj -- --n
 Compatibility notes:
 
 - `start.sh` now delegates to `PipelineRunner` instead of `Generate-ToolFamily.ps1`.
+- `BootstrapStep` runs automatically as Step 0 even when the user supplies a subset of namespace steps.
 - If the first argument starts with `-`, `start.sh` passes all arguments through directly to `PipelineRunner`.
 - The numbered PowerShell wrappers stay available for manual runs, but the supported day-to-day path is `start.sh` → `PipelineRunner`.
 
@@ -97,11 +101,8 @@ Compatibility notes:
 
 ### ✅ Active scripts
 
-These scripts are actively invoked during normal pipeline execution via `start.sh` → `PipelineRunner`:
-
-| Script | Called by | Purpose |
-|---|---|---|
-| `preflight.ps1` | `PipelineRunner.cs` bootstrap | Environment validation, .NET build coordination, CLI metadata extraction, brand-to-server mapping validation |
+No PowerShell scripts are required on the standard execution path anymore.
+Normal execution is `start.sh` → `PipelineRunner` → typed `BootstrapStep` + typed namespace steps.
 
 ### ⚠️ Legacy scripts
 
@@ -109,8 +110,9 @@ These scripts are **no longer on the standard execution path** (previously calle
 
 | Script | Replaced by | Notes |
 |---|---|---|
+| `preflight.ps1` | `BootstrapStep` | Legacy fallback for bootstrap logic; standard runs now execute typed C# bootstrap instead of PowerShell |
 | `Generate-ToolFamily.ps1` | `PipelineRunner` orchestrator | Manual/fallback PowerShell orchestrator for single namespace runs |
-| `0-Validate-BrandMappings.ps1` | Brand validation in `preflight.ps1` | Validates `brand-to-server-mapping.json` |
+| `0-Validate-BrandMappings.ps1` | Brand validation in `BootstrapStep` | Validates `brand-to-server-mapping.json` |
 | `1-Generate-AnnotationsParametersRaw-One.ps1` | `AnnotationsParametersRawStep` (Step 1) | Legacy wrapper for manual Step 1 execution |
 | `2-Generate-ExamplePrompts-One.ps1` | `ExamplePromptsStep` (Step 2) | Legacy wrapper for manual Step 2 execution |
 | `3-Generate-ToolGenerationAndAIImprovements-One.ps1` | `ToolGenerationStep` (Step 3) | Legacy wrapper for manual Step 3 execution |

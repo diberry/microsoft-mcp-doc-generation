@@ -1,4 +1,5 @@
 using PipelineRunner.Cli;
+using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 
 namespace PipelineRunner.Context;
@@ -34,6 +35,8 @@ public sealed class PipelineContext
     public CliMetadataSnapshot? CliOutput { get; set; }
 
     public bool AiConfigured { get; set; }
+
+    public IReadOnlyList<IPipelineStep> PlannedSteps { get; set; } = Array.Empty<IPipelineStep>();
 
     public IReadOnlyList<string> SelectedNamespaces { get; set; } = Array.Empty<string>();
 

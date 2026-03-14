@@ -41,6 +41,7 @@ public class DryRunIntegrationTests
             Assert.Equal(0, exitCode);
             Assert.Empty(processRunner.Invocations);
             Assert.Contains(reportWriter.Messages, message => message.Contains("Dry run plan", StringComparison.Ordinal));
+            Assert.Contains(reportWriter.Messages, message => message.Contains("Step 0: Bootstrap pipeline [Global, Fatal, Typed]", StringComparison.Ordinal));
             Assert.Contains(reportWriter.Messages, message => message.Contains("Step 1: Generate annotations, parameters, and raw tools [Namespace, Fatal, Typed]", StringComparison.Ordinal));
             Assert.Contains(reportWriter.Messages, message => message.Contains("Step 4: Generate tool-family article [Namespace, Fatal, Typed]", StringComparison.Ordinal));
             Assert.Contains(reportWriter.Messages, message => message.Contains("Step 5: Generate skills relevance [Namespace, Warn, Typed]", StringComparison.Ordinal));

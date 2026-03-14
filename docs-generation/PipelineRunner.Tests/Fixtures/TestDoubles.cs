@@ -79,6 +79,8 @@ internal sealed class StubCliMetadataLoader : ICliMetadataLoader
 {
     public bool CliOutputExists(string outputPath) => false;
 
+    public bool CliVersionExists(string outputPath) => false;
+
     public bool NamespaceMetadataExists(string outputPath) => false;
 
     public ValueTask<CliMetadataSnapshot> LoadCliOutputAsync(string outputPath, CancellationToken cancellationToken)

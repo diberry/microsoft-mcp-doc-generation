@@ -6,7 +6,8 @@ public sealed record PipelineRequest(
     string OutputPath,
     bool SkipBuild,
     bool SkipValidation,
-    bool DryRun)
+    bool DryRun,
+    bool SkipEnvValidation = false)
 {
     public static IReadOnlyList<int> DefaultSteps { get; } = [1, 2, 3, 4, 5, 6];
 
