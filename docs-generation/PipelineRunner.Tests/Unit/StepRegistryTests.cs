@@ -1,6 +1,7 @@
 using PipelineRunner.Contracts;
 using PipelineRunner.Context;
 using PipelineRunner.Registry;
+using PipelineRunner.Steps;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -40,6 +41,29 @@ public class StepRegistryTests
         var step = registry.GetStep(2);
 
         Assert.Equal("second", step.Name);
+    }
+
+    [Fact]
+    public void CreateDefault_RegistersTypedPhaseTwoSteps()
+    {
+        var scriptsRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-scripts-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(scriptsRoot);
+
+        try
+        {
+            var registry = StepRegistry.CreateDefault(scriptsRoot);
+
+            Assert.IsType<AnnotationsParametersRawStep>(registry.GetStep(1));
+            Assert.IsType<ExamplePromptsStep>(registry.GetStep(2));
+            Assert.IsType<ToolGenerationStep>(registry.GetStep(3));
+            Assert.IsType<ShimStep>(registry.GetStep(4));
+            Assert.IsType<ShimStep>(registry.GetStep(5));
+            Assert.IsType<HorizontalArticlesStep>(registry.GetStep(6));
+        }
+        finally
+        {
+            Directory.Delete(scriptsRoot, recursive: true);
+        }
     }
 
     private sealed class FakeStep : IPipelineStep
