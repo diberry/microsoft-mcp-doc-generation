@@ -86,6 +86,17 @@ public class BootstrapStepTests
             invocation => invocation.Arguments.Any(argument => argument.EndsWith("BrandMapperValidator.csproj", StringComparison.OrdinalIgnoreCase)));
     }
 
+    [Fact]
+    public async Task ExecuteAsync_RespectsSkipEnvValidationFlag()
+    {
+        using var harness = CreateHarness(requiresAiConfiguration: true, skipEnvValidation: true, aiConfigured: false);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(0, harness.AiCapabilityProbe.ProbeCalls);
+    }
+
     private static TestHarness CreateHarness(
         bool skipBuild = false,
         bool skipValidation = false,
@@ -105,6 +116,7 @@ public class BootstrapStepTests
 
         var processRunner = new ScriptedProcessRunner();
         var buildCoordinator = new RecordingBuildCoordinator();
+        var aiCapabilityProbe = new RecordingAiCapabilityProbe(aiConfigured);
         var step = new BootstrapStep();
         var plannedSteps = requiresAiConfiguration
             ? new IPipelineStep[] { step, new ExamplePromptsStep() }
@@ -129,23 +141,24 @@ public class BootstrapStepTests
             TargetMatcher = new TargetMatcher(),
             FilteredCliWriter = new StubFilteredCliWriter(),
             BuildCoordinator = buildCoordinator,
-            AiCapabilityProbe = new FixedAiCapabilityProbe(aiConfigured),
+            AiCapabilityProbe = aiCapabilityProbe,
             Reports = new BufferedReportWriter(),
             PlannedSteps = plannedSteps,
         };
 
-        return new TestHarness(repoRoot, step, context, processRunner, buildCoordinator);
+        return new TestHarness(repoRoot, step, context, processRunner, buildCoordinator, aiCapabilityProbe);
     }
 
     private sealed class TestHarness : IDisposable
     {
-        public TestHarness(string rootPath, BootstrapStep step, PipelineContext context, ScriptedProcessRunner processRunner, RecordingBuildCoordinator buildCoordinator)
+        public TestHarness(string rootPath, BootstrapStep step, PipelineContext context, ScriptedProcessRunner processRunner, RecordingBuildCoordinator buildCoordinator, RecordingAiCapabilityProbe aiCapabilityProbe)
         {
             RootPath = rootPath;
             Step = step;
             Context = context;
             ProcessRunner = processRunner;
             BuildCoordinator = buildCoordinator;
+            AiCapabilityProbe = aiCapabilityProbe;
         }
 
         public string RootPath { get; }
@@ -157,6 +170,8 @@ public class BootstrapStepTests
         public ScriptedProcessRunner ProcessRunner { get; }
 
         public RecordingBuildCoordinator BuildCoordinator { get; }
+
+        public RecordingAiCapabilityProbe AiCapabilityProbe { get; }
 
         public void Dispose()
         {
@@ -178,10 +193,15 @@ public class BootstrapStepTests
         }
     }
 
-    private sealed class FixedAiCapabilityProbe(bool isConfigured) : IAiCapabilityProbe
+    private sealed class RecordingAiCapabilityProbe(bool isConfigured) : IAiCapabilityProbe
     {
+        public int ProbeCalls { get; private set; }
+
         public ValueTask<AiCapabilityResult> ProbeAsync(string docsGenerationRoot, CancellationToken cancellationToken)
-            => ValueTask.FromResult(new AiCapabilityResult(isConfigured, isConfigured ? Array.Empty<string>() : ["FOUNDRY_API_KEY"]));
+        {
+            ProbeCalls++;
+            return ValueTask.FromResult(new AiCapabilityResult(isConfigured, isConfigured ? Array.Empty<string>() : ["FOUNDRY_API_KEY"]));
+        }
     }
 
     private sealed class DelegatingCliMetadataLoader : ICliMetadataLoader

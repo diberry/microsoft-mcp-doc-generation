@@ -23,7 +23,7 @@ if [[ $# -gt 0 && "$1" =~ ^- ]]; then
 fi
 
 if [[ $# -gt 0 ]]; then
-    if [[ "$1" =~ ^[0-6](,[0-6])*$ ]]; then
+    if [[ "$1" =~ ^[1-6](,[1-6])*$ ]]; then
         STEPS_ARG="$1"
     else
         NAMESPACE_ARG="$1"
