@@ -29,7 +29,7 @@ public sealed class StepRegistry
             new AnnotationsParametersRawStep(),
             new ExamplePromptsStep(),
             new ToolGenerationStep(),
-            new ShimStep(4, "Generate tool-family article", FailurePolicy.Fatal, Path.Combine(scriptsRoot, "4-Generate-ToolFamilyCleanup-One.ps1"), "ToolCommand", dependsOn: [3], requiresAiConfiguration: true, usesIsolatedWorkspace: true, expectedOutputs: ["tool-family-metadata", "tool-family-related", "tool-family", "reports"]),
+            new ToolFamilyCleanupStep(),
             new ShimStep(5, "Generate skills relevance", FailurePolicy.Warn, Path.Combine(scriptsRoot, "5-Generate-SkillsRelevance-One.ps1"), "ServiceArea", expectedOutputs: ["skills-relevance"]),
             new HorizontalArticlesStep(),
         ]);

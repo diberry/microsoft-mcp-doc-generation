@@ -110,6 +110,10 @@ public sealed class PipelineRunner
             {
                 context.Reports.Info($"  Step {step.Id}: {step.Name}");
                 var result = await step.ExecuteAsync(context, cancellationToken);
+                if (result.Success && !context.Request.SkipValidation && step.PostValidators.Count > 0)
+                {
+                    result = await RunPostValidatorsAsync(context, step, result, cancellationToken);
+                }
 
                 foreach (var warning in result.Warnings)
                 {
@@ -214,6 +218,46 @@ public sealed class PipelineRunner
         return SuccessExitCode;
     }
 
+    private static async Task<StepResult> RunPostValidatorsAsync(
+        PipelineContext context,
+        IPipelineStep step,
+        StepResult result,
+        CancellationToken cancellationToken)
+    {
+        var success = result.Success;
+        var warnings = result.Warnings.ToList();
+        var validatorResults = result.ValidatorResults.ToList();
+
+        foreach (var validator in step.PostValidators)
+        {
+            context.Reports.Info($"    Validator: {validator.Name}");
+
+            ValidatorResult validatorResult;
+            try
+            {
+                validatorResult = await validator.ValidateAsync(context, step, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                validatorResult = new ValidatorResult(
+                    validator.Name,
+                    false,
+                    [$"Blocking: Validator '{validator.Name}' failed with an exception: {ex.Message}"]);
+            }
+
+            validatorResults.Add(validatorResult);
+            warnings.AddRange(validatorResult.Warnings);
+            success &= validatorResult.Success;
+        }
+
+        return result with
+        {
+            Success = success,
+            Warnings = warnings,
+            ValidatorResults = validatorResults,
+        };
+    }
+
     private static IReadOnlyList<string> ValidateDependencies(IReadOnlyList<IPipelineStep> selectedSteps)
     {
         var selectedIds = selectedSteps.Select(step => step.Id).ToHashSet();
@@ -310,6 +354,10 @@ public sealed class PipelineRunner
                 if (step.DependsOn.Count > 0)
                 {
                     context.Reports.Info($"    Depends on: {string.Join(", ", step.DependsOn)}");
+                }
+                if (step.PostValidators.Count > 0)
+                {
+                    context.Reports.Info($"    Post-validators: {string.Join(", ", step.PostValidators.Select(validator => validator.Name))}");
                 }
             }
             else
