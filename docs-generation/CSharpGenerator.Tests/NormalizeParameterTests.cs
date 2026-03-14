@@ -143,6 +143,7 @@ public class NormalizeParameterTests : IClassFixture<TextCleanupFixture>
     [InlineData("sql-server-name", "SQL server name")]
     [InlineData("dns-name", "DNS name")]
     [InlineData("sku-name", "SKU name")]
+    [InlineData("etag-value", "ETag value")]
     public void NormalizeParameter_WithAcronyms_PreservesAcronymsAndQualifiers(string input, string expected)
     {
         // Act
@@ -282,6 +283,7 @@ public class NormalizeParameterTests : IClassFixture<TextCleanupFixture>
     [InlineData("id", "ID")]
     [InlineData("uri", "URI")]
     [InlineData("url", "URL")]
+    [InlineData("etag", "ETag")]
     [InlineData("type", "Type")]
     [InlineData("status", "Status")]
     public void NormalizeParameter_SingleWordQualifiers_FormattedCorrectly(string input, string expected)

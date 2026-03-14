@@ -204,6 +204,7 @@ public static class TextCleanup
             "xml" => "XML",
             "yaml" => "YAML",
             "oauth" => "OAuth",
+            "etag" => "ETag",
             "cdn" => "CDN",
             "rg" => "Resource group",
             _ => word
@@ -271,7 +272,7 @@ public static class TextCleanup
     // Helper method to check if a word is a known acronym that should remain uppercase
     private static bool IsAcronym(string word)
     {
-        string[] knownAcronyms = { "ID", "IDs", "URI", "URL", "URLs", "AI", "API", "APIs", "CPU", "GPU", "IP", "SQL", "VM", "VMs", "DNS", "SKU", "SKUs", "TLS", "SSL", "HTTP", "HTTPS", "JSON", "XML", "YAML", "OAuth", "CDN" };
+        string[] knownAcronyms = { "ID", "IDs", "URI", "URL", "URLs", "AI", "API", "APIs", "CPU", "GPU", "IP", "SQL", "VM", "VMs", "DNS", "SKU", "SKUs", "TLS", "SSL", "HTTP", "HTTPS", "JSON", "XML", "YAML", "OAuth", "ETag", "CDN" };
         return knownAcronyms.Contains(word);
     }
     public static string ReplaceStaticText(string text)
