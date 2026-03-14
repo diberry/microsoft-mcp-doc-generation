@@ -112,6 +112,61 @@ public class NamespaceStepTests
     }
 
     [Fact]
+    public async Task Step5_SkillsRelevance_UsesExpectedGeneratorArguments()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new RecordingProcessRunner();
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+
+            var skillsOutputDirectory = Path.Combine(context.OutputPath, "skills-relevance");
+            SeedFile(Path.Combine(skillsOutputDirectory, "compute-skills-relevance.md"));
+
+            var step = new SkillsRelevanceStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Single(runner.Invocations);
+            Assert.Contains(runner.Invocations[0].Arguments, argument => argument.EndsWith("SkillsRelevance.csproj", StringComparison.Ordinal));
+            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "compute");
+            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--output-path");
+            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == skillsOutputDirectory);
+            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--min-score");
+            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "0.1");
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step5_SkillsRelevance_FailureReturnsWarningsWithoutThrowing()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new FailingProcessRunner(7, "GitHub API rate limited");
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+
+            var step = new SkillsRelevanceStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Single(runner.Invocations);
+            Assert.Contains(result.Warnings, warning => warning.Contains("Skills relevance generation failed (exit code 7).", StringComparison.Ordinal));
+            Assert.Contains(result.Warnings, warning => warning.Contains("GitHub API rate limited", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task Step6_HorizontalArticles_UsesExpectedGeneratorArguments()
     {
         var testRoot = CreateTestRoot();
@@ -215,5 +270,57 @@ public class NamespaceStepTests
         {
             Directory.Delete(path, recursive: true);
         }
+    }
+
+    private sealed class FailingProcessRunner : IProcessRunner
+    {
+        private readonly int _exitCode;
+        private readonly string _standardError;
+
+        public FailingProcessRunner(int exitCode, string standardError)
+        {
+            _exitCode = exitCode;
+            _standardError = standardError;
+        }
+
+        public List<ProcessSpec> Invocations { get; } = new();
+
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
+        {
+            Invocations.Add(spec);
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, _exitCode, string.Empty, _standardError, TimeSpan.Zero));
+        }
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)
+            => RunAsync(
+                new ProcessSpec(
+                    "dotnet",
+                    ["build", solutionPath, "--configuration", "Release", "--verbosity", "quiet"],
+                    Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory),
+                cancellationToken);
+
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string projectPath, IEnumerable<string> arguments, bool noBuild, string workingDirectory, CancellationToken cancellationToken)
+        {
+            var invocation = new List<string>
+            {
+                "run",
+                "--project",
+                projectPath,
+                "--configuration",
+                "Release",
+            };
+
+            if (noBuild)
+            {
+                invocation.Add("--no-build");
+            }
+
+            invocation.Add("--");
+            invocation.AddRange(arguments);
+            return RunAsync(new ProcessSpec("dotnet", invocation, workingDirectory), cancellationToken);
+        }
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
+            => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
     }
 }
