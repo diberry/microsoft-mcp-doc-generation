@@ -76,7 +76,7 @@ public static class TestHelpers
             "..",
             "..",
             "scripts",
-            "5-Validate-ToolFamily.ps1"));
+            "Validate-ToolFamily-PostAssembly.ps1"));
 
         if (!File.Exists(scriptPath))
         {

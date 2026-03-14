@@ -1,222 +1,146 @@
-# Generation Scripts - Execution Order
+# Generation Scripts - Current Execution Order
 
-This document explains the numbered generation scripts and their execution order.
+This document explains the current numbered generation scripts and how they are orchestrated.
 
 ## Script Naming Convention
 
-All generation scripts are now numbered to indicate their execution order:
+The active pipeline uses:
+
+- **Preflight** once per run
+- **Core Steps 1-4** for the namespace/family documentation pipeline
+- **Step 4 post-assembly validation** via `Validate-ToolFamily-PostAssembly.ps1`
+- **Supplementary Step 5** for skills relevance
+- **Supplementary Step 6** for horizontal articles
 
 ```
-docs-generation/scripts/
-├── Generate.ps1                                    # Main orchestrator (runs all steps)
-├── 1-Generate-AnnotationsParametersRaw.ps1        # Step 1: Base content
-├── 2-Generate-ToolGenerationAndAIImprovements.ps1 # Step 2: Tool pages with AI
-├── 3-Generate-ExamplePrompts.ps1                   # Step 3: Example prompts
-├── 4-Generate-ToolFamilyFiles.ps1                  # Step 4: Tool families
-├── 5-Validate-total-tool-count-and-family.ps1     # Step 5: Validation & reports
-└── 2-Generate-ExamplePrompts-One.ps1              # Utility: Test single tool
+start.sh
+├── preflight.ps1
+│   ├── validate-env.ps1
+│   └── 0-Validate-BrandMappings.ps1
+└── docs-generation/scripts/start-only.sh
+    └── Generate-ToolFamily.ps1
+        ├── 1-Generate-AnnotationsParametersRaw-One.ps1
+        ├── 2-Generate-ExamplePrompts-One.ps1
+        ├── 3-Generate-ToolGenerationAndAIImprovements-One.ps1
+        ├── 4-Generate-ToolFamilyCleanup-One.ps1
+        ├── Validate-ToolFamily-PostAssembly.ps1
+        ├── 5-Generate-SkillsRelevance-One.ps1
+        └── 6-Generate-HorizontalArticles-One.ps1
 ```
 
 ## Execution Order
 
-### 1. Base Content Generation (`scripts/1-Generate-AnnotationsParametersRaw.ps1`)
+### Preflight (`start.sh` → `docs-generation/scripts/preflight.ps1`)
 
-**Purpose**: Generates foundational include files and raw tool documentation
+Runs once before namespace processing begins.
 
-**Outputs**:
-- `generated/annotations/*.md` - Tool annotation include files
-- `generated/parameters/*.md` - Parameter documentation include files
-- `generated/tools-raw/*.md` - Raw tool pages with placeholders
-- `generated/common-general/commands.md` - Commands overview page
-- `generated/common-general/common.md` - Common tools page
+**Purpose**:
+- Validate `.env` for Azure OpenAI-backed steps
+- Build the .NET solution
+- Generate MCP CLI metadata
+- Validate brand mappings before numbered generation steps run
 
-**Usage**:
-```bash
-pwsh ./scripts/1-Generate-AnnotationsParametersRaw.ps1 -OutputPath ../generated
-```
+### Step 1. Base Content (`1-Generate-AnnotationsParametersRaw-One.ps1`)
 
-### 2. Tool Generation with AI Improvements (`scripts/2-Generate-ToolGenerationAndAIImprovements.ps1`)
-
-**Purpose**: 3-phase tool page generation with AI enhancements
-
-**Phases**:
-1. **Raw**: Create tool pages with placeholders
-2. **Composed**: Replace placeholders with actual content (annotations, parameters, examples)
-3. **Improved**: Apply AI-based improvements to descriptions and content
+**Purpose**: Generate annotations, parameter includes, manifests, and raw tool markdown for one namespace/family.
 
 **Outputs**:
-- `generated/tools-raw/*.md` - Raw tool pages
-- `generated/tools-composed/*.md` - Composed tool pages
-- `generated/tools-ai-improved/*.md` - AI-improved tool pages
+- `generated*/annotations/*.md`
+- `generated*/parameters/*.md`
+- `generated*/parameters-manifests/*.json`
+- `generated*/tools-raw/*.md`
 
-**Usage**:
-```bash
-pwsh ./scripts/2-Generate-ToolGenerationAndAIImprovements.ps1 -OutputPath ../generated
-pwsh ./scripts/2-Generate-ToolGenerationAndAIImprovements.ps1 -SkipRaw  # Use existing raw files
-pwsh ./scripts/2-Generate-ToolGenerationAndAIImprovements.ps1 -SkipImproved  # Skip AI improvements
-```
+### Step 2. Example Prompts (`2-Generate-ExamplePrompts-One.ps1`)
 
-### 3. Example Prompts Generation (`scripts/3-Generate-ExamplePrompts.ps1`)
-
-**Purpose**: Generate and validate natural language example prompts using Azure OpenAI
+**Purpose**: Generate example prompts for each tool in the namespace/family and validate them when the target resolves to a specific tool command.
 
 **Outputs**:
-- `generated/example-prompts/*.md` - Example prompt files (5 prompts per tool)
-- `generated/example-prompts-prompts/*.md` - Input prompts sent to AI
-- `generated/example-prompts-raw-output/*.txt` - Raw JSON from AI responses
-- `generated/example-prompts-validation/*.md` - Validation reports
+- `generated*/example-prompts/*.md`
+- `generated*/example-prompts-prompts/*.md`
+- `generated*/example-prompts-raw-output/*.txt`
+- `generated*/example-prompts-validation/*.md`
 
-**Usage**:
-```bash
-pwsh ./scripts/3-Generate-ExamplePrompts.ps1 -OutputPath ../generated
-```
+### Step 3. Tool Composition and AI Improvements (`3-Generate-ToolGenerationAndAIImprovements-One.ps1`)
 
-**Testing Single Tool**:
-```bash
-pwsh ./scripts/2-Generate-ExamplePrompts-One.ps1 -ToolCommand "keyvault secret create" -OutputPath "../generated"
-```
-
-### 4. Tool Family Generation (`scripts/4-Generate-ToolFamilyFiles.ps1`)
-
-**Purpose**: Generate complete tool documentation and tool family cleanup
+**Purpose**: Compose tool files and apply AI improvements for one namespace/family.
 
 **Outputs**:
-- `generated/tools/*.complete.md` - Complete tool pages (all-in-one documentation)
-- Cleaned tool family files with AI-generated improvements
+- `generated*/tools-composed/*.md`
+- `generated*/tools-ai-improved/*.md`
+- `generated*/tools/*.md`
 
-**Usage**:
-```bash
-pwsh ./scripts/4-Generate-ToolFamilyFiles.ps1 -OutputPath ../generated
-```
+### Step 4. Tool-Family Assembly (`4-Generate-ToolFamilyCleanup-One.ps1`)
 
-### 5. Validation and Reporting (`scripts/5-Validate-total-tool-count-and-family.ps1`)
-
-**Purpose**: Validate tool counts between sources and generate comparison reports
+**Purpose**: Assemble the tool-family article, related metadata, and final stitched output for one namespace/family.
 
 **Outputs**:
-- `generated/ToolDescriptionEvaluator.json` - ToolDescriptionEvaluator output copy
-- `generated/tool-count-comparison.json` - Detailed comparison report
-- Console output with tool count statistics and any discrepancies
+- `generated*/tool-family/*.md`
+- `generated*/tool-family-metadata/*.md`
+- `generated*/tool-family-related/*.md`
+
+### Step 4 Sub-Step. Post-Assembly Validation (`Validate-ToolFamily-PostAssembly.ps1`)
+
+Runs automatically inside Step 4.
+
+**Purpose**:
+- Fail fast on dropped tools or mismatched tool counts
+- Validate tool-file ↔ article-section cross references
+- Emit warning-only checks for prompt/header/marker quality
+
+**Outputs**:
+- `generated*/reports/tool-family-validation-<namespace>.txt`
+
+### Step 5. Skills Relevance (`5-Generate-SkillsRelevance-One.ps1`)
+
+**Purpose**: Generate a supplementary GitHub Copilot skills relevance report for one namespace/family.
+
+**Outputs**:
+- `generated*/skills-relevance/<namespace>-skills-relevance.md`
+
+### Step 6. Horizontal Articles (`6-Generate-HorizontalArticles-One.ps1`)
+
+**Purpose**: Generate supplementary horizontal how-to articles for one namespace/family.
+
+**Outputs**:
+- `generated*/horizontal-articles/horizontal-article-<namespace>.md`
+
+## Main Entry Points
+
+### Root Orchestrator (`start.sh`)
 
 **Usage**:
 ```bash
-pwsh ./scripts/5-Validate-total-tool-count-and-family.ps1 -OutputPath ../generated
+./start.sh
+./start.sh advisor
+./start.sh 1,2,3,4
+./start.sh advisor 1,2,3,4,5,6
 ```
 
-**Validates**:
-- CLI output tool count vs ToolDescriptionEvaluator tool count
-- Identifies missing or extra tools between sources
-- Generates comparison reports for analysis
-
-## Main Orchestrator (`scripts/Generate.ps1`)
-
-The main entry point that runs all generation steps in order.
+### Worker (`docs-generation/scripts/start-only.sh`)
 
 **Usage**:
 ```bash
-cd docs-generation
-pwsh ./scripts/Generate.ps1 -OutputPath ../generated
+./docs-generation/scripts/start-only.sh advisor
+./docs-generation/scripts/start-only.sh advisor 1,2,3,4
 ```
 
-**Options**:
-- `-Format` - Output format: 'json', 'yaml', or 'both' (default: json)
-- `-CreateIndex` - Create index page (default: true)
-- `-CreateCommon` - Create common tools page (default: true)
-- `-CreateCommands` - Create commands page (default: true)
-- `-CreateToolPages` - Create per-service tool pages (default: false)
-- `-CreateServiceOptions` - Create service start options page (default: true)
-- `-ExamplePrompts` - Generate example prompts with AI (default: true)
+### Development Shortcut
+
+Use the root helper below when you only want the early pipeline stages during local iteration:
+
+```bash
+./start-steps-1-2-only.sh
+```
 
 ## Quick Reference
 
-| Script | Purpose | Duration | Dependencies |
-|--------|---------|----------|--------------|
-| 1 | Base content (annotations, parameters, raw tools) | 2-5 min | CLI output |
-| 2 | Tool pages (raw → composed → improved) | 5-15 min | Step 1 |
-| 3 | Example prompts with AI | 15-30 min | CLI output, Azure OpenAI |
-| 4 | Tool families and complete tools | 10-20 min | Steps 1-3 |
-| 5 | Validate tool counts and generate reports | 2-5 min | Steps 1-4 |
-
-## Development Workflow
-
-### Full Generation
-```bash
-cd docs-generation
-pwsh ./scripts/Generate.ps1 -OutputPath ../generated
-```
-
-### Partial Generation (Skip Steps)
-```bash
-# Skip example prompts (faster for testing)
-pwsh ./scripts/Generate.ps1 -ExamplePrompts $false
-
-# Run individual steps
-pwsh ./scripts/1-Generate-AnnotationsParametersRaw.ps1 -OutputPath ../generated
-pwsh ./scripts/2-Generate-ToolGenerationAndAIImprovements.ps1 -OutputPath ../generated
-pwsh ./scripts/3-Generate-ExamplePrompts.ps1 -OutputPath ../generated
-pwsh ./scripts/4-Generate-ToolFamilyFiles.ps1 -OutputPath ../generated
-```
-
-### Testing Changes
-```bash
-# Test a single tool's example prompt generation
-pwsh ./scripts/2-Generate-ExamplePrompts-One.ps1 -ToolCommand "storage account list"
-
-# Test without validation
-pwsh ./scripts/2-Generate-ExamplePrompts-One.ps1 -ToolCommand "storage account list" -SkipValidation
-```
-
-## Validation Scripts
-
-Additional validation scripts are available in `docs-generation/scripts/standalone/` for verifying annotation files:
-
-### Annotation Hints Verification (`verify-annotation-hints.js`)
-
-Verifies that annotation INCLUDE statements have the required "Tool annotation hints" line immediately before them.
-
-**Usage**:
-```bash
-cd docs-generation/scripts/standalone
-node verify-annotation-hints.js
-```
-
-**Outputs**:
-- `annotation-hints-report.md` - Detailed report of all annotation INCLUDE statements
-- Console summary with pass/fail status
-
-### Annotation References Verification (`verify-annotation-references.js`)
-
-Verifies annotation files are properly referenced in tool files (no orphans, no duplicates, no missing files).
-
-**Usage**:
-```bash
-cd docs-generation/scripts/standalone
-node verify-annotation-references.js
-```
-
-**Outputs**:
-- `annotation-reference-report.md` - Detailed report of annotation file references
-- Console summary with statistics
-
-Both scripts exit with status code 1 if issues are found, making them suitable for CI/CD pipelines.
-
-## Migration Notes
-
-**Old Names → New Names:**
-- `Generate-MultiPageDocs.ps1` → `Generate.ps1`
-- `Generate-AnnotationsParametersRaw.ps1` → `1-Generate-AnnotationsParametersRaw.ps1`
-- `Generate-ToolGenerationAndAIImprovements.ps1` → `2-Generate-ToolGenerationAndAIImprovements.ps1`
-- `Generate-ExamplePrompts.ps1` → `3-Generate-ExamplePrompts.ps1`
-- `scripts/Generate-ToolFamilyFiles.ps1` → `4-Generate-ToolFamilyFiles.ps1` (moved to root)
-- `Test-SingleToolPrompt.ps1` → `GenerateExamplePrompt-One.ps1`
-
-**All references updated in:**
-- PowerShell scripts (`.ps1`)
-- Shell scripts (`.sh`)
-- Documentation files (`README.md`, `ARCHITECTURE.md`, etc.)
-- Instruction files (`.github/copilot-instructions.md`)
-- Docker files (`Dockerfile`)
-
-## Last Updated
-
-February 7, 2026
+| Phase | Purpose | Dependencies |
+|------|---------|--------------|
+| Preflight | Environment validation, build, CLI metadata, brand validation | None |
+| 1 | Annotations, parameters, raw tools | CLI metadata |
+| 2 | Example prompts | Step 1 output recommended |
+| 3 | Tool composition + AI improvements | Steps 1-2 |
+| 4 | Tool-family assembly | Step 3 |
+| 4 validation | Post-assembly validator report | Step 4 |
+| 5 | Skills relevance (supplementary, non-fatal) | None beyond namespace context |
+| 6 | Horizontal articles (supplementary) | Best after Step 4 |

@@ -1,1 +1,0 @@
-bash ./start.sh 1,2 2>&1 | tee start-log.txt

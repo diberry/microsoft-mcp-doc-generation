@@ -1,21 +1,21 @@
 #!/bin/bash
-# Start-only: Worker script to generate a single tool family documentation.
+# Start-only: Worker script to generate documentation for a single namespace or family.
 #
 # Usage:
-#   ./start-only.sh <tool-family> [steps]
+#   ./start-only.sh <namespace> [steps]
 #   ./start-only.sh advisor
 #   ./start-only.sh advisor 1,2,3
 #
 # What it does:
 #   - Runs Generate-ToolFamily.ps1 via pwsh for the specified namespace
-#   - Produces ./generated/tool-family/<tool-family>.md
+#   - Produces ./generated/tool-family/<namespace>.md
 #   - Uses existing CLI metadata files (does NOT regenerate them)
 #
 # Prerequisites:
 #   - CLI metadata files must already exist in ./generated/cli/
 #   - PowerShell (pwsh)
 #   - .NET SDK (for generator projects)
-#   - Azure OpenAI env vars for AI steps (if required by Step 3/4)
+#   - Azure OpenAI env vars for AI steps (if required by Steps 2, 3, 4, or 6)
 #
 # Notes:
 #   - This script is designed to be called by start.sh orchestrator

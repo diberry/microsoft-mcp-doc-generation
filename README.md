@@ -37,8 +37,7 @@ Generate with specific steps only:
 | 1 | Generate annotations, parameter files, and raw tool markdown | `annotations/`, `parameters/`, `tools-raw/` | No |
 | 2 | Generate example prompts for each tool | `example-prompts/`, `example-prompts-prompts/` | Yes |
 | 3 | Generate composed and AI-improved tool files | `tools/` | Yes |
-| 4 | Assemble the tool-family article and related metadata | `tool-family/{namespace}.md` | Yes |
-| Validation | Run post-assembly validation immediately after Step 4; blocking issues fail the namespace | `reports/tool-family-validation-{namespace}.txt` | No |
+| 4 | Assemble the tool-family article, generate related metadata, and run post-assembly validation | `tool-family/{namespace}.md`, `reports/tool-family-validation-{namespace}.txt` | Yes |
 | 5 | Generate GitHub Copilot skills relevance reports (supplementary, non-fatal) | `skills-relevance/{namespace}-skills-relevance.md` | No |
 | 6 | Generate horizontal articles | `horizontal-articles/horizontal-article-{namespace}.md` | Yes |
 
@@ -139,7 +138,7 @@ microsoft-mcp-doc-generation/
 │   │   ├── 2-Generate-ExamplePrompts-One.ps1
 │   │   ├── 3-Generate-ToolGenerationAndAIImprovements-One.ps1
 │   │   ├── 4-Generate-ToolFamilyCleanup-One.ps1
-│   │   ├── 5-Validate-ToolFamily.ps1
+│   │   ├── Validate-ToolFamily-PostAssembly.ps1
 │   │   ├── 5-Generate-SkillsRelevance-One.ps1
 │   │   ├── 6-Generate-HorizontalArticles-One.ps1
 │   │   ├── standalone/          # Supporting validation/dev scripts

@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Checks that the .env file exists in docs-generation directory and contains
-    all required Azure OpenAI credentials for AI-based generation steps (2, 3, 4, 5).
+    all required Azure OpenAI credentials for AI-based generation steps (2, 3, 4, 6).
     
     Required variables:
     - FOUNDRY_API_KEY: Azure OpenAI API key
@@ -61,7 +61,7 @@ if (-not (Test-Path $envFile)) {
     
     # Define required variables
     $requiredVars = @{
-        'FOUNDRY_API_KEY' = 'Azure OpenAI API key (required for AI steps 2, 3, 4, 5)'
+        'FOUNDRY_API_KEY' = 'Azure OpenAI API key (required for AI steps 2, 3, 4, 6)'
         'FOUNDRY_ENDPOINT' = 'Azure OpenAI endpoint URL'
         'FOUNDRY_MODEL_NAME' = 'Azure OpenAI model deployment name'
     }
@@ -119,7 +119,7 @@ if ($envIssues.Count -gt 0) {
             Write-Host "   $issue" -ForegroundColor Yellow
         }
         Write-Host ""
-        Write-Host "   AI generation steps (2, 3, 4, 5) require Azure OpenAI credentials." -ForegroundColor Yellow
+        Write-Host "   AI generation steps (2, 3, 4, 6) require Azure OpenAI credentials." -ForegroundColor Yellow
         Write-Host "   You can still run Step 1 (non-AI) if you only need basic generation." -ForegroundColor Yellow
         Write-Host ""
     } else {
@@ -128,7 +128,7 @@ if ($envIssues.Count -gt 0) {
             Write-Host "   $issue" -ForegroundColor Red
         }
         Write-Host ""
-        Write-Host "   AI generation steps (2, 3, 4, 5) require Azure OpenAI credentials." -ForegroundColor Yellow
+        Write-Host "   AI generation steps (2, 3, 4, 6) require Azure OpenAI credentials." -ForegroundColor Yellow
         Write-Host "   You can still run Step 1 (non-AI) if you only need basic generation." -ForegroundColor Yellow
         Write-Host ""
         Write-Host "⛔ VALIDATION FAILED: Fix .env configuration and re-run." -ForegroundColor Red

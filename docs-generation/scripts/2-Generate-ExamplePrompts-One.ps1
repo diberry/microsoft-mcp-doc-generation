@@ -1,21 +1,21 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Tests example prompt generation and validation for a single tool or family
+    Tests example prompt generation and validation for a single namespace or family
 
 .DESCRIPTION
-    Generates and validates example prompts for a single Azure MCP tool or tool family.
-    Useful for quick testing and debugging of the prompt generation pipeline.
+    Generates and validates example prompts for a single Azure MCP namespace or family.
+    It also supports a specific tool command for targeted debugging of the prompt generation pipeline.
     
     Steps:
-    1. Filters cli-output.json to include only the specified tool
-    2. Generates example prompts for that tool using ExamplePromptGeneratorStandalone
-    3. Validates the generated prompts using ExamplePromptValidator
+    1. Filters cli-output.json to include only the specified namespace, family, or tool command
+    2. Generates example prompts for that target using ExamplePromptGeneratorStandalone
+    3. Validates generated prompts when the target resolves to a specific tool command
     4. Shows all output files (input prompt, raw output, example prompts, validation)
 
 .PARAMETER ToolCommand
-    The tool command to test (e.g., "keyvault secret create", "storage account list")
-    Can also be a tool family/namespace prefix to generate all tools in that family (e.g., "keyvault", "storage")
+    The tool command or namespace/family to test (e.g., "keyvault secret create", "storage account list", "storage")
+    The `-One.ps1` workflow typically targets one namespace/family at a time.
 
 .PARAMETER OutputPath
     Path to the generated directory (default: ../generated from docs-generation root)
@@ -24,8 +24,8 @@
     Skip the validation step (only generate prompts)
 
 .EXAMPLE
-    ./2-Generate-ExamplePrompts-One.ps1 -ToolCommand "keyvault secret create"  # Single tool
-    ./2-Generate-ExamplePrompts-One.ps1 -ToolCommand "storage"                      # All storage tools
+    ./2-Generate-ExamplePrompts-One.ps1 -ToolCommand "keyvault secret create"  # Specific tool command
+    ./2-Generate-ExamplePrompts-One.ps1 -ToolCommand "storage"                      # Single namespace/family
     ./2-Generate-ExamplePrompts-One.ps1 -ToolCommand "acr registry list" -SkipValidation
 #>
 
@@ -47,8 +47,8 @@ $ErrorActionPreference = "Stop"
 
 try {
     Write-Divider
-    Write-Progress "Single Tool Prompt Generation & Validation Test"
-    Write-Info "Tool: $ToolCommand"
+    Write-Progress "Single Namespace/Family Prompt Test"
+    Write-Info "Target: $ToolCommand"
     Write-Info "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     Write-Divider
     Write-Host ""
@@ -200,7 +200,7 @@ try {
                 Write-Warning "✗ Validation report not found: $validationFile"
             }
         } else {
-            Write-Warning "Skipping validation for tool families (use single tool for validation)"
+            Write-Warning "Skipping validation for multi-tool namespaces/families (use a specific tool command for validation)"
         }
     } else {
         Write-Warning "Skipped validation (use without -SkipValidation to validate)"

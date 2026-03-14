@@ -10,7 +10,7 @@
     3. If new namespaces found, uses GenAI to suggest brand mapping entries
     4. Outputs suggestions and HALTS execution for human review
 
-    This script should run BEFORE any generation steps (Steps 1-5).
+    This script should run BEFORE the generation pipeline (core Steps 1-4 plus optional Steps 5-6).
 
 .PARAMETER OutputPath
     Path to the generated directory (default: ../generated from script location)
