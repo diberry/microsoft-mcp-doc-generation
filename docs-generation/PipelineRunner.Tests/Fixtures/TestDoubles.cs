@@ -1,4 +1,3 @@
-using System.Text.Json;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 
@@ -15,10 +14,33 @@ internal sealed class RecordingProcessRunner : IProcessRunner
     }
 
     public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)
-        => RunAsync(new ProcessSpec("dotnet", ["build", solutionPath], Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory), cancellationToken);
+        => RunAsync(
+            new ProcessSpec(
+                "dotnet",
+                ["build", solutionPath, "--configuration", "Release", "--verbosity", "quiet"],
+                Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory),
+            cancellationToken);
 
     public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string projectPath, IEnumerable<string> arguments, bool noBuild, string workingDirectory, CancellationToken cancellationToken)
-        => RunAsync(new ProcessSpec("dotnet", ["run", projectPath, .. arguments], workingDirectory), cancellationToken);
+    {
+        var invocation = new List<string>
+        {
+            "run",
+            "--project",
+            projectPath,
+            "--configuration",
+            "Release",
+        };
+
+        if (noBuild)
+        {
+            invocation.Add("--no-build");
+        }
+
+        invocation.Add("--");
+        invocation.AddRange(arguments);
+        return RunAsync(new ProcessSpec("dotnet", invocation, workingDirectory), cancellationToken);
+    }
 
     public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
         => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
