@@ -95,18 +95,36 @@ Compatibility notes:
 
 ## Root scripts
 
-| Script | Current role |
+### ✅ Active scripts
+
+These scripts are actively invoked during normal pipeline execution via `start.sh` → `PipelineRunner`:
+
+| Script | Called by | Purpose |
+|---|---|---|
+| `preflight.ps1` | `PipelineRunner.cs` bootstrap | Environment validation, .NET build coordination, CLI metadata extraction, brand-to-server mapping validation |
+
+### ⚠️ Legacy scripts
+
+These scripts are **no longer on the standard execution path** (previously called by `Generate-ToolFamily.ps1` or `start.sh`, now replaced by typed C# steps in `PipelineRunner/Steps/`). They are retained for reference, manual troubleshooting, and fallback execution:
+
+| Script | Replaced by | Notes |
+|---|---|---|
+| `Generate-ToolFamily.ps1` | `PipelineRunner` orchestrator | Manual/fallback PowerShell orchestrator for single namespace runs |
+| `0-Validate-BrandMappings.ps1` | Brand validation in `preflight.ps1` | Validates `brand-to-server-mapping.json` |
+| `1-Generate-AnnotationsParametersRaw-One.ps1` | `AnnotationsParametersRawStep` (Step 1) | Legacy wrapper for manual Step 1 execution |
+| `2-Generate-ExamplePrompts-One.ps1` | `ExamplePromptsStep` (Step 2) | Legacy wrapper for manual Step 2 execution |
+| `3-Generate-ToolGenerationAndAIImprovements-One.ps1` | `ToolGenerationStep` (Step 3) | Legacy wrapper for manual Step 3 execution |
+| `4-Generate-ToolFamilyCleanup-One.ps1` | `ToolFamilyCleanupStep` (Step 4) | Legacy wrapper for manual Step 4 execution |
+| `5-Generate-SkillsRelevance-One.ps1` | `SkillsRelevanceStep` (Step 5) | Legacy wrapper for manual Step 5 execution |
+| `6-Generate-HorizontalArticles-One.ps1` | `HorizontalArticlesStep` (Step 6) | Legacy wrapper for manual Step 6 execution |
+
+### ℹ️ Support/utility scripts
+
+| Script | Purpose |
 |---|---|
-| `preflight.ps1` | Still used by `PipelineRunner` bootstrap for environment checks, build coordination, CLI metadata, and brand validation |
-| `validate-env.ps1` | Validates `.env` for Azure OpenAI-backed steps |
-| `0-Validate-BrandMappings.ps1` | Validates `brand-to-server-mapping.json` consistency with CLI namespaces |
-| `Generate-ToolFamily.ps1` | Legacy/manual PowerShell orchestrator retained for reference and fallback |
-| `1-Generate-AnnotationsParametersRaw-One.ps1` | Legacy/manual Step 1 wrapper retained for reference and fallback |
-| `2-Generate-ExamplePrompts-One.ps1` | Legacy/manual Step 2 wrapper retained for reference and fallback |
-| `3-Generate-ToolGenerationAndAIImprovements-One.ps1` | Legacy/manual Step 3 wrapper retained for reference and fallback |
-| `4-Generate-ToolFamilyCleanup-One.ps1` | Legacy/manual Step 4 wrapper retained for reference and fallback |
-| `5-Generate-SkillsRelevance-One.ps1` | Legacy/manual Step 5 wrapper retained for reference and fallback |
-| `6-Generate-HorizontalArticles-One.ps1` | Legacy/manual Step 6 wrapper retained for reference and fallback |
+| `validate-env.ps1` | Validates `.env` for Azure OpenAI-backed steps (used by legacy scripts) |
+| `Shared-Functions.ps1` | Shared functions library used by legacy PowerShell scripts |
+| `Validate-ToolFamily-PostAssembly.ps1` | Post-assembly tool-family validation (deprecated; validation now integrated into `ToolFamilyCleanupStep`) |
 | `Invoke-CliAnalyzer.ps1` | Manual helper for CLI analyzer generation |
 
 ## standalone/
