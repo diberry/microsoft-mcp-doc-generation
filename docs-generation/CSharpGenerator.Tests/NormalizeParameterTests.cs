@@ -98,7 +98,8 @@ public class NormalizeParameterTests : IClassFixture<TextCleanupFixture>
     public void NormalizeParameter_NullString_ReturnsUnknown()
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(null);
+        string? input = null;
+        var result = TextCleanup.NormalizeParameter(input!);
 
         // Assert
         Assert.Equal("Unknown", result);
@@ -228,15 +229,14 @@ public class NormalizeParameterTests : IClassFixture<TextCleanupFixture>
 
     [Theory]
     [InlineData("resource_group_name", "Resource_group_name")] // Underscores not split
-    [InlineData("resourceGroupName", "Resourcegroupname")] // CamelCase not split (hyphen-based split only)
+    [InlineData("resourceGroupName", "ResourceGroupName")] // CamelCase is preserved when no hyphens are present
     public void NormalizeParameter_NonHyphenSeparators_NotSplit(string input, string expected)
     {
         // Act
         var result = TextCleanup.NormalizeParameter(input);
 
         // Assert
-        // Note: First word capitalization is preserved if already capitalized
-        Assert.StartsWith("Resource", result);
+        Assert.Equal(expected, result);
     }
 
     // ── Case Sensitivity ────────────────────────────────────────────
