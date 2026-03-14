@@ -1,24 +1,24 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Generates tool family files for a single tool
+    Generates tool family files for a single namespace or family
 
 .DESCRIPTION
     Similar to GenerateExamplePrompt-One.ps1 but for tool family generation.
     Generates and tests tool family metadata, related content, and final stitched files
-    for a single Azure MCP tool. Useful for quick testing and debugging of the 
-    tool family cleanup/assembly pipeline.
+    for a single Azure MCP namespace or family. It also supports a specific tool command
+    for targeted debugging of the tool family cleanup/assembly pipeline.
     
     Steps:
-    1. Filters cli-output.json to include only the specified tool
+    1. Filters cli-output.json to include only the specified namespace, family, or tool command
     2. Generates metadata (frontmatter + H1) using AI
     3. Generates related content section using AI
     4. Stitches together final tool family file
     5. Shows all output files
 
 .PARAMETER ToolCommand
-    The tool command to test (e.g., "keyvault secret create", "storage account list")
-    Can also be a tool family/namespace prefix to generate all tools in that family (e.g., "keyvault", "storage")
+    The tool command or namespace/family to test (e.g., "keyvault secret create", "storage account list", "storage")
+    The `-One.ps1` workflow typically targets one namespace/family at a time.
 
 .PARAMETER OutputPath
     Path to the generated directory (default: ../generated from docs-generation root)
@@ -36,8 +36,8 @@
     Skip the validation step (only generate files)
 
 .EXAMPLE
-    ./Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "keyvault secret create"  # Single tool
-    ./Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "storage"                      # All storage tools
+    ./Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "keyvault secret create"  # Specific tool command
+    ./Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "storage"                      # Single namespace/family
     ./Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "acr registry list" -SkipRelated
 #>
 
@@ -62,8 +62,8 @@ $ErrorActionPreference = "Stop"
 
 try {
     Write-Divider
-    Write-Progress "Single Tool Family Generation Test"
-    Write-Info "Tool: $ToolCommand"
+    Write-Progress "Single Namespace/Family Generation Test"
+    Write-Info "Target: $ToolCommand"
     Write-Info "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     Write-Divider
     Write-Host ""
@@ -260,7 +260,7 @@ try {
     Write-Host ""
     
     if ($matchingTools.Count -eq 1) {
-        # Single tool - files are named by FAMILY, not by tool
+        # Specific tool command - files are named by family, not by tool command
         $metadataFile = Join-Path $metadataOutputDir "$familyName-metadata.md"
         $relatedFile = Join-Path $relatedOutputDir "$familyName-related.md"
         $finalFile = Join-Path $finalOutputDir "$familyName.md"
@@ -323,7 +323,7 @@ try {
         Write-Host ""
         
         if ($matchingTools.Count -eq 1) {
-            # Single tool validation
+            # Specific tool command validation
             $allFound = $true
             
             if (-not (Test-Path $metadataFile)) {
@@ -366,7 +366,7 @@ try {
             Write-Info "    - $finalOutputDir ($finalCount files)"
         }
 
-        $validationScript = Join-Path $scriptDir "5-Validate-ToolFamily.ps1"
+        $validationScript = Join-Path $scriptDir "Validate-ToolFamily-PostAssembly.ps1"
         if (-not (Test-Path $validationScript)) {
             throw "Validation script not found: $validationScript"
         }

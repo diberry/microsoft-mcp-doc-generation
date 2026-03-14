@@ -35,7 +35,7 @@
 #   - Node.js + npm (for MCP CLI metadata)
 #   - PowerShell (pwsh)
 #   - .NET SDK (for generator projects)
-#   - Azure OpenAI env vars (for Steps 2, 3, 6)
+#   - Azure OpenAI env vars (for Steps 2, 3, 4, 6)
 
 set -euo pipefail
 

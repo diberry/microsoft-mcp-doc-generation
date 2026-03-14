@@ -11,7 +11,9 @@ All scripts are in `docs-generation/scripts/`:
 - `2-Generate-ExamplePrompts-One.ps1` — Step 2: AI example prompts
 - `3-Generate-ToolGenerationAndAIImprovements-One.ps1` — Step 3: tool generation + AI improvements
 - `4-Generate-ToolFamilyCleanup-One.ps1` — Step 4: tool family metadata
-- `5-Generate-HorizontalArticles-One.ps1` — Step 5: horizontal articles
+- `5-Generate-SkillsRelevance-One.ps1` — Step 5: skills relevance
+- `6-Generate-HorizontalArticles-One.ps1` — Step 6: horizontal articles
+- `Validate-ToolFamily-PostAssembly.ps1` — Step 4 post-assembly validator
 - `Shared-Functions.ps1` — Shared PowerShell utilities
 - `bash-common.sh` — Shared bash utilities
 - `validate-env.ps1` — Environment validation

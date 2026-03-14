@@ -1,23 +1,23 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Generates annotations, parameters, and raw tool files for a single tool
+    Generates annotations, parameters, and raw tool files for a single namespace or family
 
 .DESCRIPTION
     Similar to GenerateExamplePrompt-One.ps1 but for the base generation pipeline.
-    Generates and validates annotations, parameters, and raw tool files for a single Azure MCP tool.
-    Useful for quick testing and debugging of the annotation/parameter/raw pipeline.
+    Generates and validates annotations, parameters, and raw tool files for a single Azure MCP namespace or family.
+    It also supports a specific tool command for targeted debugging of the annotation/parameter/raw pipeline.
     
     Steps:
-    1. Filters cli-output.json to include only the specified tool
-    2. Generates annotations for that tool
-    3. Generates parameters and parameter manifests for that tool
-    4. Generates raw tool file for that tool
+    1. Filters cli-output.json to include only the specified namespace, family, or tool command
+    2. Generates annotations for that target
+    3. Generates parameters and parameter manifests for that target
+    4. Generates raw tool file(s) for that target
     5. Shows all output files
 
 .PARAMETER ToolCommand
-    The tool command to test (e.g., "keyvault secret create", "storage account list")
-    Can also be a tool family/namespace prefix to generate all tools in that family (e.g., "keyvault", "storage")
+    The tool command or namespace/family to test (e.g., "keyvault secret create", "storage account list", "storage")
+    The `-One.ps1` workflow typically targets one namespace/family at a time.
 
 .PARAMETER OutputPath
     Path to the generated directory (default: ../generated from docs-generation root)
@@ -26,8 +26,8 @@
     Skip the validation step (only generate files)
 
 .EXAMPLE
-    ./Generate-AnnotationsParametersRaw-One.ps1 -ToolCommand "keyvault secret create"  # Single tool
-    ./Generate-AnnotationsParametersRaw-One.ps1 -ToolCommand "storage"                      # All storage tools
+    ./Generate-AnnotationsParametersRaw-One.ps1 -ToolCommand "keyvault secret create"  # Specific tool command
+    ./Generate-AnnotationsParametersRaw-One.ps1 -ToolCommand "storage"                      # Single namespace/family
     ./Generate-AnnotationsParametersRaw-One.ps1 -ToolCommand "acr registry list" -SkipValidation
 #>
 
@@ -71,8 +71,8 @@ function Get-CommandFromFile {
 
 try {
     Write-Divider
-    Write-Progress "Single Tool Annotations/Parameters/Raw Generation Test"
-    Write-Info "Tool: $ToolCommand"
+    Write-Progress "Single Namespace/Family Raw Generation Test"
+    Write-Info "Target: $ToolCommand"
     Write-Info "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     Write-Divider
     Write-Host ""
@@ -182,7 +182,7 @@ try {
 
     # Show generated files
     if ($matchingTools.Count -eq 1) {
-        # Single tool
+        # Specific tool command
         $singleToolCommand = $matchingTools[0].command
         $baseFileName = Get-ToolBaseFileName $singleToolCommand
         
@@ -202,7 +202,7 @@ try {
     Write-Host ""
     
     if ($matchingTools.Count -eq 1) {
-        # Single tool - validate exact files
+        # Specific tool command - validate exact files
         if (Test-Path $annotationsFile) {
             Write-Success "✓ Annotations: $annotationsFile"
             $lineCount = (Get-Content $annotationsFile).Count
@@ -278,7 +278,7 @@ try {
         Write-Host ""
         
         if ($matchingTools.Count -eq 1) {
-            # Single tool validation
+            # Specific tool command validation
             $allFound = $true
             if (-not (Test-Path $annotationsFile)) {
                 Write-Warning "✗ Annotations file not found"

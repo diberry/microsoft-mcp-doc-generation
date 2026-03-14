@@ -1,6 +1,6 @@
 # docs-generation/scripts
 
-Scripts for the Azure MCP Documentation Generator pipeline and related development tooling.
+Scripts for the Azure MCP documentation generation pipeline and related development tooling.
 
 ## Directory structure
 
@@ -13,38 +13,48 @@ scripts/
 
 ## Active pipeline scripts (root)
 
-These 12 scripts form the generation pipeline invoked by the root `start.sh`:
+These scripts form the current generation flow invoked by the root `start.sh` orchestrator:
 
 ```
 start.sh
-├── preflight.ps1                                    # One-time setup (build, CLI metadata, validation)
-│   ├── validate-env.ps1                             # Validates .env has required AI credentials
-│   └── 0-Validate-BrandMappings.ps1                 # Validates brand-to-server-mapping.json
-└── start-only.sh                                    # Worker: processes a single namespace
-    └── Generate-ToolFamily.ps1                      # Per-namespace orchestrator (Steps 1-5)
-        ├── Invoke-CliAnalyzer.ps1               # Runs CliAnalyzer .NET project on CLI JSON
-        ├── 1-Generate-AnnotationsParametersRaw-One.ps1  # Step 1: annotations, parameters, raw tools
-        ├── 2-Generate-ExamplePrompts-One.ps1            # Step 2: AI example prompts + validation
-        ├── 3-Generate-ToolGenerationAndAIImprovements-One.ps1  # Step 3: composed + AI-improved tools
-        ├── 4-Generate-ToolFamilyCleanup-One.ps1         # Step 4: tool family assembly + cleanup
-        └── 5-Generate-HorizontalArticles-One.ps1        # Step 5: horizontal how-to articles
+├── preflight.ps1                                         # One-time setup (build, CLI metadata, env + brand validation)
+│   ├── validate-env.ps1                                  # Validates .env for Azure OpenAI-backed steps
+│   └── 0-Validate-BrandMappings.ps1                      # Validates brand-to-server-mapping.json
+└── start-only.sh                                         # Worker: processes one namespace/family
+    └── Generate-ToolFamily.ps1                           # Per-namespace orchestrator (core Steps 1-4, optional Steps 5-6)
+        ├── Invoke-CliAnalyzer.ps1                        # Runs CliAnalyzer on CLI JSON
+        ├── 1-Generate-AnnotationsParametersRaw-One.ps1   # Step 1: annotations, parameters, raw tools
+        ├── 2-Generate-ExamplePrompts-One.ps1             # Step 2: example prompts + validation
+        ├── 3-Generate-ToolGenerationAndAIImprovements-One.ps1 # Step 3: composed + AI-improved tools
+        ├── 4-Generate-ToolFamilyCleanup-One.ps1          # Step 4: tool family assembly
+        ├── Validate-ToolFamily-PostAssembly.ps1          # Step 4 sub-step: post-assembly validation
+        ├── 5-Generate-SkillsRelevance-One.ps1            # Step 5: skills relevance report
+        └── 6-Generate-HorizontalArticles-One.ps1         # Step 6: horizontal how-to articles
 ```
+
+### Pipeline step model
+
+- **Core pipeline:** Steps 1-4
+- **Step 4 validation:** `Validate-ToolFamily-PostAssembly.ps1` runs automatically inside Step 4
+- **Supplementary outputs:** Step 5 (skills relevance) and Step 6 (horizontal articles)
 
 ### Script details
 
 | Script | Purpose |
 |---|---|
-| `preflight.ps1` | One-time setup: validates environment, builds .NET solution, generates CLI metadata, runs brand validation |
-| `validate-env.ps1` | Checks `.env` file has required `FOUNDRY_*` credentials for Azure OpenAI |
-| `0-Validate-BrandMappings.ps1` | Validates `brand-to-server-mapping.json` consistency with CLI namespaces |
-| `start-only.sh` | Worker script that processes a single namespace; called by `start.sh` in a loop |
-| `Generate-ToolFamily.ps1` | Main per-namespace orchestrator running Steps 1–5 in sequence |
+| `preflight.ps1` | One-time setup: validates environment, builds the .NET solution, generates CLI metadata, and runs brand validation |
+| `validate-env.ps1` | Checks `.env` has the Azure OpenAI credentials required for Steps 2, 3, 4, and 6 |
+| `0-Validate-BrandMappings.ps1` | Validates `brand-to-server-mapping.json` consistency with CLI namespaces before the numbered steps run |
+| `start-only.sh` | Worker script that processes a single namespace/family; called by `start.sh` in a loop |
+| `Generate-ToolFamily.ps1` | Main per-namespace orchestrator running core Steps 1-4, then optional Steps 5-6 |
 | `Invoke-CliAnalyzer.ps1` | Runs the CliAnalyzer .NET project to extract tool metadata from CLI JSON |
-| `1-Generate-AnnotationsParametersRaw-One.ps1` | Step 1: generates annotation, parameter, and raw tool include files for one namespace |
-| `2-Generate-ExamplePrompts-One.ps1` | Step 2: generates AI example prompts via Azure OpenAI and validates them for one namespace |
-| `3-Generate-ToolGenerationAndAIImprovements-One.ps1` | Step 3: runs ToolGeneration_Composed (placeholder replacement) and ToolGeneration_Improved (AI improvements) for one namespace |
-| `4-Generate-ToolFamilyCleanup-One.ps1` | Step 4: assembles tool family files with AI metadata for one namespace |
-| `5-Generate-HorizontalArticles-One.ps1` | Step 5: generates horizontal how-to articles using AI for one namespace |
+| `1-Generate-AnnotationsParametersRaw-One.ps1` | Step 1: generates annotation, parameter, and raw tool include files for one namespace/family |
+| `2-Generate-ExamplePrompts-One.ps1` | Step 2: generates AI example prompts and validates them for one namespace/family |
+| `3-Generate-ToolGenerationAndAIImprovements-One.ps1` | Step 3: runs ToolGeneration_Composed and ToolGeneration_Improved for one namespace/family |
+| `4-Generate-ToolFamilyCleanup-One.ps1` | Step 4: assembles tool-family files with AI metadata for one namespace/family |
+| `Validate-ToolFamily-PostAssembly.ps1` | Step 4 sub-step: validates the assembled tool-family article and report output |
+| `5-Generate-SkillsRelevance-One.ps1` | Step 5: generates GitHub Copilot skills relevance reports for one namespace/family |
+| `6-Generate-HorizontalArticles-One.ps1` | Step 6: generates horizontal how-to articles using AI for one namespace/family |
 
 ## standalone/
 
@@ -78,5 +88,3 @@ Development, debugging, testing, and CI helper scripts.
 | `parse-commands.ps1` | Parses CLI output JSON into structured CSV (namespace/family/tool/operation) |
 | `compare-generation.sh` | Compares baseline vs current generation output (file counts + diffs) |
 | `copilot-verify.sh` | Verifies GitHub repo settings for Copilot/Actions (permissions, approvals) |
-
-

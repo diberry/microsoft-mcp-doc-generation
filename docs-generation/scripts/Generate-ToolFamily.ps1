@@ -1,24 +1,25 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Complete tool family (namespace) documentation generator - single service/family
+    Complete namespace/family documentation generator
 
 .DESCRIPTION
     Orchestrates all generation steps to produce a complete tool family file.
-    This script guides you through the entire pipeline for a single tool family:
+    This script guides you through the current pipeline for a single namespace/family:
     
     1. Generates annotations, parameters, and raw tool files
     2. Generates example prompts for each tool
     3. Generates composed and AI-improved tool files
     4. Generates tool family metadata, related content, final file, and post-assembly validation
-    5. Optionally generates horizontal article
+    5. Optionally generates a GitHub Copilot skills relevance report
+    6. Optionally generates a horizontal article
     
-    The result is a complete, standalone documentation file for the tool family
-    with all content integrated and AI-enhanced.
+    The result after Step 4 is a complete, standalone documentation file for the tool family.
+    Steps 5 and 6 add supplementary namespace-level outputs.
     
     IMPORTANT - Step Dependencies:
     =============================
-    The steps have sequential dependencies. Each step requires outputs from previous steps:
+    The steps have sequential dependencies. Steps 1-4 are the core pipeline; Steps 5-6 are optional add-ons.
     
     - Step 1 (Annotations/Parameters/Raw): No dependencies. Creates base files.
                                            Output: annotations/, parameters/, tools-raw/
@@ -29,17 +30,17 @@
     - Step 3 (Composed/Improved): REQUIRES Step 1 (annotations, parameters) + Step 2 (prompts)
                                   Output: tools-composed/, tools-ai-improved/
     
-    - Step 4 (Family Assembly + Validation): REQUIRES Step 3 outputs
-                                             Output: tool-family/ + validation report
+    - Step 4 (Family Assembly + Post-Assembly Validation): REQUIRES Step 3 outputs
+                                                            Output: tool-family/ + validation report
     
     - Step 5 (Skills Relevance): Fetches GitHub Copilot skills and ranks by relevance. Non-fatal.
-                                Output: skills-relevance/
+                                 Output: skills-relevance/
     
-    - Step 6 (Horizontal Articles): Can run independently but should follow other steps
-                                    Output: horizontal-articles/
+    - Step 6 (Horizontal Articles): Produces cross-cutting service guidance for the same namespace/family.
+                                     Output: horizontal-articles/
     
-    To get complete output, run at minimum: Steps 1, 2, 3
-    To get everything: Steps 1, 2, 3, 4 (and optionally 5)
+    To get the core pipeline output, run Steps 1, 2, 3, 4.
+    To get everything, run Steps 1, 2, 3, 4, 5, 6.
     
     Running Step 3 alone will produce files with placeholder content for missing annotations/parameters/prompts.
 
@@ -87,7 +88,7 @@
       @(1,2,3,4,5,6) - Add everything (~25-30 min) - FULL PIPELINE
 
 .EXAMPLE
-    # PowerShell: Full pipeline (all 5 steps, default)
+    # PowerShell: Full pipeline (all 6 steps, default)
     ./Generate-ToolFamily.ps1 -ToolFamily "keyvault"
     
     # PowerShell: Full pipeline with custom token limit
@@ -105,7 +106,7 @@
     # PowerShell: Run Steps 1-4 (adds family assembly, ~20-25 minutes)
     ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,2,3,4)
     
-    # PowerShell: Run all steps (all 6, ~25-30 minutes)
+    # PowerShell: Run all steps (core Steps 1-4 plus optional Steps 5-6, ~25-30 minutes)
     ./Generate-ToolFamily.ps1 -ToolFamily "advisor" -Steps @(1,2,3,4,5,6)
     
     # PowerShell: Run specific steps (e.g., only steps 1 and 4) - Will have incomplete output!
@@ -188,8 +189,8 @@ try {
     $ToolFamily = $ToolFamily.Trim()
 
     Write-Divider
-    Write-Progress "Complete Tool Family Documentation Generator"
-    Write-Info "Tool Family: $ToolFamily"
+    Write-Progress "Complete Namespace/Family Documentation Generator"
+    Write-Info "Namespace/Family: $ToolFamily"
     Write-Info "Started: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
     Write-Divider
     Write-Host ""
