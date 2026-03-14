@@ -14,6 +14,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NAMESPACE_ARG=""
 STEPS_ARG="1,2,3,4,5,6"
 
+# If first arg starts with -, pass all args through directly to PipelineRunner
+if [[ $# -gt 0 && "$1" =~ ^- ]]; then
+    dotnet run --project "$ROOT_DIR/docs-generation/PipelineRunner/PipelineRunner.csproj" -- "$@"
+    exit $?
+fi
+
 if [[ $# -gt 0 ]]; then
     if [[ "$1" =~ ^[1-6](,[1-6])*$ ]]; then
         STEPS_ARG="$1"
