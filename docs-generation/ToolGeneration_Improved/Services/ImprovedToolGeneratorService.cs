@@ -12,6 +12,12 @@ namespace ToolGeneration_Improved.Services;
 /// </summary>
 public class ImprovedToolGeneratorService
 {
+    internal sealed record RequiredParameterEntry(string DisplayName, string NormalizedName, string RowLine);
+
+    private sealed record ParameterTableRow(int LineIndex, string DisplayName, string NormalizedName, string RequirementText, string OriginalLine);
+
+    private sealed record ParameterTable(int HeaderLineIndex, int EndLineIndexExclusive, List<string> Lines, List<ParameterTableRow> Rows);
+
     private readonly GenerativeAIClient _aiClient;
     private readonly string _systemPrompt;
     private readonly string _userPromptTemplate;
@@ -28,6 +34,15 @@ public class ImprovedToolGeneratorService
         "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):",
         "[Tool annotation hints](../index.md#tool-annotations-for-azure-mcp-server):",
         "[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):"
+    ];
+
+    private static readonly string[] ParameterSectionMarkers =
+    [
+        "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):",
+        "[Tool annotation hints](../index.md#tool-annotations-for-azure-mcp-server):",
+        "[Tool annotation hints](../../index.md#tool-annotations-for-azure-mcp-server):",
+        "**Prerequisites**:",
+        "**Success verification**:"
     ];
 
     /// <summary>
@@ -103,12 +118,14 @@ public class ImprovedToolGeneratorService
 
                 // Load composed file content
                 var originalContent = await File.ReadAllTextAsync(composedFilePath);
+                var requiredParameters = ExtractRequiredParameters(originalContent);
 
                 // Protect handlebar template labels from AI modification
                 var protectedContent = ProtectTemplateLabels(originalContent, out var labelMap);
 
                 // Generate user prompt with the content
                 var userPrompt = string.Format(_userPromptTemplate, protectedContent);
+                userPrompt = AppendRequiredParameterPreservationInstruction(userPrompt, requiredParameters);
 
                 // Call AI to improve the content
                 var improvedContent = await _aiClient.GetChatCompletionAsync(
@@ -127,6 +144,22 @@ public class ImprovedToolGeneratorService
                     Console.WriteLine($" ⚠ Leaked tokens detected: {string.Join(", ", leakedTokens)}");
                     Console.WriteLine($"      Falling back to original content");
                     restoredContent = originalContent;
+                }
+                else if (requiredParameters.Count > 0)
+                {
+                    var missingRequiredParameters = FindMissingRequiredParameters(restoredContent, requiredParameters);
+                    if (missingRequiredParameters.Count > 0)
+                    {
+                        Console.WriteLine($" ⚠ Missing required parameters after AI: {string.Join(", ", missingRequiredParameters.Select(parameter => parameter.DisplayName))}");
+                        restoredContent = ReinjectMissingRequiredParameters(restoredContent, originalContent, missingRequiredParameters);
+
+                        var remainingMissingParameters = FindMissingRequiredParameters(restoredContent, requiredParameters);
+                        if (remainingMissingParameters.Count > 0)
+                        {
+                            Console.WriteLine($"      Reinjection incomplete; falling back to original content");
+                            restoredContent = originalContent;
+                        }
+                    }
                 }
 
                 // Save improved content
@@ -202,6 +235,97 @@ public class ImprovedToolGeneratorService
         return leaked;
     }
 
+    internal static List<RequiredParameterEntry> ExtractRequiredParameters(string content)
+    {
+        var table = FindParameterTable(content);
+        if (table is null)
+        {
+            return [];
+        }
+
+        return table.Rows
+            .Where(row => row.RequirementText.StartsWith("Required", StringComparison.OrdinalIgnoreCase))
+            .GroupBy(row => row.NormalizedName)
+            .Select(group => new RequiredParameterEntry(
+                group.Key,
+                group.Key,
+                group.First().OriginalLine))
+            .ToList();
+    }
+
+    internal static string AppendRequiredParameterPreservationInstruction(string userPrompt, IReadOnlyList<RequiredParameterEntry> requiredParameters)
+    {
+        if (requiredParameters.Count == 0)
+        {
+            return userPrompt;
+        }
+
+        var requiredNames = string.Join(", ", requiredParameters.Select(parameter => $"`{parameter.DisplayName}`"));
+        return $"{userPrompt}\n\nCRITICAL REQUIREMENT: Preserve every required parameter row from the input parameter table in the final output. The final output must continue to include these required parameters: {requiredNames}.";
+    }
+
+    internal static List<RequiredParameterEntry> FindMissingRequiredParameters(string content, IReadOnlyList<RequiredParameterEntry> requiredParameters)
+    {
+        if (requiredParameters.Count == 0)
+        {
+            return [];
+        }
+
+        var table = FindParameterTable(content);
+        if (table is null)
+        {
+            return requiredParameters.ToList();
+        }
+
+        var presentParameters = table.Rows
+            .Select(row => row.NormalizedName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return requiredParameters
+            .Where(parameter => !presentParameters.Contains(parameter.NormalizedName))
+            .ToList();
+    }
+
+    internal static string ReinjectMissingRequiredParameters(string content, string originalContent, IReadOnlyList<RequiredParameterEntry> missingParameters)
+    {
+        if (missingParameters.Count == 0)
+        {
+            return content;
+        }
+
+        var originalTable = FindParameterTable(originalContent);
+        if (originalTable is null)
+        {
+            return content;
+        }
+
+        var newline = DetectNewLine(content);
+        var currentTable = FindParameterTable(content);
+        if (currentTable is null)
+        {
+            var tableBlock = string.Join(newline, originalTable.Lines).TrimEnd();
+            return InsertParameterTableBlock(content, tableBlock, newline);
+        }
+
+        var repairedLines = SplitLines(content).ToList();
+        var missingLines = missingParameters
+            .Select(parameter => parameter.RowLine)
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (missingLines.Count == 0)
+        {
+            return content;
+        }
+
+        var firstOptionalRow = currentTable.Rows.FirstOrDefault(row =>
+            !row.RequirementText.StartsWith("Required", StringComparison.OrdinalIgnoreCase));
+        var insertAt = firstOptionalRow?.LineIndex ?? currentTable.EndLineIndexExclusive;
+        repairedLines.InsertRange(insertAt, missingLines);
+        return string.Join(newline, repairedLines);
+    }
+
     internal static string ProtectTemplateLabels(string content, out Dictionary<string, string> labelMap)
     {
         var map = new Dictionary<string, string>();
@@ -266,5 +390,130 @@ public class ImprovedToolGeneratorService
         }
 
         return normalized;
+    }
+
+    private static ParameterTable? FindParameterTable(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return null;
+        }
+
+        var lines = SplitLines(content);
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (!IsParameterTableHeader(lines[i]))
+            {
+                continue;
+            }
+
+            var tableLines = new List<string> { lines[i] };
+            var rows = new List<ParameterTableRow>();
+            var lineIndex = i + 1;
+            while (lineIndex < lines.Count && lines[lineIndex].TrimStart().StartsWith("|", StringComparison.Ordinal))
+            {
+                var line = lines[lineIndex];
+                tableLines.Add(line);
+
+                var cells = ParseMarkdownTableCells(line);
+                if (cells.Count >= 3 && !IsMarkdownDividerRow(cells))
+                {
+                    var displayName = cells[0];
+                    var normalizedName = NormalizeParameterName(displayName);
+                    if (!string.IsNullOrWhiteSpace(normalizedName))
+                    {
+                        rows.Add(new ParameterTableRow(
+                            lineIndex,
+                            displayName,
+                            normalizedName,
+                            cells[1],
+                            line));
+                    }
+                }
+
+                lineIndex++;
+            }
+
+            return new ParameterTable(i, lineIndex, tableLines, rows);
+        }
+
+        return null;
+    }
+
+    private static bool IsParameterTableHeader(string line)
+    {
+        var cells = ParseMarkdownTableCells(line);
+        if (cells.Count < 3)
+        {
+            return false;
+        }
+
+        var firstHeader = NormalizeParameterName(cells[0]);
+        return (firstHeader.Equals("parameter", StringComparison.OrdinalIgnoreCase) ||
+                firstHeader.Equals("option", StringComparison.OrdinalIgnoreCase)) &&
+               cells[1].Contains("Required or optional", StringComparison.OrdinalIgnoreCase) &&
+               cells[2].Contains("Description", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static List<string> ParseMarkdownTableCells(string line)
+    {
+        var trimmedLine = line.Trim();
+        if (!trimmedLine.StartsWith("|", StringComparison.Ordinal) ||
+            !trimmedLine.EndsWith("|", StringComparison.Ordinal))
+        {
+            return [];
+        }
+
+        var segments = trimmedLine.Split('|');
+        return segments.Skip(1).Take(segments.Length - 2).Select(segment => segment.Trim()).ToList();
+    }
+
+    private static bool IsMarkdownDividerRow(IReadOnlyList<string> cells)
+    {
+        return cells.All(cell =>
+            !string.IsNullOrWhiteSpace(cell) &&
+            cell.All(ch => ch == '-' || ch == ':' || char.IsWhiteSpace(ch)));
+    }
+
+    private static string NormalizeParameterName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = System.Text.RegularExpressions.Regex.Replace(value, @"\[([^\]]+)\]\([^)]+\)", "$1");
+        normalized = normalized.Replace("`", string.Empty)
+            .Replace("*", string.Empty)
+            .Replace("_", string.Empty)
+            .Trim();
+        normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", " ");
+        return normalized;
+    }
+
+    private static IReadOnlyList<string> SplitLines(string content)
+    {
+        return content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+    }
+
+    private static string DetectNewLine(string content)
+    {
+        return content.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+    }
+
+    private static string InsertParameterTableBlock(string content, string tableBlock, string newline)
+    {
+        foreach (var marker in ParameterSectionMarkers)
+        {
+            var markerIndex = content.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex >= 0)
+            {
+                var prefix = content[..markerIndex].TrimEnd('\r', '\n');
+                var suffix = content[markerIndex..].TrimStart('\r', '\n');
+                return $"{prefix}{newline}{newline}{tableBlock}{newline}{newline}{suffix}";
+            }
+        }
+
+        return $"{content.TrimEnd('\r', '\n')}{newline}{newline}{tableBlock}{newline}";
     }
 }

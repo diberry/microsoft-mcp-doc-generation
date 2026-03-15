@@ -78,6 +78,36 @@ public class NamespaceStepTests
     }
 
     [Fact]
+    public async Task Step2_ExamplePrompts_NamespaceRun_UsesValidatorWithoutToolFilter()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new RecordingProcessRunner();
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+
+            SeedFile(Path.Combine(context.OutputPath, "example-prompts", "compute-list-example-prompts.md"));
+            SeedFile(Path.Combine(context.OutputPath, "example-prompts-prompts", "compute-list-input-prompt.md"));
+            SeedFile(Path.Combine(context.OutputPath, "example-prompts-raw-output", "compute-list-raw-output.txt"));
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Equal(2, runner.Invocations.Count);
+            Assert.Contains(runner.Invocations[1].Arguments, argument => argument.EndsWith("ExamplePromptValidator.csproj", StringComparison.Ordinal));
+            Assert.DoesNotContain("--tool-command", runner.Invocations[1].Arguments);
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("Skipping example prompt validation", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task Step3_ToolGeneration_UsesExpectedGeneratorArguments()
     {
         var testRoot = CreateTestRoot();
