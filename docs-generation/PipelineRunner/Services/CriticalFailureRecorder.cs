@@ -36,41 +36,55 @@ public static class CriticalFailureRecorder
         }
 
         var directory = Path.Combine(context.OutputPath, "critical-failures");
-        Directory.CreateDirectory(directory);
 
-        var recordedAt = DateTimeOffset.UtcNow;
-        var persisted = new List<CriticalFailureRecordReference>(failures.Count);
-
-        for (var index = 0; index < failures.Count; index++)
+        try
         {
-            var failure = failures[index];
-            var filePath = Path.Combine(directory, BuildRecordFileName(recordedAt, step, failure, index));
-            var payload = new CriticalFailureRecord(
-                recordedAt.UtcDateTime,
-                ResolveNamespace(context),
-                step.Id,
-                step.Name,
-                step.FailurePolicy.ToString(),
-                failure.ArtifactType,
-                failure.ArtifactName,
-                failure.Summary,
-                failure.Details,
-                failure.RelatedPaths,
-                result.Warnings,
-                result.ProcessInvocations,
-                result.ValidatorResults);
+            Directory.CreateDirectory(directory);
 
-            File.WriteAllText(filePath, JsonSerializer.Serialize(payload, JsonOptions));
-            persisted.Add(new CriticalFailureRecordReference(
-                failure.ArtifactType,
-                failure.ArtifactName,
-                step.Id,
-                step.Name,
-                failure.Summary,
-                filePath));
+            var recordedAt = DateTimeOffset.UtcNow;
+            var persisted = new List<CriticalFailureRecordReference>(failures.Count);
+
+            for (var index = 0; index < failures.Count; index++)
+            {
+                var failure = failures[index];
+                var filePath = Path.Combine(directory, BuildRecordFileName(recordedAt, step, failure, index));
+                var payload = new CriticalFailureRecord(
+                    recordedAt.UtcDateTime,
+                    ResolveNamespace(context),
+                    step.Id,
+                    step.Name,
+                    step.FailurePolicy.ToString(),
+                    failure.ArtifactType,
+                    failure.ArtifactName,
+                    failure.Summary,
+                    failure.Details,
+                    failure.RelatedPaths,
+                    result.Warnings,
+                    result.ProcessInvocations,
+                    result.ValidatorResults);
+
+                File.WriteAllText(filePath, JsonSerializer.Serialize(payload, JsonOptions));
+                persisted.Add(new CriticalFailureRecordReference(
+                    failure.ArtifactType,
+                    failure.ArtifactName,
+                    step.Id,
+                    step.Name,
+                    failure.Summary,
+                    filePath));
+            }
+
+            return persisted;
         }
-
-        return persisted;
+        catch (IOException exception)
+        {
+            Console.Error.WriteLine($"Warning: unable to persist critical failure records to '{directory}': {exception.Message}");
+            return Array.Empty<CriticalFailureRecordReference>();
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            Console.Error.WriteLine($"Warning: unable to persist critical failure records to '{directory}': {exception.Message}");
+            return Array.Empty<CriticalFailureRecordReference>();
+        }
     }
 
     private static IReadOnlyList<ArtifactFailure> BuildFallbackFailures(
@@ -88,6 +102,7 @@ public static class CriticalFailureRecorder
 
         return step switch
         {
+            AnnotationsParametersRawStep => BuildToolFallbackFailures(context, summary, result.Outputs),
             ExamplePromptsStep => BuildToolFallbackFailures(context, summary, result.Outputs),
             ToolGenerationStep => BuildToolFallbackFailures(context, summary, result.Outputs),
             ToolFamilyCleanupStep => [
@@ -215,6 +230,11 @@ public static class CriticalFailureRecorder
         }
 
         var sanitized = new string(buffer, 0, length).Trim('-');
+        if (sanitized.Length > 100)
+        {
+            sanitized = sanitized[..100].Trim('-');
+        }
+
         return string.IsNullOrWhiteSpace(sanitized) ? "artifact" : sanitized;
     }
 

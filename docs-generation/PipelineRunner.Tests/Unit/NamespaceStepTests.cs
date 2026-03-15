@@ -160,6 +160,57 @@ public class NamespaceStepTests
     }
 
     [Fact]
+    public async Task Step2_ExamplePrompts_TextFailureMarkersCreateToolArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new FailingProcessRunner(1, "generator failed", standardOutput: "[FAILED] compute list");
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("tool", failure.ArtifactType);
+            Assert.Equal("compute list", failure.ArtifactName);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_GeneratorCrashCreatesStepLevelArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new FailingProcessRunner(1, "Unhandled exception: generator crashed");
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("pipeline step", failure.ArtifactType);
+            Assert.Equal("ExamplePromptGeneratorStandalone", failure.ArtifactName);
+            Assert.Contains("before specific tools could be identified", failure.Summary, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task Step3_ToolGeneration_UsesExpectedGeneratorArguments()
     {
         var testRoot = CreateTestRoot();
@@ -208,6 +259,119 @@ public class NamespaceStepTests
             Assert.Single(result.ArtifactFailures);
             Assert.Equal("compute show", result.ArtifactFailures[0].ArtifactName);
             Assert.Contains("improvement", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step3_ToolGeneration_GeneratorCrashCreatesStepLevelArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new FailingProcessRunner(1, "Unhandled exception: tool generation crashed");
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+
+            await SeedToolGenerationFilesAsync(context.OutputPath, ["compute list", "compute show"], includeComposed: false, includeImproved: false);
+
+            var step = new ToolGenerationStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("pipeline step", failure.ArtifactType);
+            Assert.Equal("ToolGeneration_Composed", failure.ArtifactName);
+            Assert.Contains("before specific tools could be identified", failure.Summary, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public void CriticalFailureRecorder_AnnotationsStepFallbackCreatesPerToolRecords()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot, new RecordingProcessRunner(), skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+            var step = new AnnotationsParametersRawStep();
+            var result = new StepResult(false, ["Raw generation failed"], TimeSpan.Zero, Array.Empty<string>(), Array.Empty<string>(), Array.Empty<ValidatorResult>(), Array.Empty<ArtifactFailure>());
+
+            var persisted = CriticalFailureRecorder.Persist(context, step, result);
+
+            Assert.Equal(2, persisted.Count);
+            Assert.Contains(persisted, reference => reference.ArtifactName == "compute list");
+            Assert.Contains(persisted, reference => reference.ArtifactName == "compute show");
+            Assert.All(persisted, reference => Assert.True(File.Exists(reference.RecordPath)));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public void CriticalFailureRecorder_TruncatesSanitizedArtifactNamesInFileNames()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot, new RecordingProcessRunner(), skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+            var step = new ExamplePromptsStep();
+            var result = new StepResult(
+                false,
+                Array.Empty<string>(),
+                TimeSpan.Zero,
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<ValidatorResult>(),
+                [ArtifactFailure.Create("tool", new string('a', 140), "summary")]);
+
+            var persisted = CriticalFailureRecorder.Persist(context, step, result);
+
+            var record = Assert.Single(persisted);
+            var fileName = Path.GetFileNameWithoutExtension(record.RecordPath);
+            var start = fileName.IndexOf("-tool-", StringComparison.Ordinal);
+            var end = fileName.LastIndexOf("-01", StringComparison.Ordinal);
+            var artifactSegment = fileName[(start + "-tool-".Length)..end];
+            Assert.True(artifactSegment.Length <= 100, $"Expected sanitized artifact segment to be at most 100 characters but was {artifactSegment.Length}.");
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public void CriticalFailureRecorder_WriteFailuresDoNotThrowWhenDirectoryIsBlocked()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot, new RecordingProcessRunner(), skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+            File.WriteAllText(Path.Combine(context.OutputPath, "critical-failures"), "blocked");
+            var step = new ExamplePromptsStep();
+            var result = new StepResult(
+                false,
+                Array.Empty<string>(),
+                TimeSpan.Zero,
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<ValidatorResult>(),
+                [ArtifactFailure.Create("tool", "compute list", "summary")]);
+
+            var persisted = CriticalFailureRecorder.Persist(context, step, result);
+
+            Assert.Empty(persisted);
         }
         finally
         {
@@ -478,11 +642,13 @@ public class NamespaceStepTests
     {
         private readonly int _exitCode;
         private readonly string _standardError;
+        private readonly string _standardOutput;
 
-        public FailingProcessRunner(int exitCode, string standardError)
+        public FailingProcessRunner(int exitCode, string standardError, string standardOutput = "")
         {
             _exitCode = exitCode;
             _standardError = standardError;
+            _standardOutput = standardOutput;
         }
 
         public List<ProcessSpec> Invocations { get; } = new();
@@ -490,7 +656,7 @@ public class NamespaceStepTests
         public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
         {
             Invocations.Add(spec);
-            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, _exitCode, string.Empty, _standardError, TimeSpan.Zero));
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, _exitCode, _standardOutput, _standardError, TimeSpan.Zero));
         }
 
         public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)

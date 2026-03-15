@@ -12,6 +12,10 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         @"^\s*❌\s+(?<command>.+?)(?:\s+\(.*\))?$",
         RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    private static readonly Regex FailedToolTextRegex = new(
+        @"^\s*\[(?:FAILED|ERROR)\]\s+(?<command>.+?)(?:\s+\(.*\))?$",
+        RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     public ExamplePromptsStep()
         : base(
             2,
@@ -70,7 +74,18 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             var failedCommands = ParseFailedCommands(generatorResult.StandardOutput, matchingTools);
             if (failedCommands.Count == 0)
             {
-                failedCommands = toolArtifacts.Select(static artifact => artifact.Command).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                artifactFailures.Add(CreateArtifactFailure(
+                    "pipeline step",
+                    "ExamplePromptGeneratorStandalone",
+                    "Example prompt generation failed before specific tools could be identified.",
+                    warnings,
+                    [
+                        Path.Combine(context.OutputPath, "example-prompts"),
+                        Path.Combine(context.OutputPath, "example-prompts-prompts"),
+                        Path.Combine(context.OutputPath, "example-prompts-raw-output"),
+                    ]));
+
+                return BuildResult(context, processResults, false, warnings, validatorResults, artifactFailures);
             }
 
             artifactFailures.AddRange(toolArtifacts
@@ -196,9 +211,18 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         var knownCommands = matchingTools
             .Select(tool => tool.Command)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var failedCommands = ParseFailedCommands(output, knownCommands, FailedToolRegex);
+        return failedCommands.Count > 0
+            ? failedCommands
+            : ParseFailedCommands(output, knownCommands, FailedToolTextRegex);
+    }
+
+    private static HashSet<string> ParseFailedCommands(string output, HashSet<string> knownCommands, Regex regex)
+    {
         var failedCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (Match match in FailedToolRegex.Matches(output))
+        foreach (Match match in regex.Matches(output))
         {
             var command = match.Groups["command"].Value.Trim();
             var parenthesisIndex = command.IndexOf(" (", StringComparison.Ordinal);

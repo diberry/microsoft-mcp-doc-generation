@@ -89,6 +89,16 @@ public sealed class ToolGenerationStep : NamespaceStepBase
 
             warnings.AddRange(composedIssues.SelectMany(static issue => issue.Value));
             var failedComposedFiles = ParseFailingFiles(composedResult.StandardError, ComposedFailureRegex);
+            if (!composedResult.Succeeded && failedComposedFiles.Count == 0)
+            {
+                artifactFailures.Add(CreateStepLevelFailure(
+                    "ToolGeneration_Composed",
+                    "Tool composition failed before specific tools could be identified.",
+                    warnings,
+                    [rawToolsDirectory, composedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
+                return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+            }
+
             artifactFailures.AddRange(toolArtifacts
                 .Where(artifact => failedComposedFiles.Contains(artifact.ToolFileName) || composedIssues.ContainsKey(artifact.Command))
                 .Select(artifact => CreateArtifactFailure(
@@ -100,13 +110,18 @@ public sealed class ToolGenerationStep : NamespaceStepBase
 
             if (artifactFailures.Count == 0)
             {
-                artifactFailures.AddRange(toolArtifacts
-                    .Select(artifact => CreateArtifactFailure(
+                artifactFailures.Add(!composedResult.Succeeded
+                    ? CreateStepLevelFailure(
+                        "ToolGeneration_Composed",
+                        "Tool composition failed before specific tools could be identified.",
+                        warnings,
+                        [rawToolsDirectory, composedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory])
+                    : CreateArtifactFailure(
                         "tool",
-                        artifact.Command,
+                        GetCurrentNamespace(context),
                         "Tool composition failed before all composed files were produced.",
                         warnings,
-                        artifact.GenerationPaths)));
+                        [rawToolsDirectory, composedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
             }
 
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
@@ -132,6 +147,16 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             var failedImprovedFiles = ParseFailingFiles(
                 string.Join(Environment.NewLine, [improvedResult.StandardOutput, improvedResult.StandardError]),
                 ImprovedFailureRegex);
+            if (!improvedResult.Succeeded && failedImprovedFiles.Count == 0)
+            {
+                artifactFailures.Add(CreateStepLevelFailure(
+                    "ToolGeneration_Improved",
+                    "Tool improvement failed before specific tools could be identified.",
+                    warnings,
+                    [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
+                return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+            }
+
             artifactFailures.AddRange(toolArtifacts
                 .Where(artifact => failedImprovedFiles.Contains(artifact.ToolFileName) || improvedIssues.ContainsKey(artifact.Command))
                 .Select(artifact => CreateArtifactFailure(
@@ -143,13 +168,18 @@ public sealed class ToolGenerationStep : NamespaceStepBase
 
             if (artifactFailures.Count == 0)
             {
-                artifactFailures.AddRange(toolArtifacts
-                    .Select(artifact => CreateArtifactFailure(
+                artifactFailures.Add(!improvedResult.Succeeded
+                    ? CreateStepLevelFailure(
+                        "ToolGeneration_Improved",
+                        "Tool improvement failed before specific tools could be identified.",
+                        warnings,
+                        [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory])
+                    : CreateArtifactFailure(
                         "tool",
-                        artifact.Command,
+                        GetCurrentNamespace(context),
                         "Tool improvement failed before all final tool files were written.",
                         warnings,
-                        artifact.GenerationPaths)));
+                        [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
             }
 
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
@@ -249,6 +279,13 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             .Select(match => match.Groups["file"].Value.Trim())
             .Where(static fileName => !string.IsNullOrWhiteSpace(fileName))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static ArtifactFailure CreateStepLevelFailure(
+        string artifactName,
+        string summary,
+        IEnumerable<string> details,
+        IEnumerable<string> relatedPaths)
+        => ArtifactFailure.Create("pipeline step", artifactName, summary, details, relatedPaths);
 
     private sealed record ToolArtifacts(
         string Command,
