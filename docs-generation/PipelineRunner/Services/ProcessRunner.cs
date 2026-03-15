@@ -53,9 +53,22 @@ public sealed class ProcessRunner : IProcessRunner
 
     public async ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
     {
+        // On Windows, .cmd/.bat files need cmd.exe to execute correctly
+        // because UseShellExecute=false bypasses shell interpretation
+        var fileName = spec.FileName;
+        var arguments = spec.Arguments;
+        if (OperatingSystem.IsWindows() &&
+            (fileName.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) ||
+             fileName.EndsWith(".bat", StringComparison.OrdinalIgnoreCase)))
+        {
+            arguments = new List<string>(arguments.Count + 2) { "/c", fileName };
+            ((List<string>)arguments).AddRange(spec.Arguments);
+            fileName = "cmd.exe";
+        }
+
         var startInfo = new ProcessStartInfo
         {
-            FileName = spec.FileName,
+            FileName = fileName,
             WorkingDirectory = spec.WorkingDirectory,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
@@ -64,7 +77,7 @@ public sealed class ProcessRunner : IProcessRunner
             CreateNoWindow = true,
         };
 
-        foreach (var argument in spec.Arguments)
+        foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
