@@ -188,7 +188,62 @@ public class PipelineRunnerPostValidatorTests
             Assert.Equal(1, warnStep.Executions);
             Assert.Equal(1, nextStep.Executions);
             Assert.Contains(reportWriter.Messages, message => message.Contains("skills relevance generation failed", StringComparison.Ordinal));
-            Assert.Contains(reportWriter.Messages, message => message.Contains("Pipeline completed with 1 warning(s).", StringComparison.Ordinal));
+            Assert.Contains(reportWriter.Messages, message => message.Contains("critical failure record", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_ArtifactFailuresWriteRecordsAndSummary()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-artifact-failures-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "docs-generation", "scripts"));
+        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+
+        try
+        {
+            var processRunner = new RecordingProcessRunner();
+            var reportWriter = new BufferedReportWriter();
+            var contextFactory = new PipelineContextFactory(
+                processRunner,
+                new WorkspaceManager(),
+                new StaticCliMetadataLoader(),
+                new TargetMatcher(),
+                new StubFilteredCliWriter(),
+                new StubBuildCoordinator(),
+                new StubAiCapabilityProbe(),
+                reportWriter,
+                repoRoot);
+
+            var step = new RecordingStep(
+                id: 2,
+                name: "Generate example prompts",
+                failurePolicy: FailurePolicy.Fatal,
+                success: true,
+                artifactFailures:
+                [
+                    ArtifactFailure.Create(
+                        "tool",
+                        "compute list",
+                        "Example prompt validation failed for this tool.",
+                        ["Missing required parameters in one or more prompts."],
+                        [Path.Combine(repoRoot, "generated-compute", "example-prompts", "azure-compute-list-example-prompts.md")])
+                ]);
+            var runner = new global::PipelineRunner.PipelineRunner(new StepRegistry([step]), contextFactory);
+
+            var request = new PipelineRequest("compute", [2], ".\\generated-compute", SkipBuild: true, SkipValidation: false, DryRun: false);
+            var exitCode = await runner.RunAsync(request, CancellationToken.None);
+
+            Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
+            var failureDirectory = Path.Combine(repoRoot, "generated-compute", "critical-failures");
+            var failureFiles = Directory.GetFiles(failureDirectory, "*.json");
+            Assert.Single(failureFiles);
+            Assert.Contains(reportWriter.Messages, message => message.Contains("Critical failures summary:", StringComparison.Ordinal));
+            Assert.Contains(reportWriter.Messages, message => message.Contains("compute list", StringComparison.Ordinal));
+            Assert.Contains(reportWriter.Messages, message => message.Contains("Record:", StringComparison.Ordinal));
         }
         finally
         {
@@ -200,6 +255,7 @@ public class PipelineRunnerPostValidatorTests
     {
         private readonly bool _success;
         private readonly IReadOnlyList<string> _warnings;
+        private readonly IReadOnlyList<ArtifactFailure> _artifactFailures;
 
         public RecordingStep(
             int id,
@@ -208,11 +264,13 @@ public class PipelineRunnerPostValidatorTests
             bool success,
             IReadOnlyList<string>? warnings = null,
             IReadOnlyList<IPostValidator>? postValidators = null,
+            IReadOnlyList<ArtifactFailure>? artifactFailures = null,
             int maxRetries = 0)
             : base(id, name, StepScope.Namespace, failurePolicy, postValidators: postValidators, maxRetries: maxRetries)
         {
             _success = success;
             _warnings = warnings ?? Array.Empty<string>();
+            _artifactFailures = artifactFailures ?? Array.Empty<ArtifactFailure>();
         }
 
         public int Executions { get; private set; }
@@ -220,7 +278,7 @@ public class PipelineRunnerPostValidatorTests
         public override ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
         {
             Executions++;
-            return ValueTask.FromResult(new StepResult(_success, _warnings, TimeSpan.Zero, Array.Empty<string>(), Array.Empty<string>(), Array.Empty<ValidatorResult>()));
+            return ValueTask.FromResult(new StepResult(_success, _warnings, TimeSpan.Zero, Array.Empty<string>(), Array.Empty<string>(), Array.Empty<ValidatorResult>(), _artifactFailures));
         }
     }
 

@@ -93,12 +93,14 @@ public abstract class NamespaceStepBase : StepDefinition
         IReadOnlyCollection<ProcessExecutionResult> processResults,
         bool success,
         IEnumerable<string>? warnings = null,
-        IEnumerable<ValidatorResult>? validatorResults = null)
+        IEnumerable<ValidatorResult>? validatorResults = null,
+        IEnumerable<ArtifactFailure>? artifactFailures = null)
     {
         var resolvedWarnings = warnings?
             .Where(static warning => !string.IsNullOrWhiteSpace(warning))
             .ToArray() ?? Array.Empty<string>();
         var resolvedValidators = validatorResults?.ToArray() ?? Array.Empty<ValidatorResult>();
+        var resolvedFailures = artifactFailures?.ToArray() ?? Array.Empty<ArtifactFailure>();
         var outputs = ExpectedOutputs
             .Select(relativePath => Path.Combine(context.OutputPath, relativePath))
             .ToArray();
@@ -106,6 +108,14 @@ public abstract class NamespaceStepBase : StepDefinition
         var duration = TimeSpan.FromTicks(processResults.Sum(result => result.Duration.Ticks));
         var commands = processResults.Select(result => result.DisplayCommand).ToArray();
 
-        return new StepResult(success, resolvedWarnings, duration, outputs, commands, resolvedValidators);
+        return new StepResult(success, resolvedWarnings, duration, outputs, commands, resolvedValidators, resolvedFailures);
     }
+
+    protected static ArtifactFailure CreateArtifactFailure(
+        string artifactType,
+        string artifactName,
+        string summary,
+        IEnumerable<string>? details = null,
+        IEnumerable<string>? relatedPaths = null)
+        => ArtifactFailure.Create(artifactType, artifactName, summary, details, relatedPaths);
 }

@@ -86,6 +86,7 @@ public sealed class ShimStep : StepDefinition
             processResult.Duration,
             outputs,
             [processResult.DisplayCommand],
-            Array.Empty<ValidatorResult>());
+            Array.Empty<ValidatorResult>(),
+            Array.Empty<ArtifactFailure>());
     }
 }

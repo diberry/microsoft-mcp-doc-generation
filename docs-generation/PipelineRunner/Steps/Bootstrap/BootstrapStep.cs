@@ -354,6 +354,6 @@ public sealed class BootstrapStep : StepDefinition
         var commands = processResults.Select(result => result.DisplayCommand).ToArray();
         var duration = TimeSpan.FromTicks(processResults.Sum(result => result.Duration.Ticks));
 
-        return new StepResult(success, resolvedWarnings, duration, outputs, commands, Array.Empty<ValidatorResult>(), exitCodeOverride);
+        return new StepResult(success, resolvedWarnings, duration, outputs, commands, Array.Empty<ValidatorResult>(), Array.Empty<ArtifactFailure>(), exitCodeOverride);
     }
 }

@@ -24,11 +24,13 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
 
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
+        var artifactFailures = new List<ArtifactFailure>();
         var cliVersionPath = Path.Combine(context.OutputPath, "cli", "cli-version.json");
         if (!context.Request.SkipValidation && !File.Exists(cliVersionPath))
         {
             warnings.Add($"CLI version file not found at '{cliVersionPath}'.");
-            return BuildResult(context, processResults, false, warnings);
+            artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
+            return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
         var processResult = await context.ProcessRunner.RunDotNetProjectAsync(
@@ -41,7 +43,8 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
         if (!processResult.Succeeded)
         {
             AddProcessIssue(processResult, warnings, "Horizontal article generation failed");
-            return BuildResult(context, processResults, false, warnings);
+            artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
+            return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
         var articleDirectory = Path.Combine(context.OutputPath, "horizontal-articles");
@@ -62,6 +65,26 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             success = false;
         }
 
-        return BuildResult(context, processResults, success, warnings);
+        if (!success)
+        {
+            artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
+        }
+
+        return BuildResult(context, processResults, success, warnings, artifactFailures: artifactFailures);
+    }
+
+    private static ArtifactFailure CreateHorizontalFailure(PipelineContext context, string currentNamespace, IEnumerable<string> details)
+    {
+        var articleDirectory = Path.Combine(context.OutputPath, "horizontal-articles");
+        return CreateArtifactFailure(
+            "horizontal article",
+            $"horizontal-article-{currentNamespace}.md",
+            "Horizontal article generation failed for this namespace.",
+            details,
+            [
+                Path.Combine(articleDirectory, $"horizontal-article-{currentNamespace}.md"),
+                Path.Combine(articleDirectory, $"error-{currentNamespace}.txt"),
+                Path.Combine(articleDirectory, $"error-{currentNamespace}-airesponse.txt"),
+            ]);
     }
 }

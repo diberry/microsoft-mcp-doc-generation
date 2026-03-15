@@ -83,16 +83,17 @@ public sealed class PipelineRunner
         }
 
         var warnings = new List<string>();
+        var criticalFailures = new List<CriticalFailureRecordReference>();
         var globalSteps = selectedSteps.Where(step => step.Scope == StepScope.Global).ToArray();
         var namespaceSteps = selectedSteps.Where(step => step.Scope == StepScope.Namespace).ToArray();
 
         foreach (var step in globalSteps)
         {
-            var stepExitCode = await ExecuteStepAsync(context, step, warnings, cancellationToken);
-            if (stepExitCode != SuccessExitCode)
+            var stepOutcome = await ExecuteStepAsync(context, step, warnings, cancellationToken);
+            criticalFailures.AddRange(stepOutcome.PersistedFailures);
+            if (stepOutcome.ExitCode != SuccessExitCode)
             {
-                context.Workspaces.DeleteAll();
-                return stepExitCode;
+                return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
             }
         }
 
@@ -112,7 +113,7 @@ public sealed class PipelineRunner
 
         if (namespaceSteps.Length == 0)
         {
-            return CompleteRun(context, warnings);
+            return CompleteRun(context, warnings, criticalFailures, SuccessExitCode);
         }
 
         foreach (var namespaceName in resolvedNamespaces)
@@ -122,16 +123,16 @@ public sealed class PipelineRunner
 
             foreach (var step in namespaceSteps)
             {
-                var stepExitCode = await ExecuteStepAsync(context, step, warnings, cancellationToken);
-                if (stepExitCode != SuccessExitCode)
+                var stepOutcome = await ExecuteStepAsync(context, step, warnings, cancellationToken);
+                criticalFailures.AddRange(stepOutcome.PersistedFailures);
+                if (stepOutcome.ExitCode != SuccessExitCode)
                 {
-                    context.Workspaces.DeleteAll();
-                    return stepExitCode;
+                    return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
                 }
             }
         }
 
-        return CompleteRun(context, warnings);
+        return CompleteRun(context, warnings, criticalFailures, SuccessExitCode);
     }
 
     public static int MapBootstrapExitCode(int exitCode)
@@ -196,7 +197,7 @@ public sealed class PipelineRunner
         };
     }
 
-    private static async Task<int> ExecuteStepAsync(
+    private static async Task<StepExecutionOutcome> ExecuteStepAsync(
         PipelineContext context,
         IPipelineStep step,
         ICollection<string> warnings,
@@ -240,28 +241,80 @@ public sealed class PipelineRunner
             context.Reports.Warning(warning);
         }
 
+        var persistedFailures = CriticalFailureRecorder.Persist(context, step, result);
         var stepExitCode = MapStepFailureExitCode(step.FailurePolicy, result.Success, result.ExitCodeOverride);
         if (stepExitCode != SuccessExitCode)
         {
             context.Reports.Error($"Step {step.Id} failed.");
         }
 
-        return stepExitCode;
+        return new StepExecutionOutcome(stepExitCode, result, persistedFailures);
     }
 
-    private static int CompleteRun(PipelineContext context, IReadOnlyCollection<string> warnings)
+    private static int CompleteRun(
+        PipelineContext context,
+        IReadOnlyCollection<string> warnings,
+        IReadOnlyCollection<CriticalFailureRecordReference> criticalFailures,
+        int exitCode)
     {
-        if (warnings.Count > 0)
+        WriteCriticalFailureSummary(context, criticalFailures, exitCode);
+
+        if (exitCode == SuccessExitCode)
         {
-            context.Reports.Info($"Pipeline completed with {warnings.Count} warning(s).");
+            if (criticalFailures.Count > 0)
+            {
+                context.Reports.Warning($"Pipeline completed with {warnings.Count} warning(s) and {criticalFailures.Count} critical failure record(s).");
+            }
+            else if (warnings.Count > 0)
+            {
+                context.Reports.Info($"Pipeline completed with {warnings.Count} warning(s).");
+            }
+            else
+            {
+                context.Reports.Info("Pipeline completed successfully.");
+            }
         }
         else
         {
-            context.Reports.Info("Pipeline completed successfully.");
+            context.Reports.Error($"Pipeline stopped with {criticalFailures.Count} critical failure(s) recorded.");
         }
 
         context.Workspaces.DeleteAll();
-        return SuccessExitCode;
+        return exitCode;
+    }
+
+    private static void WriteCriticalFailureSummary(
+        PipelineContext context,
+        IReadOnlyCollection<CriticalFailureRecordReference> criticalFailures,
+        int exitCode)
+    {
+        if (criticalFailures.Count == 0)
+        {
+            return;
+        }
+
+        if (exitCode == SuccessExitCode)
+        {
+            context.Reports.Warning("Critical failures summary:");
+            foreach (var failure in criticalFailures)
+            {
+                context.Reports.Warning($"  - Artifact: {failure.ArtifactName} ({failure.ArtifactType})");
+                context.Reports.Warning($"    Step: Step {failure.StepId} - {failure.StepName}");
+                context.Reports.Warning($"    Error: {failure.Summary}");
+                context.Reports.Warning($"    Record: {failure.RecordPath}");
+            }
+
+            return;
+        }
+
+        context.Reports.Error("Critical failures summary:");
+        foreach (var failure in criticalFailures)
+        {
+            context.Reports.Error($"  - Artifact: {failure.ArtifactName} ({failure.ArtifactType})");
+            context.Reports.Error($"    Step: Step {failure.StepId} - {failure.StepName}");
+            context.Reports.Error($"    Error: {failure.Summary}");
+            context.Reports.Error($"    Record: {failure.RecordPath}");
+        }
     }
 
     private static IReadOnlyList<string> ValidateDependencies(IReadOnlyList<IPipelineStep> selectedSteps)
@@ -355,4 +408,9 @@ public sealed class PipelineRunner
             }
         }
     }
+
+    private sealed record StepExecutionOutcome(
+        int ExitCode,
+        StepResult Result,
+        IReadOnlyList<CriticalFailureRecordReference> PersistedFailures);
 }
