@@ -1,9 +1,11 @@
 using System.Text.Json;
 using PipelineRunner.Cli;
 using PipelineRunner.Context;
+using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Steps;
 using PipelineRunner.Tests.Fixtures;
+using Shared;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -53,9 +55,7 @@ public class NamespaceStepTests
             var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
             context.Items["Namespace"] = "compute list";
 
-            SeedFile(Path.Combine(context.OutputPath, "example-prompts", "compute-list-example-prompts.md"));
-            SeedFile(Path.Combine(context.OutputPath, "example-prompts-prompts", "compute-list-input-prompt.md"));
-            SeedFile(Path.Combine(context.OutputPath, "example-prompts-raw-output", "compute-list-raw-output.txt"));
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
             SeedFile(Path.Combine(context.OutputPath, "e2e-test-prompts", "parsed.json"), "{}");
             Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
 
@@ -87,9 +87,7 @@ public class NamespaceStepTests
             var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
             context.Items["Namespace"] = "compute";
 
-            SeedFile(Path.Combine(context.OutputPath, "example-prompts", "compute-list-example-prompts.md"));
-            SeedFile(Path.Combine(context.OutputPath, "example-prompts-prompts", "compute-list-input-prompt.md"));
-            SeedFile(Path.Combine(context.OutputPath, "example-prompts-raw-output", "compute-list-raw-output.txt"));
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list", "compute show");
             Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
 
             var step = new ExamplePromptsStep();
@@ -108,6 +106,60 @@ public class NamespaceStepTests
     }
 
     [Fact]
+    public async Task Step2_ExamplePrompts_MissingToolOutputCreatesArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new RecordingProcessRunner();
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute show", result.ArtifactFailures[0].ArtifactName);
+            Assert.Contains("incomplete", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_ValidatorFailureCreatesArtifactFailureWithoutBlockingStep()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new ExamplePromptValidatorFailingRunner("compute list");
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute list", result.ArtifactFailures[0].ArtifactName);
+            Assert.Contains("validation", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task Step3_ToolGeneration_UsesExpectedGeneratorArguments()
     {
         var testRoot = CreateTestRoot();
@@ -117,12 +169,7 @@ public class NamespaceStepTests
             var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
             context.Items["Namespace"] = "compute";
 
-            SeedFile(Path.Combine(context.OutputPath, "tools-raw", "compute-list.md"));
-            SeedFile(Path.Combine(context.OutputPath, "annotations", "compute-list-annotations.md"));
-            SeedFile(Path.Combine(context.OutputPath, "parameters", "compute-list-parameters.md"));
-            SeedFile(Path.Combine(context.OutputPath, "example-prompts", "compute-list-example-prompts.md"));
-            SeedFile(Path.Combine(context.OutputPath, "tools-composed", "compute-list.md"));
-            SeedFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"));
+            await SeedToolGenerationFilesAsync(context.OutputPath, ["compute list", "compute show"], includeComposed: true, includeImproved: true);
 
             var step = new ToolGenerationStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
@@ -134,6 +181,33 @@ public class NamespaceStepTests
             Assert.Contains(runner.Invocations[0].Arguments, argument => argument == Path.Combine(context.OutputPath, "example-prompts"));
             Assert.Contains(runner.Invocations[1].Arguments, argument => argument.EndsWith("ToolGeneration_Improved.csproj", StringComparison.Ordinal));
             Assert.Contains(runner.Invocations[1].Arguments, argument => argument == "8000");
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step3_ToolGeneration_MissingImprovedToolCreatesArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new RecordingProcessRunner();
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list", "compute show"]);
+            context.Items["Namespace"] = "compute";
+
+            await SeedToolGenerationFilesAsync(context.OutputPath, ["compute list", "compute show"], includeComposed: true, includeImproved: false);
+            await SeedToolOutputAsync(context.OutputPath, "compute list", includeComposed: false, includeImproved: true);
+
+            var step = new ToolGenerationStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute show", result.ArtifactFailures[0].ArtifactName);
+            Assert.Contains("improvement", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -189,6 +263,8 @@ public class NamespaceStepTests
             Assert.Single(runner.Invocations);
             Assert.Contains(result.Warnings, warning => warning.Contains("Skills relevance generation failed (exit code 7).", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("GitHub API rate limited", StringComparison.Ordinal));
+            Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute-skills-relevance.md", result.ArtifactFailures[0].ArtifactName);
         }
         finally
         {
@@ -281,6 +357,46 @@ public class NamespaceStepTests
         return new CliMetadataSnapshot(Path.Combine(Path.GetTempPath(), $"cli-output-{Guid.NewGuid():N}.json"), root, tools);
     }
 
+    private static async Task SeedExamplePromptOutputsAsync(string outputPath, params string[] commands)
+    {
+        var nameContext = await FileNameContext.CreateAsync();
+        foreach (var command in commands)
+        {
+            SeedFile(Path.Combine(outputPath, "example-prompts", ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext)));
+            SeedFile(Path.Combine(outputPath, "example-prompts-prompts", ToolFileNameBuilder.BuildInputPromptFileName(command, nameContext)));
+            SeedFile(Path.Combine(outputPath, "example-prompts-raw-output", ToolFileNameBuilder.BuildRawOutputFileName(command, nameContext)));
+            SeedFile(Path.Combine(outputPath, "example-prompts-validation", $"{ToolFileNameBuilder.BuildBaseFileName(command, nameContext)}-validation.md"));
+        }
+    }
+
+    private static async Task SeedToolGenerationFilesAsync(string outputPath, IReadOnlyList<string> commands, bool includeComposed, bool includeImproved)
+    {
+        foreach (var command in commands)
+        {
+            await SeedToolOutputAsync(outputPath, command, includeComposed, includeImproved);
+        }
+    }
+
+    private static async Task SeedToolOutputAsync(string outputPath, string command, bool includeComposed, bool includeImproved)
+    {
+        var nameContext = await FileNameContext.CreateAsync();
+        var toolFileName = ToolFileNameBuilder.BuildToolFileName(command, nameContext);
+        SeedFile(Path.Combine(outputPath, "tools-raw", toolFileName));
+        SeedFile(Path.Combine(outputPath, "annotations", ToolFileNameBuilder.BuildAnnotationFileName(command, nameContext)));
+        SeedFile(Path.Combine(outputPath, "parameters", ToolFileNameBuilder.BuildParameterFileName(command, nameContext)));
+        SeedFile(Path.Combine(outputPath, "example-prompts", ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext)));
+
+        if (includeComposed)
+        {
+            SeedFile(Path.Combine(outputPath, "tools-composed", toolFileName));
+        }
+
+        if (includeImproved)
+        {
+            SeedFile(Path.Combine(outputPath, "tools", toolFileName));
+        }
+    }
+
     private static string CreateTestRoot()
     {
         var root = Path.Combine(Path.GetTempPath(), $"pipeline-runner-step-tests-{Guid.NewGuid():N}");
@@ -300,6 +416,62 @@ public class NamespaceStepTests
         {
             Directory.Delete(path, recursive: true);
         }
+    }
+
+    private sealed class ExamplePromptValidatorFailingRunner : IProcessRunner
+    {
+        private readonly string _invalidTool;
+
+        public ExamplePromptValidatorFailingRunner(string invalidTool)
+        {
+            _invalidTool = invalidTool;
+        }
+
+        public List<ProcessSpec> Invocations { get; } = new();
+
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
+        {
+            Invocations.Add(spec);
+            if (Invocations.Count == 2)
+            {
+                var stdout = $"Validation Summary{Environment.NewLine}------------------{Environment.NewLine}Invalid tools:{Environment.NewLine}  - {_invalidTool}";
+                return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, stdout, string.Empty, TimeSpan.Zero));
+            }
+
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero));
+        }
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)
+            => RunAsync(
+                new ProcessSpec(
+                    "dotnet",
+                    ["build", solutionPath, "--configuration", "Release", "--verbosity", "quiet"],
+                    Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory),
+                cancellationToken);
+
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string projectPath, IEnumerable<string> arguments, bool noBuild, string workingDirectory, CancellationToken cancellationToken)
+        {
+            var invocation = new List<string>
+            {
+                "run",
+                "--project",
+                projectPath,
+                "--configuration",
+                "Release",
+            };
+
+            if (noBuild)
+            {
+                invocation.Add("--no-build");
+            }
+
+            invocation.Add("--");
+            invocation.AddRange(arguments);
+            return RunAsync(new ProcessSpec("dotnet", invocation, workingDirectory), cancellationToken);
+        }
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
+            => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
     }
 
     private sealed class FailingProcessRunner : IProcessRunner

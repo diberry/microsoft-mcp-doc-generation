@@ -27,19 +27,24 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         var (currentNamespace, _, _, matchingTools) = ResolveTarget(context);
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
+        var artifactFailures = new List<ArtifactFailure>();
         var familyName = ResolveFamilyName(currentNamespace, matchingTools);
         context.Items[ToolFamilyPostAssemblyValidator.FamilyNameContextKey] = familyName;
 
         var toolsInputDirectory = Path.Combine(context.OutputPath, "tools");
         if (!Directory.Exists(toolsInputDirectory))
         {
-            return BuildResult(context, processResults, false, [$"Tools directory not found: '{toolsInputDirectory}'. Run Step 3 first."]);
+            warnings.Add($"Tools directory not found: '{toolsInputDirectory}'. Run Step 3 first.");
+            artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
+            return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
         var matchingToolFiles = await ResolveFamilyToolFilesAsync(toolsInputDirectory, familyName, cancellationToken);
         if (matchingToolFiles.Count == 0)
         {
-            return BuildResult(context, processResults, false, [$"No tool files found for family '{familyName}' in '{toolsInputDirectory}'."]);
+            warnings.Add($"No tool files found for family '{familyName}' in '{toolsInputDirectory}'.");
+            artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
+            return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
         var tempRoot = context.Workspaces.CreateTemporaryDirectory("pipeline-runner-step4");
@@ -89,7 +94,8 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             if (!cleanupResult.Succeeded)
             {
                 AddProcessIssue(cleanupResult, warnings, "Tool-family cleanup failed");
-                return BuildResult(context, processResults, false, warnings);
+                artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
+                return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
             }
 
             var tempMetadataDirectory = Path.Combine(tempGeneratedDirectory, "tool-family-metadata");
@@ -116,20 +122,34 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             if (copyBackIssues.Count > 0)
             {
                 warnings.AddRange(copyBackIssues);
-                return BuildResult(context, processResults, false, warnings);
+                artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
+                return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
             }
 
             CopyMarkdownFiles(tempMetadataDirectory, Path.Combine(context.OutputPath, "tool-family-metadata"));
             CopyMarkdownFiles(tempRelatedDirectory, Path.Combine(context.OutputPath, "tool-family-related"));
             CopyMarkdownFiles(tempFinalDirectory, Path.Combine(context.OutputPath, "tool-family"));
 
-            return BuildResult(context, processResults, true, warnings);
+            return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
         }
         finally
         {
             context.Workspaces.Delete(tempRoot);
         }
     }
+
+    private static ArtifactFailure CreateFamilyFailure(PipelineContext context, string familyName, IEnumerable<string> details)
+        => CreateArtifactFailure(
+            "tool family",
+            familyName,
+            "Tool-family generation failed for this family.",
+            details,
+            [
+                Path.Combine(context.OutputPath, "tool-family", $"{familyName}.md"),
+                Path.Combine(context.OutputPath, "tool-family-metadata", $"{familyName}-metadata.md"),
+                Path.Combine(context.OutputPath, "tool-family-related", $"{familyName}-related.md"),
+                Path.Combine(context.OutputPath, "reports", $"tool-family-validation-{familyName}.txt"),
+            ]);
 
     private static void CopyMarkdownFiles(string sourceDirectory, string destinationDirectory)
     {
