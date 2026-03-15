@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PipelineRunner\PipelineRunner.csproj" />
+    <ProjectReference Include="..\ToolFamilyCleanup\ToolFamilyCleanup.csproj" />
   </ItemGroup>
 
   <ItemGroup>

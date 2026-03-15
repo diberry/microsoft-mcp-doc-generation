@@ -17,7 +17,8 @@ public abstract class StepDefinition : IPipelineStep
         bool createsFilteredCliView = false,
         bool usesIsolatedWorkspace = false,
         IReadOnlyList<string>? expectedOutputs = null,
-        string implementation = "Typed")
+        string implementation = "Typed",
+        int maxRetries = 0)
     {
         Id = id;
         Name = name;
@@ -32,6 +33,7 @@ public abstract class StepDefinition : IPipelineStep
         UsesIsolatedWorkspace = usesIsolatedWorkspace;
         ExpectedOutputs = expectedOutputs ?? Array.Empty<string>();
         Implementation = implementation;
+        MaxRetries = maxRetries;
     }
 
     public int Id { get; }
@@ -59,6 +61,8 @@ public abstract class StepDefinition : IPipelineStep
     public IReadOnlyList<string> ExpectedOutputs { get; }
 
     public string Implementation { get; }
+
+    public int MaxRetries { get; }
 
     public abstract ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken);
 }
