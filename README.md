@@ -47,12 +47,18 @@ Generate with specific steps only:
 
 - **Entry point:** `start.sh`
 - **Worker/orchestration scripts:** `docs-generation/scripts/`
-- **C#/.NET generators:** `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/`, `docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/`, `docs-generation/DocGeneration.Steps.HorizontalArticles/`, `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/`, `docs-generation/DocGeneration.Core.GenerativeAI/`, `docs-generation/DocGeneration.Core.TemplateEngine/`
+- **C#/.NET generators:** `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/`, `docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/`, `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/`, `docs-generation/DocGeneration.Steps.SkillsRelevance/`, `docs-generation/DocGeneration.Steps.HorizontalArticles/`, `docs-generation/DocGeneration.Core.GenerativeAI/`, `docs-generation/DocGeneration.Core.TemplateEngine/`, `docs-generation/DocGeneration.Utilities.ToolMetadataExtractor/`
 - **Prompt templates:** `docs-generation/prompts/`
 - **Handlebars templates:** `docs-generation/templates/`
 - **Configuration data:** `docs-generation/data/`
 - **MCP CLI metadata extraction:** `test-npm-azure-mcp/`
 - **Generated output:** `generated/` or `generated-<namespace>/`
+
+### Legacy naming notes
+
+- `RelatedSkillsGenerator` and `SkillList` were superseded by the typed Step 5 package `docs-generation/DocGeneration.Steps.SkillsRelevance/`, which now owns both the per-namespace skills relevance report and the skills index output.
+- The live Step 4 compiled project is `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/`; `docs-generation/ToolFamily/` remains planning/reference documentation, not a build project.
+- `ToolMetadataEnricher` is not present on `squad/dotnet-naming-standards`; if it is restored, its naming-standard home is `DocGeneration.Steps.Bootstrap.ToolMetadataEnricher`.
 
 **Example `.env` configuration**:
 

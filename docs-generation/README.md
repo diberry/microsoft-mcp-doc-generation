@@ -60,6 +60,11 @@ docs-generation/
 │   │   ├── CleanupConfiguration.cs
 │   │   └── CleanupGenerator.cs
 │   └── README.md                 # Detailed documentation
+├── DocGeneration.Steps.SkillsRelevance/              # Step 5 skills relevance reports + index output
+│   ├── Program.cs                # CLI entry point
+│   ├── Services/                 # Skill fetching and relevance analysis
+│   └── README.md                 # Detailed documentation
+├── ToolFamily/                                        # Planning/reference docs only; not a build project
 ├── DocGeneration.Core.Shared/                        # DocGeneration.Core.Shared utilities
 ├── prompts/                       # LLM prompt templates
 │   ├── tool-family-cleanup-system-prompt.txt  # System prompt for style guide
