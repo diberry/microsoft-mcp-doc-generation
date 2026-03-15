@@ -71,6 +71,7 @@ public class ToolFamilyValidatorIntegrationTests
         public global::PipelineRunner.Contracts.FailurePolicy FailurePolicy => global::PipelineRunner.Contracts.FailurePolicy.Fatal;
         public IReadOnlyList<int> DependsOn => Array.Empty<int>();
         public IReadOnlyList<global::PipelineRunner.Contracts.IPostValidator> PostValidators => Array.Empty<global::PipelineRunner.Contracts.IPostValidator>();
+        public int MaxRetries => 0;
         public ValueTask<global::PipelineRunner.Contracts.StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
             => ValueTask.FromResult(global::PipelineRunner.Contracts.StepResult.DryRun(Array.Empty<string>()));
     }

@@ -15,7 +15,8 @@ public abstract class NamespaceStepBase : StepDefinition
         bool requiresAiConfiguration = false,
         bool createsFilteredCliView = false,
         bool usesIsolatedWorkspace = false,
-        IReadOnlyList<string>? expectedOutputs = null)
+        IReadOnlyList<string>? expectedOutputs = null,
+        int maxRetries = 0)
         : base(
             id,
             name,
@@ -26,7 +27,8 @@ public abstract class NamespaceStepBase : StepDefinition
             requiresAiConfiguration: requiresAiConfiguration,
             createsFilteredCliView: createsFilteredCliView,
             usesIsolatedWorkspace: usesIsolatedWorkspace,
-            expectedOutputs: expectedOutputs)
+            expectedOutputs: expectedOutputs,
+            maxRetries: maxRetries)
     {
     }
 

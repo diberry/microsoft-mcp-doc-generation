@@ -17,7 +17,8 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             postValidators: [new ToolFamilyPostAssemblyValidator()],
             requiresAiConfiguration: true,
             usesIsolatedWorkspace: true,
-            expectedOutputs: ["tool-family-metadata", "tool-family-related", "tool-family", "reports"])
+            expectedOutputs: ["tool-family-metadata", "tool-family-related", "tool-family", "reports"],
+            maxRetries: 2)
     {
     }
 

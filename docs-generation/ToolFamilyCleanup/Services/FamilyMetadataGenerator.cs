@@ -75,7 +75,10 @@ public class FamilyMetadataGenerator
         var metadata = await _aiClient.GetChatCompletionAsync(_systemPrompt, userPrompt, maxTokens: MAX_TOKENS);
 
         // Extract markdown if wrapped in code fences
-        return ExtractMarkdown(metadata.Trim());
+        var extractedMetadata = ExtractMarkdown(metadata.Trim());
+        
+        // Fix A: Post-process to replace LLM-generated tool_count with actual count
+        return EnsureCorrectToolCount(extractedMetadata, familyContent.ToolCount);
     }
 
     /// <summary>
@@ -94,5 +97,25 @@ public class FamilyMetadataGenerator
         }
 
         return response.Trim();
+    }
+
+    /// <summary>
+    /// Ensures the tool_count in YAML frontmatter matches the actual count.
+    /// This prevents LLM counting errors from propagating to the output.
+    /// </summary>
+    private static string EnsureCorrectToolCount(string metadata, int actualToolCount)
+    {
+        if (string.IsNullOrWhiteSpace(metadata))
+            return metadata;
+
+        // Pattern to match tool_count in YAML frontmatter (allowing for any whitespace around colon and value)
+        var toolCountPattern = new System.Text.RegularExpressions.Regex(
+            @"(?<=^---\s*\n(?:.*\n)*?)^tool_count\s*:\s*\d+",
+            System.Text.RegularExpressions.RegexOptions.Multiline);
+
+        // Replace with actual count
+        var result = toolCountPattern.Replace(metadata, $"tool_count: {actualToolCount}", 1);
+        
+        return result;
     }
 }

@@ -203,10 +203,35 @@ public sealed class PipelineRunner
         CancellationToken cancellationToken)
     {
         context.Reports.Info($"  Step {step.Id}: {step.Name}");
-        var result = await step.ExecuteAsync(context, cancellationToken);
-        if (result.Success && !context.Request.SkipValidation && step.PostValidators.Count > 0)
+        
+        // Determine max attempts (1 + MaxRetries)
+        var maxAttempts = 1 + step.MaxRetries;
+        var hasValidators = !context.Request.SkipValidation && step.PostValidators.Count > 0;
+        
+        StepResult result = null!;
+        
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
-            result = await RunPostValidatorsAsync(context, step, result, cancellationToken);
+            if (attempt > 1)
+            {
+                context.Reports.Warning($"    Retry attempt {attempt - 1}/{step.MaxRetries} for step {step.Id}");
+            }
+            
+            result = await step.ExecuteAsync(context, cancellationToken);
+            
+            if (result.Success && hasValidators)
+            {
+                result = await RunPostValidatorsAsync(context, step, result, cancellationToken);
+            }
+            
+            // If successful or no retries available, break out
+            if (result.Success || attempt == maxAttempts)
+            {
+                break;
+            }
+            
+            // Validation failed, but we have more retries
+            context.Reports.Warning($"    Step {step.Id} validation failed, retrying ({attempt}/{maxAttempts - 1})");
         }
 
         foreach (var warning in result.Warnings)

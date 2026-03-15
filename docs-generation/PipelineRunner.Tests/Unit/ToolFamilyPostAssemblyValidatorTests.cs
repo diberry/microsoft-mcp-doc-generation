@@ -222,6 +222,8 @@ public class ToolFamilyPostAssemblyValidatorTests
 
         public IReadOnlyList<IPostValidator> PostValidators => Array.Empty<IPostValidator>();
 
+        public int MaxRetries => 0;
+
         public ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
             => ValueTask.FromResult(StepResult.DryRun(Array.Empty<string>()));
     }

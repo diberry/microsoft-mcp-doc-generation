@@ -56,6 +56,97 @@ public class PipelineRunnerPostValidatorTests
     }
 
     [Fact]
+    public async Task RunAsync_PostValidatorFailure_RetriesStepWithMaxRetries()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-retry-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "docs-generation", "scripts"));
+        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+
+        try
+        {
+            var processRunner = new RecordingProcessRunner();
+            var reportWriter = new BufferedReportWriter();
+            var contextFactory = new PipelineContextFactory(
+                processRunner,
+                new WorkspaceManager(),
+                new StaticCliMetadataLoader(),
+                new TargetMatcher(),
+                new StubFilteredCliWriter(),
+                new StubBuildCoordinator(),
+                new StubAiCapabilityProbe(),
+                reportWriter,
+                repoRoot);
+
+            // Step with maxRetries=2 and validator that always fails
+            var step = new RecordingStep(
+                id: 4,
+                name: "Generate tool-family article",
+                failurePolicy: FailurePolicy.Fatal,
+                success: true,
+                maxRetries: 2,
+                postValidators: [new FixedValidator(success: false, warnings: ["validator failed"])]);
+            var runner = new global::PipelineRunner.PipelineRunner(new StepRegistry([step]), contextFactory);
+
+            var request = new PipelineRequest("compute", [4], ".\\generated-compute", SkipBuild: true, SkipValidation: false, DryRun: false);
+            var exitCode = await runner.RunAsync(request, CancellationToken.None);
+
+            Assert.Equal(global::PipelineRunner.PipelineRunner.FatalExitCode, exitCode);
+            Assert.Equal(3, step.Executions); // 1 initial + 2 retries = 3 total attempts
+            Assert.Contains(reportWriter.Messages, message => message.Contains("Retry attempt", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_PostValidatorFailure_SucceedsOnRetry()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-retry-success-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "docs-generation", "scripts"));
+        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+
+        try
+        {
+            var processRunner = new RecordingProcessRunner();
+            var reportWriter = new BufferedReportWriter();
+            var contextFactory = new PipelineContextFactory(
+                processRunner,
+                new WorkspaceManager(),
+                new StaticCliMetadataLoader(),
+                new TargetMatcher(),
+                new StubFilteredCliWriter(),
+                new StubBuildCoordinator(),
+                new StubAiCapabilityProbe(),
+                reportWriter,
+                repoRoot);
+
+            // Validator that fails first time but succeeds on second attempt
+            var validator = new CountingValidator(failUntilAttempt: 2);
+            var step = new RecordingStep(
+                id: 4,
+                name: "Generate tool-family article",
+                failurePolicy: FailurePolicy.Fatal,
+                success: true,
+                maxRetries: 2,
+                postValidators: [validator]);
+            var runner = new global::PipelineRunner.PipelineRunner(new StepRegistry([step]), contextFactory);
+
+            var request = new PipelineRequest("compute", [4], ".\\generated-compute", SkipBuild: true, SkipValidation: false, DryRun: false);
+            var exitCode = await runner.RunAsync(request, CancellationToken.None);
+
+            Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
+            Assert.Equal(2, step.Executions); // Initial attempt + 1 retry
+            Assert.Equal(2, validator.Attempts);
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_WarnFailureContinuesToLaterSteps()
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-warn-hook-{Guid.NewGuid():N}");
@@ -116,8 +207,9 @@ public class PipelineRunnerPostValidatorTests
             FailurePolicy failurePolicy,
             bool success,
             IReadOnlyList<string>? warnings = null,
-            IReadOnlyList<IPostValidator>? postValidators = null)
-            : base(id, name, StepScope.Namespace, failurePolicy, postValidators: postValidators)
+            IReadOnlyList<IPostValidator>? postValidators = null,
+            int maxRetries = 0)
+            : base(id, name, StepScope.Namespace, failurePolicy, postValidators: postValidators, maxRetries: maxRetries)
         {
             _success = success;
             _warnings = warnings ?? Array.Empty<string>();
@@ -138,6 +230,28 @@ public class PipelineRunnerPostValidatorTests
 
         public ValueTask<ValidatorResult> ValidateAsync(PipelineContext context, IPipelineStep step, CancellationToken cancellationToken)
             => ValueTask.FromResult(new ValidatorResult(Name, success, warnings));
+    }
+
+    private sealed class CountingValidator : IPostValidator
+    {
+        private readonly int _failUntilAttempt;
+
+        public CountingValidator(int failUntilAttempt)
+        {
+            _failUntilAttempt = failUntilAttempt;
+        }
+
+        public int Attempts { get; private set; }
+
+        public string Name => "CountingValidator";
+
+        public ValueTask<ValidatorResult> ValidateAsync(PipelineContext context, IPipelineStep step, CancellationToken cancellationToken)
+        {
+            Attempts++;
+            var success = Attempts >= _failUntilAttempt;
+            var warnings = success ? Array.Empty<string>() : new[] { "validator failed" };
+            return ValueTask.FromResult(new ValidatorResult(Name, success, warnings));
+        }
     }
 
     private sealed class StaticCliMetadataLoader : ICliMetadataLoader

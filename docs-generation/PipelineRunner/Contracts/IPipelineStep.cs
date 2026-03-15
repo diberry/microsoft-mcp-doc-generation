@@ -16,5 +16,7 @@ public interface IPipelineStep
 
     IReadOnlyList<IPostValidator> PostValidators { get; }
 
+    int MaxRetries { get; }
+
     ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken);
 }
