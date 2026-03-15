@@ -136,19 +136,36 @@ public class ToolReader
     }
 
     /// <summary>
-    /// Extracts family name from filename.
+    /// Extracts family name from filename using brand mapping data.
     /// Pattern: {family}-*.md
     /// Examples:
     ///   advisor-recommendation-list.md → advisor
     ///   storage-account-create.md → storage
     ///   ai-foundry-agents-connect.md → ai-foundry (special case)
+    ///   azure-cosmos-db-list.md → cosmos (mapped via brand-to-server-mapping.json)
     /// </summary>
     private string ExtractFamilyNameFromFileName(string fileName)
     {
         // Remove .md extension
         var nameWithoutExt = fileName.Replace(".md", "");
         
-        // Split by hyphens
+        // Try to match against brand mappings first (best accuracy)
+        var brandMappings = Shared.DataFileLoader.LoadBrandMappingsAsync().GetAwaiter().GetResult();
+        foreach (var mapping in brandMappings.Values)
+        {
+            var prefix = mapping.FileName?.ToLowerInvariant();
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                // Check if filename starts with this prefix
+                if (nameWithoutExt.Equals(prefix, StringComparison.OrdinalIgnoreCase) ||
+                    nameWithoutExt.StartsWith($"{prefix}-", StringComparison.OrdinalIgnoreCase))
+                {
+                    return mapping.McpServerName;
+                }
+            }
+        }
+        
+        // Fallback: split by hyphens and use heuristics
         var parts = nameWithoutExt.Split('-');
         
         if (parts.Length < 1)
@@ -161,6 +178,26 @@ public class ToolReader
         {
             // ai-foundry-... → ai-foundry
             return $"{parts[0]}-{parts[1]}";
+        }
+        
+        // Special case for "azure-*" prefixes - skip "azure" and try to match the service name
+        if (parts[0] == "azure" && parts.Length > 1)
+        {
+            // azure-cosmos-db-... → cosmos (if we can find it in mappings by trying 2+ segments)
+            for (int segmentCount = Math.Min(parts.Length - 1, 4); segmentCount >= 1; segmentCount--)
+            {
+                var candidatePrefix = string.Join("-", parts.Take(1 + segmentCount));
+                foreach (var mapping in brandMappings.Values)
+                {
+                    if (string.Equals(mapping.FileName, candidatePrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return mapping.McpServerName;
+                    }
+                }
+            }
+            
+            // If no mapping found, return second segment as a fallback
+            return parts[1];
         }
         
         // Default: first part is the family name

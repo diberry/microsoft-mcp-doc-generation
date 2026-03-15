@@ -159,7 +159,8 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        var contentMatches = new List<string>();
+        // Step 1: Try content matching (annotation-based) on ALL files
+        var contentMatches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var filePath in toolFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -170,20 +171,22 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             }
         }
 
-        if (contentMatches.Count > 0)
-        {
-            return contentMatches;
-        }
-
+        // Step 2: For files NOT matched by content, try prefix matching
         var prefixes = await GetPrefixesAsync(familyName, cancellationToken);
-        return toolFiles
+        var prefixMatches = toolFiles
+            .Where(path => !contentMatches.Contains(path)) // Only match files not already matched by content
             .Where(path => prefixes.Any(prefix =>
             {
                 var fileName = Path.GetFileNameWithoutExtension(path);
                 return string.Equals(fileName, prefix, StringComparison.OrdinalIgnoreCase)
                     || fileName.StartsWith($"{prefix}-", StringComparison.OrdinalIgnoreCase);
             }))
+            .ToArray();
+
+        // Step 3: Return union of both strategies (deduplicated)
+        return contentMatches.Concat(prefixMatches)
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
