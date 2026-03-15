@@ -92,6 +92,100 @@ public class ToolFamilyCleanupStepTests
         }
     }
 
+    [Fact]
+    public async Task Step4_MergesAnnotationAndPrefixMatches_WhenToolsHaveMixedAnnotations()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateCosmosContext(testRoot, processRunner);
+
+            // Create tools with MIXED annotations:
+            // 1. Tool WITH @mcpcli annotation → should match by content
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-cosmos-db-list.md"), "cosmos list");
+            
+            // 2. Tool WITHOUT @mcpcli annotation → should match by prefix (via brand-to-server-mapping.json)
+            var pathNoAnnotation = Path.Combine(context.OutputPath, "tools", "azure-cosmos-db-database-container-item-query.md");
+            Directory.CreateDirectory(Path.GetDirectoryName(pathNoAnnotation)!);
+            File.WriteAllText(pathNoAnnotation, "---\n---\n# Database Container Item Query\n\nNo annotation here\n");
+            
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            int toolFileCount = 0;
+            processRunner.OnRun = spec =>
+            {
+                // Count tool files that were copied to the isolated workspace
+                var tempToolsDir = Path.Combine(Path.GetDirectoryName(spec.WorkingDirectory!)!, "generated", "tools");
+                if (Directory.Exists(tempToolsDir))
+                {
+                    toolFileCount = Directory.GetFiles(tempToolsDir, "*.md").Length;
+                }
+
+                var isolatedGeneratedRoot = Path.GetFullPath(Path.Combine(spec.WorkingDirectory, "..", "generated"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "cosmos-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "cosmos-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "cosmos.md"), "final article");
+
+                return CallbackProcessRunner.Success(spec);
+            };
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            
+            // CRITICAL ASSERTION: Both tools should be included (1 via annotation match, 1 via prefix match)
+            Assert.Equal(2, toolFileCount);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static PipelineContext CreateCosmosContext(string testRoot, IProcessRunner processRunner)
+    {
+        var docsGenerationRoot = Path.Combine(testRoot, "docs-generation");
+        var outputPath = Path.Combine(testRoot, "generated-cosmos");
+        Directory.CreateDirectory(Path.Combine(docsGenerationRoot, "data"));
+        Directory.CreateDirectory(outputPath);
+        
+        // Seed brand mappings with cosmos entry for testing
+        var brandMappings = System.Text.Json.JsonSerializer.Serialize(new[]
+        {
+            new { brandName = "Azure Cosmos DB", mcpServerName = "cosmos", shortName = "Cosmos DB", fileName = "azure-cosmos-db" }
+        });
+        File.WriteAllText(Path.Combine(docsGenerationRoot, "data", "brand-to-server-mapping.json"), brandMappings);
+
+        var context = new PipelineContext
+        {
+            Request = new PipelineRequest("cosmos", [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
+            RepoRoot = testRoot,
+            DocsGenerationRoot = docsGenerationRoot,
+            OutputPath = outputPath,
+            ProcessRunner = processRunner,
+            Workspaces = new WorkspaceManager(),
+            CliMetadataLoader = new StubCliMetadataLoader(),
+            TargetMatcher = new TargetMatcher(),
+            FilteredCliWriter = new StubFilteredCliWriter(),
+            BuildCoordinator = new StubBuildCoordinator(),
+            AiCapabilityProbe = new StubAiCapabilityProbe(),
+            Reports = new BufferedReportWriter(),
+            CliVersion = "1.2.3",
+            CliOutput = CreateSnapshot(["cosmos list", "cosmos database container item query"]),
+            SelectedNamespaces = ["cosmos"],
+        };
+        
+        // Set the namespace in the Items dictionary (required by NamespaceStepBase)
+        context.Items["Namespace"] = "cosmos";
+        
+        return context;
+    }
+
     private static PipelineContext CreateContext(string testRoot, IProcessRunner processRunner)
     {
         var docsGenerationRoot = Path.Combine(testRoot, "docs-generation");
