@@ -191,7 +191,7 @@ This skill requires **network access** to fetch documentation content:
 | Configure blob index and metadata tags from Edge Volumes | https://learn.microsoft.com/en-us/azure/azure-arc/container-storage/howto-blob-index-metadata-tags |
 | Configure Cloud Ingest subvolumes for Azure Arc Edge Volumes | https://learn.microsoft.com/en-us/azure/azure-arc/container-storage/howto-configure-cloud-ingest-subvolumes |
 | Configure Cloud Mirror subvolumes and sync frequency | https://learn.microsoft.com/en-us/azure/azure-arc/container-storage/howto-configure-cloud-mirror-subvolumes |
-| Configure Local Shared Edge Volumes in Azure Container Storage | https://learn.microsoft.com/en-us/azure/azure-arc/container-storage/howto-configure-local-shared-edge-volumes |
+| Configure Local DocGeneration.Core.Shared Edge Volumes in Azure Container Storage | https://learn.microsoft.com/en-us/azure/azure-arc/container-storage/howto-configure-local-shared-edge-volumes |
 | Map file paths to cloud object paths in Azure Container Storage | https://learn.microsoft.com/en-us/azure/azure-arc/container-storage/howto-map-names |
 | Prepare Linux hosts for Azure Arc Edge Volumes | https://learn.microsoft.com/en-us/azure/azure-arc/container-storage/howto-prepare-linux-edge-volumes |
 | Set up Prometheus and Grafana for Arc container storage | https://learn.microsoft.com/en-us/azure/azure-arc/container-storage/howto-third-party-monitoring |

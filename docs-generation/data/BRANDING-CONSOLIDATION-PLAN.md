@@ -22,9 +22,9 @@ This document analyzes the duplication between `brand-to-server-mapping.json` an
   ```
 - **Unique Fields**: `mcpServerName`, `shortName`
 - **Used By**:
-  - CSharpGenerator (main multi-page documentation)
-  - ToolGeneration_Raw (raw tool documentation)
-  - ToolFamilyCleanup (tool family processing)
+  - DocGeneration.Steps.AnnotationsParametersRaw.Annotations (main multi-page documentation)
+  - DocGeneration.Steps.AnnotationsParametersRaw.RawTools (raw tool documentation)
+  - DocGeneration.Steps.ToolFamilyCleanup (tool family processing)
   - PowerShell scripts
 
 #### 2. transformation-config.json
@@ -40,8 +40,8 @@ This document analyzes the duplication between `brand-to-server-mapping.json` an
   ```
 - **Unique Fields**: None (all fields overlap conceptually with brand-to-server-mapping)
 - **Used By**:
-  - HorizontalArticleGenerator (horizontal articles)
-  - TextTransformation library (brand name transformations)
+  - DocGeneration.Steps.HorizontalArticles (horizontal articles)
+  - DocGeneration.Core.TextTransformation library (brand name transformations)
 
 ### Overlap Analysis
 
@@ -83,23 +83,23 @@ Both files contain:
 
 3. **Update Code References**:
 
-   a. **TextTransformation Library**
-      - File: `TextTransformation/ConfigLoader.cs`
+   a. **DocGeneration.Core.TextTransformation Library**
+      - File: `DocGeneration.Core.TextTransformation/ConfigLoader.cs`
       - Change: Load from `brand-to-server-mapping.json` instead
       - Update parser to handle array format
       - Map fields: `brandName` → `brandName`, `fileName` → `filename`
       
-   b. **HorizontalArticleGenerator**
-      - File: `HorizontalArticleGenerator/Generators/HorizontalArticleGenerator.cs` (line 222)
+   b. **DocGeneration.Steps.HorizontalArticles**
+      - File: `DocGeneration.Steps.HorizontalArticles/Generators/DocGeneration.Steps.HorizontalArticles.cs` (line 222)
       - Change: Use `brand-to-server-mapping.json`
       - Update property accessors to use new schema
       
    c. **HorizontalArticleProgram.cs**
-      - File: `HorizontalArticleGenerator/HorizontalArticleProgram.cs` (line 94)
+      - File: `DocGeneration.Steps.HorizontalArticles/HorizontalArticleProgram.cs` (line 94)
       - Change: Point to `brand-to-server-mapping.json`
 
 4. **Add Utility Helper Class**
-   - Create `Shared/BrandMappingLoader.cs`
+   - Create `DocGeneration.Core.Shared/BrandMappingLoader.cs`
    - Centralized loading logic
    - Consistent error handling
    - Single source of truth for file path resolution
@@ -183,7 +183,7 @@ Both files contain:
 **Recommended Approach: Option A (Merge into Single File)**
 
 **Rationale**:
-1. **Simplest to implement**: Only requires updating 3 files (ConfigLoader, HorizontalArticleGenerator, HorizontalArticleProgram)
+1. **Simplest to implement**: Only requires updating 3 files (ConfigLoader, DocGeneration.Steps.HorizontalArticles, HorizontalArticleProgram)
 2. **Clearest for developers**: Single source of truth eliminates confusion
 3. **Easiest to maintain**: One file to update when services change
 4. **Best coverage**: `brand-to-server-mapping.json` already has 7x more services
@@ -198,14 +198,14 @@ Both files contain:
 
 If Option A is approved:
 
-- [ ] Create `Shared/BrandMappingLoader.cs` utility class
-- [ ] Update `TextTransformation/ConfigLoader.cs` to use brand-to-server-mapping.json
-- [ ] Update `HorizontalArticleGenerator/Generators/HorizontalArticleGenerator.cs`
-- [ ] Update `HorizontalArticleGenerator/HorizontalArticleProgram.cs`
+- [ ] Create `DocGeneration.Core.Shared/BrandMappingLoader.cs` utility class
+- [ ] Update `DocGeneration.Core.TextTransformation/ConfigLoader.cs` to use brand-to-server-mapping.json
+- [ ] Update `DocGeneration.Steps.HorizontalArticles/Generators/DocGeneration.Steps.HorizontalArticles.cs`
+- [ ] Update `DocGeneration.Steps.HorizontalArticles/HorizontalArticleProgram.cs`
 - [ ] Test all affected projects build successfully
 - [ ] Test generation pipeline end-to-end
-- [ ] Update `TextTransformation/README.md` documentation
-- [ ] Update `HorizontalArticleGenerator/README.md` documentation
+- [ ] Update `DocGeneration.Core.TextTransformation/README.md` documentation
+- [ ] Update `DocGeneration.Steps.HorizontalArticles/README.md` documentation
 - [ ] Update `data/README.md` to remove transformation-config.json
 - [ ] Archive `transformation-config.json` as `.deprecated`
 - [ ] Update `.gitignore` to exclude .deprecated files
@@ -219,8 +219,8 @@ If Option A is approved:
 - All builds pass with current references
 
 ### Medium Risk Changes
-- HorizontalArticleGenerator needs schema mapping updates
-- TextTransformation library needs parser updates
+- DocGeneration.Steps.HorizontalArticles needs schema mapping updates
+- DocGeneration.Core.TextTransformation library needs parser updates
 
 ### High Risk Changes
 - None identified (backward compatibility maintained)
@@ -245,7 +245,7 @@ If consolidation causes issues:
 
 1. Are there use cases for `transformation-config.json` that aren't covered by `brand-to-server-mapping.json`?
 2. Should we maintain `transformation-config.json` for backward compatibility in external tools?
-3. Should the utility helper be in `Shared` or a new `BrandMapping` project?
+3. Should the utility helper be in `DocGeneration.Core.Shared` or a new `BrandMapping` project?
 4. Should we add TypeScript type definitions for the unified schema?
 
 ## Appendices

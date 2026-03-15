@@ -381,7 +381,7 @@ This skill requires **network access** to fetch documentation content:
 | Archive Azure Communication Services chat threads to custom storage | https://learn.microsoft.com/en-us/azure/communication-services/how-tos/chat-sdk/archive-chat-threads |
 | Integrate ACS chat with Teams DLP policies | https://learn.microsoft.com/en-us/azure/communication-services/how-tos/chat-sdk/data-loss-prevention |
 | Integrate Azure AI translation and sentiment with ACS chat | https://learn.microsoft.com/en-us/azure/communication-services/how-tos/chat-sdk/translating-chats |
-| Use Teams Shared Line Appearance with ACS Calling SDK | https://learn.microsoft.com/en-us/azure/communication-services/how-tos/cte-calling-sdk/shared-line-appearance |
+| Use Teams DocGeneration.Core.Shared Line Appearance with ACS Calling SDK | https://learn.microsoft.com/en-us/azure/communication-services/how-tos/cte-calling-sdk/shared-line-appearance |
 | Accept or decline Job Router offers programmatically | https://learn.microsoft.com/en-us/azure/communication-services/how-tos/router-sdk/accept-decline-offer |
 | Use Azure Functions as Job Router rule engine | https://learn.microsoft.com/en-us/azure/communication-services/how-tos/router-sdk/azure-function |
 | Customize best-worker ranking with Azure Functions | https://learn.microsoft.com/en-us/azure/communication-services/how-tos/router-sdk/customize-worker-scoring |

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>DocGeneration.Steps.HorizontalArticles</RootNamespace>
+    <StartupObject>HorizontalArticleGenerator.HorizontalArticleProgram</StartupObject>
+    <AssemblyName>DocGeneration.Steps.HorizontalArticles</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj" />
+    <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="..\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
+    <ProjectReference Include="..\DocGeneration.Core.NaturalLanguage\DocGeneration.Core.NaturalLanguage.csproj" />
+    <ProjectReference Include="..\DocGeneration.Core.TextTransformation\DocGeneration.Core.TextTransformation.csproj" />
+    <ProjectReference Include="..\DocGeneration.Core.TemplateEngine\DocGeneration.Core.TemplateEngine.csproj" />
+  </ItemGroup>
+</Project>

@@ -70,7 +70,7 @@ function Get-CommandFromFile {
     return $null
 }
 
-<# COMMENTED OUT: Using ExamplePromptValidator .NET tool instead of regex
+<# COMMENTED OUT: Using DocGeneration.Steps.ExamplePrompts.Validation .NET tool instead of regex
 function Build-ParamRegex {
     param([string]$ParamName)
 
@@ -141,17 +141,17 @@ try {
 
     $cliJson = Get-Content $CliOutputFile -Raw | ConvertFrom-Json
 
-    # Use ExamplePromptValidator .NET tool for validation instead of regex
-    $validatorProject = Join-Path $PSScriptRoot ".." "ExamplePromptValidator"
+    # Use DocGeneration.Steps.ExamplePrompts.Validation .NET tool for validation instead of regex
+    $validatorProject = Join-Path $PSScriptRoot ".." "DocGeneration.Steps.ExamplePrompts.Validation"
     if (-not (Test-Path $validatorProject)) {
-        throw "ExamplePromptValidator project not found at: $validatorProject"
+        throw "DocGeneration.Steps.ExamplePrompts.Validation project not found at: $validatorProject"
     }
 
-    Write-Info "Running ExamplePromptValidator..."
+    Write-Info "Running DocGeneration.Steps.ExamplePrompts.Validation..."
     $validatorOutput = & dotnet run --project $validatorProject --configuration Release -- $CliOutputFile $ExamplePromptsDir $MaxMissingDetails 2>&1
     
     if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 1) {
-        throw "ExamplePromptValidator failed with exit code: $LASTEXITCODE"
+        throw "DocGeneration.Steps.ExamplePrompts.Validation failed with exit code: $LASTEXITCODE"
     }
 
     # Output the validator results

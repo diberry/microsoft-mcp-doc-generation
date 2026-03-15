@@ -45,7 +45,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Import shared logging and normalization helpers
-. "$PSScriptRoot\Shared-Functions.ps1"
+. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
 
 function Get-CommandFromFile {
     param([string]$FilePath)
@@ -112,7 +112,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    $csharpGeneratorDir = Join-Path $docsGenDir "CSharpGenerator"
+    $csharpGeneratorDir = Join-Path $docsGenDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
     Push-Location $csharpGeneratorDir
     try {
         $noBuildArg = if ($SkipBuild) { "--no-build" } else { "" }
@@ -157,7 +157,7 @@ try {
     Push-Location $docsGenDir
     try {
         $rawArgs = @(
-            "--project", "ToolGeneration_Raw",
+            "--project", "DocGeneration.Steps.AnnotationsParametersRaw.RawTools",
             "--configuration", "Release"
         )
         if ($SkipBuild) { $rawArgs += "--no-build" }

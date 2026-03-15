@@ -1,14 +1,14 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Shared helper functions for generation pipeline scripts.
+    DocGeneration.Core.Shared helper functions for generation pipeline scripts.
 
 .DESCRIPTION
     Dot-source this file from any step script to get common logging
     and tool-command normalization functions.
 
     Usage:
-        . "$PSScriptRoot\Shared-Functions.ps1"
+        . "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
 #>
 
 # ═══════════════════════════════════════════════════════════════

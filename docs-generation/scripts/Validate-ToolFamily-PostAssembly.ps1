@@ -4,7 +4,7 @@
     Validates a generated tool-family article against its tool files.
 
 .DESCRIPTION
-    Runs post-assembly validation for a namespace after ToolFamilyCleanup finishes.
+    Runs post-assembly validation for a namespace after DocGeneration.Steps.ToolFamilyCleanup finishes.
     Blocking checks fail the pipeline when the final article silently drops a tool or
     reports an incorrect tool count.
 
@@ -36,7 +36,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot\Shared-Functions.ps1"
+. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
 
 function Remove-Markup {
     param([string]$Text)

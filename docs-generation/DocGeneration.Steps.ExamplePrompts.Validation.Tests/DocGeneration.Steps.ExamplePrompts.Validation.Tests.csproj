@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>DocGeneration.Steps.ExamplePrompts.Validation.Tests</AssemblyName>
+    <RootNamespace>DocGeneration.Steps.ExamplePrompts.Validation.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DocGeneration.Steps.ExamplePrompts.Validation/DocGeneration.Steps.ExamplePrompts.Validation.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+</Project>

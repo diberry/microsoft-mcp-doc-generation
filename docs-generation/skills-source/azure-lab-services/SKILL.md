@@ -99,7 +99,7 @@ This skill requires **network access** to fetch documentation content:
 | Allow lab creators to choose lab locations in Azure Lab Services | https://learn.microsoft.com/en-us/azure/lab-services/allow-lab-creator-pick-lab-location |
 | Configure allowed regions for Azure Lab Services labs | https://learn.microsoft.com/en-us/azure/lab-services/create-and-configure-labs-admin |
 | Attach or detach Azure compute galleries to lab plans | https://learn.microsoft.com/en-us/azure/lab-services/how-to-attach-detach-shared-image-gallery |
-| Attach or detach Shared Image Gallery to Azure Lab Services accounts | https://learn.microsoft.com/en-us/azure/lab-services/how-to-attach-detach-shared-image-gallery-1 |
+| Attach or detach DocGeneration.Core.Shared Image Gallery to Azure Lab Services accounts | https://learn.microsoft.com/en-us/azure/lab-services/how-to-attach-detach-shared-image-gallery-1 |
 | Configure auto-shutdown policies for Azure Lab plans | https://learn.microsoft.com/en-us/azure/lab-services/how-to-configure-auto-shutdown-lab-plans |
 | Configure automatic VM shutdown for Azure Lab Services accounts | https://learn.microsoft.com/en-us/azure/lab-services/how-to-configure-lab-accounts |
 | Connect lab plans to virtual networks with VNET injection | https://learn.microsoft.com/en-us/azure/lab-services/how-to-connect-vnet-injection |

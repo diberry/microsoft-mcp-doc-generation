@@ -74,7 +74,7 @@ if (Test-Path $cliOutputPath) {
 # Step 2: Build C# generator
 Write-Progress "Step 2: Building C# generator..."
 
-Push-Location (Join-Path $docsGenDir "CSharpGenerator")
+Push-Location (Join-Path $docsGenDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations")
 & dotnet build --configuration Debug
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to build C# generator"
@@ -100,9 +100,9 @@ Write-Host "===============================================" -ForegroundColor Ye
 Write-Host "READY FOR DEBUGGING" -ForegroundColor Yellow
 Write-Host "===============================================" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "To debug the CSharpGenerator:" -ForegroundColor White
-Write-Host "1. Set breakpoints in the CSharpGenerator code" -ForegroundColor White
-Write-Host "2. Run the 'Debug Docs-Generation CSharpGenerator' launch configuration" -ForegroundColor White
+Write-Host "To debug the DocGeneration.Steps.AnnotationsParametersRaw.Annotations:" -ForegroundColor White
+Write-Host "1. Set breakpoints in the DocGeneration.Steps.AnnotationsParametersRaw.Annotations code" -ForegroundColor White
+Write-Host "2. Run the 'Debug Docs-Generation DocGeneration.Steps.AnnotationsParametersRaw.Annotations' launch configuration" -ForegroundColor White
 Write-Host "3. The arguments that will be used are:" -ForegroundColor White
 Write-Host "   $generatorArgs" -ForegroundColor Gray
 Write-Host ""
@@ -110,7 +110,7 @@ Write-Host "Press Enter to continue without debugging..." -ForegroundColor White
 $null = Read-Host
 
 # Continue with normal execution if the user didn't choose to debug
-Push-Location "CSharpGenerator"
+Push-Location "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
 & dotnet run --configuration Debug -- $generatorArgs
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to generate documentation with C# generator"

@@ -66,7 +66,7 @@
 .PARAMETER SkipValidation
     Skip file validation steps (default: $false)
 
-.PARAMETER UseTextTransformation
+.PARAMETER UseDocGeneration.Core.TextTransformation
     Apply text transformations to horizontal article output (default: $true)
 
 .PARAMETER SkipBuild
@@ -140,7 +140,7 @@ param(
     
     [bool]$SkipValidation = $false,
 
-    [bool]$UseTextTransformation = $true,
+    [bool]$UseDocGeneration.Core.TextTransformation = $true,
     
     [switch]$SkipBuild,
     
@@ -176,7 +176,7 @@ if ($SkipExamplePrompts) {
 }
 
 # Import shared logging and normalization helpers
-. "$PSScriptRoot\Shared-Functions.ps1"
+. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
 
 try {
     # Strip \r on Windows (jq in Git Bash) and trim whitespace.
@@ -211,7 +211,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    & "$PSScriptRoot\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true -SkipBuild $SkipBuild
+    & "$PSScriptRoot\Invoke-DocGeneration.Steps.Bootstrap.CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true -SkipBuild $SkipBuild
     Write-Host ""
 
     # ========================================================================
@@ -327,7 +327,7 @@ try {
         Write-Info "Monitor progress in the Step 4 script output below..."
         Write-Host ""
 
-        $step4Script = Join-Path $scriptDir "4-Generate-ToolFamilyCleanup-One.ps1"
+        $step4Script = Join-Path $scriptDir "4-Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1"
         if (-not (Test-Path $step4Script)) {
             throw "Step 4 script not found: $step4Script"
         }
@@ -374,7 +374,7 @@ try {
     Write-Host ""
 
     if ($runStep5) {
-        $step5Script = Join-Path $scriptDir "5-Generate-SkillsRelevance-One.ps1"
+        $step5Script = Join-Path $scriptDir "5-Generate-DocGeneration.Steps.SkillsRelevance-One.ps1"
         if (-not (Test-Path $step5Script)) {
             Write-Warning "Step 5 script not found: $step5Script"
             Write-Warning "Skipping skills relevance generation"
@@ -419,7 +419,7 @@ try {
             $step6Params = @{
                 ServiceArea = $ToolFamily
                 OutputPath = $OutputPath
-                UseTextTransformation = $UseTextTransformation
+                UseDocGeneration.Core.TextTransformation = $UseDocGeneration.Core.TextTransformation
             }
             
             if ($SkipValidation) {

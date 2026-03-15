@@ -72,7 +72,7 @@ Before creating a new validation, answer these questions to guide your implement
 - Your answer: _________________________________
 
 **Q: What should the validation package be named?**
-- Example: `ExamplePromptValidator`
+- Example: `DocGeneration.Steps.ExamplePrompts.Validation`
 - Pattern: `{Content}Validator` (specific, not generic)
 - Your answer: _________________________________
 
@@ -119,8 +119,8 @@ Before creating a new validation, answer these questions to guide your implement
        <ImplicitUsings>enable</ImplicitUsings>
      </PropertyGroup>
      <ItemGroup>
-       <ProjectReference Include="../Shared/Shared.csproj" />
-       <ProjectReference Include="../GenerativeAI/GenerativeAI.csproj" />
+       <ProjectReference Include="../DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+       <ProjectReference Include="../DocGeneration.Core.GenerativeAI/DocGeneration.Core.GenerativeAI.csproj" />
      </ItemGroup>
    </Project>
    ```
@@ -129,18 +129,18 @@ Before creating a new validation, answer these questions to guide your implement
 
    Key components:
    ```csharp
-   using GenerativeAI;
+   using DocGeneration.Core.GenerativeAI;
    
    public class YourValidator
    {
-       private readonly GenerativeAIClient? _aiClient;
+       private readonly DocGeneration.Core.GenerativeAIClient? _aiClient;
        private readonly string _systemPrompt;
        private readonly string _userPromptTemplate;
        
        public YourValidator()
        {
            // Initialize AI client and load prompts
-           _aiClient = new GenerativeAIClient();
+           _aiClient = new DocGeneration.Core.GenerativeAIClient();
            var systemPromptPath = Path.Combine(promptsDir, "system-prompt-{your-validation}.txt");
            var userPromptPath = Path.Combine(promptsDir, "user-prompt-{your-validation}.txt");
            // Load prompt files...
@@ -267,9 +267,9 @@ Before creating a new validation, answer these questions to guide your implement
    Return your validation results in JSON format as specified in the system prompt.
    ```
 
-### Step 3: Integrate into CSharpGenerator
+### Step 3: Integrate into DocGeneration.Steps.AnnotationsParametersRaw.Annotations
 
-1. **Add project reference** to `docs-generation/CSharpGenerator/CSharpGenerator.csproj`
+1. **Add project reference** to `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj`
    ```xml
    <ItemGroup>
      <ProjectReference Include="../{YourValidator}/{YourValidator}.csproj" />
@@ -399,7 +399,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Pass to dotnet run
-dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Release -- \
+dotnet run --project DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj --configuration Release -- \
     generate-docs \
     # ... other flags
     $VALIDATE_{YOUR_CONTENT}
@@ -532,12 +532,12 @@ dotnet run --project CSharpGenerator/CSharpGenerator.csproj --configuration Rele
 
 ## Example Reference
 
-See the **ExamplePromptValidator** implementation for a complete working example:
-- Package: `docs-generation/ExamplePromptValidator/`
+See the **DocGeneration.Steps.ExamplePrompts.Validation** implementation for a complete working example:
+- Package: `docs-generation/DocGeneration.Steps.ExamplePrompts.Validation/`
 - Prompts: `docs-generation/prompts/system-prompt-example-prompt-validation.txt` and `user-prompt-example-prompt-validation.txt`
-- Integration: `docs-generation/CSharpGenerator/DocumentationGenerator.cs` (lines ~293-2100)
-- Tests: `docs-generation/ExamplePromptValidator.Tests/`
-- Documentation: `docs-generation/ExamplePromptValidator/README.md`
+- Integration: `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocumentationGenerator.cs` (lines ~293-2100)
+- Tests: `docs-generation/DocGeneration.Steps.ExamplePrompts.Validation.Tests/`
+- Documentation: `docs-generation/DocGeneration.Steps.ExamplePrompts.Validation/README.md`
 
 ## Next Steps
 

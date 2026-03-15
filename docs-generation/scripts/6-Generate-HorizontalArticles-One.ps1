@@ -25,7 +25,7 @@
 .PARAMETER SkipValidation
     Skip validation of CLI output files
 
-.PARAMETER UseTextTransformation
+.PARAMETER UseDocGeneration.Core.TextTransformation
     Apply text transformations to AI-generated content (default: $true)
 
 .EXAMPLE
@@ -42,7 +42,7 @@ param(
     
     [switch]$SkipValidation = $false,
 
-    [bool]$UseTextTransformation = $true,
+    [bool]$UseDocGeneration.Core.TextTransformation = $true,
 
     [switch]$SkipBuild
 )
@@ -50,7 +50,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Import shared logging and normalization helpers
-. "$PSScriptRoot\Shared-Functions.ps1"
+. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
 
 try {
     Write-Divider
@@ -104,8 +104,8 @@ try {
     Push-Location $docsGenDir
     try {
         # Run with single service flag and output path
-        $transformArg = if ($UseTextTransformation) { "--transform" } else { "" }
-        & dotnet run --project HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --no-build -- --single-service $ServiceArea --output-path $outputDir $transformArg
+        $transformArg = if ($UseDocGeneration.Core.TextTransformation) { "--transform" } else { "" }
+        & dotnet run --project DocGeneration.Steps.HorizontalArticles/DocGeneration.Steps.HorizontalArticles.csproj --configuration Release --no-build -- --single-service $ServiceArea --output-path $outputDir $transformArg
         $exitCode = $LASTEXITCODE
     } finally {
         Pop-Location

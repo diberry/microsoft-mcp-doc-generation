@@ -27,9 +27,9 @@
     Skip building the .NET solution (already built by preflight)
 
 .EXAMPLE
-    ./5-Generate-SkillsRelevance-One.ps1 -ServiceArea "keyvault"
-    ./5-Generate-SkillsRelevance-One.ps1 -ServiceArea "aks" -OutputPath ../generated
-    ./5-Generate-SkillsRelevance-One.ps1 -ServiceArea "storage" -MinScore 0.2
+    ./5-Generate-DocGeneration.Steps.SkillsRelevance-One.ps1 -ServiceArea "keyvault"
+    ./5-Generate-DocGeneration.Steps.SkillsRelevance-One.ps1 -ServiceArea "aks" -OutputPath ../generated
+    ./5-Generate-DocGeneration.Steps.SkillsRelevance-One.ps1 -ServiceArea "storage" -MinScore 0.2
 #>
 
 param(
@@ -46,7 +46,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Import shared logging and normalization helpers
-. "$PSScriptRoot\Shared-Functions.ps1"
+. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
 
 try {
     Write-Divider
@@ -77,13 +77,13 @@ try {
     }
     Write-Host ""
 
-    # Run SkillsRelevance generator
+    # Run DocGeneration.Steps.SkillsRelevance generator
     Write-Divider
     Write-Progress "Fetching and analyzing GitHub Copilot skills..."
     Write-Divider
     Write-Host ""
 
-    $skillsProject = Join-Path $docsGenDir "SkillsRelevance"
+    $skillsProject = Join-Path $docsGenDir "DocGeneration.Steps.SkillsRelevance"
     $noBuildArg = if ($SkipBuild) { "--no-build" } else { "" }
 
     Push-Location $docsGenDir

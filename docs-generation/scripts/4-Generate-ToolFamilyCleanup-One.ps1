@@ -36,9 +36,9 @@
     Skip the validation step (only generate files)
 
 .EXAMPLE
-    ./Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "keyvault secret create"  # Specific tool command
-    ./Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "storage"                      # Single namespace/family
-    ./Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "acr registry list" -SkipRelated
+    ./Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1 -ToolCommand "keyvault secret create"  # Specific tool command
+    ./Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1 -ToolCommand "storage"                      # Single namespace/family
+    ./Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1 -ToolCommand "acr registry list" -SkipRelated
 #>
 
 param(
@@ -58,7 +58,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Import shared logging and normalization helpers
-. "$PSScriptRoot\Shared-Functions.ps1"
+. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
 
 try {
     Write-Divider
@@ -123,7 +123,7 @@ try {
     
     Write-Info "Using tools from: $toolsInputDir ($($toolFiles.Count) files)"
 
-    $toolFamilyDir = Join-Path $docsGenDir "ToolFamilyCleanup"
+    $toolFamilyDir = Join-Path $docsGenDir "DocGeneration.Steps.ToolFamilyCleanup"
 
     # Run Tool Family Cleanup (multi-phase) in a temporary workspace to limit to this family
     Write-Divider
@@ -131,7 +131,7 @@ try {
     Write-Divider
     Write-Host ""
 
-    $exePath = "$toolFamilyDir/bin/Release/net9.0/ToolFamilyCleanup.dll"
+    $exePath = "$toolFamilyDir/bin/Release/net9.0/DocGeneration.Steps.ToolFamilyCleanup.dll"
     $tempRoot = Join-Path $scriptDir "temp-family-run"
     $tempDocs = Join-Path $tempRoot "docs-generation"
     $tempGenerated = Join-Path $tempRoot "generated"

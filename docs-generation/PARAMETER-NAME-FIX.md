@@ -20,8 +20,8 @@ Should display in documentation as:
 
 After thorough investigation of the codebase, **no code was found that strips the "name" suffix** from parameter names. The transformation logic in both:
 
-1. `TextCleanup.NormalizeParameter()` (NaturalLanguageGenerator/TextCleanup.cs)
-2. `formatNaturalLanguage` helper (CSharpGenerator/HandlebarsTemplateEngine.cs)
+1. `TextCleanup.NormalizeParameter()` (DocGeneration.Core.NaturalLanguage/TextCleanup.cs)
+2. `formatNaturalLanguage` helper (DocGeneration.Steps.AnnotationsParametersRaw.Annotations/HandlebarsDocGeneration.Core.TemplateEngine.cs)
 
 Both correctly join ALL words in the parameter name, preserving type qualifiers like "name".
 
@@ -31,24 +31,24 @@ Added explicit documentation and comments as safeguards to ensure this behavior 
 
 ### Files Modified
 
-1. **docs-generation/NaturalLanguageGenerator/TextCleanup.cs**
+1. **docs-generation/DocGeneration.Core.NaturalLanguage/TextCleanup.cs**
    - Added comprehensive XML documentation
    - Added inline comments emphasizing word preservation
    - Lines 213-259 (NormalizeParameter method)
 
-2. **docs-generation/CSharpGenerator/HandlebarsTemplateEngine.cs**
+2. **docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/HandlebarsDocGeneration.Core.TemplateEngine.cs**
    - Added detailed comments to formatNaturalLanguage helper
    - Lines 324-388
 
-3. **docs-generation/CSharpGenerator/Generators/ParameterGenerator.cs**
+3. **docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Generators/ParameterGenerator.cs**
    - Added explanatory comment at NL_Name assignment
    - Line 123
 
-4. **docs-generation/CSharpGenerator/Generators/PageGenerator.cs**
+4. **docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Generators/PageGenerator.cs**
    - Added comment documenting word preservation
    - Line 141
 
-5. **docs-generation/CSharpGenerator/Generators/ParamAnnotationGenerator.cs**
+5. **docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Generators/ParamAnnotationGenerator.cs**
    - Added comment documenting word preservation
    - Line 176
 
@@ -105,7 +105,7 @@ If you need to modify parameter name transformation:
 
 ```bash
 cd docs-generation
-dotnet build CSharpGenerator/CSharpGenerator.csproj
+dotnet build DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj
 # Result: Build succeeded with 0 warnings, 0 errors
 ```
 

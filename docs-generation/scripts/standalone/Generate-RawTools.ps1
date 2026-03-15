@@ -8,8 +8,8 @@
     It has NO dependencies on other generation steps and can be run independently.
     
     Raw tool files are the foundation for all downstream processing:
-    - ToolGeneration_Composed reads raw files and adds content
-    - ToolGeneration_Improved reads composed files for AI enhancement
+    - DocGeneration.Steps.ToolGeneration.Composition reads raw files and adds content
+    - DocGeneration.Steps.ToolGeneration.Improvements reads composed files for AI enhancement
     
     Prerequisites:
     - CLI output must exist (./generated/cli/cli-output.json)
@@ -83,8 +83,8 @@ try {
     Write-Info "CLI Version: $cliVersion"
     Write-Info ""
 
-    # Run ToolGeneration_Raw
-    Write-Progress "Generating raw tool files via ToolGeneration_Raw..."
+    # Run DocGeneration.Steps.AnnotationsParametersRaw.RawTools
+    Write-Progress "Generating raw tool files via DocGeneration.Steps.AnnotationsParametersRaw.RawTools..."
     Write-Info ""
     
     $rawToolsDir = Join-Path $outputDir "tools-raw"
@@ -93,7 +93,7 @@ try {
     Push-Location $docsGenDir
     try {
         $rawArgs = @(
-            "--project", "ToolGeneration_Raw",
+            "--project", "DocGeneration.Steps.AnnotationsParametersRaw.RawTools",
             "--configuration", "Release",
             "--",
             $cliOutputFile,
@@ -105,7 +105,7 @@ try {
         dotnet run @rawArgs
         
         if ($LASTEXITCODE -ne 0) {
-            throw "ToolGeneration_Raw failed with exit code $LASTEXITCODE"
+            throw "DocGeneration.Steps.AnnotationsParametersRaw.RawTools failed with exit code $LASTEXITCODE"
         }
     } finally {
         Pop-Location

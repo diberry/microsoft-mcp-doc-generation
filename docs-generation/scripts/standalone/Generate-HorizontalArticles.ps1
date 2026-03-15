@@ -74,7 +74,7 @@ try {
     # Step 2: Build the horizontal article generator
     Write-Progress "Step 2: Building horizontal article generator..."
     
-    & dotnet build HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --nologo --verbosity quiet
+    & dotnet build DocGeneration.Steps.HorizontalArticles/DocGeneration.Steps.HorizontalArticles.csproj --configuration Release --nologo --verbosity quiet
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to build horizontal article generator (exit code: $LASTEXITCODE)"
     }
@@ -87,7 +87,7 @@ try {
     Write-Host ""
     
     Push-Location $PSScriptRoot
-    & dotnet run --project HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --no-build
+    & dotnet run --project DocGeneration.Steps.HorizontalArticles/DocGeneration.Steps.HorizontalArticles.csproj --configuration Release --no-build
     $exitCode = $LASTEXITCODE
     Pop-Location
     

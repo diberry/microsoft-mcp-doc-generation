@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start: Compatibility wrapper for the typed PipelineRunner host.
+# Start: Compatibility wrapper for the typed DocGeneration.PipelineRunner host.
 #
 # Usage:
 #   ./start.sh [namespace] [steps]
@@ -8,7 +8,7 @@
 #   ./start.sh advisor 1,2,3  # Run bootstrap + steps 1,2,3 for advisor namespace (output: ./generated-advisor/)
 #   ./start.sh 1,2,3          # Run bootstrap + steps 1,2,3 for all namespaces (output: ./generated/)
 #
-# Bootstrap step 0 always runs inside PipelineRunner; start.sh is only a thin wrapper.
+# Bootstrap step 0 always runs inside DocGeneration.PipelineRunner; start.sh is only a thin wrapper.
 
 set -euo pipefail
 
@@ -16,9 +16,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NAMESPACE_ARG=""
 STEPS_ARG="1,2,3,4,5,6"
 
-# If first arg starts with -, pass all args through directly to PipelineRunner
+# If first arg starts with -, pass all args through directly to DocGeneration.PipelineRunner
 if [[ $# -gt 0 && "$1" =~ ^- ]]; then
-    dotnet run --project "$ROOT_DIR/docs-generation/PipelineRunner/PipelineRunner.csproj" -- "$@"
+    dotnet run --project "$ROOT_DIR/docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "$@"
     exit $?
 fi
 
@@ -47,5 +47,5 @@ echo "Start: Documentation Generation Orchestrator"
 echo "==================================================================="
 echo ""
 
-dotnet run --project "$ROOT_DIR/docs-generation/PipelineRunner/PipelineRunner.csproj" -- "${RUNNER_ARGS[@]}"
+dotnet run --project "$ROOT_DIR/docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "${RUNNER_ARGS[@]}"
 exit $?
