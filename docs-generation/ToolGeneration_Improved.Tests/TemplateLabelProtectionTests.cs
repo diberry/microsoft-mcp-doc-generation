@@ -463,4 +463,128 @@ public class TemplateLabelProtectionTests
         // Should still work correctly even without a blank line
         Assert.Equal(content, restored);
     }
+
+    [Fact]
+    public void ExtractRequiredParameters_ReturnsRequiredRowsFromParameterTable()
+    {
+        var content = """
+            # foundry agents connect
+
+            | Parameter | Required or optional | Description |
+            |-----------|---------------------|-------------|
+            | **Agent ID** | Required | The ID of the agent to interact with. |
+            | **Query** | Required | The query sent to the agent. |
+            | **Max results** | Optional | Maximum number of results to return. |
+            """;
+
+        var requiredParameters = ImprovedToolGeneratorService.ExtractRequiredParameters(content);
+
+        Assert.Equal(2, requiredParameters.Count);
+        Assert.Equal("Agent ID", requiredParameters[0].DisplayName);
+        Assert.Equal("Query", requiredParameters[1].DisplayName);
+    }
+
+    [Fact]
+    public void FindMissingRequiredParameters_DetectsDroppedRequiredRows()
+    {
+        var originalContent = """
+            | Parameter | Required or optional | Description |
+            |-----------|---------------------|-------------|
+            | **Agent ID** | Required | The ID of the agent to interact with. |
+            | **Query** | Required | The query sent to the agent. |
+            | **Max results** | Optional | Maximum number of results to return. |
+            """;
+        var improvedContent = """
+            | Parameter | Required or optional | Description |
+            |-----------|---------------------|-------------|
+            | **Agent ID** | Required | The ID of the agent to interact with. |
+            | **Max results** | Optional | Maximum number of results to return. |
+            """;
+
+        var requiredParameters = ImprovedToolGeneratorService.ExtractRequiredParameters(originalContent);
+        var missingParameters = ImprovedToolGeneratorService.FindMissingRequiredParameters(improvedContent, requiredParameters);
+
+        Assert.Single(missingParameters);
+        Assert.Equal("Query", missingParameters[0].DisplayName);
+    }
+
+    [Fact]
+    public void ReinjectMissingRequiredParameters_RestoresDroppedRowsInExistingTable()
+    {
+        var originalContent = """
+            # foundry agents connect
+
+            Example prompts include:
+
+            - "Connect to the analytics agent"
+
+            | Parameter | Required or optional | Description |
+            |-----------|---------------------|-------------|
+            | **Agent ID** | Required | The ID of the agent to interact with. |
+            | **Query** | Required | The query sent to the agent. |
+            | **Max results** | Optional | Maximum number of results to return. |
+
+            [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+            Destructive: ❌
+            """;
+        var improvedContent = """
+            # foundry agents connect
+
+            Example prompts include:
+
+            - "Connect to the analytics agent"
+
+            | Parameter | Required or optional | Description |
+            |-----------|---------------------|-------------|
+            | **Agent ID** | Required | The ID of the agent to interact with. |
+            | **Max results** | Optional | Maximum number of results to return. |
+
+            [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+            Destructive: ❌
+            """;
+
+        var requiredParameters = ImprovedToolGeneratorService.ExtractRequiredParameters(originalContent);
+        var missingParameters = ImprovedToolGeneratorService.FindMissingRequiredParameters(improvedContent, requiredParameters);
+        var repairedContent = ImprovedToolGeneratorService.ReinjectMissingRequiredParameters(improvedContent, originalContent, missingParameters);
+
+        Assert.Contains("| **Query** | Required | The query sent to the agent. |", repairedContent);
+        Assert.Empty(ImprovedToolGeneratorService.FindMissingRequiredParameters(repairedContent, requiredParameters));
+    }
+
+    [Fact]
+    public void ReinjectMissingRequiredParameters_RestoresTableWhenAiDropsItEntirely()
+    {
+        var originalContent = """
+            # foundry agents connect
+
+            Example prompts include:
+
+            - "Connect to the analytics agent"
+
+            | Parameter | Required or optional | Description |
+            |-----------|---------------------|-------------|
+            | **Agent ID** | Required | The ID of the agent to interact with. |
+            | **Query** | Required | The query sent to the agent. |
+
+            [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+            Destructive: ❌
+            """;
+        var improvedContent = """
+            # foundry agents connect
+
+            Example prompts include:
+
+            - "Connect to the analytics agent"
+
+            [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+            Destructive: ❌
+            """;
+
+        var requiredParameters = ImprovedToolGeneratorService.ExtractRequiredParameters(originalContent);
+        var repairedContent = ImprovedToolGeneratorService.ReinjectMissingRequiredParameters(improvedContent, originalContent, requiredParameters);
+
+        Assert.Contains("| Parameter | Required or optional | Description |", repairedContent);
+        Assert.Contains("| **Query** | Required | The query sent to the agent. |", repairedContent);
+        Assert.Empty(ImprovedToolGeneratorService.FindMissingRequiredParameters(repairedContent, requiredParameters));
+    }
 }

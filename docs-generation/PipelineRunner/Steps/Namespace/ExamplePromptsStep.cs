@@ -72,42 +72,38 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
                 return BuildResult(context, processResults, false, warnings, validatorResults);
             }
 
+            var validatorProject = GetProjectPath(context, "ExamplePromptValidator");
+            var validatorWarnings = new List<string>();
+            var validatorArguments = new List<string>
+            {
+                "--generated", context.OutputPath,
+                "--example-prompts-dir", Path.Combine(context.OutputPath, "example-prompts"),
+            };
+
             if (matchingTools.Count == 1)
             {
-                var validatorProject = GetProjectPath(context, "ExamplePromptValidator");
-                var validatorWarnings = new List<string>();
-                var validatorResult = await context.ProcessRunner.RunDotNetProjectAsync(
-                    validatorProject,
-                    [
-                        "--generated", context.OutputPath,
-                        "--example-prompts-dir", Path.Combine(context.OutputPath, "example-prompts"),
-                        "--tool-command", matchingTools[0].Command,
-                    ],
-                    context.Request.SkipBuild,
-                    context.DocsGenerationRoot,
-                    cancellationToken);
-
-                processResults.Add(validatorResult);
-                if (!validatorResult.Succeeded)
-                {
-                    AddProcessIssue(validatorResult, validatorWarnings, "Example prompt validation completed with issues");
-                    warnings.AddRange(validatorWarnings);
-                }
-
-                validatorResults.Add(new ValidatorResult(
-                    "Validate-ExamplePrompts-RequiredParams",
-                    validatorResult.Succeeded,
-                    validatorWarnings));
+                validatorArguments.Add("--tool-command");
+                validatorArguments.Add(matchingTools[0].Command);
             }
-            else
+
+            var validatorResult = await context.ProcessRunner.RunDotNetProjectAsync(
+                validatorProject,
+                validatorArguments,
+                context.Request.SkipBuild,
+                context.DocsGenerationRoot,
+                cancellationToken);
+
+            processResults.Add(validatorResult);
+            if (!validatorResult.Succeeded)
             {
-                const string warning = "Skipping example prompt validation for multi-tool namespace runs.";
-                warnings.Add(warning);
-                validatorResults.Add(new ValidatorResult(
-                    "Validate-ExamplePrompts-RequiredParams",
-                    true,
-                    [warning]));
+                AddProcessIssue(validatorResult, validatorWarnings, "Example prompt validation completed with issues");
+                warnings.AddRange(validatorWarnings);
             }
+
+            validatorResults.Add(new ValidatorResult(
+                "Validate-ExamplePrompts-RequiredParams",
+                validatorResult.Succeeded,
+                validatorWarnings));
         }
 
         return BuildResult(context, processResults, true, warnings, validatorResults);

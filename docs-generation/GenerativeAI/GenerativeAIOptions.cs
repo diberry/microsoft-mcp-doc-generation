@@ -9,6 +9,7 @@ public class GenerativeAIOptions
     public string? Endpoint { get; set; }
     public string? Deployment { get; set; }
     public string? ApiVersion { get; set; }
+    public bool UseDefaultCredential { get; set; }
 
     private const string DotEnvFileName = ".env";
 
@@ -25,6 +26,7 @@ public class GenerativeAIOptions
         opts.Endpoint = Environment.GetEnvironmentVariable("FOUNDRY_ENDPOINT");
         opts.Deployment = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_NAME") ?? Environment.GetEnvironmentVariable("FOUNDRY_MODEL") ?? Environment.GetEnvironmentVariable("FOUNDRY_INSTANCE");
         opts.ApiVersion = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_API_VERSION");
+        opts.UseDefaultCredential = ParseBoolean(Environment.GetEnvironmentVariable("FOUNDRY_USE_DEFAULT_CREDENTIAL"));
         
         LogFileHelper.WriteDebugLines(new[]
         {
@@ -32,7 +34,8 @@ public class GenerativeAIOptions
             $"  FOUNDRY_API_KEY: {(string.IsNullOrEmpty(opts.ApiKey) ? "NOT SET" : $"SET ({opts.ApiKey.Length} chars)")}",
             $"  FOUNDRY_ENDPOINT: {opts.Endpoint ?? "NOT SET"}",
             $"  FOUNDRY_MODEL_NAME: {opts.Deployment ?? "NOT SET"}",
-            $"  FOUNDRY_MODEL_API_VERSION: {opts.ApiVersion ?? "NOT SET"}"
+            $"  FOUNDRY_MODEL_API_VERSION: {opts.ApiVersion ?? "NOT SET"}",
+            $"  FOUNDRY_USE_DEFAULT_CREDENTIAL: {opts.UseDefaultCredential}"
         });
 
         if (string.IsNullOrEmpty(opts.ApiKey) || string.IsNullOrEmpty(opts.Endpoint) || string.IsNullOrEmpty(opts.Deployment))
@@ -73,6 +76,7 @@ public class GenerativeAIOptions
                     opts.Endpoint ??= TryGet(kv, "FOUNDRY_ENDPOINT");
                     opts.Deployment ??= TryGet(kv, "FOUNDRY_MODEL_NAME") ?? TryGet(kv, "FOUNDRY_MODEL") ?? TryGet(kv, "FOUNDRY_INSTANCE");
                     opts.ApiVersion ??= TryGet(kv, "FOUNDRY_MODEL_API_VERSION");
+                    opts.UseDefaultCredential = opts.UseDefaultCredential || ParseBoolean(TryGet(kv, "FOUNDRY_USE_DEFAULT_CREDENTIAL"));
                     
                     LogFileHelper.WriteDebugLines(new[]
                     {
@@ -80,7 +84,8 @@ public class GenerativeAIOptions
                         $"    FOUNDRY_API_KEY: {(string.IsNullOrEmpty(opts.ApiKey) ? "NOT SET" : $"SET ({opts.ApiKey.Length} chars)")}",
                         $"    FOUNDRY_ENDPOINT: {opts.Endpoint ?? "NOT SET"}",
                         $"    FOUNDRY_MODEL_NAME: {opts.Deployment ?? "NOT SET"}",
-                        $"    FOUNDRY_MODEL_API_VERSION: {opts.ApiVersion ?? "NOT SET"}"
+                        $"    FOUNDRY_MODEL_API_VERSION: {opts.ApiVersion ?? "NOT SET"}",
+                        $"    FOUNDRY_USE_DEFAULT_CREDENTIAL: {opts.UseDefaultCredential}"
                     });
 
                     Console.WriteLine($"  ✅ Environment loaded from .env file");
@@ -97,6 +102,19 @@ public class GenerativeAIOptions
     }
 
     private static string? TryGet(Dictionary<string,string> d, string k) => d.TryGetValue(k, out var v) ? v : null;
+
+    private static bool ParseBoolean(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+               value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+               value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+               value.Equals("on", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static Dictionary<string,string> ParseDotEnv(string content)
     {
