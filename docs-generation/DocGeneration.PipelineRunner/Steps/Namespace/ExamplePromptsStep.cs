@@ -202,7 +202,8 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
 
             for (var attempt = 1; attempt <= MaxValidationRetries && unresolvedCommands.Contains(command); attempt++)
             {
-                var reason = SummarizeValidationReport(artifact.ValidationPath);
+                var preservedArtifacts = PreserveAttemptArtifacts(artifact, attempt);
+                var reason = SummarizeValidationReport(preservedArtifacts.ValidationPath);
                 var retryMessage = $"Retrying example prompts for '{command}' (attempt {attempt}/{MaxValidationRetries}) because {reason}";
                 context.Reports.Warning($"    {retryMessage}");
                 retryWarnings.Add(retryMessage);
@@ -210,7 +211,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
 
                 var retryGeneratorResult = await context.ProcessRunner.RunDotNetProjectAsync(
                     generatorProject,
-                    BuildRetryGeneratorArguments(generatorArguments, command, artifact.ValidationPath),
+                    BuildRetryGeneratorArguments(generatorArguments, command, preservedArtifacts.ValidationPath),
                     context.Request.SkipBuild,
                     context.DocsGenerationRoot,
                     cancellationToken);
@@ -345,6 +346,27 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         }
 
         toolWarnings.AddRange(warnings.Where(static warning => !string.IsNullOrWhiteSpace(warning)));
+    }
+
+    private static ToolArtifacts PreserveAttemptArtifacts(ToolArtifacts artifact, int attempt)
+    {
+        var preservedArtifacts = artifact.CreateRetryAttempt(attempt);
+        CopyArtifactIfExists(artifact.ExamplePromptPath, preservedArtifacts.ExamplePromptPath);
+        CopyArtifactIfExists(artifact.InputPromptPath, preservedArtifacts.InputPromptPath);
+        CopyArtifactIfExists(artifact.RawOutputPath, preservedArtifacts.RawOutputPath);
+        CopyArtifactIfExists(artifact.ValidationPath, preservedArtifacts.ValidationPath);
+        return preservedArtifacts;
+    }
+
+    private static void CopyArtifactIfExists(string sourcePath, string destinationPath)
+    {
+        if (!File.Exists(sourcePath))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+        File.Copy(sourcePath, destinationPath, overwrite: true);
     }
 
     private static string SummarizeValidationReport(string validationPath)
@@ -511,6 +533,17 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
     {
         public string[] AllPaths => [ExamplePromptPath, InputPromptPath, RawOutputPath, ValidationPath];
 
+        public ToolArtifacts CreateRetryAttempt(int attempt)
+        {
+            var attemptDirectory = $"attempt-{attempt}";
+            return new ToolArtifacts(
+                Command,
+                BuildAttemptPath(ExamplePromptPath, attemptDirectory),
+                BuildAttemptPath(InputPromptPath, attemptDirectory),
+                BuildAttemptPath(RawOutputPath, attemptDirectory),
+                BuildAttemptPath(ValidationPath, attemptDirectory));
+        }
+
         public static ToolArtifacts Create(string command, string outputPath, FileNameContext nameContext)
         {
             var baseName = ToolFileNameBuilder.BuildBaseFileName(command, nameContext);
@@ -521,6 +554,9 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
                 Path.Combine(outputPath, "example-prompts-raw-output", ToolFileNameBuilder.BuildRawOutputFileName(command, nameContext)),
                 Path.Combine(outputPath, "example-prompts-validation", $"{baseName}-validation.md"));
         }
+
+        private static string BuildAttemptPath(string path, string attemptDirectory)
+            => Path.Combine(Path.GetDirectoryName(path)!, attemptDirectory, Path.GetFileName(path));
     }
 
     private sealed record ValidationRun(

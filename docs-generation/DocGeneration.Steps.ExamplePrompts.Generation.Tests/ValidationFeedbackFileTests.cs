@@ -27,4 +27,14 @@ public class ValidationFeedbackFileTests
             }
         }
     }
+
+    [Fact]
+    public async Task LoadValidationFeedbackAsync_MissingFileReturnsNull()
+    {
+        var filePath = Path.Combine(Path.GetTempPath(), $"validation-feedback-missing-{Guid.NewGuid():N}.md");
+
+        var content = await Program.LoadValidationFeedbackAsync(filePath);
+
+        Assert.Null(content);
+    }
 }
