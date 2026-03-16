@@ -16,13 +16,14 @@ public class PipelineContextFactoryTests
         try
         {
             var factory = CreateFactory(repoRoot, new StubCliMetadataLoader());
-            var request = new PipelineRequest("storage_account", new[] { 1 }, ".\\custom-output", false, false, false);
+            var relativePath = Path.Combine(".", "custom-output");
+            var request = new PipelineRequest("storage_account", new[] { 1 }, relativePath, false, false, false);
 
             var context = await factory.CreateAsync(request, CancellationToken.None);
 
             Assert.Equal(repoRoot, context.RepoRoot);
             Assert.Equal(Path.Combine(repoRoot, "docs-generation"), context.DocsGenerationRoot);
-            Assert.Equal(Path.GetFullPath(Path.Combine(repoRoot, ".\\custom-output")), context.OutputPath);
+            Assert.Equal(Path.GetFullPath(Path.Combine(repoRoot, relativePath)), context.OutputPath);
             Assert.Equal(new[] { "storage account" }, context.SelectedNamespaces);
         }
         finally
@@ -45,7 +46,7 @@ public class PipelineContextFactoryTests
             await File.WriteAllTextAsync(Path.Combine(cliDirectory, "cli-output.json"), "{\"version\":\"1.2.3\",\"results\":[{\"command\":\"compute list\",\"name\":\"compute list\",\"description\":\"List compute resources\"}]}");
 
             var factory = CreateFactory(repoRoot, new CliMetadataLoader());
-            var request = new PipelineRequest(null, new[] { 1 }, ".\\generated", false, false, false);
+            var request = new PipelineRequest(null, new[] { 1 }, Path.Combine(".", "generated"), false, false, false);
 
             var context = await factory.CreateAsync(request, CancellationToken.None);
 
