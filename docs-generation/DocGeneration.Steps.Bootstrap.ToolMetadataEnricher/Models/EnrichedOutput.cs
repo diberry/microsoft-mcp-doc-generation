@@ -51,6 +51,9 @@ public sealed record ConditionalParameterGroup
     public List<string> Parameters { get; init; } = [];
 
     public string Source { get; init; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Description { get; init; }
 }
 
 public sealed record ParameterEnhancement
