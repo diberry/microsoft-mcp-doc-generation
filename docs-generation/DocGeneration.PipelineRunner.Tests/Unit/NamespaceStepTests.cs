@@ -138,7 +138,7 @@ public class NamespaceStepTests
         var testRoot = CreateTestRoot();
         try
         {
-            var runner = new ValidationFailingRunner("compute list");
+            var runner = new ExamplePromptRetryRunner("compute list", validationFailuresBeforeSuccess: 3);
             var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
             context.Items["Namespace"] = "compute list";
 
@@ -151,7 +151,65 @@ public class NamespaceStepTests
             Assert.True(result.Success);
             Assert.Single(result.ArtifactFailures);
             Assert.Equal("compute list", result.ArtifactFailures[0].ArtifactName);
-            Assert.Contains("validation", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("after automatic retries", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_ValidatorFailure_RetriesInvalidToolWithFeedback()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new ExamplePromptRetryRunner("compute list", validationFailuresBeforeSuccess: 1);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Empty(result.ArtifactFailures);
+            Assert.Equal(4, runner.Invocations.Count);
+            Assert.Contains(result.Warnings, warning => warning.Contains("Retrying example prompts for 'compute list' (attempt 1/2)", StringComparison.Ordinal));
+            Assert.Contains(runner.Invocations[2].Arguments, argument => argument == "--tool-command");
+            Assert.Contains(runner.Invocations[2].Arguments, argument => argument == "compute list");
+            Assert.Contains(runner.Invocations[2].Arguments, argument => argument == "--validation-feedback-file");
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_ValidatorFailureAfterRetriesCreatesArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new ExamplePromptRetryRunner("compute list", validationFailuresBeforeSuccess: 3);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute list", failure.ArtifactName);
+            Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(result.Warnings, warning => warning.Contains("attempt 2/2", StringComparison.Ordinal));
         }
         finally
         {
@@ -636,6 +694,97 @@ public class NamespaceStepTests
 
         public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
             => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
+    }
+
+    private sealed class ExamplePromptRetryRunner : IProcessRunner
+    {
+        private readonly string _invalidTool;
+        private int _validationFailuresRemaining;
+
+        public ExamplePromptRetryRunner(string invalidTool, int validationFailuresBeforeSuccess)
+        {
+            _invalidTool = invalidTool;
+            _validationFailuresRemaining = validationFailuresBeforeSuccess;
+        }
+
+        public List<ProcessSpec> Invocations { get; } = new();
+
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
+        {
+            Invocations.Add(spec);
+
+            var projectPath = GetArgumentValue(spec.Arguments, "--project");
+            if (projectPath?.EndsWith("DocGeneration.Steps.ExamplePrompts.Validation.csproj", StringComparison.Ordinal) == true)
+            {
+                var generatedPath = GetArgumentValue(spec.Arguments, "--generated")!;
+                WriteValidationFile(generatedPath, _invalidTool);
+
+                if (_validationFailuresRemaining > 0)
+                {
+                    _validationFailuresRemaining--;
+                    var stdout = $"Validation Summary{Environment.NewLine}------------------{Environment.NewLine}Invalid tools:{Environment.NewLine}  - {_invalidTool}";
+                    return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, stdout, string.Empty, TimeSpan.Zero));
+                }
+            }
+
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero));
+        }
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)
+            => RunAsync(
+                new ProcessSpec(
+                    "dotnet",
+                    ["build", solutionPath, "--configuration", "Release", "--verbosity", "quiet"],
+                    Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory),
+                cancellationToken);
+
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string projectPath, IEnumerable<string> arguments, bool noBuild, string workingDirectory, CancellationToken cancellationToken)
+        {
+            var invocation = new List<string>
+            {
+                "run",
+                "--project",
+                projectPath,
+                "--configuration",
+                "Release",
+            };
+
+            if (noBuild)
+            {
+                invocation.Add("--no-build");
+            }
+
+            invocation.Add("--");
+            invocation.AddRange(arguments);
+            return RunAsync(new ProcessSpec("dotnet", invocation, workingDirectory), cancellationToken);
+        }
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
+            => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
+
+        private static string? GetArgumentValue(IReadOnlyList<string> arguments, string flag)
+        {
+            for (var i = 0; i < arguments.Count - 1; i++)
+            {
+                if (arguments[i].Equals(flag, StringComparison.Ordinal))
+                {
+                    return arguments[i + 1];
+                }
+            }
+
+            return null;
+        }
+
+        private static void WriteValidationFile(string generatedPath, string command)
+        {
+            var nameContext = FileNameContext.CreateAsync().GetAwaiter().GetResult();
+            var baseName = ToolFileNameBuilder.BuildBaseFileName(command, nameContext);
+            var validationPath = Path.Combine(generatedPath, "example-prompts-validation", $"{baseName}-validation.md");
+            Directory.CreateDirectory(Path.GetDirectoryName(validationPath)!);
+            File.WriteAllText(
+                validationPath,
+                $"# Example Prompt Validation: {command}{Environment.NewLine}{Environment.NewLine}**Status:** Invalid{Environment.NewLine}**Summary:** Missing required parameters or quoting issues{Environment.NewLine}- Missing params: subscription{Environment.NewLine}- Issue: Use quoted placeholders");
+        }
     }
 
     private sealed class FailingProcessRunner : IProcessRunner

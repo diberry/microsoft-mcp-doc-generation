@@ -19,12 +19,14 @@ internal static class Program
         // Parse arguments
         if (args.Length < 2)
         {
-            Console.WriteLine("Usage: ExamplePromptGeneratorStandalone <cliOutputFile> <outputDir> [version] [--e2e-prompts <path>] [--param-manifests <dir>]");
-            Console.WriteLine("  cliOutputFile      - Path to cli-output.json");
-            Console.WriteLine("  outputDir          - Output directory for generated files");
-            Console.WriteLine("  version            - (Optional) CLI version string. If not provided, reads from cli-version.json");
-            Console.WriteLine("  --e2e-prompts      - (Optional) Path to parsed.json from E2eTestPromptParser");
-            Console.WriteLine("  --param-manifests  - (Optional) Directory containing per-tool parameter manifest JSON files");
+            Console.WriteLine("Usage: ExamplePromptGeneratorStandalone <cliOutputFile> <outputDir> [version] [--e2e-prompts <path>] [--param-manifests <dir>] [--tool-command <command>] [--validation-feedback-file <path>]");
+            Console.WriteLine("  cliOutputFile             - Path to cli-output.json");
+            Console.WriteLine("  outputDir                 - Output directory for generated files");
+            Console.WriteLine("  version                   - (Optional) CLI version string. If not provided, reads from cli-version.json");
+            Console.WriteLine("  --e2e-prompts             - (Optional) Path to parsed.json from E2eTestPromptParser");
+            Console.WriteLine("  --param-manifests         - (Optional) Directory containing per-tool parameter manifest JSON files");
+            Console.WriteLine("  --tool-command            - (Optional) Generate prompts only for the specified tool command");
+            Console.WriteLine("  --validation-feedback-file - (Optional) Markdown validation report from the previous attempt");
             Console.WriteLine("\nNote: Templates and prompts are embedded in the package.");
             return 1;
         }
@@ -34,6 +36,8 @@ internal static class Program
         LogFileHelper.Initialize("example-prompts");
         string? e2ePromptsPath = null;
         string? paramManifestsDir = null;
+        string? filterToolCommand = null;
+        string? validationFeedbackFile = null;
 
         // Scan for named flags first (they can appear anywhere after positional args)
         string? versionArg = null;
@@ -46,6 +50,14 @@ internal static class Program
             else if (args[i] == "--param-manifests" && i + 1 < args.Length)
             {
                 paramManifestsDir = args[++i];
+            }
+            else if (args[i] == "--tool-command" && i + 1 < args.Length)
+            {
+                filterToolCommand = args[++i];
+            }
+            else if (args[i] == "--validation-feedback-file" && i + 1 < args.Length)
+            {
+                validationFeedbackFile = args[++i];
             }
             else if (versionArg == null && !args[i].StartsWith("--"))
             {
@@ -125,6 +137,8 @@ internal static class Program
         Console.WriteLine($"📂 Prompts:          {Path.GetFullPath(promptsDir)}");
         Console.WriteLine($"📂 E2e prompts:      {(e2ePromptsPath != null ? Path.GetFullPath(e2ePromptsPath) : "(none)")}");
         Console.WriteLine($"📂 Param manifests:  {(paramManifestsDir != null ? Path.GetFullPath(paramManifestsDir) : "(none)")}");
+        Console.WriteLine($"📂 Tool filter:      {(filterToolCommand ?? "(none)")}");
+        Console.WriteLine($"📂 Validation file:  {(validationFeedbackFile != null ? Path.GetFullPath(validationFeedbackFile) : "(none)")}");
         Console.WriteLine($"📌 Version:          {version}\n");
 
         // Load CLI output
@@ -142,6 +156,19 @@ internal static class Program
             {
                 Console.WriteLine("❌ No tools found in CLI output");
                 return 1;
+            }
+
+            if (!string.IsNullOrWhiteSpace(filterToolCommand))
+            {
+                cliOutput.Results = cliOutput.Results
+                    .Where(t => string.Equals(t.Command, filterToolCommand, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (cliOutput.Results.Count == 0)
+                {
+                    Console.WriteLine($"❌ Tool not found in CLI output: {filterToolCommand}");
+                    return 1;
+                }
             }
 
             // Count tools with commands (tools without commands are skipped)
@@ -189,6 +216,8 @@ internal static class Program
             Directory.CreateDirectory(e2eErrorLogDir);
         }
 
+        var validationFeedback = await LoadValidationFeedbackAsync(validationFeedbackFile);
+
         foreach (var tool in cliOutput.Results)
         {
             if (string.IsNullOrEmpty(tool.Command))
@@ -229,7 +258,7 @@ internal static class Program
             }
 
             var parameterManifest = await LoadParameterManifestAsync(tool.Command, paramManifestsDir, nameContext);
-            var result = await generator.GenerateAsync(tool, referencePrompts, parameterManifest);
+            var result = await generator.GenerateAsync(tool, referencePrompts, parameterManifest, validationFeedback);
             if (!result.HasValue)
             {
                 failureCount++;
@@ -388,6 +417,30 @@ internal static class Program
         catch (Exception ex)
         {
             Console.WriteLine($"  ⚠️  Failed to load parameter manifest for '{toolCommand}' (falling back to CLI JSON): {ex.Message}");
+            return null;
+        }
+    }
+
+    internal static async Task<string?> LoadValidationFeedbackAsync(string? validationFeedbackFile)
+    {
+        if (string.IsNullOrWhiteSpace(validationFeedbackFile))
+        {
+            return null;
+        }
+
+        if (!File.Exists(validationFeedbackFile))
+        {
+            Console.WriteLine($"  ⚠️  Validation feedback file not found (continuing without feedback): {validationFeedbackFile}");
+            return null;
+        }
+
+        try
+        {
+            return await File.ReadAllTextAsync(validationFeedbackFile);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  ⚠️  Failed to load validation feedback (continuing without feedback): {ex.Message}");
             return null;
         }
     }

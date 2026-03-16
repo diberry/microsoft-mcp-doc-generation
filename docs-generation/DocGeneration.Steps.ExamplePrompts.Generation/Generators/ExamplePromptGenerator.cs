@@ -60,7 +60,8 @@ public sealed class ExamplePromptGenerator
     public async Task<(string userPrompt, ExamplePromptsResponse? response, string rawResponse)?> GenerateAsync(
         Tool tool,
         List<string>? referencePrompts = null,
-        IReadOnlyList<ParameterManifestParameter>? parameterManifest = null)
+        IReadOnlyList<ParameterManifestParameter>? parameterManifest = null,
+        string? validationFeedback = null)
     {
         if (!IsInitialized || tool == null)
             return null;
@@ -133,6 +134,11 @@ public sealed class ExamplePromptGenerator
                     refBuilder.AppendLine($"{i + 1}. \"{referencePrompts[i]}\"");
                 }
                 userPrompt += refBuilder.ToString();
+            }
+
+            if (!string.IsNullOrWhiteSpace(validationFeedback))
+            {
+                userPrompt += BuildValidationFeedbackSection(validationFeedback);
             }
 
             userPrompt += "\n\nGenerate the prompts now.";
@@ -215,6 +221,22 @@ public sealed class ExamplePromptGenerator
         }
 
         return parametersBuilder.ToString().TrimEnd();
+    }
+
+    internal static string BuildValidationFeedbackSection(string validationFeedback)
+    {
+        var feedbackBuilder = new StringBuilder();
+        feedbackBuilder.AppendLine();
+        feedbackBuilder.AppendLine("## Validation feedback from the previous attempt");
+        feedbackBuilder.AppendLine();
+        feedbackBuilder.AppendLine("The previous prompts failed validation. You MUST correct every issue below in this new response.");
+        feedbackBuilder.AppendLine("Do not repeat the same mistakes. Every prompt must include all required parameters with proper quoting or placeholder formatting.");
+        feedbackBuilder.AppendLine();
+        feedbackBuilder.AppendLine("Previous validation report:");
+        feedbackBuilder.AppendLine("```markdown");
+        feedbackBuilder.AppendLine(validationFeedback.Trim());
+        feedbackBuilder.AppendLine("```");
+        return feedbackBuilder.ToString().TrimEnd();
     }
 
     /// <summary>
