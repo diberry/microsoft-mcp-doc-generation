@@ -231,6 +231,27 @@ public sealed class BootstrapStep : StepDefinition
                 AddProcessIssue(azmcpResult, warnings, "azmcp-commands.md parsing failed (non-blocking)");
             }
 
+            if (azmcpResult.Succeeded)
+            {
+                var enricherProject = Path.Combine(context.DocsGenerationRoot, "DocGeneration.Steps.Bootstrap.ToolMetadataEnricher", "DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.csproj");
+                var enrichedOutputFile = Path.Combine(cliDirectory, "cli-output-enriched.json");
+                var enricherResult = await context.ProcessRunner.RunDotNetProjectAsync(
+                    enricherProject,
+                    [
+                        "--cli-output", Path.Combine(cliDirectory, "cli-output.json"),
+                        "--azmcp-commands", azmcpOutputFile,
+                        "--output", enrichedOutputFile,
+                    ],
+                    noBuild: true,
+                    context.DocsGenerationRoot,
+                    cancellationToken);
+                processResults.Add(enricherResult);
+                if (!enricherResult.Succeeded)
+                {
+                    AddProcessIssue(enricherResult, warnings, "Tool metadata enrichment failed (non-blocking)");
+                }
+            }
+
             CreateDirectories(context.OutputPath, BaseOutputDirectories);
             return BuildResult(context, processResults, success: true, warnings);
         }
@@ -274,6 +295,7 @@ public sealed class BootstrapStep : StepDefinition
             "DocGeneration.Steps.Bootstrap.BrandMappings",
             "DocGeneration.Steps.Bootstrap.E2eTestPromptParser",
             "DocGeneration.Steps.Bootstrap.CommandParser",
+            "DocGeneration.Steps.Bootstrap.ToolMetadataEnricher",
         };
 
         foreach (var step in plannedSteps.OfType<StepDefinition>())
