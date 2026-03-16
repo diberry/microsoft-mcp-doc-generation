@@ -138,7 +138,7 @@ public class NamespaceStepTests
         var testRoot = CreateTestRoot();
         try
         {
-            var runner = new ValidationFailingRunner("compute list");
+            var runner = new ExamplePromptRetryRunner("compute list", validationFailuresBeforeSuccess: 3);
             var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
             context.Items["Namespace"] = "compute list";
 
@@ -151,7 +151,137 @@ public class NamespaceStepTests
             Assert.True(result.Success);
             Assert.Single(result.ArtifactFailures);
             Assert.Equal("compute list", result.ArtifactFailures[0].ArtifactName);
-            Assert.Contains("validation", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("after automatic retries", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_ValidatorFailure_RetriesInvalidToolWithFeedback()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new ExamplePromptRetryRunner("compute list", validationFailuresBeforeSuccess: 1);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            var liveArtifacts = await GetExamplePromptArtifactsAsync(context.OutputPath, "compute list");
+            SeedFile(liveArtifacts.ExamplePromptPath, "initial example prompts");
+            SeedFile(liveArtifacts.InputPromptPath, "initial input prompt");
+            SeedFile(liveArtifacts.RawOutputPath, "initial raw output");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+            var attemptOneArtifacts = await GetExamplePromptArtifactsAsync(context.OutputPath, "compute list", attempt: 1);
+            var feedbackPath = GetArgumentValue(runner.Invocations[2].Arguments, "--validation-feedback-file");
+
+            Assert.True(result.Success);
+            Assert.Empty(result.ArtifactFailures);
+            Assert.Equal(4, runner.Invocations.Count);
+            Assert.Contains(result.Warnings, warning => warning.Contains("Retrying example prompts for 'compute list' (attempt 1/2)", StringComparison.Ordinal));
+            Assert.Contains(runner.Invocations[2].Arguments, argument => argument == "--tool-command");
+            Assert.Contains(runner.Invocations[2].Arguments, argument => argument == "compute list");
+            Assert.Equal(attemptOneArtifacts.ValidationPath, feedbackPath);
+            Assert.True(File.Exists(attemptOneArtifacts.ExamplePromptPath));
+            Assert.True(File.Exists(attemptOneArtifacts.InputPromptPath));
+            Assert.True(File.Exists(attemptOneArtifacts.RawOutputPath));
+            Assert.True(File.Exists(attemptOneArtifacts.ValidationPath));
+            Assert.Contains("Attempt 1", await File.ReadAllTextAsync(attemptOneArtifacts.ValidationPath), StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_RetryGenerationFailureCreatesArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new ExamplePromptRetryRunner(
+                "compute list",
+                validationFailuresBeforeSuccess: 3,
+                failingRetryGenerationAttempts: [1, 2]);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute list", failure.ArtifactName);
+            Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(result.Warnings, warning => warning.Contains("Example prompt regeneration failed for 'compute list'", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_RetryMissingRegeneratedOutputCreatesArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new ExamplePromptRetryRunner(
+                "compute list",
+                validationFailuresBeforeSuccess: 3,
+                missingOutputRetryAttempts: [1, 2]);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute list", failure.ArtifactName);
+            Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(result.Warnings, warning => warning.Contains("Missing example prompts markdown", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_ValidatorFailureAfterRetriesCreatesArtifactFailure()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new ExamplePromptRetryRunner("compute list", validationFailuresBeforeSuccess: 3);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute list", failure.ArtifactName);
+            Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(result.Warnings, warning => warning.Contains("attempt 2/2", StringComparison.Ordinal));
         }
         finally
         {
@@ -521,15 +651,39 @@ public class NamespaceStepTests
         return new CliMetadataSnapshot(Path.Combine(Path.GetTempPath(), $"cli-output-{Guid.NewGuid():N}.json"), root, tools);
     }
 
-    private static async Task SeedExamplePromptOutputsAsync(string outputPath, params string[] commands)
+    private static async Task<ExamplePromptArtifacts> GetExamplePromptArtifactsAsync(string outputPath, string command, int? attempt = null)
     {
         var nameContext = await FileNameContext.CreateAsync();
+        var attemptDirectory = attempt.HasValue ? $"attempt-{attempt.Value}" : null;
+
+        var examplePromptsDirectory = Path.Combine(outputPath, "example-prompts");
+        var inputPromptsDirectory = Path.Combine(outputPath, "example-prompts-prompts");
+        var rawOutputDirectory = Path.Combine(outputPath, "example-prompts-raw-output");
+        var validationDirectory = Path.Combine(outputPath, "example-prompts-validation");
+        if (!string.IsNullOrWhiteSpace(attemptDirectory))
+        {
+            examplePromptsDirectory = Path.Combine(examplePromptsDirectory, attemptDirectory);
+            inputPromptsDirectory = Path.Combine(inputPromptsDirectory, attemptDirectory);
+            rawOutputDirectory = Path.Combine(rawOutputDirectory, attemptDirectory);
+            validationDirectory = Path.Combine(validationDirectory, attemptDirectory);
+        }
+
+        return new ExamplePromptArtifacts(
+            Path.Combine(examplePromptsDirectory, ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext)),
+            Path.Combine(inputPromptsDirectory, ToolFileNameBuilder.BuildInputPromptFileName(command, nameContext)),
+            Path.Combine(rawOutputDirectory, ToolFileNameBuilder.BuildRawOutputFileName(command, nameContext)),
+            Path.Combine(validationDirectory, $"{ToolFileNameBuilder.BuildBaseFileName(command, nameContext)}-validation.md"));
+    }
+
+    private static async Task SeedExamplePromptOutputsAsync(string outputPath, params string[] commands)
+    {
         foreach (var command in commands)
         {
-            SeedFile(Path.Combine(outputPath, "example-prompts", ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext)));
-            SeedFile(Path.Combine(outputPath, "example-prompts-prompts", ToolFileNameBuilder.BuildInputPromptFileName(command, nameContext)));
-            SeedFile(Path.Combine(outputPath, "example-prompts-raw-output", ToolFileNameBuilder.BuildRawOutputFileName(command, nameContext)));
-            SeedFile(Path.Combine(outputPath, "example-prompts-validation", $"{ToolFileNameBuilder.BuildBaseFileName(command, nameContext)}-validation.md"));
+            var artifacts = await GetExamplePromptArtifactsAsync(outputPath, command);
+            SeedFile(artifacts.ExamplePromptPath);
+            SeedFile(artifacts.InputPromptPath);
+            SeedFile(artifacts.RawOutputPath);
+            SeedFile(artifacts.ValidationPath);
         }
     }
 
@@ -582,13 +736,44 @@ public class NamespaceStepTests
         }
     }
 
-    private sealed class ValidationFailingRunner : IProcessRunner
+    private static string? GetArgumentValue(IReadOnlyList<string> arguments, string flag)
+    {
+        for (var i = 0; i < arguments.Count - 1; i++)
+        {
+            if (arguments[i].Equals(flag, StringComparison.Ordinal))
+            {
+                return arguments[i + 1];
+            }
+        }
+
+        return null;
+    }
+
+    private sealed record ExamplePromptArtifacts(
+        string ExamplePromptPath,
+        string InputPromptPath,
+        string RawOutputPath,
+        string ValidationPath);
+
+    private sealed class ExamplePromptRetryRunner : IProcessRunner
     {
         private readonly string _invalidTool;
+        private readonly HashSet<int> _failingRetryGenerationAttempts;
+        private readonly HashSet<int> _missingOutputRetryAttempts;
+        private int _validationFailuresRemaining;
+        private int _retryGenerationAttempts;
+        private int _validationAttempts;
 
-        public ValidationFailingRunner(string invalidTool)
+        public ExamplePromptRetryRunner(
+            string invalidTool,
+            int validationFailuresBeforeSuccess,
+            IEnumerable<int>? failingRetryGenerationAttempts = null,
+            IEnumerable<int>? missingOutputRetryAttempts = null)
         {
             _invalidTool = invalidTool;
+            _validationFailuresRemaining = validationFailuresBeforeSuccess;
+            _failingRetryGenerationAttempts = failingRetryGenerationAttempts?.ToHashSet() ?? [];
+            _missingOutputRetryAttempts = missingOutputRetryAttempts?.ToHashSet() ?? [];
         }
 
         public List<ProcessSpec> Invocations { get; } = new();
@@ -596,10 +781,39 @@ public class NamespaceStepTests
         public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
         {
             Invocations.Add(spec);
-            if (Invocations.Count == 2)
+
+            var projectPath = GetArgumentValue(spec.Arguments, "--project");
+            if (projectPath?.EndsWith("DocGeneration.Steps.ExamplePrompts.Generation.csproj", StringComparison.Ordinal) == true
+                && spec.Arguments.Contains("--tool-command", StringComparer.Ordinal))
             {
-                var stdout = $"Validation Summary{Environment.NewLine}------------------{Environment.NewLine}Invalid tools:{Environment.NewLine}  - {_invalidTool}";
-                return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, stdout, string.Empty, TimeSpan.Zero));
+                _retryGenerationAttempts++;
+                var outputPath = GetOutputPath(spec.Arguments)!;
+
+                if (_missingOutputRetryAttempts.Contains(_retryGenerationAttempts))
+                {
+                    DeleteRetryOutput(outputPath, _invalidTool);
+                }
+
+                if (_failingRetryGenerationAttempts.Contains(_retryGenerationAttempts))
+                {
+                    var stdout = $"❌ {_invalidTool} (retry {_retryGenerationAttempts})";
+                    var stderr = $"generator retry {_retryGenerationAttempts} failed";
+                    return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, stdout, stderr, TimeSpan.Zero));
+                }
+            }
+
+            if (projectPath?.EndsWith("DocGeneration.Steps.ExamplePrompts.Validation.csproj", StringComparison.Ordinal) == true)
+            {
+                var generatedPath = GetArgumentValue(spec.Arguments, "--generated")!;
+                _validationAttempts++;
+                WriteValidationFile(generatedPath, _invalidTool, _validationAttempts);
+
+                if (_validationFailuresRemaining > 0)
+                {
+                    _validationFailuresRemaining--;
+                    var stdout = $"Validation Summary{Environment.NewLine}------------------{Environment.NewLine}Invalid tools:{Environment.NewLine}  - {_invalidTool}";
+                    return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, stdout, string.Empty, TimeSpan.Zero));
+                }
             }
 
             return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero));
@@ -636,6 +850,37 @@ public class NamespaceStepTests
 
         public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
             => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
+
+        private static string? GetOutputPath(IReadOnlyList<string> arguments)
+        {
+            for (var i = 0; i < arguments.Count; i++)
+            {
+                if (arguments[i].Equals("--", StringComparison.Ordinal) && i + 2 < arguments.Count)
+                {
+                    return arguments[i + 2];
+                }
+            }
+
+            return null;
+        }
+
+        private static void DeleteRetryOutput(string outputPath, string command)
+        {
+            var artifacts = GetExamplePromptArtifactsAsync(outputPath, command).GetAwaiter().GetResult();
+            if (File.Exists(artifacts.ExamplePromptPath))
+            {
+                File.Delete(artifacts.ExamplePromptPath);
+            }
+        }
+
+        private static void WriteValidationFile(string generatedPath, string command, int validationAttempt)
+        {
+            var artifacts = GetExamplePromptArtifactsAsync(generatedPath, command).GetAwaiter().GetResult();
+            Directory.CreateDirectory(Path.GetDirectoryName(artifacts.ValidationPath)!);
+            File.WriteAllText(
+                artifacts.ValidationPath,
+                $"# Example Prompt Validation: {command}{Environment.NewLine}{Environment.NewLine}**Status:** Invalid{Environment.NewLine}**Summary:** Attempt {validationAttempt} missing required parameters or quoting issues{Environment.NewLine}- Missing params: subscription{Environment.NewLine}- Issue: Use quoted placeholders");
+        }
     }
 
     private sealed class FailingProcessRunner : IProcessRunner
