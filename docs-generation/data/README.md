@@ -14,18 +14,18 @@ This directory contains all JSON configuration and data files used by the docume
 - `fileName`: Standardized filename slug (e.g., "azure-container-registry")
 
 **Used By**:
-- `CSharpGenerator` - Main documentation generator for multi-page docs
+- `DocGeneration.Steps.AnnotationsParametersRaw.Annotations` - Main documentation generator for multi-page docs
   - `DocumentationGenerator.cs` (line 71-74) - Loads for filename generation
   - `Generators/AnnotationGenerator.cs` (line 399) - References in comments
   - `Generators/ReportGenerator.cs` (line 211) - References in reports
-- `ToolGeneration_Raw` - Raw tool documentation generator
+- `DocGeneration.Steps.AnnotationsParametersRaw.RawTools` - Raw tool documentation generator
   - `Program.cs` (line 95-98) - Loads for brand name mapping
-- `ToolFamilyCleanup` - Tool family cleanup generator
+- `DocGeneration.Steps.ToolFamilyCleanup` - Tool family cleanup generator
   - `Services/CleanupGenerator.cs` (line 58) - Loads for brand mappings
-- `HorizontalArticleGenerator` - Horizontal article generator
+- `DocGeneration.Steps.HorizontalArticles` - Horizontal article generator
   - `Models/StaticArticleData.cs` (line 15) - Documentation reference
 - PowerShell Scripts:
-  - `4-Generate-ToolFamilyCleanup-One.ps1` (lines 234, 268) - Loads for tool family processing
+  - `4-Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1` (lines 234, 268) - Loads for tool family processing
 
 **Size**: 290 lines (44+ service mappings)
 
@@ -46,7 +46,7 @@ This directory contains all JSON configuration and data files used by the docume
 - `isRequired`: Boolean indicating if parameter is required
 
 **Used By**:
-- `CSharpGenerator` - Main documentation generator
+- `DocGeneration.Steps.AnnotationsParametersRaw.Annotations` - Main documentation generator
   - `DocumentationGenerator.cs` (line 775) - Loads common parameters to filter them from documentation tables
   - Filters these parameters unless they are required for a specific tool
 
@@ -82,7 +82,7 @@ This directory contains all JSON configuration and data files used by the docume
 ```
 
 **Used By**:
-- `CSharpGenerator` - Main documentation generator
+- `DocGeneration.Steps.AnnotationsParametersRaw.Annotations` - Main documentation generator
   - `DocumentationGenerator.cs` (line 54) - Loads for filename generation
   - `Generators/AnnotationGenerator.cs` (line 400) - References in comments
   - `Generators/ReportGenerator.cs` (line 214) - References in reports
@@ -110,10 +110,10 @@ This directory contains all JSON configuration and data files used by the docume
 ```
 
 **Used By**:
-- `CSharpGenerator` - Main documentation generator
+- `DocGeneration.Steps.AnnotationsParametersRaw.Annotations` - Main documentation generator
   - `Program.cs` (line 18) - Loads and validates configuration
   - `Config.cs` (lines 54-61) - Resolves file paths and sets static properties
-- `HorizontalArticleGenerator` - Horizontal article generator
+- `DocGeneration.Steps.HorizontalArticles` - Horizontal article generator
   - `HorizontalArticleProgram.cs` (line 27) - Loads configuration
 
 **Size**: 6 lines
@@ -132,9 +132,9 @@ This directory contains all JSON configuration and data files used by the docume
 - `NaturalLanguage`: Human-readable equivalent
 
 **Used By**:
-- `CSharpGenerator` - Main documentation generator
+- `DocGeneration.Steps.AnnotationsParametersRaw.Annotations` - Main documentation generator
   - `Config.cs` (line 54-56) - Loads and sets NLParametersPath
-- `NaturalLanguageGenerator` - Natural language text processing
+- `DocGeneration.Core.NaturalLanguage` - Natural language text processing
   - `TextCleanup.cs` (line 39-59) - Loads for parameter name normalization
 
 **Size**: 18 lines (4 parameter mappings)
@@ -159,9 +159,9 @@ This directory contains all JSON configuration and data files used by the docume
 - `NaturalLanguage`: Replacement text
 
 **Used By**:
-- `CSharpGenerator` - Main documentation generator
+- `DocGeneration.Steps.AnnotationsParametersRaw.Annotations` - Main documentation generator
   - `Config.cs` (line 58-60) - Loads and sets TextReplacerParametersPath
-- `NaturalLanguageGenerator` - Natural language text processing
+- `DocGeneration.Core.NaturalLanguage` - Natural language text processing
   - `TextCleanup.cs` (line 43-72) - Loads for text transformations
 
 **Size**: 35 lines (8 replacements)
@@ -191,7 +191,7 @@ This directory contains all JSON configuration and data files used by the docume
 ```
 
 **Used By**:
-- `CSharpGenerator` - Main documentation generator
+- `DocGeneration.Steps.AnnotationsParametersRaw.Annotations` - Main documentation generator
   - `DocumentationGenerator.cs` (line 39) - Loads for filename cleaning
 
 **Size**: 1 line (5 stop words)
@@ -211,10 +211,10 @@ This directory contains all JSON configuration and data files used by the docume
 - `filename`: Standardized filename
 
 **Used By**:
-- `HorizontalArticleGenerator` - Horizontal article generator
-  - `Generators/HorizontalArticleGenerator.cs` (line 222) - Loads for brand name transformations
+- `DocGeneration.Steps.HorizontalArticles` - Horizontal article generator
+  - `Generators/DocGeneration.Steps.HorizontalArticles.cs` (line 222) - Loads for brand name transformations
   - `HorizontalArticleProgram.cs` (line 94) - Loads for text transformation engine
-- `TextTransformation` - Text transformation library
+- `DocGeneration.Core.TextTransformation` - Text transformation library
   - `ConfigLoader.cs` (line 16) - Loads transformation configuration
   - `TransformationEngine` uses this for applying brand name mappings
 
@@ -264,24 +264,24 @@ Example:
 After modifying any data file, run these builds to verify:
 
 ```bash
-# Test CSharpGenerator
-dotnet build CSharpGenerator/CSharpGenerator.csproj
+# Test DocGeneration.Steps.AnnotationsParametersRaw.Annotations
+dotnet build DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj
 
-# Test ToolGeneration_Raw
-dotnet build ToolGeneration_Raw/ToolGeneration_Raw.csproj
+# Test DocGeneration.Steps.AnnotationsParametersRaw.RawTools
+dotnet build DocGeneration.Steps.AnnotationsParametersRaw.RawTools/DocGeneration.Steps.AnnotationsParametersRaw.RawTools.csproj
 
-# Test HorizontalArticleGenerator
-dotnet build HorizontalArticleGenerator/HorizontalArticleGenerator.csproj
+# Test DocGeneration.Steps.HorizontalArticles
+dotnet build DocGeneration.Steps.HorizontalArticles/DocGeneration.Steps.HorizontalArticles.csproj
 
-# Test ToolFamilyCleanup
-dotnet build ToolFamilyCleanup/ToolFamilyCleanup.csproj
+# Test DocGeneration.Steps.ToolFamilyCleanup
+dotnet build DocGeneration.Steps.ToolFamilyCleanup/DocGeneration.Steps.ToolFamilyCleanup.csproj
 ```
 
 ## Related Documentation
 
 - Main README: `../README.md`
-- CSharpGenerator docs: `../CSharpGenerator/docs/README.md`
-- TextTransformation docs: `../TextTransformation/README.md`
+- DocGeneration.Steps.AnnotationsParametersRaw.Annotations docs: `../DocGeneration.Steps.AnnotationsParametersRaw.Annotations/docs/README.md`
+- DocGeneration.Core.TextTransformation docs: `../DocGeneration.Core.TextTransformation/README.md`
 
 ## Migration Notes
 

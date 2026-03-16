@@ -1,5 +1,5 @@
 #!/bin/bash
-# Compare documentation generation before and after TextTransformation integration
+# Compare documentation generation before and after DocGeneration.Core.TextTransformation integration
 # Usage: ./compare-generation.sh [baseline-dir] [current-dir]
 
 set -e

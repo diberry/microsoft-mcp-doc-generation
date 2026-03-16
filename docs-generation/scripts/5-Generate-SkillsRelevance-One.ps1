@@ -77,13 +77,13 @@ try {
     }
     Write-Host ""
 
-    # Run SkillsRelevance generator
+    # Run DocGeneration.Steps.SkillsRelevance generator
     Write-Divider
     Write-Progress "Fetching and analyzing GitHub Copilot skills..."
     Write-Divider
     Write-Host ""
 
-    $skillsProject = Join-Path $docsGenDir "SkillsRelevance"
+    $skillsProject = Join-Path $docsGenDir "DocGeneration.Steps.SkillsRelevance"
     $noBuildArg = if ($SkipBuild) { "--no-build" } else { "" }
 
     Push-Location $docsGenDir

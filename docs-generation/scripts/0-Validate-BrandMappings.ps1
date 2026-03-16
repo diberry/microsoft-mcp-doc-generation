@@ -78,22 +78,22 @@ Write-Info "CLI output:    $CliOutputPath"
 Write-Info "Brand mapping: $BrandMappingPath"
 Write-Host ""
 
-# Build the BrandMapperValidator project
-$projectDir = Join-Path $docsGenDir "BrandMapperValidator"
-$projectFile = Join-Path $projectDir "BrandMapperValidator.csproj"
+# Build the DocGeneration.Steps.Bootstrap.BrandMappings project
+$projectDir = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.BrandMappings"
+$projectFile = Join-Path $projectDir "DocGeneration.Steps.Bootstrap.BrandMappings.csproj"
 
 if (-not (Test-Path $projectFile)) {
-    Write-Err "BrandMapperValidator project not found: $projectFile"
+    Write-Err "DocGeneration.Steps.Bootstrap.BrandMappings project not found: $projectFile"
     exit 1
 }
 
 if (-not $SkipBuild) {
-    Write-Info "Building BrandMapperValidator..."
+    Write-Info "Building DocGeneration.Steps.Bootstrap.BrandMappings..."
     Push-Location $projectDir
     try {
         & dotnet build --configuration Release --verbosity quiet
         if ($LASTEXITCODE -ne 0) {
-            Write-Err "Failed to build BrandMapperValidator"
+            Write-Err "Failed to build DocGeneration.Steps.Bootstrap.BrandMappings"
             exit 1
         }
         Write-Success "Build successful"

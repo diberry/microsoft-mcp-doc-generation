@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>DocGeneration.Core.NaturalLanguage</AssemblyName>
+    <RootNamespace>DocGeneration.Core.NaturalLanguage</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+  </ItemGroup>
+</Project>

@@ -1412,7 +1412,7 @@ This skill requires **network access** to fetch documentation content:
 | Query NCSStorageLogs for general Nexus storage events | https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/ncsstoragelogs |
 | Use NetworkAccessAlerts identity and access logs | https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/networkaccessalerts |
 | Use NetworkAccessConnectionEvents Azure Monitor log schema | https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/networkaccessconnectionevents |
-| Use NetworkAccessGenerativeAIInsights Azure Monitor log schema | https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/networkaccessgenerativeaiinsights |
+| Use NetworkAccessDocGeneration.Core.GenerativeAIInsights Azure Monitor log schema | https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/networkaccessgenerativeaiinsights |
 | Use NetworkAccessTraffic network access log schema | https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/networkaccesstraffic |
 | Query NetworkSessions firewall and proxy session logs | https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/networksessions |
 | Analyze NGINXaaS deployment logs with Azure Monitor tables | https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/nginx-nginxplus_nginxdeployments |

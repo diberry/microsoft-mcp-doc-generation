@@ -1,5 +1,5 @@
 #!/bin/bash
-# Shared bash helpers for the documentation generation pipeline.
+# DocGeneration.Core.Shared bash helpers for the documentation generation pipeline.
 # Source this file in bash scripts: source "$(dirname "${BASH_SOURCE[0]}")/bash-common.sh"
 
 # Detect OS: Windows Git Bash (MSYS/MINGW/CYGWIN) adds \r to command output

@@ -17,7 +17,7 @@
 - **Increase**: ~250 tokens (~20% increase)
 
 #### Current Configuration
-- **Default maxTokens**: 8,000 tokens (from GenerativeAIClient.cs line 23)
+- **Default maxTokens**: 8,000 tokens (from DocGeneration.Core.GenerativeAIClient.cs line 23)
 - **Usage**: ExamplePromptGenerator.cs line 181 uses default (no explicit limit)
 - **Model**: Configured via environment (typically gpt-4o with 16K token limit)
 
@@ -53,7 +53,7 @@ While no changes are needed now, consider monitoring if:
 
 ### Comparison with Cleanup Generator
 
-For context, the ToolFamilyCleanup generator uses:
+For context, the DocGeneration.Steps.ToolFamilyCleanup generator uses:
 - **MIN_MAX_TOKENS**: 12,000 tokens
 - **MAX_OUTPUT_TOKENS**: 16,384 tokens (model limit)
 - **Dynamic calculation**: Based on tool count and content size

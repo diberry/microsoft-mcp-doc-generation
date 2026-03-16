@@ -58,8 +58,8 @@ try {
     $existingFiles = @(Get-ChildItem -Path $examplePromptsDir -Filter "*.md" -File)
     Write-Info "Existing example prompt files: $($existingFiles.Count)"
     
-    # Navigate to CSharpGenerator
-    $generatorDir = Join-Path $docsGenDir "CSharpGenerator"
+    # Navigate to DocGeneration.Steps.AnnotationsParametersRaw.Annotations
+    $generatorDir = Join-Path $docsGenDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
     if (-not (Test-Path $generatorDir)) {
         throw "Generator directory not found: $generatorDir"
     }

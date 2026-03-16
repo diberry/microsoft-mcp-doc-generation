@@ -4,7 +4,7 @@
     Validates a generated tool-family article against its tool files.
 
 .DESCRIPTION
-    Runs post-assembly validation for a namespace after ToolFamilyCleanup finishes.
+    Runs post-assembly validation for a namespace after DocGeneration.Steps.ToolFamilyCleanup finishes.
     Blocking checks fail the pipeline when the final article silently drops a tool or
     reports an incorrect tool count.
 

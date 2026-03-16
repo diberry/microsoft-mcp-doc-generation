@@ -8,7 +8,7 @@ The documentation generation system consists of:
 
 - **PowerShell Orchestrator** (`scripts/Generate.ps1`) - Main entry point that coordinates the generation process
 - **Modular Scripts** (`scripts/`) - Independent scripts for annotations/parameters/raw tools, example prompts, tool family files, and validation
-- **C# Generator** (`CSharpGenerator/`) - .NET 9.0 console application that processes CLI output and generates documentation using Handlebars templates
+- **C# Generator** (`DocGeneration.Steps.AnnotationsParametersRaw.Annotations/`) - .NET 9.0 console application that processes CLI output and generates documentation using Handlebars templates
 - **Handlebars Templates** (`templates/`) - Template files that define the structure and format of generated documentation
 
 ## Architecture
@@ -34,33 +34,38 @@ docs-generation/
 │   ├── static-text-replacement.json  # Text replacements
 │   ├── stop-words.json            # Stop words removed from include filenames
 │   └── transformation-config.json # Service brand name mappings for transformations
-├── CSharpGenerator/               # C# console application (.NET 9.0)
-│   ├── CSharpGenerator.csproj    # Project file
+├── DocGeneration.Steps.AnnotationsParametersRaw.Annotations/               # C# console application (.NET 9.0)
+│   ├── DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj    # Project file
 │   ├── Program.cs                # Main entry point
 │   ├── DocumentationGenerator.cs # Core generation logic
 │   └── Config.cs                 # Configuration loader
-├── TemplateEngine/                # Shared Handlebars template library
-│   ├── TemplateEngine.csproj     # References Handlebars.Net via CPM
-│   ├── HandlebarsTemplateEngine.cs # Template rendering API
+├── DocGeneration.Core.TemplateEngine/                # DocGeneration.Core.Shared Handlebars template library
+│   ├── DocGeneration.Core.TemplateEngine.csproj     # References Handlebars.Net via CPM
+│   ├── HandlebarsDocGeneration.Core.TemplateEngine.cs # Template rendering API
 │   └── Helpers/                  # Custom Handlebars helpers
 │       ├── CoreHelpers.cs        # Generic helpers (dates, strings, math)
 │       └── McpHelpers.cs         # MCP command structure helpers
-├── NaturalLanguageGenerator/      # Natural language processing
+├── DocGeneration.Core.NaturalLanguage/      # Natural language processing
 │   └── TextCleanup.cs            # Text normalization
-├── GenerativeAI/                  # AI integration for example prompts
-│   ├── GenerativeAIClient.cs     # AI service client
-│   └── GenerativeAIOptions.cs    # Configuration
-├── ToolMetadataExtractor/        # Tool for extracting ToolMetadata information
+├── DocGeneration.Core.GenerativeAI/                  # AI integration for example prompts
+│   ├── DocGeneration.Core.GenerativeAIClient.cs     # AI service client
+│   └── DocGeneration.Core.GenerativeAIOptions.cs    # Configuration
+├── DocGeneration.Utilities.ToolMetadataExtractor/        # Tool for extracting ToolMetadata information
 │   ├── Models/                   # Data models for tool metadata
 │   ├── Services/                 # Services for metadata extraction
 │   └── Program.cs                # Command-line interface
-├── ToolFamilyCleanup/             # LLM-based cleanup tool (independent)
+├── DocGeneration.Steps.ToolFamilyCleanup/             # LLM-based cleanup tool (independent)
 │   ├── Program.cs                # CLI entry point
 │   ├── Services/                 # Cleanup services
 │   │   ├── CleanupConfiguration.cs
 │   │   └── CleanupGenerator.cs
 │   └── README.md                 # Detailed documentation
-├── Shared/                        # Shared utilities
+├── DocGeneration.Steps.SkillsRelevance/              # Step 5 skills relevance reports + index output
+│   ├── Program.cs                # CLI entry point
+│   ├── Services/                 # Skill fetching and relevance analysis
+│   └── README.md                 # Detailed documentation
+├── ToolFamily/                                        # Planning/reference docs only; not a build project
+├── DocGeneration.Core.Shared/                        # DocGeneration.Core.Shared utilities
 ├── prompts/                       # LLM prompt templates
 │   ├── tool-family-cleanup-system-prompt.txt  # System prompt for style guide
 │   └── tool-family-cleanup-user-prompt.txt    # User prompt template
@@ -133,7 +138,7 @@ Both scripts generate detailed markdown reports and exit with status code 1 if i
 
 ## Tool Family Cleanup (New)
 
-The **ToolFamilyCleanup** package is an independent tool that applies Microsoft style guide standards to generated tool family documentation using LLM-based processing.
+The **DocGeneration.Steps.ToolFamilyCleanup** package is an independent tool that applies Microsoft style guide standards to generated tool family documentation using LLM-based processing.
 
 ### Key Features
 - **Independent operation**: Works separately from main documentation generation
@@ -145,7 +150,7 @@ The **ToolFamilyCleanup** package is an independent tool that applies Microsoft 
 ### Quick Start
 ```bash
 cd docs-generation
-pwsh ./scripts/GenerateToolFamilyCleanup-multifile.ps1
+pwsh ./scripts/GenerateDocGeneration.Steps.ToolFamilyCleanup-multifile.ps1
 ```
 
 ### Customizing Prompts for Azure MCP Style
@@ -155,7 +160,7 @@ To add Azure MCP-specific style requirements, edit these files:
 - **User Prompt**: `docs-generation/prompts/tool-family-cleanup-user-prompt.txt`
   - Modify the task instructions to emphasize specific requirements
 
-See `docs-generation/ToolFamilyCleanup/README.md` for detailed documentation.
+See `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/README.md` for detailed documentation.
 
 ```
 
@@ -395,10 +400,10 @@ When updating `brand-to-server-mapping.json` or `compound-words.json`:
 
 ### Stage 2: Markdown Generation (`scripts/Generate.ps1` via `run-content-generation-output.sh`)
 1. **Configuration Loading**: Loads brand mappings, compound words, stop words, NL parameters
-2. **Generator Build**: Compiles C# generator projects (CSharpGenerator, NaturalLanguageGenerator, Shared)
+2. **Generator Build**: Compiles C# generator projects (DocGeneration.Steps.AnnotationsParametersRaw.Annotations, DocGeneration.Core.NaturalLanguage, DocGeneration.Core.Shared)
 3. **Data Processing**: Parses CLI JSON output (181 tools across 44 service areas)
 4. **Filename Resolution**: Applies 3-tier resolution (brand → compound words → original name)
-5. **Template Processing**: Uses TemplateEngine (shared Handlebars.Net library) to process .hbs templates with tool data
+5. **Template Processing**: Uses DocGeneration.Core.TemplateEngine (shared Handlebars.Net library) to process .hbs templates with tool data
 6. **Documentation Generation**: Writes 591 markdown files to `generated/multi-page/`
    - Main service docs: acr.md, aks.md, storage.md, etc.
    - Include files: annotations/, parameters/, param-and-annotation/
@@ -411,7 +416,7 @@ When updating `brand-to-server-mapping.json` or `compound-words.json`:
 4. **Output**: Saves to `generated/example-prompts/`
 
 ### Optional: Metadata Extraction
-The ToolMetadataExtractor can be used separately to extract ToolMetadata properties from tool source files for additional context.
+The DocGeneration.Utilities.ToolMetadataExtractor can be used separately to extract ToolMetadata properties from tool source files for additional context.
 
 ## Dependencies
 
@@ -419,7 +424,7 @@ The ToolMetadataExtractor can be used separately to extract ToolMetadata propert
 
 This project uses Central Package Management (CPM) as configured in the solution's `Directory.Packages.props`.
 
-- **Handlebars.Net** (version 2.1.6) - Referenced only by the `TemplateEngine` shared library; no other project references it directly
+- **Handlebars.Net** (version 2.1.6) - Referenced only by the `DocGeneration.Core.TemplateEngine` shared library; no other project references it directly
 
 **Important**: When using CPM, package versions are defined in `Directory.Packages.props`, not in individual project files:
 
@@ -427,7 +432,7 @@ This project uses Central Package Management (CPM) as configured in the solution
 <PackageVersion Include="Handlebars.Net" Version="2.1.6" />
 ```
 
-Projects that need template rendering add a `ProjectReference` to `TemplateEngine` instead of referencing `Handlebars.Net` directly.
+Projects that need template rendering add a `ProjectReference` to `DocGeneration.Core.TemplateEngine` instead of referencing `Handlebars.Net` directly.
 
 ### Local Dependencies
 
@@ -504,7 +509,7 @@ Generates documentation for common tools that span multiple service areas.
 ### Building the C# Generator
 
 ```bash
-cd CSharpGenerator
+cd DocGeneration.Steps.AnnotationsParametersRaw.Annotations
 dotnet build --configuration Release
 ```
 
@@ -572,16 +577,16 @@ If the process can't create a value, it inserts the `TBD` placeholder. Look for 
 
 ## Tool Metadata Extractor
 
-The ToolMetadataExtractor is a command-line utility that extracts metadata from MCP tool source files. It helps identify and extract `ToolMetadata` properties that provide important information about each tool's capabilities and behavior.
+The DocGeneration.Utilities.ToolMetadataExtractor is a command-line utility that extracts metadata from MCP tool source files. It helps identify and extract `ToolMetadata` properties that provide important information about each tool's capabilities and behavior.
 
 ### Usage
 
 ```bash
 # Extract metadata from a list of tools
-dotnet run --project ToolMetadataExtractor/ToolMetadataExtractor.csproj -- --tools "storage account list" "keyvault secret create" --output metadata.json
+dotnet run --project DocGeneration.Utilities.ToolMetadataExtractor/DocGeneration.Utilities.ToolMetadataExtractor.csproj -- --tools "storage account list" "keyvault secret create" --output metadata.json
 
 # Extract metadata from a file containing tool names
-dotnet run --project ToolMetadataExtractor/ToolMetadataExtractor.csproj -- --tools-file tool-list.txt --output metadata.json
+dotnet run --project DocGeneration.Utilities.ToolMetadataExtractor/DocGeneration.Utilities.ToolMetadataExtractor.csproj -- --tools-file tool-list.txt --output metadata.json
 
 # Use the provided scripts
 ./extract-metadata.sh    # Bash script
@@ -641,7 +646,7 @@ The project includes debugging support for VS Code to help you debug the documen
        "type": "coreclr",
        "request": "launch",
        "preLaunchTask": "build",
-       "program": "${workspaceFolder}/docs-generation/CSharpGenerator/bin/Debug/net9.0/CSharpGenerator.dll",
+       "program": "${workspaceFolder}/docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/bin/Debug/net9.0/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.dll",
        "args": [
            "generate-docs",
            "../generated/cli/cli-output.json",
@@ -650,7 +655,7 @@ The project includes debugging support for VS Code to help you debug the documen
            "--common",
            "--commands"
        ],
-       "cwd": "${workspaceFolder}/docs-generation/CSharpGenerator",
+       "cwd": "${workspaceFolder}/docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations",
        "console": "integratedTerminal",
        "stopAtEntry": false,
        "env": {
@@ -673,7 +678,7 @@ The project includes debugging support for VS Code to help you debug the documen
 
 2. **Set breakpoints**:
    
-   Set breakpoints in the CSharpGenerator code (e.g., `Program.cs`) where you want to pause execution.
+   Set breakpoints in the DocGeneration.Steps.AnnotationsParametersRaw.Annotations code (e.g., `Program.cs`) where you want to pause execution.
 
 3. **Run the debug script**:
 
@@ -702,6 +707,6 @@ The project includes debugging support for VS Code to help you debug the documen
 
 If you prefer not to use the debug script, you can manually start debugging by:
 
-1. Building the CSharpGenerator in Debug mode
+1. Building the DocGeneration.Steps.AnnotationsParametersRaw.Annotations in Debug mode
 2. Ensuring CLI output exists at `generated/cli/cli-output.json`
 3. Starting the "Debug Generate Docs" launch configuration in VS Code

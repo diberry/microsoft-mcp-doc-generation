@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors>NU1701</WarningsNotAsErrors>
+    <AssemblyName>DocGeneration.Steps.ToolGeneration.Improvements</AssemblyName>
+    <RootNamespace>DocGeneration.Steps.ToolGeneration.Improvements</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="DocGeneration.Steps.ToolGeneration.Improvements.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="../DocGeneration.Core.GenerativeAI/DocGeneration.Core.GenerativeAI.csproj" />
+  </ItemGroup>
+</Project>

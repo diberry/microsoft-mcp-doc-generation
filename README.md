@@ -47,12 +47,18 @@ Generate with specific steps only:
 
 - **Entry point:** `start.sh`
 - **Worker/orchestration scripts:** `docs-generation/scripts/`
-- **C#/.NET generators:** `docs-generation/CSharpGenerator/`, `docs-generation/ExamplePromptGeneratorStandalone/`, `docs-generation/HorizontalArticleGenerator/`, `docs-generation/ToolFamilyCleanup/`, `docs-generation/GenerativeAI/`, `docs-generation/TemplateEngine/`
+- **C#/.NET generators:** `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/`, `docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/`, `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/`, `docs-generation/DocGeneration.Steps.SkillsRelevance/`, `docs-generation/DocGeneration.Steps.HorizontalArticles/`, `docs-generation/DocGeneration.Core.GenerativeAI/`, `docs-generation/DocGeneration.Core.TemplateEngine/`, `docs-generation/DocGeneration.Utilities.ToolMetadataExtractor/`
 - **Prompt templates:** `docs-generation/prompts/`
 - **Handlebars templates:** `docs-generation/templates/`
 - **Configuration data:** `docs-generation/data/`
 - **MCP CLI metadata extraction:** `test-npm-azure-mcp/`
 - **Generated output:** `generated/` or `generated-<namespace>/`
+
+### Legacy naming notes
+
+- `RelatedSkillsGenerator` and `SkillList` were superseded by the typed Step 5 package `docs-generation/DocGeneration.Steps.SkillsRelevance/`, which now owns both the per-namespace skills relevance report and the skills index output.
+- The live Step 4 compiled project is `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/`; `docs-generation/ToolFamily/` remains planning/reference documentation, not a build project.
+- `ToolMetadataEnricher` is not present on `squad/dotnet-naming-standards`; if it is restored, its naming-standard home is `DocGeneration.Steps.Bootstrap.ToolMetadataEnricher`.
 
 **Example `.env` configuration**:
 
@@ -131,29 +137,29 @@ microsoft-mcp-doc-generation/
 │   └── ARCHITECTURE.md          # System architecture
 │
 ├── docs-generation/             # Generation system
-│   ├── PipelineRunner/          # Typed orchestrator including BootstrapStep + Steps 1-6
+│   ├── DocGeneration.PipelineRunner/          # Typed orchestrator including BootstrapStep + Steps 1-6
 │   ├── scripts/                 # Legacy/fallback PowerShell/bash orchestration helpers
 │   │   ├── preflight.ps1        # Legacy bootstrap fallback; standard path uses BootstrapStep
 │   │   ├── Generate-ToolFamily.ps1
 │   │   ├── 1-Generate-AnnotationsParametersRaw-One.ps1
 │   │   ├── 2-Generate-ExamplePrompts-One.ps1
 │   │   ├── 3-Generate-ToolGenerationAndAIImprovements-One.ps1
-│   │   ├── 4-Generate-ToolFamilyCleanup-One.ps1
+│   │   ├── 4-Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1
 │   │   ├── Validate-ToolFamily-PostAssembly.ps1
-│   │   ├── 5-Generate-SkillsRelevance-One.ps1
+│   │   ├── 5-Generate-DocGeneration.Steps.SkillsRelevance-One.ps1
 │   │   ├── 6-Generate-HorizontalArticles-One.ps1
 │   │   ├── standalone/          # Supporting validation/dev scripts
-│   │   └── utilities/           # Shared helpers and utilities
+│   │   └── utilities/           # DocGeneration.Core.Shared helpers and utilities
 │   ├── data/                    # Configuration files (JSON)
 │   ├── prompts/                 # AI prompt templates (see below)
 │   ├── templates/               # Handlebars templates
 │   │
-│   ├── CSharpGenerator/         # Core generator (.NET 9.0)
-│   ├── ExamplePromptGeneratorStandalone/  # AI prompt generator
-│   ├── HorizontalArticleGenerator/        # How-to article generator
-│   ├── ToolFamilyCleanup/       # AI-based formatting
-│   ├── GenerativeAI/            # Azure OpenAI client
-│   └── Shared/                  # Shared utilities
+│   ├── DocGeneration.Steps.AnnotationsParametersRaw.Annotations/         # Core generator (.NET 9.0)
+│   ├── DocGeneration.Steps.ExamplePrompts.Generation/  # AI prompt generator
+│   ├── DocGeneration.Steps.HorizontalArticles/        # How-to article generator
+│   ├── DocGeneration.Steps.ToolFamilyCleanup/       # AI-based formatting
+│   ├── DocGeneration.Core.GenerativeAI/            # Azure OpenAI client
+│   └── DocGeneration.Core.Shared/                  # DocGeneration.Core.Shared utilities
 │
 ├── generated/                   # Output directory (created during generation)
 │   ├── tool-family/             # Main output: service documentation
@@ -180,7 +186,7 @@ microsoft-mcp-doc-generation/
 
 Prompts are distributed across generator projects based on their purpose:
 
-#### 1. Example Prompts (`docs-generation/ExamplePromptGeneratorStandalone/prompts/`)
+#### 1. Example Prompts (`docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/prompts/`)
 ```
 prompts/
 ├── system-prompt.txt                    # AI behavior for example generation
@@ -189,7 +195,7 @@ prompts/
 **Purpose**: Generates 5 natural language example prompts per tool  
 **Output**: `./generated/example-prompts/{tool}-example-prompts.md`
 
-#### 2. Tool Family Cleanup (`docs-generation/ToolFamilyCleanup/prompts/`)
+#### 2. Tool Family Cleanup (`docs-generation/DocGeneration.Steps.ToolFamilyCleanup/prompts/`)
 ```
 prompts/
 ├── tool-family-cleanup-system-prompt.txt   # Style guide and formatting rules
@@ -202,7 +208,7 @@ prompts/
 **Purpose**: AI-based formatting, structure improvements, metadata generation  
 **Output**: Improved `./generated/tool-family/{namespace}.md` files
 
-#### 3. Horizontal Articles (`docs-generation/HorizontalArticleGenerator/prompts/`)
+#### 3. Horizontal Articles (`docs-generation/DocGeneration.Steps.HorizontalArticles/prompts/`)
 ```
 prompts/
 ├── horizontal-article-system-prompt.txt    # How-to article format

@@ -21,13 +21,13 @@ docs-generation/
 │   ├── Services/
 │   │   ├── ToolFamilyResolver.cs           (determine families from CLI data)
 │   │   ├── AnnotationLoader.cs             (load annotation content)
-│   │   └── (uses TemplateEngine shared library)
+│   │   └── (uses DocGeneration.Core.TemplateEngine shared library)
 │   └── Templates/
 │       └── tool-family-template.hbs        (Handlebars template)
 ```
 
 ### 1.2 Independence
-- **No dependencies** on CSharpGenerator, AnnotationGenerator, or PageGenerator
+- **No dependencies** on DocGeneration.Steps.AnnotationsParametersRaw.Annotations, AnnotationGenerator, or PageGenerator
 - **Input**: CLI output JSON, generated annotations folder, generated tools folder
 - **Output**: `generated/tool-families/` with one file per family (e.g., `azure-storage-tools.md`)
 - **Reusable**: Can be called independently or from Generate-MultiPageDocs.ps1
@@ -302,7 +302,7 @@ dotnet run -- generate-tool-families <cli-namespace-json> <cli-output-json> <out
 
 ### Phase 2: Template & Rendering
 - [ ] Create `tool-family-template.hbs`
-- [ ] Add ProjectReference to `TemplateEngine` shared library
+- [ ] Add ProjectReference to `DocGeneration.Core.TemplateEngine` shared library
 - [ ] Implement `ToolFamilyDocumentationGenerator.cs`
 - [ ] Test template rendering with sample data
 
@@ -346,7 +346,7 @@ Structure (from your `final-tool-family-file.md`):
 | **Tool Family Grouping** | By service area from CLI output + brand mapping |
 | **Resource Grouping** | Automatic (derived from tool command structure) or config-based |
 | **Parameter Extraction** | From annotations OR from CLI if available |
-| **Template Engine** | TemplateEngine shared library (wraps Handlebars.Net) |
+| **Template Engine** | DocGeneration.Core.TemplateEngine shared library (wraps Handlebars.Net) |
 | **Configuration** | JSON file (`tool-family-config.json`) for metadata |
 | **Independence** | No cross-dependencies; can run standalone |
 | **Output Location** | `generated/tool-families/` |

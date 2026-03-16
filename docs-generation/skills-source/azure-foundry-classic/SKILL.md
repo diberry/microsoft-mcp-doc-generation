@@ -141,7 +141,7 @@ This skill requires **network access** to fetch documentation content:
 | Configure Private Link for Microsoft Foundry Projects | https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/configure-private-link |
 | Secure Microsoft Foundry hubs with managed VNets | https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/create-secure-ai-hub |
 | Create Custom Azure Policies for Microsoft Foundry Governance | https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/custom-policy-definition |
-| Disable Shared-Key Access to Foundry Hub Storage | https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/disable-local-auth |
+| Disable DocGeneration.Core.Shared-Key Access to Foundry Hub Storage | https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/disable-local-auth |
 | Hide Preview Features in Foundry Using Azure Tags | https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/disable-preview-features |
 | Secure storage accounts for Foundry evaluations with RBAC | https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/evaluations-storage-account |
 | Configure Private Link for Microsoft Foundry Hubs | https://learn.microsoft.com/en-us/azure/foundry-classic/how-to/hub-configure-private-link |

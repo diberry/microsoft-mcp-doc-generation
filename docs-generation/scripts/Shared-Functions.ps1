@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Shared helper functions for generation pipeline scripts.
+    DocGeneration.Core.Shared helper functions for generation pipeline scripts.
 
 .DESCRIPTION
     Dot-source this file from any step script to get common logging

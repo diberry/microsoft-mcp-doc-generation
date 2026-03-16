@@ -28,7 +28,7 @@ if ($Help) {
     Write-Host "Azure MCP Tool Family Cleanup Generator (Multi-Phase)"
     Write-Host "======================================================"
     Write-Host ""
-    Write-Host "Usage: ./GenerateToolFamilyCleanup-multifile.ps1 [options]"
+    Write-Host "Usage: ./GenerateDocGeneration.Steps.ToolFamilyCleanup-multifile.ps1 [options]"
     Write-Host ""
     Write-Host "Options:"
     Write-Host "  -OutputPath <path>          Base output directory (default: ../../generated)"
@@ -97,9 +97,9 @@ $docsGenDir = Split-Path -Parent $PSScriptRoot
 
 Write-Host ""
 
-# Build ToolFamilyCleanup
-Write-Host "Building ToolFamilyCleanup..."
-Push-Location "$docsGenDir/ToolFamilyCleanup"
+# Build DocGeneration.Steps.ToolFamilyCleanup
+Write-Host "Building DocGeneration.Steps.ToolFamilyCleanup..."
+Push-Location "$docsGenDir/DocGeneration.Steps.ToolFamilyCleanup"
 try {
     $buildOutput = dotnet build --configuration Release 2>&1
     if ($LASTEXITCODE -ne 0) {
@@ -116,7 +116,7 @@ finally {
 
 # Run Tool Family Cleanup in multi-phase mode
 Write-Host "Running Tool Family Cleanup (Multi-Phase)..."
-$exePath = "$docsGenDir/ToolFamilyCleanup/bin/Release/net9.0/ToolFamilyCleanup.dll"
+$exePath = "$docsGenDir/DocGeneration.Steps.ToolFamilyCleanup/bin/Release/net9.0/DocGeneration.Steps.ToolFamilyCleanup.dll"
 
 # Run from docs-generation directory so relative paths work correctly
 Push-Location $docsGenDir

@@ -105,7 +105,7 @@ try {
     try {
         # Run with single service flag and output path
         $transformArg = if ($UseTextTransformation) { "--transform" } else { "" }
-        & dotnet run --project HorizontalArticleGenerator/HorizontalArticleGenerator.csproj --configuration Release --no-build -- --single-service $ServiceArea --output-path $outputDir $transformArg
+        & dotnet run --project DocGeneration.Steps.HorizontalArticles/DocGeneration.Steps.HorizontalArticles.csproj --configuration Release --no-build -- --single-service $ServiceArea --output-path $outputDir $transformArg
         $exitCode = $LASTEXITCODE
     } finally {
         Pop-Location

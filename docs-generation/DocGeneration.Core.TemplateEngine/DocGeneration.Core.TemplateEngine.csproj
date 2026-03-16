@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DocGeneration.Core.TemplateEngine</RootNamespace>
+    <AssemblyName>DocGeneration.Core.TemplateEngine</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Handlebars.Net" />
+  </ItemGroup>
+</Project>

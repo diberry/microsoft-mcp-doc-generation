@@ -102,7 +102,7 @@ This skill requires **network access** to fetch documentation content:
 | Use managed identities to access Service Bus | https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-managed-service-identity |
 | Migrate Service Bus apps to passwordless Entra ID auth | https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-migrate-azure-credentials |
 | Create Service Bus authorization rules with ARM templates | https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-resource-manager-namespace-auth-rule |
-| Secure Service Bus with Shared Access Signatures | https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas |
+| Secure Service Bus with DocGeneration.Core.Shared Access Signatures | https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas |
 | Configure Service Bus virtual network service endpoints | https://learn.microsoft.com/en-us/azure/service-bus-messaging/service-bus-service-endpoints |
 | Audit Service Bus TLS minimum version compliance with Azure Policy | https://learn.microsoft.com/en-us/azure/service-bus-messaging/transport-layer-security-audit-minimum-version |
 | Configure minimum TLS version for a Service Bus namespace | https://learn.microsoft.com/en-us/azure/service-bus-messaging/transport-layer-security-configure-minimum-version |

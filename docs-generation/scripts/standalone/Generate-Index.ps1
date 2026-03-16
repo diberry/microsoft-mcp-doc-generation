@@ -68,12 +68,12 @@ try {
     }
     
     # Determine generator directory
-    $generatorPath = if (Test-Path "CSharpGenerator/CSharpGenerator.csproj") {
-        "CSharpGenerator"
-    } elseif (Test-Path "docs-generation/CSharpGenerator/CSharpGenerator.csproj") {
-        "docs-generation/CSharpGenerator"
+    $generatorPath = if (Test-Path "DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj") {
+        "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
+    } elseif (Test-Path "docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj") {
+        "docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
     } else {
-        throw "Cannot locate CSharpGenerator project"
+        throw "Cannot locate DocGeneration.Steps.AnnotationsParametersRaw.Annotations project"
     }
     
     # Build generator args

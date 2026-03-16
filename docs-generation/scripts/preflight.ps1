@@ -57,7 +57,7 @@ Write-Host ""
 
 # Step 0: Validate .env file and AI configuration
 if ($SkipEnvValidation) {
-    Write-Host "Skipping .env validation (handled by PipelineRunner)..." -ForegroundColor Yellow
+    Write-Host "Skipping .env validation (handled by DocGeneration.PipelineRunner)..." -ForegroundColor Yellow
 } else {
     $validateEnvScript = Join-Path $scriptDir "validate-env.ps1"
     & $validateEnvScript -DocsGenDir $docsGenDir
@@ -88,7 +88,7 @@ Write-Host ""
 Write-Host "Building .NET solution..." -ForegroundColor Yellow
 $solutionFile = Join-Path $repoRoot "docs-generation.sln"
 if ($SkipBuild) {
-    Write-Host "Skipping .NET build (handled by PipelineRunner or caller)" -ForegroundColor Yellow
+    Write-Host "Skipping .NET build (handled by DocGeneration.PipelineRunner or caller)" -ForegroundColor Yellow
 } elseif (Test-Path $solutionFile) {
     # Clean stale obj/bin artifacts to prevent NuGet target conflicts
     Write-Host "  Cleaning previous build artifacts..." -ForegroundColor Gray
@@ -155,7 +155,7 @@ Write-Host "Downloading and parsing e2e test prompts..." -ForegroundColor Yellow
 $e2eOutputDir = Join-Path $OutputPath "e2e-test-prompts"
 New-Item -ItemType Directory -Path $e2eOutputDir -Force | Out-Null
 $e2eOutputFile = Join-Path $e2eOutputDir "parsed.json"
-$e2eProject = Join-Path $docsGenDir "E2eTestPromptParser/E2eTestPromptParser.csproj"
+$e2eProject = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.E2eTestPromptParser/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj"
 & dotnet run --project $e2eProject --configuration Release --no-build -- $e2eOutputFile
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠ WARNING: E2e test prompt parsing failed (non-blocking)" -ForegroundColor Yellow
@@ -168,7 +168,7 @@ Write-Host ""
 Write-Host "Parsing azmcp-commands.md..." -ForegroundColor Yellow
 $azmcpSourceFile = Join-Path $docsGenDir "azure-mcp/azmcp-commands.md"
 $azmcpOutputFile = Join-Path $OutputPath "cli/azmcp-commands.json"
-$azmcpProject = Join-Path $docsGenDir "AzmcpCommandParser/AzmcpCommandParser.csproj"
+$azmcpProject = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.CommandParser/DocGeneration.Steps.Bootstrap.CommandParser.csproj"
 & dotnet run --project $azmcpProject --configuration Release --no-build -- --file $azmcpSourceFile --output $azmcpOutputFile
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠ WARNING: azmcp-commands.md parsing failed (non-blocking)" -ForegroundColor Yellow

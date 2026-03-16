@@ -4,7 +4,7 @@
     Runs the CLI Analyzer to generate Markdown reports of the CLI JSON data
 
 .DESCRIPTION
-    This script orchestrates the CliAnalyzer .NET application to analyze the Azure MCP
+    This script orchestrates the DocGeneration.Steps.Bootstrap.CliAnalyzer .NET application to analyze the Azure MCP
     CLI JSON data and generate both console output and Markdown reports.
     
     The analyzer groups tools by namespace, counts parameters (required vs optional),
@@ -26,7 +26,7 @@
     Generate Markdown report only, skip console output (default: $false)
 
 .PARAMETER SkipBuild
-    Skip building the CliAnalyzer project (default: $false).
+    Skip building the DocGeneration.Steps.Bootstrap.CliAnalyzer project (default: $false).
     Set to $true when the orchestrator has already built the solution.
 
 .EXAMPLE
@@ -107,7 +107,7 @@ try {
     $analyzerArgs = @(
         "run",
         "--project",
-        "docs-generation/CliAnalyzer",
+        "docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer",
         "--",
         "--file",
         $cliJsonPath,
@@ -136,7 +136,7 @@ try {
         Write-Info "Building CLI Analyzer project..."
         Push-Location $repoRoot
         try {
-            & dotnet build docs-generation/CliAnalyzer --configuration Release 2>&1 | ForEach-Object { Write-Info $_ }
+            & dotnet build docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer --configuration Release 2>&1 | ForEach-Object { Write-Info $_ }
             if ($LASTEXITCODE -ne 0) {
                 Write-Warning "Build warnings/messages occurred (exit code: $LASTEXITCODE)"
             }

@@ -17,41 +17,41 @@ The standard pipeline path is now:
 
 ```
 start.sh
-└── docs-generation/PipelineRunner/PipelineRunner.csproj
+└── docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj
     ├── BootstrapStep                                # Step 0 global bootstrap: env, build, CLI metadata, brand validation, parsers
     └── typed C# namespace steps (Steps 1-6)
         ├── AnnotationsParametersRawStep             # Step 1
         ├── ExamplePromptsStep                       # Step 2
         ├── ToolGenerationStep                       # Step 3
-        ├── ToolFamilyCleanupStep                    # Step 4
-        ├── SkillsRelevanceStep                      # Step 5
+        ├── DocGeneration.Steps.ToolFamilyCleanupStep                    # Step 4
+        ├── DocGeneration.Steps.SkillsRelevanceStep                      # Step 5
         └── HorizontalArticlesStep                   # Step 6
 ```
 
-`start.sh` is now a thin wrapper around `dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj`.
-`BootstrapStep` plus all six standard namespace steps are typed C# classes under `docs-generation/PipelineRunner/Steps/`.
+`start.sh` is now a thin wrapper around `dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj`.
+`BootstrapStep` plus all six standard namespace steps are typed C# classes under `docs-generation/DocGeneration.PipelineRunner/Steps/`.
 The numbered `*-One.ps1` scripts remain in the repo as reference, fallback, and ad-hoc/manual execution helpers, but they are no longer in the standard `start.sh` execution path.
 
 ### Typed standard steps
 
 | Step | Typed class | Generator(s) invoked | Failure policy | Primary outputs |
 |---|---|---|---|---|
-| 0 | `BootstrapStep` | npm CLI metadata extraction, `BrandMapperValidator`, `E2eTestPromptParser`, `AzmcpCommandParser` | Fatal | `cli/`, `e2e-test-prompts/`, shared bootstrap outputs |
-| 1 | `AnnotationsParametersRawStep` | `CSharpGenerator`, `ToolGeneration_Raw` | Fatal | `annotations/`, `parameters/`, `tools-raw/` |
-| 2 | `ExamplePromptsStep` | `ExamplePromptGeneratorStandalone`, `ExamplePromptValidator` | Fatal | `example-prompts/`, `example-prompts-prompts/`, `example-prompts-raw-output/` |
-| 3 | `ToolGenerationStep` | `ToolGeneration_Composed`, `ToolGeneration_Improved` | Fatal | `tools-composed/`, `tools/` |
-| 4 | `ToolFamilyCleanupStep` | `ToolFamilyCleanup` + typed post-validator | Fatal | `tool-family-metadata/`, `tool-family-related/`, `tool-family/`, `reports/` |
-| 5 | `SkillsRelevanceStep` | `SkillsRelevance` | Warn | `skills-relevance/` |
-| 6 | `HorizontalArticlesStep` | `HorizontalArticleGenerator` | Fatal | `horizontal-articles/` |
+| 0 | `BootstrapStep` | npm CLI metadata extraction, `DocGeneration.Steps.Bootstrap.BrandMappings`, `DocGeneration.Steps.Bootstrap.E2eTestPromptParser`, `DocGeneration.Steps.Bootstrap.CommandParser` | Fatal | `cli/`, `e2e-test-prompts/`, shared bootstrap outputs |
+| 1 | `AnnotationsParametersRawStep` | `DocGeneration.Steps.AnnotationsParametersRaw.Annotations`, `DocGeneration.Steps.AnnotationsParametersRaw.RawTools` | Fatal | `annotations/`, `parameters/`, `tools-raw/` |
+| 2 | `ExamplePromptsStep` | `DocGeneration.Steps.ExamplePrompts.Generation`, `DocGeneration.Steps.ExamplePrompts.Validation` | Fatal | `example-prompts/`, `example-prompts-prompts/`, `example-prompts-raw-output/` |
+| 3 | `ToolGenerationStep` | `DocGeneration.Steps.ToolGeneration.Composition`, `DocGeneration.Steps.ToolGeneration.Improvements` | Fatal | `tools-composed/`, `tools/` |
+| 4 | `DocGeneration.Steps.ToolFamilyCleanupStep` | `DocGeneration.Steps.ToolFamilyCleanup` + typed post-validator | Fatal | `tool-family-metadata/`, `tool-family-related/`, `tool-family/`, `reports/` |
+| 5 | `DocGeneration.Steps.SkillsRelevanceStep` | `DocGeneration.Steps.SkillsRelevance` | Warn | `skills-relevance/` |
+| 6 | `HorizontalArticlesStep` | `DocGeneration.Steps.HorizontalArticles` | Fatal | `horizontal-articles/` |
 
 Step 5 remains warning-only by design: skills relevance is supplementary and must not halt the main pipeline.
 
-## PipelineRunner CLI
+## DocGeneration.PipelineRunner CLI
 
 Run the typed runner from the repo root:
 
 ```bash
-dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj -- --namespace compute --steps 1,2,3,4,5,6 --output ./generated-compute
+dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 1,2,3,4,5,6 --output ./generated-compute
 ```
 
 ### Supported options
@@ -70,13 +70,13 @@ dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj -- --n
 
 ```bash
 # Full typed plan for one namespace without running generators
-dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj -- --namespace compute --dry-run
+dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --dry-run
 
 # Run only the core documentation pipeline
-dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj -- --namespace compute --steps 1,2,3,4
+dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 1,2,3,4
 
 # Run only supplementary outputs after core content already exists
-dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj -- --namespace compute --steps 5,6 --skip-build
+dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 5,6 --skip-build
 ```
 
 ## `start.sh` backward compatibility
@@ -92,32 +92,32 @@ dotnet run --project docs-generation/PipelineRunner/PipelineRunner.csproj -- --n
 
 Compatibility notes:
 
-- `start.sh` now delegates to `PipelineRunner` instead of `Generate-ToolFamily.ps1`.
+- `start.sh` now delegates to `DocGeneration.PipelineRunner` instead of `Generate-ToolFamily.ps1`.
 - `BootstrapStep` runs automatically as Step 0 even when the user supplies a subset of namespace steps.
-- If the first argument starts with `-`, `start.sh` passes all arguments through directly to `PipelineRunner`.
-- The numbered PowerShell wrappers stay available for manual runs, but the supported day-to-day path is `start.sh` → `PipelineRunner`.
+- If the first argument starts with `-`, `start.sh` passes all arguments through directly to `DocGeneration.PipelineRunner`.
+- The numbered PowerShell wrappers stay available for manual runs, but the supported day-to-day path is `start.sh` → `DocGeneration.PipelineRunner`.
 
 ## Root scripts
 
 ### ✅ Active scripts
 
 No PowerShell scripts are required on the standard execution path anymore.
-Normal execution is `start.sh` → `PipelineRunner` → typed `BootstrapStep` + typed namespace steps.
+Normal execution is `start.sh` → `DocGeneration.PipelineRunner` → typed `BootstrapStep` + typed namespace steps.
 
 ### ⚠️ Legacy scripts
 
-These scripts are **no longer on the standard execution path** (previously called by `Generate-ToolFamily.ps1` or `start.sh`, now replaced by typed C# steps in `PipelineRunner/Steps/`). They are retained for reference, manual troubleshooting, and fallback execution:
+These scripts are **no longer on the standard execution path** (previously called by `Generate-ToolFamily.ps1` or `start.sh`, now replaced by typed C# steps in `DocGeneration.PipelineRunner/Steps/`). They are retained for reference, manual troubleshooting, and fallback execution:
 
 | Script | Replaced by | Notes |
 |---|---|---|
 | `preflight.ps1` | `BootstrapStep` | Legacy fallback for bootstrap logic; standard runs now execute typed C# bootstrap instead of PowerShell |
-| `Generate-ToolFamily.ps1` | `PipelineRunner` orchestrator | Manual/fallback PowerShell orchestrator for single namespace runs |
+| `Generate-ToolFamily.ps1` | `DocGeneration.PipelineRunner` orchestrator | Manual/fallback PowerShell orchestrator for single namespace runs |
 | `0-Validate-BrandMappings.ps1` | Brand validation in `BootstrapStep` | Validates `brand-to-server-mapping.json` |
 | `1-Generate-AnnotationsParametersRaw-One.ps1` | `AnnotationsParametersRawStep` (Step 1) | Legacy wrapper for manual Step 1 execution |
 | `2-Generate-ExamplePrompts-One.ps1` | `ExamplePromptsStep` (Step 2) | Legacy wrapper for manual Step 2 execution |
 | `3-Generate-ToolGenerationAndAIImprovements-One.ps1` | `ToolGenerationStep` (Step 3) | Legacy wrapper for manual Step 3 execution |
-| `4-Generate-ToolFamilyCleanup-One.ps1` | `ToolFamilyCleanupStep` (Step 4) | Legacy wrapper for manual Step 4 execution |
-| `5-Generate-SkillsRelevance-One.ps1` | `SkillsRelevanceStep` (Step 5) | Legacy wrapper for manual Step 5 execution |
+| `4-Generate-ToolFamilyCleanup-One.ps1` | `DocGeneration.Steps.ToolFamilyCleanupStep` (Step 4) | Legacy wrapper for manual Step 4 execution |
+| `5-Generate-SkillsRelevance-One.ps1` | `DocGeneration.Steps.SkillsRelevanceStep` (Step 5) | Legacy wrapper for manual Step 5 execution |
 | `6-Generate-HorizontalArticles-One.ps1` | `HorizontalArticlesStep` (Step 6) | Legacy wrapper for manual Step 6 execution |
 
 ### ℹ️ Support/utility scripts
@@ -126,7 +126,7 @@ These scripts are **no longer on the standard execution path** (previously calle
 |---|---|
 | `validate-env.ps1` | Validates `.env` for Azure OpenAI-backed steps (used by legacy scripts) |
 | `Shared-Functions.ps1` | Shared functions library used by legacy PowerShell scripts |
-| `Validate-ToolFamily-PostAssembly.ps1` | Post-assembly tool-family validation (deprecated; validation now integrated into `ToolFamilyCleanupStep`) |
+| `Validate-ToolFamily-PostAssembly.ps1` | Post-assembly tool-family validation (deprecated; validation now integrated into `DocGeneration.Steps.ToolFamilyCleanupStep`) |
 | `Invoke-CliAnalyzer.ps1` | Manual helper for CLI analyzer generation |
 
 ## standalone/
@@ -138,7 +138,7 @@ Individual generator scripts for running a single generation step directly. Usef
 | `Generate-Annotations.ps1` | Generates annotation include files (tool metadata: destructive, idempotent, etc.) |
 | `Generate-Parameters.ps1` | Generates parameter include files (CLI options for each tool) |
 | `Generate-RawTools.ps1` | Generates raw tool `.md` files from CLI output |
-| `Generate-ExamplePrompts.ps1` | Runs ExamplePromptGeneratorStandalone against existing CLI data |
+| `Generate-ExamplePrompts.ps1` | Runs DocGeneration.Steps.ExamplePrompts.Generation against existing CLI data |
 | `Generate-ExamplePromptsAI.ps1` | Generates NL example prompts via Azure OpenAI |
 | `Generate-HorizontalArticles.ps1` | Generates horizontal how-to articles using AI |
 | `Generate-Commands.ps1` | Generates the commands reference page listing all tools |

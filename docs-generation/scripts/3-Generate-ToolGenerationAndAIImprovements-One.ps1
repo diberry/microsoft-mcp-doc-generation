@@ -134,7 +134,7 @@ try {
         Push-Location $docsGenDir
         try {
             $composedArgs = @(
-                "--project", "ToolGeneration_Composed",
+                "--project", "DocGeneration.Steps.ToolGeneration.Composition",
                 "--configuration", "Release"
             )
             if ($SkipBuild) { $composedArgs += "--no-build" }
@@ -181,7 +181,7 @@ try {
             Push-Location $docsGenDir
             try {
                 $improvedArgs = @(
-                    "--project", "ToolGeneration_Improved",
+                    "--project", "DocGeneration.Steps.ToolGeneration.Improvements",
                     "--configuration", "Release"
                 )
                 if ($SkipBuild) { $improvedArgs += "--no-build" }

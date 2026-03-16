@@ -112,7 +112,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    $csharpGeneratorDir = Join-Path $docsGenDir "CSharpGenerator"
+    $csharpGeneratorDir = Join-Path $docsGenDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
     Push-Location $csharpGeneratorDir
     try {
         $noBuildArg = if ($SkipBuild) { "--no-build" } else { "" }
@@ -157,7 +157,7 @@ try {
     Push-Location $docsGenDir
     try {
         $rawArgs = @(
-            "--project", "ToolGeneration_Raw",
+            "--project", "DocGeneration.Steps.AnnotationsParametersRaw.RawTools",
             "--configuration", "Release"
         )
         if ($SkipBuild) { $rawArgs += "--no-build" }
