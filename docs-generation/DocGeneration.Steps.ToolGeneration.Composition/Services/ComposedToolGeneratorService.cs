@@ -292,11 +292,24 @@ public class ComposedToolGeneratorService
     {
         // Replace placeholders with actual content
         var composed = rawContent;
+        var normalizedExamplePrompts = StripLeadingMcpCliComment(examplePromptsContent).Trim();
         
-        composed = composed.Replace(ExamplePromptsPlaceholder, examplePromptsContent.Trim());
+        composed = composed.Replace(ExamplePromptsPlaceholder, normalizedExamplePrompts);
         composed = composed.Replace(ParametersPlaceholder, parametersContent.Trim());
         composed = composed.Replace(AnnotationsPlaceholder, annotationsContent.Trim());
 
         return composed;
+    }
+
+    private static string StripLeadingMcpCliComment(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return content;
+        }
+
+        var normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var stripped = Regex.Replace(normalized, @"\A\s*<!--\s*@mcpcli\s+.+?\s*-->\n?", string.Empty);
+        return stripped.Replace("\n", Environment.NewLine, StringComparison.Ordinal);
     }
 }

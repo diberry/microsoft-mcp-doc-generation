@@ -13,6 +13,11 @@ namespace HorizontalArticleGenerator.Generators;
 /// </summary>
 public class ArticleContentProcessor
 {
+    private static readonly HashSet<string> CatchAllNamespaces = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "extension"
+    };
+
     private readonly TransformationEngine? _transformationEngine;
 
     public ArticleContentProcessor(TransformationEngine? transformationEngine = null)
@@ -35,14 +40,14 @@ public class ArticleContentProcessor
     /// Validate and auto-correct AI-generated content for common quality issues.
     /// Mutates the input data in place.
     /// </summary>
-    public ValidationResult Validate(AIGeneratedArticleData aiData, string serviceName)
+    public ValidationResult Validate(AIGeneratedArticleData aiData, string serviceName, string? serviceIdentifier = null)
     {
         var result = new ValidationResult();
 
         StripTrailingPeriods(aiData, result);
         FixBrokenSentences(aiData, result);
         FixRedundantWords(aiData, result);
-        ValidateLinkUrls(aiData, result);
+        ValidateLinkUrls(aiData, result, serviceIdentifier);
         DeduplicateAdditionalLinks(aiData, result);
         ValidateRbacRoles(aiData, result, serviceName);
         ValidateToolDescriptions(aiData, result);
@@ -169,9 +174,9 @@ public class ArticleContentProcessor
     /// Run the full processing pipeline: validate then transform.
     /// This is the order used by the generator.
     /// </summary>
-    public ValidationResult Process(AIGeneratedArticleData aiData, string serviceName)
+    public ValidationResult Process(AIGeneratedArticleData aiData, string serviceName, string? serviceIdentifier = null)
     {
-        var result = Validate(aiData, serviceName);
+        var result = Validate(aiData, serviceName, serviceIdentifier);
         ApplyTransformations(aiData);
         return result;
     }
@@ -374,7 +379,7 @@ public class ArticleContentProcessor
     /// <summary>
     /// Strip learn.microsoft.com prefix from URLs and remove links with fabricated URL patterns.
     /// </summary>
-    private static void ValidateLinkUrls(AIGeneratedArticleData aiData, ValidationResult result)
+    private static void ValidateLinkUrls(AIGeneratedArticleData aiData, ValidationResult result, string? serviceIdentifier)
     {
         // Strip learn.microsoft.com prefix from serviceDocLink
         if (!string.IsNullOrEmpty(aiData.ServiceDocLink))
@@ -382,8 +387,17 @@ public class ArticleContentProcessor
             var cleaned = StripLearnPrefix(aiData.ServiceDocLink);
             if (cleaned != aiData.ServiceDocLink)
             {
-                aiData.ServiceDocLink = cleaned;
                 result.Corrections.Add("Stripped learn.microsoft.com prefix from serviceDocLink");
+            }
+
+            if (IsCatchAllNamespace(serviceIdentifier) && IsCatchAllServiceDocLink(cleaned, serviceIdentifier!))
+            {
+                aiData.ServiceDocLink = null;
+                result.Corrections.Add($"Removed invalid serviceDocLink for catch-all namespace '{serviceIdentifier}'");
+            }
+            else
+            {
+                aiData.ServiceDocLink = cleaned;
             }
         }
 
@@ -497,6 +511,17 @@ public class ArticleContentProcessor
         if (string.IsNullOrEmpty(url)) return null;
         var segments = url.TrimStart('/').Split('/');
         return segments.Length >= 2 ? $"/{segments[0]}/{segments[1]}" : null;
+    }
+
+    private static bool IsCatchAllNamespace(string? serviceIdentifier)
+        => !string.IsNullOrWhiteSpace(serviceIdentifier) && CatchAllNamespaces.Contains(serviceIdentifier);
+
+    private static bool IsCatchAllServiceDocLink(string url, string serviceIdentifier)
+    {
+        var normalized = url.TrimEnd('/');
+        var namespacePath = $"/azure/{serviceIdentifier}";
+        return normalized.Equals(namespacePath, StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith($"{namespacePath}/", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string StripLearnPrefix(string url)

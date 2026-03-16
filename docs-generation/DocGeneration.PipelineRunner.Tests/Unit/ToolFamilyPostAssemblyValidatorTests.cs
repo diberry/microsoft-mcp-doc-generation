@@ -74,7 +74,6 @@ public class ToolFamilyPostAssemblyValidatorTests
 
             Assert.True(result.Success);
             Assert.Contains(result.Warnings, warning => warning.Contains("example prompt header is Examples:", StringComparison.Ordinal));
-            Assert.Contains(result.Warnings, warning => warning.Contains("expected 2 annotation markers, found 1", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("missing 'resource group name'", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("Branding: Use \"this tool\" instead of \"this command\".", StringComparison.Ordinal));
         }
@@ -121,7 +120,6 @@ public class ToolFamilyPostAssemblyValidatorTests
 
         ## List virtual machines
         <!-- @mcpcli compute list -->
-        <!-- @mcpcli compute list -->
         Example prompts include:
         - List resources where resource group name is 'rg-one'
         | Parameter | Required |
@@ -129,7 +127,6 @@ public class ToolFamilyPostAssemblyValidatorTests
         | resource group name | Yes |
 
         ## Show virtual machine
-        <!-- @mcpcli compute show -->
         <!-- @mcpcli compute show -->
         Example prompts include:
         - Show the VM named 'vm-one'
@@ -150,7 +147,6 @@ public class ToolFamilyPostAssemblyValidatorTests
         # Compute tools
 
         ## List virtual machines
-        <!-- @mcpcli compute list -->
         <!-- @mcpcli compute list -->
         Example prompts include:
         - List resources where resource group name is 'rg-one'
@@ -185,7 +181,7 @@ public class ToolFamilyPostAssemblyValidatorTests
         """;
 
     private static void SeedToolFile(string path, string command)
-        => SeedFile(path, $"---\n---\n# Tool\n\n<!-- @mcpcli {command} -->\nBody\n<!-- @mcpcli {command} -->\n");
+        => SeedFile(path, $"---\n---\n# Tool\n\n<!-- @mcpcli {command} -->\nBody\n");
 
     private static void SeedFile(string path, string content)
     {

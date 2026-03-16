@@ -636,9 +636,9 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         {
             var headerIsStandard = section.ExampleHeaderIndex >= 0;
             var headerIsPositionedCorrectly = true;
-            if (headerIsStandard && section.MarkerLineIndices.Count >= 2)
+            if (headerIsStandard && section.MarkerLineIndices.Count > 0)
             {
-                headerIsPositionedCorrectly = section.ExampleHeaderIndex > section.MarkerLineIndices[1];
+                headerIsPositionedCorrectly = section.ExampleHeaderIndex > section.MarkerLineIndices[^1];
             }
             if (headerIsStandard && section.TableStartIndex >= 0)
             {
@@ -657,8 +657,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private static IReadOnlyList<string> GetMarkerWarnings(IEnumerable<ArticleSection> sections)
         => sections
-            .Where(section => section.MarkerCount != 2)
-            .Select(section => $"⚠️ {section.ToolKey}: expected 2 annotation markers, found {section.MarkerCount}")
+            .Where(section => section.MarkerCount != 1)
+            .Select(section => $"⚠️ {section.ToolKey}: expected 1 annotation marker, found {section.MarkerCount}")
             .ToArray();
 
     private static IReadOnlyList<string> GetBrandingIssues(string articleContent)
@@ -749,9 +749,9 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         reportLines.AddRange(requiredParamWarnings.Select(warning => $"  {warning}"));
 
         reportLines.Add(string.Empty);
-        var markerWarnings = warningIssues.Where(issue => issue.Contains("annotation markers", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var markerWarnings = warningIssues.Where(issue => issue.Contains("annotation marker", StringComparison.OrdinalIgnoreCase)).ToArray();
         var totalMarkers = sections.Sum(section => section.MarkerCount);
-        reportLines.Add($"Annotation markers: {totalMarkers} found (expected {sections.Count * 2}) {(markerWarnings.Length == 0 && totalMarkers == sections.Count * 2 ? "✅" : "⚠️")}");
+        reportLines.Add($"Annotation markers: {totalMarkers} found (expected {sections.Count}) {(markerWarnings.Length == 0 && totalMarkers == sections.Count ? "✅" : "⚠️")}");
         reportLines.AddRange(markerWarnings.Select(warning => $"  {warning}"));
 
         var headerWarnings = warningIssues.Where(issue => issue.Contains("example prompt header", StringComparison.OrdinalIgnoreCase)).ToArray();

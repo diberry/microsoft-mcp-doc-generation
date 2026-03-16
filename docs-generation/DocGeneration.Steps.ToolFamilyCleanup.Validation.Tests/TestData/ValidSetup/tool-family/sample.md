@@ -9,7 +9,6 @@ This article is a synthetic fixture for validator integration tests.
 
 ## Alpha get
 <!-- @mcpcli sample alpha get -->
-<!-- @mcpcli sample alpha get -->
 Example prompts include:
 - Get the alpha resource named 'alpha-one' in resource group 'rg-app'.
 | Parameter | Required | Description |
@@ -19,7 +18,6 @@ Example prompts include:
 
 ## Beta update
 <!-- @mcpcli sample beta update -->
-<!-- @mcpcli sample beta update -->
 Example prompts include:
 - Update beta name 'beta-main' in region 'eastus'.
 | Parameter | Required | Description |
@@ -28,7 +26,6 @@ Example prompts include:
 | `Region` | ✅ | Region for the beta item. |
 
 ## Gamma list
-<!-- @mcpcli sample gamma list -->
 <!-- @mcpcli sample gamma list -->
 Example prompts include:
 - List gamma items with filter 'recent'.

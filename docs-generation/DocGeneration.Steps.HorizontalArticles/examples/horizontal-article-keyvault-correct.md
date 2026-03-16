@@ -94,7 +94,7 @@ Retrieve [Azure Key Vault Managed HSM](/azure/key-vault/managed-hsm/overview) ac
 - Review purge protection and soft-delete retention settings for Managed HSM
 - Query HSM-specific configurations
 
-For detailed information about each tool, including parameters and examples, see [Azure Key Vault tools for Azure MCP Server](../tools/azure-key-vault.md).
+For detailed information about each tool, including parameters and examples, see [Azure Key Vault tools for Azure MCP Server](../tool-family/keyvault.md).
 
 ## Get started
 
@@ -107,7 +107,7 @@ Ready to use Azure MCP Server with your Azure Key Vault resources?
    - "Get the certificate 'web-ssl-cert' from key vault 'prod-vault'"
    - "Create a new RSA key named 'app-key' in key vault 'crypto-vault'"
 
-3. **Learn more**: Review the [Azure Key Vault tools reference](../tools/azure-key-vault.md) for all available capabilities and detailed parameter information.
+3. **Learn more**: Review the [Azure Key Vault tools reference](../tool-family/keyvault.md) for all available capabilities and detailed parameter information.
 
 ## Best practices
 
@@ -124,6 +124,6 @@ For general Azure Key Vault security guidance beyond the Azure MCP Server, see [
 
 * [Azure MCP Server overview](../overview.md)
 * [Get started with Azure MCP Server](../get-started.md)
-* [Azure Key Vault tools reference](../tools/azure-key-vault.md)
+* [Azure Key Vault tools reference](../tool-family/keyvault.md)
 * [Azure Key Vault documentation](/azure/key-vault/general/overview)
 * [Azure RBAC for Key Vault](/azure/key-vault/general/rbac-guide)

@@ -44,7 +44,7 @@ public class AIGeneratedArticleData
     public List<BestPractice>? BestPractices { get; set; }
     
     [JsonPropertyName("genai-serviceDocLink")]
-    public string ServiceDocLink { get; set; } = string.Empty;
+    public string? ServiceDocLink { get; set; }
     
     [JsonPropertyName("genai-additionalLinks")]
     public List<AdditionalLink> AdditionalLinks { get; set; } = new();

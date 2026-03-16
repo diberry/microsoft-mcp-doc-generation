@@ -12,6 +12,11 @@ namespace ToolFamilyCleanup.Services;
 /// </summary>
 public class H2HeadingGenerator
 {
+    private static readonly HashSet<string> CatchAllNamespaces = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "extension"
+    };
+
     private readonly GenerativeAIClient _aiClient;
     private string? _systemPrompt;
     private string? _userPromptTemplate;
@@ -55,7 +60,8 @@ public class H2HeadingGenerator
         if (string.IsNullOrWhiteSpace(tool.Command) || string.IsNullOrWhiteSpace(tool.Description))
         {
             // Fallback: use the tool's existing heading if we don't have enough data
-            return ExtractHeadingFromContent(tool.Content) ?? tool.ToolName ?? "Tool";
+            var fallbackHeading = ExtractHeadingFromContent(tool.Content) ?? tool.ToolName ?? "Tool";
+            return EnsureCatchAllHeading(CleanHeading(fallbackHeading), tool, familyDisplayName);
         }
 
         var userPrompt = GenerateUserPrompt(tool, familyDisplayName);
@@ -63,12 +69,13 @@ public class H2HeadingGenerator
         try
         {
             var heading = await _aiClient.GetChatCompletionAsync(_systemPrompt!, userPrompt, maxTokens: 100);
-            return CleanHeading(ExtractMarkdownFromResponse(heading));
+            return EnsureCatchAllHeading(CleanHeading(ExtractMarkdownFromResponse(heading)), tool, familyDisplayName);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"⚠ Failed to generate H2 heading for '{tool.Command}': {ex.Message}");
-            return ExtractHeadingFromContent(tool.Content) ?? tool.ToolName ?? "Tool";
+            var fallbackHeading = ExtractHeadingFromContent(tool.Content) ?? tool.ToolName ?? "Tool";
+            return EnsureCatchAllHeading(CleanHeading(fallbackHeading), tool, familyDisplayName);
         }
     }
 
@@ -77,7 +84,8 @@ public class H2HeadingGenerator
         return _userPromptTemplate!
             .Replace("{{COMMAND}}", tool.Command ?? "")
             .Replace("{{DESCRIPTION}}", tool.Description ?? "")
-            .Replace("{{FAMILY_NAME}}", familyDisplayName ?? "");
+            .Replace("{{FAMILY_NAME}}", familyDisplayName ?? "")
+            .Replace("{{IS_CATCH_ALL}}", IsCatchAllNamespace(tool.FamilyName) ? "true" : "false");
     }
 
     /// <summary>
@@ -85,7 +93,7 @@ public class H2HeadingGenerator
     /// Removes extra whitespace and markdown syntax if present.
     /// Ensures proper H2 markdown syntax (##).
     /// </summary>
-    private string CleanHeading(string heading)
+    private static string CleanHeading(string heading)
     {
         if (string.IsNullOrWhiteSpace(heading))
         {
@@ -126,6 +134,73 @@ public class H2HeadingGenerator
         }
         return null;
     }
+
+    private static string EnsureCatchAllHeading(string heading, ToolContent tool, string familyDisplayName)
+    {
+        if (!IsCatchAllNamespace(tool.FamilyName) || !IsGenericCatchAllHeading(heading, tool, familyDisplayName))
+        {
+            return heading;
+        }
+
+        return CleanHeading(BuildCatchAllFallbackHeading(tool));
+    }
+
+    private static bool IsCatchAllNamespace(string? familyName)
+        => !string.IsNullOrWhiteSpace(familyName) && CatchAllNamespaces.Contains(familyName);
+
+    private static bool IsGenericCatchAllHeading(string heading, ToolContent tool, string familyDisplayName)
+    {
+        var cleaned = heading.TrimStart('#', ' ').Trim();
+        return cleaned.Contains(familyDisplayName, StringComparison.OrdinalIgnoreCase)
+            || cleaned.Contains(tool.FamilyName, StringComparison.OrdinalIgnoreCase)
+            || cleaned.StartsWith("Use ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildCatchAllFallbackHeading(ToolContent tool)
+    {
+        var description = tool.Description ?? string.Empty;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            description,
+            @"^(?<verb>Run|Runs|Scan|Scans|Create|Creates|Get|Gets|List|Lists|Update|Updates|Delete|Deletes|Remove|Removes|Manage|Manages|Check|Checks|Generate|Generates)\s+(?<target>.+?)(?:\s+(?:CLI|tool|tools|command|commands)\b|[\.,])",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (match.Success)
+        {
+            var verb = NormalizeVerb(match.Groups["verb"].Value);
+            var target = System.Text.RegularExpressions.Regex.Replace(match.Groups["target"].Value.Trim(), @"\s*\([^)]*\)", string.Empty);
+            return $"{verb} {target}";
+        }
+
+        return string.IsNullOrWhiteSpace(tool.ToolName) ? "Use the tool" : tool.ToolName;
+    }
+
+    private static string NormalizeVerb(string verb)
+        => verb.ToLowerInvariant() switch
+        {
+            "runs" => "Run",
+            "run" => "Run",
+            "scans" => "Scan",
+            "scan" => "Scan",
+            "creates" => "Create",
+            "create" => "Create",
+            "gets" => "Get",
+            "get" => "Get",
+            "lists" => "Get",
+            "list" => "Get",
+            "updates" => "Update",
+            "update" => "Update",
+            "deletes" => "Delete",
+            "delete" => "Delete",
+            "removes" => "Remove",
+            "remove" => "Remove",
+            "manages" => "Manage",
+            "manage" => "Manage",
+            "checks" => "Check",
+            "check" => "Check",
+            "generates" => "Generate",
+            "generate" => "Generate",
+            _ => "Use"
+        };
 
     /// <summary>
     /// Extracts markdown from AI response if wrapped in code fences.

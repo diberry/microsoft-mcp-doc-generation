@@ -150,8 +150,8 @@ public class ToolFamilyValidatorTests
         var result = await TestHelpers.RunValidatorAsync(NamespaceName, tempDir.Path);
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("Annotation markers: 7 found (expected 6) ⚠️", result.CombinedOutput);
-        Assert.Contains("⚠️ gamma-list: expected 2 annotation markers, found 3", result.CombinedOutput);
+        Assert.Contains("Annotation markers: 4 found (expected 3) ⚠️", result.CombinedOutput);
+        Assert.Contains("⚠️ gamma-list: expected 1 annotation marker, found 2", result.CombinedOutput);
     }
 
     private static void PrepareValidFixture(TempDir tempDir) =>
@@ -222,7 +222,6 @@ public class ToolFamilyValidatorTests
 
     private const string DeltaInspectSection = """
 ## Delta inspect
-<!-- @mcpcli sample delta inspect -->
 <!-- @mcpcli sample delta inspect -->
 Example prompts include:
 - Inspect delta item 'delta-01'.

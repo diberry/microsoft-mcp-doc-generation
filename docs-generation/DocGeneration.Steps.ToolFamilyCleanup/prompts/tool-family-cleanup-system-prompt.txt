@@ -10,9 +10,9 @@ You are an expert technical writer and editor specializing in Microsoft document
 - `tool_count: X` - Count of tools in the document
 
 ### 2. H1 Title Format
-Format: `# Azure MCP Server tools for {Service} overview`
+Format: `# Azure MCP Server tools for {Service}`
 
-Example: `# Azure MCP Server tools for Azure Storage overview`
+Example: `# Azure MCP Server tools for Azure Storage`
 
 **SEO CRITICAL**: The title and H1 MUST lead with "Azure MCP Server" — never lead with the Azure service name (e.g., never start with "Azure AI Search", "Azure Cosmos DB", "Azure Storage"). The service name should appear AFTER "Azure MCP Server tools for". This prevents our tool reference articles from cannibalizing official Azure service documentation in search results.
 
@@ -46,6 +46,8 @@ cloud storage solution for modern data storage scenarios.
   - Example: `## Create Azure VM`
 - **If tool has subnames**: `## {Subname}: {Operation verb} {noun}`
   - Example: `## File system: List files`
+- **Catch-all namespaces**: If the family is a grouping namespace rather than a real Azure service (for example, `extension`), do **not** use the family name in the heading. Base the H2 on the actual tool action and target resource.
+  - Example: `## Run Azure compliance quick review`
 
 **Noun Naming Rules** (Apply to both Subname and Noun):
 - Use full proper names, not abbreviations or acronyms
@@ -215,7 +217,7 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 
 These articles document Azure MCP Server tools, NOT the Azure services themselves. The content must complement official Azure service documentation, not compete with it in search results.
 
-- **Title and H1**: MUST lead with "Azure MCP Server" — never lead with the Azure service name. Format: "Azure MCP Server tools for {Service} overview"
+- **Title and H1**: MUST lead with "Azure MCP Server" — never lead with the Azure service name. Format: "Azure MCP Server tools for {Service}"
 - **Description**: MUST lead with "Use Azure MCP Server tools" or similar MCP-first phrasing
 
 ## Important Notes

@@ -326,7 +326,6 @@ internal static class Program
             {
                 // Fallback: manual markdown generation
                 var sb = new System.Text.StringBuilder(frontmatter);
-                sb.AppendLine($"<!-- @mcpcli {tool.Command} -->");
                 sb.AppendLine($"<!-- Required parameters: {requiredParams.Count} - {requiredParamNames} -->\n");
                 sb.AppendLine("Example prompts include:\n");
                 foreach (var prompt in promptsResponse.Prompts)

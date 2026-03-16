@@ -242,7 +242,7 @@ public class ToolFamilyCleanupStepTests
     }
 
     private static void SeedToolFile(string path, string command)
-        => SeedFile(path, $"---\n---\n# Sample\n\n<!-- @mcpcli {command} -->\nbody\n<!-- @mcpcli {command} -->\n");
+        => SeedFile(path, $"---\n---\n# Sample\n\n<!-- @mcpcli {command} -->\nbody\n");
 
     private static void SeedFile(string path, string content)
     {
