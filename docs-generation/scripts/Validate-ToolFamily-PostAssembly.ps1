@@ -352,7 +352,7 @@ function Get-NamespaceToolFiles {
         $content = Get-Content $file.FullName -Raw
         $commandText = $null
 
-        $commands = Get-McpCliCommands $content
+        $commands = @(Get-McpCliCommands $content)
         foreach ($candidate in $commands) {
             $normalized = Normalize-ToolCommand $candidate
             if ($normalized -and $normalized.Split(' ')[0].ToLowerInvariant() -eq $namespaceLower) {
@@ -427,7 +427,7 @@ function Get-ArticleSections {
         }
 
         $sectionLines = $sectionText -split "`n"
-        $commands = Get-McpCliCommands $sectionText
+        $commands = @(Get-McpCliCommands $sectionText)
         $toolKey = if ($commands.Count -gt 0) {
             Convert-CommandToToolKey -CommandText $commands[0] -NamespaceName $NamespaceName
         } else {
@@ -489,7 +489,7 @@ function Get-ArticleSections {
             Heading = $heading
             ToolKey = $toolKey
             Commands = $commands
-            MarkerCount = $commands.Count
+            MarkerCount = $markerLineIndices.Count
             MarkerLineIndices = @($markerLineIndices)
             ExampleHeaderIndex = $exampleHeaderIndex
             TableStartIndex = $tableStartIndex
@@ -659,8 +659,8 @@ try {
     foreach ($section in $sections) {
         $headerIsStandard = $section.ExampleHeaderIndex -ge 0
         $headerIsPositionedCorrectly = $true
-        if ($headerIsStandard -and $section.MarkerLineIndices.Count -ge 2) {
-            $headerIsPositionedCorrectly = $section.ExampleHeaderIndex -gt $section.MarkerLineIndices[1]
+        if ($headerIsStandard -and $section.MarkerLineIndices.Count -gt 0) {
+            $headerIsPositionedCorrectly = $section.ExampleHeaderIndex -gt $section.MarkerLineIndices[-1]
         }
         if ($headerIsStandard -and $section.TableStartIndex -ge 0) {
             $headerIsPositionedCorrectly = $headerIsPositionedCorrectly -and $section.ExampleHeaderIndex -lt $section.TableStartIndex
@@ -681,8 +681,8 @@ try {
     $markerWarnings = New-Object System.Collections.Generic.List[string]
     $totalMarkers = ($sections | Measure-Object -Property MarkerCount -Sum).Sum
     foreach ($section in $sections) {
-        if ($section.MarkerCount -ne 2) {
-            $markerWarnings.Add("⚠️ $($section.ToolKey): expected 2 annotation markers, found $($section.MarkerCount)")
+        if ($section.MarkerCount -ne 1) {
+            $markerWarnings.Add("⚠️ $($section.ToolKey): expected 1 annotation marker, found $($section.MarkerCount)")
         }
     }
 
@@ -742,7 +742,7 @@ try {
     }
 
     $reportLines.Add('')
-    $reportLines.Add("Annotation markers: $totalMarkers found (expected $($articleSectionCount * 2)) $(if ($totalMarkers -eq ($articleSectionCount * 2) -and $markerWarnings.Count -eq 0) { '✅' } else { '⚠️' })")
+    $reportLines.Add("Annotation markers: $totalMarkers found (expected $articleSectionCount) $(if ($totalMarkers -eq $articleSectionCount -and $markerWarnings.Count -eq 0) { '✅' } else { '⚠️' })")
     foreach ($warning in $markerWarnings) {
         $reportLines.Add("  $warning")
     }

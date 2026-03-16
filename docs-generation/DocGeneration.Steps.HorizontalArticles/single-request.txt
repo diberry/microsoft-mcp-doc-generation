@@ -127,7 +127,7 @@ Generate JSON data for a how-to article about using Azure MCP Server with Acr.
 **Service Information:**
 - Service Brand Name: Acr
 - Service Identifier: acr
-- Tools Reference Link: ../tools/acr.md
+- Tools Reference Link: ../tool-family/acr.md
 
 **Available MCP Tools for this service:**
 Tool: acr registry list

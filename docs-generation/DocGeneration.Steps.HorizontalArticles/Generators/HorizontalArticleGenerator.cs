@@ -45,7 +45,7 @@ public class HorizontalArticleGenerator
             
             // Validate and transform AI-generated content via ArticleContentProcessor
             var processor = new ArticleContentProcessor(_transformationEngine);
-            var validationResult = processor.Process(aiData, staticData.ServiceBrandName);
+            var validationResult = processor.Process(aiData, staticData.ServiceBrandName, staticData.ServiceIdentifier);
 
             // Output corrections
             if (validationResult.Corrections.Count > 0)
@@ -252,21 +252,17 @@ public class HorizontalArticleGenerator
                     .FirstOrDefault(m => m.McpName == serviceArea);
 
                 string serviceBrandName;
-                string toolsRefFile;
                 if (transformMapping?.BrandName != null)
                 {
                     serviceBrandName = transformMapping.BrandName;
-                    toolsRefFile = transformMapping.Filename ?? serviceArea;
                 }
                 else if (sharedBrandMappings.TryGetValue(serviceArea, out var brandMap))
                 {
                     serviceBrandName = brandMap.BrandName ?? FormatServiceName(serviceArea);
-                    toolsRefFile = serviceArea;
                 }
                 else
                 {
                     serviceBrandName = FormatServiceName(serviceArea);
-                    toolsRefFile = serviceArea;
                 }
 
                 var staticData = new StaticArticleData
@@ -275,7 +271,7 @@ public class HorizontalArticleGenerator
                     ServiceIdentifier = serviceArea,
                     GeneratedAt = DateTime.UtcNow.ToString("o"),
                     Version = cliVersion,
-                    ToolsReferenceLink = $"../tools/{toolsRefFile}.md",
+                    ToolsReferenceLink = BuildToolsReferenceLink(serviceArea),
                     Tools = tools.Select(tool => new HorizontalToolSummary
                     {
                         Command = tool.Command ?? tool.Name ?? "",
@@ -310,7 +306,7 @@ public class HorizontalArticleGenerator
                     ServiceIdentifier = serviceArea,
                     GeneratedAt = DateTime.UtcNow.ToString("o"),
                     Version = cliVersion,
-                    ToolsReferenceLink = $"../tools/{serviceArea}.md",
+                    ToolsReferenceLink = BuildToolsReferenceLink(serviceArea),
                     Tools = tools.Select(tool => new HorizontalToolSummary
                     {
                         Command = tool.Command ?? tool.Name ?? "",
@@ -359,6 +355,11 @@ public class HorizontalArticleGenerator
         };
     }
     
+    private static string BuildToolsReferenceLink(string serviceArea)
+    {
+        return $"../tool-family/{serviceArea}.md";
+    }
+
     /// <summary>
     /// Simple service name formatting
     /// </summary>
@@ -597,7 +598,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             ["genai-authenticationNotes"] = templateData.AuthenticationNotes ?? string.Empty,
             ["genai-commonIssues"] = templateData.CommonIssues ?? (object)new List<CommonIssue>(),
             ["genai-bestPractices"] = templateData.BestPractices ?? (object)new List<BestPractice>(),
-            ["genai-serviceDocLink"] = templateData.ServiceDocLink,
+            ["genai-serviceDocLink"] = templateData.ServiceDocLink ?? string.Empty,
             ["genai-additionalLinks"] = templateData.AdditionalLinks,
             
             // Merged tools - convert to dictionaries for Handlebars

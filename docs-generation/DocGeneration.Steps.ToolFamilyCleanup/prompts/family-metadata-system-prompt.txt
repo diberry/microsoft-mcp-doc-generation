@@ -8,7 +8,7 @@ Generate EXACTLY this structure:
 
 ```markdown
 ---
-title: Azure MCP Server tools for {ServiceName} overview
+title: Azure MCP Server tools for {ServiceName}
 description: Use Azure MCP Server tools to manage {brief-service-description} with natural language prompts from your IDE.
 ms.service: azure-mcp-server
 ms.topic: concept-article
@@ -16,7 +16,7 @@ tool_count: {NUMBER}
 mcp-cli.version: {CLI_VERSION}
 ---
 
-# Azure MCP Server tools for {ServiceName} overview
+# Azure MCP Server tools for {ServiceName}
 
 The Azure MCP Server lets you manage {service-description}, including {key-capabilities}, with natural language prompts.
 
@@ -35,7 +35,7 @@ These articles document Azure MCP Server tools, NOT the Azure services themselve
 ## Requirements
 
 1. **Frontmatter**:
-   - `title`: Must follow pattern "Azure MCP Server tools for {ServiceName} overview"
+   - `title`: Must follow pattern "Azure MCP Server tools for {ServiceName}"
    - `description`: Must lead with "Use Azure MCP Server tools to..." — MCP Server product name must appear before the service name
    - `ms.service`: Always "azure-mcp-server"
    - `ms.topic`: Always "concept-article"
@@ -44,7 +44,7 @@ These articles document Azure MCP Server tools, NOT the Azure services themselve
 
 2. **H1 Heading**:
    - Must match the title exactly
-   - Format: "Azure MCP Server tools for {ServiceName} overview"
+   - Format: "Azure MCP Server tools for {ServiceName}"
 
 3. **Introduction Paragraph 1**:
    - Start with "The Azure MCP Server lets you manage..."

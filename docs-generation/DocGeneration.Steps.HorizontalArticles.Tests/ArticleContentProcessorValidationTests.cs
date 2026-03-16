@@ -445,6 +445,18 @@ public class ArticleContentProcessorValidationTests
     }
 
     [Test]
+    public void Validate_RemovesCatchAllServiceDocLink()
+    {
+        var data = CreateMinimalData();
+        data.ServiceDocLink = "https://learn.microsoft.com/en-us/azure/extension/";
+
+        var result = _processor.Validate(data, "Azure Extension", "extension");
+
+        Assert.That(data.ServiceDocLink, Is.Null);
+        Assert.That(result.Corrections, Has.Some.Contains("Removed invalid serviceDocLink for catch-all namespace 'extension'"));
+    }
+
+    [Test]
     public void Validate_RemovesLinksWithFabricatedDocsPath()
     {
         var data = CreateMinimalData();

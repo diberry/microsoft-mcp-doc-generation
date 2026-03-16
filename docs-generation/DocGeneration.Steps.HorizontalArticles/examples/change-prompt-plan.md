@@ -135,7 +135,7 @@ storing and accessing secrets, keys, and certificates. ...
 
 **Problem**: Generated links use GitHub URLs (`https://github.com/microsoft/azure-mcp-server`) and full `https://learn.microsoft.com/en-us/azure/...` URLs.
 
-**Correct pattern**: Microsoft Learn relative paths (`../overview.md`, `../tools/azure-key-vault.md`) and Azure doc-relative paths (`/azure/key-vault/general/overview`).
+**Correct pattern**: Microsoft Learn relative paths (`../overview.md`, `../tool-family/keyvault.md`) and Azure doc-relative paths (`/azure/key-vault/general/overview`).
 
 **Required changes**:
 - System prompt should instruct AI to use `/azure/...` format for Azure doc links (not full URLs)

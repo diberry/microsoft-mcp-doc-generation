@@ -33,6 +33,14 @@ Use proper names instead of abbreviations or acronyms:
 - `command`: Full MCP CLI command (e.g., "advisor recommendation list")
 - `description`: First sentence describing what the tool does
 - `familyName`: Service/family (e.g., "storage", "compute")
+- `isCatchAllNamespace`: Whether the family is only a grouping namespace, not a real Azure service
+
+### Catch-all namespace rule
+If `isCatchAllNamespace` is `true` (for example, the `extension` namespace), do **not** use the family name in the heading. Base the heading on the actual tool action and target resource instead.
+
+Examples:
+- `extension azqr` → `Run Azure Quick Review`
+- `extension cli_generate` → `Generate Azure CLI command`
 
 ### Output Format
 Return ONLY the H2 heading text (without the `##` markdown syntax).

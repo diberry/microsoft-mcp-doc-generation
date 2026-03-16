@@ -43,7 +43,7 @@ Azure MCP Server provides the following tools for Keyvault:
 - **[keyvault secret create](../parameters/keyvault-secret-create-parameters.md)** - Create a new secret with a specified value in Key Vault.
 - **[keyvault secret get](../parameters/keyvault-secret-get-parameters.md)** - List all secrets or retrieve a specific secret value.
 
-For detailed parameter information and usage examples, see the [Keyvault MCP tools reference](../tools/keyvault.md).
+For detailed parameter information and usage examples, see the [Keyvault MCP tools reference](../tool-family/keyvault.md).
 
 ## Common scenarios
 
@@ -122,7 +122,7 @@ You receive an error indicating access is denied when trying to access a secret.
 ## Related content
 
 - [Azure MCP Server documentation](https://github.com/microsoft/azure-mcp-server)
-- [Keyvault MCP tools reference](../tools/keyvault.md)
+- [Keyvault MCP tools reference](../tool-family/keyvault.md)
 - [Keyvault documentation](https://learn.microsoft.com/en-us/azure/key-vault/general/overview)
 - [Key Vault Best Practices](https://learn.microsoft.com/en-us/azure/key-vault/general/best-practices)
 - [Quickstart: Create a Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/quick-create-portal)

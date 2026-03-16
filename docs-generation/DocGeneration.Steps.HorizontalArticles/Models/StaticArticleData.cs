@@ -34,8 +34,8 @@ public class StaticArticleData
     public string Version { get; set; } = string.Empty;
     
     /// <summary>
-    /// Link to the tools reference page for this service
-    /// Example: "../tools/storage.md"
+    /// Link to the tool-family reference page for this service
+    /// Example: "../tool-family/storage.md"
     /// </summary>
     public string ToolsReferenceLink { get; set; } = string.Empty;
     
