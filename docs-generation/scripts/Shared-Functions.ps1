@@ -8,7 +8,7 @@
     and tool-command normalization functions.
 
     Usage:
-        . "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
+        . "$PSScriptRoot\Shared-Functions.ps1"
 #>
 
 # ═══════════════════════════════════════════════════════════════

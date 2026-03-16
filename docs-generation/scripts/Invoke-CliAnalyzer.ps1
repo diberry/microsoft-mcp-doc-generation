@@ -30,16 +30,16 @@
     Set to $true when the orchestrator has already built the solution.
 
 .EXAMPLE
-    ./Invoke-DocGeneration.Steps.Bootstrap.CliAnalyzer.ps1
+    ./Invoke-CliAnalyzer.ps1
     # Runs full analysis with console output and HTML report
     
-    ./Invoke-DocGeneration.Steps.Bootstrap.CliAnalyzer.ps1 -HtmlOnly
+    ./Invoke-CliAnalyzer.ps1 -HtmlOnly
     # Generates Markdown report without console output
     
-    ./Invoke-DocGeneration.Steps.Bootstrap.CliAnalyzer.ps1 -Namespace sql
+    ./Invoke-CliAnalyzer.ps1 -Namespace sql
     # Analyzes SQL tools only
     
-    ./Invoke-DocGeneration.Steps.Bootstrap.CliAnalyzer.ps1 -Namespace sql -Tool "create"
+    ./Invoke-CliAnalyzer.ps1 -Namespace sql -Tool "create"
     # Shows details for the SQL create tool
 #>
 

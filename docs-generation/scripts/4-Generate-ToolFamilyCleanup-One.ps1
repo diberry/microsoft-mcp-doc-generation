@@ -36,9 +36,9 @@
     Skip the validation step (only generate files)
 
 .EXAMPLE
-    ./Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1 -ToolCommand "keyvault secret create"  # Specific tool command
-    ./Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1 -ToolCommand "storage"                      # Single namespace/family
-    ./Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1 -ToolCommand "acr registry list" -SkipRelated
+    ./4-Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "keyvault secret create"  # Specific tool command
+    ./4-Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "storage"                  # Single namespace/family
+    ./4-Generate-ToolFamilyCleanup-One.ps1 -ToolCommand "acr registry list" -SkipRelated
 #>
 
 param(
@@ -58,7 +58,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Import shared logging and normalization helpers
-. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
+. "$PSScriptRoot\Shared-Functions.ps1"
 
 try {
     Write-Divider

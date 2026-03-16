@@ -36,7 +36,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
+. "$PSScriptRoot\Shared-Functions.ps1"
 
 function Remove-Markup {
     param([string]$Text)

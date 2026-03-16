@@ -45,7 +45,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Import shared logging and normalization helpers
-. "$PSScriptRoot\DocGeneration.Core.Shared-Functions.ps1"
+. "$PSScriptRoot\Shared-Functions.ps1"
 
 function Get-CommandFromFile {
     param([string]$FilePath)
