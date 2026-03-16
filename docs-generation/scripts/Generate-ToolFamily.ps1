@@ -66,7 +66,7 @@
 .PARAMETER SkipValidation
     Skip file validation steps (default: $false)
 
-.PARAMETER UseDocGeneration.Core.TextTransformation
+.PARAMETER UseTextTransformation
     Apply text transformations to horizontal article output (default: $true)
 
 .PARAMETER SkipBuild
@@ -140,7 +140,7 @@ param(
     
     [bool]$SkipValidation = $false,
 
-    [bool]$UseDocGeneration.Core.TextTransformation = $true,
+    [bool]$UseTextTransformation = $true,
     
     [switch]$SkipBuild,
     
@@ -419,7 +419,7 @@ try {
             $step6Params = @{
                 ServiceArea = $ToolFamily
                 OutputPath = $OutputPath
-                UseDocGeneration.Core.TextTransformation = $UseDocGeneration.Core.TextTransformation
+                UseTextTransformation = $UseTextTransformation
             }
             
             if ($SkipValidation) {

@@ -116,8 +116,8 @@ These scripts are **no longer on the standard execution path** (previously calle
 | `1-Generate-AnnotationsParametersRaw-One.ps1` | `AnnotationsParametersRawStep` (Step 1) | Legacy wrapper for manual Step 1 execution |
 | `2-Generate-ExamplePrompts-One.ps1` | `ExamplePromptsStep` (Step 2) | Legacy wrapper for manual Step 2 execution |
 | `3-Generate-ToolGenerationAndAIImprovements-One.ps1` | `ToolGenerationStep` (Step 3) | Legacy wrapper for manual Step 3 execution |
-| `4-Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1` | `DocGeneration.Steps.ToolFamilyCleanupStep` (Step 4) | Legacy wrapper for manual Step 4 execution |
-| `5-Generate-DocGeneration.Steps.SkillsRelevance-One.ps1` | `DocGeneration.Steps.SkillsRelevanceStep` (Step 5) | Legacy wrapper for manual Step 5 execution |
+| `4-Generate-ToolFamilyCleanup-One.ps1` | `DocGeneration.Steps.ToolFamilyCleanupStep` (Step 4) | Legacy wrapper for manual Step 4 execution |
+| `5-Generate-SkillsRelevance-One.ps1` | `DocGeneration.Steps.SkillsRelevanceStep` (Step 5) | Legacy wrapper for manual Step 5 execution |
 | `6-Generate-HorizontalArticles-One.ps1` | `HorizontalArticlesStep` (Step 6) | Legacy wrapper for manual Step 6 execution |
 
 ### ℹ️ Support/utility scripts
@@ -125,9 +125,9 @@ These scripts are **no longer on the standard execution path** (previously calle
 | Script | Purpose |
 |---|---|
 | `validate-env.ps1` | Validates `.env` for Azure OpenAI-backed steps (used by legacy scripts) |
-| `DocGeneration.Core.Shared-Functions.ps1` | DocGeneration.Core.Shared functions library used by legacy PowerShell scripts |
+| `Shared-Functions.ps1` | Shared functions library used by legacy PowerShell scripts |
 | `Validate-ToolFamily-PostAssembly.ps1` | Post-assembly tool-family validation (deprecated; validation now integrated into `DocGeneration.Steps.ToolFamilyCleanupStep`) |
-| `Invoke-DocGeneration.Steps.Bootstrap.CliAnalyzer.ps1` | Manual helper for CLI analyzer generation |
+| `Invoke-CliAnalyzer.ps1` | Manual helper for CLI analyzer generation |
 
 ## standalone/
 
@@ -144,7 +144,7 @@ Individual generator scripts for running a single generation step directly. Usef
 | `Generate-Commands.ps1` | Generates the commands reference page listing all tools |
 | `Generate-Common.ps1` | Generates a "most common tools" summary page |
 | `Generate-Index.ps1` | Generates the documentation index page |
-| `GenerateDocGeneration.Steps.ToolFamilyCleanup-multifile.ps1` | Multi-phase tool family assembly with AI metadata |
+| `GenerateToolFamilyCleanup-multifile.ps1` | Multi-phase tool family assembly with AI metadata |
 | `Validate.ps1` | Final validation checking all expected files were generated |
 | `Validate-ExamplePrompts-RequiredParams.ps1` | Validates example prompts contain required parameters (regex, no LLM) |
 | `verify-annotation-hints.js` | Verifies that annotation INCLUDE statements have required "Tool annotation hints" line before them |

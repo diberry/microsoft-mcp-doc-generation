@@ -124,7 +124,7 @@ title: Test
     /// </summary>
     private static string InvokeEnsureCorrectToolCount(string metadata, int actualToolCount)
     {
-        var generatorType = Type.GetType("ToolFamilyCleanup.Services.FamilyMetadataGenerator, ToolFamilyCleanup");
+        var generatorType = Type.GetType("ToolFamilyCleanup.Services.FamilyMetadataGenerator, DocGeneration.Steps.ToolFamilyCleanup");
         if (generatorType == null)
         {
             throw new InvalidOperationException("Could not load FamilyMetadataGenerator type");

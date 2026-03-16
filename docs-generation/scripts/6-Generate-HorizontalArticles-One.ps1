@@ -25,7 +25,7 @@
 .PARAMETER SkipValidation
     Skip validation of CLI output files
 
-.PARAMETER UseDocGeneration.Core.TextTransformation
+.PARAMETER UseTextTransformation
     Apply text transformations to AI-generated content (default: $true)
 
 .EXAMPLE
@@ -42,7 +42,7 @@ param(
     
     [switch]$SkipValidation = $false,
 
-    [bool]$UseDocGeneration.Core.TextTransformation = $true,
+    [bool]$UseTextTransformation = $true,
 
     [switch]$SkipBuild
 )
@@ -104,7 +104,7 @@ try {
     Push-Location $docsGenDir
     try {
         # Run with single service flag and output path
-        $transformArg = if ($UseDocGeneration.Core.TextTransformation) { "--transform" } else { "" }
+        $transformArg = if ($UseTextTransformation) { "--transform" } else { "" }
         & dotnet run --project DocGeneration.Steps.HorizontalArticles/DocGeneration.Steps.HorizontalArticles.csproj --configuration Release --no-build -- --single-service $ServiceArea --output-path $outputDir $transformArg
         $exitCode = $LASTEXITCODE
     } finally {

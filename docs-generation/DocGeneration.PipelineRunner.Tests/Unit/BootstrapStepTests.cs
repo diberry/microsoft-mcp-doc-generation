@@ -83,7 +83,7 @@ public class BootstrapStepTests
         Assert.True(result.Success);
         Assert.DoesNotContain(
             harness.ProcessRunner.Invocations,
-            invocation => invocation.Arguments.Any(argument => argument.EndsWith("BrandMapperValidator.csproj", StringComparison.OrdinalIgnoreCase)));
+            invocation => invocation.Arguments.Any(argument => argument.EndsWith("DocGeneration.Steps.Bootstrap.BrandMappings.csproj", StringComparison.OrdinalIgnoreCase)));
     }
 
     [Fact]

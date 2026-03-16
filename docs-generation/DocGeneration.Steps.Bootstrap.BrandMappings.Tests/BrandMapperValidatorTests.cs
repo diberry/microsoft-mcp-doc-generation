@@ -167,7 +167,7 @@ public class BrandMapperValidatorTests
     {
         // Since we can't directly call Program.Main from another assembly (it's internal),
         // we need to run the validator as a separate process
-        var assemblyPath = Path.Combine(AppContext.BaseDirectory, "BrandMapperValidator.dll");
+        var assemblyPath = Path.Combine(AppContext.BaseDirectory, "DocGeneration.Steps.Bootstrap.BrandMappings.dll");
         
         var startInfo = new ProcessStartInfo
         {
