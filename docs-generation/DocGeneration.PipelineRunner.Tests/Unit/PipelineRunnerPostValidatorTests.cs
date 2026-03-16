@@ -234,11 +234,12 @@ public class PipelineRunnerPostValidatorTests
                 ]);
             var runner = new global::PipelineRunner.PipelineRunner(new StepRegistry([step]), contextFactory);
 
-            var request = new PipelineRequest("compute", [2], ".\\generated-compute", SkipBuild: true, SkipValidation: false, DryRun: false);
+            var outputRelativePath = Path.Combine(".", "generated-compute");
+            var request = new PipelineRequest("compute", [2], outputRelativePath, SkipBuild: true, SkipValidation: false, DryRun: false);
             var exitCode = await runner.RunAsync(request, CancellationToken.None);
 
             Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
-            var failureDirectory = Path.Combine(repoRoot, "generated-compute", "critical-failures");
+            var failureDirectory = Path.Combine(Path.GetFullPath(Path.Combine(repoRoot, outputRelativePath)), "critical-failures");
             var failureFiles = Directory.GetFiles(failureDirectory, "*.json");
             Assert.Single(failureFiles);
             Assert.Contains(reportWriter.Messages, message => message.Contains("Critical failures summary:", StringComparison.Ordinal));
