@@ -43,14 +43,30 @@ The following parameters are common infrastructure parameters and should be EXCL
    
    **MATCHING IS SIMPLE: If you see the word anywhere in the prompt, the parameter is PRESENT.**
    
+   **⚠️ ANGLE-BRACKET PLACEHOLDERS ARE VALID PARAMETER MENTIONS:**
+   Prompts often use `<paramName>` as a placeholder for a value. The word inside the angle brackets IS the parameter.
+   - `<key>` → `--key` is PRESENT ✅
+   - `<account>` → `--account` is PRESENT ✅
+   - `<value>` → `--value` is PRESENT ✅
+   - `<resource-group>` → `--resource-group` is PRESENT ✅
+   - `<cluster-name>` → `--cluster-name` is PRESENT ✅
+   Do NOT treat `<word>` as an HTML tag. It is a placeholder. The word inside the brackets matches the parameter name.
+   Examples of prompts with angle-bracket placeholders — ALL VALID:
+     * "Set the key <key> in store <account> to <value>" → `--key`, `--account`, `--value` ALL PRESENT ✅
+     * "Delete key <key> from <account>" → `--key`, `--account` BOTH PRESENT ✅
+     * "List resources in <resource-group>" → `--resource-group` is PRESENT ✅
+   
    **Parameter Matching Rules**:
    
    **FOR SINGLE-WORD PARAMETERS (`--key`, `--value`, `--account`, `--cluster`, etc.):**
-   - If the word appears ANYWHERE in the prompt → parameter IS PRESENT
+   - If the word appears ANYWHERE in the prompt (including inside angle brackets like `<word>`) → parameter IS PRESENT
    - Examples:
      * "the key 'X'" → `--key` is PRESENT ✅
      * "key 'X'" → `--key` is PRESENT ✅
      * "for key X" → `--key` is PRESENT ✅
+     * "store <account>" → `--account` is PRESENT ✅
+     * "the key <key>" → `--key` is PRESENT ✅
+     * "to <value>" → `--value` is PRESENT ✅
      * "to 'X'" (for --value) → `--value` is PRESENT ✅
      * "with the value 'X'" → `--value` is PRESENT ✅
      * "store 'X'" → `--account` is PRESENT ✅
@@ -124,11 +140,12 @@ Return a JSON object with the following structure:
 - **When uncertain, mark for manual review**: If you're unsure whether a parameter is present, add "MANUAL_REVIEW" to the issues list rather than marking it as missing
 - **Required parameters**: ALL required parameters must be mentioned (excluding infrastructure parameters)
 - **Examples of valid parameter mentions**:
-  - `--key`: "the key 'X'", "key 'X'", "for key X" → ALL valid ✅
-  - `--value`: "to 'X'", "with value 'X'", "value is 'X'" → ALL valid ✅
-  - `--account`: "store 'X'", "account 'X'", "App Configuration 'X'" → ALL valid ✅
+  - `--key`: "the key 'X'", "key 'X'", "for key X", "the key <key>" → ALL valid ✅
+  - `--value`: "to 'X'", "with value 'X'", "value is 'X'", "to <value>" → ALL valid ✅
+  - `--account`: "store 'X'", "account 'X'", "App Configuration 'X'", "store <account>" → ALL valid ✅
   - `--question`: ANY sentence ending with "?" contains a question → valid ✅
   - `--resource-type`: "resource 'X'" implies a type → valid ✅
+  - **Angle-bracket placeholders**: `<paramName>` always counts as `--paramName` being present ✅
 - **Contextually aware matching**:
   - For App Configuration: "store" = `--account`
   - Questions in the prompt = `--question` parameter

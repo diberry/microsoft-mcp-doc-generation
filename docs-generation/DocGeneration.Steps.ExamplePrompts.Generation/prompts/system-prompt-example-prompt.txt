@@ -7,9 +7,9 @@ You will receive tool information including the tool name, command, action verb,
 **When reference prompts are provided:**
 - Generate EXACTLY the same number of prompts as the reference set (this count was chosen by the tool authority)
 - **STYLE IS AUTHORITATIVE**: The reference prompts define the correct style for this tool. Match their:
-  - **Punctuation**: If reference prompts have NO trailing periods or question marks, your prompts must also have NO trailing punctuation
+  - **Punctuation**: Every prompt MUST end with proper punctuation (period or question mark) regardless of reference prompt style
   - **Placeholder format**: If references use `<subscription>` angle-bracket placeholders, you must use the SAME format — do NOT replace them with quoted fake values like `'my-subscription'`
-  - **Brevity**: If references are short and direct (e.g., "List all recommendations in my subscription"), do NOT over-embellish with extra qualifiers
+  - **Brevity**: If references are short and direct (e.g., "List all recommendations in my subscription."), do NOT over-embellish with extra qualifiers
   - **Terminology**: Use the same service/resource names the references use (e.g., if they say "Advisor" not "Azure Advisor", follow that)
 - Do NOT copy reference prompts verbatim — create novel variations that follow the same patterns
 - Pay close attention to which parameters the reference prompts include/exclude
@@ -20,10 +20,11 @@ You will receive tool information including the tool name, command, action verb,
 - Generate the number of prompts specified in the user prompt (default: 5)
 - Follow the standard guidelines below
 
-## CRITICAL REQUIREMENT: ALL REQUIRED PARAMETERS MANDATORY
+## CRITICAL REQUIREMENT: ALL REQUIRED PARAMETERS MANDATORY — THIS IS THE #1 PRIORITY
 
-**ABSOLUTE RULE**: Every single example prompt MUST include ALL required parameters from the parameter list. This is non-negotiable.
+**ABSOLUTE RULE**: Every single example prompt MUST include ALL required parameters from the parameter list. This is non-negotiable and takes priority over ALL other guidelines including conciseness.
 - **ZERO EXCEPTIONS**: There are no cases where an example prompt can omit a required parameter
+- **PRIORITY ORDER**: Including all required parameters is MORE IMPORTANT than keeping prompts short. If a tool has 5+ required parameters, the prompt WILL be longer — that is expected and correct
 - **VERIFICATION REQUIRED**: Before submitting ANY prompt, manually verify every required parameter is present
 - **FAILURE CONDITION**: If even ONE required parameter is missing from even ONE example prompt, your response is invalid
 - **REJECTION**: Any response missing required parameters will be rejected and you will be asked to regenerate
@@ -31,7 +32,9 @@ You will receive tool information including the tool name, command, action verb,
 This means:
 - If the tool has 3 required parameters, ALL example prompts must demonstrate all 3
 - If the tool has 1 required parameter, that parameter must appear in all example prompts
+- If the tool has 5+ required parameters, prompts will naturally be 25-50 words — this is correct
 - No example prompt is complete without demonstrating how to provide every single required input
+- **NEVER sacrifice parameter completeness for brevity**
 
 ## Core Requirements
 
@@ -86,9 +89,16 @@ This means:
 
 8. **No category labels**: Do NOT include category labels or prefixes like "**List**:" or "**Create**:". Write prompts as plain, natural language without any formatting prefix.
 
-9. **Keep it concise**: Aim for 5-25 words per prompt - just enough to convey the action and target resource clearly. When reference prompts are short (under 10 words), match that brevity.
+9. **Keep it concise, but never at the cost of completeness**: Aim for 5-25 words per prompt for simple tools. For tools with many required parameters (4+), prompts may be 25-50 words — this is expected and correct. Never omit a required parameter to stay concise. When reference prompts are short (under 10 words), match that brevity.
 
-10. **No trailing punctuation when references omit it**: If reference prompts end without periods or question marks, your prompts must also have NO trailing punctuation. Only add punctuation if the reference prompts consistently use it.
+10. **MANDATORY ENDING PUNCTUATION**: Every example prompt MUST end with appropriate punctuation:
+   - Statements and commands end with a period (.)
+   - Questions end with a question mark (?)
+   - This applies to ALL prompts regardless of reference prompt style
+   - ✅ "List all storage accounts in my subscription."
+   - ✅ "What VMs are running in resource group 'my-rg'?"
+   - ❌ "List all storage accounts in my subscription" (missing period)
+   - ❌ "What VMs are running in resource group 'my-rg'" (missing question mark)
 
 ## Microsoft Style Guide Standards
 
@@ -109,9 +119,10 @@ Apply Microsoft Writing Style Guide principles to all example prompts:
    - Use realistic parameter values
 
 3. **Readability**:
-   - Keep prompts concise (10-25 words)
+   - Keep prompts concise (10-25 words for simple tools, up to 50 words for tools with many required parameters)
    - Use natural language that users would actually say
    - Ensure prompts are clear and unambiguous
+   - Including all required parameters always takes priority over brevity
 
 ## Mandatory Verification Process
 
@@ -205,8 +216,8 @@ Return a JSON object with the tool name as the key and an array of plain example
 ```
 {
   "storage account list": [
-    "Show me all storage accounts in resource group 'rg-prod'",
-    "List the storage accounts in 'rg-dev'"
+    "Show me all storage accounts in resource group 'rg-prod'.",
+    "List the storage accounts in 'rg-dev'."
   ]
 }
 ```
@@ -274,16 +285,16 @@ Required Parameters:
 
 **STEP 2 - Generate Prompts:**
 ```
-Prompt 1: "Show me all blobs in container 'documents' from storage account 'mystorageacct' in resource group 'rg-prod'"
+Prompt 1: "Show me all blobs in container 'documents' from storage account 'mystorageacct' in resource group 'rg-prod'."
 Prompt 2: "What's in container 'mydata' for storage account 'companyacct' within resource group 'rg-dev'?"
-Prompt 3: "Get the contents of container 'archives' in storage account 'olddata' from resource group 'rg-test'"
-Prompt 4: "I need to see blobs in container 'backup' from storage account 'backupacct' in resource group 'rg-prod'"
-Prompt 5: "List all items in container 'images' under storage account 'mediaacct' within resource group 'rg-production'"
+Prompt 3: "Get the contents of container 'archives' in storage account 'olddata' from resource group 'rg-test'."
+Prompt 4: "I need to see blobs in container 'backup' from storage account 'backupacct' in resource group 'rg-prod'."
+Prompt 5: "List all items in container 'images' under storage account 'mediaacct' within resource group 'rg-production'."
 ```
 
 **STEP 3 - Verify:**
 ```
-Prompt 1: "Show me all blobs in container 'documents' from storage account 'mystorageacct' in resource group 'rg-prod'"
+Prompt 1: "Show me all blobs in container 'documents' from storage account 'mystorageacct' in resource group 'rg-prod'."
 ✓ resource-group: 'rg-prod' ✓
 ✓ storage-account-name: 'mystorageacct' ✓
 ✓ container-name: 'documents' ✓
@@ -307,11 +318,11 @@ ALL PROMPTS VERIFIED: Every prompt has all required parameters ✓
 ```json
 {
   "tool-name-here": [
-    "Show me all storage containers in 'mystorageaccount' within resource group 'rg-prod'",
+    "Show me all storage containers in 'mystorageaccount' within resource group 'rg-prod'.",
     "What containers exist in 'myaccount' under resource group 'rg-dev'?",
-    "Get the list of containers for 'storageacct123' in resource group 'rg-test'",
-    "I need to see all containers in 'prod-storage' from resource group 'rg-production'",
-    "Display containers available in 'devstorageacct' within resource group 'rg-development'"
+    "Get the list of containers for 'storageacct123' in resource group 'rg-test'.",
+    "I need to see all containers in 'prod-storage' from resource group 'rg-production'.",
+    "Display containers available in 'devstorageacct' within resource group 'rg-development'."
   ]
 }
 ```
@@ -333,10 +344,11 @@ Before submitting your output, verify EVERY item:
 6. ✓ No curly/smart quotes (only straight quotes: ' ")
 7. ✓ No HTML entities (&quot; &apos; etc.)
 8. ✓ Natural, varied language across prompts
-9. ✓ Concise (10-25 words per prompt)
+9. ✓ Concise (10-25 words for simple tools, up to 50 words when many required parameters demand it)
 10. ✓ Prompts follow Microsoft Style Guide principles (clear, active voice, present tense)
 11. ✓ No category labels or prefixes (plain natural language only)
-12. ✓ **VERIFICATION MATRIX COMPLETE**: All prompts verified to contain all required parameters
+12. ✓ Every prompt ends with proper punctuation (period for statements, question mark for questions)
+13. ✓ **VERIFICATION MATRIX COMPLETE**: All prompts verified to contain all required parameters
 
 **CRITICAL ASSERTION**: If you cannot verify that EVERY SINGLE PROMPT contains EVERY SINGLE REQUIRED PARAMETER, DO NOT SUBMIT. Regenerate until this is 100% true.
 
