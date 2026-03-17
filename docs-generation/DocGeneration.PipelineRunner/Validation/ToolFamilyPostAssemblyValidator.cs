@@ -480,7 +480,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             foreach (var requiredParameter in section.RequiredParameters)
             {
                 var coverage = GetConcretePromptCoverage(section.ExamplePrompts, requiredParameter, section.RequiredParameters.Count);
-                if (!coverage.Covered)
+                if (!coverage.Covered && !coverage.PlaceholderDetected)
                 {
                     missingParameters.Add(requiredParameter);
                 }
@@ -562,13 +562,17 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
             var trimmedPrompt = examplePrompt.Trim();
             var lowerPrompt = trimmedPrompt.ToLowerInvariant();
-            var placeholders = Regex.Matches(trimmedPrompt, "<[^>]+>|\\{[^}]+\\}|\\[[^\\]]+\\]")
+            var placeholders = Regex.Matches(trimmedPrompt, "<[^>]+>|\\{[^}]+\\}|\\[[^\\]]+\\]|`[^`]+`")
                 .Select(match => match.Value)
                 .ToArray();
 
             foreach (var placeholder in placeholders)
             {
-                var placeholderSlug = ConvertToSlug(placeholder);
+                // Strip outer bracket pair (<…>, {…}, […]) so ConvertToSlug sees the inner text
+                var inner = placeholder.Length >= 2 ? placeholder[1..^1] : placeholder;
+                // Strip any remaining nested delimiters (handles double-wrapped like `<account>`)
+                inner = inner.TrimStart('<', '{', '[').TrimEnd('>', '}', ']');
+                var placeholderSlug = ConvertToSlug(inner);
                 if (placeholderSlug == slug
                     || placeholderSlug.Contains(slug, StringComparison.Ordinal)
                     || words.Count(word => placeholderSlug.Contains(word, StringComparison.Ordinal)) >= Math.Min(Math.Max(words.Length, 1), 2))

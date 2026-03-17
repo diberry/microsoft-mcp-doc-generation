@@ -81,6 +81,13 @@ public sealed class ExamplePromptGenerator
             var promptParameters = GetPromptParameters(tool, parameterManifest);
             var parametersBuilder = new StringBuilder(BuildParametersSection(promptParameters));
 
+            // Build required parameter summary for the user prompt
+            var requiredParams = promptParameters.Where(p => p.IsRequired).ToList();
+            var requiredParamCount = requiredParams.Count.ToString();
+            var requiredParamNames = requiredParams.Count > 0
+                ? string.Join(", ", requiredParams.Select(p => p.Name))
+                : "(none)";
+
             // Fill user prompt template - use regex to replace handlebars block
             var userPrompt = _userPromptTemplate
                 .Replace("{TOOL_NAME}", tool.Name ?? "Unknown")
@@ -88,7 +95,9 @@ public sealed class ExamplePromptGenerator
                 .Replace("{TOOL_DESCRIPTION}", tool.Description ?? "No description available")
                 .Replace("{ACTION_VERB}", actionVerb)
                 .Replace("{RESOURCE_TYPE}", resourceType)
-                .Replace("{PROMPT_COUNT}", promptCount.ToString());
+                .Replace("{PROMPT_COUNT}", promptCount.ToString())
+                .Replace("{REQUIRED_PARAM_COUNT}", requiredParamCount)
+                .Replace("{REQUIRED_PARAM_NAMES}", requiredParamNames);
             
             // Replace the handlebars {{#each PARAMETERS}} block with actual parameters
             // Use regex to handle different line endings
@@ -138,7 +147,7 @@ public sealed class ExamplePromptGenerator
 
             if (!string.IsNullOrWhiteSpace(validationFeedback))
             {
-                userPrompt += BuildValidationFeedbackSection(validationFeedback);
+                userPrompt += BuildValidationFeedbackSection(validationFeedback, requiredParamCount, requiredParamNames);
             }
 
             userPrompt += "\n\nGenerate the prompts now.";
@@ -161,9 +170,9 @@ public sealed class ExamplePromptGenerator
 
             if (promptsResponse != null && promptsResponse.Prompts.Any())
             {
-                // Clean AI-generated text
+                // Clean AI-generated text, then ensure ending punctuation
                 promptsResponse.Prompts = promptsResponse.Prompts
-                    .Select(p => CleanAIGeneratedText(p))
+                    .Select(p => EnsureEndingPunctuation(CleanAIGeneratedText(p)))
                     .ToList();
             }
 
@@ -223,7 +232,8 @@ public sealed class ExamplePromptGenerator
         return parametersBuilder.ToString().TrimEnd();
     }
 
-    internal static string BuildValidationFeedbackSection(string validationFeedback)
+    internal static string BuildValidationFeedbackSection(string validationFeedback,
+        string? requiredParamCount = null, string? requiredParamNames = null)
     {
         var feedbackBuilder = new StringBuilder();
         feedbackBuilder.AppendLine();
@@ -231,6 +241,14 @@ public sealed class ExamplePromptGenerator
         feedbackBuilder.AppendLine();
         feedbackBuilder.AppendLine("The previous prompts failed validation. You MUST correct every issue below in this new response.");
         feedbackBuilder.AppendLine("Do not repeat the same mistakes. Every prompt must include all required parameters with proper quoting or placeholder formatting.");
+
+        if (!string.IsNullOrWhiteSpace(requiredParamCount) && !string.IsNullOrWhiteSpace(requiredParamNames))
+        {
+            feedbackBuilder.AppendLine();
+            feedbackBuilder.AppendLine($"**REMINDER: This tool has {requiredParamCount} REQUIRED parameters: {requiredParamNames}**");
+            feedbackBuilder.AppendLine($"Every single prompt MUST mention ALL {requiredParamCount} of them. Count them in each prompt.");
+        }
+
         feedbackBuilder.AppendLine();
         feedbackBuilder.AppendLine("Previous validation report:");
         feedbackBuilder.AppendLine("```markdown");
@@ -371,6 +389,20 @@ public sealed class ExamplePromptGenerator
 
         Console.WriteLine("  ⚠️  No JSON structure found in response");
         return string.Empty;
+    }
+
+    /// <summary>
+    /// Safety net: ensures every prompt ends with proper punctuation.
+    /// If the prompt already ends with . ? or ! it is left alone.
+    /// Otherwise a period is appended.
+    /// </summary>
+    internal static string EnsureEndingPunctuation(string prompt)
+    {
+        var trimmed = prompt.TrimEnd();
+        if (trimmed.Length == 0) return trimmed;
+        var lastChar = trimmed[^1];
+        if (lastChar == '.' || lastChar == '?' || lastChar == '!') return trimmed;
+        return trimmed + ".";
     }
 
     /// <summary>

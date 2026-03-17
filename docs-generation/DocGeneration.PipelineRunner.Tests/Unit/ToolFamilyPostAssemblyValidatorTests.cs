@@ -83,6 +83,96 @@ public class ToolFamilyPostAssemblyValidatorTests
         }
     }
 
+    [Fact]
+    public async Task ValidateAsync_AngleBracketPlaceholders_AcceptedAsValidParameterMentions()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), AngleBracketPlaceholderContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("missing", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("in example prompt", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_BacktickPlaceholders_AcceptedAsValidParameterMentions()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), BacktickPlaceholderContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("missing", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("in example prompt", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static string AngleBracketPlaceholderContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## Set configuration value
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - Set the key <key> in App Configuration store <account> to <value>
+        | Parameter | Required |
+        | --- | --- |
+        | account | Yes |
+        | key | Yes |
+        | value | Yes |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string BacktickPlaceholderContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## Set configuration value
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - Delete the key `key` in App Configuration store `account`
+        - Get the secret `<key>` from vault `<account>`
+        | Parameter | Required |
+        | --- | --- |
+        | account | Yes |
+        | key | Yes |
+
+        ## Related content
+        - Link
+        """;
+
     private static PipelineContext CreateContext(string testRoot)
     {
         var outputPath = Path.Combine(testRoot, "generated-compute");

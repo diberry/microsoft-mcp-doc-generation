@@ -11,6 +11,12 @@ Parameters:
 - {{name}} ({{#if required}}Required{{else}}Optional{{/if}}): {{description}}
 {{/each}}
 
+## ⚠️ Required Parameter Summary
+
+This tool has **{REQUIRED_PARAM_COUNT} required parameter(s)**: {REQUIRED_PARAM_NAMES}
+
+**Every single example prompt MUST include ALL {REQUIRED_PARAM_COUNT} of these required parameters.** Count them in each prompt before outputting. If any prompt has fewer than {REQUIRED_PARAM_COUNT} required parameters represented, regenerate it.
+
 Rules for optional parameters:
 - If `resource-group` is Required, include it. If Optional, omit it.
 - If a parameter is marked Optional, include it only when truly necessary for the action.
