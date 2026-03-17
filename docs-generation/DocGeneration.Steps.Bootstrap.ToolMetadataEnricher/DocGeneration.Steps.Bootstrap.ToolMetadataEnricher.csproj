@@ -12,9 +12,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
-  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
