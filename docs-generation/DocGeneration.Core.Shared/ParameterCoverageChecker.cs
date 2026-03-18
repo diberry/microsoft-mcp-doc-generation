@@ -1,0 +1,193 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+
+namespace Shared;
+
+/// <summary>
+/// Checks whether example prompts contain concrete (non-placeholder) values
+/// for required parameters.
+/// </summary>
+public static class ParameterCoverageChecker
+{
+    public static PromptCoverage GetConcretePromptCoverage(IReadOnlyList<string> examplePrompts, string parameterName, int totalRequiredParameters)
+    {
+        var slug = ConvertToSlug(parameterName);
+        var words = slug.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        var wordPattern = string.Join("[-_ ]+", words.Select(Regex.Escape));
+        var variantList = new List<string>();
+
+        foreach (var variant in new[]
+        {
+            parameterName.ToLowerInvariant(),
+            string.Join(' ', words),
+            string.Join('-', words),
+            string.Join('_', words),
+        })
+        {
+            if (!string.IsNullOrWhiteSpace(variant))
+            {
+                variantList.Add(variant);
+            }
+        }
+
+        if (words.Length > 1 && new[] { "name", "text", "array", "value" }.Contains(words[^1], StringComparer.Ordinal))
+        {
+            var baseWords = words[..^1];
+            foreach (var variant in new[]
+            {
+                string.Join(' ', baseWords),
+                string.Join('-', baseWords),
+                string.Join('_', baseWords),
+            })
+            {
+                if (!string.IsNullOrWhiteSpace(variant))
+                {
+                    variantList.Add(variant);
+                }
+            }
+        }
+
+        if (words.Length > 0 && string.Equals(words[^1], "text", StringComparison.Ordinal))
+        {
+            variantList.Add("text");
+        }
+
+        if (words.Length > 0 && string.Equals(words[^1], "array", StringComparison.Ordinal))
+        {
+            variantList.Add(words[0]);
+            variantList.Add($"{words[0]}s");
+        }
+
+        var variants = variantList
+            .Where(variant => !string.IsNullOrWhiteSpace(variant))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var placeholderDetected = false;
+        var covered = false;
+        foreach (var examplePrompt in examplePrompts)
+        {
+            if (string.IsNullOrWhiteSpace(examplePrompt))
+            {
+                continue;
+            }
+
+            var trimmedPrompt = examplePrompt.Trim();
+            var lowerPrompt = trimmedPrompt.ToLowerInvariant();
+            var placeholders = Regex.Matches(trimmedPrompt, "<[^>]+>|\\{[^}]+\\}|\\[[^\\]]+\\]|`[^`]+`")
+                .Select(match => match.Value)
+                .ToArray();
+
+            foreach (var placeholder in placeholders)
+            {
+                // Strip outer bracket pair (<…>, {…}, […]) so ConvertToSlug sees the inner text
+                var inner = placeholder.Length >= 2 ? placeholder[1..^1] : placeholder;
+                // Strip any remaining nested delimiters (handles double-wrapped like `<account>`)
+                inner = inner.TrimStart('<', '{', '[').TrimEnd('>', '}', ']');
+                var placeholderSlug = ConvertToSlug(inner);
+                var requiredWordMatches = Math.Min(Math.Max(words.Length, 1), 2);
+                if (placeholderSlug == slug
+                    || placeholderSlug.Contains(slug, StringComparison.Ordinal)
+                    || words.Count(word => placeholderSlug.Contains(word, StringComparison.Ordinal)) >= requiredWordMatches)
+                {
+                    placeholderDetected = true;
+                }
+
+                // Semantic fallback: word-level match on raw inner text (before slugifying).
+                // Catches descriptive placeholders like <key_name> for parameter "Key"
+                // where the parameter word appears as a discrete token in the placeholder.
+                if (!placeholderDetected)
+                {
+                    var innerTokens = Regex.Split(inner.ToLowerInvariant(), "[^a-z0-9]+")
+                        .Where(t => t.Length > 0)
+                        .ToArray();
+                    if (words.Count(word => innerTokens.Contains(word, StringComparer.Ordinal))
+                        >= requiredWordMatches)
+                    {
+                        placeholderDetected = true;
+                    }
+                }
+            }
+
+            var foundVariant = false;
+            var matchIndex = -1;
+            foreach (var variant in variants)
+            {
+                var currentIndex = lowerPrompt.IndexOf(variant.ToLowerInvariant(), StringComparison.Ordinal);
+                if (currentIndex >= 0)
+                {
+                    foundVariant = true;
+                    matchIndex = currentIndex + variant.Length;
+                    break;
+                }
+            }
+
+            if (!foundVariant && !string.IsNullOrWhiteSpace(wordPattern))
+            {
+                var wordMatch = Regex.Match(lowerPrompt, $"(?i)\\b{wordPattern}\\b");
+                if (wordMatch.Success)
+                {
+                    foundVariant = true;
+                    matchIndex = wordMatch.Index + wordMatch.Length;
+                }
+            }
+
+            if (foundVariant && matchIndex >= 0)
+            {
+                var tail = trimmedPrompt[Math.Min(matchIndex, trimmedPrompt.Length)..];
+                if (Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*'[^'<>{}\\[\\]]+'")
+                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*`[^`<>{}\\[\\]]+`")
+                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*https?://\\S+")
+                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\[(?!\\s*[<\\{]).+\\]")
+                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\{(?!\\s*[<\\{]).+\\}"))
+                {
+                    covered = true;
+                    break;
+                }
+            }
+
+            if (!covered && totalRequiredParameters == 1 && placeholders.Length == 0)
+            {
+                if (Regex.IsMatch(trimmedPrompt, "'[^'<>{}\\[\\]]+'")
+                    || Regex.IsMatch(trimmedPrompt, "`[^`<>{}\\[\\]]+`")
+                    || Regex.IsMatch(trimmedPrompt, "https?://\\S+"))
+                {
+                    covered = true;
+                    break;
+                }
+            }
+        }
+
+        return new PromptCoverage(covered, placeholderDetected);
+    }
+
+    public static string ConvertToSlug(string text)
+    {
+        var clean = RemoveMarkup(text);
+        if (string.IsNullOrWhiteSpace(clean))
+        {
+            return string.Empty;
+        }
+
+        var slug = Regex.Replace(clean.ToLowerInvariant(), "[^a-z0-9]+", "-");
+        return slug.Trim('-');
+    }
+
+    public static string RemoveMarkup(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return string.Empty;
+        }
+
+        var clean = text.Replace("**", string.Empty, StringComparison.Ordinal)
+            .Replace("`", string.Empty, StringComparison.Ordinal);
+        clean = Regex.Replace(clean, "<[^>]+>", string.Empty);
+        clean = Regex.Replace(clean, "\\s+", " ");
+        return clean.Trim();
+    }
+}
+
+public sealed record PromptCoverage(bool Covered, bool PlaceholderDetected);
