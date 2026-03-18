@@ -72,7 +72,7 @@ public class ToolFamilyPostAssemblyValidatorTests
             var validator = new ToolFamilyPostAssemblyValidator();
             var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
 
-            Assert.True(result.Success);
+            Assert.False(result.Success);
             Assert.Contains(result.Warnings, warning => warning.Contains("example prompt header is Examples:", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("missing 'resource group name'", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("Branding: Use \"this tool\" instead of \"this command\".", StringComparison.Ordinal));

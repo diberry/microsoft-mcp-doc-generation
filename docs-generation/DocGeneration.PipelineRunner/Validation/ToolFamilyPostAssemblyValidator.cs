@@ -109,9 +109,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     blockingIssues.Add("Cross-reference check failed.");
                 }
 
+                // With section freezing (AD-017), missing required params
+                // indicates a freeze failure — treat as blocking error.
                 foreach (var warning in GetRequiredParameterWarnings(sections))
                 {
-                    warningIssues.Add(warning);
+                    blockingIssues.Add(warning);
                 }
 
                 foreach (var warning in GetExampleHeaderWarnings(sections))
@@ -490,7 +492,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             {
                 var suffix = missingParameters.Count > 1 ? "s" : string.Empty;
                 var joined = string.Join(", ", missingParameters.Select(parameter => $"'{parameter}'"));
-                warnings.Add($"⚠️ {section.ToolKey}: missing {joined} in example prompt{suffix}");
+                warnings.Add($"🛑 {section.ToolKey}: missing {joined} in example prompt{suffix} (section freeze failure)");
             }
         }
 
