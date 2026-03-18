@@ -216,6 +216,12 @@
     "fileName": "azure-monitor"
   },
   {
+    "brandName": "Azure Monitor Instrumentation",
+    "mcpServerName": "monitorinstrumentation",
+    "shortName": "Monitor Instrumentation",
+    "fileName": "azure-monitor-instrumentation"
+  },
+  {
     "brandName": "Azure Database for MySQL",
     "mcpServerName": "mysql",
     "shortName": "MySQL",
