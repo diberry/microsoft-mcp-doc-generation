@@ -573,11 +573,27 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 // Strip any remaining nested delimiters (handles double-wrapped like `<account>`)
                 inner = inner.TrimStart('<', '{', '[').TrimEnd('>', '}', ']');
                 var placeholderSlug = ConvertToSlug(inner);
+                var requiredWordMatches = Math.Min(Math.Max(words.Length, 1), 2);
                 if (placeholderSlug == slug
                     || placeholderSlug.Contains(slug, StringComparison.Ordinal)
-                    || words.Count(word => placeholderSlug.Contains(word, StringComparison.Ordinal)) >= Math.Min(Math.Max(words.Length, 1), 2))
+                    || words.Count(word => placeholderSlug.Contains(word, StringComparison.Ordinal)) >= requiredWordMatches)
                 {
                     placeholderDetected = true;
+                }
+
+                // Semantic fallback: word-level match on raw inner text (before slugifying).
+                // Catches descriptive placeholders like <key_name> for parameter "Key"
+                // where the parameter word appears as a discrete token in the placeholder.
+                if (!placeholderDetected)
+                {
+                    var innerTokens = Regex.Split(inner.ToLowerInvariant(), "[^a-z0-9]+")
+                        .Where(t => t.Length > 0)
+                        .ToArray();
+                    if (words.Count(word => innerTokens.Contains(word, StringComparer.Ordinal))
+                        >= requiredWordMatches)
+                    {
+                        placeholderDetected = true;
+                    }
                 }
             }
 

@@ -8,13 +8,12 @@ You will receive tool information including the tool name, command, action verb,
 - Generate EXACTLY the same number of prompts as the reference set (this count was chosen by the tool authority)
 - **STYLE IS AUTHORITATIVE**: The reference prompts define the correct style for this tool. Match their:
   - **Punctuation**: Every prompt MUST end with proper punctuation (period or question mark) regardless of reference prompt style
-  - **Placeholder format**: If references use `<subscription>` angle-bracket placeholders, you must use the SAME format — do NOT replace them with quoted fake values like `'my-subscription'`
+  - **Parameter values**: Always use single-quoted concrete values (e.g., `'my-subscription'`, `'prod-rg'`) — even if reference prompts use angle-bracket placeholders, convert them to single-quoted concrete values
   - **Brevity**: If references are short and direct (e.g., "List all recommendations in my subscription."), do NOT over-embellish with extra qualifiers
   - **Terminology**: Use the same service/resource names the references use (e.g., if they say "Advisor" not "Azure Advisor", follow that)
 - Do NOT copy reference prompts verbatim — create novel variations that follow the same patterns
 - Pay close attention to which parameters the reference prompts include/exclude
 - Do NOT add parameters that the reference prompts deliberately omit
-- Mirror the reference prompts' use of placeholders like `<subscription>`, `<resource-group>`, etc.
 
 **When NO reference prompts are provided:**
 - Generate the number of prompts specified in the user prompt (default: 5)
@@ -40,16 +39,20 @@ This means:
 
 1. **Sound authentic**: Write prompts as real developers would naturally phrase them in conversation or when typing commands
 
-2. **Use realistic Azure resource names OR match reference placeholder style**:
-   - **When reference prompts use angle-bracket placeholders** (e.g., `<subscription>`, `<resource-group>`, `<storage-account>`): Use the SAME placeholder format in your prompts. Do NOT invent fake values.
-   - **When reference prompts use actual resource names** (e.g., 'mystorageacct', 'rg-prod'): Follow Azure naming conventions with realistic examples
-   - **When NO reference prompts are provided**: Default to realistic Azure resource names:
+2. **Use realistic Azure resource names in single quotes**:
+   - Always wrap parameter values in single quotes using concrete, realistic example values
+   - Use descriptive but short values: 'my-appconfig', 'my-key', 'prod-rg', 'my-storage'
+   - **NEVER use angle-bracket placeholders** like `<account>` or `<key>` — these are invisible when rendered as HTML
+   - **NEVER use backtick-wrapped placeholders** like `` `account` `` — these look like code, not values
+   - Follow Azure naming conventions:
      - Storage accounts: lowercase (e.g., 'mystorageacct', 'companydata2024')
      - Resource groups: kebab-case (e.g., 'rg-prod', 'webapp-dev')
      - Container registries: lowercase (e.g., 'myregistry', 'acrprod')
      - Web apps: kebab-case (e.g., 'webapp-prod', 'api-staging')
      - General resources: PascalCase or kebab-case as appropriate
      - Containers/blobs: lowercase (e.g., 'documents', 'mycontainer')
+     - Keys/config items: kebab-case (e.g., 'my-key', 'db-connection-string')
+     - App Configuration stores: kebab-case (e.g., 'my-appconfig', 'prod-config')
 
 3. **Vary naturally but don't force it**: Use different sentence structures, but prefer the direct, simple style shown in reference prompts over artificially creative phrasing. Avoid over-qualifying or over-embellishing.
 
@@ -71,14 +74,19 @@ This means:
      * For `--question` → phrase as a question or say "question: ..."
      * **GENERAL RULE**: Use the core word(s) from the parameter name in your prompt text
 
-5. **Parameter value formatting**:
-   - **When reference prompts use angle-bracket placeholders** (e.g., `<subscription>`): Use the same `<placeholder>` format — do NOT wrap in quotes
-   - **When reference prompts use single-quoted values** (e.g., `'mystorageacct'`): Wrap parameter values in single straight quotes
-   - **When NO reference prompts are provided**: Wrap values in single straight quotes by default
-   - Example with quotes: "Show me details for storage account 'mystorageacct' in resource group 'rg-prod'"
-   - Example with placeholders: "Show me Advisor recommendations in the subscription <subscription>"
+5. **PARAMETER VALUE FORMAT — Single-Quoted Concrete Values**:
+   - **ALWAYS** wrap parameter values in single straight quotes with concrete, realistic example values
+   - Use descriptive but short values: 'my-appconfig', 'my-key', 'prod-rg', 'my-storage'
+   - **NEVER use angle-bracket placeholders** like `<account>` or `<key>` — these are invisible when rendered as HTML and break documentation
+   - **NEVER use backtick-wrapped placeholders** like `` `account` `` — these look like code references, not parameter values
+   - ✅ "Delete key 'my-key' from App Configuration store 'my-appconfig'."
+   - ✅ "List all VMs in resource group 'prod-rg'."
+   - ✅ "Get storage account 'my-storage' details."
+   - ❌ "Delete key <key> from App Configuration store <account>." (angle brackets invisible in HTML)
+   - ❌ "List all VMs in resource group `my-rg`." (backticks look like code)
+   - ❌ "Delete key \<key\> from store." (escaped angle brackets are confusing)
 
-6. **Focus on required parameters**: Include ALL required parameters plus only the most relevant optional parameters (1-2 at most). Omit infrastructure parameters like subscription, tenant, auth methods, retry settings, and timeouts unless explicitly required.
+6. **Focus on required parameters**:Include ALL required parameters plus only the most relevant optional parameters (1-2 at most). Omit infrastructure parameters like subscription, tenant, auth methods, retry settings, and timeouts unless explicitly required.
 
 7. **Handle optional resource-identifying parameters**: When a tool has optional parameters that identify a specific resource (like resource name, item ID, etc.), generate examples demonstrating BOTH use cases:
    - **List/Get All**: Examples WITHOUT the optional identifier parameter (e.g., "List all Function Apps in my subscription", "Show me all storage accounts in resource group 'rg-prod'")
@@ -159,6 +167,22 @@ All required params present? YES or FAILED
 - Repeat until ALL prompts pass verification
 
 **Only proceed to output when ALL prompts have ALL required parameters verified as YES**
+
+## COMMON-WORD PARAMETERS — Special Attention Required
+
+Some parameters have names that are common English words (e.g., `account`, `key`, `value`, `name`, `type`, `query`, `filter`, `content`, `label`). When these appear as REQUIRED parameters, the word may naturally appear in your sentence without actually referencing the parameter's VALUE. This is a critical mistake.
+
+**RULE**: For every required parameter whose name is a common English word, you MUST include a single-quoted concrete value that maps to that parameter — not just use the word in passing.
+
+**Examples of the problem:**
+- ❌ "List key-value pairs in the App Configuration store." — The word "store" appears, but no `account` parameter VALUE is provided (e.g., 'my-appconfig')
+- ❌ "Get the value of this key." — "value" and "key" appear as English words, but no parameter VALUES are given
+
+**Correct usage:**
+- ✅ "List key-value pairs in App Configuration account 'my-appconfig'." — `account` parameter has a single-quoted concrete value
+- ✅ "Get the value of key 'MaxRetries' from account 'my-appconfig'." — both `key` and `account` have single-quoted concrete values
+
+**Verification**: After generating each prompt, for every required parameter whose name is a common English word, confirm the prompt contains a single-quoted concrete value for that parameter — not just the word used conversationally.
 
 ## Important Guidelines
 
@@ -334,21 +358,23 @@ Before submitting your output, verify EVERY item:
 1. ✓ Created checklist of all required parameters
 2. ✓ **EVERY SINGLE PROMPT includes ALL required parameters** (non-negotiable)
 3. ✓ Created verification matrix for all prompts
-4. ✓ All parameter values wrapped in single quotes (e.g., 'mystorageacct', 'rg-prod')
-5. ✓ Used realistic Azure resource names following naming conventions:
+4. ✓ All parameter values wrapped in single quotes (e.g., 'my-storage', 'rg-prod', 'my-key')
+5. ✓ NO angle-bracket placeholders (e.g., <account>, <key>) — these are invisible in HTML
+6. ✓ NO backtick-wrapped placeholders (e.g., `account`) — these look like code
+7. ✓ Used realistic Azure resource names following naming conventions:
    - Storage accounts: lowercase (e.g., 'mystorageacct', 'companydata2024')
    - Resource groups: kebab-case (e.g., 'rg-prod', 'webapp-dev')
    - Container registries: lowercase (e.g., 'myregistry', 'acrprod')
    - Web apps: kebab-case (e.g., 'webapp-prod', 'api-staging')
    - Containers/blobs: lowercase (e.g., 'documents', 'mycontainer')
-6. ✓ No curly/smart quotes (only straight quotes: ' ")
-7. ✓ No HTML entities (&quot; &apos; etc.)
-8. ✓ Natural, varied language across prompts
-9. ✓ Concise (10-25 words for simple tools, up to 50 words when many required parameters demand it)
-10. ✓ Prompts follow Microsoft Style Guide principles (clear, active voice, present tense)
-11. ✓ No category labels or prefixes (plain natural language only)
-12. ✓ Every prompt ends with proper punctuation (period for statements, question mark for questions)
-13. ✓ **VERIFICATION MATRIX COMPLETE**: All prompts verified to contain all required parameters
+8. ✓ No curly/smart quotes (only straight quotes: ' ")
+9. ✓ No HTML entities (&quot; &apos; etc.)
+10. ✓ Natural, varied language across prompts
+11. ✓ Concise (10-25 words for simple tools, up to 50 words when many required parameters demand it)
+12. ✓ Prompts follow Microsoft Style Guide principles (clear, active voice, present tense)
+13. ✓ No category labels or prefixes (plain natural language only)
+14. ✓ Every prompt ends with proper punctuation (period for statements, question mark for questions)
+15. ✓ **VERIFICATION MATRIX COMPLETE**: All prompts verified to contain all required parameters
 
 **CRITICAL ASSERTION**: If you cannot verify that EVERY SINGLE PROMPT contains EVERY SINGLE REQUIRED PARAMETER, DO NOT SUBMIT. Regenerate until this is 100% true.
 
@@ -356,5 +382,5 @@ Before submitting your output, verify EVERY item:
 
 Correct format uses only: ' and "
 
-**CRITICAL:** Verify realistic Azure resource names are used, not placeholders like 'myresource' or 'example'. Use specific, realistic names like 'mystorageacct', 'webapp-prod', 'myregistry', 'rg-production'.
+**CRITICAL:** Verify realistic Azure resource names are used in single quotes, not generic values like 'myresource' or 'example'. Use specific, realistic names like 'my-storage', 'webapp-prod', 'my-registry', 'rg-production'.
 

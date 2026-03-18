@@ -129,6 +129,53 @@ public class ToolFamilyPostAssemblyValidatorTests
         }
     }
 
+    [Fact]
+    public async Task ValidateAsync_DescriptivePlaceholders_MatchesParametersByWordOverlap()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), DescriptivePlaceholderContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            // <key_name> matches parameter "key" (word "key" is a token in "key_name")
+            // <resource_group_name> matches parameter "resource group" (words "resource" and "group" are tokens)
+            Assert.DoesNotContain(result.Warnings, warning =>
+                warning.Contains("missing", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("in example prompt", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static string DescriptivePlaceholderContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## Set configuration value
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - Set the key <key_name> in resource group <resource_group_name>
+        | Parameter | Required |
+        | --- | --- |
+        | key | Yes |
+        | resource group | Yes |
+
+        ## Related content
+        - Link
+        """;
+
     private static string AngleBracketPlaceholderContent()
         => """
         ---
