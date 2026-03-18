@@ -18,5 +18,6 @@ Focus on:
 10. **Convert any `--switch-name` references in description text to natural language** (e.g., `--resource-group` → "resource group") unless the switch name is a parameter keyword in the parameter table
 11. **Remove LLM-specific tool-calling guidance** from descriptions — strip "Use this tool when...", "Do not use this tool to...", "equivalent to `az ...`", tool disambiguation hints, and parameter-passing instructions aimed at AI agents. Rewrite to focus on what a human user can accomplish.
 12. **Backtick formatting consistency** — If a term in the tool description also appears in the parameter descriptions table enclosed in single backticks, apply the same backtick formatting to that term in the description text (e.g., if the parameter table uses `resource-group` in backticks, the description must also use `resource-group` with backticks)
+13. **Branding: "tool" not "command"** — Always use "this tool" instead of "this command" when referring to the current MCP tool. These are MCP tools, not CLI commands. Use "tools" (not "commands") for plural references.
 
 Return only the improved markdown content, maintaining the same structure and format.
