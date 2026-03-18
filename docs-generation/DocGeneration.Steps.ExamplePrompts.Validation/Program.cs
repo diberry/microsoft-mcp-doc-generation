@@ -206,6 +206,7 @@ internal static class Program
                 .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
                 .Where(line => line.TrimStart().StartsWith("- ", StringComparison.Ordinal))
                 .Select(line => line.TrimStart()[2..].Trim())
+                .Where(prompt => !string.IsNullOrWhiteSpace(prompt))
                 .ToList();
 
             var requiredParamNames = requiredParams
