@@ -4,17 +4,11 @@ param name string
 @description('Location for the resource.')
 param location string
 
-@description('Name of the GPT-4o-mini model deployment.')
-param gpt4oMiniDeploymentName string
+@description('Name of the GPT-5-mini model deployment.')
+param gpt5MiniDeploymentName string
 
-@description('Name of the GPT-4o model deployment.')
-param gpt4oDeploymentName string
-
-@description('Capacity for GPT-4o-mini deployment (thousands of TPM).')
-param gpt4oMiniCapacity int
-
-@description('Capacity for GPT-4o deployment (thousands of TPM).')
-param gpt4oCapacity int
+@description('Capacity for GPT-5-mini deployment (thousands of TPM).')
+param gpt5MiniCapacity int
 
 // ── Azure OpenAI Account ────────────────────────────────────────────────────────
 
@@ -31,41 +25,20 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
 }
 
-// ── GPT-4o-mini Deployment ──────────────────────────────────────────────────────
+// ── GPT-5-mini Deployment ────────────────────────────────────────────────────────
 
-resource gpt4oMiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: openAi
-  name: gpt4oMiniDeploymentName
-  sku: {
-    name: 'Standard'
-    capacity: gpt4oMiniCapacity
-  }
-  properties: {
-    model: {
-      format: 'OpenAI'
-      name: 'gpt-4o-mini'
-      version: '2024-07-18'
-    }
-  }
-}
-
-// ── GPT-4o Deployment ───────────────────────────────────────────────────────────
-
-resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
-  parent: openAi
-  name: gpt4oDeploymentName
-  dependsOn: [
-    gpt4oMiniDeployment
-  ]
+  name: gpt5MiniDeploymentName
   sku: {
     name: 'GlobalStandard'
-    capacity: gpt4oCapacity
+    capacity: gpt5MiniCapacity
   }
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o'
-      version: '2024-11-20'
+      name: 'gpt-5-mini'
+      version: '2025-08-07'
     }
   }
 }
