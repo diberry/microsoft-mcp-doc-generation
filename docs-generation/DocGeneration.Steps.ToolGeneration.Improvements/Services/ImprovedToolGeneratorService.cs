@@ -48,9 +48,10 @@ public class ImprovedToolGeneratorService
     /// <summary>
     /// Regex that detects leaked placeholder tokens in output content.
     /// Matches the current format (<<<TPL_LABEL_N>>>) and the old format (__TPL_LABEL_N__ or **TPL_LABEL_N**).
+    /// Also detects leaked frozen section tokens (<<<FROZEN_SECTION_N>>>).
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex LeakedTokenRegex = new(
-        @"(<<<TPL_LABEL_\d+>>>|__TPL_LABEL_\d+__|\*\*TPL_LABEL_\d+\*\*)",
+        @"(<<<TPL_LABEL_\d+>>>|__TPL_LABEL_\d+__|\*\*TPL_LABEL_\d+\*\*|<<<FROZEN_SECTION_\d+>>>)",
         System.Text.RegularExpressions.RegexOptions.Compiled);
 
     public ImprovedToolGeneratorService(GenerativeAIClient aiClient, string systemPrompt, string userPromptTemplate)
@@ -120,8 +121,11 @@ public class ImprovedToolGeneratorService
                 var originalContent = await File.ReadAllTextAsync(composedFilePath);
                 var requiredParameters = ExtractRequiredParameters(originalContent);
 
+                // Freeze example prompt sections before any other protection
+                var frozenContent = ProtectExamplePromptSections(originalContent, out var sectionMap);
+
                 // Protect handlebar template labels from AI modification
-                var protectedContent = ProtectTemplateLabels(originalContent, out var labelMap);
+                var protectedContent = ProtectTemplateLabels(frozenContent, out var labelMap);
 
                 // Generate user prompt with the content
                 var userPrompt = string.Format(_userPromptTemplate, protectedContent);
@@ -136,6 +140,9 @@ public class ImprovedToolGeneratorService
                 // Restore protected labels and normalize formatting
                 var restoredContent = RestoreTemplateLabels(improvedContent, labelMap);
                 restoredContent = NormalizeTemplateLabels(restoredContent);
+
+                // Restore frozen example prompt sections
+                restoredContent = RestoreExamplePromptSections(restoredContent, sectionMap);
 
                 // Validate no leaked placeholder tokens remain
                 var leakedTokens = ValidateRestoredContent(restoredContent);
@@ -363,6 +370,47 @@ public class ImprovedToolGeneratorService
 
         var restored = content;
         foreach (var pair in labelMap)
+        {
+            restored = restored.Replace(pair.Key, pair.Value);
+        }
+
+        return restored;
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex ExamplePromptSectionRegex = new(
+        @"^([ \t]*Example prompts(?:\s+include)?:\s*\r?\n(?:[ \t]*- .+\r?\n?)+)",
+        System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    internal static string ProtectExamplePromptSections(string content, out Dictionary<string, string> sectionMap)
+    {
+        var map = new Dictionary<string, string>();
+        if (string.IsNullOrEmpty(content))
+        {
+            sectionMap = map;
+            return content;
+        }
+
+        var index = 0;
+        var protectedContent = ExamplePromptSectionRegex.Replace(content, match =>
+        {
+            var token = $"<<<FROZEN_SECTION_{index++}>>>";
+            map[token] = match.Value;
+            return token;
+        });
+
+        sectionMap = map;
+        return protectedContent;
+    }
+
+    internal static string RestoreExamplePromptSections(string content, Dictionary<string, string> sectionMap)
+    {
+        if (string.IsNullOrEmpty(content) || sectionMap.Count == 0)
+        {
+            return content;
+        }
+
+        var restored = content;
+        foreach (var pair in sectionMap)
         {
             restored = restored.Replace(pair.Key, pair.Value);
         }

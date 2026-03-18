@@ -65,6 +65,7 @@ public class PromptValidator
     /// </summary>
     /// <param name="toolFileContent">Complete tool file content from generated/tools/*.complete.md</param>
     /// <returns>Validation result from LLM</returns>
+    [Obsolete("Use CodeBasedPromptValidator instead. Will be removed in a future release.")]
     public async Task<ValidationResult?> ValidateWithLLMAsync(string toolFileContent)
     {
         if (!IsInitialized())

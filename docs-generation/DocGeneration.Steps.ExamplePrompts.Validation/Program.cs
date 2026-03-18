@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text;
+using DocGeneration.Steps.ExamplePrompts.Validation;
 using ExamplePromptValidator;
 using Shared;
 
@@ -15,6 +16,7 @@ internal static class Program
         var toolsDir = string.Empty;
         var examplePromptsDir = string.Empty;
         var filterToolCommand = string.Empty;
+        var useLlmValidation = false;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -42,6 +44,12 @@ internal static class Program
                 filterToolCommand = args[++i];
                 continue;
             }
+
+            if (arg.Equals("--use-llm-validation", StringComparison.OrdinalIgnoreCase))
+            {
+                useLlmValidation = true;
+                continue;
+            }
         }
 
         if (string.IsNullOrWhiteSpace(generatedDir))
@@ -63,6 +71,7 @@ internal static class Program
         Console.WriteLine("========================");
         Console.WriteLine($"Generated directory: {generatedDir}");
         Console.WriteLine($"Example prompts directory: {examplePromptsDir}");
+        Console.WriteLine($"Validation mode: {(useLlmValidation ? "LLM" : "Code-based")}");
         if (!string.IsNullOrWhiteSpace(filterToolCommand))
         {
             Console.WriteLine($"Filtering to tool: {filterToolCommand}");
@@ -101,6 +110,155 @@ internal static class Program
             return 1;
         }
 
+        if (useLlmValidation)
+        {
+            return await RunLlmValidationAsync(tools, generatedDir, examplePromptsDir, filterToolCommand);
+        }
+
+        return await RunCodeBasedValidationAsync(tools, generatedDir, examplePromptsDir);
+    }
+
+    private static async Task<int> RunCodeBasedValidationAsync(
+        List<System.Text.Json.JsonElement> tools,
+        string generatedDir,
+        string examplePromptsDir)
+    {
+        var codeValidator = new CodeBasedPromptValidator();
+
+        var totalTools = 0;
+        var validated = 0;
+        var valid = 0;
+        var invalid = 0;
+        var skipped = 0;
+        var invalidTools = new List<string>();
+
+        var validationDir = Path.Combine(generatedDir, "example-prompts-validation");
+        Directory.CreateDirectory(validationDir);
+
+        var nameContext = await FileNameContext.CreateAsync();
+
+        foreach (var toolElement in tools)
+        {
+            var command = toolElement.GetProperty("command").GetString();
+            if (string.IsNullOrWhiteSpace(command))
+                continue;
+
+            totalTools++;
+
+            var baseName = ToolFileNameBuilder.BuildBaseFileName(command, nameContext);
+            var examplePromptFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext);
+            var examplePromptFile = Path.Combine(examplePromptsDir, examplePromptFileName);
+
+            if (!File.Exists(examplePromptFile))
+            {
+                Console.WriteLine($"⚠️  {command} (example prompts file not found)");
+                skipped++;
+                await WriteValidationFileAsync(validationDir, baseName, new StringBuilder()
+                    .AppendLine($"# Example Prompt Validation: {command}")
+                    .AppendLine()
+                    .AppendLine("**Status:** Skipped (example prompts file not found)")
+                    .AppendLine($"**Expected File:** {examplePromptFile}")
+                    .ToString());
+                continue;
+            }
+
+            var options = new List<System.Text.Json.JsonElement>();
+            if (toolElement.TryGetProperty("option", out var optionElement) && optionElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                options = optionElement.EnumerateArray().ToList();
+            }
+
+            var requiredParams = options
+                .Where(o => o.TryGetProperty("required", out var req) && req.GetBoolean())
+                .ToList();
+
+            if (options.Count == 0)
+            {
+                validated++;
+                valid++;
+                Console.WriteLine($"   ⏭️  {command} - No parameters to validate");
+                await WriteValidationFileAsync(validationDir, baseName, new StringBuilder()
+                    .AppendLine($"# Example Prompt Validation: {command}")
+                    .AppendLine()
+                    .AppendLine("**Status:** Skipped (zero parameters)")
+                    .AppendLine($"**Example Prompts File:** {examplePromptFile}")
+                    .ToString());
+                continue;
+            }
+
+            if (requiredParams.Count == 0)
+            {
+                validated++;
+                valid++;
+                Console.WriteLine($"   ⏭️  {command} - No required parameters to validate");
+                await WriteValidationFileAsync(validationDir, baseName, new StringBuilder()
+                    .AppendLine($"# Example Prompt Validation: {command}")
+                    .AppendLine()
+                    .AppendLine("**Status:** Skipped (zero required parameters)")
+                    .AppendLine($"**Example Prompts File:** {examplePromptFile}")
+                    .AppendLine($"**Optional Parameters:** {options.Count}")
+                    .ToString());
+                continue;
+            }
+
+            var examplePromptsContent = await File.ReadAllTextAsync(examplePromptFile);
+            var prompts = examplePromptsContent
+                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => line.TrimStart().StartsWith("- ", StringComparison.Ordinal))
+                .Select(line => line.TrimStart()[2..].Trim())
+                .ToList();
+
+            var requiredParamNames = requiredParams
+                .Select(o => o.TryGetProperty("name", out var nameElem) ? nameElem.GetString() ?? string.Empty : string.Empty)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToList();
+
+            var result = codeValidator.ValidatePrompts(prompts, requiredParamNames);
+            validated++;
+
+            var reportBuilder = new StringBuilder()
+                .AppendLine($"# Example Prompt Validation: {command}")
+                .AppendLine()
+                .AppendLine($"**Example Prompts File:** {examplePromptFile}")
+                .AppendLine($"**Required Parameters:** {string.Join(", ", requiredParamNames)}")
+                .AppendLine($"**Total Prompts:** {result.TotalPrompts}")
+                .AppendLine();
+
+            if (result.IsValid)
+            {
+                valid++;
+                Console.WriteLine($"   ✅ {command}");
+                reportBuilder.AppendLine("**Status:** Valid");
+                reportBuilder.AppendLine("**Summary:** All required parameters covered by example prompts");
+            }
+            else
+            {
+                invalid++;
+                invalidTools.Add(command);
+                var uncoveredParams = result.Details
+                    .Where(d => !d.Covered && !d.PlaceholderDetected)
+                    .Select(d => d.ParameterName)
+                    .ToList();
+                Console.WriteLine($"   ❌ {command} (missing: {string.Join(", ", uncoveredParams)})");
+                reportBuilder.AppendLine("**Status:** Invalid");
+                reportBuilder.AppendLine($"**Summary:** Required parameters missing from example prompts: {string.Join(", ", uncoveredParams)}");
+                reportBuilder.AppendLine($"- Missing params: {string.Join(", ", uncoveredParams)}");
+            }
+
+            await WriteValidationFileAsync(validationDir, baseName, reportBuilder.ToString());
+            Console.Out.Flush();
+        }
+
+        WriteValidationSummary(totalTools, validated, valid, invalid, skipped, invalidTools);
+        return invalid > 0 || validated == 0 ? 1 : 0;
+    }
+
+    private static async Task<int> RunLlmValidationAsync(
+        List<System.Text.Json.JsonElement> tools,
+        string generatedDir,
+        string examplePromptsDir,
+        string filterToolCommand)
+    {
         var validator = new PromptValidator();
         if (!validator.IsInitialized())
         {
@@ -118,14 +276,7 @@ internal static class Program
         var validationDir = Path.Combine(generatedDir, "example-prompts-validation");
         Directory.CreateDirectory(validationDir);
 
-        // Load shared data files for deterministic filename generation (matches ExamplePromptGeneratorStandalone)
         var nameContext = await FileNameContext.CreateAsync();
-
-        async Task WriteValidationFileAsync(string baseName, string content)
-        {
-            var validationPath = Path.Combine(validationDir, $"{baseName}-validation.md");
-            await File.WriteAllTextAsync(validationPath, content);
-        }
 
         foreach (var toolElement in tools)
         {
@@ -135,10 +286,7 @@ internal static class Program
 
             totalTools++;
             
-            // Debug: Check if we're processing this command multiple times
             var toolId = toolElement.TryGetProperty("id", out var idElem) ? idElem.GetString() : "no-id";
-            
-            // Use shared filename builder to match ExamplePromptGeneratorStandalone naming
             var baseName = ToolFileNameBuilder.BuildBaseFileName(command, nameContext);
             var examplePromptFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext);
             var examplePromptFile = Path.Combine(examplePromptsDir, examplePromptFileName);
@@ -147,21 +295,18 @@ internal static class Program
             {
                 Console.WriteLine($"⚠️  {command} (example prompts file not found)");
                 skipped++;
-                var missingFileReport = new StringBuilder()
+                await WriteValidationFileAsync(validationDir, baseName, new StringBuilder()
                     .AppendLine($"# Example Prompt Validation: {command}")
                     .AppendLine()
-                    .AppendLine($"**Status:** Skipped (example prompts file not found)")
+                    .AppendLine("**Status:** Skipped (example prompts file not found)")
                     .AppendLine($"**Expected File:** {examplePromptFile}")
-                    .ToString();
-                await WriteValidationFileAsync(baseName, missingFileReport);
+                    .ToString());
                 continue;
             }
 
-            // Build tool context for validation
             var toolName = toolElement.GetProperty("name").GetString() ?? "unknown";
             var toolDescription = toolElement.GetProperty("description").GetString() ?? "";
             
-            // Handle optional parameters
             var options = new List<System.Text.Json.JsonElement>();
             if (toolElement.TryGetProperty("option", out var optionElement) && optionElement.ValueKind == System.Text.Json.JsonValueKind.Array)
             {
@@ -170,11 +315,9 @@ internal static class Program
             
             var requiredParams = options.Where(o => o.TryGetProperty("required", out var req) && req.GetBoolean()).ToList();
             
-            // Show file being checked
             Console.WriteLine($"\n📄 {command} (ID: {toolId?.Substring(0, 8)})");
             Console.WriteLine($"   File: {examplePromptFile}");
             
-            // Handle tools with no parameters
             if (options.Count == 0)
             {
                 Console.WriteLine($"   0️⃣  Tool has zero parameters");
@@ -182,17 +325,15 @@ internal static class Program
                 valid++;
                 Console.WriteLine($"   ⏭️  SKIPPED - No parameters to validate");
                 Console.Out.Flush();
-                var zeroParamsReport = new StringBuilder()
+                await WriteValidationFileAsync(validationDir, baseName, new StringBuilder()
                     .AppendLine($"# Example Prompt Validation: {command}")
                     .AppendLine()
-                    .AppendLine($"**Status:** Skipped (zero parameters)")
+                    .AppendLine("**Status:** Skipped (zero parameters)")
                     .AppendLine($"**Example Prompts File:** {examplePromptFile}")
-                    .ToString();
-                await WriteValidationFileAsync(baseName, zeroParamsReport);
+                    .ToString());
                 continue;
             }
             
-            // Handle tools with no required parameters
             if (requiredParams.Count == 0)
             {
                 Console.WriteLine($"   0️⃣  Tool has zero required parameters ({options.Count} optional)");
@@ -200,21 +341,18 @@ internal static class Program
                 valid++;
                 Console.WriteLine($"   ⏭️  SKIPPED - No required parameters to validate");
                 Console.Out.Flush();
-                var zeroRequiredReport = new StringBuilder()
+                await WriteValidationFileAsync(validationDir, baseName, new StringBuilder()
                     .AppendLine($"# Example Prompt Validation: {command}")
                     .AppendLine()
-                    .AppendLine($"**Status:** Skipped (zero required parameters)")
+                    .AppendLine("**Status:** Skipped (zero required parameters)")
                     .AppendLine($"**Example Prompts File:** {examplePromptFile}")
                     .AppendLine($"**Optional Parameters:** {options.Count}")
-                    .ToString();
-                await WriteValidationFileAsync(baseName, zeroRequiredReport);
+                    .ToString());
                 continue;
             }
 
-            // Read example prompts file
             var examplePromptsContent = await File.ReadAllTextAsync(examplePromptFile);
             
-            // Build parameter list
             var parameterLines = options.Select(o => {
                 var name = o.TryGetProperty("name", out var nameElem) ? nameElem.GetString() : "unknown";
                 var required = o.TryGetProperty("required", out var reqElem) && reqElem.GetBoolean();
@@ -222,7 +360,6 @@ internal static class Program
                 return $"- `{name}` ({(required ? "Required" : "Optional")}): {desc}";
             }).ToList();
             
-            // Build tool file content for validation (simplified format with just what we need)
             var toolContent = $"## Tool: {toolName}\n\n" +
                 $"**Command:** {command}\n\n" +
                 $"**Description:** {toolDescription}\n\n" +
@@ -231,26 +368,25 @@ internal static class Program
                 $"### Example Prompts\n\n" +
                 examplePromptsContent;
 
-            // Validate with LLM
+#pragma warning disable CS0618 // Type or member is obsolete
             var result = await validator.ValidateWithLLMAsync(toolContent);
+#pragma warning restore CS0618
 
             if (result == null)
             {
                 Console.WriteLine($"⚠️  {command} (validation failed)");
                 skipped++;
-                var failedReport = new StringBuilder()
+                await WriteValidationFileAsync(validationDir, baseName, new StringBuilder()
                     .AppendLine($"# Example Prompt Validation: {command}")
                     .AppendLine()
-                    .AppendLine($"**Status:** Failed (LLM validation returned no result)")
+                    .AppendLine("**Status:** Failed (LLM validation returned no result)")
                     .AppendLine($"**Example Prompts File:** {examplePromptFile}")
-                    .ToString();
-                await WriteValidationFileAsync(baseName, failedReport);
+                    .ToString());
                 continue;
             }
 
             validated++;
             
-            // Show required parameters
             if (result.RequiredParameters != null && result.RequiredParameters.Count > 0)
             {
                 Console.WriteLine($"   Required: {string.Join(", ", result.RequiredParameters)}");
@@ -275,7 +411,7 @@ internal static class Program
                 {
                     reportBuilder.AppendLine($"**Summary:** {result.Summary}");
                 }
-                await WriteValidationFileAsync(baseName, reportBuilder.ToString());
+                await WriteValidationFileAsync(validationDir, baseName, reportBuilder.ToString());
                 Console.Out.Flush();
             }
             else
@@ -285,14 +421,12 @@ internal static class Program
                 Console.WriteLine($"   ❌ INVALID - {result.InvalidPrompts}/{result.TotalPrompts} prompts have issues");
                 reportBuilder.AppendLine("**Status:** Invalid");
                 
-                // Show summary first
                 if (!string.IsNullOrEmpty(result.Summary))
                 {
                     Console.WriteLine($"   📝 {result.Summary}");
                     reportBuilder.AppendLine($"**Summary:** {result.Summary}");
                 }
                 
-                // Show details about invalid prompts
                 if (result.Validation != null && result.Validation.Any())
                 {
                     var invalidCount = 0;
@@ -301,7 +435,7 @@ internal static class Program
                         if (!validation.IsValid)
                         {
                             invalidCount++;
-                            if (invalidCount <= 3) // Show first 3 invalid prompts
+                            if (invalidCount <= 3)
                             {
                                 var prompt = validation.Prompt?.Length > 60 ? validation.Prompt.Substring(0, 60) + "..." : validation.Prompt;
                                 Console.WriteLine($"\n   ❌ Prompt {invalidCount}: {prompt}");
@@ -335,7 +469,6 @@ internal static class Program
                     }
                 }
                 
-                // Show recommendations
                 if (result.Recommendations != null && result.Recommendations.Count > 0)
                 {
                     Console.WriteLine($"   💡 Recommendations:");
@@ -351,11 +484,23 @@ internal static class Program
                     }
                 }
                 
-                await WriteValidationFileAsync(baseName, reportBuilder.ToString());
+                await WriteValidationFileAsync(validationDir, baseName, reportBuilder.ToString());
                 Console.Out.Flush();
             }
         }
 
+        WriteValidationSummary(totalTools, validated, valid, invalid, skipped, invalidTools);
+        return invalid > 0 || validated == 0 ? 1 : 0;
+    }
+
+    private static async Task WriteValidationFileAsync(string validationDir, string baseName, string content)
+    {
+        var validationPath = Path.Combine(validationDir, $"{baseName}-validation.md");
+        await File.WriteAllTextAsync(validationPath, content);
+    }
+
+    private static void WriteValidationSummary(int totalTools, int validated, int valid, int invalid, int skipped, List<string> invalidTools)
+    {
         Console.WriteLine();
         Console.WriteLine("Validation Summary");
         Console.WriteLine("------------------");
@@ -374,7 +519,5 @@ internal static class Program
                 Console.WriteLine($"  - {tool}");
             }
         }
-
-        return invalid > 0 || validated == 0 ? 1 : 0;
     }
 }
