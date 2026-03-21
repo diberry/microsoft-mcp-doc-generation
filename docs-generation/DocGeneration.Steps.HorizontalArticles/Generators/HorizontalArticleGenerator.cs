@@ -426,11 +426,12 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         await File.WriteAllTextAsync(promptFilePath, promptContent);
 
         // Calculate token limit based on tool count
-        // Base: 2000 tokens + 600 tokens per tool (for tool descriptions, scenarios, etc.)
-        // Min: 4000, Max: 16000
+        // Base: 4000 tokens for article structure (sections, intro, prerequisites, RBAC, best practices)
+        // Plus: 600 tokens per tool (for tool descriptions, scenarios, etc.)
+        // Min: 8000 (even small namespaces need substantial output), Max: 24000
         var toolCount = staticData.Tools.Count;
-        var calculatedTokens = 2000 + (toolCount * 600);
-        var maxTokens = Math.Clamp(calculatedTokens, 4000, 16000);
+        var calculatedTokens = 4000 + (toolCount * 600);
+        var maxTokens = Math.Clamp(calculatedTokens, 8000, 24000);
 
         // Call AI client
         var response = await _aiClient.GetChatCompletionAsync(
