@@ -212,6 +212,7 @@ internal static class Program
             var requiredParamNames = requiredParams
                 .Select(o => o.TryGetProperty("name", out var nameElem) ? nameElem.GetString() ?? string.Empty : string.Empty)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name.TrimStart('-').Trim()) // Strip CLI switch prefix (--name → name)
                 .ToList();
 
             var result = codeValidator.ValidatePrompts(prompts, requiredParamNames);
