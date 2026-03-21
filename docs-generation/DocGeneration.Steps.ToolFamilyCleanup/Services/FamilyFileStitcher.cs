@@ -41,6 +41,9 @@ public class FamilyFileStitcher
         var markdown = sb.ToString().TrimEnd();
         markdown = PostProcessor.ExpandMcpAcronym(markdown);
 
+        // 5. Post-processing: inject required frontmatter fields (#155)
+        markdown = FrontmatterEnricher.Enrich(markdown);
+
         return markdown;
     }
 
