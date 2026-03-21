@@ -66,6 +66,26 @@ public static class ParameterCoverageChecker
             variantList.Add(abbr.Groups[1].Value.ToLowerInvariant());
         }
 
+        // Add common abbreviation expansions
+        var abbreviationExpansions = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "param", new[] { "parameter", "parameters" } },
+            { "config", new[] { "configuration", "configurations" } },
+            { "env", new[] { "environment", "environments" } },
+            { "msg", new[] { "message", "messages" } },
+        };
+        if (abbreviationExpansions.TryGetValue(slug, out var expansions))
+        {
+            variantList.AddRange(expansions);
+        }
+
+        // Add plural and past-tense morphological forms for single-word slugs
+        if (words.Length == 1)
+        {
+            variantList.Add(slug + "s");
+            variantList.Add(slug + "d");
+        }
+
         var variants = variantList
             .Where(variant => !string.IsNullOrWhiteSpace(variant))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -130,6 +150,13 @@ public static class ParameterCoverageChecker
                     {
                         foundVariant = true;
                         matchIndex = m.Index + m.Length;
+                        // Extend past common morphological suffixes if present
+                        var suffixTail = lowerPrompt[matchIndex..];
+                        var suffixMatch = Regex.Match(suffixTail, @"^(ing|ed|er|d|s)\b");
+                        if (suffixMatch.Success)
+                        {
+                            matchIndex += suffixMatch.Length;
+                        }
                         break;
                     }
                 }
@@ -184,6 +211,24 @@ public static class ParameterCoverageChecker
                 {
                     covered = true;
                     break;
+                }
+            }
+
+            // Fallback for single-word resource identifier params with low param count
+            if (!covered && words.Length == 1 && totalRequiredParameters <= 2 && placeholders.Length == 0)
+            {
+                var nameLikeParams = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "name", "key", "id", "app", "param", "tag", "role", "type", "path",
+                };
+                if (nameLikeParams.Contains(slug))
+                {
+                    if (Regex.IsMatch(trimmedPrompt, "'[^'<>{}\\[\\]]+'")
+                        || Regex.IsMatch(trimmedPrompt, "`[^`<>{}\\[\\]]+`"))
+                    {
+                        covered = true;
+                        break;
+                    }
                 }
             }
         }

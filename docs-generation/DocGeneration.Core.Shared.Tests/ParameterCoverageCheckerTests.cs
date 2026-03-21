@@ -215,4 +215,147 @@ public class ParameterCoverageCheckerTests
         var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "items", 2);
         Assert.True(result.Covered, "Real JSON array should be covered");
     }
+
+    // ── Issue #161: Array parameter patterns ─────────────────────────
+    // AI-generated prompts for array params don't always include literal
+    // JSON array syntax. The checker must handle natural language references.
+
+    [Fact]
+    public void ArrayParam_NaturalLanguageReference_WithConcreteValue()
+    {
+        // AI prompt: describes the messages but uses natural language, not JSON array
+        var prompts = new[] { "Create a chat completion with the user message 'What is the weather today?'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "message-array", 4);
+        Assert.True(result.Covered,
+            "Array param 'message-array' should match when base word 'message' appears with a concrete quoted value");
+    }
+
+    [Fact]
+    public void ArrayParam_PluralBaseWord_WithConcreteValue()
+    {
+        // AI uses plural form "messages" instead of exact param name
+        var prompts = new[] { "Send messages 'Hello, how can I help?' to the chat completion endpoint" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "message-array", 4);
+        Assert.True(result.Covered,
+            "Array param should match when plural base word 'messages' appears with concrete value");
+    }
+
+    [Fact]
+    public void ArrayParam_JsonArraySyntax_WithObjects()
+    {
+        // Best case: AI actually includes JSON array syntax
+        var prompts = new[] { "Create a chat completion with message array [{'role': 'user', 'content': 'hello'}]" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "message-array", 4);
+        Assert.True(result.Covered,
+            "Array param with literal JSON array syntax should definitely be covered");
+    }
+
+    [Fact]
+    public void ArrayParam_NoMention_ReturnsFalse()
+    {
+        // Negative: prompt doesn't mention the array param at all
+        var prompts = new[] { "Create a chat completion using deployment 'gpt-4' in resource group 'rg-prod'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "message-array", 4);
+        Assert.False(result.Covered,
+            "Array param should NOT be covered when neither 'message' nor 'array' appears");
+    }
+
+    // ── Issue #161: Single-word parameter patterns ───────────────────
+    // Params like "name", "key", "app" are common English words that appear
+    // in many contexts. The checker must handle them robustly.
+
+    [Fact]
+    public void SingleWordParam_Name_InUpdateContext()
+    {
+        // AI prompt describes updating a named resource — "name" is implicit
+        var prompts = new[] { "Update the file share 'analytics-share' to increase quota to 200 GB" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "name", 2);
+        Assert.True(result.Covered,
+            "Single-word param 'name' should be covered when a concrete quoted resource name is the first/primary arg");
+    }
+
+    [Fact]
+    public void SingleWordParam_Name_WithExplicitNamed()
+    {
+        // AI prompt uses "named" keyword with concrete value
+        var prompts = new[] { "Update the file share named 'data-share' in resource group 'rg-storage'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "name", 2);
+        Assert.True(result.Covered,
+            "Single-word param 'name' should match 'named' + concrete value");
+    }
+
+    [Fact]
+    public void SingleWordParam_Name_WithCalledKeyword()
+    {
+        // AI prompt uses "called" instead of "named"
+        var prompts = new[] { "Delete the file share called 'temp-share'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "name", 1);
+        Assert.True(result.Covered,
+            "Single-word param 'name' should match when any concrete quoted resource identifier exists");
+    }
+
+    [Fact]
+    public void SingleWordParam_Name_NoConcreteValue_ReturnsFalse()
+    {
+        // Negative: prompt uses "name" generically without concrete value
+        var prompts = new[] { "Update the file share quota" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "name", 2);
+        Assert.False(result.Covered,
+            "Single-word param 'name' should NOT be covered without any concrete value");
+    }
+
+    [Fact]
+    public void SingleWordParam_Key_WithConcreteValue()
+    {
+        // Another single-word param: "key"
+        var prompts = new[] { "Get the secret key named 'api-key-prod' from the vault" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "key", 2);
+        Assert.True(result.Covered,
+            "Single-word param 'key' should match with concrete value");
+    }
+
+    [Fact]
+    public void SingleWordParam_Param_WithConcreteValue()
+    {
+        // "param" — the postgres server-param-get case
+        var prompts = new[] { "Get the server parameter 'max_connections' from the PostgreSQL server 'prod-pg'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "param", 2);
+        Assert.True(result.Covered,
+            "Single-word param 'param' should match 'parameter' + concrete value");
+    }
+
+    [Fact]
+    public void SingleWordParam_Param_PluralForm()
+    {
+        // AI uses "parameters" (plural) instead of "param"
+        var prompts = new[] { "List all server parameters for PostgreSQL server 'prod-pg'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "param", 2);
+        Assert.True(result.Covered,
+            "Single-word param 'param' should match its expanded form 'parameters'");
+    }
+
+    // ── Issue #161: Combined edge cases ──────────────────────────────
+
+    [Fact]
+    public void SingleWordParam_AsOnlyRequiredParam_WithQuotedValue()
+    {
+        // When a tool has only 1 required param and a quoted value exists anywhere
+        var prompts = new[] { "Delete 'my-resource'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "name", 1);
+        Assert.True(result.Covered,
+            "Single required param 'name' with ANY quoted value in a 1-param tool should be covered");
+    }
+
+    [Fact]
+    public void MultiplePrompts_OneHasCoverage_ReturnsCovered()
+    {
+        // At least one prompt in the set has concrete coverage
+        var prompts = new[] {
+            "Update the file share quota",  // no concrete name
+            "Update file share 'data-share' to 500 GB"  // has concrete name
+        };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "name", 2);
+        Assert.True(result.Covered,
+            "Should be covered if ANY prompt in the set has the parameter with concrete value");
+    }
 }
