@@ -1,6 +1,8 @@
+using System.Text.Json;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
+using Shared;
 
 namespace PipelineRunner.Steps;
 
@@ -156,6 +158,9 @@ public sealed class BootstrapStep : StepDefinition
             context.CliOutput = await context.CliMetadataLoader.LoadCliOutputAsync(context.OutputPath, cancellationToken);
             context.CliVersion = await context.CliMetadataLoader.LoadCliVersionAsync(context.OutputPath, cancellationToken);
             await context.CliMetadataLoader.LoadNamespacesAsync(context.OutputPath, cancellationToken);
+
+            // Generate deterministic H2 headings from CLI metadata (once, for all namespaces)
+            await GenerateH2HeadingsAsync(context);
 
             if (!string.IsNullOrWhiteSpace(context.Request.Namespace))
             {
@@ -377,5 +382,47 @@ public sealed class BootstrapStep : StepDefinition
         var duration = TimeSpan.FromTicks(processResults.Sum(result => result.Duration.Ticks));
 
         return new StepResult(success, resolvedWarnings, duration, outputs, commands, Array.Empty<ValidatorResult>(), Array.Empty<ArtifactFailure>(), exitCodeOverride);
+    }
+
+    /// <summary>
+    /// Generates deterministic H2 headings from CLI metadata and writes h2-headings.json
+    /// per namespace. Runs once in bootstrap so all downstream steps can consume the file.
+    /// </summary>
+    private static async Task GenerateH2HeadingsAsync(PipelineContext context)
+    {
+        if (context.CliOutput?.Tools == null || context.CliOutput.Tools.Count == 0) return;
+
+        var tools = context.CliOutput.Tools;
+
+        // Group tools by namespace (first segment of command)
+        var byNamespace = tools
+            .Where(t => !string.IsNullOrWhiteSpace(t.Command))
+            .GroupBy(t => t.Command.Split(' ')[0].ToLowerInvariant());
+
+        var totalHeadings = 0;
+        foreach (var nsGroup in byNamespace)
+        {
+            var nsName = nsGroup.Key;
+            var toolData = nsGroup
+                .Select(t => (command: t.Command, description: t.Description))
+                .ToList();
+
+            var headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData!);
+
+            // Write to the appropriate output directory
+            var nsOutputDir = string.IsNullOrWhiteSpace(context.Request.Namespace)
+                ? context.OutputPath  // all-namespace run → ./generated/
+                : context.OutputPath; // single-namespace run → ./generated-{ns}/
+
+            var h2Dir = Path.Combine(nsOutputDir, "h2-headings");
+            Directory.CreateDirectory(h2Dir);
+
+            var h2Path = Path.Combine(h2Dir, $"{nsName}.json");
+            var json = JsonSerializer.Serialize(headings, new JsonSerializerOptions { WriteIndented = true });
+            await File.WriteAllTextAsync(h2Path, json);
+            totalHeadings += headings.Count;
+        }
+
+        context.Reports.Info($"Generated {totalHeadings} deterministic H2 headings for {byNamespace.Count()} namespace(s).");
     }
 }

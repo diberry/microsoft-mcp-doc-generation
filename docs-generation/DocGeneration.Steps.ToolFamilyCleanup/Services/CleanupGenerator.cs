@@ -366,12 +366,10 @@ public class CleanupGenerator
         // Initialize generators
         var metadataGenerator = new FamilyMetadataGenerator(_options);
         var relatedContentGenerator = new RelatedContentGenerator(_options);
-        var h2HeadingGenerator = new H2HeadingGenerator(_options);
         var stitcher = new FamilyFileStitcher();
 
         await metadataGenerator.LoadPromptsAsync();
         await relatedContentGenerator.LoadPromptsAsync();
-        await h2HeadingGenerator.LoadPromptsAsync();
         Console.WriteLine("✓ Generators initialized");
         Console.WriteLine();
 
@@ -411,16 +409,48 @@ public class CleanupGenerator
                     RelatedContent = string.Empty // Will be populated
                 };
 
-                // Phase 1.5: Generate improved H2 headings for each tool
-                Console.Write($"{progress}   Phase 1.5: Generating H2 headings... ");
-                var h2TokensUsed = 0;
+                // Phase 1.5: Apply H2 headings from preflight-generated h2-headings.json
+                Console.Write($"{progress}   Phase 1.5: Applying H2 headings... ");
+                var h2HeadingsPath = Path.GetFullPath(Path.Combine("../generated", "h2-headings", $"{familyName}.json"));
+                Dictionary<string, string> headings;
+
+                if (File.Exists(h2HeadingsPath))
+                {
+                    var h2Json = await File.ReadAllTextAsync(h2HeadingsPath);
+                    headings = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(h2Json)
+                        ?? new Dictionary<string, string>();
+                    Console.WriteLine($"✓ (from preflight, {headings.Count} headings)");
+                }
+                else
+                {
+                    // Fallback: generate deterministically if preflight file missing
+                    var toolData = familyContent.Tools
+                        .Select(t => (command: t.Command ?? "", description: t.Description))
+                        .ToList();
+                    headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData);
+                    Console.WriteLine($"✓ (deterministic fallback, {headings.Count} headings)");
+                }
+
                 foreach (var tool in familyContent.Tools)
                 {
-                    var improvedHeading = await h2HeadingGenerator.GenerateHeadingAsync(tool, displayName);
-                    tool.Content = ReplaceH2Heading(tool.Content, improvedHeading);
-                    h2TokensUsed += EstimateTokens(improvedHeading);
+                    // Try command first, then derive from filename if @mcpcli comment was stripped by Step 3
+                    var command = tool.Command;
+                    if (string.IsNullOrWhiteSpace(command) && !string.IsNullOrWhiteSpace(tool.FileName))
+                    {
+                        // azure-fileshares-fileshare-create.md → fileshares fileshare create
+                        command = tool.FileName
+                            .Replace(".md", "")
+                            .Replace("azure-", "")
+                            .Replace("-", " ");
+                    }
+
+                    var heading = headings.TryGetValue(command ?? "", out var h)
+                        ? h
+                        : DeterministicH2HeadingGenerator.GenerateHeading(command ?? "", tool.Description);
+                    tool.Content = ReplaceH2Heading(tool.Content, heading);
+                    // Update ToolName so Phase 2 metadata uses the deterministic heading
+                    tool.ToolName = heading;
                 }
-                Console.WriteLine($"✓ ({h2TokensUsed} tokens)");
 
                 // Phase 2: Generate metadata
                 Console.Write($"{progress}   Phase 2: Generating metadata... ");
@@ -451,7 +481,7 @@ public class CleanupGenerator
                 await stitcher.StitchAndSaveAsync(familyContent, outputPath);
                 Console.WriteLine($"✓ Saved to {familyName}.md");
 
-                totalTokensUsed += h2TokensUsed + EstimateTokens(metadata) + EstimateTokens(relatedContent);
+                totalTokensUsed += EstimateTokens(metadata) + EstimateTokens(relatedContent);
                 successCount++;
                 Console.WriteLine();
             }
