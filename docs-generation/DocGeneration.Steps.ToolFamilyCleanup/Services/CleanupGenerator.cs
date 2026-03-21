@@ -366,12 +366,10 @@ public class CleanupGenerator
         // Initialize generators
         var metadataGenerator = new FamilyMetadataGenerator(_options);
         var relatedContentGenerator = new RelatedContentGenerator(_options);
-        var h2HeadingGenerator = new H2HeadingGenerator(_options);
         var stitcher = new FamilyFileStitcher();
 
         await metadataGenerator.LoadPromptsAsync();
         await relatedContentGenerator.LoadPromptsAsync();
-        await h2HeadingGenerator.LoadPromptsAsync();
         Console.WriteLine("✓ Generators initialized");
         Console.WriteLine();
 
@@ -411,16 +409,48 @@ public class CleanupGenerator
                     RelatedContent = string.Empty // Will be populated
                 };
 
-                // Phase 1.5: Generate improved H2 headings for each tool
-                Console.Write($"{progress}   Phase 1.5: Generating H2 headings... ");
-                var h2TokensUsed = 0;
+                // Phase 1.5: Apply H2 headings from preflight-generated h2-headings.json
+                Console.Write($"{progress}   Phase 1.5: Applying H2 headings... ");
+                var h2HeadingsPath = Path.GetFullPath(Path.Combine("../generated", "h2-headings", $"{familyName}.json"));
+                Dictionary<string, string> headings;
+
+                if (File.Exists(h2HeadingsPath))
+                {
+                    var h2Json = await File.ReadAllTextAsync(h2HeadingsPath);
+                    headings = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(h2Json)
+                        ?? new Dictionary<string, string>();
+                    Console.WriteLine($"✓ (from preflight, {headings.Count} headings)");
+                }
+                else
+                {
+                    // Fallback: generate deterministically if preflight file missing
+                    var toolData = familyContent.Tools
+                        .Select(t => (command: t.Command ?? "", description: t.Description))
+                        .ToList();
+                    headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData);
+                    Console.WriteLine($"✓ (deterministic fallback, {headings.Count} headings)");
+                }
+
                 foreach (var tool in familyContent.Tools)
                 {
-                    var improvedHeading = await h2HeadingGenerator.GenerateHeadingAsync(tool, displayName);
-                    tool.Content = ReplaceH2Heading(tool.Content, improvedHeading);
-                    h2TokensUsed += EstimateTokens(improvedHeading);
+                    // Try command first, then derive from filename if @mcpcli comment was stripped by Step 3
+                    var command = tool.Command;
+                    if (string.IsNullOrWhiteSpace(command) && !string.IsNullOrWhiteSpace(tool.FileName))
+                    {
+                        // azure-fileshares-fileshare-create.md → fileshares fileshare create
+                        command = tool.FileName
+                            .Replace(".md", "")
+                            .Replace("azure-", "")
+                            .Replace("-", " ");
+                    }
+
+                    var heading = headings.TryGetValue(command ?? "", out var h)
+                        ? h
+                        : DeterministicH2HeadingGenerator.GenerateHeading(command ?? "", tool.Description);
+                    tool.Content = ReplaceH2Heading(tool.Content, heading);
+                    // Update ToolName so Phase 2 metadata uses the deterministic heading
+                    tool.ToolName = heading;
                 }
-                Console.WriteLine($"✓ ({h2TokensUsed} tokens)");
 
                 // Phase 2: Generate metadata
                 Console.Write($"{progress}   Phase 2: Generating metadata... ");
@@ -442,13 +472,16 @@ public class CleanupGenerator
                 await File.WriteAllTextAsync(relatedPath, relatedContent);
                 Console.WriteLine($"✓ ({EstimateTokens(relatedContent)} tokens)");
 
+                // Phase 3.5: Pre-stitch H2 count validation
+                ValidateAndFixPhantomH2Sections(familyContent, progress);
+
                 // Phase 4: Stitch together
                 Console.Write($"{progress}   Phase 4: Stitching file... ");
                 var outputPath = Path.Combine(outputDir, $"{familyName}.md");
                 await stitcher.StitchAndSaveAsync(familyContent, outputPath);
                 Console.WriteLine($"✓ Saved to {familyName}.md");
 
-                totalTokensUsed += h2TokensUsed + EstimateTokens(metadata) + EstimateTokens(relatedContent);
+                totalTokensUsed += EstimateTokens(metadata) + EstimateTokens(relatedContent);
                 successCount++;
                 Console.WriteLine();
             }
@@ -485,7 +518,7 @@ public class CleanupGenerator
     /// Ensures proper H2 markdown syntax (##).
     /// Preserves the CLI comment and all other content.
     /// </summary>
-    private string ReplaceH2Heading(string content, string newHeading)
+    internal static string ReplaceH2Heading(string content, string newHeading)
     {
         if (string.IsNullOrWhiteSpace(newHeading))
         {
@@ -508,6 +541,7 @@ public class CleanupGenerator
         var lines = content.Split('\n');
         var result = new List<string>();
         var replaced = false;
+        var strippingPhantom = false;
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -518,6 +552,27 @@ public class CleanupGenerator
             {
                 result.Add(properHeading);
                 replaced = true;
+                strippingPhantom = false;
+            }
+            else if (replaced && line.StartsWith("## "))
+            {
+                // Strip phantom H2 sections (e.g., "## Examples" generated by Step 3 AI)
+                // Each tool should have exactly one H2 heading — skip additional ones
+                // and their content until the next non-H2 structural element
+                strippingPhantom = true;
+            }
+            else if (strippingPhantom)
+            {
+                // Keep stripping until we hit a structural marker that indicates
+                // the tool's real content is resuming (parameter table, annotation, include, etc.)
+                if (line.StartsWith("| ") || line.StartsWith("[Tool annotation") ||
+                    line.StartsWith("<!-- ") || line.StartsWith("Example prompts include:") ||
+                    line.StartsWith("> [!") || line.StartsWith(":::"))
+                {
+                    strippingPhantom = false;
+                    result.Add(line);
+                }
+                // Continue stripping bare example lines (quoted prompts, empty lines)
             }
             else
             {
@@ -526,5 +581,138 @@ public class CleanupGenerator
         }
 
         return string.Join('\n', result);
+    }
+
+    // Compiled regex for matching H2 headings (## ...) in tool content
+    private static readonly Regex H2HeadingRegex = new(@"^##\s+(.+)$", RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Validates that the assembled tool content has the correct number of H2 sections.
+    /// If phantom H2 sections are found (e.g., "## Examples", "## Overview"), strips them.
+    /// This runs before stitching to prevent tool count mismatches in the post-assembly validator.
+    /// </summary>
+    internal static void ValidateAndFixPhantomH2Sections(FamilyContent familyContent, string progress)
+    {
+        var expectedToolCount = familyContent.ToolCount;
+
+        // Collect all H2 headings from tool sections (excluding Related content which is separate)
+        var allH2Headings = new List<(string heading, int toolIndex)>();
+        for (int i = 0; i < familyContent.Tools.Count; i++)
+        {
+            var tool = familyContent.Tools[i];
+            var matches = H2HeadingRegex.Matches(tool.Content);
+            foreach (Match match in matches)
+            {
+                var headingText = match.Groups[1].Value.Trim();
+                if (!string.Equals(headingText, "Related content", StringComparison.OrdinalIgnoreCase))
+                {
+                    allH2Headings.Add((headingText, i));
+                }
+            }
+        }
+
+        var actualH2Count = allH2Headings.Count;
+
+        if (actualH2Count == expectedToolCount)
+        {
+            return; // Counts match, no phantom sections
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"{progress}   ⚠ H2 count mismatch: expected {expectedToolCount}, found {actualH2Count}");
+        foreach (var (heading, toolIndex) in allH2Headings)
+        {
+            Console.WriteLine($"{progress}     H2: \"{heading}\" (in tool #{toolIndex + 1}: {familyContent.Tools[toolIndex].ToolName})");
+        }
+
+        if (actualH2Count <= expectedToolCount)
+        {
+            Console.WriteLine($"{progress}   ⚠ Fewer H2s than expected — cannot auto-fix (tools may be missing headings)");
+            return;
+        }
+
+        // Build a set of expected tool names for matching
+        var expectedToolNames = new HashSet<string>(
+            familyContent.Tools.Select(t => t.ToolName),
+            StringComparer.OrdinalIgnoreCase);
+
+        // Attempt to strip phantom H2 sections from each tool's content
+        int strippedCount = 0;
+        for (int i = 0; i < familyContent.Tools.Count; i++)
+        {
+            var tool = familyContent.Tools[i];
+            var h2Matches = H2HeadingRegex.Matches(tool.Content);
+
+            if (h2Matches.Count <= 1)
+            {
+                continue; // Only one H2 — this is the tool's own heading, keep it
+            }
+
+            // The first H2 is the tool's heading; subsequent H2s in the same tool content are phantoms
+            var phantomMatches = new List<Match>();
+            for (int m = 1; m < h2Matches.Count; m++)
+            {
+                phantomMatches.Add(h2Matches[m]);
+            }
+
+            if (phantomMatches.Count == 0)
+            {
+                continue;
+            }
+
+            // Strip each phantom H2 and its content (until the next H2 or end of content)
+            var lines = tool.Content.Split('\n').ToList();
+            // Process in reverse order to preserve line indices
+            for (int p = phantomMatches.Count - 1; p >= 0; p--)
+            {
+                var phantomMatch = phantomMatches[p];
+                var phantomHeading = phantomMatch.Groups[1].Value.Trim();
+
+                // Find the line index of this phantom H2
+                var phantomLineIndex = -1;
+                var charCount = 0;
+                var lineArray = tool.Content.Split('\n');
+                for (int li = 0; li < lineArray.Length; li++)
+                {
+                    if (charCount == phantomMatch.Index)
+                    {
+                        phantomLineIndex = li;
+                        break;
+                    }
+                    charCount += lineArray[li].Length + 1; // +1 for newline
+                }
+
+                if (phantomLineIndex < 0)
+                {
+                    continue;
+                }
+
+                // Find the end of this phantom section (next H2 or end of content)
+                var endLineIndex = lines.Count;
+                for (int li = phantomLineIndex + 1; li < lines.Count; li++)
+                {
+                    if (lines[li].StartsWith("## "))
+                    {
+                        endLineIndex = li;
+                        break;
+                    }
+                }
+
+                Console.WriteLine($"{progress}   🔧 Stripping phantom H2 \"{phantomHeading}\" from tool \"{tool.ToolName}\" (lines {phantomLineIndex + 1}-{endLineIndex})");
+                lines.RemoveRange(phantomLineIndex, endLineIndex - phantomLineIndex);
+                strippedCount++;
+            }
+
+            tool.Content = string.Join('\n', lines);
+        }
+
+        if (strippedCount > 0)
+        {
+            Console.WriteLine($"{progress}   ✓ Stripped {strippedCount} phantom H2 section(s)");
+        }
+        else
+        {
+            Console.WriteLine($"{progress}   ⚠ Could not auto-fix H2 mismatch — manual review needed");
+        }
     }
 }

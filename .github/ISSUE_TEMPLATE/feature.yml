@@ -1,0 +1,135 @@
+name: Feature / Enhancement
+description: New capability, improvement to an existing pipeline stage, or content quality enhancement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature / Enhancement
+        Fill out every section so future-you understands the full context months later.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What's wrong or missing today? Why does this matter?
+      placeholder: "Generated tool-family articles use bare CLI verbs as H2 headings ('add', 'get', 'list') instead of descriptive names ('Add database connection', 'Get web app details'). This is ambiguous when multiple tools use the same verb."
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected
+    attributes:
+      label: Affected namespaces and steps
+      description: Which namespaces or pipeline steps does this affect? Is it all 52 or specific ones?
+      placeholder: |
+        All 52 namespaces. Most visible in appservice (two 'get' sections).
+        Pipeline step: Step 4 (tool-family-cleanup prompt)
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: How should this be implemented? Include specific file changes, prompt modifications, or config updates.
+      placeholder: |
+        Add a prompt rule to `tool-family-cleanup-system-prompt.txt`:
+        - H2 headings must be descriptive (3-7 words)
+        - Format: `## {Verb} {Noun Phrase}` (e.g., "## Get web app details")
+        - Never use bare verbs
+
+        **Files:**
+        - `DocGeneration.Steps.ToolFamilyCleanup/prompts/tool-family-cleanup-system-prompt.txt`
+        - `DocGeneration.Steps.ToolFamilyCleanup/prompts/h2-heading-system-prompt.txt`
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you consider? Why were they rejected?
+      placeholder: |
+        1. Post-processing regex to fix headings — rejected because it's fragile and duplicates AI logic
+        2. Deterministic heading generation from command names — rejected because it produces robotic headings
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Where did you find this problem? Link to PRs, Acrolinx reports, content review feedback, or generated output examples.
+      placeholder: |
+        Found in PR #8639 (appservice content review).
+        Acrolinx rule: Clarity > Could you add a comma after the introductory phrase?
+        Generated output: `generated-appservice/tool-family/appservice.md` lines 18-45
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Key files
+      description: List every file relevant to implementing this feature.
+      placeholder: |
+        | File | Purpose |
+        |------|---------|
+        | `tool-family-cleanup-system-prompt.txt` | AI constraints for heading generation |
+        | `h2-heading-system-prompt.txt` | Per-tool heading generation prompt |
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How do we know this is done? Include testable conditions.
+      placeholder: |
+        - [ ] All H2 headings in generated articles are 3-7 words (no bare verbs)
+        - [ ] No two H2 headings in the same article are identical
+        - [ ] Tests added validating heading format
+        - [ ] Regenerated appservice namespace — no bare verb headings
+    validations:
+      required: true
+
+  - type: textarea
+    id: testing
+    attributes:
+      label: Test strategy
+      description: What tests should be written alongside this feature?
+      placeholder: |
+        - Unit test: H2 heading format validator (3-7 words, starts with verb)
+        - Integration test: regenerate appservice, check all H2s are descriptive
+        - Regression: existing 733 tests must pass
+    validations:
+      required: true
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related issues, commits, and decisions
+      description: Link related work for context.
+      placeholder: |
+        - Related: #154 (generic H2 headings)
+        - Decision: AD-002 (Known Quality Risk Areas)
+    validations:
+      required: false
+
+  - type: dropdown
+    id: squad-routing
+    attributes:
+      label: Squad routing
+      description: Which team member should own this?
+      options:
+        - "Avery — Architecture / cross-cutting"
+        - "Morgan — C# generators / templates / config"
+        - "Quinn — Scripts / CI / Docker"
+        - "Sage — AI prompts / content validation"
+        - "Parker — Tests / QA"
+        - "Reeve — Documentation"
+        - "Not sure — needs triage"
+    validations:
+      required: true

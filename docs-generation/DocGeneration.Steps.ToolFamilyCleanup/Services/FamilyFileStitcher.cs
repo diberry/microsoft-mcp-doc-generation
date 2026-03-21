@@ -21,8 +21,10 @@ public class FamilyFileStitcher
     {
         var sb = new StringBuilder();
 
-        // 1. Metadata section (frontmatter + H1 + intro)
-        sb.AppendLine(familyContent.Metadata);
+        // 1. Metadata section (frontmatter + H1 + intro — strip any H2s the AI may have generated)
+        var metadataLines = familyContent.Metadata.Split('\n')
+            .Where(line => !line.StartsWith("## "));
+        sb.AppendLine(string.Join('\n', metadataLines));
         sb.AppendLine();
 
         // 2. Tool sections (H2 + content for each tool)

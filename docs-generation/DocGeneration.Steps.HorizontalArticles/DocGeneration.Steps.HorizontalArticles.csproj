@@ -9,6 +9,9 @@
     <AssemblyName>DocGeneration.Steps.HorizontalArticles</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="DocGeneration.Steps.HorizontalArticles.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj" />
     <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
     <ProjectReference Include="..\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />

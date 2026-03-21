@@ -64,7 +64,9 @@ public sealed class PipelineRunner
         var context = await _contextFactory.CreateAsync(request, cancellationToken);
         var selectedSteps = _stepRegistry.GetOrderedSteps(request.Steps);
         context.PlannedSteps = selectedSteps;
-        var dependencyErrors = ValidateDependencies(selectedSteps);
+        var dependencyErrors = request.SkipDependencyValidation
+            ? Array.Empty<string>()
+            : ValidateDependencies(selectedSteps);
 
         if (request.DryRun)
         {

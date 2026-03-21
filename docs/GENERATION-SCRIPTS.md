@@ -114,6 +114,7 @@ Runs automatically inside Step 4.
 ./start.sh advisor
 ./start.sh 1,2,3,4
 ./start.sh advisor 1,2,3,4,5,6
+./start.sh advisor 4 --skip-deps    # Skip dependency validation for fast iteration
 ```
 
 ### Worker (`docs-generation/scripts/start-only.sh`)

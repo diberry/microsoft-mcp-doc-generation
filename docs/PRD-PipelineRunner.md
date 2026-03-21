@@ -454,6 +454,12 @@ dotnet run --project docs-generation/PipelineRunner -- \
 - Skips build work and passes `--no-build` where appropriate
 - Must not silently disable required artifacts that are missing; missing binaries remain an error
 
+### `--skip-deps`
+
+- Optional
+- Skips step dependency validation, allowing a step to run without its prerequisites having completed
+- Useful for fast iteration when prior step outputs already exist from a previous run
+
 ### `--skip-validation`
 
 - Optional

@@ -18,6 +18,18 @@ namespace HorizontalArticleGenerator.Generators;
 /// </summary>
 public class HorizontalArticleGenerator
 {
+    /// <summary>
+    /// Calculates the maximum token budget for AI article generation based on tool count.
+    /// Base: 4000 tokens for article structure (sections, intro, prerequisites, RBAC, best practices).
+    /// Plus: 600 tokens per tool (for tool descriptions, scenarios, etc.).
+    /// Min: 8000 (even small namespaces need substantial output), Max: 24000.
+    /// </summary>
+    internal static int CalculateMaxTokens(int toolCount)
+    {
+        var calculatedTokens = 4000 + (toolCount * 600);
+        return Math.Clamp(calculatedTokens, 8000, 24000);
+    }
+
     // Extracted method for generating a single article
     private async Task<bool> GenerateSingleArticleAsync(StaticArticleData staticData, string outputDir, string progress)
     {
@@ -426,11 +438,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         await File.WriteAllTextAsync(promptFilePath, promptContent);
 
         // Calculate token limit based on tool count
-        // Base: 2000 tokens + 600 tokens per tool (for tool descriptions, scenarios, etc.)
-        // Min: 4000, Max: 16000
-        var toolCount = staticData.Tools.Count;
-        var calculatedTokens = 2000 + (toolCount * 600);
-        var maxTokens = Math.Clamp(calculatedTokens, 4000, 16000);
+        var maxTokens = CalculateMaxTokens(staticData.Tools.Count);
 
         // Call AI client
         var response = await _aiClient.GetChatCompletionAsync(

@@ -12,7 +12,7 @@ public class ToolContent
     /// <summary>
     /// Human-readable tool name (e.g., "agents connect")
     /// </summary>
-    public required string ToolName { get; init; }
+    public required string ToolName { get; set; }
     
     /// <summary>
     /// Original filename from ./generated/tools (e.g., "azure-ai-foundry-agents-connect.complete.md")

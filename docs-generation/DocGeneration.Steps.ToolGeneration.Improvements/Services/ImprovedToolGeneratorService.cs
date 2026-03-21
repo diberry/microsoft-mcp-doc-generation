@@ -3,6 +3,7 @@
 
 using GenerativeAI;
 using System.Linq;
+using System.Text.RegularExpressions;
 using ToolGeneration_Improved.Models;
 
 namespace ToolGeneration_Improved.Services;
@@ -124,6 +125,9 @@ public class ImprovedToolGeneratorService
                 // Freeze example prompt sections before any other protection
                 var frozenContent = ProtectExamplePromptSections(originalContent, out var sectionMap);
 
+                // Extract @mcpcli command comment before AI (AI sometimes strips it)
+                var mcpCliComment = ExtractMcpCliComment(originalContent);
+
                 // Protect handlebar template labels from AI modification
                 var protectedContent = ProtectTemplateLabels(frozenContent, out var labelMap);
 
@@ -143,6 +147,9 @@ public class ImprovedToolGeneratorService
 
                 // Restore frozen example prompt sections
                 restoredContent = RestoreExamplePromptSections(restoredContent, sectionMap);
+
+                // Restore @mcpcli command comment if AI stripped it
+                restoredContent = RestoreMcpCliComment(restoredContent, mcpCliComment);
 
                 // Validate no leaked placeholder tokens remain
                 var leakedTokens = ValidateRestoredContent(restoredContent);
@@ -416,6 +423,57 @@ public class ImprovedToolGeneratorService
         }
 
         return restored;
+    }
+
+    private static readonly Regex McpCliCommentRegex = new(@"<!--\s*@mcpcli\s+[^>]+-->", RegexOptions.Compiled);
+
+    /// <summary>
+    /// Extracts the @mcpcli command comment from tool content.
+    /// These comments are used for validation during content PRs and must be preserved.
+    /// </summary>
+    internal static string? ExtractMcpCliComment(string content)
+    {
+        var match = McpCliCommentRegex.Match(content);
+        return match.Success ? match.Value : null;
+    }
+
+    /// <summary>
+    /// Restores the @mcpcli command comment if the AI stripped it.
+    /// Inserts after the first H1 heading if missing.
+    /// </summary>
+    internal static string RestoreMcpCliComment(string content, string? mcpCliComment)
+    {
+        if (string.IsNullOrEmpty(mcpCliComment) || string.IsNullOrEmpty(content))
+        {
+            return content;
+        }
+
+        // Already present — no action needed
+        if (content.Contains("@mcpcli", StringComparison.Ordinal))
+        {
+            return content;
+        }
+
+        // Insert after first H1 heading (# ...)
+        var lines = content.Split('\n').ToList();
+        for (int i = 0; i < lines.Count; i++)
+        {
+            if (lines[i].TrimStart().StartsWith("# ") && !lines[i].TrimStart().StartsWith("## "))
+            {
+                lines.Insert(i + 1, "");
+                lines.Insert(i + 2, mcpCliComment);
+                return string.Join('\n', lines);
+            }
+        }
+
+        // Fallback: insert at beginning (after frontmatter if present)
+        var fmEnd = content.IndexOf("---\n", content.IndexOf("---\n") + 4);
+        if (fmEnd > 0)
+        {
+            return content.Insert(fmEnd + 4, $"\n{mcpCliComment}\n");
+        }
+
+        return $"{mcpCliComment}\n{content}";
     }
 
     internal static string NormalizeTemplateLabels(string content)

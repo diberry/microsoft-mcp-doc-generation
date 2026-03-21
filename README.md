@@ -25,6 +25,12 @@ Generate with specific steps only:
 ./start.sh advisor 1,2    # advisor only, steps 1-2 (output: ./generated-advisor/)
 ```
 
+Skip dependency validation for fast iteration on a single step:
+
+```bash
+./start.sh advisor 4 --skip-deps   # Run step 4 without requiring steps 1-3
+```
+
 **Note**: When a specific namespace is provided, output goes to `./generated-<namespace>/` instead of `./generated/`. This allows you to work on a single service without affecting the full documentation set.
 
 ### Pipeline Steps
@@ -340,6 +346,8 @@ generated/
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+**Note**: This repository uses GitHub issue templates. All new issues must use the [bug](/.github/ISSUE_TEMPLATE/bug.yml) or [feature](/.github/ISSUE_TEMPLATE/feature.yml) template.
 
 ---
 

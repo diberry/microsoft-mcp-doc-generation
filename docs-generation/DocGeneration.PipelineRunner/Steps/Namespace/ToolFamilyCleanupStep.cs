@@ -84,6 +84,18 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 File.Copy(filePath, destinationPath, overwrite: true);
             }
 
+            // Copy h2-headings JSON for deterministic heading lookup in Phase 1.5
+            var h2HeadingsSource = Path.Combine(context.OutputPath, "h2-headings");
+            if (Directory.Exists(h2HeadingsSource))
+            {
+                var tempH2Directory = Path.Combine(tempGeneratedDirectory, "h2-headings");
+                Directory.CreateDirectory(tempH2Directory);
+                foreach (var filePath in Directory.EnumerateFiles(h2HeadingsSource, "*.json"))
+                {
+                    File.Copy(filePath, Path.Combine(tempH2Directory, Path.GetFileName(filePath)), overwrite: true);
+                }
+            }
+
             var cleanupResult = await context.ProcessRunner.RunDotNetProjectAsync(
                 GetProjectPath(context, "DocGeneration.Steps.ToolFamilyCleanup"),
                 ["--multi-phase"],

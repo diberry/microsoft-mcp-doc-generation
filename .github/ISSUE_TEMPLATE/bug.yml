@@ -1,0 +1,172 @@
+name: Bug Report
+description: A pipeline stage produces incorrect output, fails validation, or crashes
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+        Fill out every section. If you skip a section, future-you won't understand this issue in 6 months.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One paragraph — what's broken and how it manifests.
+      placeholder: "Step 4 fails for compute namespace with 'Tool count integrity check failed' — the AI generates phantom ## Examples H2 sections that inflate the section count from 12 to 14."
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected
+    attributes:
+      label: Affected namespaces and steps
+      description: Which of the 52 namespaces fail? Which pipeline step (0-6)?
+      placeholder: |
+        | Namespace | Step | Error |
+        |-----------|------|-------|
+        | compute | Step 4 | Tool count mismatch (12 vs 14) |
+        | search | Step 4 | No output files produced |
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Exact commands to reproduce. Include the namespace and step numbers.
+      placeholder: |
+        ```bash
+        ./start.sh compute 1,2,3,4   # Step 4 fails
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen instead?
+      placeholder: "Step 4 should produce compute.md with exactly 12 H2 sections matching the 12 tool files."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happens? Include error messages, validation report output, or critical-failure JSON.
+      placeholder: |
+        Validation report (generated-compute/reports/tool-family-validation-compute.txt):
+        ```
+        Tool files found: 12
+        Article H2 sections: 14
+        ❌ Tool count integrity: FAIL
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: root-cause
+    attributes:
+      label: Root cause analysis
+      description: What code/prompt/config produces the wrong output? Trace the data flow from input to the point of failure. Include file paths and line numbers.
+      placeholder: |
+        **Data flow:**
+        1. Step 3 AI generates tool files in `tools/` — some contain `## Examples` H2 sections
+        2. Phase 1.5 `ReplaceH2Heading` (CleanupGenerator.cs:491) replaces only the first H1/H2
+        3. The extra `## Examples` stays in the tool content
+        4. Phase 4 stitch concatenates all tool content → 14 H2s instead of 12
+        5. `ToolFamilyPostAssemblyValidator` (line 79) enforces toolFileCount == articleSectionCount → FAIL
+
+        **Root cause file:** `CleanupGenerator.cs:520` — only replaces first heading, leaves subsequent H2s
+    validations:
+      required: true
+
+  - type: textarea
+    id: investigation
+    attributes:
+      label: Investigation already done
+      description: What did you check, try, or rule out? This prevents duplicate work.
+      placeholder: |
+        - Checked tool files in `generated-compute/tools/` — `disk-get.md` and `vmss-get.md` contain `## Examples`
+        - Confirmed phantom H2s come from Step 3 AI, not Step 4
+        - Tried prompt-only fix (commit 425a327) — AI still generates phantom sections
+        - Pre-stitch validator (Phase 3.5) has a character-offset bug in stripping logic
+    validations:
+      required: false
+
+  - type: textarea
+    id: proposed-fix
+    attributes:
+      label: Proposed fix
+      description: How should this be fixed? Which files need changes?
+      placeholder: |
+        **Fix:** Modify `ReplaceH2Heading` to strip ALL H2 sections after the first heading.
+
+        **Files:**
+        - `DocGeneration.Steps.ToolFamilyCleanup/Services/CleanupGenerator.cs` (lines 491-532)
+
+        **Tests needed:**
+        - Content with H1 + phantom `## Examples` → Examples stripped
+        - Content with H1 only → unchanged
+        - Content with H1 + `## Examples` + parameter table → stripping stops at structural marker
+    validations:
+      required: false
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Key files
+      description: List every file relevant to understanding or fixing this bug.
+      placeholder: |
+        | File | Purpose |
+        |------|---------|
+        | `CleanupGenerator.cs` | Phase 1.5 heading replacement + Phase 3.5 validator |
+        | `ToolFamilyPostAssemblyValidator.cs` | Post-assembly 3-way count check |
+        | `tool-family-cleanup-system-prompt.txt` | AI constraints for tool-family generation |
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How do we know this is fixed? Be specific — which namespaces pass, which tests exist.
+      placeholder: |
+        - [ ] compute passes Step 4 on first try (no retries)
+        - [ ] Tests added for phantom H2 stripping in ReplaceH2Heading
+        - [ ] No regression in the 8 currently-passing namespaces
+        - [ ] `dotnet test docs-generation.sln` — all tests pass
+    validations:
+      required: true
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related issues, commits, and decisions
+      description: Link parent issues, related PRs, commits that attempted fixes, and squad decisions.
+      placeholder: |
+        - Parent: #158
+        - Related: #140 (phantom Examples H2)
+        - Commits: `425a327` (prompt constraint), `ef246a1` (Phase 1.5 fix)
+        - Decision: AD-006 (Issue #158 Resolution)
+    validations:
+      required: false
+
+  - type: dropdown
+    id: squad-routing
+    attributes:
+      label: Squad routing
+      description: Which team member should own this?
+      options:
+        - "Avery — Architecture / cross-cutting"
+        - "Morgan — C# generators / templates / config"
+        - "Quinn — Scripts / CI / Docker"
+        - "Sage — AI prompts / content validation"
+        - "Parker — Tests / QA"
+        - "Reeve — Documentation"
+        - "Not sure — needs triage"
+    validations:
+      required: true

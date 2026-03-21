@@ -84,6 +84,7 @@ Your task is to review and improve tool documentation files for the Azure Model 
 ## What NOT to Change
 
 - Do NOT modify frontmatter (metadata between --- markers)
+- Do NOT remove or modify `<!-- @mcpcli ... -->` command comments — these are used for validation during content PRs
 - Do NOT change parameter names or technical specifications
 - Do NOT alter the basic structure of the document
 - Do NOT remove include directives or references

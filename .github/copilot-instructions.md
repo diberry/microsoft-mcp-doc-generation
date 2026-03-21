@@ -239,6 +239,14 @@ Include files use 3-tier resolution:
 ### Path Not Found in Container
 - **Solution**: Use `$env:MCP_SERVER_PATH` for environment detection
 
+### Phantom H2 Sections in Generated Output
+- **Symptom**: AI-generated heading replacements (Phase 1.5) or tool-family assembly (Step 4) inject empty or malformed `## ` sections that inflate tool counts or cause validation mismatches
+- **Solution**: The pipeline now strips phantom H2 sections during heading replacement (Phase 1.5) and post-assembly (Step 4). If you see tool-count mismatch errors in validation reports, check for stray `## ` lines in the tool-family article source.
+
+### ParameterCoverageChecker False Positives
+- **Symptom**: Post-assembly validation reports "section freeze" or false-positive missing-parameter warnings, especially for single-word parameters (e.g., `query`) or parameters whose values contain JSON (e.g., `--filter '{"key":"value"}'`)
+- **Solution**: `ParameterCoverageChecker` now accepts single-word parameter names and allows JSON-like content inside quoted parameter values. CLI switch prefixes (`--`) are stripped before matching.
+
 ## Output Structure
 
 ## Default Output Directory (Important)
@@ -296,6 +304,9 @@ generated/
 ./start.sh advisor              # All steps for advisor only
 ./start.sh advisor 1            # Step 1 only for advisor
 ./start.sh advisor 1,2,3        # Steps 1-3 for advisor
+
+# Skip dependency validation for fast iteration
+./start.sh advisor 4 --skip-deps   # Run step 4 without requiring steps 1-3
 
 # Direct worker call (requires preflight setup first)
 ./docs-generation/scripts/start-only.sh advisor         # All steps for advisor
@@ -524,6 +535,7 @@ pwsh -File "$SCRIPT_DIR/MyScript.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS"
 - Update `Config.cs` for new configuration files
 - Test with `dotnet build` before running
 - **Zero warnings policy**: The CI build uses `--configuration Release` which treats warnings as errors. All compiler warnings (nullable, unused variables, etc.) must be resolved before pushing. Run `dotnet build docs-generation.sln --configuration Release` locally and fix any warnings.
+- **Branch protection**: The `build-and-test` CI workflow must pass before merging. All tests (668+ across 12 test projects) run automatically on every PR.
 - **For new .NET projects**: Always add to `docs-generation.sln` (`dotnet sln add`) and verify the full solution builds (`dotnet build docs-generation.sln`). This ensures the project is included in CI build and test via `.github/workflows/build-and-test.yml`. If the project includes tests, add a corresponding `.Tests` project to the solution as well. **Every new project MUST include a `README.md`** in its directory covering purpose, usage, architecture, and dependencies.
 - **When modifying existing projects**: Review the project's `README.md` and update it if the changes affect documented behavior, CLI options, architecture, dependencies, or usage patterns.
 - **Every bug fix MUST include tests**: When fixing a bug or error, add one or more unit tests that reproduce the bug and verify the fix. Tests must be placed in a `.Tests` project that is part of `docs-generation.sln` so that CI (`dotnet test docs-generation.sln`) runs them automatically. If no `.Tests` project exists for the affected project, create one (xunit, CPM, added to the solution). If the code under test has `private` methods that need testing, change them to `internal` and add `<InternalsVisibleTo Include="ProjectName.Tests" />` to the source project's `.csproj`.
@@ -637,4 +649,4 @@ If a bug is found in one service's generated output, the fix MUST be a generic r
 
 ## Last Updated
 
-February 22, 2026
+March 28, 2026

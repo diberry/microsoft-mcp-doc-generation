@@ -195,6 +195,13 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 - If the input has 5 tools, the output MUST have 5 tools
 - If you run out of space, continue with all remaining tools
 
+**CRITICAL - Exact H2 Section Count (1:1 Tool Mapping)**:
+- The output MUST contain **exactly the same number of H2 (`##`) sections** as tools in the input (excluding `## Related content`)
+- Each H2 section MUST map 1:1 to exactly one tool — no more, no less
+- **DO NOT create additional H2 sections** such as `## Examples`, `## Overview`, `## Summary`, `## Prerequisites`, `## Tools`, `## Getting Started`, or any other non-tool heading
+- The ONLY permitted H2 sections are: one per tool + `## Related content` at the end
+- If the input has N tools, the output MUST have exactly N tool H2 sections plus the `## Related content` section
+
 **Preserve**:
 - Original structure (unless clarity improvements needed)
 - All frontmatter (update if incorrect)
