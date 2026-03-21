@@ -33,6 +33,34 @@ Skip dependency validation for fast iteration on a single step:
 
 **Note**: When a specific namespace is provided, output goes to `./generated-<namespace>/` instead of `./generated/`. This allows you to work on a single service without affecting the full documentation set.
 
+### Parallel Execution (Fan-Out)
+
+After preflight (Step 0) completes once, individual namespaces can run **in parallel** since each writes to its own isolated `generated-<namespace>/` directory:
+
+```bash
+# Run preflight once (builds solution, extracts CLI metadata)
+./start.sh advisor 1    # Any namespace triggers preflight
+
+# Then fan out multiple namespaces in parallel
+./start.sh compute &
+./start.sh storage &
+./start.sh keyvault &
+./start.sh cosmos &
+wait  # Wait for all to complete
+```
+
+Or run specific steps in parallel:
+
+```bash
+# Fan out Step 5-6 for namespaces that already have Steps 1-4 on disk
+./start.sh appservice 5,6 &
+./start.sh compute 5,6 &
+./start.sh cosmos 5,6 &
+wait
+```
+
+**Safe because**: Each namespace writes to `generated-<namespace>/`, shared CLI metadata is read-only after preflight, and the C# pipeline runner uses instance-scoped state with no global locks.
+
 ### Pipeline Steps
 
 `start.sh` now runs typed `BootstrapStep` (Step 0) once, then the per-namespace pipeline below:
