@@ -295,6 +295,16 @@ public class ParameterCoverageCheckerTests
     }
 
     [Fact]
+    public void ArrayParam_JsonInsideQuotes_ReturnsCovered()
+    {
+        // The EXACT pattern foundryextensions generates: JSON array inside single quotes
+        var prompts = new[] { "Create a chat completion with message-array '[{\"role\":\"user\",\"content\":\"Hello\"}]' for resource-group 'rg-foundry'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "message-array", 4);
+        Assert.True(result.Covered,
+            "Quoted value containing JSON (braces/brackets inside quotes) should be accepted as concrete");
+    }
+
+    [Fact]
     public void SingleWordParam_Name_NoConcreteValue_ReturnsFalse()
     {
         // Negative: prompt uses "name" generically without concrete value

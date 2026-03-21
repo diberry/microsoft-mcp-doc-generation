@@ -185,8 +185,8 @@ public static class ParameterCoverageChecker
             if (foundVariant && matchIndex >= 0)
             {
                 var tail = trimmedPrompt[Math.Min(matchIndex, trimmedPrompt.Length)..];
-                if (Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*'[^'<>{}\\[\\]]+'")
-                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*`[^`<>{}\\[\\]]+`")
+                if (Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*'[^']+'")
+                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*`[^`]+`")
                     || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*https?://\\S+")
                     || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\[(?!\\s*<)(?!\\s*\\{\\s*[^'\"\\s]).+\\]")
                     || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\{(?!\\s*[<\\{]).+\\}"))
