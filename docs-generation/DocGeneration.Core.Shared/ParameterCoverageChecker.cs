@@ -60,6 +60,12 @@ public static class ParameterCoverageChecker
             variantList.Add($"{words[0]}s");
         }
 
+        // Extract abbreviations from parentheses: (VMSS), (AKS), etc.
+        foreach (Match abbr in Regex.Matches(parameterName, @"\(([A-Z]{2,})\)"))
+        {
+            variantList.Add(abbr.Groups[1].Value.ToLowerInvariant());
+        }
+
         var variants = variantList
             .Where(variant => !string.IsNullOrWhiteSpace(variant))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -115,12 +121,27 @@ public static class ParameterCoverageChecker
             var matchIndex = -1;
             foreach (var variant in variants)
             {
-                var currentIndex = lowerPrompt.IndexOf(variant.ToLowerInvariant(), StringComparison.Ordinal);
-                if (currentIndex >= 0)
+                var lowerVariant = variant.ToLowerInvariant();
+                // Defect 1 fix: single-word variants use word boundary to avoid substring matches
+                if (!lowerVariant.Contains(' ') && !lowerVariant.Contains('-') && !lowerVariant.Contains('_'))
                 {
-                    foundVariant = true;
-                    matchIndex = currentIndex + variant.Length;
-                    break;
+                    var m = Regex.Match(lowerPrompt, $@"\b{Regex.Escape(lowerVariant)}\b");
+                    if (m.Success)
+                    {
+                        foundVariant = true;
+                        matchIndex = m.Index + m.Length;
+                        break;
+                    }
+                }
+                else
+                {
+                    var currentIndex = lowerPrompt.IndexOf(lowerVariant, StringComparison.Ordinal);
+                    if (currentIndex >= 0)
+                    {
+                        foundVariant = true;
+                        matchIndex = currentIndex + lowerVariant.Length;
+                        break;
+                    }
                 }
             }
 
@@ -140,8 +161,15 @@ public static class ParameterCoverageChecker
                 if (Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*'[^'<>{}\\[\\]]+'")
                     || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*`[^`<>{}\\[\\]]+`")
                     || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*https?://\\S+")
-                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\[(?!\\s*[<\\{]).+\\]")
+                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\[(?!\\s*<)(?!\\s*\\{\\s*[^'\"\\s]).+\\]")
                     || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\{(?!\\s*[<\\{]).+\\}"))
+                {
+                    covered = true;
+                    break;
+                }
+
+                // Defect 3 fix: multi-word structural parameters (3+ words) at sentence end
+                if (words.Length >= 3 && string.IsNullOrWhiteSpace(tail))
                 {
                     covered = true;
                     break;
