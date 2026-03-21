@@ -17,6 +17,7 @@ public static class PipelineCli
         rootCommand.AddOption(options.SkipBuild);
         rootCommand.AddOption(options.SkipValidation);
         rootCommand.AddOption(options.SkipEnvValidation);
+        rootCommand.AddOption(options.SkipDeps);
         rootCommand.AddOption(options.DryRun);
         return rootCommand;
     }
@@ -53,7 +54,8 @@ public static class PipelineCli
             parseResult.GetValueForOption(options.SkipBuild),
             parseResult.GetValueForOption(options.SkipValidation),
             parseResult.GetValueForOption(options.DryRun),
-            parseResult.GetValueForOption(options.SkipEnvValidation));
+            parseResult.GetValueForOption(options.SkipEnvValidation),
+            parseResult.GetValueForOption(options.SkipDeps));
 
         var validationErrors = request.Validate();
         return validationErrors.Count > 0
@@ -104,6 +106,7 @@ public static class PipelineCli
         rootCommand.AddOption(options.SkipBuild);
         rootCommand.AddOption(options.SkipValidation);
         rootCommand.AddOption(options.SkipEnvValidation);
+        rootCommand.AddOption(options.SkipDeps);
         rootCommand.AddOption(options.DryRun);
         return rootCommand;
     }
@@ -116,6 +119,7 @@ public static class PipelineCli
             new Option<bool>("--skip-build", "Skip build work and require existing Release outputs."),
             new Option<bool>("--skip-validation", "Skip validation checks executed by the typed runner."),
             new Option<bool>("--skip-env-validation", "Skip Azure OpenAI environment validation during bootstrap."),
+            new Option<bool>("--skip-deps", "Skip step dependency validation. Allows running a step without its prerequisites."),
             new Option<bool>("--dry-run", "Print the resolved execution plan without running bootstrap or steps."));
 
     private sealed record CliOptions(
@@ -125,5 +129,6 @@ public static class PipelineCli
         Option<bool> SkipBuild,
         Option<bool> SkipValidation,
         Option<bool> SkipEnvValidation,
+        Option<bool> SkipDeps,
         Option<bool> DryRun);
 }
