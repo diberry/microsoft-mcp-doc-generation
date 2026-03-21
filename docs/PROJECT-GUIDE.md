@@ -108,6 +108,14 @@ Run a subset of the 7-step pipeline for a namespace. Useful for testing or debug
 ./start.sh compute 4         # Run step 4 (tool-family assembly) for compute
 ```
 
+#### Skip Dependency Validation
+
+When iterating on a single step whose prerequisites already exist from a prior run, skip dependency checks:
+
+```bash
+./start.sh advisor 4 --skip-deps   # Run step 4 without requiring steps 1-3
+```
+
 **Pipeline Steps:**
 
 | Step | Name | Scope | Requires AI | Output |
@@ -266,6 +274,16 @@ tail -f generated/logs/step2.log
 # and API quota. Restart with verbose output:
 ./start.sh advisor 2 --verbose
 ```
+
+#### Step 4 tool-count mismatch in validation report
+
+**Cause:** Phantom `## ` sections injected by AI heading replacement or assembly, inflating the detected tool count  
+**Solution:** The pipeline now strips phantom H2 sections during Phase 1.5 (heading replacement) and Step 4 (post-assembly). If validation still fails, inspect the tool-family article for stray `## ` headings with no body content.
+
+#### ParameterCoverageChecker false positives freezing sections
+
+**Cause:** Single-word parameters (e.g., `query`) or JSON values inside quoted parameter strings (e.g., `--filter '{"key":"value"}'`) were rejected by the coverage checker  
+**Solution:** `ParameterCoverageChecker` now handles single-word and array parameters correctly, and allows JSON-like content within quoted values. CLI switch prefixes (`--`) are stripped before matching.
 
 ---
 
