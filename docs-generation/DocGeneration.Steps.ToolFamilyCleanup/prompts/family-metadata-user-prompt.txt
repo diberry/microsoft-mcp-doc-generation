@@ -3,7 +3,8 @@ Generate the metadata section (frontmatter + H1 + introduction) for the followin
 **Tool Family**: {{FAMILY_NAME}}
 **Tool Count**: {{TOOL_COUNT}}
 **CLI Version**: {{CLI_VERSION}}
-**Tools in Family**: {{TOOL_LIST}}
+**Tools in Family** (exactly {{TOOL_COUNT}} — output must have exactly {{TOOL_COUNT}} H2 sections):
+{{TOOL_LIST}}
 
 Requirements:
 - Generate frontmatter with title, description, ms.service, ms.topic, tool_count, and mcp-cli.version

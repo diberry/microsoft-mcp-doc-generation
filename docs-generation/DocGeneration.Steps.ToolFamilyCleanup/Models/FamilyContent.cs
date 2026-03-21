@@ -43,7 +43,16 @@ public class FamilyContent
     public int ToolCount => Tools.Count;
     
     /// <summary>
-    /// Comma-separated list of tool names for prompts
+    /// Strict numbered list of tool names for prompts.
+    /// Format: "1. tool-one\n2. tool-two\n3. tool-three"
+    /// Makes the 1:1 mapping between tools and H2 sections explicit.
     /// </summary>
-    public string ToolNamesList => string.Join(", ", Tools.Select(t => t.ToolName).OrderBy(n => n));
+    public string ToolNamesList
+    {
+        get
+        {
+            var orderedTools = Tools.Select(t => t.ToolName).OrderBy(n => n).ToList();
+            return string.Join("\n", orderedTools.Select((name, index) => $"{index + 1}. {name}"));
+        }
+    }
 }
