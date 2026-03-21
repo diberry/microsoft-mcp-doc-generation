@@ -488,7 +488,7 @@ public class CleanupGenerator
     /// Ensures proper H2 markdown syntax (##).
     /// Preserves the CLI comment and all other content.
     /// </summary>
-    private string ReplaceH2Heading(string content, string newHeading)
+    internal static string ReplaceH2Heading(string content, string newHeading)
     {
         if (string.IsNullOrWhiteSpace(newHeading))
         {
@@ -561,7 +561,7 @@ public class CleanupGenerator
     /// If phantom H2 sections are found (e.g., "## Examples", "## Overview"), strips them.
     /// This runs before stitching to prevent tool count mismatches in the post-assembly validator.
     /// </summary>
-    private static void ValidateAndFixPhantomH2Sections(FamilyContent familyContent, string progress)
+    internal static void ValidateAndFixPhantomH2Sections(FamilyContent familyContent, string progress)
     {
         var expectedToolCount = familyContent.ToolCount;
 
@@ -644,7 +644,7 @@ public class CleanupGenerator
                 var lineArray = tool.Content.Split('\n');
                 for (int li = 0; li < lineArray.Length; li++)
                 {
-                    if (charCount == phantomMatch.Index || charCount + 1 == phantomMatch.Index)
+                    if (charCount == phantomMatch.Index)
                     {
                         phantomLineIndex = li;
                         break;

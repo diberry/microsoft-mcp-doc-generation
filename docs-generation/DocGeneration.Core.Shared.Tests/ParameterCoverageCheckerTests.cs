@@ -166,4 +166,53 @@ public class ParameterCoverageCheckerTests
         var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "App", 2);
         Assert.False(result.Covered);
     }
+
+    // ── CLI switch prefix stripping (behavioral) ────────────────────
+
+    [Fact]
+    public void ParameterWithoutPrefix_Name_WithConcreteValue_ReturnsCovered()
+    {
+        // Parameter "name" (no --prefix) with prompt containing a concrete value
+        var prompts = new[] { "Delete file share named 'myshare'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "name", 1);
+        Assert.True(result.Covered);
+    }
+
+    [Fact]
+    public void ParameterWithoutPrefix_MessageArray_WithJsonArray_ReturnsCovered()
+    {
+        // Parameter "message-array" (no --prefix) with JSON array value
+        var prompts = new[] { "Send messages [{'role':'user','content':'hello'}]" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "message-array", 2);
+        Assert.True(result.Covered);
+    }
+
+    [Fact]
+    public void ParameterWithoutPrefix_Param_WithConcreteValue_ReturnsCovered()
+    {
+        // Parameter "param" (no --prefix) with concrete value
+        var prompts = new[] { "Get the server parameter named 'max_connections'" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "param", 1);
+        Assert.True(result.Covered);
+    }
+
+    // ── JSON array placeholder rejection ────────────────────────────
+
+    [Fact]
+    public void JsonArrayPlaceholder_ReturnsCoveredFalse()
+    {
+        // Placeholder-like content in brackets should not count as concrete
+        var prompts = new[] { "Process items [{config}]" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "items", 2);
+        Assert.False(result.Covered, "Placeholder-like JSON array should not be covered");
+    }
+
+    [Fact]
+    public void RealJsonArray_ReturnsCoveredTrue()
+    {
+        // Real JSON object array with concrete values should count as covered
+        var prompts = new[] { "Process items [{'id': 1, 'name': 'test'}]" };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "items", 2);
+        Assert.True(result.Covered, "Real JSON array should be covered");
+    }
 }
