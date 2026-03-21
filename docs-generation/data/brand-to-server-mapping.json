@@ -1,5 +1,11 @@
 [
   {
+    "brandName": "Azure Container Apps",
+    "mcpServerName": "containerapps",
+    "shortName": "Container Apps",
+    "fileName": "azure-container-apps"
+  },
+  {
     "brandName": "Azure Container Registry",
     "mcpServerName": "acr",
     "shortName": "ACR",
