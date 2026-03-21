@@ -2,11 +2,12 @@
 # Start: Compatibility wrapper for the typed DocGeneration.PipelineRunner host.
 #
 # Usage:
-#   ./start.sh [namespace] [steps]
-#   ./start.sh                # Run bootstrap + steps 1-6 for all namespaces (output: ./generated/)
-#   ./start.sh advisor        # Run bootstrap + steps 1-6 for advisor namespace only (output: ./generated-advisor/)
-#   ./start.sh advisor 1,2,3  # Run bootstrap + steps 1,2,3 for advisor namespace (output: ./generated-advisor/)
-#   ./start.sh 1,2,3          # Run bootstrap + steps 1,2,3 for all namespaces (output: ./generated/)
+#   ./start.sh [namespace] [steps] [--skip-deps]
+#   ./start.sh                      # Run bootstrap + steps 1-6 for all namespaces (output: ./generated/)
+#   ./start.sh advisor              # Run bootstrap + steps 1-6 for advisor namespace only (output: ./generated-advisor/)
+#   ./start.sh advisor 1,2,3        # Run bootstrap + steps 1,2,3 for advisor namespace (output: ./generated-advisor/)
+#   ./start.sh 1,2,3                # Run bootstrap + steps 1,2,3 for all namespaces (output: ./generated/)
+#   ./start.sh advisor 4 --skip-deps  # Run step 4 skipping dependency validation
 #
 # Bootstrap step 0 always runs inside DocGeneration.PipelineRunner; start.sh is only a thin wrapper.
 
@@ -15,6 +16,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NAMESPACE_ARG=""
 STEPS_ARG="1,2,3,4,5,6"
+EXTRA_ARGS=()
 
 # If first arg starts with -, pass all args through directly to DocGeneration.PipelineRunner
 if [[ $# -gt 0 && "$1" =~ ^- ]]; then
@@ -25,13 +27,22 @@ fi
 if [[ $# -gt 0 ]]; then
     if [[ "$1" =~ ^[1-6](,[1-6])*$ ]]; then
         STEPS_ARG="$1"
+        shift
     else
         NAMESPACE_ARG="$1"
-        if [[ $# -gt 1 ]]; then
-            STEPS_ARG="$2"
+        shift
+        if [[ $# -gt 0 && "$1" =~ ^[1-6](,[1-6])*$ ]]; then
+            STEPS_ARG="$1"
+            shift
         fi
     fi
 fi
+
+# Collect remaining flags (e.g., --skip-deps)
+while [[ $# -gt 0 ]]; do
+    EXTRA_ARGS+=("$1")
+    shift
+done
 
 RUNNER_ARGS=(--steps "$STEPS_ARG")
 if [[ -n "$NAMESPACE_ARG" ]]; then
@@ -41,6 +52,9 @@ else
     OUTPUT_DIR="$ROOT_DIR/generated"
     RUNNER_ARGS+=(--output "$OUTPUT_DIR")
 fi
+
+# Append extra flags
+RUNNER_ARGS+=("${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}")
 
 echo "==================================================================="
 echo "Start: Documentation Generation Orchestrator"
