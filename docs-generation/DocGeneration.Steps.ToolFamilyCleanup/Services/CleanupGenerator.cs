@@ -332,7 +332,7 @@ public class CleanupGenerator
     /// Processes tool families using multi-phase approach: read tools, generate metadata/related content, stitch together.
     /// Solves 16K token limit by processing tools individually and assembling at the end.
     /// </summary>
-    public async Task ProcessToolFamiliesMultiPhase()
+    public async Task<int> ProcessToolFamiliesMultiPhase()
     {
         Console.WriteLine("=== Tool Family Cleanup Generation (Multi-Phase) ===");
         Console.WriteLine();
@@ -360,7 +360,7 @@ public class CleanupGenerator
         if (toolsByFamily.Count == 0)
         {
             Console.WriteLine("⚠ No tool families found.");
-            return;
+            return 0;
         }
 
         // Initialize generators
@@ -502,6 +502,8 @@ public class CleanupGenerator
         Console.WriteLine($"Metadata:         {metadataDir}");
         Console.WriteLine($"Related content:  {relatedDir}");
         Console.WriteLine($"Final files:      {outputDir}");
+
+        return failCount;
     }
 
     /// <summary>

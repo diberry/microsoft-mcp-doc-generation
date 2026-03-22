@@ -147,6 +147,82 @@ public class ToolFamilyCleanupStepTests
         }
     }
 
+    [Fact]
+    public async Task Step4_ExitZeroButNoOutputFiles_FailsWithSubprocessOutput()
+    {
+        // Reproduces #160: subprocess exits 0 (AI exception swallowed) but produces no output files.
+        // Before fix: step reported "Expected isolated output" with no explanation.
+        // After fix: step surfaces the "✗ Failed" lines from subprocess stdout.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner
+            {
+                OnRun = spec =>
+                {
+                    // Subprocess exits 0 but writes NO output files (AI generation failed silently)
+                    var stdout = "[1/1] Processing family: search (6 tools)...\n" +
+                                 "[1/1]   Phase 2: Generating metadata... \n" +
+                                 "[1/1] ✗ Failed to process search: Rate limit exceeded after 5 retries\n" +
+                                 "\n=== Summary ===\nFailed:           1\n";
+                    return CallbackProcessRunner.SuccessWithOutput(spec, stdout);
+                },
+            };
+
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            // Should surface the failure reason from subprocess stdout
+            Assert.Contains(result.Warnings, w => w.Contains("✗") || w.Contains("Failed"));
+            // Should NOT just say "Expected isolated output" without context
+            Assert.Contains(result.Warnings, w => w.Contains("Subprocess output"));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step4_ExitZeroNoOutputNoErrorLines_ShowsGenericMessage()
+    {
+        // Edge case: subprocess exits 0, no output files, stdout has no error indicators
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner
+            {
+                OnRun = spec =>
+                {
+                    // Subprocess exits 0 with clean-looking output but no files written
+                    return CallbackProcessRunner.SuccessWithOutput(spec, "Azure MCP Tool Family Cleanup\n============================\n");
+                },
+            };
+
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            // Should show a helpful generic message when no error lines found
+            Assert.Contains(result.Warnings, w => w.Contains("produced no output files"));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
     private static PipelineContext CreateCosmosContext(string testRoot, IProcessRunner processRunner)
     {
         var docsGenerationRoot = Path.Combine(testRoot, "docs-generation");
@@ -306,6 +382,9 @@ public class ToolFamilyCleanupStepTests
 
         public static ProcessExecutionResult Success(ProcessSpec spec)
             => new(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero);
+
+        public static ProcessExecutionResult SuccessWithOutput(ProcessSpec spec, string standardOutput)
+            => new(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, standardOutput, string.Empty, TimeSpan.Zero);
 
         public static ProcessExecutionResult Failure(ProcessSpec spec, int exitCode, string standardError)
             => new(spec.FileName, spec.Arguments, spec.WorkingDirectory, exitCode, string.Empty, standardError, TimeSpan.Zero);

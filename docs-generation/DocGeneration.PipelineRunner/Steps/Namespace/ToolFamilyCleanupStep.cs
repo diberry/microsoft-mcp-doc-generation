@@ -133,6 +133,24 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 
             if (copyBackIssues.Count > 0)
             {
+                // Surface subprocess stdout so the "✗ Failed to process" message is visible (#160)
+                if (!string.IsNullOrWhiteSpace(cleanupResult.StandardOutput))
+                {
+                    var relevantLines = cleanupResult.StandardOutput
+                        .Split('\n')
+                        .Where(line => line.Contains("✗") || line.Contains("Failed") || line.Contains("Error"))
+                        .Select(line => line.Trim())
+                        .Where(line => !string.IsNullOrEmpty(line))
+                        .ToArray();
+                    if (relevantLines.Length > 0)
+                    {
+                        warnings.Add($"Subprocess output: {string.Join(" | ", relevantLines)}");
+                    }
+                    else
+                    {
+                        warnings.Add("Subprocess exited 0 but produced no output files. Check AI credentials and rate limits.");
+                    }
+                }
                 warnings.AddRange(copyBackIssues);
                 artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
                 return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
