@@ -50,6 +50,9 @@ public class FamilyFileStitcher
         // 7. Post-processing: ensure blank line between annotation link and values (#151)
         markdown = AnnotationSpaceFixer.Fix(markdown);
 
+        // 8. Post-processing: apply contractions per Microsoft style guide (#145)
+        markdown = ContractionFixer.Fix(markdown);
+
         return markdown;
     }
 

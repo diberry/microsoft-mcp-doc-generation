@@ -162,6 +162,40 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 - Avoid unexplained jargon and acronyms
 - Use consistent terminology
 
+### Acrolinx Compliance Rules
+
+#### Overview Sentence Structure (#143)
+The overview paragraph immediately after H1 must be split into **two sentences**:
+1. **First sentence**: States the purpose — what the tool family lets you do
+2. **Second sentence**: Lists the capabilities — what specific resources or actions are available
+
+**Bad** (single complex sentence):
+> The Azure MCP Server lets you manage Azure Storage resources, including storage accounts, containers, tables, and blobs with natural language prompts.
+
+**Good** (two clear sentences):
+> The Azure MCP Server lets you manage Azure Storage resources with natural language prompts. You can work with storage accounts, containers, tables, and blobs.
+
+#### Present Tense and Contractions (#145)
+- **Use present tense** — describe what the tool does NOW, not what it "will" do
+  - Replace "will be generated" with "is generated"
+  - Replace "will return" with "returns"
+  - Replace "will be created" with "is created"
+- **Use contractions** per Microsoft style guide to keep a conversational tone:
+  - "does not" → "doesn't"
+  - "do not" → "don't"  
+  - "is not" → "isn't"
+  - "will not" → "won't"
+  - "cannot" / "can not" → "can't"
+
+#### Commas After Introductory Phrases (#146)
+Always add a comma after an introductory phrase at the start of a sentence:
+- "For each detector**,** it returns..."
+- "If not specified**,** the default value is used."
+- "When using this tool**,** you must provide..."
+- "After the operation completes**,** the result is returned."
+
+Common introductory phrases: For each, If not, When using, After, Before, In addition, By default, For example, In this case, To use.
+
 ### Technical Accuracy
 - Verify technical descriptions are accurate
 - Ensure command syntax is properly formatted
