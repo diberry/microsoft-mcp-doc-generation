@@ -44,6 +44,9 @@ public class FamilyFileStitcher
         // 5. Post-processing: inject required frontmatter fields (#155)
         markdown = FrontmatterEnricher.Enrich(markdown);
 
+        // 6. Post-processing: strip duplicate example blocks (#153)
+        markdown = DuplicateExampleStripper.Strip(markdown);
+
         return markdown;
     }
 
