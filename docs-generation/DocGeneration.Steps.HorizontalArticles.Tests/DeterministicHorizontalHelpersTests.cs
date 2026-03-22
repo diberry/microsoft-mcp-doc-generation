@@ -170,7 +170,7 @@ public class DeterministicHorizontalHelpersTests
         var capabilities = DeterministicHorizontalHelpers.PreComputeCapabilities(tools);
 
         Assert.That(capabilities, Has.Count.EqualTo(3));
-        Assert.That(capabilities, Has.All.Not.EndsWith("."));
+        Assert.That(capabilities.Values, Has.All.Not.EndsWith("."));
     }
 
     // ── PreComputeShortDescriptions ─────────────────────────────────
@@ -222,7 +222,77 @@ public class DeterministicHorizontalHelpersTests
         var caps2 = DeterministicHorizontalHelpers.PreComputeCapabilities(tools);
 
         Assert.That(order1.Select(t => t.Command), Is.EqualTo(order2.Select(t => t.Command)));
-        Assert.That(caps1, Is.EqualTo(caps2));
+        Assert.That(caps1.Values, Is.EqualTo(caps2.Values));
+    }
+
+    // ── Edge cases (review feedback) ────────────────────────────────
+
+    [Test]
+    public void ClassifyToolPlane_NullMetadata_DefaultsToVerbClassification()
+    {
+        var tool = new HorizontalToolSummary
+        {
+            Command = "storage account create",
+            Description = "Create account",
+            Metadata = null!
+        };
+        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo("management"));
+    }
+
+    [Test]
+    public void ClassifyToolPlane_EmptyMetadata_DefaultsToVerbClassification()
+    {
+        var tool = new HorizontalToolSummary
+        {
+            Command = "cosmos container get",
+            Description = "Get container",
+            Metadata = new Dictionary<string, MetadataValue>()
+        };
+        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo("data"));
+    }
+
+    [TestCase("appconfig createorupdate", "management")]
+    [TestCase("compute deploy", "management")]
+    [TestCase("functionapp publish", "management")]
+    public void ClassifyToolPlane_CompoundVerbs_CorrectlyClassified(string command, string expected)
+    {
+        var tool = MakeTool(command);
+        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void OrderToolsByPlane_EmptyList_ReturnsEmpty()
+    {
+        var result = DeterministicHorizontalHelpers.OrderToolsByPlane(new List<HorizontalToolSummary>());
+        Assert.That(result, Is.Empty);
+    }
+
+    [Test]
+    public void PreComputeCapabilities_DuplicateCommands_FirstWins()
+    {
+        var tools = new List<HorizontalToolSummary>
+        {
+            MakeTool("storage list", description: "First description."),
+            MakeTool("storage list", description: "Second description."),
+        };
+
+        var caps = DeterministicHorizontalHelpers.PreComputeCapabilities(tools);
+        Assert.That(caps, Has.Count.EqualTo(1));
+        Assert.That(caps["storage list"], Is.EqualTo("First description"));
+    }
+
+    [Test]
+    public void TruncateDescription_EmptyString_ReturnsEmpty()
+    {
+        var result = DeterministicHorizontalHelpers.TruncateDescription("", maxWords: 10);
+        Assert.That(result, Is.EqualTo(""));
+    }
+
+    [Test]
+    public void TruncateDescription_SingleWord_ReturnsTrimmed()
+    {
+        var result = DeterministicHorizontalHelpers.TruncateDescription("List.", maxWords: 10);
+        Assert.That(result, Is.EqualTo("List"));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────

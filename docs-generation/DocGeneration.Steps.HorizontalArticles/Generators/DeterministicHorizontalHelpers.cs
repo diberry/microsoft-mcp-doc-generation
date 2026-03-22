@@ -15,12 +15,14 @@ public static class DeterministicHorizontalHelpers
 {
     private static readonly HashSet<string> ManagementVerbs = new(StringComparer.OrdinalIgnoreCase)
     {
-        "create", "delete", "update", "add", "remove", "set", "import", "assign"
+        "create", "delete", "update", "add", "remove", "set", "import", "assign",
+        "cancel", "deploy", "publish", "send", "move", "copy", "upload"
     };
 
     private static readonly HashSet<string> DataVerbs = new(StringComparer.OrdinalIgnoreCase)
     {
-        "list", "get", "query", "search", "find", "read", "export", "download"
+        "list", "get", "query", "search", "find", "read", "export", "download",
+        "recognize", "synthesize", "diagnose", "check_status"
     };
 
     /// <summary>
@@ -30,18 +32,29 @@ public static class DeterministicHorizontalHelpers
     /// </summary>
     public static string ClassifyToolPlane(HorizontalToolSummary tool)
     {
-        // Metadata takes priority
-        if (tool.Metadata.TryGetValue("destructive", out var destructive) && destructive.Value)
-            return "management";
-        if (tool.Metadata.TryGetValue("readOnly", out var readOnly) && readOnly.Value)
-            return "data";
+        // Metadata takes priority (null-safe)
+        if (tool.Metadata != null)
+        {
+            if (tool.Metadata.TryGetValue("destructive", out var destructive) && destructive.Value)
+                return "management";
+            if (tool.Metadata.TryGetValue("readOnly", out var readOnly) && readOnly.Value)
+                return "data";
+        }
 
         // Fall back to command verb classification
         var verb = ExtractVerb(tool.Command);
-        if (verb != null && ManagementVerbs.Contains(verb))
-            return "management";
-        if (verb != null && DataVerbs.Contains(verb))
-            return "data";
+        if (verb != null)
+        {
+            // Handle compound verbs like "createorupdate"
+            if (verb.Contains("create", StringComparison.OrdinalIgnoreCase) ||
+                verb.Contains("delete", StringComparison.OrdinalIgnoreCase) ||
+                verb.Contains("update", StringComparison.OrdinalIgnoreCase))
+                return "management";
+            if (ManagementVerbs.Contains(verb))
+                return "management";
+            if (DataVerbs.Contains(verb))
+                return "data";
+        }
 
         // Default to data plane (read-only assumption)
         return "data";
@@ -70,11 +83,18 @@ public static class DeterministicHorizontalHelpers
     }
 
     /// <summary>
-    /// Pre-computes one capability string per tool.
+    /// Pre-computes one capability string per tool, keyed by command.
     /// </summary>
-    public static List<string> PreComputeCapabilities(List<HorizontalToolSummary> tools)
+    public static Dictionary<string, string> PreComputeCapabilities(List<HorizontalToolSummary> tools)
     {
-        return tools.Select(ExtractCapability).ToList();
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var tool in tools)
+        {
+            // Skip duplicates (first wins)
+            if (!result.ContainsKey(tool.Command))
+                result[tool.Command] = ExtractCapability(tool);
+        }
+        return result;
     }
 
     /// <summary>
@@ -82,9 +102,13 @@ public static class DeterministicHorizontalHelpers
     /// </summary>
     public static Dictionary<string, string> PreComputeShortDescriptions(List<HorizontalToolSummary> tools)
     {
-        return tools.ToDictionary(
-            t => t.Command,
-            t => TruncateDescription(t.Description?.Trim() ?? t.Command, maxWords: 12));
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var tool in tools)
+        {
+            if (!result.ContainsKey(tool.Command))
+                result[tool.Command] = TruncateDescription(tool.Description?.Trim() ?? tool.Command, maxWords: 12);
+        }
+        return result;
     }
 
     /// <summary>
