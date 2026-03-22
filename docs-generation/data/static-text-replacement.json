@@ -34,6 +34,10 @@
     {
         "Parameter": "CosmosDB",
         "NaturalLanguage": "Azure Cosmos DB"
+    },
+    {
+        "Parameter": "This is a logical container",
+        "NaturalLanguage": "This resource group is a logical container"
     }
 
 ]
