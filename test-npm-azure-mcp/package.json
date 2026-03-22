@@ -1,7 +1,8 @@
 {
   "name": "test-npm-azure-mcp",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Azure MCP CLI metadata extractor — provides tool data for the documentation generation pipeline",
+  "private": true,
   "scripts": {
     "start": "az login",
     "start:info": "azmcp server info",
@@ -11,12 +12,12 @@
     "get:tools-json": "azmcp tools list",
     "get:tools-namespace": "azmcp tools list --namespace-mode",
     "get:subscriptions": "azmcp subscription list",
-    "get:chat-completion": "azmcp foundry openai chat-completions-create --subscription aa94d689-ef39-45c8-9434-0d9efb62b456 --tenant 888d76fa-54b2-4ced-8ee5-aac1585adee7"
+    "get:chat-completion": "bash chat-completion.sh",
+    "validate": "node validate-cli-output.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@azure/mcp": "^2.0.0-beta.31"
   }
