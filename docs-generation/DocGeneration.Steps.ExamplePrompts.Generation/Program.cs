@@ -205,6 +205,7 @@ internal static class Program
 
         var successCount = 0;
         var failureCount = 0;
+        var deterministicCount = 0;
         var e2eMatchCount = 0;
         var e2eMissCount = 0;
         var e2eLogEntries = new List<string>();
@@ -258,15 +259,31 @@ internal static class Program
             }
 
             var parameterManifest = await LoadParameterManifestAsync(tool.Command, paramManifestsDir, nameContext);
-            var result = await generator.GenerateAsync(tool, referencePrompts, parameterManifest, validationFeedback);
-            if (!result.HasValue)
-            {
-                failureCount++;
-                Console.WriteLine($"  ❌ {tool.Command}");
-                continue;
-            }
 
-            var (userPrompt, promptsResponse, rawResponse) = result.Value;
+            // Check if tool is eligible for deterministic generation (#163 Tier 2a)
+            bool hasE2ePrompts = referencePrompts != null && referencePrompts.Count > 0;
+            string userPrompt;
+            ExamplePromptsResponse? promptsResponse;
+            string rawResponse;
+
+            if (DeterministicExamplePromptGenerator.IsEligible(tool, hasE2ePrompts))
+            {
+                promptsResponse = DeterministicExamplePromptGenerator.Generate(tool);
+                userPrompt = $"deterministic — no AI call (#163 Tier 2a)\nVerb: {DeterministicExamplePromptGenerator.ClassifyVerb(tool.Command!)}\nResource: {DeterministicExamplePromptGenerator.ExtractResource(tool.Command!)}";
+                rawResponse = "{}";
+                deterministicCount++;
+            }
+            else
+            {
+                var result = await generator.GenerateAsync(tool, referencePrompts, parameterManifest, validationFeedback);
+                if (!result.HasValue)
+                {
+                    failureCount++;
+                    Console.WriteLine($"  ❌ {tool.Command}");
+                    continue;
+                }
+                (userPrompt, promptsResponse, rawResponse) = result.Value;
+            }
 
             // Use shared deterministic filename builder
             var inputPromptFileName = ToolFileNameBuilder.BuildInputPromptFileName(
@@ -336,11 +353,12 @@ internal static class Program
             }
 
             await File.WriteAllTextAsync(examplePromptPath, exampleContent);
-            Console.WriteLine($"  ✅ {tool.Command,-50} → {examplePromptFileName}");
+            var modeLabel = DeterministicExamplePromptGenerator.IsEligible(tool, hasE2ePrompts) ? "deterministic" : "AI";
+            Console.WriteLine($"  ✅ {tool.Command,-50} → {examplePromptFileName} ({modeLabel})");
         }
 
         Console.WriteLine($"\n📊 Summary:");
-        Console.WriteLine($"  ✅ Generated: {successCount}");
+        Console.WriteLine($"  ✅ Generated: {successCount} ({deterministicCount} deterministic, {successCount - deterministicCount} AI)");
         Console.WriteLine($"  ❌ Failed:    {failureCount}");
         if (e2eLookup != null)
         {
