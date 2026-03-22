@@ -223,6 +223,37 @@ public class ToolFamilyCleanupStepTests
         }
     }
 
+    [Fact]
+    public async Task Step4_ExitZeroNoOutputEmptyStdout_ShowsGenericMessage()
+    {
+        // Edge case from code review: subprocess stdout is completely empty.
+        // Generic diagnostic must still appear even when there's nothing to parse.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner
+            {
+                OnRun = spec => CallbackProcessRunner.Success(spec), // Success returns empty stdout
+            };
+
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("produced no output files"));
+            Assert.Contains(result.Warnings, w => w.Contains("Expected isolated"));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
     private static PipelineContext CreateCosmosContext(string testRoot, IProcessRunner processRunner)
     {
         var docsGenerationRoot = Path.Combine(testRoot, "docs-generation");

@@ -146,11 +146,14 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     {
                         warnings.Add($"Subprocess output: {string.Join(" | ", relevantLines)}");
                     }
-                    else
-                    {
-                        warnings.Add("Subprocess exited 0 but produced no output files. Check AI credentials and rate limits.");
-                    }
                 }
+
+                // Always add diagnostic hint when no subprocess error lines were surfaced
+                if (!warnings.Any(w => w.Contains("Subprocess output:")))
+                {
+                    warnings.Add("Subprocess exited 0 but produced no output files. Check AI credentials and rate limits.");
+                }
+
                 warnings.AddRange(copyBackIssues);
                 artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
                 return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
