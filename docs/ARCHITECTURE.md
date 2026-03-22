@@ -190,7 +190,7 @@ These are reliable, testable fixes that compensate for AI inconsistency.
 
 ### Multi-Namespace Merge (AD-011)
 
-Some Azure services span multiple MCP namespaces but publish as a single article (e.g., `monitor` + `workbooks` → `azure-monitor.md`). Rather than threading multi-namespace awareness through all 6 pipeline steps, a **post-assembly merge** runs after all namespaces complete:
+Some Azure services span multiple MCP namespaces but publish as a single article (e.g., `monitor` + `workbooks` → `monitor.md`). Rather than threading multi-namespace awareness through all 6 pipeline steps, a **post-assembly merge** runs after all namespaces complete:
 
 1. Each namespace generates independently through Steps 1-6
 2. `merge-namespaces.sh` reads merge group config from `brand-to-server-mapping.json`
@@ -199,7 +199,7 @@ Some Azure services span multiple MCP namespaces but publish as a single article
    - `mergeOrder`: position within group (1 = primary)
    - `mergeRole`: `"primary"` (owns frontmatter/overview/related) or `"secondary"` (tool H2 sections only)
 4. Namespaces WITHOUT `mergeGroup` are standalone — fully backward compatible
-5. `MergeGroupValidator` enforces: exactly one primary per group, unique sequential order, complete field sets
+5. `MergeGroupValidator` enforces: exactly one primary per group, unique order values (no duplicates), complete field sets
 
 **C# implementation**: `NamespaceMerger.cs` provides typed merge logic with `ParseArticle()` / `Merge()` / `UpdateToolCount()` methods, mirrored by the Node.js-based `merge-namespaces.sh` for shell-level execution.
 
