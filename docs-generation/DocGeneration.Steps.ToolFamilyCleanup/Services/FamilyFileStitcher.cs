@@ -47,6 +47,9 @@ public class FamilyFileStitcher
         // 6. Post-processing: strip duplicate example blocks (#153)
         markdown = DuplicateExampleStripper.Strip(markdown);
 
+        // 7. Post-processing: ensure blank line between annotation link and values (#151)
+        markdown = AnnotationSpaceFixer.Fix(markdown);
+
         return markdown;
     }
 
