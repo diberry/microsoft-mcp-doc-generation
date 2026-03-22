@@ -79,7 +79,7 @@ Remaining 5 failures tracked as:
 - #161: Step 2 checker too strict for `message-array` and `name` params (foundryextensions, fileshares)
 
 ### AD-007: TDD — Tests First, Then Code
-**Date:** 2026-03-21  
+**Date:** 2026-03-21 (updated 2026-03-22)  
 **Author:** Avery (Lead)  
 **Status:** Active  
 **Supersedes:** Previous version of AD-007
@@ -101,7 +101,39 @@ Rules:
 - If the code under test is `private`, make it `internal` with `[InternalsVisibleTo]`
 - **PRs that contain code changes without corresponding test changes are blocked**
 
-**Rationale:** Our #158 work shipped 6 commits but only 5 tests. Retrofitting 45 tests after the fact (AD-007 v1) worked but is wasteful — TDD catches design issues earlier and produces better-targeted fixes.
+### AD-010: Test Coverage Depth — Tests Must Catch the Bug on Regression
+**Date:** 2026-03-22  
+**Author:** Avery (Lead)  
+**Status:** Active  
+**Extends:** AD-007
+
+**Tests must be behavioral, not just structural.** A test that only checks a method signature or return type is insufficient. Every fix must include tests that would **definitively catch the bug if it regressed**.
+
+**Coverage depth requirements:**
+
+| Change Type | Minimum Test Coverage |
+|-------------|----------------------|
+| Bug fix (code path) | ≥1 test that reproduces the exact failure scenario with realistic inputs |
+| Bug fix (error handling) | ≥1 test for the error path + ≥1 test for the happy path to guard regressions |
+| Bug fix (AI-dependent) | ≥1 test simulating AI failure (mock/stub), ≥1 test simulating AI success |
+| New feature | ≥1 test per public method, ≥1 edge case, ≥1 null/empty input |
+| Config/data change | ≥1 test proving the new config value is loaded AND applied |
+| Post-processing step | ≥1 test with input containing the problem pattern, ≥1 test with clean input (no false positives) |
+
+**Test quality checklist (reviewer must verify):**
+- [ ] Test would FAIL if the fix were reverted (not just a type check or reflection test)
+- [ ] Test uses realistic inputs (not trivial "hello world" data)
+- [ ] Test asserts on the observable behavior, not implementation details
+- [ ] Error-path tests verify the error message/warning content, not just success/failure boolean
+- [ ] If testing a pipeline step, test uses the existing `CallbackProcessRunner`/mock pattern
+
+**Anti-patterns (blocked in review):**
+- ❌ Reflection-only tests (checking method exists, return type, attribute presence) as sole coverage
+- ❌ Tests that pass regardless of whether the fix is present
+- ❌ Tests that only assert `Assert.True(result.Success)` without checking warnings/output
+- ❌ "Smoke tests" that call the method but don't assert meaningful behavior
+
+**Rationale:** PR #172 initially had only 1 reflection test for a 3-file fix. The test would pass even if the exit code logic were reverted. Adding behavioral tests (simulating "exit 0 but no output files") caught the actual scenario. Tests must be written to catch the bug, not just prove the code compiles.
 
 ### AD-008: Plan Step Runs Before Executing
 **Date:** 2026-03-21  
