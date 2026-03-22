@@ -119,4 +119,79 @@ public class ParameterGeneratorTests
         Assert.True(parameter.IsConditionalRequired);
         Assert.Equal("Provide vault name.", parameter.Description);
     }
+
+    // ── Common Parameter Filtering (#147) ──────────────────────────
+
+    [Fact]
+    public void CommonParameters_DoNotIncludeResourceGroup()
+    {
+        // resource-group is a scoping parameter used by only ~35 tools,
+        // NOT a universal infrastructure param. It must NOT be in common-parameters.json.
+        var commonParamsPath = Path.Combine(
+            FindProjectRoot(), "docs-generation", "data", "common-parameters.json");
+        var json = File.ReadAllText(commonParamsPath);
+        var commonParams = System.Text.Json.JsonSerializer.Deserialize<List<CommonParam>>(json,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Assert.NotNull(commonParams);
+        Assert.DoesNotContain(commonParams, p => p.Name == "--resource-group");
+    }
+
+    [Fact]
+    public void CommonParameters_DoNotIncludeSubscription()
+    {
+        // subscription is also a scoping parameter — tools that declare it
+        // need it shown in their parameter table for user clarity.
+        var commonParamsPath = Path.Combine(
+            FindProjectRoot(), "docs-generation", "data", "common-parameters.json");
+        var json = File.ReadAllText(commonParamsPath);
+        var commonParams = System.Text.Json.JsonSerializer.Deserialize<List<CommonParam>>(json,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Assert.NotNull(commonParams);
+        Assert.DoesNotContain(commonParams, p => p.Name == "--subscription");
+    }
+
+    [Fact]
+    public void CommonParameters_OnlyContainInfrastructureParams()
+    {
+        // Only retry-*, auth-method, and tenant are true infrastructure params
+        // that appear on ALL tools and add no tool-specific information.
+        var commonParamsPath = Path.Combine(
+            FindProjectRoot(), "docs-generation", "data", "common-parameters.json");
+        var json = File.ReadAllText(commonParamsPath);
+        var commonParams = System.Text.Json.JsonSerializer.Deserialize<List<CommonParam>>(json,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Assert.NotNull(commonParams);
+        var allowedPrefixes = new[] { "--retry-", "--auth-method", "--tenant" };
+        foreach (var param in commonParams)
+        {
+            Assert.True(
+                allowedPrefixes.Any(p => param.Name!.StartsWith(p, StringComparison.OrdinalIgnoreCase)),
+                $"Unexpected common parameter '{param.Name}' — scoping params like resource-group and subscription should not be common");
+        }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    private static string FindProjectRoot()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null)
+        {
+            if (File.Exists(Path.Combine(dir, "docs-generation.sln")))
+                return dir;
+            dir = Path.GetDirectoryName(dir);
+        }
+        throw new InvalidOperationException("Could not find project root (docs-generation.sln)");
+    }
+
+    private sealed class CommonParam
+    {
+        public string? Name { get; set; }
+        public string? Type { get; set; }
+        public string? Description { get; set; }
+        public bool IsRequired { get; set; }
+    }
 }

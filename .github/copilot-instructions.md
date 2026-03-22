@@ -100,8 +100,9 @@ Other configs:
 **Critical**: The parameter count shown in console output and `generation-summary.md` reflects only **non-common parameters** that appear in the documentation parameter tables.
 
 - **Common parameters** are defined in `docs-generation/common-parameters.json`:
-  - `--tenant`, `--subscription`, `--auth-method`, `--resource-group`
+  - `--tenant`, `--auth-method` (infrastructure params)
   - `--retry-delay`, `--retry-max-delay`, `--retry-max-retries`, `--retry-mode`, `--retry-network-timeout`
+  - Note: `--resource-group` and `--subscription` are **scoping params** — NOT in common-parameters.json because they are tool-specific and change behavior when present
 - **Exception**: Common parameters that are **required** for a specific tool are kept in the table
 - The count matches what users see in the parameter tables in the generated `.md` files
 - **Filtering occurs in**:
@@ -567,7 +568,7 @@ pwsh -File "$SCRIPT_DIR/MyScript.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS"
 - **Every bug fix MUST include tests**: When fixing a bug or error, add one or more unit tests that reproduce the bug and verify the fix. Tests must be placed in a `.Tests` project that is part of `docs-generation.sln` so that CI (`dotnet test docs-generation.sln`) runs them automatically. If no `.Tests` project exists for the affected project, create one (xunit, CPM, added to the solution). If the code under test has `private` methods that need testing, change them to `internal` and add `<InternalsVisibleTo Include="ProjectName.Tests" />` to the source project's `.csproj`.
 - **For new generators**: Place in `Generators/` directory, follow existing patterns
   - Use dependency injection for shared functions (brand mapping, filename cleaning)
-  - Filter common parameters using `ExtractCommonParameters` unless they're required
+  - Filter infrastructure parameters (tenant, auth-method, retry-*) using `common-parameters.json` — scoping params like resource-group and subscription are NOT filtered
   - Document in separate README.md file within the generator directory
 - **For Azure OpenAI integration**:
   - Always implement retry logic with exponential backoff (see `GenerativeAIClient.cs`)
