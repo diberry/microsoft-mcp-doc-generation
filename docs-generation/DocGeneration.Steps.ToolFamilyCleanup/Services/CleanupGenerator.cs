@@ -365,11 +365,27 @@ public class CleanupGenerator
 
         // Initialize generators
         var metadataGenerator = new FamilyMetadataGenerator(_options);
-        var relatedContentGenerator = new RelatedContentGenerator(_options);
         var stitcher = new FamilyFileStitcher();
 
+        // Load deterministic related content links (#163 — replaces AI call)
+        var serviceDocLinksPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "service-doc-links.json");
+        if (!File.Exists(serviceDocLinksPath))
+        {
+            serviceDocLinksPath = Path.Combine(AppContext.BaseDirectory, "data", "service-doc-links.json");
+        }
+        Dictionary<string, ServiceDocLink> serviceDocLinks;
+        if (File.Exists(serviceDocLinksPath))
+        {
+            serviceDocLinks = DeterministicRelatedContentGenerator.LoadServiceDocLinks(serviceDocLinksPath);
+            Console.WriteLine($"✓ Loaded {serviceDocLinks.Count} service doc links (deterministic related content)");
+        }
+        else
+        {
+            serviceDocLinks = new Dictionary<string, ServiceDocLink>();
+            Console.WriteLine("⚠ service-doc-links.json not found — related content will use empty fallback");
+        }
+
         await metadataGenerator.LoadPromptsAsync();
-        await relatedContentGenerator.LoadPromptsAsync();
         Console.WriteLine("✓ Generators initialized");
         Console.WriteLine();
 
@@ -462,15 +478,15 @@ public class CleanupGenerator
                 await File.WriteAllTextAsync(metadataPath, metadata);
                 Console.WriteLine($"✓ ({EstimateTokens(metadata)} tokens)");
 
-                // Phase 3: Generate related content
+                // Phase 3: Generate related content (deterministic — no AI call, #163)
                 Console.Write($"{progress}   Phase 3: Generating related content... ");
-                var relatedContent = await relatedContentGenerator.GenerateAsync(familyContent);
+                var relatedContent = DeterministicRelatedContentGenerator.Generate(familyName, serviceDocLinks);
                 familyContent.RelatedContent = relatedContent;
                 
                 // Save related content
                 var relatedPath = Path.Combine(relatedDir, $"{familyName}-related.md");
                 await File.WriteAllTextAsync(relatedPath, relatedContent);
-                Console.WriteLine($"✓ ({EstimateTokens(relatedContent)} tokens)");
+                Console.WriteLine($"✓ (deterministic)");
 
                 // Phase 3.5: Pre-stitch H2 count validation
                 ValidateAndFixPhantomH2Sections(familyContent, progress);
