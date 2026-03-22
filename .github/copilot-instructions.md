@@ -212,6 +212,26 @@ All validations, transformations, prompts, and tests in the HorizontalArticleGen
 2. Add to `compound-words.json` if has concatenated words
 3. Regenerate docs - old include files should be deleted first
 
+### Multi-Namespace Merge (AD-011)
+
+Some Azure services span multiple MCP namespaces but publish as a single article. This uses a **post-assembly merge** pattern:
+
+**Configuration** in `brand-to-server-mapping.json`:
+- `mergeGroup`: group identifier (e.g., `"azure-monitor"`)
+- `mergeOrder`: position within group (1 = primary)
+- `mergeRole`: `"primary"` (owns frontmatter/overview/related) or `"secondary"` (tool H2 sections only)
+
+**Key components**:
+- `merge-namespaces.sh` — Post-assembly merge script called by `start.sh`
+- `NamespaceMerger.cs` — Typed C# merge logic (ParseArticle/Merge/UpdateToolCount)
+- `MergeGroupValidator.cs` — Config validation (exactly 1 primary, unique order, complete fields)
+
+**Adding a new merge group**:
+1. Add `mergeGroup`, `mergeOrder`, `mergeRole` to each namespace's entry in `brand-to-server-mapping.json`
+2. Run `dotnet test` — `MergeGroupValidator` catches configuration errors
+3. Run `./start.sh` — merge runs automatically after all namespaces complete
+4. Verify merged output in `generated-{primary-namespace}/tool-family/`
+
 ### Modifying Templates
 1. Edit `.hbs` file in `templates/`
 2. Rebuild: `dotnet build CSharpGenerator/`
