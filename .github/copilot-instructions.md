@@ -345,6 +345,32 @@ pwsh ./Debug-MultiPageDocs.ps1  # Prepare environment
 # Then F5 in VS Code with "Debug Generate Docs" config
 ```
 
+## ⚠️ IMPORTANT: Test-Driven Development (TDD) — Mandatory
+
+**Every code change MUST start with tests and have behavioral test coverage.** See `.squad/decisions.md` AD-007 and AD-010.
+
+**Workflow (non-negotiable):**
+1. Write failing test(s) that reproduce the bug or define the feature contract
+2. Verify the test(s) FAIL against current code
+3. Implement the fix
+4. Verify ALL tests pass (new + existing)
+5. Commit tests and code together
+
+**Test coverage depth — tests must catch the bug on regression:**
+- Bug fixes: ≥1 test that reproduces the exact failure with realistic inputs
+- Error handling: ≥1 error-path test + ≥1 happy-path regression guard
+- AI-dependent code: ≥1 test simulating AI failure (mock/stub)
+- Post-processing: ≥1 test with problem-pattern input + ≥1 clean-input test (no false positives)
+- Config changes: ≥1 test proving the config value is loaded AND applied
+
+**Blocked anti-patterns:**
+- ❌ Reflection-only tests (method exists, return type) as sole coverage
+- ❌ Tests that pass regardless of whether the fix is present
+- ❌ Tests that only assert `result.Success` without checking warnings/output content
+- ❌ Code changes without corresponding test changes
+
+**Reviewer checklist:** Would this test FAIL if the fix were reverted? If not, it's not a real test.
+
 ## ⚠️ IMPORTANT: Testing Projects with Generative AI
 
 **Critical for time management**: Any project that uses generative AI (Azure OpenAI) will make sequential API calls to generate content. This can take **15-30+ minutes** to complete a full run (~200+ tools × ~2-4 seconds per API call).
