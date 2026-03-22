@@ -6,21 +6,9 @@
     "isRequired": false
   },
   {
-    "name": "--subscription",
-    "type": "string",
-    "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name. If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
-    "isRequired": false
-  },
-  {
     "name": "--auth-method",
     "type": "string",
     "description": "Authentication method to use. Options: 'credential' (Azure CLI/managed identity), 'key' (access key), or 'connectionString'.",
-    "isRequired": false
-  },
-  {
-    "name": "--resource-group",
-    "type": "string",
-    "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
     "isRequired": false
   },
   {
