@@ -115,6 +115,27 @@ Each namespace writes to its own `generated-{namespace}/` directory with no shar
 # Check: generated-advisor/reports/tool-family-validation-*.txt
 ```
 
+## Post-Assembly Merge (AD-011)
+
+After all namespaces complete, `start.sh` automatically calls `merge-namespaces.sh` to combine multi-namespace tool-family articles. This is config-driven via `brand-to-server-mapping.json` merge fields.
+
+```bash
+# Automatic: runs after successful pipeline completion
+./start.sh                        # All namespaces → merge runs at end
+
+# Manual: run merge independently
+./merge-namespaces.sh             # Merge all configured groups
+./merge-namespaces.sh --dry-run   # Preview what would be merged
+```
+
+**Currently configured merge groups:**
+
+| Group | Primary | Secondary | Result |
+|-------|---------|-----------|--------|
+| `azure-monitor` | monitor (15 tools) | workbooks (5 tools) | `monitor.md` (20 tools) |
+
+Namespaces without `mergeGroup` config are standalone — the merge step is a no-op for them.
+
 ## Exit Codes
 
 | Code | Meaning |

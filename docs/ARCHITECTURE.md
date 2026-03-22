@@ -96,6 +96,14 @@ Final Output ──────────────────────�
   ├── parameters/*.md                    ← Include files
   ├── example-prompts/*.md               ← Include files
   └── reports/                           ← Validation reports
+
+Post-Assembly: Multi-Namespace Merge (AD-011) ────────────────────
+  • Runs AFTER all namespaces complete (called by start.sh)
+  • Reads mergeGroup config from brand-to-server-mapping.json
+  • Primary namespace: keeps frontmatter + overview + related content
+  • Secondary namespaces: contribute tool H2 sections only
+  • Updates tool_count in merged article frontmatter
+  • Example: monitor (15 tools) + workbooks (5 tools) → monitor.md (20 tools)
 ```
 
 ## Step Contract
@@ -167,12 +175,33 @@ If validation fails, Step 4 retries (up to 2 attempts) since AI output is non-de
 
 ### Deterministic Post-Processing
 
-The `FamilyFileStitcher.Stitch()` method chains deterministic fixes after AI assembly:
-1. `PostProcessor.ExpandMcpAcronym()` — expand "MCP" on first body mention
-2. `FrontmatterEnricher.Enrich()` — inject required Microsoft Learn fields
-3. `DuplicateExampleStripper.Strip()` — remove non-canonical example blocks
+The `FamilyFileStitcher.Stitch()` method chains 9 deterministic fixes after AI assembly:
+1. H2 stripping from metadata (remove AI-generated H2 lines from frontmatter section)
+2. Tool section assembly (merge individual tool H2 blocks)
+3. Related content assembly (append related content section)
+4. `PostProcessor.ExpandMcpAcronym()` — expand "MCP" on first body mention
+5. `FrontmatterEnricher.Enrich()` — inject required Microsoft Learn fields
+6. `DuplicateExampleStripper.Strip()` — remove non-canonical example blocks
+7. `AnnotationSpaceFixer.Fix()` — blank line between annotation link and values
+8. `ContractionFixer.Fix()` — "does not" → "doesn't", etc. (backtick-aware)
+9. `ExampleValueBackticker.Fix()` — wrap bare values in `(for example, VALUE)` with backticks
 
 These are reliable, testable fixes that compensate for AI inconsistency.
+
+### Multi-Namespace Merge (AD-011)
+
+Some Azure services span multiple MCP namespaces but publish as a single article (e.g., `monitor` + `workbooks` → `azure-monitor.md`). Rather than threading multi-namespace awareness through all 6 pipeline steps, a **post-assembly merge** runs after all namespaces complete:
+
+1. Each namespace generates independently through Steps 1-6
+2. `merge-namespaces.sh` reads merge group config from `brand-to-server-mapping.json`
+3. Grouped namespaces are combined using three optional fields:
+   - `mergeGroup`: group identifier (e.g., `"azure-monitor"`)
+   - `mergeOrder`: position within group (1 = primary)
+   - `mergeRole`: `"primary"` (owns frontmatter/overview/related) or `"secondary"` (tool H2 sections only)
+4. Namespaces WITHOUT `mergeGroup` are standalone — fully backward compatible
+5. `MergeGroupValidator` enforces: exactly one primary per group, unique sequential order, complete field sets
+
+**C# implementation**: `NamespaceMerger.cs` provides typed merge logic with `ParseArticle()` / `Merge()` / `UpdateToolCount()` methods, mirrored by the Node.js-based `merge-namespaces.sh` for shell-level execution.
 
 ### Parallel Execution
 
@@ -223,6 +252,7 @@ Step 0 validates these variables before any AI steps run (unless `--skip-env-val
 ```
 microsoft-mcp-doc-generation/
 ├── start.sh                          # Entry point (bash wrapper)
+├── merge-namespaces.sh               # Post-assembly merge (AD-011)
 ├── docs-generation.sln               # .NET solution
 ├── docs-generation/
 │   ├── DocGeneration.PipelineRunner/  # Typed orchestrator
