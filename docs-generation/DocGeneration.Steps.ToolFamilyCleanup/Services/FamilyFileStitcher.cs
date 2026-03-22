@@ -37,7 +37,11 @@ public class FamilyFileStitcher
         // 3. Related content section
         sb.AppendLine(familyContent.RelatedContent);
 
-        return sb.ToString().TrimEnd();
+        // 4. Post-processing: expand MCP acronym on first body mention (#142)
+        var markdown = sb.ToString().TrimEnd();
+        markdown = PostProcessor.ExpandMcpAcronym(markdown);
+
+        return markdown;
     }
 
     /// <summary>
