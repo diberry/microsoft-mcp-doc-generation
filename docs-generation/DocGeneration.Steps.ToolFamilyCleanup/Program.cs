@@ -64,7 +64,13 @@ internal class Program
             
             if (useMultiPhase)
             {
-                await generator.ProcessToolFamiliesMultiPhase();
+                var failCount = await generator.ProcessToolFamiliesMultiPhase();
+                if (failCount > 0)
+                {
+                    Console.WriteLine();
+                    Console.Error.WriteLine($"✗ Tool family cleanup completed with {failCount} failure(s)");
+                    return 1;
+                }
             }
             else
             {
