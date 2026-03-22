@@ -30,6 +30,10 @@
     {
         "Parameter": "VMSS",
         "NaturalLanguage": "Virtual machine scale set (VMSS)"
+    },
+    {
+        "Parameter": "CosmosDB",
+        "NaturalLanguage": "Azure Cosmos DB"
     }
 
 ]
