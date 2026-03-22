@@ -10,8 +10,9 @@ This is the Azure MCP Documentation Generator - an automated system that generat
 
 Files under `generated/` and `generated-*/` directories are **programmatically generated output**. Do NOT modify these files directly unless the user explicitly requests it. Instead, fix the **source code** that generates them:
 
+- **Typed steps** (`docs-generation/DocGeneration.PipelineRunner/Steps/`)
+- **Generator projects** (`docs-generation/DocGeneration.Steps.*/*.cs`)
 - **Templates** (`docs-generation/templates/*.hbs`, project-specific `templates/` dirs)
-- **C# generators** (`docs-generation/CSharpGenerator/`, `ToolGeneration_Raw/`, `ToolGeneration_Composed/`, `ToolGeneration_Improved/`, `ToolFamilyCleanup/`, `HorizontalArticleGenerator/`, `ExamplePromptGeneratorStandalone/`)
 - **Configuration files** (`docs-generation/data/*.json`)
 - **AI prompts** (`docs-generation/prompts/`, project-specific `prompts/` dirs)
 
@@ -19,49 +20,48 @@ After fixing the source, the user will regenerate the output with `bash start.sh
 
 ## Architecture
 
-### Three-Tier System
+### Typed .NET Pipeline (PipelineRunner)
 
-1. **Orchestration Layer** (PowerShell)
-   - `docs-generation/Generate.ps1` - Main entry point
-   - Detects container vs local environment via `$env:MCP_SERVER_PATH`
-   - Calls Azure MCP CLI to extract tool data
-   - Invokes C# generator with JSON input
+The pipeline is orchestrated by `DocGeneration.PipelineRunner`, a typed C# runner invoked via `start.sh`:
 
-2. **Generation Layer** (C# + .NET 9.0)
-   - `docs-generation/CSharpGenerator/` - Console app that processes JSON
-   - Uses Handlebars.Net 2.1.6 for template processing
-   - Applies configuration for filename resolution
-
-3. **Template Layer** (Handlebars)
-   - `docs-generation/templates/*.hbs` - Define documentation structure
-   - `tool-family-page.hbs` - Main service docs
-   - `annotation-template.hbs`, `parameter-template.hbs` - Includes
-   - `tool-complete-template.hbs` - Complete tool documentation (NEW)
-
-## Key Components
-
-### PowerShell Orchestrator
-**File**: `docs-generation/Generate.ps1`
-
-Environment detection:
-```powershell
-$mcpServerPath = if ($env:MCP_SERVER_PATH) { 
-    $env:MCP_SERVER_PATH  # Container: /mcp/servers/Azure.Mcp.Server/src
-} else { 
-    "..\servers\Azure.Mcp.Server\src"  # Local
-}
+```
+start.sh → PipelineCli → PipelineRunner.RunAsync()
+               │
+               ├── Step 0: BootstrapStep (Global)
+               │     Build .NET, extract CLI metadata, validate brands
+               │
+               ├── Step 1: AnnotationsParametersRawStep (per namespace)
+               │     CLI JSON → annotations, parameters, raw tools
+               │
+               ├── Step 2: ExamplePromptsStep (AI, per namespace)
+               │     Generate 5 NL prompts per tool via Azure OpenAI
+               │
+               ├── Step 3: ToolGenerationStep (AI, per namespace)
+               │     Compose + AI-improve tool descriptions
+               │
+               ├── Step 4: ToolFamilyCleanupStep (AI, per namespace, retries 2x)
+               │     Assemble per-service article + post-assembly validation
+               │
+               ├── Step 5: SkillsRelevanceStep (warn-only, per namespace)
+               │     GitHub Copilot skills mapping
+               │
+               └── Step 6: HorizontalArticlesStep (AI, per namespace)
+                     Overview articles with capabilities, RBAC, best practices
 ```
 
-### C# Generator
-**Directory**: `docs-generation/CSharpGenerator/`
+Every step implements `IPipelineStep` with typed dependency declarations, failure policies, and optional post-validators. See `docs/ARCHITECTURE.md` for full details.
 
-Key files:
-- `Program.cs` - Entry point
-- `DocumentationGenerator.cs` - Core logic
-  - **Parameter Count**: The parameter count displayed in console output and `generation-summary.md` represents the count of **non-common parameters only** (those shown in the parameter tables). Common parameters are defined in `docs-generation/common-parameters.json` and are filtered out to match what users see in the documentation.
-- `Config.cs` - Configuration loader
-- `Generators/CompleteToolGenerator.cs` - Complete tool documentation generator (NEW)
-  - See `Generators/COMPLETE-TOOLS-README.md` for detailed documentation
+### Key Files
+
+| Component | Location |
+|-----------|----------|
+| Pipeline entry point | `DocGeneration.PipelineRunner/Program.cs` |
+| Step registry | `DocGeneration.PipelineRunner/Registry/StepRegistry.cs` |
+| Step contract | `DocGeneration.PipelineRunner/Contracts/IPipelineStep.cs` |
+| Bootstrap (Step 0) | `DocGeneration.PipelineRunner/Steps/Bootstrap/BootstrapStep.cs` |
+| Steps 1-6 | `DocGeneration.PipelineRunner/Steps/Namespace/` |
+| Post-validators | `DocGeneration.PipelineRunner/Validation/` |
+| Workspace manager | `DocGeneration.PipelineRunner/Services/WorkspaceManager.cs` |
 
 ### TemplateEngine (shared library)
 **Directory**: `docs-generation/TemplateEngine/`
