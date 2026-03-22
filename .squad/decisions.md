@@ -203,6 +203,25 @@ Step dependency chain (what each step reads from disk):
 
 Generated content must NEVER use `~/` (DocFX repo-root) paths. Use only: absolute URLs, site-root-relative (`/azure/...`), or file-relative (`../includes/...`) paths.
 
+### AD-011: Multi-Namespace Merge — Post-Assembly Design
+**Date:** 2026-03-22  
+**Author:** Avery (Lead)  
+**Status:** Active
+
+Some Azure services span multiple MCP namespaces but publish as a single article (e.g., `monitor` + `workbooks` → `azure-monitor.md`). Rather than threading multi-namespace awareness through all 6 pipeline steps (high risk), we use a **post-assembly merge** pattern:
+
+1. Each namespace generates independently through Steps 1-6 as before
+2. A merge step runs AFTER all namespaces complete
+3. Grouped namespaces are defined in `brand-to-server-mapping.json` via optional fields:
+   - `mergeGroup`: group identifier (e.g., `"azure-monitor"`)
+   - `mergeOrder`: position within group (1 = primary)
+   - `mergeRole`: `"primary"` (owns frontmatter/overview/related-content) or `"secondary"` (contributes tool H2 sections only)
+4. Namespaces WITHOUT `mergeGroup` are standalone — fully backward compatible
+5. Validation rules:
+   - Each group must have exactly one `"primary"` namespace
+   - `mergeOrder` values must be unique and sequential within a group
+   - `mergeGroup` value should match the primary namespace's `fileName`
+
 ## Governance
 
 - All meaningful changes require team consensus

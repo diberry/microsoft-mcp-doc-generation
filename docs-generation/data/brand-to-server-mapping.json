@@ -219,7 +219,10 @@
     "brandName": "Azure Monitor",
     "mcpServerName": "monitor",
     "shortName": "Monitor",
-    "fileName": "azure-monitor"
+    "fileName": "azure-monitor",
+    "mergeGroup": "azure-monitor",
+    "mergeOrder": 1,
+    "mergeRole": "primary"
   },
   {
     "brandName": "Azure Monitor Instrumentation",
@@ -345,6 +348,9 @@
     "brandName": "Azure Workbooks",
     "mcpServerName": "workbooks",
     "shortName": "Workbooks",
-    "fileName": "azure-workbooks"
+    "fileName": "azure-workbooks",
+    "mergeGroup": "azure-monitor",
+    "mergeOrder": 2,
+    "mergeRole": "secondary"
   }
 ]
