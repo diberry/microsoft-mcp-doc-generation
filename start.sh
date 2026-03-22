@@ -62,4 +62,12 @@ echo "==================================================================="
 echo ""
 
 dotnet run --project "$ROOT_DIR/docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "${RUNNER_ARGS[@]}"
-exit $?
+PIPELINE_EXIT=$?
+
+# Post-assembly: merge multi-namespace articles (AD-011)
+# Only runs when tool-family articles exist for merge group members
+if [[ $PIPELINE_EXIT -eq 0 && -f "$ROOT_DIR/merge-namespaces.sh" ]]; then
+    bash "$ROOT_DIR/merge-namespaces.sh"
+fi
+
+exit $PIPELINE_EXIT
