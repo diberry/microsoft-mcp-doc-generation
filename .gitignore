@@ -33,6 +33,7 @@ generated*
 
 # Workflow-generated diff files (uploaded as artifacts, not committed)
 test-npm-azure-mcp/diff-*.txt
+test-npm-azure-mcp/environment.txt
 
 # Local-only orchestration scripts (not committed)
 start-with-*.sh
