@@ -53,6 +53,9 @@ public class FamilyFileStitcher
         // 8. Post-processing: apply contractions per Microsoft style guide (#145)
         markdown = ContractionFixer.Fix(markdown);
 
+        // 9. Post-processing: wrap bare example values in backticks (#152)
+        markdown = ExampleValueBackticker.Fix(markdown);
+
         return markdown;
     }
 
