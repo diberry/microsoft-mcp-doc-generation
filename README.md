@@ -1,6 +1,6 @@
 # Azure MCP Documentation Generator
 
-Automated system for generating comprehensive markdown documentation for Microsoft Azure Model Context Protocol (MCP) server tools.
+Automated system for generating comprehensive markdown documentation for Microsoft Azure Model Context Protocol (MCP) server tools. A typed .NET pipeline (PipelineRunner) orchestrates 7 steps — from raw CLI metadata extraction through AI-enhanced article assembly — producing 800+ markdown files across 52 Azure service namespaces.
 
 ## Quick Start
 
@@ -164,36 +164,30 @@ Cross-cutting "how-to" guides for service-level scenarios:
 
 ```
 microsoft-mcp-doc-generation/
+├── start.sh                     # Entry point (bash wrapper → PipelineRunner)
+├── docs-generation.sln          # .NET 9 solution
+│
 ├── docs/                        # Documentation
 │   ├── QUICK-START.md           # 5-minute guide
-│   ├── START-SCRIPTS.md         # Detailed start.sh documentation
+│   ├── START-SCRIPTS.md         # Detailed start.sh options
+│   ├── ARCHITECTURE.md          # System architecture + data flow
 │   ├── GENERATION-SCRIPTS.md    # Script execution order
-│   └── ARCHITECTURE.md          # System architecture
+│   └── PROJECT-GUIDE.md         # Full developer guide
 │
 ├── docs-generation/             # Generation system
-│   ├── DocGeneration.PipelineRunner/          # Typed orchestrator including BootstrapStep + Steps 1-6
-│   ├── scripts/                 # Legacy/fallback PowerShell/bash orchestration helpers
-│   │   ├── preflight.ps1        # Legacy bootstrap fallback; standard path uses BootstrapStep
-│   │   ├── Generate-ToolFamily.ps1
-│   │   ├── 1-Generate-AnnotationsParametersRaw-One.ps1
-│   │   ├── 2-Generate-ExamplePrompts-One.ps1
-│   │   ├── 3-Generate-ToolGenerationAndAIImprovements-One.ps1
-│   │   ├── 4-Generate-DocGeneration.Steps.ToolFamilyCleanup-One.ps1
-│   │   ├── Validate-ToolFamily-PostAssembly.ps1
-│   │   ├── 5-Generate-DocGeneration.Steps.SkillsRelevance-One.ps1
-│   │   ├── 6-Generate-HorizontalArticles-One.ps1
-│   │   ├── standalone/          # Supporting validation/dev scripts
-│   │   └── utilities/           # DocGeneration.Core.Shared helpers and utilities
+│   ├── DocGeneration.PipelineRunner/          # Typed orchestrator (Steps 0-6)
+│   │   ├── Program.cs                        # CLI entry (System.CommandLine)
+│   │   ├── PipelineRunner.cs                 # Core runner loop
+│   │   ├── Registry/StepRegistry.cs          # Step registration
+│   │   ├── Steps/Bootstrap/                  # Step 0: env, build, CLI
+│   │   ├── Steps/Namespace/                  # Steps 1-6
+│   │   └── Validation/                       # Post-assembly validators
+│   ├── DocGeneration.Steps.*/                # Generator projects (one per step)
+│   ├── DocGeneration.Core.*/                 # Shared libraries
+│   ├── scripts/                 # Legacy PowerShell (fallback only)
 │   ├── data/                    # Configuration files (JSON)
-│   ├── prompts/                 # AI prompt templates (see below)
-│   ├── templates/               # Handlebars templates
-│   │
-│   ├── DocGeneration.Steps.AnnotationsParametersRaw.Annotations/         # Core generator (.NET 9.0)
-│   ├── DocGeneration.Steps.ExamplePrompts.Generation/  # AI prompt generator
-│   ├── DocGeneration.Steps.HorizontalArticles/        # How-to article generator
-│   ├── DocGeneration.Steps.ToolFamilyCleanup/       # AI-based formatting
-│   ├── DocGeneration.Core.GenerativeAI/            # Azure OpenAI client
-│   └── DocGeneration.Core.Shared/                  # DocGeneration.Core.Shared utilities
+│   ├── prompts/                 # AI prompt templates
+│   └── templates/               # Handlebars templates
 │
 ├── generated/                   # Output directory (created during generation)
 │   ├── tool-family/             # Main output: service documentation
@@ -297,11 +291,12 @@ To modify AI-generated content quality or style:
 
 ## Additional Documentation
 
-- **[docs/QUICK-START.md](docs/QUICK-START.md)** - Docker-based 5-minute setup guide
-- **[docs/START-SCRIPTS.md](docs/START-SCRIPTS.md)** - Complete start.sh documentation with all options
-- **[docs/GENERATION-SCRIPTS.md](docs/GENERATION-SCRIPTS.md)** - Detailed script execution order and dependencies
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System architecture and design decisions
-- **[docs-generation/README.md](docs-generation/README.md)** - Generator implementation details
+- **[docs/QUICK-START.md](docs/QUICK-START.md)** — 5-minute setup guide
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System architecture, data flow, step details
+- **[docs/START-SCRIPTS.md](docs/START-SCRIPTS.md)** — Complete start.sh documentation with all options
+- **[docs/GENERATION-SCRIPTS.md](docs/GENERATION-SCRIPTS.md)** — Detailed script execution order and dependencies
+- **[docs/PROJECT-GUIDE.md](docs/PROJECT-GUIDE.md)** — Full developer guide (extending, testing, troubleshooting)
+- **[docs-generation/README.md](docs-generation/README.md)** — Generator implementation details
 
 ## Prerequisites
 
