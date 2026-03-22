@@ -470,13 +470,30 @@ public class CleanupGenerator
 
                 // Phase 2: Generate metadata
                 Console.Write($"{progress}   Phase 2: Generating metadata... ");
-                var metadata = await metadataGenerator.GenerateAsync(familyContent, _cliVersion ?? "unknown");
+                var aiMetadata = await metadataGenerator.GenerateAsync(familyContent, _cliVersion ?? "unknown");
+
+                // Apply deterministic frontmatter (#163 Tier 1b)
+                // AI still generates intro paragraphs; frontmatter YAML + H1 are deterministic
+                string metadata;
+                if (serviceDocLinks.TryGetValue(familyName, out var docLink)
+                    && !string.IsNullOrWhiteSpace(docLink.SeoDescription))
+                {
+                    var header = DeterministicFrontmatterGenerator.Generate(
+                        displayName, familyContent.ToolCount, _cliVersion ?? "unknown", docLink.SeoDescription);
+                    var intros = DeterministicFrontmatterGenerator.ExtractIntroParagraphs(aiMetadata);
+                    metadata = DeterministicFrontmatterGenerator.Assemble(header, intros);
+                    Console.WriteLine($"✓ (deterministic frontmatter + AI intros)");
+                }
+                else
+                {
+                    metadata = aiMetadata;
+                    Console.WriteLine($"✓ ({EstimateTokens(metadata)} tokens, full AI)");
+                }
                 familyContent.Metadata = metadata;
                 
                 // Save metadata
                 var metadataPath = Path.Combine(metadataDir, $"{familyName}-metadata.md");
                 await File.WriteAllTextAsync(metadataPath, metadata);
-                Console.WriteLine($"✓ ({EstimateTokens(metadata)} tokens)");
 
                 // Phase 3: Generate related content (deterministic — no AI call, #163)
                 Console.Write($"{progress}   Phase 3: Generating related content... ");
