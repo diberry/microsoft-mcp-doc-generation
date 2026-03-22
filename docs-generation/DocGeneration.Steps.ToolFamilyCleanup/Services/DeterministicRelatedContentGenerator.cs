@@ -54,6 +54,6 @@ public static class DeterministicRelatedContentGenerator
 }
 
 /// <summary>
-/// Represents a link to Azure service documentation.
+/// Represents a link to Azure service documentation with optional SEO description.
 /// </summary>
-public record ServiceDocLink(string Title, string Url);
+public record ServiceDocLink(string Title, string Url, string? SeoDescription = null);
