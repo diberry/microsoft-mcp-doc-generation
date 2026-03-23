@@ -45,10 +45,10 @@ mcp-cli.version: {{version}}
 | *No parameters* |  | |
 
 {{/if}}
-{{#if AnnotationFileName}}
+{{#if AnnotationContent}}
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-[!INCLUDE [{{Command}}](../annotations/{{AnnotationFileName}})]
+{{{AnnotationContent}}}
 {{else}}
 <!-- No tool annotations for this tool -->
 {{/if}}
