@@ -135,7 +135,8 @@ public class ParameterGenerator
                     Required = opt.Required,
                     RequiredText = BuildRequiredText(opt.Required, parameterName, conditionalParameters),
                     IsConditionalRequired = conditionalParameters.Contains(parameterName),
-                    Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? string.Empty))
+                    Description = TextCleanup.WrapExampleValues(
+                        TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? string.Empty)))
                 };
             })
             .ToList();
