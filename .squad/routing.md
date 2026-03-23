@@ -7,6 +7,7 @@ How to decide who handles what.
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
 | Pipeline architecture / cross-stage issues | Avery | Data flow changes, new pipeline stages, quality gates between stages |
+| Pipeline orchestrator / step contracts | Riley | PipelineRunner, step registration, dependencies, workspace isolation, retry logic, merge orchestration |
 | C# generator code (`docs-generation/**/*.cs`) | Morgan | Generator bug fixes, new generators, template changes, config file updates |
 | Scripts / CI / Docker (`.ps1`, `.sh`, `.yml`, `Dockerfile`) | Quinn | Script fixes, Docker builds, CI pipeline, preflight validation |
 | AI prompts / Azure OpenAI (`prompts/`, `GenerativeAI/`) | Sage | Prompt design, AI output validation, fabrication detection, content transformation |
@@ -26,7 +27,7 @@ Some tasks need multiple agents working in parallel:
 
 | Scenario | Primary | Secondary | Notes |
 |----------|---------|-----------|-------|
-| New pipeline stage | Avery (design) | Morgan (implement) + Quinn (script) + Parker (test) + Reeve (docs) | Avery designs, then fan out |
+| New pipeline stage | Avery (design) | Riley (orchestration) + Morgan (implement) + Quinn (script) + Parker (test) + Reeve (docs) | Avery designs, Riley wires into PipelineRunner, then fan out |
 | AI content quality fix | Sage (prompt) | Parker (validation test) + Reeve (update troubleshooting docs) | Sage fixes prompt, Parker adds regression test |
 | Generator bug fix | Morgan (fix) | Parker (test) + Reeve (docs if behavior changes) | Morgan fixes code, Parker adds test |
 | Full pipeline change | Avery (architecture) | All others | Avery designs, routes subtasks |

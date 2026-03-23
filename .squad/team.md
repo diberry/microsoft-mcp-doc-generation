@@ -13,6 +13,7 @@
 | Name | Role | Charter | Status |
 |------|------|---------|--------|
 | Avery | Lead / Architect | `.squad/agents/avery/charter.md` | ✅ Active |
+| Riley | Pipeline Architect | `.squad/agents/riley/charter.md` | ✅ Active |
 | Morgan | C# Generator Developer | `.squad/agents/morgan/charter.md` | ✅ Active |
 | Quinn | DevOps / Scripts Engineer | `.squad/agents/quinn/charter.md` | ✅ Active |
 | Sage | AI / Prompt Engineer | `.squad/agents/sage/charter.md` | ✅ Active |
