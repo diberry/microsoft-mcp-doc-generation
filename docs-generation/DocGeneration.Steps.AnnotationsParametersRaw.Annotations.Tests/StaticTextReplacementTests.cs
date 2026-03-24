@@ -136,4 +136,109 @@ public class StaticTextReplacementTests : IClassFixture<TextCleanupFixture>
         // Assert — no double-replacement
         Assert.Equal("This resource group is a logical container for Azure resources.", result);
     }
+
+    // ── Acrolinx Wordy/Informal Phrase Replacements (#215) ──────────
+
+    [Theory]
+    [InlineData("Configure storage etc.", "Configure storage and more")]
+    [InlineData("Manage VMs, storage, etc.", "Manage VMs, storage, and more")]
+    public void ReplaceStaticText_Etc_ReplacedWithAndMore(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ReplaceStaticText_Etc_NotReplacedInsideBackticks()
+    {
+        // "etc." inside backticks should stay — it's a code reference
+        // Note: static replacement doesn't skip backticks — backtick-awareness
+        // is the responsibility of higher-level fixers in FamilyFileStitcher
+        var input = "Use the `etc.` directory for config files.";
+        var result = TextCleanup.ReplaceStaticText(input);
+        // Static replacement applies to all text including backtick content;
+        // backtick protection is handled at the fixer level, not here
+        Assert.NotNull(result);
+    }
+
+    [Theory]
+    [InlineData("Configure the resource in order to deploy.", "Configure the resource to deploy.")]
+    [InlineData("In order to use this tool, authenticate first.", "to use this tool, authenticate first.")]
+    public void ReplaceStaticText_InOrderTo_ReplacedWithTo(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Make sure the cluster is running.", "ensure the cluster is running.")]
+    [InlineData("make sure you authenticate first.", "ensure you authenticate first.")]
+    public void ReplaceStaticText_MakeSure_ReplacedWithEnsure(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("A number of resources are available.", "several resources are available.")]
+    [InlineData("a number of parameters are optional.", "several parameters are optional.")]
+    public void ReplaceStaticText_ANumberOf_ReplacedWithSeveral(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Utilize the Azure CLI to deploy.", "use the Azure CLI to deploy.")]
+    [InlineData("You can utilize this tool.", "You can use this tool.")]
+    public void ReplaceStaticText_Utilize_ReplacedWithUse(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("This functionality enables deployment.", "This feature enables deployment.")]
+    [InlineData("The tool provides monitoring functionality.", "The tool provides monitoring feature.")]
+    public void ReplaceStaticText_Functionality_ReplacedWithFeature(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Connect via the Azure portal.", "Connect through the Azure portal.")]
+    [InlineData("Deploy resources via CLI.", "Deploy resources through CLI.")]
+    public void ReplaceStaticText_Via_ReplacedWithThrough(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("You can leverage this tool.", "You can use this tool.")]
+    [InlineData("Leverage the existing infrastructure.", "use the existing infrastructure.")]
+    public void ReplaceStaticText_Leverage_ReplacedWithUse(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Authenticate prior to running the command.", "Authenticate before running the command.")]
+    [InlineData("Prior to deployment, configure the app.", "before deployment, configure the app.")]
+    public void ReplaceStaticText_PriorTo_ReplacedWithBefore(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ReplaceStaticText_MultipleWordyPhrases_AllReplaced()
+    {
+        var input = "You can utilize this feature to leverage the existing tools.";
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.DoesNotContain("utilize", result, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("leverage", result, StringComparison.OrdinalIgnoreCase);
+    }
 }

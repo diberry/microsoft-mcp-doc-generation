@@ -65,3 +65,22 @@
 4. Test suite baseline: 1028 tests (PR #201 branch), 1023 tests (PR #200 branch), all passing.
 
 **Pattern identified:** PRs that fix template rendering bugs tend to only test the helper methods, not the template rendering itself. Template-level regression tests (rendering actual `.hbs` files with `HandlebarsTemplateEngine.ProcessTemplateString()`) are the gap.
+
+### 2026-03-25: Test Strategy Document Created
+
+**Context:** Per #202 requirements review, drafted `docs/test-strategy.md` covering the full pipeline test landscape.
+
+**Key findings from audit:**
+- **1,100+ tests** across **17 active test projects** (17 deprecated/legacy projects also exist but not in .sln)
+- **3 step projects with zero test projects:** CliAnalyzer (Step 0), RawTools (Step 1), Composition (Step 3)
+- **Only Step 4** has an `IPostValidator`. Steps 0, 1, 2, 3, 5, 6 have none — Steps 3 and 6 are critical gaps (template token leakage, AI JSON failures per AD-002)
+- **Only 1 of 10 templates** (`tool-family-page.hbs`) has regression tests. The other 9 are untested.
+- **23 of 49 namespaces** have `generated-validated-*` snapshots; 26 have zero validated output
+- **Zero step contract tests** exist — no test verifies Step N output is valid Step N+1 input
+- `verify-quantity/index.js` checks file existence but not content quality
+- `TextCleanup` (NaturalLanguage) has zero test coverage
+- `HandlebarsTemplateEngine` has only 2 basic tests despite being the core rendering engine
+
+**Document structure:** 10 sections covering current landscape, test pyramid, test categories (6 types), test data strategy with reference namespaces, regression detection via baseline fingerprinting, AD-010/AD-019 compliance enforcement, execution/CI, gap analysis, and 8-week priority roadmap (18 tasks across 4 phases).
+
+**Decision:** The test pyramid is bottom-heavy (strong unit tests) but hollow in the middle (no step contracts, minimal template tests). Phase 1 priority is Step 3 + Step 6 validators and template regression tests for `tool-complete-template.hbs` and `parameter-template.hbs`.

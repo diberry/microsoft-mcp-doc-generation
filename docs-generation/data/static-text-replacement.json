@@ -38,6 +38,42 @@
     {
         "Parameter": "This is a logical container",
         "NaturalLanguage": "This resource group is a logical container"
+    },
+    {
+        "Parameter": "etc.",
+        "NaturalLanguage": "and more"
+    },
+    {
+        "Parameter": "in order to",
+        "NaturalLanguage": "to"
+    },
+    {
+        "Parameter": "make sure",
+        "NaturalLanguage": "ensure"
+    },
+    {
+        "Parameter": "a number of",
+        "NaturalLanguage": "several"
+    },
+    {
+        "Parameter": "utilize",
+        "NaturalLanguage": "use"
+    },
+    {
+        "Parameter": "functionality",
+        "NaturalLanguage": "feature"
+    },
+    {
+        "Parameter": "via",
+        "NaturalLanguage": "through"
+    },
+    {
+        "Parameter": "leverage",
+        "NaturalLanguage": "use"
+    },
+    {
+        "Parameter": "prior to",
+        "NaturalLanguage": "before"
     }
 
 ]

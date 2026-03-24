@@ -9,6 +9,26 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-03-25: Work Prioritization — 14 Issues Created from Team Reviews
+
+**Session:** Synthesized requirements review (#202), test strategy reviews (6 reviewers), AD-020, AD-021, and existing issue backlog into a prioritized issue set.
+
+**Key prioritization decisions:**
+
+1. **P0 tier (3 issues: #203, #204, #205):** ResetOutputDirectory data loss and the two missing post-validators (Steps 3 and 6). These are the only items that cause data loss or allow bad content to ship silently. Unanimous team consensus on all three.
+
+2. **P1 tier (5 issues: #206-#210):** Defensive testing and structured contracts. TextCleanup tests (#206) are the highest-risk untested code path — one regex regression corrupts 800+ files. Failure path tests (#207), bootstrap contracts (#208), baseline fingerprinting (#209), and structured step-result.json (#210) all catch bugs before production.
+
+3. **P2 tier (4 issues: #211-#214):** Developer experience and observability. Prompt versioning (#211), token tracking (#212), CI docs (#213), and prompt regression framework (#214). Important but not blocking — the pipeline works without them.
+
+4. **P3 tier (2 issues: #215, #216):** Quality-over-time improvements. Acrolinx compliance (#215) and StripFrontmatter consolidation (#216). Both are real value but low urgency.
+
+**Architectural insight:** The P0/P1 split reflects a key principle — **prevent data loss first, then catch bugs, then improve DX.** The team's unanimous agreement on ResetOutputDirectory as P0 shows maturity: a correctness-first team recognizes that destroying valid output is worse than any feature gap.
+
+**Work distribution:** Riley gets both pipeline infrastructure P0/P1s (#203, #210). Morgan and Sage each get a validator (#204, #205). Parker gets the high-impact test work (#206, #207). This spreads load while keeping domain expertise aligned.
+
+---
+
 ### 2026-03-24: Round 2 Architecture Re-Review — PRs #200 and #201
 
 **Session:** Re-review after Morgan addressed Parker's Round 1 rejection findings.

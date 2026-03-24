@@ -291,6 +291,103 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 
 ---
 
+### AD-021: Step 3 and Step 6 Must Have Post-Validators Before Next Release
+**Date:** 2026-03-25  
+**Author:** Parker (QA/Tester)  
+**Status:** Active  
+**Extends:** AD-002, AD-010  
+**Triggered by:** Test strategy audit (docs/test-strategy.md)
+
+**Decision:** Steps 3 (ToolGeneration) and 6 (HorizontalArticles) must implement `IPostValidator` before the next release. These are the only AI-dependent steps with **no output validation at all**, creating the two highest-risk gaps identified in AD-002:
+
+1. **Step 3:** Template token leakage (`<<<TPL_LABEL_N>>>`) in final output goes undetected
+2. **Step 6:** AI JSON parse failures producing incomplete horizontal articles go undetected
+
+**Rationale:** The test strategy audit found that only Step 4 has a post-validator. Steps 3 and 6 produce AI-generated content that feeds directly into the final documentation corpus — if they fail silently, bad content ships. Both risks are already documented in AD-002 but have no mitigation.
+
+**Impact:** Morgan or Sage should implement these validators. Parker will write tests for the validators once implemented. Blocks: any release claiming "full pipeline validation".
+
+---
+
+### AD-022: Acrolinx Compliance Strategy for Tool-Family Articles
+**Date:** 2026-03-25
+**Author:** Sage (AI / Prompt Engineer)
+**Status:** Active
+**Triggered by:** Acrolinx gate requirement; 30% pass rate on tool-family articles; issues #142-#146; PR review feedback from azure-dev-docs-pr
+
+**Context:** Our generated tool-family articles currently pass Acrolinx quality gate (80+) at only 30% rate (3/10). Worst performers: Deploy (61), Postgres (64), Cloud Architect (67). Acrolinx is mandatory for merging to production docs.
+
+**Decision:** Implement **6-priority remediation plan** combining prompt changes (P0) and deterministic post-processors (P1-P4):
+
+1. **P0 — System prompt update:** Add explicit Acrolinx compliance rules to `tool-family-cleanup-system-prompt.txt` (sentence length ≤25 words, present tense, active voice, contractions, introductory commas, wordy phrase avoidance).
+2. **P1 — JsonSchemaCollapser:** New post-processor to collapse inline JSON schema parameter descriptions into human-readable summaries. Expected +15-20 pts for Deploy.
+3. **P1 — ContractionFixer extension:** Add positive contractions ("it is"→"it's", "you are"→"you're", etc.) to existing ContractionFixer.
+4. **P2 — WordyPhraseFixer + static replacements:** Deterministic removal of "in order to", "due to the fact that", deprecated Microsoft terms ("Azure AD"→"Microsoft Entra ID"), and ableist language ("simply", "just").
+5. **P3 — TenseFixer + AcronymExpander:** Present tense enforcement ("will list"→"lists") and multi-acronym first-use expansion.
+6. **P4 — SentenceLengthWarner:** Diagnostic logging for sentences exceeding 25 words (inform, not auto-fix).
+
+**Rationale:** Post-processing is preferred over prompt-only fixes because it's **deterministic** — a regex that converts "it is" to "it's" always works, while an AI prompt instruction may be ignored 20% of the time. The prompt changes (P0) remain valuable as first-line defense.
+
+**Quick win:** Expanding `static-text-replacement.json` with 15 wordy phrases, 8 deprecated terms, and 5 ableist language removals yields +5-10 pts with zero code changes.
+
+**Impact:**
+- **Sage:** Owns prompt change (P0) and all post-processor implementations (P1-P3).
+- **Morgan:** May need to adjust FamilyFileStitcher call order if new post-processors are added.
+- **Parker:** Must write tests for each new post-processor per AD-007 and AD-010.
+- **All namespaces:** Changes apply universally across all 52 namespaces — no service-specific logic.
+
+---
+
+### AD-023: Work Prioritization Framework — Post-Review Issue Set
+**Date:** 2026-03-25
+**Author:** Avery (Lead / Architect)
+**Status:** Active
+**Requested by:** Dina Berry
+
+**Context:** After merging PRs #200 and #201, creating the requirements doc (#202), completing the test strategy, and receiving 6 team reviews, the backlog needed consolidation and prioritization.
+
+**Decision:** 14 GitHub issues created across 4 priority tiers, synthesized from requirements review (#202), test strategy reviews (6 reviewers), AD-020 (pipeline architecture assessment), AD-021 (Step 3/6 validator requirement), and existing backlog.
+
+**Priority Framework:**
+
+| Tier | Criteria | Count | Issues |
+|------|----------|-------|--------|
+| **P0** | Data loss or silent bad content shipping | 3 | #203, #204, #205 |
+| **P1** | Catches bugs before production | 5 | #206, #207, #208, #209, #210 |
+| **P2** | Improves developer experience / observability | 4 | #211, #212, #213, #214 |
+| **P3** | Improves quality over time | 2 | #215, #216 |
+
+**Issue Assignments:**
+
+| # | Title | Priority | Owner |
+|---|-------|----------|-------|
+| #203 | Fix ResetOutputDirectory — destroys partial progress | P0 | Riley |
+| #204 | Add Step 3 post-validator — template token leakage | P0 | Morgan |
+| #205 | Add Step 6 post-validator — incomplete horizontal articles | P0 | Sage |
+| #206 | Add TextCleanup unit tests — high-risk regex chain | P1 | Parker |
+| #207 | Add failure path tests for all pipeline steps | P1 | Parker |
+| #208 | Add Bootstrap contract tests — step I/O validation | P1 | Avery |
+| #209 | Implement baseline fingerprinting for generated output | P1 | Avery + Quinn |
+| #210 | Replace regex error detection with structured step-result.json | P1 | Riley |
+| #211 | Add prompt versioning system | P2 | Sage |
+| #212 | Add token usage tracking and observability | P2 | Sage |
+| #213 | Create CI integration documentation | P2 | Quinn |
+| #214 | Build prompt regression testing framework | P2 | Sage |
+| #215 | Acrolinx compliance — automated style fixes | P3 | Sage |
+| #216 | Consolidate StripFrontmatter implementations | P3 | Morgan |
+
+**Execution Order:**
+1. **Immediate:** P0 issues (#203, #204, #205) — all three can run in parallel
+2. **Next sprint:** P1 issues — #206 and #210 first (highest test/infra leverage), then #207, #208, #209
+3. **Following sprint:** P2 issues — #211 and #214 first (prompt quality loop), then #212, #213
+4. **Backlog:** P3 issues — pick up opportunistically
+
+**Rationale:** Prioritization follows a single principle: **prevent harm before adding value.** P0 prevents data loss and silent failures. P1 builds the safety net. P2 makes the team faster. P3 polishes quality. Each tier's value compounds — fingerprinting (P1) enables prompt regression testing (P2), which enables prompt versioning (P2) to be meaningful.
+
+**Impact:** All team members have assigned work. The `squad` label on all issues enables triage routing. Individual `squad:{member}` labels enable filtered views per team member.
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
