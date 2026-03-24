@@ -37,9 +37,10 @@ public class FamilyFileStitcher
         // 3. Related content section
         sb.AppendLine(familyContent.RelatedContent);
 
-        // 4. Post-processing: expand MCP acronym on first body mention (#142)
+        // 4. Post-processing: expand all acronyms on first body mention (#142, #215)
+        //    Replaces the old single-MCP expander with generalized AcronymExpander
         var markdown = sb.ToString().TrimEnd();
-        markdown = PostProcessor.ExpandMcpAcronym(markdown);
+        markdown = AcronymExpander.ExpandAll(markdown);
 
         // 5. Post-processing: inject required frontmatter fields (#155)
         markdown = FrontmatterEnricher.Enrich(markdown);
@@ -50,10 +51,16 @@ public class FamilyFileStitcher
         // 7. Post-processing: ensure blank line between annotation link and values (#151)
         markdown = AnnotationSpaceFixer.Fix(markdown);
 
-        // 8. Post-processing: apply contractions per Microsoft style guide (#145)
+        // 8. Post-processing: convert future tense to present tense (#145, #215)
+        markdown = PresentTenseFixer.Fix(markdown);
+
+        // 9. Post-processing: apply contractions per Microsoft style guide (#145)
         markdown = ContractionFixer.Fix(markdown);
 
-        // 9. Post-processing: wrap bare example values in backticks (#152)
+        // 10. Post-processing: insert commas after introductory phrases (#146, #215)
+        markdown = IntroductoryCommaFixer.Fix(markdown);
+
+        // 11. Post-processing: wrap bare example values in backticks (#152)
         markdown = ExampleValueBackticker.Fix(markdown);
 
         return markdown;
