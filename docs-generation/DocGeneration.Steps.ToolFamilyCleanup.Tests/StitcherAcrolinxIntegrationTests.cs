@@ -145,4 +145,25 @@ public class StitcherAcrolinxIntegrationTests
         Assert.Contains("isn't", result);
         Assert.DoesNotContain("will not", result);
     }
+
+    // ── JsonSchemaCollapser is applied (Acrolinx P1) ────────────────
+
+    [Fact]
+    public void Stitch_CollapsesInlineJsonSchema()
+    {
+        var toolContent = "## Generate diagram\n\n| Parameter |  Required or optional | Description |\n|-----------------------|----------------------|-------------|\n| **Raw mcp tool input** |  Required | {\n    &quot;type&quot;: &quot;object&quot;,\n    &quot;properties&quot;: {\n        &quot;workspaceFolder&quot;: {\n            &quot;type&quot;: &quot;string&quot;\n        }\n    }\n}. |";
+
+        var content = CreateTestContent(
+            "---\ntitle: Test\n---\n\n# Test\n\nIntro paragraph.",
+            toolContent);
+
+        var stitcher = new FamilyFileStitcher();
+        var result = stitcher.Stitch(content);
+
+        // JsonSchemaCollapser should replace schema with prose
+        Assert.Contains("JSON object that defines the input structure for this tool.", result);
+        Assert.DoesNotContain("&quot;properties&quot;", result);
+        // Table structure preserved
+        Assert.Contains("| **Raw mcp tool input** |", result);
+    }
 }
