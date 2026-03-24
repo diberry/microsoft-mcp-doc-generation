@@ -9,50 +9,37 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
-### 2026-03-24: Multi-Agent PR Review — Test Coverage Assessment
+### 2026-03-24: PR #200 and PR #201 Final Review — Both APPROVED After Morgan Fixes
 
-**PR #200 and PR #201 test coverage review — BOTH REJECTED:**
+**Context:** Initial multi-agent review rejected both PRs for template-level test coverage gaps (AD-010 violation). Morgan completed comprehensive fixes; both PRs now meet all requirements.
 
-**Core Issue:** Both PRs modify `.hbs` templates but have zero template-level regression tests. Per AD-010, method-level tests are insufficient for template fixes. If template changes were reverted, all tests would pass — unacceptable.
-
-**Detailed Findings:**
-
-**PR #200 (annotation inline rendering):**
+**PR #200 — annotation inline rendering (APPROVED):**
 - ✅ `StripFrontmatter()` helper tests: 77+ cases with realistic YAML examples — comprehensive and solid
-- ❌ Missing: No test rendering `tool-family-page.hbs` with new inline annotation pattern using `HandlebarsTemplateEngine.ProcessTemplateString()`
-- If template change reverted, test suite still passes — AD-010 violation
+- ✅ New `AnnotationTemplateRegressionTests.cs`: 5 tests rendering actual `tool-family-page.hbs` via `HandlebarsTemplateEngine.ProcessTemplateString()`. All would FAIL if template reverted.
+- ✅ Realistic test data: Frontmatter updated with pipeline-sourced patterns (`generated:` timestamp, `# [!INCLUDE]` comment, `# azmcp` comment, full semver+metadata)
+- ✅ Edge case coverage: New test sourced from real appservice annotation files
+- Implementation: Clean, performant `StripFrontmatter()` with proper triple-mustache handling for unescaped emoji/pipes
 
-**PR #201 (mcpcli markers + example backticks):**
+**PR #201 — mcpcli markers + example backticks (APPROVED):**
 - ✅ `WrapExampleValues()` helper tests: 11 comprehensive cases covering single values, comma-separated, idempotency, null/empty, edge cases
-- ❌ Missing: No test rendering template with backtick-wrapped examples in parameter descriptions
-- If template change reverted, test suite still passes — AD-010 violation
-
-**Untracked Pattern Exists:**
-- `ToolFamilyPageTemplateRegressionTests.cs` exists in codebase but not committed in either PR
-- File demonstrates the expected approach: load template from `docs-generation/templates/`, render with controlled data, assert on output
-
-**Regex Bug Found:**
-- **PR #201:** `WrapExampleValues` regex incorrectly backticks mixed value/explanation patterns
-- Example: Input `(for example, PT1H for 1 hour, PT5M for 5 minutes)` → Current output `(for example, `PT1H for 1 hour, PT5M for 5 minutes`)`
-- Expected: Only wrap actual values (`PT1H`, `PT5M`), not explanations
-- This edge case would be caught by template-level tests on real parameter data
-
-**New Decision Issued (AD-019):** Template-level regression tests now required for all `.hbs` file changes. Tests must:
-1. Load actual template from `docs-generation/templates/`
-2. Render using `HandlebarsTemplateEngine.ProcessTemplateString()`
-3. Assert on specific output change
-4. Would FAIL if template change reverted
+- ✅ Regex bug fixed: Now splits each comma-separated part on spaces; first token = value (backticked), rest = explanation (left as-is). Handles `(for example, PT1H for 1 hour, PT5M for 5 minutes)` → `(for example, \`PT1H\` for 1 hour, \`PT5M\` for 5 minutes)`
+- ✅ New `ToolFamilyPageTemplateRegressionTests.cs`: 8 tests rendering actual `.hbs` templates. Tests assert `@mcpcli` prefix, no plain markers, no blank line between H2 and marker, no `@mcpcli` in example-prompts. All would FAIL if template reverted.
+- ✅ Untracked test file committed with corrected namespace and csproj reference
+- ✅ 4 regex fix tests: behavioral coverage for single value+explanation, multiple values+explanations, mixed patterns, comma-in-pattern edge cases
+- Key learning: Template tests need `Normalize()` (`\r\n` → `\n`) for cross-platform Windows reliability
+- Implementation: Idempotent regex using `[^)\x60]` character class (backtick in exclusion prevents double-wrapping)
 
 **Test Suite Baseline:**
-- PR #200 branch: 1023 tests (all passing)
-- PR #201 branch: 1028 tests (all passing)
+- Total: 1034+ tests (started at 1023-1028)
+- Status: ✅ All passing
+- Regressions: None detected
+- New coverage: 13 template-level regression tests (5 PR #200 + 8 PR #201)
 
-**Resubmission Requirements:**
-- Add template-level regression tests to both PRs
-- Fix comma-split edge case in `WrapExampleValues` regex
-- Resubmit both PRs together
+**No merge conflicts expected between PRs** — annotations and mcpcli changes occur in non-overlapping template sections.
 
-**Learning:** PRs that fix template rendering bugs tend to only test the helper methods, not the template rendering itself. Template-level regression tests (rendering actual `.hbs` files) are the missing coverage gap.
+**Learning captured:** PRs that fix template rendering bugs must include template-level regression tests (rendering actual `.hbs` files), not just method-level tests. This is now documented in AD-019.
+
+**Decisions affected:** AD-019 (Template-Level Regression Tests Required for Template Fixes) issued during this review cycle. Both PRs now exemplify the expected pattern.
 
 ---
 
