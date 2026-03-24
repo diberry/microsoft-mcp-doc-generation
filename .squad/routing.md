@@ -6,15 +6,18 @@ How to decide who handles what.
 
 | Work Type | Route To | Examples |
 |-----------|----------|----------|
-| Pipeline architecture / cross-stage issues | Avery | Data flow changes, new pipeline stages, quality gates between stages |
+| Pipeline architecture / cross-stage issues | Riley | Data flow changes, new pipeline stages, quality gates between stages, step contracts, template architecture |
 | Pipeline orchestrator / step contracts | Riley | PipelineRunner, step registration, dependencies, workspace isolation, retry logic, merge orchestration |
 | C# generator code (`docs-generation/**/*.cs`) | Morgan | Generator bug fixes, new generators, template changes, config file updates |
 | Scripts / CI / Docker (`.ps1`, `.sh`, `.yml`, `Dockerfile`) | Quinn | Script fixes, Docker builds, CI pipeline, preflight validation |
 | AI prompts / Azure OpenAI (`prompts/`, `GenerativeAI/`) | Sage | Prompt design, AI output validation, fabrication detection, content transformation |
 | Test projects (`*.Tests/`, `verify-quantity/`) | Parker | New tests, test data, content validation, regression detection |
-| Code review | Avery + domain specialist | Avery reviews architecture; domain owner reviews implementation |
-| Testing | Parker | Write tests, find edge cases, verify fixes |
-| Scope & priorities | Avery | What to build next, trade-offs, decisions |
+| Code review | Avery + domain specialist | Avery coordinates review; domain owner reviews implementation |
+| Test strategy & quality gates | Cameron | Test architecture, coverage roadmap, validator requirements, regression frameworks |
+| Test strategy + architecture alignment | Cameron + Riley | Co-own quality gate definitions, testability reviews, release readiness |
+| Testing | Parker | Write tests, find edge cases, verify fixes (coordinated by Cameron) |
+| Scope & priorities | Avery | What to build next, trade-offs, decisions, sprint planning |
+| Architecture & design reviews | Riley | New steps, cross-stage changes, template architecture, structural changes |
 | Content quality issues in generated output | Sage (if AI) + Morgan (if template/config) | Hallucinated RBAC roles → Sage; wrong parameter count → Morgan |
 | Engineering & user documentation (`docs/`, `README.md`) | Reeve | Pipeline guides, config reference, troubleshooting, user how-tos |
 | PR documentation review | Reeve | Every PR reviewed for doc completeness — blocks if docs missing |

@@ -63,6 +63,9 @@ public class FamilyFileStitcher
         // 11. Post-processing: wrap bare example values in backticks (#152)
         markdown = ExampleValueBackticker.Fix(markdown);
 
+        // 12. Post-processing: convert full learn.microsoft.com URLs to site-root-relative paths (#220, AD-017)
+        markdown = LearnUrlRelativizer.Relativize(markdown);
+
         return markdown;
     }
 
