@@ -1,0 +1,76 @@
+{
+  "status": 200,
+  "message": "Success",
+  "results": [
+    {
+      "id": "aaa-111",
+      "name": "list",
+      "description": "List container registries",
+      "command": "acr registry list",
+      "option": [
+        { "name": "--tenant", "description": "Tenant ID", "type": "string" },
+        { "name": "--auth-method", "description": "Auth method", "type": "string" },
+        { "name": "--retry-delay", "description": "Retry delay", "type": "string" },
+        { "name": "--retry-max-delay", "description": "Max delay", "type": "string" },
+        { "name": "--retry-max-retries", "description": "Max retries", "type": "string" },
+        { "name": "--retry-mode", "description": "Retry mode", "type": "string" },
+        { "name": "--retry-network-timeout", "description": "Network timeout", "type": "string" },
+        { "name": "--subscription", "description": "Subscription", "type": "string" },
+        { "name": "--resource-group", "description": "Resource group", "type": "string" }
+      ]
+    },
+    {
+      "id": "aaa-222",
+      "name": "show",
+      "description": "Get registry details",
+      "command": "acr registry show",
+      "option": [
+        { "name": "--tenant", "description": "Tenant ID", "type": "string" },
+        { "name": "--auth-method", "description": "Auth method", "type": "string" },
+        { "name": "--retry-delay", "description": "Retry delay", "type": "string" },
+        { "name": "--retry-max-delay", "description": "Max delay", "type": "string" },
+        { "name": "--retry-max-retries", "description": "Max retries", "type": "string" },
+        { "name": "--retry-mode", "description": "Retry mode", "type": "string" },
+        { "name": "--retry-network-timeout", "description": "Network timeout", "type": "string" },
+        { "name": "--subscription", "description": "Subscription", "type": "string" },
+        { "name": "--registry-name", "description": "Registry name", "type": "string", "required": true }
+      ]
+    },
+    {
+      "id": "bbb-111",
+      "name": "query",
+      "description": "Query Cosmos DB items",
+      "command": "cosmos database container item query",
+      "option": [
+        { "name": "--tenant", "description": "Tenant ID", "type": "string" },
+        { "name": "--auth-method", "description": "Auth method", "type": "string" },
+        { "name": "--retry-delay", "description": "Retry delay", "type": "string" },
+        { "name": "--retry-max-delay", "description": "Max delay", "type": "string" },
+        { "name": "--retry-max-retries", "description": "Max retries", "type": "string" },
+        { "name": "--retry-mode", "description": "Retry mode", "type": "string" },
+        { "name": "--retry-network-timeout", "description": "Network timeout", "type": "string" },
+        { "name": "--subscription", "description": "Subscription", "type": "string" },
+        { "name": "--account", "description": "Cosmos DB account", "type": "string", "required": true },
+        { "name": "--database", "description": "Database name", "type": "string", "required": true },
+        { "name": "--container", "description": "Container name", "type": "string", "required": true },
+        { "name": "--query", "description": "SQL query", "type": "string" }
+      ]
+    },
+    {
+      "id": "bbb-222",
+      "name": "list",
+      "description": "List Cosmos DB accounts",
+      "command": "cosmos account list",
+      "option": [
+        { "name": "--tenant", "description": "Tenant ID", "type": "string" },
+        { "name": "--auth-method", "description": "Auth method", "type": "string" },
+        { "name": "--retry-delay", "description": "Retry delay", "type": "string" },
+        { "name": "--retry-max-delay", "description": "Max delay", "type": "string" },
+        { "name": "--retry-max-retries", "description": "Max retries", "type": "string" },
+        { "name": "--retry-mode", "description": "Retry mode", "type": "string" },
+        { "name": "--retry-network-timeout", "description": "Network timeout", "type": "string" },
+        { "name": "--subscription", "description": "Subscription", "type": "string" }
+      ]
+    }
+  ]
+}

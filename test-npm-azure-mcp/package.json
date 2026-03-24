@@ -13,7 +13,9 @@
     "get:tools-namespace": "azmcp tools list --namespace-mode",
     "get:subscriptions": "azmcp subscription list",
     "get:chat-completion": "bash chat-completion.sh",
-    "validate": "node validate-cli-output.js"
+    "validate": "node validate-cli-output.js",
+    "generate:report": "node generate-report.js",
+    "test:report": "node --test test/generate-report.test.js"
   },
   "keywords": [],
   "author": "",
