@@ -27,8 +27,22 @@ public static partial class ContractionFixer
         (BuildRule("can not"), "can't"),
     ];
 
+    // Positive contractions with case-preserving replacement
+    private static readonly (Regex Pattern, string Contraction)[] PositiveRules =
+    [
+        (BuildRule("it is"), "it's"),
+        (BuildRule("you are"), "you're"),
+        (BuildRule("we have"), "we've"),
+        (BuildRule("that is"), "that's"),
+        (BuildRule("there is"), "there's"),
+        (BuildRule("here is"), "here's"),
+        (BuildRule("what is"), "what's"),
+        (BuildRule("who is"), "who's"),
+    ];
+
     /// <summary>
-    /// Replaces non-contracted negative forms with contractions.
+    /// Replaces non-contracted forms with contractions.
+    /// Negative rules run first, then positive rules with case preservation.
     /// Skips text inside backticks to avoid breaking code references.
     /// </summary>
     public static string Fix(string markdown)
@@ -40,6 +54,13 @@ public static partial class ContractionFixer
         foreach (var (pattern, replacement) in Rules)
         {
             result = pattern.Replace(result, replacement);
+        }
+        foreach (var (pattern, contraction) in PositiveRules)
+        {
+            result = pattern.Replace(result, m =>
+                char.IsUpper(m.Value[0])
+                    ? char.ToUpper(contraction[0]) + contraction[1..]
+                    : contraction);
         }
         return result;
     }
