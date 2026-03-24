@@ -106,7 +106,8 @@ public class PageGenerator
                             Type = opt.Type,
                             Required = opt.Required,
                             RequiredText = opt.Required == true ? "Required" : "Optional",
-                            Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")),
+                            Description = TextCleanup.WrapExampleValues(
+                                TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))),
                         })
                         .ToList();
                 }

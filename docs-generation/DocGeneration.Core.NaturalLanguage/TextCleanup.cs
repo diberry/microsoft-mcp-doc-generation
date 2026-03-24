@@ -336,6 +336,41 @@ public static class TextCleanup
         return text + ".";
     }
 
+    private static readonly Regex BareExampleValuePattern = new(
+        @"\(for example, ([^)`]+)\)",
+        RegexOptions.Compiled);
+
+    /// <summary>
+    /// Wraps bare example values in backticks within "(for example, ...)" patterns.
+    /// Idempotent — already-backticked values pass through unchanged.
+    /// </summary>
+    public static string WrapExampleValues(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+
+        return BareExampleValuePattern.Replace(text, match =>
+        {
+            var values = match.Groups[1].Value;
+            var parts = values.Split(", ");
+            var backticked = parts.Select(v =>
+            {
+                var trimmed = v.Trim();
+                var spaceIdx = trimmed.IndexOf(' ');
+                if (spaceIdx > 0)
+                {
+                    // Value with explanation text (e.g., "PT1H for 1 hour")
+                    // — only backtick the value token, keep explanation as-is
+                    var value = trimmed.Substring(0, spaceIdx);
+                    var explanation = trimmed.Substring(spaceIdx);
+                    return $"`{value}`{explanation}";
+                }
+                return $"`{trimmed}`";
+            });
+            return $"(for example, {string.Join(", ", backticked)})";
+        });
+    }
+
     /// <summary>
     /// Cleans AI-generated text by replacing smart quotes with straight quotes and HTML entities with plain characters.
     /// This is a safety net to fix issues that the AI model might generate despite prompt instructions.
