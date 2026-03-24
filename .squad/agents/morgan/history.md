@@ -76,3 +76,17 @@
 - Already completed (see entry above)
 
 **Decision Issued:** AD-019 (Template-Level Regression Tests Required for Template Fixes) — both PRs now exemplify the expected pattern.
+
+### 2026-03-25: Acrolinx Compliance Gap Analysis — Implementation Audit
+
+**Task:** Dina requested analysis of post-processing chain and templates to identify Acrolinx compliance gaps. Goal: generated tool-family files scoring well above 80.
+
+**Real Acrolinx scores from MicrosoftDocs/azure-dev-docs-pr PRs:**
+- `azure-deploy.md` (PR #8750): **61** (Terminology: 81, Spelling/Grammar: 45, Clarity: 67) — CRITICAL
+- `azure-virtual-machines.md` (PR #8668): **74-77** (Terminology: 75-78, S&G: 76-77, Clarity: 73-77) — BELOW THRESHOLD
+- Annotation includes: **100** — no issues
+- `supported-azure-services.md`: **96** — no issues
+
+**Key finding:** Tool-family files are 20-40 points below the 80 threshold. Spelling/Grammar is the worst category (45 on deploy). This is the #1 priority.
+
+**Gaps identified (8 categories) and corresponding code changes needed — see full analysis delivered in task response.**
