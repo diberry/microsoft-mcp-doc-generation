@@ -41,6 +41,7 @@ public static class DeterministicFrontmatterGenerator
         sb.AppendLine("---");
         sb.AppendLine($"title: {title}");
         sb.AppendLine($"description: {description}");
+        sb.AppendLine($"ms.date: {DateTime.UtcNow:MM/dd/yyyy}");
         sb.AppendLine("ms.service: azure-mcp-server");
         sb.AppendLine("ms.topic: concept-article");
         sb.AppendLine($"tool_count: {toolCount}");
