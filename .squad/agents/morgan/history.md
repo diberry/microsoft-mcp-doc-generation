@@ -119,3 +119,13 @@
 
 **Key learning:** The static-text-replacement engine's word-boundary regex `(?![A-Za-z0-9_-])` prevents matching keys with trailing spaces when followed by a word character. Entries ending in spaces (like "please ") silently fail. Always use word-boundary-compatible keys.
 
+### 2026-03-25: Fix #219 — ms.date missing in generated tool-family frontmatter
+
+**Bug:** `DeterministicFrontmatterGenerator.Generate()` produced frontmatter YAML without `ms.date`. While `FrontmatterEnricher.Enrich()` correctly injects it during the stitcher pipeline, the intermediate metadata file (saved before stitching in CleanupGenerator line 496) lacked the field.
+
+**Fix:** Added `ms.date: {DateTime.UtcNow:MM/dd/yyyy}` directly to `DeterministicFrontmatterGenerator.Generate()` — 1-line change. Placed after `description:` and before `ms.service:` per Microsoft Learn conventions. The enricher remains as an idempotent safety net (skips ms.date when already present).
+
+**Tests (TDD per AD-007):** 11 integration tests in `FrontmatterPipelineIntegrationTests.cs` — 2 generator-level tests (one was the failing red-phase test), 9 pipeline-level tests verifying all enriched fields survive the full Generate→Stitch flow.
+
+**Key learning:** Required frontmatter fields should be emitted at the source (generator), not solely injected by downstream enrichers. Intermediate files saved between pipeline stages bypass post-processing. Defense-in-depth: generate correct output AND enrich as a safety net.
+
