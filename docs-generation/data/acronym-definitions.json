@@ -1,0 +1,44 @@
+[
+    {
+        "Acronym": "MCP",
+        "Expansion": "Model Context Protocol",
+        "ContextPattern": "Azure MCP Server",
+        "ExpandedForm": "Azure Model Context Protocol (MCP) Server"
+    },
+    {
+        "Acronym": "VM",
+        "Expansion": "virtual machine"
+    },
+    {
+        "Acronym": "VMSS",
+        "Expansion": "virtual machine scale set"
+    },
+    {
+        "Acronym": "AKS",
+        "Expansion": "Azure Kubernetes Service"
+    },
+    {
+        "Acronym": "RBAC",
+        "Expansion": "role-based access control"
+    },
+    {
+        "Acronym": "IaC",
+        "Expansion": "infrastructure as code"
+    },
+    {
+        "Acronym": "WAF",
+        "Expansion": "Web Application Firewall"
+    },
+    {
+        "Acronym": "NSG",
+        "Expansion": "network security group"
+    },
+    {
+        "Acronym": "VNet",
+        "Expansion": "virtual network"
+    },
+    {
+        "Acronym": "ACR",
+        "Expansion": "Azure Container Registry"
+    }
+]
