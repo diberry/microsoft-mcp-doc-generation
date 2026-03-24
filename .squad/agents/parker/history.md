@@ -41,6 +41,17 @@
 
 **Decisions affected:** AD-019 (Template-Level Regression Tests Required for Template Fixes) issued during this review cycle. Both PRs now exemplify the expected pattern.
 
+### 2026-03-24: Round 2 QA Re-Review — PRs #200 and #201 (APPROVED)
+
+**Outcome:** Both PRs APPROVED after Round 1 rejection findings fully resolved.
+
+**Round 2 Test Validation:**
+- **PR #200:** All 5 Round 1 rejection findings resolved. Template regression tests cover inline rendering, fallback comments, triple-mustache emoji/pipes, condition fields, and actual file verification. `StripFrontmatter` tests updated with realistic YAML/frontmatter patterns.
+- **PR #201:** All 5 Round 1 rejection findings resolved. Regex bug fixed (split-on-spaces for comma-separated patterns). 8 template regression tests validate `@mcpcli` prefix, no plain markers, marker positioning, and no `@mcpcli` in prompts. 4 regex behavior tests cover all edge cases.
+- **Test Suite:** 1,061 tests passing across both branches. No new test failures. 13 template-level regression tests added (5 PR #200 + 8 PR #201).
+
+**Quality Gate:** All AD-010 requirements met. Template-level tests demonstrate idempotency and correct rendering. No regressions detected. Ready for merge.
+
 ---
 
 ### 2026-03-23: PR #201 and PR #200 Test Quality Review

@@ -27,6 +27,18 @@ The tests themselves become the documentation of the fix's contract. No separate
 
 **Recommendation:** Both PRs exemplify best practices. Code formatting/standardization changes should include comprehensive test coverage (11+ test cases minimum) to guard against regressions, even for internal pipelines. The documentation gates pass; defer to Parker's test validation for final approval.
 
+### 2026-03-24: Round 2 Documentation Re-Review — PRs #200 and #201 (APPROVED)
+
+**Outcome:** Both PRs APPROVED after Round 1 review cycle completed.
+
+**Round 2 Assessment:**
+- **PR #200:** Test documentation excellent. New `AnnotationTemplateRegressionTests` class includes 5 comprehensive test descriptions explaining template edge cases. `StripFrontmatter` test method names and descriptions document realistic YAML patterns. Commit message clear and thorough.
+- **PR #201:** Test documentation excellent. New `ToolFamilyPageTemplateRegressionTests` class includes 8 test descriptions covering marker placement, idempotency, and edge cases. Regex behavior tests have clear method names documenting expected input/output patterns. Commit message thoroughly explains both the `@mcpcli` marker standardization and the `WrapExampleValues` fix.
+- **No user-facing docs needed** — internal generation improvements with configuration-transparent changes.
+- **Knowledge transfer:** Test comments and method names provide excellent self-documenting code for future maintainers.
+
+**Assessment:** Both PRs meet documentation standards. Tests exemplify expected AD-019 pattern (template-level regression tests with clear descriptions). Ready for merge.
+
 ---
 
 - Internal code generation improvements (bug fixes that only affect generated markdown structure/formatting) don't require user-facing docs if they have clear commit messages, excellent inline code comments, and comprehensive tests that meet AD-007/AD-010 standards. The tests themselves become the "documentation" of the fix's contract.
