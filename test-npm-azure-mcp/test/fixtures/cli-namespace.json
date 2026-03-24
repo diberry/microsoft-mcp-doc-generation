@@ -1,0 +1,18 @@
+{
+  "status": 200,
+  "message": "Success",
+  "results": [
+    {
+      "id": "",
+      "name": "acr",
+      "description": "Azure Container Registry operations",
+      "command": "acr"
+    },
+    {
+      "id": "",
+      "name": "cosmos",
+      "description": "Cosmos DB operations",
+      "command": "cosmos"
+    }
+  ]
+}

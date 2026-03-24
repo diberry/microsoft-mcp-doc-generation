@@ -1,0 +1,9 @@
+[
+  { "name": "--tenant", "type": "string", "description": "Tenant ID", "isRequired": false },
+  { "name": "--auth-method", "type": "string", "description": "Auth method", "isRequired": false },
+  { "name": "--retry-delay", "type": "number", "description": "Retry delay", "isRequired": false },
+  { "name": "--retry-max-delay", "type": "number", "description": "Max delay", "isRequired": false },
+  { "name": "--retry-max-retries", "type": "integer", "description": "Max retries", "isRequired": false },
+  { "name": "--retry-mode", "type": "string", "description": "Retry mode", "isRequired": false },
+  { "name": "--retry-network-timeout", "type": "number", "description": "Network timeout", "isRequired": false }
+]
