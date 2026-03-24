@@ -22,3 +22,17 @@
 - `static-text-replacement.json` only has 10 entries — needs Microsoft Entra ID, deprecated terms, ableist language removals.
 
 **Output:** `docs/acrolinx-compliance-strategy.md` — comprehensive strategy with prioritized implementation plan (P0-P4), specific code examples, and estimated score improvements.
+
+### 2026-03-25: P0 Acrolinx Prompt Implementation
+
+**Task:** Implemented the P0 item from the Acrolinx compliance strategy — added dedicated Acrolinx compliance sections to all AI system prompts.
+
+**Changes:**
+- Added 10-rule Acrolinx compliance sections to 6 prompt files: Step 2 (example generation), Step 3 (tool improvements), Step 4 (tool family cleanup), Step 6 (horizontal articles), plus 2 shared prompt copies.
+- Step 4 already had 3 partial rules (#143, #145, #146). Expanded to full 10-rule coverage including active voice, no first person, acronyms, relative URLs, sentence length, word choice, and brand compliance.
+- Each section is tailored to the prompt's context (e.g., Step 2 focuses on conversational prompt style, Step 6 targets genai- JSON fields).
+- Wrote 42 new tests (`AcrolinxComplianceSectionTests.cs`) that verify all prompt files contain required instructions. Tests are parameterized across all 4 step-specific prompts + 2 shared copies.
+
+**Key Insight:** The shared `docs-generation/prompts/system-prompt.txt` is only 1 line — it's NOT a copy of the Step 3 prompt. The step-specific prompts in each `DocGeneration.Steps.*/prompts/` directory are the actual runtime prompts.
+
+**PR:** #223
