@@ -9,25 +9,23 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
-### 2026-03-25: Work Prioritization — 14 Issues Created from Team Reviews
+### 2026-03-25: Work Prioritization — 14 Issues Created from Team Reviews (UPDATE: ALL MERGED)
 
-**Session:** Synthesized requirements review (#202), test strategy reviews (6 reviewers), AD-020, AD-021, and existing issue backlog into a prioritized issue set.
+**Session:** Synthesized requirements review (#202), test strategy reviews (6 reviewers), AD-020, AD-021, and existing issue backlog into a prioritized issue set. **Status: All 3 merged PRs complete; decision inbox consolidated; user workflow directive enforced.**
 
-**Key prioritization decisions:**
+**Work distribution:**
+- Morgan: P0 (#204 - Step 3 validator), P3 (#216 - StripFrontmatter consolidation)
+- Sage: P0 (#205 - Step 6 validator), P2 (#211, #212, #214 - prompt versioning/tracking/regression)
+- Parker: P1 (#206, #207 - TextCleanup tests, failure path tests)
+- Avery: P1 (#208, #209 - Bootstrap contracts, fingerprinting)
+- Riley: P0 (#203 - ResetOutputDirectory fix), P1 (#210 - structured step-result.json)
 
-1. **P0 tier (3 issues: #203, #204, #205):** ResetOutputDirectory data loss and the two missing post-validators (Steps 3 and 6). These are the only items that cause data loss or allow bad content to ship silently. Unanimous team consensus on all three.
+**Merged work this batch:**
+- PR #221 (Morgan): LearnUrlRelativizer — full URLs → relative paths (AD-024)
+- PR #222 (Morgan): ms.date frontmatter assignment
+- PR #223 (Sage): Acrolinx compliance — 4 services + 62 tests (AD-022, AD-025 by Parker)
 
-2. **P1 tier (5 issues: #206-#210):** Defensive testing and structured contracts. TextCleanup tests (#206) are the highest-risk untested code path — one regex regression corrupts 800+ files. Failure path tests (#207), bootstrap contracts (#208), baseline fingerprinting (#209), and structured step-result.json (#210) all catch bugs before production.
-
-3. **P2 tier (4 issues: #211-#214):** Developer experience and observability. Prompt versioning (#211), token tracking (#212), CI docs (#213), and prompt regression framework (#214). Important but not blocking — the pipeline works without them.
-
-4. **P3 tier (2 issues: #215, #216):** Quality-over-time improvements. Acrolinx compliance (#215) and StripFrontmatter consolidation (#216). Both are real value but low urgency.
-
-**Architectural insight:** The P0/P1 split reflects a key principle — **prevent data loss first, then catch bugs, then improve DX.** The team's unanimous agreement on ResetOutputDirectory as P0 shows maturity: a correctness-first team recognizes that destroying valid output is worse than any feature gap.
-
-**Work distribution:** Riley gets both pipeline infrastructure P0/P1s (#203, #210). Morgan and Sage each get a validator (#204, #205). Parker gets the high-impact test work (#206, #207). This spreads load while keeping domain expertise aligned.
-
----
+**Key decision:** AD-020 (User Workflow Directive) — all future work must follow 6-step process (plan → test → code → tests → review → notify). Never skip steps.
 
 ### 2026-03-24: Round 2 Architecture Re-Review — PRs #200 and #201
 

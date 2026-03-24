@@ -66,6 +66,9 @@ public class FamilyFileStitcher
         // 12. Post-processing: convert full learn.microsoft.com URLs to site-root-relative paths (#220, AD-017)
         markdown = LearnUrlRelativizer.Relativize(markdown);
 
+        // 13. Post-processing: collapse inline JSON schemas in parameter tables (Acrolinx P1)
+        markdown = JsonSchemaCollapser.Collapse(markdown);
+
         return markdown;
     }
 

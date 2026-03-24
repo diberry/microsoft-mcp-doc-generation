@@ -129,3 +129,34 @@
 
 **Key learning:** Required frontmatter fields should be emitted at the source (generator), not solely injected by downstream enrichers. Intermediate files saved between pipeline stages bypass post-processing. Defense-in-depth: generate correct output AND enrich as a safety net.
 
+### 2026-03-25: Fix #220 — Full learn.microsoft.com URLs → site-root-relative paths
+
+**Task:** Generated tool-family files contained full `https://learn.microsoft.com/azure/...` URLs in AI-generated intro paragraphs (line 14 across all namespaces). AD-017 requires site-root-relative paths (`/azure/...`).
+
+**Root cause:** AI-generated content (Step 4 intro paragraphs) produces full URLs despite prompt instructions. Templates were clean — no hardcoded full URLs. HorizontalArticles already had `StripLearnPrefix` but only for its own pipeline.
+
+**Implementation:**
+- Created `LearnUrlRelativizer.cs` — regex-based post-processor using `[GeneratedRegex]` source generator for performance. Handles locale stripping, backtick/code-block protection, query params, and anchors.
+- Wired as Stage 12 in `FamilyFileStitcher.Stitch()` (after ExampleValueBackticker).
+- 17 TDD tests (AD-007) covering all edge cases.
+- Full solution: 0 build warnings, 0 test failures (226 ToolFamilyCleanup tests, 1100+ total).
+
+**Key learning:** AI-generated content is the primary source of full learn.microsoft.com URLs — prompts instruct relative paths but AI doesn't always comply. Belt-and-suspenders: always have a deterministic post-processor as backstop for URL normalization, don't rely on prompt instructions alone.
+
+**PR:** #221 (MERGED)
+
+**Decision issued:** AD-024 (LearnUrlRelativizer Decision)
+
+### 2026-03-25: ms.date Frontmatter Assignment
+
+**Task:** Fix #219 — Generated tool-family files missing or containing placeholder `ms.date` values in frontmatter. Requires actual generation timestamp.
+
+**Implementation:** PageGenerator now assigns `ms.date: [datetime]` to all generated files at template rendering.
+
+**Tests:** 11 new tests; all passing.
+
+**PR:** #222 (MERGED)
+
+---
+
+### 2026-03-25: Fix #220 — Full learn.microsoft.com URLs → site-root-relative paths
