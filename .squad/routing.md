@@ -13,7 +13,9 @@ How to decide who handles what.
 | AI prompts / Azure OpenAI (`prompts/`, `GenerativeAI/`) | Sage | Prompt design, AI output validation, fabrication detection, content transformation |
 | Test projects (`*.Tests/`, `verify-quantity/`) | Parker | New tests, test data, content validation, regression detection |
 | Code review | Avery + domain specialist | Avery reviews architecture; domain owner reviews implementation |
-| Testing | Parker | Write tests, find edge cases, verify fixes |
+| Test strategy & quality gates | Cameron | Test architecture, coverage roadmap, validator requirements, regression frameworks |
+| Test strategy + architecture alignment | Cameron + Avery | Co-own quality gate definitions, testability reviews, release readiness |
+| Testing | Parker | Write tests, find edge cases, verify fixes (coordinated by Cameron) |
 | Scope & priorities | Avery | What to build next, trade-offs, decisions |
 | Content quality issues in generated output | Sage (if AI) + Morgan (if template/config) | Hallucinated RBAC roles → Sage; wrong parameter count → Morgan |
 | Engineering & user documentation (`docs/`, `README.md`) | Reeve | Pipeline guides, config reference, troubleshooting, user how-tos |
