@@ -74,6 +74,62 @@
     {
         "Parameter": "prior to",
         "NaturalLanguage": "before"
+    },
+    {
+        "Parameter": "Azure Active Directory",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "Azure AD",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "AAD",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "whitelist",
+        "NaturalLanguage": "allowlist"
+    },
+    {
+        "Parameter": "blacklist",
+        "NaturalLanguage": "blocklist"
+    },
+    {
+        "Parameter": "master branch",
+        "NaturalLanguage": "main branch"
+    },
+    {
+        "Parameter": "sanity check",
+        "NaturalLanguage": "validation check"
+    },
+    {
+        "Parameter": "dummy",
+        "NaturalLanguage": "placeholder"
+    },
+    {
+        "Parameter": "due to the fact that",
+        "NaturalLanguage": "because"
+    },
+    {
+        "Parameter": "provides the ability to",
+        "NaturalLanguage": "lets you"
+    },
+    {
+        "Parameter": "in the event that",
+        "NaturalLanguage": "if"
+    },
+    {
+        "Parameter": "is able to",
+        "NaturalLanguage": "can"
+    },
+    {
+        "Parameter": "as well as",
+        "NaturalLanguage": "and"
+    },
+    {
+        "Parameter": "in addition to",
+        "NaturalLanguage": "besides"
     }
 
 ]
