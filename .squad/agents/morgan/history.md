@@ -90,3 +90,32 @@
 **Key finding:** Tool-family files are 20-40 points below the 80 threshold. Spelling/Grammar is the worst category (45 on deploy). This is the #1 priority.
 
 **Gaps identified (8 categories) and corresponding code changes needed — see full analysis delivered in task response.**
+
+### 2026-03-25: Acrolinx Compliance P0+P1 Implementation — 4 Services + 9 Static Entries
+
+**Task:** Implement Acrolinx P0+P1 fix plan using strict TDD (AD-007: tests first, then implement).
+
+**Work completed:**
+
+1. **P0: static-text-replacement.json** — Added 9 wordy-phrase entries:
+   - `etc.` → `and more`, `in order to` → `to`, `make sure` → `ensure`, `a number of` → `several`, `utilize` → `use`, `functionality` → `feature`, `via` → `through`, `leverage` → `use`, `prior to` → `before`
+   - Dropped `please ` — word-boundary regex prevents matching trailing-space keys before next word. Needs a dedicated service.
+   - 20 new tests in StaticTextReplacementTests.cs
+
+2. **P1: IntroductoryCommaFixer** — New service inserts commas after: For example, In addition, By default, In this case, If not. Skips code blocks/backticks. Dropped "For each" and "When using" — these need comma after the whole dependent clause, not just the two-word phrase.
+   - 20 tests in IntroductoryCommaFixerTests.cs
+
+3. **P1: PresentTenseFixer** — New service converts "will be <verb>ed" → "is/are <verb>ed", "will <verb>" → "<verb>s", "will not be" → "is not". Whitelist of 16 common verbs avoids false positives. Skips code blocks/backticks.
+   - 24 tests in PresentTenseFixerTests.cs
+
+4. **P1: AcronymExpander** — Generalized PostProcessor.ExpandMcpAcronym() to config-driven multi-acronym expander. Handles VM, VMSS, AKS, RBAC, IaC, WAF, NSG, VNet, ACR + MCP context pattern. Skips frontmatter/headings/backticks.
+   - Config: `data/acronym-definitions.json`
+   - 11 tests in AcronymExpanderTests.cs
+
+5. **FamilyFileStitcher wiring** — Stage 4: AcronymExpander (replaces MCP-only), Stage 8: PresentTenseFixer (before ContractionFixer), Stage 10: IntroductoryCommaFixer (after ContractionFixer). Order ensures "will not be" → "is not" → "isn't" flows correctly.
+   - 7 integration tests in StitcherAcrolinxIntegrationTests.cs
+
+**Test totals:** 62 new behavioral tests. All 202 ToolFamilyCleanup tests pass. Full solution: 0 build warnings, 0 regressions.
+
+**Key learning:** The static-text-replacement engine's word-boundary regex `(?![A-Za-z0-9_-])` prevents matching keys with trailing spaces when followed by a word character. Entries ending in spaces (like "please ") silently fail. Always use word-boundary-compatible keys.
+
