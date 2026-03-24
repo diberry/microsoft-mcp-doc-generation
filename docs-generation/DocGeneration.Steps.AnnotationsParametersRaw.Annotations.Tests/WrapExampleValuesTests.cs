@@ -52,6 +52,42 @@ public class WrapExampleValuesTests
         Assert.Equal(input, result);
     }
 
+    // ── Mixed value/explanation patterns (PR #201 regression fix) ──
+
+    [Theory]
+    [InlineData(
+        "The interval (for example, PT1H for 1 hour).",
+        "The interval (for example, `PT1H` for 1 hour).")]
+    [InlineData(
+        "The duration (for example, PT5M for 5 minutes).",
+        "The duration (for example, `PT5M` for 5 minutes).")]
+    [InlineData(
+        "The period (for example, P1D for 1 day).",
+        "The period (for example, `P1D` for 1 day).")]
+    public void WrapExampleValues_ValueWithExplanation_OnlyBackticksValueToken(string input, string expected)
+    {
+        var result = TextCleanup.WrapExampleValues(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void WrapExampleValues_MultipleValuesWithExplanations_BackticksEachValueOnly()
+    {
+        var input = "The interval (for example, PT1H for 1 hour, PT5M for 5 minutes).";
+        var result = TextCleanup.WrapExampleValues(input);
+
+        Assert.Equal("The interval (for example, `PT1H` for 1 hour, `PT5M` for 5 minutes).", result);
+    }
+
+    [Fact]
+    public void WrapExampleValues_MixedPlainAndExplanationValues_HandledCorrectly()
+    {
+        var input = "The unit (for example, PT1H for 1 hour, Percent, ByteSeconds for byte-seconds).";
+        var result = TextCleanup.WrapExampleValues(input);
+
+        Assert.Equal("The unit (for example, `PT1H` for 1 hour, `Percent`, `ByteSeconds` for byte-seconds).", result);
+    }
+
     // ── Edge cases ──────────────────────────────────────────────────
 
     [Fact]

@@ -353,7 +353,20 @@ public static class TextCleanup
         {
             var values = match.Groups[1].Value;
             var parts = values.Split(", ");
-            var backticked = parts.Select(v => $"`{v.Trim()}`");
+            var backticked = parts.Select(v =>
+            {
+                var trimmed = v.Trim();
+                var spaceIdx = trimmed.IndexOf(' ');
+                if (spaceIdx > 0)
+                {
+                    // Value with explanation text (e.g., "PT1H for 1 hour")
+                    // — only backtick the value token, keep explanation as-is
+                    var value = trimmed.Substring(0, spaceIdx);
+                    var explanation = trimmed.Substring(spaceIdx);
+                    return $"`{value}`{explanation}";
+                }
+                return $"`{trimmed}`";
+            });
             return $"(for example, {string.Join(", ", backticked)})";
         });
     }
