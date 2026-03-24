@@ -237,6 +237,23 @@ Three separate `StripFrontmatter` implementations exist:
 
 **Priority:** Low — tracked as tech debt, not blocking.
 
+### AD-020: User Workflow Directive — Mandatory Development Process
+**Date:** 2026-03-24
+**Author:** Dina Berry (via Copilot)
+**Status:** Active
+
+**All development work must follow this process in strict order:**
+1. Create a plan (design, test strategy, edge cases)
+2. Write failing tests (define the contract before implementation)
+3. Write implementation code (make the tests pass)
+4. Run tests (all must pass, no regressions)
+5. Full team review (architecture, implementation, documentation, tests)
+6. Notify Dina that work is ready for final review
+
+**Never skip steps or present work before the full team review is complete.** This is a user-mandated workflow to ensure consistency, quality, and accountability across all squad work.
+
+**Reference:** Captured in `.squad/decisions/inbox/copilot-directive-2026-03-24T19-38-25Z.md`
+
 ---
 
 ### AD-019: Template-Level Regression Tests Required for Template Fixes
@@ -385,6 +402,66 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 **Rationale:** Prioritization follows a single principle: **prevent harm before adding value.** P0 prevents data loss and silent failures. P1 builds the safety net. P2 makes the team faster. P3 polishes quality. Each tier's value compounds — fingerprinting (P1) enables prompt regression testing (P2), which enables prompt versioning (P2) to be meaningful.
 
 **Impact:** All team members have assigned work. The `squad` label on all issues enables triage routing. Individual `squad:{member}` labels enable filtered views per team member.
+
+---
+
+### AD-024: LearnUrlRelativizer — Deterministic Post-Processing Backstop for Full URLs
+**Date:** 2026-03-25
+**Author:** Morgan (C# Generator Developer)
+**Status:** Active
+**Related:** PR #221, Issue #220
+
+**Context:** Generated tool-family files contained full `https://learn.microsoft.com/azure/...` URLs violating AD-017 (Link Format Convention). Root cause: AI-generated content (Step 4 intro paragraphs) produces full URLs despite prompt instructions telling it to use relative paths.
+
+**Decision:** Added `LearnUrlRelativizer` as a deterministic post-processing stage (Stage 12 in FamilyFileStitcher) that converts all full learn.microsoft.com URLs to site-root-relative paths. This is a **belt-and-suspenders** approach: prompts already request relative URLs, but the post-processor enforces it deterministically.
+
+**Key Design Choices:**
+1. **Regex with `[GeneratedRegex]`** — source-generated for performance, handles locale stripping (`/en-us`), query params, and anchors.
+2. **Code-block protection** — skips URLs inside backticks and fenced code blocks (consistent with ContractionFixer, PresentTenseFixer pattern).
+3. **Placed last in pipeline** — Stage 12, after all other text transformations, so it catches any URLs introduced by earlier stages.
+4. **Applies to all learn.microsoft.com paths** — not just `/azure/...` but also `/cli/`, `/dotnet/`, etc.
+
+**Rationale:** AI content generation is inherently non-deterministic — prompt instructions alone cannot guarantee URL format compliance. Every post-processing service in the pipeline follows this pattern: deterministic fix as backstop for AI behavior. The HorizontalArticles pipeline already had `StripLearnPrefix` for its own content; this extends the same principle to tool-family files.
+
+**Impact:** All generated tool-family files will have site-root-relative paths for learn.microsoft.com links. Future AI-generated content that includes full learn URLs will be automatically corrected. Minimal performance impact — regex runs once per file at the end of the pipeline.
+
+**Test Coverage:** 17 TDD tests (AD-007) covering all edge cases — locale stripping, query params, anchors, code-block protection, idempotency.
+
+---
+
+### AD-025: Test-Driven Quality Assurance — PR #217 and #218 Assessment
+**Date:** 2026-03-25
+**Author:** Parker (QA / Tester)
+**Status:** Active
+**Related:** PR #217 (Generation Report), PR #218 (Acrolinx Compliance)
+
+**Context:** Comprehensive QA review of two major PRs following team standardization on AD-007 (TDD) and AD-010 (behavioral test depth).
+
+**Decision:** Both PRs **APPROVED** for merge based on exceptional test coverage and behavioral alignment with AD-010 standards.
+
+**PR #217 — Generation Report (Quinn):**
+- **Verdict:** APPROVE
+- **Test results:** 28/28 passing (Node.js `node:test`)
+- **AD-010 compliance:** ✅ PASS — All 5 exported functions (`loadCommonParams`, `extractNamespaces`, `computeToolStats`, `computeNamespaceSummary`, `generateReport`) have tests asserting on specific output values. Reverting any function logic would break tests.
+- **Edge cases:** ✅ Comprehensive — empty results, missing option arrays, determinism checks, alphabetical sort verification
+- **Test data:** ✅ Realistic — real Azure namespace patterns (acr, cosmos) with production parameter names (`--tenant`, `--retry-*`, etc.) from `common-parameters.json` schema
+- **Coverage gaps (non-blocking):** `readJson()` (npm output parser) and `parseArgs()` untested; integration test for CLI `main()` missing — acceptable for report script
+
+**PR #218 — Acrolinx Compliance (Morgan):**
+- **Verdict:** APPROVE
+- **Test results:** 202/202 ToolFamilyCleanup tests + 240/240 Annotations tests = 442/442 passing; full solution 1,149 tests, 0 failures
+- **AD-010 compliance:** ✅ PASS — All services tested behaviorally:
+  - AcronymExpander: 12 tests asserting exact output ("virtual machine (VM)" appears)
+  - IntroductoryCommaFixer: 14 tests asserting comma insertion
+  - PresentTenseFixer: 16 tests asserting tense conversion ("will return" → "returns")
+  - StaticTextReplacement: 20 tests asserting phrase replacements
+  - StitcherAcrolinxIntegrationTests: 7 integration tests verifying full pipeline wiring and ordering
+- **Critical strength:** 7 integration tests call `FamilyFileStitcher.Stitch()` end-to-end, verifying correct order and combined behavior
+- **Edge cases:** ✅ Comprehensive — null/empty inputs, idempotency, code-block protection, heading/frontmatter protection, sentence boundaries, mid-sentence exclusion, proper noun handling, plural subject detection
+- **Test data:** ✅ Realistic — Azure-specific content (VM management, AKS, RBAC, storage, Cosmos DB)
+- **Coverage gaps (non-blocking):** Acronym definitions in JSON have no dedicated tests; verb whitelist only 6/16 verbs individually tested; file-loading fallback untested — all use same code paths, low risk
+
+**Key Assessment:** Both PRs exemplify expected TDD pattern. Template-level regression tests in both PRs satisfy AD-019. Zero regressions across full solution. Both ready for merge.
 
 ---
 
