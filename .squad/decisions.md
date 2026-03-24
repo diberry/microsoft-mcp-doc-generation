@@ -222,6 +222,75 @@ Some Azure services span multiple MCP namespaces but publish as a single article
    - `mergeOrder` values must be unique and sequential within a group
    - `mergeGroup` value should match the primary namespace's `fileName`
 
+### AD-018: Consolidate StripFrontmatter Implementations
+**Date:** 2026-03-24  
+**Author:** Avery (Lead)  
+**Status:** Proposed  
+**Triggered by:** Architecture review of PR #200
+
+Three separate `StripFrontmatter` implementations exist:
+1. `ToolReader.StripFrontmatter()` — regex-based
+2. `ComposedToolGeneratorService.StripFrontmatter()` — line-by-line parsing
+3. `PageGenerator.StripFrontmatter()` — line-by-line parsing
+
+**Decision:** When module boundaries are next refactored, consolidate into `DocGeneration.Core` or `DocGeneration.Core.NaturalLanguage`. Until then, duplication is acceptable tech debt (implementations in different project boundaries).
+
+**Priority:** Low — tracked as tech debt, not blocking.
+
+---
+
+### AD-019: Template-Level Regression Tests Required for Template Fixes
+**Date:** 2026-03-24  
+**Author:** Parker (QA/Tester)  
+**Status:** Active  
+**Extends:** AD-010
+
+**Decision:** Any PR that modifies a Handlebars template (`.hbs` file) must include at least one test that:
+1. Loads the actual template from `docs-generation/templates/`
+2. Renders it using `HandlebarsTemplateEngine.ProcessTemplateString()`
+3. Asserts on the specific output change
+4. Would FAIL if the template change were reverted
+
+Template-level tests must supplement method-level tests for helper functions — method tests are necessary but not sufficient for template fix PRs.
+
+**Rationale:** PRs #200 and #201 both fix template bugs but only test helper methods. If template changes were reverted, all tests would pass — an AD-010 violation. The pattern already exists in `ToolFamilyPageTemplateRegressionTests.cs`.
+
+**Impact:** Affects all contributors modifying `.hbs` files.
+
+---
+
+### AD-020: Pipeline Architecture Assessment
+**Date:** 2026-03-24  
+**Author:** Riley (Pipeline Architect)  
+**Status:** Informational
+
+Comprehensive architecture review of PipelineRunner, Steps 0-6, cross-step data flow, merge infrastructure, and workspace isolation. **Overall assessment: production-worthy with manageable risks.** The architecture is sound and typed contracts provide good guardrails.
+
+**Key Findings:**
+
+**Risks (prioritized):**
+1. 🔴 **Risk 1 (Critical):** Bootstrap `ResetOutputDirectory` destroys partial progress. Running `./start.sh advisor 4` after fixing a failed step wipes Steps 1-3 output. Mitigation: Add incremental mode that preserves outputs when `--skip-deps` is active.
+2. 🟠 **Risk 2 (High):** Subprocess error detection via regex is fragile. If a generator changes output format, failures go undetected. Mitigation: Structured error contracts (`step-result.json`).
+3. 🟠 **Risk 3 (Medium):** Implicit dependencies not captured. Steps 5 and 6 depend on Bootstrap metadata but don't declare `dependsOn`. Mitigation: Add explicit `DependsOn` declarations.
+4. 🟡 **Risk 4 (Medium):** Dual merge implementations (shell + C#). Consolidate to single implementation.
+5. 🟡 **Risk 5 (Medium):** Step 4 file matching could cross namespaces if `@mcpcli` annotations are corrupted. Add cross-validation after matching.
+
+**Opportunities (by impact):**
+1. Incremental Bootstrap mode (save 10-15 min per retry)
+2. Structured error contracts between runner and generators
+3. Add retries to Step 3 (fragile AI step)
+4. Consolidate merge implementations
+5. Add content integrity validation to Step 1
+
+**Component Ratings:**
+- 🟢 Solid: PipelineRunner core, step contracts, StepRegistry, WorkspaceManager, deterministic generators, FamilyFileStitcher, parallel safety
+- 🟡 Acceptable: Bootstrap (destructive reset), Steps 1-3 (regex detection), Steps 5-6 (implicit dependencies), post-assembly merge
+- 🟠 Needs attention: Step 4 (complex file matching + validator complexity)
+
+See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed review.
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
