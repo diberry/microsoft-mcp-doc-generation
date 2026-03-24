@@ -80,7 +80,8 @@ public class PageGenerator
                     {
                         try
                         {
-                            filteredTool.AnnotationContent = File.ReadAllText(annotationFilePath);
+                            var rawContent = File.ReadAllText(annotationFilePath);
+                            filteredTool.AnnotationContent = StripFrontmatter(rawContent).Trim();
                             filteredTool.AnnotationFileName = annotationFileName;
                         }
                         catch
@@ -225,5 +226,36 @@ public class PageGenerator
         var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
         await File.WriteAllTextAsync(outputFile, result);
         LogFileHelper.WriteDebug("Generated commands page: common-general/azmcp-commands.md");
+    }
+
+    /// <summary>
+    /// Strips YAML frontmatter (--- ... ---) from markdown content.
+    /// Returns the content after the closing --- delimiter.
+    /// </summary>
+    internal static string StripFrontmatter(string content)
+    {
+        if (string.IsNullOrEmpty(content) || !content.TrimStart().StartsWith("---"))
+            return content;
+
+        var lines = content.Split('\n');
+        var foundStart = false;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (lines[i].Trim() == "---")
+            {
+                if (!foundStart)
+                {
+                    foundStart = true;
+                }
+                else
+                {
+                    // Return everything after the closing ---
+                    return string.Join('\n', lines.Skip(i + 1));
+                }
+            }
+        }
+
+        return content;
     }
 }
