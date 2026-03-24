@@ -291,6 +291,24 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 
 ---
 
+### AD-021: Step 3 and Step 6 Must Have Post-Validators Before Next Release
+**Date:** 2026-03-25  
+**Author:** Parker (QA/Tester)  
+**Status:** Active  
+**Extends:** AD-002, AD-010  
+**Triggered by:** Test strategy audit (docs/test-strategy.md)
+
+**Decision:** Steps 3 (ToolGeneration) and 6 (HorizontalArticles) must implement `IPostValidator` before the next release. These are the only AI-dependent steps with **no output validation at all**, creating the two highest-risk gaps identified in AD-002:
+
+1. **Step 3:** Template token leakage (`<<<TPL_LABEL_N>>>`) in final output goes undetected
+2. **Step 6:** AI JSON parse failures producing incomplete horizontal articles go undetected
+
+**Rationale:** The test strategy audit found that only Step 4 has a post-validator. Steps 3 and 6 produce AI-generated content that feeds directly into the final documentation corpus — if they fail silently, bad content ships. Both risks are already documented in AD-002 but have no mitigation.
+
+**Impact:** Morgan or Sage should implement these validators. Parker will write tests for the validators once implemented. Blocks: any release claiming "full pipeline validation".
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
