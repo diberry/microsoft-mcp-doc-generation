@@ -241,4 +241,165 @@ public class StaticTextReplacementTests : IClassFixture<TextCleanupFixture>
         Assert.DoesNotContain("utilize", result, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("leverage", result, StringComparison.OrdinalIgnoreCase);
     }
+
+    // ── Deprecated Microsoft Terminology (Acrolinx P2) ──────────────
+
+    [Theory]
+    [InlineData("Connect to Azure Active Directory for auth.", "Connect to Microsoft Entra ID for auth.")]
+    [InlineData("azure active directory supports SSO.", "Microsoft Entra ID supports SSO.")]
+    public void ReplaceStaticText_AzureActiveDirectory_ReplacedWithEntraID(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Configure Azure AD for your tenant.", "Configure Microsoft Entra ID for your tenant.")]
+    [InlineData("Use azure ad to manage identities.", "Use Microsoft Entra ID to manage identities.")]
+    public void ReplaceStaticText_AzureAD_ReplacedWithEntraID(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Enable AAD authentication.", "Enable Microsoft Entra ID authentication.")]
+    [InlineData("The AAD token is valid.", "The Microsoft Entra ID token is valid.")]
+    public void ReplaceStaticText_AAD_ReplacedWithEntraID(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ReplaceStaticText_AAD_NotReplacedInsideWords()
+    {
+        // "AAD" inside a larger token should NOT be replaced
+        var input = "The SAAD library and AADConnect tool are configured.";
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Contains("SAAD", result);
+    }
+
+    // ── Inclusive Language (Acrolinx P2) ─────────────────────────────
+
+    [Theory]
+    [InlineData("Add the IP to the whitelist.", "Add the IP to the allowlist.")]
+    [InlineData("Whitelist the domain name.", "allowlist the domain name.")]
+    public void ReplaceStaticText_Whitelist_ReplacedWithAllowlist(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ReplaceStaticText_Whitelist_NotReplacedInsideWords()
+    {
+        // "whitelisted" should NOT become "allowlisted" — word boundary guard
+        var input = "The IP was whitelisted yesterday.";
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Contains("whitelisted", result);
+    }
+
+    [Theory]
+    [InlineData("Remove the IP from the blacklist.", "Remove the IP from the blocklist.")]
+    [InlineData("Blacklist the malicious domain.", "blocklist the malicious domain.")]
+    public void ReplaceStaticText_Blacklist_ReplacedWithBlocklist(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Push changes to the master branch.", "Push changes to the main branch.")]
+    [InlineData("Merge into master branch before release.", "Merge into main branch before release.")]
+    public void ReplaceStaticText_MasterBranch_ReplacedWithMainBranch(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Run a sanity check before deploying.", "Run a validation check before deploying.")]
+    [InlineData("Perform a sanity check on the config.", "Perform a validation check on the config.")]
+    public void ReplaceStaticText_SanityCheck_ReplacedWithValidationCheck(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Use a dummy value for testing.", "Use a placeholder value for testing.")]
+    [InlineData("Create a dummy account.", "Create a placeholder account.")]
+    public void ReplaceStaticText_Dummy_ReplacedWithPlaceholder(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    // ── Additional Wordy Phrases (Acrolinx P2) ─────────────────────
+
+    [Theory]
+    [InlineData("Due to the fact that the server is down, retry later.", "because the server is down, retry later.")]
+    [InlineData("This fails due to the fact that the key expired.", "This fails because the key expired.")]
+    public void ReplaceStaticText_DueToTheFactThat_ReplacedWithBecause(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("This tool provides the ability to deploy apps.", "This tool lets you deploy apps.")]
+    [InlineData("The CLI provides the ability to manage resources.", "The CLI lets you manage resources.")]
+    public void ReplaceStaticText_ProvidesTheAbilityTo_ReplacedWithLetsYou(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("In the event that the deployment fails, roll back.", "if the deployment fails, roll back.")]
+    [InlineData("Retry in the event that the connection times out.", "Retry if the connection times out.")]
+    public void ReplaceStaticText_InTheEventThat_ReplacedWithIf(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("The tool is able to monitor resources.", "The tool can monitor resources.")]
+    [InlineData("This service is able to scale automatically.", "This service can scale automatically.")]
+    public void ReplaceStaticText_IsAbleTo_ReplacedWithCan(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Deploy VMs as well as containers.", "Deploy VMs and containers.")]
+    [InlineData("Manage storage as well as networking.", "Manage storage and networking.")]
+    public void ReplaceStaticText_AsWellAs_ReplacedWithAnd(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("In addition to VMs, you can deploy containers.", "besides VMs, you can deploy containers.")]
+    [InlineData("Configure DNS in addition to networking.", "Configure DNS besides networking.")]
+    public void ReplaceStaticText_InAdditionTo_ReplacedWithBesides(string input, string expected)
+    {
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ReplaceStaticText_MultipleP2Replacements_AllApplied()
+    {
+        var input = "Utilize Azure AD as well as the whitelist to configure access.";
+        var result = TextCleanup.ReplaceStaticText(input);
+        Assert.DoesNotContain("Azure AD", result);
+        Assert.DoesNotContain("whitelist", result, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("as well as", result, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("utilize", result, StringComparison.OrdinalIgnoreCase);
+    }
 }
