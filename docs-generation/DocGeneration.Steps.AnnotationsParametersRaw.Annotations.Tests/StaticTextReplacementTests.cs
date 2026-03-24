@@ -278,6 +278,7 @@ public class StaticTextReplacementTests : IClassFixture<TextCleanupFixture>
         var input = "The SAAD library and AADConnect tool are configured.";
         var result = TextCleanup.ReplaceStaticText(input);
         Assert.Contains("SAAD", result);
+        Assert.Contains("AADConnect", result);
     }
 
     // ── Inclusive Language (Acrolinx P2) ─────────────────────────────
