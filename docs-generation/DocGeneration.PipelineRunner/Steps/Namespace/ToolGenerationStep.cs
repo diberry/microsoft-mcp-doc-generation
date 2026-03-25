@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
+using PipelineRunner.Validation;
 using Shared;
 
 namespace PipelineRunner.Steps;
@@ -26,7 +27,8 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             dependsOn: [1, 2],
             requiresAiConfiguration: true,
             createsFilteredCliView: true,
-            expectedOutputs: ["tools-composed", "tools"])
+            expectedOutputs: ["tools-composed", "tools"],
+            postValidators: [new ToolGenerationOutputValidator()])
     {
     }
 

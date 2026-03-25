@@ -67,7 +67,15 @@ public sealed class BootstrapStep : StepDefinition
                 }
             }
 
-            ResetOutputDirectory(context.OutputPath);
+            if (IsFullPipelineRun(context))
+            {
+                ResetOutputDirectory(context.OutputPath);
+            }
+            else
+            {
+                // Incremental run — preserve existing output, just ensure directories exist
+                Directory.CreateDirectory(context.OutputPath);
+            }
             CreateDirectories(context.OutputPath, ["cli"]);
 
             await context.BuildCoordinator.EnsureReadyAsync(
@@ -271,6 +279,17 @@ public sealed class BootstrapStep : StepDefinition
         => context.PlannedSteps
             .OfType<StepDefinition>()
             .Any(step => step.RequiresAiConfiguration);
+
+    /// <summary>
+    /// Returns true when all six namespace steps (1–6) are planned, indicating a full pipeline run.
+    /// Partial runs (e.g., --steps 4) preserve existing output from prior steps.
+    /// </summary>
+    private static bool IsFullPipelineRun(PipelineContext context)
+    {
+        var requestedSteps = context.Request.Steps;
+        var fullRun = new HashSet<int> { 1, 2, 3, 4, 5, 6 };
+        return fullRun.IsSubsetOf(requestedSteps);
+    }
 
     private static void ResetOutputDirectory(string outputPath)
     {
