@@ -8,7 +8,7 @@ You will receive tool information including the tool name, command, action verb,
 - Generate EXACTLY the same number of prompts as the reference set (this count was chosen by the tool authority)
 - **STYLE IS AUTHORITATIVE**: The reference prompts define the correct style for this tool. Match their:
   - **Punctuation**: Every prompt MUST end with proper punctuation (period or question mark) regardless of reference prompt style
-  - **Parameter values**: Always use single-quoted concrete values (e.g., `'my-subscription'`, `'prod-rg'`) — even if reference prompts use angle-bracket placeholders, convert them to single-quoted concrete values
+  - **Parameter values**: Always use single-quoted concrete values (e.g., `'my-subscription'`, `'prod-rg'`) — even if reference prompts use any forbidden format (angle brackets, backticks, double quotes, bare text, or mixed formats), convert ALL parameter values to single-quoted concrete values
   - **Brevity**: If references are short and direct (e.g., "List all recommendations in my subscription."), do NOT over-embellish with extra qualifiers
   - **Terminology**: Use the same service/resource names the references use (e.g., if they say "Advisor" not "Azure Advisor", follow that)
 - Do NOT copy reference prompts verbatim — create novel variations that follow the same patterns
