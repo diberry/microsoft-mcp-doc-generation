@@ -15,7 +15,7 @@ Parameters:
 
 This tool has **{REQUIRED_PARAM_COUNT} required parameter(s)**: {REQUIRED_PARAM_NAMES}
 
-**Every single example prompt MUST include ALL {REQUIRED_PARAM_COUNT} of these required parameters.** Each parameter value MUST appear in single quotes with a concrete, realistic example value (e.g., 'my-value'). Count them in each prompt before outputting. If any prompt has fewer than {REQUIRED_PARAM_COUNT} required parameters represented, regenerate it.
+**CRITICAL — Every single example prompt MUST include ALL {REQUIRED_PARAM_COUNT} of these required parameters.** Each parameter value MUST appear in single quotes with a concrete, realistic example value (e.g., 'my-value'). Before outputting your response, verify that every prompt contains all {REQUIRED_PARAM_COUNT} required parameters. Your response will be rejected if any required parameter is missing from any prompt.
 
 Rules for optional parameters:
 - If `resource-group` is Required, include it. If Optional, omit it.
