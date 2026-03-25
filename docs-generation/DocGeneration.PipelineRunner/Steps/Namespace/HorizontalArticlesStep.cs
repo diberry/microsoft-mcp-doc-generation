@@ -1,6 +1,7 @@
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
+using PipelineRunner.Validation;
 
 namespace PipelineRunner.Steps;
 
@@ -13,7 +14,8 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             FailurePolicy.Fatal,
             requiresAiConfiguration: true,
             createsFilteredCliView: true,
-            expectedOutputs: ["horizontal-articles"])
+            expectedOutputs: ["horizontal-articles"],
+            postValidators: [new HorizontalArticleOutputValidator()])
     {
     }
 
