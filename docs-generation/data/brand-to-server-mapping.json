@@ -78,10 +78,10 @@
     "fileName": "azure-communication-services"
   },
   {
-    "brandName": "Azure Compute",
+    "brandName": "Azure Virtual Machines",
     "mcpServerName": "compute",
-    "shortName": "Compute",
-    "fileName": "azure-compute"
+    "shortName": "Virtual Machines",
+    "fileName": "azure-virtual-machines"
   },
   {
     "brandName": "Azure Confidential Ledger",
