@@ -8,7 +8,7 @@ You will receive tool information including the tool name, command, action verb,
 - Generate EXACTLY the same number of prompts as the reference set (this count was chosen by the tool authority)
 - **STYLE IS AUTHORITATIVE**: The reference prompts define the correct style for this tool. Match their:
   - **Punctuation**: Every prompt MUST end with proper punctuation (period or question mark) regardless of reference prompt style
-  - **Parameter values**: Always use single-quoted concrete values (e.g., `'my-subscription'`, `'prod-rg'`) — even if reference prompts use angle-bracket placeholders, convert them to single-quoted concrete values
+  - **Parameter values**: Always use single-quoted concrete values (e.g., `'my-subscription'`, `'prod-rg'`) — even if reference prompts use any forbidden format (angle brackets, backticks, double quotes, bare text, or mixed formats), convert ALL parameter values to single-quoted concrete values
   - **Brevity**: If references are short and direct (e.g., "List all recommendations in my subscription."), do NOT over-embellish with extra qualifiers
   - **Terminology**: Use the same service/resource names the references use (e.g., if they say "Advisor" not "Azure Advisor", follow that)
 - Do NOT copy reference prompts verbatim — create novel variations that follow the same patterns
@@ -74,17 +74,22 @@ This means:
      * For `--question` → phrase as a question or say "question: ..."
      * **GENERAL RULE**: Use the core word(s) from the parameter name in your prompt text
 
-5. **PARAMETER VALUE FORMAT — Single-Quoted Concrete Values**:
-   - **ALWAYS** wrap parameter values in single straight quotes with concrete, realistic example values
+5. **PARAMETER VALUE FORMAT — Single-Quoted Concrete Values ONLY**:
+   - **ALL parameter values MUST be wrapped in single straight quotes (')** with concrete, realistic example values — NO EXCEPTIONS
    - Use descriptive but short values: 'my-appconfig', 'my-key', 'prod-rg', 'my-storage'
-   - **NEVER use angle-bracket placeholders** like `<account>` or `<key>` — these are invisible when rendered as HTML and break documentation
-   - **NEVER use backtick-wrapped placeholders** like `` `account` `` — these look like code references, not parameter values
+   - **FORBIDDEN FORMATS** (will cause rejection):
+     * Angle brackets: `<account>`, `<key>` — invisible when rendered as HTML
+     * Backticks: `` `account` ``, `` `key` `` — renders as code, not values
+     * Escaped angle brackets: `\<key\>` — confusing and broken
+     * Bare unquoted text: `my-key` without quotes — ambiguous in prose
+     * Double quotes: `"my-key"` — use single quotes only
+     * Mixed formats in same prompt — ALL values must use single quotes
    - ✅ "Delete key 'my-key' from App Configuration store 'my-appconfig'."
    - ✅ "List all VMs in resource group 'prod-rg'."
    - ✅ "Get storage account 'my-storage' details."
-   - ❌ "Delete key <key> from App Configuration store <account>." (angle brackets invisible in HTML)
-   - ❌ "List all VMs in resource group `my-rg`." (backticks look like code)
-   - ❌ "Delete key \<key\> from store." (escaped angle brackets are confusing)
+   - ❌ "Delete key <key> from App Configuration store <account>." (angle brackets)
+   - ❌ "List all VMs in resource group `my-rg`." (backticks)
+   - ❌ "Delete key 'my-key' from store <account>." (mixed formats)
 
 6. **Focus on required parameters**:Include ALL required parameters plus only the most relevant optional parameters (1-2 at most). Omit infrastructure parameters like subscription, tenant, auth methods, retry settings, and timeouts unless explicitly required.
 
