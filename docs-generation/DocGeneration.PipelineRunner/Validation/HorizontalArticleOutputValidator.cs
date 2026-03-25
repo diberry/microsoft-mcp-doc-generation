@@ -89,7 +89,11 @@ public sealed class HorizontalArticleOutputValidator : IPostValidator
         }
 
         var success = !warnings.Any(w =>
-            w.Contains("truncated") || w.Contains("Missing or invalid frontmatter") || w.Contains("error artifacts"));
+            w.Contains("truncated") ||
+            w.Contains("Missing or invalid frontmatter") ||
+            w.Contains("error artifacts") ||
+            w.Contains("Missing required section") ||
+            w.Contains("Frontmatter missing"));
 
         return new ValidatorResult(Name, success, warnings);
     }
