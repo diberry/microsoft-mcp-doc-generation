@@ -120,6 +120,22 @@ public class ToolGenerationOutputValidatorTests : IDisposable
         Assert.DoesNotContain(result.Warnings, w => w.Contains("clean-tool.md"));
     }
 
+    [Fact]
+    public async Task ValidateAsync_BothViolationTypes_CountsFileOnce()
+    {
+        var toolsDir = Path.Combine(_testRoot, "tools");
+        Directory.CreateDirectory(toolsDir);
+        await File.WriteAllTextAsync(
+            Path.Combine(toolsDir, "dual-leak.md"),
+            "# Dual Leak\n\nThis has {{toolName}} Handlebars AND {REQUIRED_PARAM_COUNT} template variable leaks in the same file content that is long enough.");
+
+        var context = CreateContext(_testRoot);
+        var result = await _validator.ValidateAsync(context, null!, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, w => w.Contains("1 of 1 tool file(s)"));
+    }
+
     private static PipelineContext CreateContext(string outputPath) => new()
     {
         Request = new PipelineRequest("test", [3], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),

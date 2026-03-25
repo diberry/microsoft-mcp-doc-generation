@@ -36,7 +36,7 @@ public sealed class ToolGenerationOutputValidator : IPostValidator
         if (toolFiles.Length == 0)
             return new ValidatorResult(Name, true, warnings);
 
-        var leakedFiles = new List<string>();
+        var leakedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var toolFile in toolFiles)
         {
