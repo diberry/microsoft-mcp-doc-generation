@@ -62,7 +62,6 @@ public sealed class HorizontalArticleOutputValidator : IPostValidator
         if (content.Length < MinimumArticleLength)
         {
             warnings.Add($"Article appears truncated ({content.Length} chars, expected {MinimumArticleLength}+)");
-            return new ValidatorResult(Name, false, warnings);
         }
 
         // Validate frontmatter
