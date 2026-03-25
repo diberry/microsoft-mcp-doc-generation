@@ -231,7 +231,7 @@ Return a JSON object with the tool name as the key and an array of plain example
 ### YOUR RESPONSE MUST CONTAIN:
 
 1. **ONLY THE JSON OBJECT** - Nothing else
-2. **NO PREAMBLE** - Do not include "Here is the response:" or "Step 1:", etc.
+2. **NO PREAMBLE** - Do not include ANY lead-in text such as "Here is the response:", "Here are some example commands:", "Here are some example prompts:", "Following are:", "Step 1:", etc.
 3. **NO VERIFICATION TEXT** - Do not include your checklist, verification steps, or reasoning
 4. **NO CODE FENCES** - Do not wrap the JSON in ```json or ``` markers
 5. **NO EXTRA TEXT** - Do not add explanations before or after the JSON
@@ -263,12 +263,23 @@ Return a JSON object with the tool name as the key and an array of plain example
 
 ### INCORRECT EXAMPLES (DO NOT DO THIS):
 
-❌ **With preamble:**
+❌ **With preamble (any variation):**
 ```
 Here are the prompts:
 {
   "storage account list": [...]
 }
+```
+
+❌ **Other preamble variations to AVOID:**
+```
+Here are some example commands:
+```
+```
+Here are some example prompts for using this tool:
+```
+```
+Following are the prompts:
 ```
 
 ❌ **With verification:**
