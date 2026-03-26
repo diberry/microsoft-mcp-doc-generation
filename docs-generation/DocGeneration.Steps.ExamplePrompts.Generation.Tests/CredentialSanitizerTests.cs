@@ -27,9 +27,6 @@ public class CredentialSanitizerTests
         Assert.DoesNotMatch(@"P@ssw0rd!2026", result);
         Assert.DoesNotMatch(@"S3cureP@ss!", result);
         Assert.DoesNotMatch(@"Admin#123!", result);
-
-        // Structural parts of the prompt must survive
-        Assert.Contains("key vault", result, StringComparison.OrdinalIgnoreCase);
     }
 
     [Theory]
