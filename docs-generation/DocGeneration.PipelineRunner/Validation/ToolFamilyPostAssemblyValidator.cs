@@ -78,7 +78,20 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
                 if (toolFileCount != articleSectionCount || frontmatterToolCount is null || frontmatterToolCount != toolFileCount)
                 {
-                    blockingIssues.Add("Tool count integrity check failed.");
+                    var details = new List<string>();
+                    if (toolFileCount != articleSectionCount)
+                    {
+                        details.Add($"tool files: {toolFileCount}, article sections: {articleSectionCount}");
+                    }
+                    if (frontmatterToolCount is null)
+                    {
+                        details.Add("frontmatter tool_count is missing");
+                    }
+                    else if (frontmatterToolCount != toolFileCount)
+                    {
+                        details.Add($"frontmatter tool_count: {frontmatterToolCount}, actual tool files: {toolFileCount}");
+                    }
+                    blockingIssues.Add($"Tool count integrity check failed ({string.Join("; ", details)}).");
                 }
 
                 foreach (var duplicate in toolFileLookup.Where(pair => pair.Value.Count > 1))
@@ -106,7 +119,18 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
                 if (missingFromArticle.Length > 0 || missingFromFiles.Length > 0)
                 {
-                    blockingIssues.Add("Cross-reference check failed.");
+                    var parts = new List<string>();
+                    if (missingFromArticle.Length > 0)
+                    {
+                        var toolNames = string.Join(", ", missingFromArticle.Select(name => $"'{name}'"));
+                        parts.Add($"{missingFromArticle.Length} tool(s) exist in /tools/ but have no H2 section in the article: {toolNames}. Regenerate the namespace to include them");
+                    }
+                    if (missingFromFiles.Length > 0)
+                    {
+                        var sectionNames = string.Join(", ", missingFromFiles.Select(name => $"'{name}'"));
+                        parts.Add($"{missingFromFiles.Length} article section(s) have no matching tool file: {sectionNames}");
+                    }
+                    blockingIssues.Add($"Cross-reference check failed. {string.Join(". ", parts)}.");
                 }
 
                 // With section freezing (AD-017), missing required params

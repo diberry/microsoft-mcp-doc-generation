@@ -536,6 +536,45 @@ public class PhantomH2Tests
     }
 
     [Fact]
+    public void ValidateAndFix_FewerH2sThanExpected_WarnsWithToolNames()
+    {
+        // One tool is missing its H2 heading entirely — verify console output names it
+        var contentMissingH2 = string.Join("\n", new[]
+        {
+            "<!-- @mcpcli monitor alert create -->",
+            "",
+            "Creates a metric alert rule.",
+            "",
+            "| Parameter | Required | Description |",
+            "| --- | --- | --- |",
+            "| `alertName` | Yes | The alert rule name. |"
+        });
+
+        var family = BuildFamily("monitor",
+            ("alert create", contentMissingH2),
+            ("alert get", BuildToolContent("Get Monitor alert", "monitor alert get")));
+
+        // Capture console output
+        var writer = new StringWriter();
+        Console.SetOut(writer);
+
+        try
+        {
+            CleanupGenerator.ValidateAndFixPhantomH2Sections(family, "  [1/1]");
+
+            var output = writer.ToString();
+            // The output should identify the tool missing its H2
+            Assert.Contains("alert create", output);
+            Assert.Contains("no H2 heading", output);
+            Assert.Contains("Regenerate", output);
+        }
+        finally
+        {
+            Console.SetOut(new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true });
+        }
+    }
+
+    [Fact]
     public void ValidateAndFix_EmptyToolsList_NoException()
     {
         var family = new FamilyContent

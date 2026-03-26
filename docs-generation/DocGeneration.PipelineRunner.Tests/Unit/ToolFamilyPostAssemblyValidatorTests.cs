@@ -50,7 +50,8 @@ public class ToolFamilyPostAssemblyValidatorTests
             var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
 
             Assert.False(result.Success);
-            Assert.Contains(result.Warnings, warning => warning.Contains("Blocking: Tool count integrity check failed.", StringComparison.Ordinal));
+            Assert.Contains(result.Warnings, warning => warning.Contains("Blocking: Tool count integrity check failed (", StringComparison.Ordinal));
+            Assert.Contains(result.Warnings, warning => warning.Contains("frontmatter tool_count: 1, actual tool files: 2", StringComparison.Ordinal));
             Assert.Contains("RESULT: FAIL", File.ReadAllText(Path.Combine(context.OutputPath, "reports", "tool-family-validation-compute.txt")), StringComparison.Ordinal);
         }
         finally
@@ -340,6 +341,63 @@ public class ToolFamilyPostAssemblyValidatorTests
             Directory.Delete(path, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task ValidateAsync_MissingToolFromArticle_ListsToolNameInError()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            // 3 tool files but article only has 2 H2 sections
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-create.md"), "compute create");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithMissingTool());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.False(result.Success);
+            // The error should name the missing tool file
+            Assert.Contains(result.Warnings, warning =>
+                warning.Contains("Cross-reference check failed", StringComparison.Ordinal)
+                && warning.Contains("compute-create.md", StringComparison.Ordinal)
+                && warning.Contains("Regenerate the namespace to include them", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static string ArticleWithMissingTool()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 3
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List resources where resource group name is 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+
+        ## Show virtual machine
+        <!-- @mcpcli compute show -->
+        Example prompts include:
+        - Show the VM named 'vm-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+
+        ## Related content
+        - Link
+        """;
 
     private sealed class FakeStep : IPipelineStep
     {
