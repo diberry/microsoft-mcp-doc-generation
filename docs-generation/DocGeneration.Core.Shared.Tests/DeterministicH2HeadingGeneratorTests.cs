@@ -156,4 +156,86 @@ public class DeterministicH2HeadingGeneratorTests
             "fileshares limits", "Get file share limits");
         Assert.True(heading.Split(' ').Length >= 2);
     }
+
+    // ─── Sentence Case: ToSentenceCase Direct Tests ───────────────────
+
+    [Theory]
+    [InlineData("Get All Resources", "Get all resources")]
+    [InlineData("List SQL Databases", "List SQL databases")]
+    [InlineData("Create File Share", "Create file share")]
+    [InlineData("Delete Azure VM", "Delete Azure VM")]
+    [InlineData("Get Resource Health Events", "Get resource health events")]
+    [InlineData("Get all resources", "Get all resources")] // already sentence case
+    [InlineData("Get", "Get")] // single word
+    [InlineData("Create Cosmos DB Account", "Create Cosmos DB account")]
+    [InlineData("Update Kubernetes Cluster", "Update Kubernetes cluster")]
+    [InlineData("Query PostgreSQL Databases", "Query PostgreSQL databases")]
+    [InlineData("Get Redis Cache", "Get Redis cache")]
+    [InlineData("Delete Entra ID Configuration", "Delete Entra ID configuration")]
+    [InlineData("List SignalR Services", "List SignalR services")]
+    [InlineData("", "")] // empty string
+    public void ToSentenceCase_ConvertsCorrectly(string input, string expected)
+    {
+        var result = DeterministicH2HeadingGenerator.ToSentenceCase(input);
+        Assert.Equal(expected, result);
+    }
+
+    // ─── Sentence Case: GenerateHeading Integration Tests ─────────────
+
+    [Fact]
+    public void GenerateHeading_ProducesSentenceCase()
+    {
+        // Heading for known verbs should be sentence case
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "compute vm create", "Create a new virtual machine");
+        // "Create virtual machine" — first word capitalized, rest lowercase
+        Assert.Equal("Create virtual machine", heading);
+        Assert.Matches(@"^[A-Z][a-z]+ [a-z]", heading);
+    }
+
+    [Fact]
+    public void GenerateHeading_PreservesProperNounsInSentenceCase()
+    {
+        // Namespace "aks" is recognized as proper noun AKS in sentence case
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "aks cluster get", "Get details of a Kubernetes cluster");
+        Assert.Contains("AKS", heading);
+        // "cluster" is not a proper noun — should be lowercase
+        Assert.Contains("cluster", heading);
+    }
+
+    [Fact]
+    public void GenerateHeadings_AllOutputsSentenceCase()
+    {
+        var tools = new[]
+        {
+            ("compute disk create", "Create a new Azure managed disk"),
+            ("compute disk delete", "Delete an Azure managed disk"),
+            ("compute vm create", "Create a new virtual machine"),
+            ("compute vm get", "Get details of a virtual machine"),
+        };
+
+        var headings = DeterministicH2HeadingGenerator.GenerateHeadings(
+            tools.Select(t => (t.Item1, (string?)t.Item2)));
+
+        foreach (var heading in headings.Values)
+        {
+            // Every heading: first word capitalized, subsequent non-proper-noun words lowercase
+            var words = heading.Split(' ');
+            Assert.True(char.IsUpper(words[0][0]),
+                $"Heading '{heading}' — first word must start with uppercase");
+
+            for (int i = 1; i < words.Length; i++)
+            {
+                var word = words[i];
+                // Either it's a recognized proper noun (could be any case) or it's lowercase
+                bool isProperNoun = DeterministicH2HeadingGenerator.ProperNouns.Contains(word);
+                if (!isProperNoun)
+                {
+                    Assert.True(char.IsLower(word[0]),
+                        $"Heading '{heading}' — word '{word}' at position {i} should be lowercase (not a proper noun)");
+                }
+            }
+        }
+    }
 }

@@ -44,6 +44,63 @@ public static class DeterministicH2HeadingGenerator
         ["rec"] = "recommendations",
     };
 
+    /// <summary>
+    /// Proper nouns and acronyms whose casing must be preserved in sentence case headings.
+    /// Keyed by case-insensitive lookup; values are the canonical casing.
+    /// </summary>
+    private static readonly Dictionary<string, string> ProperNounMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Azure"] = "Azure",
+        ["SQL"] = "SQL",
+        ["PostgreSQL"] = "PostgreSQL",
+        ["MySQL"] = "MySQL",
+        ["Cosmos"] = "Cosmos",
+        ["DB"] = "DB",
+        ["Kubernetes"] = "Kubernetes",
+        ["AKS"] = "AKS",
+        ["API"] = "API",
+        ["CLI"] = "CLI",
+        ["VM"] = "VM",
+        ["VMSS"] = "VMSS",
+        ["DNS"] = "DNS",
+        ["IP"] = "IP",
+        ["URL"] = "URL",
+        ["HTTP"] = "HTTP",
+        ["HTTPS"] = "HTTPS",
+        ["RBAC"] = "RBAC",
+        ["OAuth"] = "OAuth",
+        ["JWT"] = "JWT",
+        ["TLS"] = "TLS",
+        ["SSL"] = "SSL",
+        ["MCP"] = "MCP",
+        ["AI"] = "AI",
+        ["Entra"] = "Entra",
+        ["ID"] = "ID",
+        ["Bicep"] = "Bicep",
+        ["Terraform"] = "Terraform",
+        ["Redis"] = "Redis",
+        ["SignalR"] = "SignalR",
+        ["Grafana"] = "Grafana",
+        ["Kusto"] = "Kusto",
+        ["Lustre"] = "Lustre",
+        ["DevOps"] = "DevOps",
+        ["JSON"] = "JSON",
+        ["YAML"] = "YAML",
+        ["XML"] = "XML",
+        ["ARM"] = "ARM",
+        ["IoT"] = "IoT",
+        ["CDN"] = "CDN",
+        ["NAT"] = "NAT",
+        ["VPN"] = "VPN",
+        ["REST"] = "REST",
+    };
+
+    /// <summary>
+    /// Public read-only view of proper nouns for test assertions.
+    /// </summary>
+    public static readonly IReadOnlySet<string> ProperNouns =
+        new HashSet<string>(ProperNounMap.Values, StringComparer.Ordinal);
+
     // Words to ignore when extracting disambiguation tokens from descriptions
     private static readonly HashSet<string> StopWords = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -119,7 +176,7 @@ public static class DeterministicH2HeadingGenerator
             ? displayVerb
             : $"{displayVerb} {resourcePhrase}";
 
-        return Truncate(heading, 7);
+        return ToSentenceCase(Truncate(heading, 7));
     }
 
     /// <summary>
@@ -150,6 +207,12 @@ public static class DeterministicH2HeadingGenerator
 
             // Try to disambiguate using resource segments and description
             DisambiguateGroup(entries, toolLookup, result);
+        }
+
+        // Phase 3: Enforce sentence case on all headings (including disambiguated ones)
+        foreach (var key in result.Keys.ToList())
+        {
+            result[key] = ToSentenceCase(result[key]);
         }
 
         return result;
@@ -475,6 +538,38 @@ public static class DeterministicH2HeadingGenerator
         var words = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         return string.Join(" ", words.Select(w =>
             char.ToUpperInvariant(w[0]) + (w.Length > 1 ? w[1..].ToLowerInvariant() : "")));
+    }
+
+    /// <summary>
+    /// Converts a heading to sentence case: first word capitalized, remaining words
+    /// lowercase unless they are recognized proper nouns/acronyms.
+    /// </summary>
+    public static string ToSentenceCase(string heading)
+    {
+        if (string.IsNullOrWhiteSpace(heading)) return heading;
+
+        var words = heading.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var result = new string[words.Length];
+
+        for (int i = 0; i < words.Length; i++)
+        {
+            if (ProperNounMap.TryGetValue(words[i], out var properForm))
+            {
+                result[i] = properForm;
+            }
+            else if (i == 0)
+            {
+                // First word: capitalize first letter, lowercase rest
+                result[i] = char.ToUpperInvariant(words[i][0]) +
+                            (words[i].Length > 1 ? words[i][1..].ToLowerInvariant() : "");
+            }
+            else
+            {
+                result[i] = words[i].ToLowerInvariant();
+            }
+        }
+
+        return string.Join(" ", result);
     }
 
     private static string Truncate(string heading, int maxWords)
