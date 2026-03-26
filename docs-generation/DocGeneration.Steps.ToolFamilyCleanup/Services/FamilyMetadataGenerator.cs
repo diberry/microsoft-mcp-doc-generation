@@ -64,12 +64,16 @@ public class FamilyMetadataGenerator
             ? familyContent.FamilyName
             : familyContent.DisplayName;
 
+        // Extract verbs from tool commands for accurate capability descriptions
+        var verbList = GetVerbSummary(familyContent.Tools);
+
         // Generate user prompt with placeholders replaced
         var userPrompt = _userPromptTemplate
             .Replace("{{FAMILY_NAME}}", familyDisplayName)
             .Replace("{{TOOL_COUNT}}", familyContent.ToolCount.ToString())
             .Replace("{{CLI_VERSION}}", cliVersion)
-            .Replace("{{TOOL_LIST}}", familyContent.ToolNamesList);
+            .Replace("{{TOOL_LIST}}", familyContent.ToolNamesList)
+            .Replace("{{VERB_LIST}}", verbList);
 
         // Call LLM
         var metadata = await _aiClient.GetChatCompletionAsync(_systemPrompt, userPrompt, maxTokens: MAX_TOKENS);
@@ -79,6 +83,23 @@ public class FamilyMetadataGenerator
         
         // Fix A: Post-process to replace LLM-generated tool_count with actual count
         return EnsureCorrectToolCount(extractedMetadata, familyContent.ToolCount);
+    }
+
+    /// <summary>
+    /// Extracts deduplicated, sorted verbs from tool commands (last segment of each command).
+    /// Returns a comma-separated string like "create, delete, get, list, update".
+    /// </summary>
+    public static string GetVerbSummary(List<ToolContent> tools)
+    {
+        var verbs = tools
+            .Select(t => t.Command?.Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault())
+            .Where(v => !string.IsNullOrEmpty(v))
+            .Select(v => v!.ToLowerInvariant())
+            .Distinct()
+            .OrderBy(v => v)
+            .ToList();
+
+        return string.Join(", ", verbs);
     }
 
     /// <summary>
