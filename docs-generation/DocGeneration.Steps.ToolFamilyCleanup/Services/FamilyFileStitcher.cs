@@ -69,6 +69,9 @@ public class FamilyFileStitcher
         // 13. Post-processing: collapse inline JSON schemas in parameter tables (Acrolinx P1)
         markdown = JsonSchemaCollapser.Collapse(markdown);
 
+        // 14. Post-processing: strip HTML scaffolding comments (preserve @mcpcli markers)
+        markdown = ScaffoldingCommentStripper.Strip(markdown);
+
         return markdown;
     }
 
