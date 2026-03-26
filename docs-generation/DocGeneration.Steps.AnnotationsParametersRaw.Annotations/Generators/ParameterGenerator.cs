@@ -60,8 +60,7 @@ public class ParameterGenerator
                     StringComparer.OrdinalIgnoreCase);
 
                 var filteredOptions = allOptions
-                    .Where(opt => !string.IsNullOrEmpty(opt.Name) && 
-                                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true))
+                    .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames))
                     .ToList();
 
                 var parameterManifest = BuildParameterManifest(filteredOptions, conditionalParameters);
