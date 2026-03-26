@@ -36,7 +36,7 @@ public class ParameterGenerator
             
             // Get common parameters from CLI data only
             var commonParameters = data.SourceDiscoveredCommonParams;
-            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
+            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
             
             foreach (var tool in data.Tools)
             {

@@ -45,7 +45,7 @@ public class PageGenerator
             var commonParameters = data.SourceDiscoveredCommonParams.Any() 
                 ? data.SourceDiscoveredCommonParams 
                 : _extractCommonParameters(data.Tools);
-            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
+            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
 
             // Annotations directory path (at parent level)
             var parentDirCandidate = Path.GetDirectoryName(outputDir);

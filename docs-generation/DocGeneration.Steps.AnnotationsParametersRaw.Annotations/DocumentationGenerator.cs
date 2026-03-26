@@ -173,7 +173,7 @@ public static class DocumentationGenerator
         var commonParameters = transformedData.SourceDiscoveredCommonParams.Any() 
             ? transformedData.SourceDiscoveredCommonParams 
             : ExtractCommonParameters(transformedData.Tools);
-        var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
+        var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
         
         // Log detailed area breakdown to file
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
