@@ -84,6 +84,15 @@ public static class DeterministicH2HeadingGenerator
         ["Kusto"] = "Kusto",
         ["Lustre"] = "Lustre",
         ["DevOps"] = "DevOps",
+        ["JSON"] = "JSON",
+        ["YAML"] = "YAML",
+        ["XML"] = "XML",
+        ["ARM"] = "ARM",
+        ["IoT"] = "IoT",
+        ["CDN"] = "CDN",
+        ["NAT"] = "NAT",
+        ["VPN"] = "VPN",
+        ["REST"] = "REST",
     };
 
     /// <summary>
