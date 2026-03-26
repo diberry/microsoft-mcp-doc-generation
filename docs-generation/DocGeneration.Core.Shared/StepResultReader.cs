@@ -47,7 +47,7 @@ public static class StepResultReader
             result = JsonSerializer.Deserialize<StepResultFile>(json, DeserializerOptions);
             return result is not null;
         }
-        catch (JsonException)
+        catch (Exception)
         {
             return false;
         }
