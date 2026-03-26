@@ -660,9 +660,36 @@ public class CleanupGenerator
             Console.WriteLine($"{progress}     H2: \"{heading}\" (in tool #{toolIndex + 1}: {familyContent.Tools[toolIndex].ToolName})");
         }
 
-        if (actualH2Count <= expectedToolCount)
+        if (actualH2Count < expectedToolCount)
         {
-            Console.WriteLine($"{progress}   ⚠ Fewer H2s than expected — cannot auto-fix (tools may be missing headings)");
+            // Identify which specific tools are missing H2 headings
+            var toolsMissingH2 = familyContent.Tools
+                .Where(t =>
+                {
+                    var toolH2s = H2HeadingRegex.Matches(t.Content)
+                        .Select(m => m.Groups[1].Value.Trim())
+                        .Where(h => !string.Equals(h, "Related content", StringComparison.OrdinalIgnoreCase));
+                    return !toolH2s.Any();
+                })
+                .Select(t => t.ToolName)
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (toolsMissingH2.Count > 0)
+            {
+                var toolList = string.Join(", ", toolsMissingH2.Select(n => $"'{n}'"));
+                Console.WriteLine($"{progress}   ⚠ {toolsMissingH2.Count} tool(s) have no H2 heading: {toolList}");
+                Console.WriteLine($"{progress}   ⚠ Regenerate the '{familyContent.FamilyName}' namespace to include them.");
+            }
+            else
+            {
+                Console.WriteLine($"{progress}   ⚠ Fewer H2s than expected — cannot auto-fix (tools may be missing headings)");
+            }
+            return;
+        }
+
+        if (actualH2Count == expectedToolCount)
+        {
             return;
         }
 
