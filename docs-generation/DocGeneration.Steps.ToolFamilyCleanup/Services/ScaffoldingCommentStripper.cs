@@ -19,7 +19,7 @@ public static class ScaffoldingCommentStripper
     // Matches any HTML comment EXCEPT those starting with <!-- @mcpcli
     // Uses Singleline so .*? spans newlines (for multiline comments)
     private static readonly Regex ScaffoldingCommentPattern = new(
-        @"<!--\s(?!@mcpcli\b).*?-->",
+        @"<!--(?!\s*@mcpcli\b).*?-->",
         RegexOptions.Singleline | RegexOptions.Compiled);
 
     /// <summary>
