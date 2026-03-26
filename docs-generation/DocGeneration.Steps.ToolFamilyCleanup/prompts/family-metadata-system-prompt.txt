@@ -48,7 +48,7 @@ These articles document Azure MCP Server tools, NOT the Azure services themselve
 
 3. **Introduction Paragraph 1**:
    - Start with "The Azure MCP Server lets you manage..."
-   - Mention key capabilities (2-4 items)
+   - Use the **Available Operations** verb list provided in the user prompt to describe what operations are available. Include all provided verbs (e.g., "create, get, list, update, and delete") rather than guessing capabilities. Do not omit any verbs from the provided list.
    - End with "with natural language prompts"
 
 4. **Introduction Paragraph 2**:

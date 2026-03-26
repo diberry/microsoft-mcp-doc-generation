@@ -332,6 +332,17 @@ public static class TextCleanup
         {
             return text;
         }
+
+        // Check for punctuation before trailing closing quotes
+        var lastChar = text[^1];
+        if (lastChar == '\'' || lastChar == '"' || lastChar == '`')
+        {
+            var i = text.Length - 1;
+            while (i > 0 && (text[i] == '\'' || text[i] == '"' || text[i] == '`'))
+                i--;
+            if (i >= 0 && (text[i] == '.' || text[i] == '?' || text[i] == '!'))
+                return text;
+        }
         
         return text + ".";
     }
