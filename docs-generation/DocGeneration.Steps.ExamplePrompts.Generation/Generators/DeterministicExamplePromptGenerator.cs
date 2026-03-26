@@ -61,14 +61,39 @@ public static class DeterministicExamplePromptGenerator
         return StandardVerbs.Contains(lastSegment) ? lastSegment : null;
     }
 
+    private static readonly HashSet<string> CommonParamNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "retry-delay", "retry-max-delay", "retry-max-retries", "retry-mode",
+        "retry-network-timeout", "auth-method", "tenant", "subscription", "resource-group"
+    };
+
+    /// <summary>
+    /// Returns true if the parameter is a common infrastructure parameter
+    /// that does not change a tool's mode of operation.
+    /// </summary>
+    public static bool IsCommonParam(string paramName)
+    {
+        return CommonParamNames.Contains(paramName);
+    }
+
     /// <summary>
     /// Checks if a tool is eligible for deterministic prompt generation.
-    /// Returns false for non-standard verbs or when e2e prompts exist (they dictate style).
+    /// Returns false for non-standard verbs, when e2e prompts exist,
+    /// or when the tool has non-common optional parameters (dual-mode tools).
     /// </summary>
     public static bool IsEligible(Tool tool, bool hasE2ePrompts)
     {
         if (hasE2ePrompts) return false;
-        return ClassifyVerb(tool.Command) != null;
+        if (ClassifyVerb(tool.Command) == null) return false;
+
+        // Dual-mode tools with non-common optional params should use AI generation
+        var nonCommonOptionalParams = tool.Option?
+            .Where(o => !o.Required && !IsCommonParam(o.Name ?? ""))
+            .ToList() ?? new List<Option>();
+
+        if (nonCommonOptionalParams.Count > 0) return false;
+
+        return true;
     }
 
     /// <summary>
