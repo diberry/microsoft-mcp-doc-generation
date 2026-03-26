@@ -402,6 +402,17 @@ public sealed class ExamplePromptGenerator
         if (trimmed.Length == 0) return trimmed;
         var lastChar = trimmed[^1];
         if (lastChar == '.' || lastChar == '?' || lastChar == '!') return trimmed;
+
+        // Check for punctuation before trailing closing quotes
+        if (lastChar == '\'' || lastChar == '"' || lastChar == '`')
+        {
+            var i = trimmed.Length - 1;
+            while (i > 0 && (trimmed[i] == '\'' || trimmed[i] == '"' || trimmed[i] == '`'))
+                i--;
+            if (i >= 0 && (trimmed[i] == '.' || trimmed[i] == '?' || trimmed[i] == '!'))
+                return trimmed;
+        }
+
         return trimmed + ".";
     }
 

@@ -1,4 +1,4 @@
-using Xunit;
+﻿using Xunit;
 using NaturalLanguageGenerator;
 
 namespace DocGeneration.Core.NaturalLanguage.Tests;
@@ -152,6 +152,62 @@ public class TextCleanupTests : IDisposable
     {
         var result = TextCleanup.EnsureEndsPeriod("  The Cosmos DB account name  ");
         Assert.Equal("The Cosmos DB account name.", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_QuestionMarkBeforeSingleQuote_NoChange()
+    {
+        var result = TextCleanup.EnsureEndsPeriod("Ask 'Why are requests timing out?'");
+        Assert.Equal("Ask 'Why are requests timing out?'", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_QuestionMarkBeforeDoubleQuote_NoChange()
+    {
+        var result = TextCleanup.EnsureEndsPeriod("Ask \"What is the status?\"");
+        Assert.Equal("Ask \"What is the status?\"", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_ExclamationBeforeDoubleQuote_NoChange()
+    {
+        var result = TextCleanup.EnsureEndsPeriod("Alert said \"Critical failure!\"");
+        Assert.Equal("Alert said \"Critical failure!\"", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_PeriodBeforeSingleQuote_NoChange()
+    {
+        var result = TextCleanup.EnsureEndsPeriod("Run command 'az show.'");
+        Assert.Equal("Run command 'az show.'", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_NoPunctuationBeforeSingleQuote_AddsPeriod()
+    {
+        var result = TextCleanup.EnsureEndsPeriod("Use resource 'my-resource'");
+        Assert.Equal("Use resource 'my-resource'.", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_NoPunctuationBeforeDoubleQuote_AddsPeriod()
+    {
+        var result = TextCleanup.EnsureEndsPeriod("Show vault \"my-vault\"");
+        Assert.Equal("Show vault \"my-vault\".", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_QuestionMarkBeforeBacktick_NoChange()
+    {
+        var result = TextCleanup.EnsureEndsPeriod("Ask `Why is latency high?`");
+        Assert.Equal("Ask `Why is latency high?`", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_NoPunctuationBeforeBacktick_AddsPeriod()
+    {
+        var result = TextCleanup.EnsureEndsPeriod("Run `az account show`");
+        Assert.Equal("Run `az account show`.", result);
     }
 
     // ─────────────────────────────────────────────
