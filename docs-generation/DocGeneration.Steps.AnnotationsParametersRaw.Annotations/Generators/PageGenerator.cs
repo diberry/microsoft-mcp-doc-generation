@@ -45,7 +45,7 @@ public class PageGenerator
             var commonParameters = data.SourceDiscoveredCommonParams.Any() 
                 ? data.SourceDiscoveredCommonParams 
                 : _extractCommonParameters(data.Tools);
-            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
+            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
 
             // Annotations directory path (at parent level)
             var parentDirCandidate = Path.GetDirectoryName(outputDir);
@@ -95,7 +95,7 @@ public class PageGenerator
                 if (tool.Option != null)
                 {
                     var filteredOptions = tool.Option
-                        .Where(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name));
+                        .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames));
 
                     filteredTool.Option = filteredOptions
                         .Select(opt => new Option
@@ -227,6 +227,18 @@ public class PageGenerator
         var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
         await File.WriteAllTextAsync(outputFile, result);
         LogFileHelper.WriteDebug("Generated commands page: common-general/azmcp-commands.md");
+    }
+
+    /// <summary>
+    /// Filters a tool's options to exclude common parameters that are optional.
+    /// Required common parameters are kept so they appear in the parameter table.
+    /// </summary>
+    internal static List<Option> FilterToolOptions(
+        IEnumerable<Option> options, HashSet<string> commonParameterNames)
+    {
+        return options
+            .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames))
+            .ToList();
     }
 
     /// <summary>

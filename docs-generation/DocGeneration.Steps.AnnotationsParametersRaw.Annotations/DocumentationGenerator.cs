@@ -173,7 +173,7 @@ public static class DocumentationGenerator
         var commonParameters = transformedData.SourceDiscoveredCommonParams.Any() 
             ? transformedData.SourceDiscoveredCommonParams 
             : ExtractCommonParameters(transformedData.Tools);
-        var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""));
+        var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
         
         // Log detailed area breakdown to file
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
@@ -199,8 +199,7 @@ public static class DocumentationGenerator
             foreach (var tool in area.Value.Tools.OrderBy(t => t.Command))
             {
                 // Calculate non-common parameter count (matches what's shown in parameter tables)
-                var nonCommonParamCount = tool.Option?
-                    .Count(opt => !string.IsNullOrEmpty(opt.Name) && !commonParameterNames.Contains(opt.Name)) ?? 0;
+                var nonCommonParamCount = CountNonCommonParameters(tool, commonParameterNames);
                 
                 // Build indicators for generated files
                 var indicators = new List<string>();
@@ -493,6 +492,16 @@ public static class DocumentationGenerator
         data.SourceDiscoveredCommonParams = allCommonParams.Values.OrderBy(p => p.Name).ToList();
         
         return data;
+    }
+
+    /// <summary>
+    /// Counts non-common parameters for a tool, excluding common parameters that are optional.
+    /// Required common parameters are counted because they appear in parameter tables.
+    /// </summary>
+    internal static int CountNonCommonParameters(Tool tool, HashSet<string> commonParameterNames)
+    {
+        return tool.Option?
+            .Count(opt => Generators.ParameterFilterHelper.ShouldInclude(opt, commonParameterNames)) ?? 0;
     }
 
     /// <summary>
