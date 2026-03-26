@@ -3,6 +3,7 @@
 
 using System.Text;
 using ExamplePromptGeneratorStandalone.Models;
+using ExamplePromptGeneratorStandalone.Sanitizers;
 
 namespace ExamplePromptGeneratorStandalone.Generators;
 
@@ -150,7 +151,7 @@ public static class DeterministicExamplePromptGenerator
                     .Replace(" from {params}", "").Replace(" for {params}", "");
             }
 
-            prompts.Add(prompt);
+            prompts.Add(CredentialSanitizer.Sanitize(prompt));
         }
 
         return prompts;
