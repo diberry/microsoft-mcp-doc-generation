@@ -1,3 +1,4 @@
+using Shared;
 using ToolGeneration_Composed.Services;
 using Xunit;
 
@@ -23,19 +24,28 @@ public class ComposedToolGeneratorServiceTests
 
         try
         {
-            var rawToolPath = Path.Combine(rawToolsDir, "azure-compute-list.md");
+            // Build filenames with the same ToolFileNameBuilder the service uses
+            // so include files are found during composition.
+            const string command = "compute list";
+            var nameContext = await FileNameContext.CreateAsync();
+            var toolFileName = ToolFileNameBuilder.BuildToolFileName(command, nameContext);
+            var examplePromptsFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext);
+            var parametersFileName = ToolFileNameBuilder.BuildParameterFileName(command, nameContext);
+            var annotationsFileName = ToolFileNameBuilder.BuildAnnotationFileName(command, nameContext);
+
+            var rawToolPath = Path.Combine(rawToolsDir, toolFileName);
             await File.WriteAllTextAsync(rawToolPath, "---\n---\n# list\n\n<!-- @mcpcli compute list -->\n\nLists compute resources.\n\n{{EXAMPLE_PROMPTS_CONTENT}}\n\n{{PARAMETERS_CONTENT}}\n\n{{ANNOTATIONS_CONTENT}}\n");
 
             await File.WriteAllTextAsync(
-                Path.Combine(examplePromptsDir, "azure-compute-list-example-prompts.md"),
+                Path.Combine(examplePromptsDir, examplePromptsFileName),
                 "---\n---\n<!-- @mcpcli compute list -->\n<!-- Required parameters: 1 - 'Resource group' -->\n\nExample prompts include:\n\n- \"List compute resources in 'rg-app'\"\n");
 
             await File.WriteAllTextAsync(
-                Path.Combine(parametersDir, "azure-compute-list-parameters.md"),
+                Path.Combine(parametersDir, parametersFileName),
                 "---\n---\n| Parameter | Required or optional | Description |\n| --- | --- | --- |\n| **Resource group** | Required | Resource group name. |\n");
 
             await File.WriteAllTextAsync(
-                Path.Combine(annotationsDir, "azure-compute-list-annotations.md"),
+                Path.Combine(annotationsDir, annotationsFileName),
                 "---\n---\nAnnotation content.\n");
 
             var service = new ComposedToolGeneratorService();
@@ -43,7 +53,7 @@ public class ComposedToolGeneratorServiceTests
 
             Assert.Equal(0, exitCode);
 
-            var outputPath = Path.Combine(outputDir, "azure-compute-list.md");
+            var outputPath = Path.Combine(outputDir, toolFileName);
             var output = await File.ReadAllTextAsync(outputPath);
             var markerMatches = System.Text.RegularExpressions.Regex.Matches(output, System.Text.RegularExpressions.Regex.Escape("<!-- @mcpcli compute list -->"));
 
