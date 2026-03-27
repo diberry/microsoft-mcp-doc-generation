@@ -249,4 +249,181 @@ public class CredentialSanitizerTests
         // This is a protocol prefix, not a credential — should be preserved
         Assert.Contains("DefaultEndpointsProtocol=https", result);
     }
+
+    // ── Azure endpoint sanitization (issue #275) ────────────────────
+
+    [Theory]
+    [InlineData("sql-prod.database.windows.net", "contoso-sql.database.windows.net")]
+    [InlineData("sql-inventory.database.windows.net", "contoso-sql.database.windows.net")]
+    [InlineData("orders-sql.database.windows.net", "contoso-sql.database.windows.net")]
+    [InlineData("myserver.database.windows.net", "contoso-sql.database.windows.net")]
+    public void SanitizesEndpoints_SqlDatabase(string endpoint, string expected)
+    {
+        var prompt = $"Connect to '{endpoint}' and run the query.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain(endpoint, result);
+        Assert.Contains(expected, result);
+    }
+
+    [Theory]
+    [InlineData("mystorage.blob.core.windows.net", "contoso.blob.core.windows.net")]
+    [InlineData("data-lake.blob.core.windows.net", "contoso.blob.core.windows.net")]
+    public void SanitizesEndpoints_BlobStorage(string endpoint, string expected)
+    {
+        var prompt = $"Upload file to '{endpoint}/container/blob.txt'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain(endpoint, result);
+        Assert.Contains(expected, result);
+    }
+
+    [Theory]
+    [InlineData("mystorage.table.core.windows.net", "contoso.table.core.windows.net")]
+    [InlineData("mystorage.queue.core.windows.net", "contoso.queue.core.windows.net")]
+    public void SanitizesEndpoints_TableAndQueue(string endpoint, string expected)
+    {
+        var prompt = $"Query data from '{endpoint}'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain(endpoint, result);
+        Assert.Contains(expected, result);
+    }
+
+    [Theory]
+    [InlineData("prod-kv.vault.azure.net", "contoso-kv.vault.azure.net")]
+    [InlineData("finance-kv.vault.azure.net", "contoso-kv.vault.azure.net")]
+    public void SanitizesEndpoints_KeyVault(string endpoint, string expected)
+    {
+        var prompt = $"Get secret from '{endpoint}/secrets/my-secret'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain(endpoint, result);
+        Assert.Contains(expected, result);
+    }
+
+    [Theory]
+    [InlineData("my-webapp.azurewebsites.net", "contoso-app.azurewebsites.net")]
+    [InlineData("api-prod.azurewebsites.net", "contoso-app.azurewebsites.net")]
+    public void SanitizesEndpoints_WebApps(string endpoint, string expected)
+    {
+        var prompt = $"Deploy code to '{endpoint}'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain(endpoint, result);
+        Assert.Contains(expected, result);
+    }
+
+    [Theory]
+    [InlineData("my-cache.redis.cache.windows.net", "contoso-cache.redis.cache.windows.net")]
+    public void SanitizesEndpoints_Redis(string endpoint, string expected)
+    {
+        var prompt = $"Connect to Redis cache at '{endpoint}'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain(endpoint, result);
+        Assert.Contains(expected, result);
+    }
+
+    [Theory]
+    [InlineData("my-bus.servicebus.windows.net", "contoso-bus.servicebus.windows.net")]
+    public void SanitizesEndpoints_ServiceBus(string endpoint, string expected)
+    {
+        var prompt = $"Send message to '{endpoint}/my-queue'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain(endpoint, result);
+        Assert.Contains(expected, result);
+    }
+
+    [Theory]
+    [InlineData("my-cosmos.documents.azure.com", "contoso-cosmos.documents.azure.com")]
+    public void SanitizesEndpoints_CosmosDb(string endpoint, string expected)
+    {
+        var prompt = $"Query items from '{endpoint}/dbs/mydb'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain(endpoint, result);
+        Assert.Contains(expected, result);
+    }
+
+    [Theory]
+    [InlineData("contoso-sql.database.windows.net")]
+    [InlineData("contoso.blob.core.windows.net")]
+    [InlineData("fabrikam-kv.vault.azure.net")]
+    [InlineData("adventure-works-app.azurewebsites.net")]
+    [InlineData("example-bus.servicebus.windows.net")]
+    [InlineData("fictional-cache.redis.cache.windows.net")]
+    public void PreservesFictionalEndpoints_NoModification(string endpoint)
+    {
+        var prompt = $"Connect to '{endpoint}' for testing.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.Contains(endpoint, result);
+    }
+
+    [Fact]
+    public void SanitizesEndpoints_PreservesPathAfterHostname()
+    {
+        var prompt = "Connect to 'myserver.database.windows.net/mydb' with user 'admin'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.Contains("contoso-sql.database.windows.net/mydb", result);
+        Assert.DoesNotContain("myserver.database.windows.net", result);
+    }
+
+    [Fact]
+    public void SanitizesEndpoints_MixedWithCredentials()
+    {
+        var prompt =
+            "Connect to 'Server=myserver.database.windows.net;User ID=admin;Password=P@ssw0rd!2026' " +
+            "and upload to 'data-lake.blob.core.windows.net/backups'.";
+
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        // Credentials sanitized
+        Assert.DoesNotContain("P@ssw0rd!2026", result);
+        // Endpoints sanitized
+        Assert.DoesNotContain("myserver.database.windows.net", result);
+        Assert.Contains("contoso-sql.database.windows.net", result);
+        Assert.DoesNotContain("data-lake.blob.core.windows.net", result);
+        Assert.Contains("contoso.blob.core.windows.net", result);
+    }
+
+    [Fact]
+    public void SanitizesEndpoints_MultipleEndpointsInOnePrompt()
+    {
+        var prompt =
+            "Copy data from 'source-sql.database.windows.net' " +
+            "to 'backup-storage.blob.core.windows.net/archive'.";
+
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.DoesNotContain("source-sql.database.windows.net", result);
+        Assert.DoesNotContain("backup-storage.blob.core.windows.net", result);
+        Assert.Contains("contoso-sql.database.windows.net", result);
+        Assert.Contains("contoso.blob.core.windows.net/archive", result);
+    }
+
+    [Fact]
+    public void SanitizesEndpoints_Issue275_AppServiceRealWorld()
+    {
+        // Exact patterns from the issue report
+        var endpoints = new[]
+        {
+            "sql-prod.database.windows.net",
+            "sql-inventory.database.windows.net",
+            "orders-sql.database.windows.net",
+            "myserver.database.windows.net",
+        };
+
+        foreach (var endpoint in endpoints)
+        {
+            var prompt = $"Query the database at '{endpoint}'.";
+            var result = CredentialSanitizer.Sanitize(prompt);
+
+            Assert.DoesNotContain(endpoint, result);
+            Assert.Contains("contoso-sql.database.windows.net", result);
+        }
+    }
 }
