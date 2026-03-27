@@ -41,7 +41,7 @@ To use the Azure MCP Server with Azure Key Vault, you need:
 
 ### Azure requirements
 
-- **Azure subscription**: An active Azure subscription. [Create one for free](https://azure.microsoft.com/free/).
+- **Azure subscription**: An active Azure subscription. [Create one for free](https://azure.microsoft.com/pricing/purchase-options/azure-account?cid=msft_learn).
 - **Azure Key Vault resources**: At least one key vault in your subscription. You can create a key vault using the [Azure CLI](/azure/key-vault/general/quick-create-cli), [Azure PowerShell](/azure/key-vault/general/quick-create-powershell), or the [Azure portal](/azure/key-vault/general/quick-create-portal).
 - **Azure permissions**: Appropriate [Azure RBAC roles](/azure/key-vault/general/rbac-guide#azure-built-in-roles-for-key-vault-data-plane-operations) like Key Vault Administrator, Key Vault Secrets Officer, Key Vault Certificates Officer, or Key Vault Crypto Officer to perform the operations you want. See [Provide access to Key Vault keys, certificates, and secrets with Azure role-based access control](/azure/key-vault/general/rbac-guide).
 
