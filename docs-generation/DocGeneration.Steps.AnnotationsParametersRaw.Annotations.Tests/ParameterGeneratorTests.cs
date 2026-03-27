@@ -138,10 +138,10 @@ public class ParameterGeneratorTests
     }
 
     [Fact]
-    public void CommonParameters_DoNotIncludeSubscription()
+    public void CommonParameters_IncludeSubscription()
     {
-        // subscription is also a scoping parameter — tools that declare it
-        // need it shown in their parameter table for user clarity.
+        // subscription is a scoping parameter that must be in common-parameters.json
+        // so that ParameterFilterHelper filters it when optional but keeps it when required (#276).
         var commonParamsPath = Path.Combine(
             FindProjectRoot(), "docs-generation", "data", "common-parameters.json");
         var json = File.ReadAllText(commonParamsPath);
@@ -149,14 +149,14 @@ public class ParameterGeneratorTests
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.NotNull(commonParams);
-        Assert.DoesNotContain(commonParams, p => p.Name == "--subscription");
+        Assert.Contains(commonParams, p => p.Name == "--subscription");
     }
 
     [Fact]
-    public void CommonParameters_OnlyContainInfrastructureParams()
+    public void CommonParameters_OnlyContainInfrastructureAndScopingParams()
     {
-        // Only retry-*, auth-method, and tenant are true infrastructure params
-        // that appear on ALL tools and add no tool-specific information.
+        // Infrastructure params (retry-*, auth-method, tenant) and scoping
+        // params (subscription) are the allowed common parameters.
         var commonParamsPath = Path.Combine(
             FindProjectRoot(), "docs-generation", "data", "common-parameters.json");
         var json = File.ReadAllText(commonParamsPath);
@@ -164,12 +164,12 @@ public class ParameterGeneratorTests
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.NotNull(commonParams);
-        var allowedPrefixes = new[] { "--retry-", "--auth-method", "--tenant" };
+        var allowedPrefixes = new[] { "--retry-", "--auth-method", "--tenant", "--subscription" };
         foreach (var param in commonParams)
         {
             Assert.True(
                 allowedPrefixes.Any(p => param.Name!.StartsWith(p, StringComparison.OrdinalIgnoreCase)),
-                $"Unexpected common parameter '{param.Name}' — scoping params like resource-group and subscription should not be common");
+                $"Unexpected common parameter '{param.Name}' — only infrastructure and scoping params should be common");
         }
     }
 

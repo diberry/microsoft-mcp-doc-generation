@@ -40,5 +40,11 @@
     "type": "number",
     "description": "Network operation timeout in seconds. Operations taking longer than this will be canceled.",
     "isRequired": false
+  },
+  {
+    "name": "--subscription",
+    "type": "string",
+    "description": "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name.",
+    "isRequired": false
   }
 ]
