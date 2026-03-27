@@ -307,6 +307,7 @@ To modify AI-generated content quality or style:
 
 ### Optional (for AI-enhanced steps)
 - **Azure OpenAI** - For steps 2, 3, 4, and 6 (example prompts, improvements, assembly cleanup, horizontal articles)
+- **GitHub CLI (`gh`)** - For step 5 (skills relevance). Must be authenticated (`gh auth login`). The `GITHUB_TOKEN` env var is used for GitHub API calls; without it, unauthenticated rate limits (60 req/hr) apply.
 
 ### Configuration
 
@@ -320,6 +321,12 @@ cp docs-generation/sample.env docs-generation/.env
 FOUNDRY_API_KEY="your-api-key"
 FOUNDRY_ENDPOINT="https://your-resource.openai.azure.com/"
 FOUNDRY_MODEL_NAME="gpt-4o-mini"
+
+# For step 5 (skills relevance) — set GitHub token for higher rate limits
+# Generate from authenticated gh CLI:
+#   export GITHUB_TOKEN=$(gh auth token)    # bash
+#   $env:GITHUB_TOKEN = (gh auth token)     # PowerShell
+GITHUB_TOKEN="your-github-token"
 ```
 
 ## Output Structure
