@@ -31,29 +31,30 @@ public class HorizontalArticleOutputValidatorTests : IDisposable
         "Azure Storage provides scalable, durable cloud storage for blobs, files, queues, and tables. " +
         "Use Azure MCP Server tools to manage storage accounts, containers, and blobs with natural language prompts from your IDE. " +
         "These tools help you create, list, and configure storage resources without leaving your development environment.\n\n" +
-        "## Capabilities\n\n" +
+        "## What is the Azure MCP Server?\n\n" +
+        "For Azure Storage users, this means you can:\n\n" +
         "- List all storage accounts in a subscription or resource group\n" +
         "- Create and manage blob containers with access policies\n" +
-        "- Upload and download files to blob storage\n" +
-        "- Configure storage account settings and access tiers\n" +
-        "- Manage table storage entities and queries\n\n" +
+        "- Upload and download files to blob storage\n\n" +
         "## Prerequisites\n\n" +
         "- An active Azure subscription\n" +
         "- Azure CLI installed and authenticated\n" +
         "- Appropriate RBAC role assignments on target storage accounts\n\n" +
-        "## Permissions\n\n" +
-        "| Role | Description |\n|------|-------------|\n" +
-        "| Storage Blob Data Reader | Read access to blob data |\n" +
-        "| Storage Blob Data Contributor | Read, write, and delete access to blob data |\n" +
-        "| Storage Account Contributor | Full access to manage storage accounts |\n\n" +
+        "## Where can you use Azure MCP Server?\n\n" +
+        "Available in VS Code, Visual Studio, and other MCP-compatible tools.\n\n" +
+        "## Available tools for Azure Storage\n\n" +
+        "| Tool | Description |\n|------|-------------|\n" +
+        "| `storage account list` | List storage accounts in a subscription |\n" +
+        "| `storage blob list` | List blobs in a container |\n\n" +
+        "## Get started\n\n" +
+        "1. Set up your environment\n" +
+        "2. Start exploring\n\n" +
         "## Best practices\n\n" +
-        "- Use managed identity for authentication instead of storage account keys\n" +
-        "- Enable soft delete for blob containers to protect against accidental deletion\n" +
-        "- Use Azure Private Link endpoints for secure access to storage accounts\n" +
-        "- Apply lifecycle management policies to optimize storage costs automatically\n\n" +
-        "## Resources\n\n" +
-        "- [Azure Storage documentation](/azure/storage/)\n" +
-        "- [Azure Blob Storage quickstart](/azure/storage/blobs/storage-quickstart-blobs-portal)\n";
+        "- **Use managed identity**: Prefer managed identity for authentication instead of storage account keys\n" +
+        "- **Enable soft delete**: Enable soft delete for blob containers to protect against accidental deletion\n\n" +
+        "## Related content\n\n" +
+        "* [Azure MCP Server overview](../overview.md)\n" +
+        "* [Azure Storage documentation](/azure/storage/)\n";
 
     [Fact]
     public async Task ValidateAsync_ValidArticle_ReturnsSuccess()
@@ -124,7 +125,7 @@ public class HorizontalArticleOutputValidatorTests : IDisposable
         Directory.CreateDirectory(articlesDir);
         await File.WriteAllTextAsync(
             Path.Combine(articlesDir, "horizontal-article-keyvault.md"),
-            $"# No Frontmatter\n\n{content}\n\n## Capabilities\n\n- Cap1\n\n## Prerequisites\n\n- Pre1\n\n## Permissions\n\n- Perm1");
+            $"# No Frontmatter\n\n{content}\n\n## Prerequisites\n\n- Pre1\n\n## Best practices\n\n- Practice1\n\n## Related content\n\n- Link1");
 
         var context = CreateContext(_testRoot, "keyvault");
         var result = await _validator.ValidateAsync(context, null!, CancellationToken.None);
@@ -138,18 +139,13 @@ public class HorizontalArticleOutputValidatorTests : IDisposable
     {
         var articlesDir = Path.Combine(_testRoot, "horizontal-articles");
         Directory.CreateDirectory(articlesDir);
-        // Article with frontmatter but missing Permissions section
+        // Article with frontmatter but missing Best practices and Related content sections
         var content =
             "---\ntitle: Azure MCP Server tools for Azure Monitor\nms.topic: concept-article\nms.date: 03/25/2026\n---\n\n" +
             "# Azure MCP Server tools for Azure Monitor\n\n" +
             "Azure Monitor provides full-stack monitoring for applications and infrastructure running on Azure and on-premises. " +
             "Use MCP tools to query logs, list metrics, and create alerts with natural language prompts. " +
             "These tools integrate with Log Analytics workspaces and Application Insights resources for comprehensive observability.\n\n" +
-            "## Capabilities\n\n" +
-            "- Query Azure Monitor logs using Kusto Query Language (KQL)\n" +
-            "- List and analyze metrics from Azure resources\n" +
-            "- Create and manage alert rules for proactive monitoring\n" +
-            "- Configure diagnostic settings for resource telemetry collection\n\n" +
             "## Prerequisites\n\n" +
             "- An active Azure subscription with monitoring resources\n" +
             "- A Log Analytics workspace configured for your environment\n" +
@@ -161,7 +157,7 @@ public class HorizontalArticleOutputValidatorTests : IDisposable
         var result = await _validator.ValidateAsync(context, null!, CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains(result.Warnings, w => w.Contains("Missing required section: Permissions"));
+        Assert.Contains(result.Warnings, w => w.Contains("Missing required section: Best practices"));
     }
 
     [Fact]
@@ -176,17 +172,14 @@ public class HorizontalArticleOutputValidatorTests : IDisposable
             "Azure SQL provides a family of managed database services built on SQL Server. " +
             "Use MCP tools to manage databases, configure server settings, and execute queries with natural language prompts. " +
             "These tools support Azure SQL Database, Azure SQL Managed Instance, and elastic pool management.\n\n" +
-            "## Capabilities\n\n" +
-            "- List and manage Azure SQL databases and servers\n" +
-            "- Execute SQL queries against Azure SQL databases\n" +
-            "- Configure server firewall rules and security settings\n" +
-            "- Manage elastic pools for cost-effective database hosting\n\n" +
             "## Prerequisites\n\n" +
             "- An active Azure subscription with SQL resources provisioned\n" +
             "- Azure CLI installed and authenticated\n\n" +
-            "## Permissions\n\n" +
-            "- SQL DB Contributor role for database management operations\n" +
-            "- SQL Server Contributor role for server-level configuration\n";
+            "## Best practices\n\n" +
+            "- **Use managed identity**: Prefer managed identity for SQL authentication\n" +
+            "- **Enable auditing**: Configure database auditing for compliance\n\n" +
+            "## Related content\n\n" +
+            "* [Azure SQL documentation](/azure/azure-sql/)\n";
         await File.WriteAllTextAsync(
             Path.Combine(articlesDir, "horizontal-article-sql.md"), content);
 
