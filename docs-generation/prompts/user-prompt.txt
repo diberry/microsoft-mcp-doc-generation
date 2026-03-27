@@ -1,1 +1,0 @@
-Generate a simple example prompt for the Azure Storage account creation tool.
