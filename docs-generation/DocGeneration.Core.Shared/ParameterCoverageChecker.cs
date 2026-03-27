@@ -86,6 +86,19 @@ public static class ParameterCoverageChecker
             variantList.Add(slug + "d");
         }
 
+        // For multi-word params (e.g. "database-server"), add individual constituent
+        // words as variants so prompts like "server 'my-host'" can match.
+        if (words.Length > 1)
+        {
+            foreach (var word in words)
+            {
+                if (word.Length >= 3)
+                {
+                    variantList.Add(word);
+                }
+            }
+        }
+
         var variants = variantList
             .Where(variant => !string.IsNullOrWhiteSpace(variant))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -185,11 +198,14 @@ public static class ParameterCoverageChecker
             if (foundVariant && matchIndex >= 0)
             {
                 var tail = trimmedPrompt[Math.Min(matchIndex, trimmedPrompt.Length)..];
-                if (Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*'[^']+'")
-                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*`[^`]+`")
-                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*https?://\\S+")
-                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\[(?!\\s*<)(?!\\s*\\{\\s*[^'\"\\s]).+\\]")
-                    || Regex.IsMatch(tail, "^\\s*(?:set to|named|name|with|at|for|in|of|is|=|:)?\\s*\\{(?!\\s*[<\\{]).+\\}"))
+                // Allow up to 2 intermediate words between the parameter name and the value
+                // (e.g. "app service 'my-app'" where "service" sits between "app" and the value).
+                const string cp = "(?:\\w+\\s+){0,2}(?:set to|named|name|with|at|for|in|of|is|=|:)?";
+                if (Regex.IsMatch(tail, "^\\s*" + cp + "\\s*'[^']+'")
+                    || Regex.IsMatch(tail, "^\\s*" + cp + "\\s*`[^`]+`")
+                    || Regex.IsMatch(tail, "^\\s*" + cp + "\\s*https?://\\S+")
+                    || Regex.IsMatch(tail, "^\\s*" + cp + "\\s*\\[(?!\\s*<)(?!\\s*\\{\\s*[^'\"\\s]).+\\]")
+                    || Regex.IsMatch(tail, "^\\s*" + cp + "\\s*\\{(?!\\s*[<\\{]).+\\}"))
                 {
                     covered = true;
                     break;
