@@ -205,7 +205,7 @@ public class AcrolinxComplianceSectionTests
     public void SharedPrompt_Step3_ContainsAcrolinxSection()
     {
         var content = File.ReadAllText(Path.Combine(
-            ProjectRoot, "docs-generation", "prompts", "system-prompt.txt"));
+            ProjectRoot, "docs-generation", "DocGeneration.Steps.ToolGeneration.Improvements", "Prompts", "system-prompt.txt"));
         Assert.Contains("present tense", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("contraction", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("active voice", content, StringComparison.OrdinalIgnoreCase);
@@ -215,7 +215,7 @@ public class AcrolinxComplianceSectionTests
     public void SharedPrompt_Step4_ContainsAcrolinxSection()
     {
         var content = File.ReadAllText(Path.Combine(
-            ProjectRoot, "docs-generation", "prompts", "tool-family-cleanup-system-prompt.txt"));
+            ProjectRoot, "docs-generation", "DocGeneration.Steps.ToolFamilyCleanup", "prompts", "tool-family-cleanup-system-prompt.txt"));
         Assert.Contains("present tense", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("contraction", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("active voice", content, StringComparison.OrdinalIgnoreCase);
