@@ -241,4 +241,28 @@ public class QualityMetricsTests
 
         Assert.Equal(5, metrics.WordCount);
     }
+
+    [Fact]
+    public void Analyze_EmptyString_ReturnsZeroMetrics()
+    {
+        var metrics = QualityMetrics.Analyze("");
+
+        Assert.Equal(0, metrics.SectionCount);
+        Assert.Equal(0, metrics.WordCount);
+        Assert.Equal(0, metrics.CharCount);
+        Assert.False(metrics.HasValidFrontmatter);
+        Assert.Equal(0, metrics.ContractionCount);
+        Assert.Equal(0, metrics.FutureTenseViolations);
+        Assert.Equal(0, metrics.FabricatedUrlCount);
+        Assert.Equal(0, metrics.BrandingViolations);
+    }
+
+    [Fact]
+    public void ContractionRate_NoOpportunities_ReturnsZero()
+    {
+        var content = "Just plain text with no contraction opportunities at all.";
+        var metrics = QualityMetrics.Analyze(content);
+
+        Assert.Equal(0.0, metrics.ContractionRate);
+    }
 }

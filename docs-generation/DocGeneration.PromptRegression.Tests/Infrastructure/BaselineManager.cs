@@ -117,18 +117,6 @@ public sealed class BaselineManager
 
     private static string FindProjectRoot()
     {
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            if (File.Exists(Path.Combine(dir, "DocGeneration.PromptRegression.Tests.csproj")))
-                return dir;
-            // Also check source directory (not bin output)
-            var csproj = Directory.GetFiles(dir, "DocGeneration.PromptRegression.Tests.csproj", SearchOption.TopDirectoryOnly);
-            if (csproj.Length > 0) return dir;
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-        throw new InvalidOperationException(
-            "Could not find DocGeneration.PromptRegression.Tests project root. " +
-            "Ensure tests run from within the project directory.");
+        return ProjectRootFinder.FindTestProjectRoot();
     }
 }

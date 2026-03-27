@@ -21,9 +21,10 @@ public sealed class MetricsComparison
 
     /// <summary>
     /// True if any metric regressed (got worse).
-    /// Regressions: fewer sections, more violations, lower contraction rate, more missing sections.
+    /// Regressions: lost sections, more violations, more missing required sections.
     /// </summary>
     public bool HasRegressions =>
+        SectionDelta < -1 ||
         MissingSectionsDelta > 0 ||
         FutureTenseDelta > 0 ||
         FabricatedUrlDelta > 0 ||

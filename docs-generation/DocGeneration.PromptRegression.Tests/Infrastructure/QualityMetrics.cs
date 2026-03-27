@@ -19,18 +19,15 @@ public sealed class QualityMetrics
     public int FutureTenseViolations { get; init; }
     public int FabricatedUrlCount { get; init; }
     public int BrandingViolations { get; init; }
-    public int ParameterCoverage { get; init; }
-    public int TotalParameters { get; init; }
 
+    /// <summary>
+    /// Ratio of contractions used to total contraction opportunities.
+    /// Returns 0.0 when there are no opportunities (nothing to contract).
+    /// </summary>
     public double ContractionRate =>
         ContractionOpportunities > 0
             ? (double)ContractionCount / ContractionOpportunities
-            : 1.0;
-
-    public double ParameterCoverageRate =>
-        TotalParameters > 0
-            ? (double)ParameterCoverage / TotalParameters
-            : 1.0;
+            : 0.0;
 
     public static QualityMetrics Analyze(string content)
     {
@@ -58,9 +55,11 @@ public sealed class QualityMetrics
         return Regex.Matches(body, @"^#{1,3}\s+", RegexOptions.Multiline).Count;
     }
 
+    private static readonly char[] WordSplitChars = [' ', '\n', '\r', '\t'];
+
     private static int CountWords(string body)
     {
-        return body.Split((char[])[' ', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries).Length;
+        return body.Split(WordSplitChars, StringSplitOptions.RemoveEmptyEntries).Length;
     }
 
     private static string? ExtractFrontmatter(string content)

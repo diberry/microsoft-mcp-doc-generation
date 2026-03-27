@@ -8,7 +8,7 @@ namespace DocGeneration.PromptRegression.Tests.Tests;
 /// </summary>
 public class PromptContentTests
 {
-    private static readonly string DocsGenRoot = FindDocsGenerationRoot();
+    private static readonly string DocsGenRoot = ProjectRootFinder.FindDocsGenerationRoot();
 
     [Theory]
     [InlineData("DocGeneration.Steps.ExamplePrompts.Generation/prompts/system-prompt-example-prompt.txt")]
@@ -90,17 +90,5 @@ public class PromptContentTests
         var fullPath = Path.Combine(DocsGenRoot, relativePath);
         Assert.True(File.Exists(fullPath), $"Prompt file missing: {relativePath}");
         return File.ReadAllText(fullPath);
-    }
-
-    private static string FindDocsGenerationRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir is not null)
-        {
-            if (File.Exists(Path.Combine(dir, "docs-generation.sln")))
-                return Path.Combine(dir, "docs-generation");
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-        throw new InvalidOperationException("Could not find docs-generation.sln");
     }
 }
