@@ -32,16 +32,9 @@ public class IntegrationTests
             return; // skip if not configured
         }
 
-        // Read prompts from files (navigate to docs-generation/prompts)
-        var promptsDir = Path.Combine("..", "..", "..", "..", "prompts");
-        var systemPromptPath = Path.Combine(promptsDir, "system-prompt.txt");
-        var userPromptPath = Path.Combine(promptsDir, "user-prompt.txt");
-
-        Assert.True(File.Exists(systemPromptPath), $"System prompt file not found: {systemPromptPath}");
-        Assert.True(File.Exists(userPromptPath), $"User prompt file not found: {userPromptPath}");
-
-        var systemPrompt = File.ReadAllText(systemPromptPath).Trim();
-        var userPrompt = File.ReadAllText(userPromptPath).Trim();
+        // Use inline prompts for integration testing (legacy prompt files removed in #295)
+        var systemPrompt = "You are a helpful assistant that generates concise documentation.";
+        var userPrompt = "Describe Azure Storage in one sentence.";
 
         _output.WriteLine("========================================");
         _output.WriteLine("SYSTEM PROMPT:");
