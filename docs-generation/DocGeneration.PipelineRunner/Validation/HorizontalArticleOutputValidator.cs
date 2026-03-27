@@ -21,7 +21,7 @@ public sealed class HorizontalArticleOutputValidator : IPostValidator
         ["title:", "ms.topic:", "ms.date:"];
 
     private static readonly string[] RequiredSections =
-        ["## Capabilities", "## Prerequisites", "## Permissions"];
+        ["## Prerequisites", "## Best practices", "## Related content"];
 
     public string Name => "HorizontalArticleOutputValidator";
 
