@@ -426,4 +426,60 @@ public class CredentialSanitizerTests
             Assert.Contains("contoso-sql.database.windows.net", result);
         }
     }
+
+    // ── Issue #288: sanitizer applied to prompt list (integration) ───
+
+    [Fact]
+    public void Issue288_SanitizeAppliedToPromptList_ReplacesAllEndpoints()
+    {
+        // Simulates the AI-generated prompt list that Program.cs sanitizes
+        // before writing to disk (issue #288 integration pattern).
+        var prompts = new List<string>
+        {
+            "List all databases on server 'sql-prod.database.windows.net'.",
+            "Get logs from 'my-webapp.azurewebsites.net' in resource group 'rg-prod'.",
+            "Retrieve secrets from vault 'finance-kv.vault.azure.net/secrets/db-pass'.",
+            "Upload backup to 'data-lake.blob.core.windows.net/backups'.",
+            "Send message to queue 'my-bus.servicebus.windows.net/my-queue'.",
+        };
+
+        var sanitized = prompts.Select(CredentialSanitizer.Sanitize).ToList();
+
+        // Every realistic endpoint must be replaced
+        Assert.DoesNotContain(sanitized, p => p.Contains("sql-prod.database.windows.net"));
+        Assert.DoesNotContain(sanitized, p => p.Contains("my-webapp.azurewebsites.net"));
+        Assert.DoesNotContain(sanitized, p => p.Contains("finance-kv.vault.azure.net"));
+        Assert.DoesNotContain(sanitized, p => p.Contains("data-lake.blob.core.windows.net"));
+        Assert.DoesNotContain(sanitized, p => p.Contains("my-bus.servicebus.windows.net"));
+
+        // Safe replacements must be present
+        Assert.Contains(sanitized, p => p.Contains("contoso-sql.database.windows.net"));
+        Assert.Contains(sanitized, p => p.Contains("contoso-app.azurewebsites.net"));
+        Assert.Contains(sanitized, p => p.Contains("contoso-kv.vault.azure.net"));
+        Assert.Contains(sanitized, p => p.Contains("contoso.blob.core.windows.net"));
+        Assert.Contains(sanitized, p => p.Contains("contoso-bus.servicebus.windows.net"));
+
+        // Non-endpoint content must survive
+        Assert.Contains(sanitized, p => p.Contains("rg-prod"));
+        Assert.Contains(sanitized, p => p.Contains("backups"));
+    }
+
+    [Fact]
+    public void Issue288_SanitizeIsIdempotent_DeterministicPromptsUnchanged()
+    {
+        // Deterministic prompts already sanitize internally.
+        // Running sanitizer again (defense-in-depth in Program.cs) must be a no-op.
+        var alreadySanitized = new[]
+        {
+            "List all databases on server 'contoso-sql.database.windows.net'.",
+            "Get secrets from 'contoso-kv.vault.azure.net/secrets/my-secret'.",
+            "Deploy to 'contoso-app.azurewebsites.net' in resource group 'rg-prod'.",
+        };
+
+        foreach (var prompt in alreadySanitized)
+        {
+            var result = CredentialSanitizer.Sanitize(prompt);
+            Assert.Equal(prompt, result);
+        }
+    }
 }

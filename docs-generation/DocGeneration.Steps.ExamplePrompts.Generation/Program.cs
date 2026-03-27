@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using ExamplePromptGeneratorStandalone.Generators;
 using ExamplePromptGeneratorStandalone.Models;
+using ExamplePromptGeneratorStandalone.Sanitizers;
 using ExamplePromptGeneratorStandalone.Utilities;
 using TemplateEngine;
 using Shared;
@@ -308,6 +309,13 @@ internal static class Program
             }
 
             successCount++;
+
+            // Defense-in-depth: sanitize all prompts before writing to disk (issue #288)
+            // Handles credentials AND Azure endpoint patterns (PR #286).
+            // Idempotent — safe for deterministic prompts that already sanitized internally.
+            promptsResponse.Prompts = promptsResponse.Prompts
+                .Select(CredentialSanitizer.Sanitize)
+                .ToList();
 
             // Generate example prompts markdown
             var examplePromptFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(
