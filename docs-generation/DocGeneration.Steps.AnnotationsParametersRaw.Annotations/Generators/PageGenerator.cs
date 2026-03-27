@@ -9,6 +9,7 @@ using CSharpGenerator.Models;
 using NaturalLanguageGenerator;
 using Shared;
 using TemplateEngine;
+using ToolFamilyCleanup.Services;
 
 namespace CSharpGenerator.Generators;
 
@@ -106,8 +107,9 @@ public class PageGenerator
                             Type = opt.Type,
                             Required = opt.Required,
                             RequiredText = opt.Required == true ? "Required" : "Optional",
-                            Description = TextCleanup.WrapExampleValues(
-                                TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? ""))),
+                            Description = ParameterDescriptionBackticker.Apply(
+                                TextCleanup.WrapExampleValues(
+                                    TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")))),
                         })
                         .ToList();
                 }

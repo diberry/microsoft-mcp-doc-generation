@@ -10,6 +10,7 @@ using CSharpGenerator.Models;
 using NaturalLanguageGenerator;
 using Shared;
 using TemplateEngine;
+using ToolFamilyCleanup.Services;
 using static CSharpGenerator.Generators.FrontmatterUtility;
 
 namespace CSharpGenerator.Generators;
@@ -134,8 +135,9 @@ public class ParameterGenerator
                     Required = opt.Required,
                     RequiredText = BuildRequiredText(opt.Required, parameterName, conditionalParameters),
                     IsConditionalRequired = conditionalParameters.Contains(parameterName),
-                    Description = TextCleanup.WrapExampleValues(
-                        TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? string.Empty)))
+                    Description = ParameterDescriptionBackticker.Apply(
+                        TextCleanup.WrapExampleValues(
+                            TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? string.Empty))))
                 };
             })
             .ToList();
