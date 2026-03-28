@@ -99,30 +99,31 @@ public static partial class CredentialSanitizer
             return prompt;
 
         // 1. Password=value / pwd=value — replace only the secret value
+        //    Backslash-escaped angle brackets for MS Learn compatibility (issue #300).
         prompt = PasswordKeyValueRegex().Replace(prompt, match =>
         {
             var eqIndex = match.Value.IndexOf('=');
-            return match.Value[..(eqIndex + 1)] + "<secure-password>";
+            return match.Value[..(eqIndex + 1)] + @"\<secure-password\>";
         });
 
         // 2. api_key=value / apiKey=value — replace the entire assignment
-        prompt = ApiKeyAssignmentRegex().Replace(prompt, "<api-key>");
+        prompt = ApiKeyAssignmentRegex().Replace(prompt, @"\<api-key\>");
 
         // 3. Prefixed API keys (sk_live_*, pg_live_*, etc.)
-        prompt = PrefixedApiKeyRegex().Replace(prompt, "<api-key>");
+        prompt = PrefixedApiKeyRegex().Replace(prompt, @"\<api-key\>");
 
         // 4. Bearer tokens
-        prompt = BearerTokenRegex().Replace(prompt, "Bearer <token>");
+        prompt = BearerTokenRegex().Replace(prompt, @"Bearer \<token\>");
 
         // 5. Standalone JWT tokens (eyJ...)
-        prompt = JwtTokenRegex().Replace(prompt, "<token>");
+        prompt = JwtTokenRegex().Replace(prompt, @"\<token\>");
 
         // 6. Quoted values with special chars (@, #, !) — catch remaining passwords
         prompt = QuotedPasswordLikeRegex().Replace(prompt, match =>
         {
             var value = match.Groups[1].Value;
             if (HasLettersRegex().IsMatch(value))
-                return "'<secure-password>'";
+                return @"'\<secure-password\>'";
             return match.Value;
         });
 
