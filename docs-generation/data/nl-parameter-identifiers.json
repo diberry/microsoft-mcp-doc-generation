@@ -1,0 +1,22 @@
+[
+  { "Parameter": "account", "NaturalLanguage": "Account name" },
+  { "Parameter": "app", "NaturalLanguage": "App name" },
+  { "Parameter": "blob", "NaturalLanguage": "Blob name" },
+  { "Parameter": "certificate", "NaturalLanguage": "Certificate name" },
+  { "Parameter": "container", "NaturalLanguage": "Container name" },
+  { "Parameter": "database", "NaturalLanguage": "Database name" },
+  { "Parameter": "entity", "NaturalLanguage": "Entity name" },
+  { "Parameter": "index", "NaturalLanguage": "Index name" },
+  { "Parameter": "key", "NaturalLanguage": "Key name" },
+  { "Parameter": "resource", "NaturalLanguage": "Resource name" },
+  { "Parameter": "secret", "NaturalLanguage": "Secret name" },
+  { "Parameter": "server", "NaturalLanguage": "Server name" },
+  { "Parameter": "service", "NaturalLanguage": "Service name" },
+  { "Parameter": "subnet", "NaturalLanguage": "Subnet name" },
+  { "Parameter": "table", "NaturalLanguage": "Table name" },
+  { "Parameter": "template", "NaturalLanguage": "Template name" },
+  { "Parameter": "user", "NaturalLanguage": "User name" },
+  { "Parameter": "vault", "NaturalLanguage": "Vault name" },
+  { "Parameter": "webtest", "NaturalLanguage": "Web test name" },
+  { "Parameter": "workspace", "NaturalLanguage": "Workspace name" }
+]

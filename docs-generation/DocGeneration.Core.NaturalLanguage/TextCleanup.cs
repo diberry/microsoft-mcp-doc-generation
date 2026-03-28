@@ -17,6 +17,9 @@ public static class TextCleanup
     public static MappedParameter[]? mappedParameters { get; private set; }
 
     private static Dictionary<string, string>? mappedParametersDict;
+    // Separate dictionary for resource identifier parameter names (Issue #270).
+    // Used ONLY in NormalizeParameter full-name lookup, NOT in ReplaceStaticText.
+    private static Dictionary<string, string>? parameterIdentifiersDict;
     // Precompiled regex for multi-key replacement (constructed in LoadFiles)
     private static Regex? replacerRegex;
 
@@ -105,6 +108,47 @@ public static class TextCleanup
             else
             {
                 replacerRegex = null;
+            }
+
+
+            // Load resource identifier mappings from nl-parameter-identifiers.json (Issue #270).
+            // Auto-discovered from the same directory as nl-parameters.json.
+            parameterIdentifiersDict = null;
+            if (!string.IsNullOrEmpty(nlParametersPath))
+            {
+                var dir = Path.GetDirectoryName(nlParametersPath);
+                if (dir != null)
+                {
+                    var identifiersPath = Path.Combine(dir, "nl-parameter-identifiers.json");
+                    if (File.Exists(identifiersPath))
+                    {
+                        var identifiers = JsonSerializer.Deserialize<List<MappedParameter>>(File.ReadAllText(identifiersPath));
+                        if (identifiers != null && identifiers.Count > 0)
+                        {
+                            var idDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                            foreach (var mp in identifiers)
+                            {
+                                if (!string.IsNullOrEmpty(mp.Parameter))
+                                {
+                                    idDict[mp.Parameter] = mp.NaturalLanguage ?? string.Empty;
+                                }
+                            }
+                            parameterIdentifiersDict = idDict;
+                        }
+                    }
+                }
+            }
+
+            // Warn about overlapping keys between identifier and parameter dictionaries (PR #317 review).
+            if (parameterIdentifiersDict != null && mappedParametersDict != null)
+            {
+                foreach (var key in parameterIdentifiersDict.Keys)
+                {
+                    if (mappedParametersDict.ContainsKey(key))
+                    {
+                        LogFileHelper.WriteDebug($"[WARNING] Key '{key}' exists in both nl-parameter-identifiers.json and nl-parameters.json — identifier mapping takes precedence in NormalizeParameter.");
+                    }
+                }
             }
 
             return true;
@@ -230,6 +274,14 @@ public static class TextCleanup
         if (programmaticName.StartsWith("--"))
         {
             programmaticName = programmaticName.Substring(2);
+        }
+
+        // Check resource identifier mappings first (Issue #270).
+        // These map bare resource type names (e.g., "database") to "{ResourceType} name" format.
+        if (parameterIdentifiersDict != null && parameterIdentifiersDict.TryGetValue(programmaticName, out var identifierName))
+        {
+            LogFileHelper.WriteDebug($"Found resource identifier name for '{programmaticName}': {identifierName}");
+            return identifierName;
         }
 
         // Check if we have a direct mapping in our dictionary
