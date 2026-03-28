@@ -131,4 +131,47 @@ public class IntroductoryCommaFixerTests
         var result = IntroductoryCommaFixer.Fix(input);
         Assert.Contains("For example, you", result);
     }
+
+    // ── Issue #280: "If not" must not corrupt longer phrases ────────
+
+    [Theory]
+    [InlineData(
+        "If not specified the AZURE_SUBSCRIPTION_ID environment variable will be used instead.",
+        "If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used instead.")]
+    [InlineData(
+        "If not provided a default is generated.",
+        "If not provided, a default is generated.")]
+    public void Fix_IfNotSpecified_CommaAfterFullPhrase(string input, string expected)
+    {
+        var result = IntroductoryCommaFixer.Fix(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("If not specified, the AZURE_SUBSCRIPTION_ID environment variable will be used.")]
+    [InlineData("If not provided, a default value is used.")]
+    public void Fix_IfNotSpecified_AlreadyCorrect_NoChange(string input)
+    {
+        var result = IntroductoryCommaFixer.Fix(input);
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void Fix_IfNotSpecified_InTableRow_NoSpuriousComma()
+    {
+        // Real-world pattern from generated parameter tables (issue #280)
+        var input = "| **Subscription** | Optional | Specifies the Azure subscription to use. If not specified the `AZURE_SUBSCRIPTION_ID` environment variable is used instead. |";
+        var result = IntroductoryCommaFixer.Fix(input);
+        Assert.Contains("If not specified, the", result);
+        Assert.DoesNotContain("If not, specified", result);
+    }
+
+    [Fact]
+    public void Fix_IfNot_StillWorksWhenNotPartOfLongerPhrase()
+    {
+        // Bare "If not" should still get a comma when it's the complete phrase
+        var input = "If not the tool returns an error.";
+        var result = IntroductoryCommaFixer.Fix(input);
+        Assert.Equal("If not, the tool returns an error.", result);
+    }
 }
