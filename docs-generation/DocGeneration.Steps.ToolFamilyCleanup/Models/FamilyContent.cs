@@ -28,7 +28,7 @@ public class FamilyContent
     public required string Metadata { get; set; }
     
     /// <summary>
-    /// List of tools belonging to this family, ordered alphabetically
+    /// List of tools belonging to this family, ordered by resource type then verb (#279)
     /// </summary>
     public required List<ToolContent> Tools { get; init; }
     
