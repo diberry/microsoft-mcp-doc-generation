@@ -18,7 +18,7 @@ mcp-cli.version: {CLI_VERSION}
 
 # Azure MCP Server tools for {ServiceName}
 
-The Azure MCP Server lets you manage {service-description}, including {key-capabilities}, with natural language prompts.
+The Azure MCP Server lets you manage {service-description}, including: {key-capabilities}, with natural language prompts.
 
 {ServiceName} is {one-sentence-description-of-service}. For more information, see [{ServiceName} documentation]({link-to-official-docs}).
 

@@ -51,6 +51,9 @@ public class FamilyFileStitcher
         // 7. Post-processing: ensure blank line between annotation link and values (#151)
         markdown = AnnotationSpaceFixer.Fix(markdown);
 
+        // 7a. Post-processing: strip trailing pipe from annotation value lines (#281)
+        markdown = AnnotationTrailingPipeFixer.Fix(markdown);
+
         // 8. Post-processing: convert future tense to present tense (#145, #215)
         markdown = PresentTenseFixer.Fix(markdown);
 
@@ -59,6 +62,9 @@ public class FamilyFileStitcher
 
         // 10. Post-processing: insert commas after introductory phrases (#146, #215)
         markdown = IntroductoryCommaFixer.Fix(markdown);
+
+        // 10a. Post-processing: insert colon after "including" in intro paragraphs (#282)
+        markdown = IncludingColonFixer.Fix(markdown);
 
         // 11. Post-processing: wrap bare example values in backticks (#152)
         markdown = ExampleValueBackticker.Fix(markdown);
