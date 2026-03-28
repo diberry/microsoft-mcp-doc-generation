@@ -123,10 +123,9 @@ public class ParameterGeneratorTests
     // ── Common Parameter Filtering (#147) ──────────────────────────
 
     [Fact]
-    public void CommonParameters_DoNotIncludeResourceGroup()
+    public void CommonParameters_IncludeResourceGroup()
     {
-        // resource-group is a scoping parameter used by only ~35 tools,
-        // NOT a universal infrastructure param. It must NOT be in common-parameters.json.
+        // resource-group is a scoping parameter filtered when optional, kept when required.
         var commonParamsPath = Path.Combine(
             FindProjectRoot(), "docs-generation", "data", "common-parameters.json");
         var json = File.ReadAllText(commonParamsPath);
@@ -134,7 +133,7 @@ public class ParameterGeneratorTests
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.NotNull(commonParams);
-        Assert.DoesNotContain(commonParams, p => p.Name == "--resource-group");
+        Assert.Contains(commonParams, p => p.Name == "--resource-group");
     }
 
     [Fact]
@@ -164,12 +163,12 @@ public class ParameterGeneratorTests
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.NotNull(commonParams);
-        var allowedPrefixes = new[] { "--retry-", "--auth-method", "--tenant", "--subscription" };
+        var allowedPrefixes = new[] { "--retry-", "--auth-method", "--tenant", "--subscription", "--resource-group" };
         foreach (var param in commonParams)
         {
             Assert.True(
                 allowedPrefixes.Any(p => param.Name!.StartsWith(p, StringComparison.OrdinalIgnoreCase)),
-                $"Unexpected common parameter '{param.Name}' — only infrastructure and scoping params should be common");
+                $"Unexpected common parameter '{param.Name}'");
         }
     }
 
