@@ -182,4 +182,97 @@ public class ParameterDescriptionBacktickerTests
         var result = ParameterDescriptionBackticker.Apply(input!);
         Assert.Equal(input, result);
     }
+
+    // ───────────────────────────────────────────────
+    // (k) Alphanumeric enum values (issue #283)
+    // ───────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(
+        "Accepted values: V1, V2.",
+        "Accepted values: `V1`, `V2`.")]
+    [InlineData(
+        "Accepted values: Premium_LRS, PremiumV2_LRS, Premium_ZRS, StandardSSD_LRS, StandardSSD_ZRS, Standard_LRS, UltraSSD_LRS.",
+        "Accepted values: `Premium_LRS`, `PremiumV2_LRS`, `Premium_ZRS`, `StandardSSD_LRS`, `StandardSSD_ZRS`, `Standard_LRS`, `UltraSSD_LRS`.")]
+    [InlineData(
+        "Hyper-V generation: V1 or V2.",
+        "Hyper-V generation: `V1` or `V2`.")]
+    public void BackticksAlphanumericEnumValues(string input, string expected)
+    {
+        var result = ParameterDescriptionBackticker.Apply(input);
+        Assert.Equal(expected, result);
+    }
+
+    // ───────────────────────────────────────────────
+    // (l) Single-quoted values to backticks (issue #283)
+    // ───────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(
+        "OS disk type: 'Premium_LRS', 'StandardSSD_LRS', 'Standard_LRS'. Defaults based on VM size.",
+        "OS disk type: `Premium_LRS`, `StandardSSD_LRS`, `Standard_LRS`. Defaults based on VM size.")]
+    [InlineData(
+        "alias like 'Ubuntu2404', 'Win2022Datacenter'. Defaults to Ubuntu 24.04 LTS.",
+        "alias like `Ubuntu2404`, `Win2022Datacenter`. Defaults to Ubuntu 24.04 LTS.")]
+    [InlineData(
+        "Upgrade policy mode: 'Automatic', 'Manual', or 'Rolling'. Default is 'Manual'.",
+        "Upgrade policy mode: `Automatic`, `Manual`, or `Rolling`. Default is `Manual`.")]
+    [InlineData(
+        "License type: 'Windows_Server', 'Windows_Client', 'RHEL_BYOS', 'SLES_BYOS', or 'None' to disable.",
+        "License type: `Windows_Server`, `Windows_Client`, `RHEL_BYOS`, `SLES_BYOS`, or `None` to disable.")]
+    [InlineData(
+        "Scale-in policy: 'Default', 'NewestVM', or 'OldestVM'.",
+        "Scale-in policy: `Default`, `NewestVM`, or `OldestVM`.")]
+    [InlineData(
+        "hyper v generation 'V2'.",
+        "hyper v generation `V2`.")]
+    public void ConvertsSingleQuotedValuesToBackticks(string input, string expected)
+    {
+        var result = ParameterDescriptionBackticker.Apply(input);
+        Assert.Equal(expected, result);
+    }
+
+    // ───────────────────────────────────────────────
+    // (m) Single-quoted booleans to backticks (issue #283)
+    // ───────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(
+        "with enable bursting 'true'.",
+        "with enable bursting `true`.")]
+    [InlineData(
+        "Set to 'false' to disable.",
+        "Set to `false` to disable.")]
+    public void ConvertsSingleQuotedBooleansToBackticks(string input, string expected)
+    {
+        var result = ParameterDescriptionBackticker.Apply(input);
+        Assert.Equal(expected, result);
+    }
+
+    // ───────────────────────────────────────────────
+    // (n) Already-backticked alphanumeric — no change
+    // ───────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("Accepted values: `V1`, `V2`.")]
+    [InlineData("Accepted values: `PremiumV2_LRS`, `Standard_LRS`.")]
+    [InlineData("Type: `Ubuntu2404`.")]
+    public void PreservesAlreadyBacktickedAlphanumeric(string input)
+    {
+        var result = ParameterDescriptionBackticker.Apply(input);
+        Assert.Equal(input, result);
+    }
+
+    // ───────────────────────────────────────────────
+    // (o) Prose single-quoted words — not converted
+    // ───────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("The resource group's location.")]
+    [InlineData("Use '' to clear existing tags.")]
+    public void PreservesNonTechnicalSingleQuotes(string input)
+    {
+        var result = ParameterDescriptionBackticker.Apply(input);
+        Assert.Equal(input, result);
+    }
 }
