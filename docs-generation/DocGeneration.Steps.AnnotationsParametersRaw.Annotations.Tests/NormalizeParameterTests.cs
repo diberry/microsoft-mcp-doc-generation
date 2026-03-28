@@ -11,7 +11,8 @@ namespace CSharpGenerator.Tests;
 /// Priority: P0 — parameter name transformation affects all documentation.
 /// Related PR: #40 — copilot/remove-name-type-parameter
 /// </summary>
-public class NormalizeParameterTests : IClassFixture<TextCleanupFixture>
+[Collection("StaticState")]
+public class NormalizeParameterTests
 {
     private readonly TextCleanupFixture _fixture;
 
@@ -293,5 +294,65 @@ public class NormalizeParameterTests : IClassFixture<TextCleanupFixture>
 
         // Assert
         Assert.Equal(expected, result);
+    }
+
+    // ── Resource Identifier Parameters (Issue #270) ─────────────────
+
+    [Theory]
+    [InlineData("database", "Database name")]
+    [InlineData("server", "Server name")]
+    [InlineData("account", "Account name")]
+    [InlineData("container", "Container name")]
+    [InlineData("vault", "Vault name")]
+    [InlineData("secret", "Secret name")]
+    [InlineData("key", "Key name")]
+    [InlineData("certificate", "Certificate name")]
+    [InlineData("workspace", "Workspace name")]
+    [InlineData("index", "Index name")]
+    [InlineData("service", "Service name")]
+    [InlineData("table", "Table name")]
+    [InlineData("blob", "Blob name")]
+    [InlineData("app", "App name")]
+    [InlineData("subnet", "Subnet name")]
+    [InlineData("resource", "Resource name")]
+    [InlineData("entity", "Entity name")]
+    [InlineData("user", "User name")]
+    [InlineData("webtest", "Web test name")]
+    [InlineData("template", "Template name")]
+    public void NormalizeParameter_BareResourceIdentifier_AppendsNameSuffix(string input, string expected)
+    {
+        var result = TextCleanup.NormalizeParameter(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("--database", "Database name")]
+    [InlineData("--server", "Server name")]
+    [InlineData("--vault", "Vault name")]
+    [InlineData("--container", "Container name")]
+    [InlineData("--account", "Account name")]
+    public void NormalizeParameter_BareResourceIdentifierWithPrefix_AppendsNameSuffix(string input, string expected)
+    {
+        var result = TextCleanup.NormalizeParameter(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("database-name", "Database name")]
+    [InlineData("server-name", "Server name")]
+    [InlineData("container-name", "Container name")]
+    [InlineData("account-name", "Account name")]
+    public void NormalizeParameter_ResourceIdentifierWithNameSuffix_StillWorks(string input, string expected)
+    {
+        var result = TextCleanup.NormalizeParameter(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void NormalizeParameter_ResourceIdentifierMapping_DoesNotAffectStaticTextReplacement()
+    {
+        var text = "The database is required for this operation.";
+        var result = TextCleanup.ReplaceStaticText(text);
+        Assert.DoesNotContain("Database name", result);
     }
 }

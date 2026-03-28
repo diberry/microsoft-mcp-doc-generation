@@ -26,6 +26,9 @@
     <Content Include="..\data\nl-parameters.json" Link="TestData\nl-parameters.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\data\nl-parameter-identifiers.json" Link="TestData\nl-parameter-identifiers.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\data\static-text-replacement.json" Link="TestData\static-text-replacement.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
