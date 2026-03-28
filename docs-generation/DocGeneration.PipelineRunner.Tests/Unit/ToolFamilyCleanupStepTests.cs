@@ -4,6 +4,7 @@ using PipelineRunner.Context;
 using PipelineRunner.Services;
 using PipelineRunner.Steps;
 using PipelineRunner.Tests.Fixtures;
+using Shared;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -24,19 +25,23 @@ public class ToolFamilyCleanupStepTests
             SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
 
+            // Resolve brand-mapped output filename the same way ToolFamilyCleanupStep does,
+            // so the callback creates files the step will find (PR #316 changed expected filenames).
+            var outputFileName = await ToolFileNameBuilder.ResolveFamilyFileNameAsync("compute");
+
             processRunner.OnRun = spec =>
             {
                 Assert.NotEqual(context.DocsGenerationRoot, spec.WorkingDirectory);
                 Assert.Contains("pipeline-runner-step4", spec.WorkingDirectory, StringComparison.OrdinalIgnoreCase);
-                Assert.False(File.Exists(Path.Combine(context.OutputPath, "tool-family", "compute.md")));
+                Assert.False(File.Exists(Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md")));
 
                 var isolatedGeneratedRoot = Path.GetFullPath(Path.Combine(spec.WorkingDirectory, "..", "generated"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "compute-metadata.md"), "metadata");
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "compute-related.md"), "related");
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "compute.md"), "final article");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", $"{outputFileName}-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", $"{outputFileName}-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", $"{outputFileName}.md"), "final article");
 
                 return CallbackProcessRunner.Success(spec);
             };
@@ -46,9 +51,9 @@ public class ToolFamilyCleanupStepTests
 
             Assert.True(result.Success);
             Assert.Single(processRunner.Invocations);
-            Assert.Equal("metadata", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family-metadata", "compute-metadata.md")));
-            Assert.Equal("related", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family-related", "compute-related.md")));
-            Assert.Equal("final article", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family", "compute.md")));
+            Assert.Equal("metadata", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family-metadata", $"{outputFileName}-metadata.md")));
+            Assert.Equal("related", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family-related", $"{outputFileName}-related.md")));
+            Assert.Equal("final article", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md")));
             Assert.False(Directory.Exists(processRunner.Invocations[0].WorkingDirectory));
         }
         finally
