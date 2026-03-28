@@ -416,6 +416,9 @@ public class CleanupGenerator
                     ? brandName
                     : familyName;
 
+                // Resolve brand-mapped output filename (#267)
+                var outputFileName = ToolFileNameBuilder.ResolveFamilyFileName(familyName, brandMappingsDict);
+
                 var familyContent = new FamilyContent
                 {
                     FamilyName = familyName,
@@ -492,7 +495,7 @@ public class CleanupGenerator
                 familyContent.Metadata = metadata;
                 
                 // Save metadata
-                var metadataPath = Path.Combine(metadataDir, $"{familyName}-metadata.md");
+                var metadataPath = Path.Combine(metadataDir, $"{outputFileName}-metadata.md");
                 await File.WriteAllTextAsync(metadataPath, metadata);
 
                 // Phase 3: Generate related content (deterministic — no AI call, #163)
@@ -501,7 +504,7 @@ public class CleanupGenerator
                 familyContent.RelatedContent = relatedContent;
                 
                 // Save related content
-                var relatedPath = Path.Combine(relatedDir, $"{familyName}-related.md");
+                var relatedPath = Path.Combine(relatedDir, $"{outputFileName}-related.md");
                 await File.WriteAllTextAsync(relatedPath, relatedContent);
                 Console.WriteLine($"✓ (deterministic)");
 
@@ -510,9 +513,9 @@ public class CleanupGenerator
 
                 // Phase 4: Stitch together
                 Console.Write($"{progress}   Phase 4: Stitching file... ");
-                var outputPath = Path.Combine(outputDir, $"{familyName}.md");
+                var outputPath = Path.Combine(outputDir, $"{outputFileName}.md");
                 await stitcher.StitchAndSaveAsync(familyContent, outputPath);
-                Console.WriteLine($"✓ Saved to {familyName}.md");
+                Console.WriteLine($"✓ Saved to {outputFileName}.md");
 
                 totalTokensUsed += EstimateTokens(metadata) + EstimateTokens(relatedContent);
                 successCount++;

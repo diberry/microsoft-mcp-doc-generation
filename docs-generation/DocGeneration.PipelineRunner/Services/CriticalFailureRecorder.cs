@@ -112,7 +112,7 @@ public static class CriticalFailureRecorder
                     summary,
                     result.Warnings,
                     [
-                        Path.Combine(context.OutputPath, "tool-family", $"{ResolveFamilyName(context)}.md"),
+                        Path.Combine(context.OutputPath, "tool-family", $"{ResolveOutputFileName(context)}.md"),
                         Path.Combine(context.OutputPath, "reports", $"tool-family-validation-{ResolveFamilyName(context)}.txt"),
                         .. result.Outputs,
                     ])
@@ -183,6 +183,18 @@ public static class CriticalFailureRecorder
 
         var namespaceRoot = ResolveNamespaceRoot(context);
         return string.IsNullOrWhiteSpace(namespaceRoot) ? "unknown" : namespaceRoot;
+    }
+
+    private static string ResolveOutputFileName(PipelineContext context)
+    {
+        if (context.Items.TryGetValue(ToolFamilyPostAssemblyValidator.OutputFileNameContextKey, out var outputFileNameValue)
+            && outputFileNameValue is string outputFileName
+            && !string.IsNullOrWhiteSpace(outputFileName))
+        {
+            return outputFileName.Trim().ToLowerInvariant();
+        }
+
+        return ResolveFamilyName(context);
     }
 
     private static string ResolveNamespaceRoot(PipelineContext context)
