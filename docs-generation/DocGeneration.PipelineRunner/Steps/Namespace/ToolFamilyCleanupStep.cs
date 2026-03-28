@@ -212,33 +212,9 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         }
     }
 
-    private static async Task<string> ResolveFamilyOutputFileNameFromContextAsync(string familyName, PipelineContext context)
+    private static async Task<string> ResolveFamilyOutputFileNameFromContextAsync(string familyName, PipelineContext _)
     {
-        var brandMappingPath = Path.Combine(context.DocsGenerationRoot, "data", "brand-to-server-mapping.json");
-        if (!File.Exists(brandMappingPath))
-        {
-            return familyName;
-        }
-
-        try
-        {
-            var json = await File.ReadAllTextAsync(brandMappingPath);
-            var mappings = System.Text.Json.JsonSerializer.Deserialize<List<BrandMapping>>(json,
-                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (mappings == null)
-            {
-                return familyName;
-            }
-
-            var dict = mappings
-                .Where(m => !string.IsNullOrWhiteSpace(m.McpServerName))
-                .ToDictionary(m => m.McpServerName!, m => m);
-            return ToolFileNameBuilder.ResolveFamilyFileName(familyName, dict);
-        }
-        catch
-        {
-            return familyName;
-        }
+        return await ToolFileNameBuilder.ResolveFamilyFileNameAsync(familyName);
     }
 
     private static string ResolveFamilyName(string currentNamespace, IReadOnlyList<CliTool> matchingTools)
