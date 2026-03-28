@@ -7,7 +7,8 @@ namespace ToolFamilyCleanup.Services;
 
 /// <summary>
 /// Wraps technical values in parameter description text with backticks.
-/// Targets enum names, boolean literals, date formats, and CLI switches
+/// Targets enum names, boolean literals, date formats, CLI switches,
+/// and single-quoted technical identifiers
 /// to improve Acrolinx Spelling &amp; Grammar scores.
 /// </summary>
 public static class ParameterDescriptionBackticker
@@ -18,10 +19,18 @@ public static class ParameterDescriptionBackticker
     private static readonly Regex DateFormat = new(
         @"\b[Yy]{2,4}-[Mm]{2}-[Dd]{2}(?:T[Hh]{2}:[Mm]{2}:[Ss]{2})?\b", RegexOptions.Compiled);
     private static readonly Regex EnumListAfterColon = new(
-        @"(?<=:\s)([A-Z][a-zA-Z_]*(?:(?:\s*,\s*(?:or\s+)?|\s+or\s+)[A-Z][a-zA-Z_]*)+)",
+        @"(?<=:\s)([A-Z][a-zA-Z0-9_]*(?:(?:\s*,\s*(?:or\s+)?|\s+or\s+)[A-Z][a-zA-Z0-9_]*)+)",
         RegexOptions.Compiled);
-    private static readonly Regex EnumItem = new(@"[A-Z][a-zA-Z_]*", RegexOptions.Compiled);
+    private static readonly Regex EnumItem = new(@"[A-Z][a-zA-Z0-9_]*", RegexOptions.Compiled);
     private static readonly Regex Placeholder = new(@"\x00(\d+)\x00", RegexOptions.Compiled);
+
+    // Single-quoted PascalCase identifiers: 'Premium_LRS', 'V2', 'Ubuntu2404'
+    private static readonly Regex SingleQuotedIdentifier = new(
+        @"'([A-Z][a-zA-Z0-9_]*)'", RegexOptions.Compiled);
+
+    // Single-quoted boolean literals: 'true', 'false'
+    private static readonly Regex SingleQuotedBoolean = new(
+        @"'(true|false)'", RegexOptions.Compiled);
 
     /// <summary>
     /// Applies backtick wrapping to technical values in a parameter description string.
@@ -37,6 +46,18 @@ public static class ParameterDescriptionBackticker
 
         // Protect already-backticked spans from double-wrapping
         var protectedSpans = new List<string>();
+        result = BacktickedSpan.Replace(result, m =>
+        {
+            protectedSpans.Add(m.Value);
+            return $"\x00{protectedSpans.Count - 1}\x00";
+        });
+
+        // Convert single-quoted technical values to backtick-wrapped BEFORE
+        // other rules, so downstream patterns don't see stale single quotes.
+        result = SingleQuotedIdentifier.Replace(result, "`$1`");
+        result = SingleQuotedBoolean.Replace(result, "`$1`");
+
+        // Re-protect newly created backticked spans from double-wrapping
         result = BacktickedSpan.Replace(result, m =>
         {
             protectedSpans.Add(m.Value);
