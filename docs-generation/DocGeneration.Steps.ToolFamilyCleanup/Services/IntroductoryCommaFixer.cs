@@ -17,6 +17,8 @@ public static class IntroductoryCommaFixer
 {
     private static readonly string[] IntroductoryPhrases =
     [
+        "If not specified",
+        "If not provided",
         "For example",
         "In addition",
         "By default",
@@ -66,7 +68,7 @@ public static class IntroductoryCommaFixer
         // Apply comma insertion for each introductory phrase
         foreach (var phrase in IntroductoryPhrases)
         {
-            markdown = InsertCommaAfterPhrase(markdown, phrase);
+            markdown = InsertCommaAfterPhrase(markdown, phrase, IntroductoryPhrases);
         }
 
         // Restore placeholders
@@ -82,12 +84,25 @@ public static class IntroductoryCommaFixer
     /// Inserts a comma after the given phrase when it appears at a sentence
     /// boundary (start of string, after a period+space, after newline, after
     /// bullet marker) and is NOT already followed by a comma.
+    /// If this phrase is a prefix of a longer phrase in the list, a negative
+    /// lookahead prevents matching the longer phrase (fixes #280).
     /// </summary>
-    private static string InsertCommaAfterPhrase(string markdown, string phrase)
+    private static string InsertCommaAfterPhrase(string markdown, string phrase, string[] allPhrases)
     {
+        // Build negative lookahead so short phrases don't corrupt longer ones
+        var extensions = allPhrases
+            .Where(p => p.Length > phrase.Length &&
+                   p.StartsWith(phrase + " ", StringComparison.OrdinalIgnoreCase))
+            .Select(p => Regex.Escape(p[phrase.Length..]))
+            .ToList();
+
+        var extensionGuard = extensions.Count > 0
+            ? $"(?!{string.Join("|", extensions)})"
+            : "";
+
         // Match the phrase at sentence boundaries, NOT already followed by comma
         // Sentence boundaries: start of string, after ". ", after newline, after "- "
-        var pattern = $@"(?<=^|(?<=\.)\s|(?<=\n)|- )({Regex.Escape(phrase)})(?!,)\s";
+        var pattern = $@"(?<=^|(?<=\.)\s|(?<=\n)|- )({Regex.Escape(phrase)}){extensionGuard}(?!,)\s";
         return Regex.Replace(markdown, pattern, "$1, ", RegexOptions.Multiline);
     }
 }
