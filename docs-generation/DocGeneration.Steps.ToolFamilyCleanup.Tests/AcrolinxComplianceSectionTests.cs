@@ -24,7 +24,7 @@ public class AcrolinxComplianceSectionTests
         // Step 2 — Example prompt generation
         ["DocGeneration.Steps.ExamplePrompts.Generation", "prompts", "system-prompt-example-prompt.txt"],
         // Step 3 — Tool documentation improvements
-        ["DocGeneration.Steps.ToolGeneration.Improvements", "Prompts", "system-prompt.txt"],
+        ["DocGeneration.Steps.ToolGeneration.Improvements", "prompts", "system-prompt.txt"],
         // Step 4 — Tool family article cleanup (primary article assembly)
         ["DocGeneration.Steps.ToolFamilyCleanup", "prompts", "tool-family-cleanup-system-prompt.txt"],
         // Step 6 — Horizontal (how-to) article generation
@@ -205,7 +205,7 @@ public class AcrolinxComplianceSectionTests
     public void SharedPrompt_Step3_ContainsAcrolinxSection()
     {
         var content = File.ReadAllText(Path.Combine(
-            ProjectRoot, "docs-generation", "DocGeneration.Steps.ToolGeneration.Improvements", "Prompts", "system-prompt.txt"));
+            ProjectRoot, "docs-generation", "DocGeneration.Steps.ToolGeneration.Improvements", "prompts", "system-prompt.txt"));
         Assert.Contains("present tense", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("contraction", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("active voice", content, StringComparison.OrdinalIgnoreCase);

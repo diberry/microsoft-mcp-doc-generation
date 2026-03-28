@@ -15,7 +15,7 @@ public class PromptContentTests
     [InlineData("DocGeneration.Steps.ExamplePrompts.Validation/prompts/system-prompt-example-prompt-validation.txt")]
     [InlineData("DocGeneration.Steps.ToolFamilyCleanup/prompts/tool-family-cleanup-system-prompt.txt")]
     [InlineData("DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-system-prompt.txt")]
-    [InlineData("DocGeneration.Steps.ToolGeneration.Improvements/Prompts/system-prompt.txt")]
+    [InlineData("DocGeneration.Steps.ToolGeneration.Improvements/prompts/system-prompt.txt")]
     [InlineData("DocGeneration.Steps.Bootstrap.BrandMappings/prompts/system-prompt.txt")]
     public void SystemPrompt_Exists_AndIsNotEmpty(string relativePath)
     {
@@ -31,7 +31,7 @@ public class PromptContentTests
     [InlineData("DocGeneration.Steps.ExamplePrompts.Validation/prompts/user-prompt-example-prompt-validation.txt")]
     [InlineData("DocGeneration.Steps.ToolFamilyCleanup/prompts/tool-family-cleanup-user-prompt.txt")]
     [InlineData("DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-user-prompt.txt")]
-    [InlineData("DocGeneration.Steps.ToolGeneration.Improvements/Prompts/user-prompt-template.txt")]
+    [InlineData("DocGeneration.Steps.ToolGeneration.Improvements/prompts/user-prompt-template.txt")]
     [InlineData("DocGeneration.Steps.Bootstrap.BrandMappings/prompts/user-prompt.txt")]
     public void UserPrompt_Exists_AndIsNotEmpty(string relativePath)
     {
