@@ -97,17 +97,17 @@ internal class Program
         var searchPaths = new[]
         {
             // Relative to AppContext.BaseDirectory (bin/Release/net9.0)
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Prompts", promptFileName),
-            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "DocGeneration.Steps.ToolGeneration.Improvements", "Prompts", promptFileName),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "prompts", promptFileName),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "DocGeneration.Steps.ToolGeneration.Improvements", "prompts", promptFileName),
             
             // Relative to current working directory
-            Path.Combine(Directory.GetCurrentDirectory(), "Prompts", promptFileName),
-            Path.Combine(Directory.GetCurrentDirectory(), "DocGeneration.Steps.ToolGeneration.Improvements", "Prompts", promptFileName),
-            Path.Combine(Directory.GetCurrentDirectory(), "docs-generation", "DocGeneration.Steps.ToolGeneration.Improvements", "Prompts", promptFileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "prompts", promptFileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "DocGeneration.Steps.ToolGeneration.Improvements", "prompts", promptFileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "docs-generation", "DocGeneration.Steps.ToolGeneration.Improvements", "prompts", promptFileName),
             
             // Relative to project directory
-            Path.Combine(Directory.GetCurrentDirectory(), "..", "Prompts", promptFileName),
-            Path.Combine(Directory.GetCurrentDirectory(), "..", "DocGeneration.Steps.ToolGeneration.Improvements", "Prompts", promptFileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "prompts", promptFileName),
+            Path.Combine(Directory.GetCurrentDirectory(), "..", "DocGeneration.Steps.ToolGeneration.Improvements", "prompts", promptFileName),
         };
 
         foreach (var path in searchPaths)
