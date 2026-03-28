@@ -10,7 +10,7 @@ namespace ToolFamilyCleanup.Services;
 /// fields into tool-family articles. Fields that already exist are preserved.
 /// 
 /// Required fields per Microsoft Learn publishing standards:
-/// - author, ms.author, ms.date, ms.service, ms.topic
+/// - author, ms.author, ms.reviewer, ms.date, ms.service, ms.topic
 /// - ai-usage (for AI-generated content)
 /// - content_well_notification (for AI-generated content)
 /// - ms.custom (for campaign tracking)
@@ -18,6 +18,7 @@ namespace ToolFamilyCleanup.Services;
 public static class FrontmatterEnricher
 {
     private const string Author = "diberry";
+    private const string Reviewer = "mbaldwin";
     private const string AiUsage = "ai-generated";
     private const string ContentWellValue = "AI-contribution";
     private const string MsCustom = "build-2025";
@@ -56,6 +57,7 @@ public static class FrontmatterEnricher
         // Inject missing fields
         InjectIfMissing(lines, "author", $"author: {Author}");
         InjectIfMissing(lines, "ms.author", $"ms.author: {Author}");
+        InjectIfMissing(lines, "ms.reviewer", $"ms.reviewer: {Reviewer}");
         InjectIfMissing(lines, "ms.date", $"ms.date: {DateTime.UtcNow:MM/dd/yyyy}");
         InjectIfMissing(lines, "ai-usage", $"ai-usage: {AiUsage}");
         InjectIfMissing(lines, "ms.custom", $"ms.custom: {MsCustom}");

@@ -12,7 +12,7 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// Integration tests verifying that required frontmatter fields survive
 /// the full pipeline: DeterministicFrontmatterGenerator → Assemble → FamilyFileStitcher.Stitch().
 /// The stitcher's post-processing chain includes FrontmatterEnricher which must inject
-/// ms.date, author, ms.author, ai-usage, content_well_notification, and ms.custom.
+/// ms.date, author, ms.author, ms.reviewer, ai-usage, content_well_notification, and ms.custom.
 ///
 /// Fixes: #219 — ms.date missing in generated tool-family files.
 /// Decision: AD-007 (TDD — write failing tests before implementing fix).
@@ -147,6 +147,23 @@ public class FrontmatterPipelineIntegrationTests
         Assert.Contains("ms.custom: build-2025", result);
     }
 
+    // ── ms.reviewer present after full pipeline (#284) ────────────
+
+    [Fact]
+    public void Stitch_DeterministicFrontmatter_ContainsMsReviewer()
+    {
+        var header = DeterministicFrontmatterGenerator.Generate(
+            TestBrandName, 2, TestCliVersion, TestSeoDescription);
+        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro.");
+
+        var familyContent = CreateFamilyContent("resourcehealth", metadata);
+        var stitcher = new FamilyFileStitcher();
+
+        var result = stitcher.Stitch(familyContent);
+
+        Assert.Contains("ms.reviewer: mbaldwin", result);
+    }
+
     // ── All enriched fields are inside frontmatter delimiters ───────
 
     [Fact]
@@ -176,6 +193,7 @@ public class FrontmatterPipelineIntegrationTests
         Assert.Contains("ai-usage:", frontmatter);
         Assert.Contains("ms.custom:", frontmatter);
         Assert.Contains("content_well_notification:", frontmatter);
+        Assert.Contains("ms.reviewer:", frontmatter);
     }
 
     // ── Generator itself includes ms.date (defense in depth) ──────
