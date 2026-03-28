@@ -12,6 +12,7 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             6,
             "Generate horizontal article",
             FailurePolicy.Fatal,
+            dependsOn: [0],
             requiresAiConfiguration: true,
             createsFilteredCliView: true,
             expectedOutputs: ["horizontal-articles"],

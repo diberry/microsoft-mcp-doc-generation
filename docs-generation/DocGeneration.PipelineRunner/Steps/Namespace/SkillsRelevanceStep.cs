@@ -13,6 +13,7 @@ public sealed class SkillsRelevanceStep : NamespaceStepBase
             5,
             "Generate skills relevance",
             FailurePolicy.Warn,
+            dependsOn: [0],
             expectedOutputs: ["skills-relevance"])
     {
     }

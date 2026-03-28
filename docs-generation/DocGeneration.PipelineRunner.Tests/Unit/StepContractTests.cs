@@ -98,19 +98,21 @@ public class StepContractTests
     }
 
     /// <summary>
-    /// AD-020 gap: Steps 5 and 6 have no declared dependencies despite
-    /// logically consuming outputs from earlier steps. This is intentional
-    /// to allow independent execution, but should be documented.
+    /// Steps 5 and 6 consume CLI metadata produced by Bootstrap (Step 0).
+    /// Without this dependency, running them in isolation (e.g. ./start.sh advisor 5)
+    /// throws a confusing InvalidOperationException instead of a clear dependency error.
+    /// See issue #187 item 3.
     /// </summary>
-    [Theory]
-    [InlineData(5)]
-    [InlineData(6)]
-    public void Steps5And6_HaveNoDeclaredDependencies_AD020Gap(int stepId)
+    [Fact]
+    public void Step5_DependsOnBootstrap()
     {
-        // These steps can run independently of the main generation chain.
-        // Step 5 (SkillsRelevance) uses CLI metadata only.
-        // Step 6 (HorizontalArticles) reads CLI data + AI; no file deps on Steps 1-4.
-        Assert.Empty(_registry.GetStep(stepId).DependsOn);
+        Assert.Contains(0, _registry.GetStep(5).DependsOn);
+    }
+
+    [Fact]
+    public void Step6_DependsOnBootstrap()
+    {
+        Assert.Contains(0, _registry.GetStep(6).DependsOn);
     }
 
     // ── No circular dependencies ────────────────────────────────────────
