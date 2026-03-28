@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Shared;
 
@@ -164,5 +165,21 @@ public static class FrontmatterUtility
             version: mcpCliVersion,
             generatedDate: generatedDate,
             msDate: generatedDate);
+    }
+
+    private static readonly Regex StripFrontmatterRegex = new(
+        @"^---\s*\n(.*?\n)?---\s*\n?",
+        RegexOptions.Singleline | RegexOptions.Compiled);
+
+    /// <summary>
+    /// Strips YAML frontmatter (--- ... ---) from markdown content.
+    /// Returns the content after the closing --- delimiter.
+    /// </summary>
+    public static string StripFrontmatter(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return content;
+
+        return StripFrontmatterRegex.Replace(content, string.Empty);
     }
 }

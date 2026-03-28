@@ -68,10 +68,8 @@ public sealed class QualityMetrics
         return match.Success ? match.Groups[1].Value : null;
     }
 
-    private static string StripFrontmatter(string content)
-    {
-        return Regex.Replace(content, @"^---\s*\n.*?\n---\s*\n?", "", RegexOptions.Singleline);
-    }
+    private static string StripFrontmatter(string content) =>
+        Shared.FrontmatterUtility.StripFrontmatter(content);
 
     private static IReadOnlyList<string> ExtractFrontmatterFields(string? frontmatter)
     {
