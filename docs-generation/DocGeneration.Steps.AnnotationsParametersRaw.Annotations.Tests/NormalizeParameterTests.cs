@@ -355,4 +355,14 @@ public class NormalizeParameterTests
         var result = TextCleanup.ReplaceStaticText(text);
         Assert.DoesNotContain("Database name", result);
     }
+
+    [Fact]
+    public void NormalizeParameter_IdentifierDict_TakesPrecedenceOverParameterDict()
+    {
+        // "database" exists in nl-parameter-identifiers.json as "Database name".
+        // If it were also added to nl-parameters.json, the identifier mapping should still win
+        // because it is checked first (Issue #270 / PR #317 overlap detection).
+        var result = TextCleanup.NormalizeParameter("database");
+        Assert.Equal("Database name", result);
+    }
 }

@@ -138,6 +138,19 @@ public static class TextCleanup
                     }
                 }
             }
+
+            // Warn about overlapping keys between identifier and parameter dictionaries (PR #317 review).
+            if (parameterIdentifiersDict != null && mappedParametersDict != null)
+            {
+                foreach (var key in parameterIdentifiersDict.Keys)
+                {
+                    if (mappedParametersDict.ContainsKey(key))
+                    {
+                        LogFileHelper.WriteDebug($"[WARNING] Key '{key}' exists in both nl-parameter-identifiers.json and nl-parameters.json — identifier mapping takes precedence in NormalizeParameter.");
+                    }
+                }
+            }
+
             return true;
 
         }
