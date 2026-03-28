@@ -78,11 +78,14 @@ public class ToolReader
             }
         }
 
-        // Sort tools within each family alphabetically
+        // Sort tools within each family by resource type first, then by verb (#279).
+        // Command format: "namespace resource [resource2…] verb"
+        // Sort key groups all operations on the same resource together.
         foreach (var family in toolsByFamily.Keys)
         {
             toolsByFamily[family] = toolsByFamily[family]
-                .OrderBy(t => t.ToolName)
+                .OrderBy(t => GetResourceSortKey(t.Command), StringComparer.Ordinal)
+                .ThenBy(t => t.ToolName, StringComparer.Ordinal)
                 .ToList();
         }
 
@@ -268,5 +271,33 @@ public class ToolReader
     private string StripFrontmatter(string content)
     {
         return FrontmatterRegex.Replace(content, string.Empty);
+    }
+
+    /// <summary>
+    /// Builds a sort key from a command that groups by resource type first, then by verb.
+    /// Command format: "namespace resource1 [resource2…] verb"
+    /// Result format:  "resource1 resource2\0verb"
+    /// The NUL separator ensures resource groups sort together regardless of verb names.
+    /// For two-segment commands (namespace + verb), returns "\0verb" so bare verbs sort
+    /// before any resource-specific tools within the same family.
+    /// </summary>
+    internal static string GetResourceSortKey(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+            return string.Empty;
+
+        var segments = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (segments.Length <= 1)
+            return command;
+
+        // Two-segment: "namespace verb" → sort by "\0verb" (bare verbs first)
+        if (segments.Length == 2)
+            return $"\0{segments[1]}";
+
+        // Three+ segments: "namespace resource… verb"
+        var resource = string.Join(" ", segments[1..^1]);
+        var verb = segments[^1];
+        return $"{resource}\0{verb}";
     }
 }
