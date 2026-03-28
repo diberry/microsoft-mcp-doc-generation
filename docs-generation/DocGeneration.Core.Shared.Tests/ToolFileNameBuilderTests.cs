@@ -227,4 +227,69 @@ public class ToolFileNameBuilderTests
         // Empty FileName → falls through to compound words → raw area
         Assert.Equal("azure-svc-list", result);
     }
+    // ── ResolveFamilyFileName tests (issue #267) ──────────────────────
+
+    [Fact]
+    public void ResolveFamilyFileName_BrandMapped_ReturnsBrandFileName()
+    {
+        var mappings = new Dictionary<string, BrandMapping>
+        {
+            ["compute"] = new BrandMapping { FileName = "azure-virtual-machines" },
+        };
+        var result = ToolFileNameBuilder.ResolveFamilyFileName("compute", mappings);
+        Assert.Equal("azure-virtual-machines", result);
+    }
+
+    [Fact]
+    public void ResolveFamilyFileName_NoMapping_ReturnsFamilyName()
+    {
+        var mappings = new Dictionary<string, BrandMapping>();
+        var result = ToolFileNameBuilder.ResolveFamilyFileName("advisor", mappings);
+        Assert.Equal("advisor", result);
+    }
+
+    [Fact]
+    public void ResolveFamilyFileName_EmptyFileName_FallsBackToFamilyName()
+    {
+        var mappings = new Dictionary<string, BrandMapping>
+        {
+            ["svc"] = new BrandMapping { FileName = "" },
+        };
+        var result = ToolFileNameBuilder.ResolveFamilyFileName("svc", mappings);
+        Assert.Equal("svc", result);
+    }
+
+    [Fact]
+    public void ResolveFamilyFileName_NullFamilyName_ReturnsNull()
+    {
+        var mappings = new Dictionary<string, BrandMapping>();
+        var result = ToolFileNameBuilder.ResolveFamilyFileName(null!, mappings);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ResolveFamilyFileName_MixedCase_ReturnsLowerCase()
+    {
+        var mappings = new Dictionary<string, BrandMapping>
+        {
+            ["storage"] = new BrandMapping { FileName = "Azure-Storage" },
+        };
+        var result = ToolFileNameBuilder.ResolveFamilyFileName("storage", mappings);
+        Assert.Equal("azure-storage", result);
+    }
+
+    [Fact]
+    public void ResolveFamilyFileName_MultipleNamespaces_EachResolvesCorrectly()
+    {
+        var mappings = new Dictionary<string, BrandMapping>
+        {
+            ["compute"] = new BrandMapping { FileName = "azure-virtual-machines" },
+            ["cosmos"] = new BrandMapping { FileName = "azure-cosmos-db" },
+            ["keyvault"] = new BrandMapping { FileName = "azure-key-vault" },
+        };
+        Assert.Equal("azure-virtual-machines", ToolFileNameBuilder.ResolveFamilyFileName("compute", mappings));
+        Assert.Equal("azure-cosmos-db", ToolFileNameBuilder.ResolveFamilyFileName("cosmos", mappings));
+        Assert.Equal("azure-key-vault", ToolFileNameBuilder.ResolveFamilyFileName("keyvault", mappings));
+    }
+
 }

@@ -9,6 +9,7 @@ namespace PipelineRunner.Validation;
 public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 {
     public const string FamilyNameContextKey = "ToolFamilyCleanup.FamilyName";
+    public const string OutputFileNameContextKey = "ToolFamilyCleanup.OutputFileName";
 
     private static readonly Regex FrontmatterRegex = new(@"^---\s*\n(.*?)\n---\s*\n?", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex HeadingRegex = new(@"(?m)^##\s+(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -28,8 +29,9 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     public async ValueTask<ValidatorResult> ValidateAsync(PipelineContext context, IPipelineStep step, CancellationToken cancellationToken)
     {
         var familyName = ResolveFamilyName(context);
+        var outputFileName = ResolveOutputFileName(context, familyName);
         var toolsDirectory = Path.Combine(context.OutputPath, "tools");
-        var articlePath = Path.Combine(context.OutputPath, "tool-family", $"{familyName}.md");
+        var articlePath = Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md");
         var reportDirectory = Path.Combine(context.OutputPath, "reports");
         var reportPath = Path.Combine(reportDirectory, $"tool-family-validation-{familyName}.txt");
 
@@ -200,6 +202,18 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         }
 
         throw new InvalidOperationException("Tool-family validation requires a current namespace or family name in the pipeline context.");
+    }
+
+    private static string ResolveOutputFileName(PipelineContext context, string familyName)
+    {
+        if (context.Items.TryGetValue(OutputFileNameContextKey, out var outputFileNameValue)
+            && outputFileNameValue is string outputFileName
+            && !string.IsNullOrWhiteSpace(outputFileName))
+        {
+            return outputFileName.Trim().ToLowerInvariant();
+        }
+
+        return familyName;
     }
 
     private static async Task<IReadOnlyList<string>> GetNamespaceFilePrefixesAsync(string namespaceName, CancellationToken cancellationToken)

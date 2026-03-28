@@ -29,13 +29,15 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
         var familyName = ResolveFamilyName(currentNamespace, matchingTools);
+        var outputFileName = await ResolveFamilyOutputFileNameFromContextAsync(familyName, context);
         context.Items[ToolFamilyPostAssemblyValidator.FamilyNameContextKey] = familyName;
+        context.Items[ToolFamilyPostAssemblyValidator.OutputFileNameContextKey] = outputFileName;
 
         var toolsInputDirectory = Path.Combine(context.OutputPath, "tools");
         if (!Directory.Exists(toolsInputDirectory))
         {
             warnings.Add($"Tools directory not found: '{toolsInputDirectory}'. Run Step 3 first.");
-            artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
+            artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
@@ -43,7 +45,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         if (matchingToolFiles.Count == 0)
         {
             warnings.Add($"No tool files found for family '{familyName}' in '{toolsInputDirectory}'.");
-            artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
+            artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
@@ -106,16 +108,16 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             if (!cleanupResult.Succeeded)
             {
                 AddProcessIssue(cleanupResult, warnings, "Tool-family cleanup failed");
-                artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
+                artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
                 return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
             }
 
             var tempMetadataDirectory = Path.Combine(tempGeneratedDirectory, "tool-family-metadata");
             var tempRelatedDirectory = Path.Combine(tempGeneratedDirectory, "tool-family-related");
             var tempFinalDirectory = Path.Combine(tempGeneratedDirectory, "tool-family");
-            var expectedMetadataFile = Path.Combine(tempMetadataDirectory, $"{familyName}-metadata.md");
-            var expectedRelatedFile = Path.Combine(tempRelatedDirectory, $"{familyName}-related.md");
-            var expectedFinalFile = Path.Combine(tempFinalDirectory, $"{familyName}.md");
+            var expectedMetadataFile = Path.Combine(tempMetadataDirectory, $"{outputFileName}-metadata.md");
+            var expectedRelatedFile = Path.Combine(tempRelatedDirectory, $"{outputFileName}-related.md");
+            var expectedFinalFile = Path.Combine(tempFinalDirectory, $"{outputFileName}.md");
 
             var copyBackIssues = new List<string>();
             if (!File.Exists(expectedMetadataFile))
@@ -155,13 +157,21 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 }
 
                 warnings.AddRange(copyBackIssues);
-                artifactFailures.Add(CreateFamilyFailure(context, familyName, warnings));
+                artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
                 return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
             }
 
             CopyMarkdownFiles(tempMetadataDirectory, Path.Combine(context.OutputPath, "tool-family-metadata"));
             CopyMarkdownFiles(tempRelatedDirectory, Path.Combine(context.OutputPath, "tool-family-related"));
             CopyMarkdownFiles(tempFinalDirectory, Path.Combine(context.OutputPath, "tool-family"));
+
+            // Clean stale files with old naming convention (#267)
+            if (!string.Equals(familyName, outputFileName, StringComparison.OrdinalIgnoreCase))
+            {
+                RemoveStaleFile(Path.Combine(context.OutputPath, "tool-family", $"{familyName}.md"));
+                RemoveStaleFile(Path.Combine(context.OutputPath, "tool-family-metadata", $"{familyName}-metadata.md"));
+                RemoveStaleFile(Path.Combine(context.OutputPath, "tool-family-related", $"{familyName}-related.md"));
+            }
 
             return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
         }
@@ -171,16 +181,16 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         }
     }
 
-    private static ArtifactFailure CreateFamilyFailure(PipelineContext context, string familyName, IEnumerable<string> details)
+    private static ArtifactFailure CreateFamilyFailure(PipelineContext context, string familyName, string outputFileName, IEnumerable<string> details)
         => CreateArtifactFailure(
             "tool family",
             familyName,
             "Tool-family generation failed for this family.",
             details,
             [
-                Path.Combine(context.OutputPath, "tool-family", $"{familyName}.md"),
-                Path.Combine(context.OutputPath, "tool-family-metadata", $"{familyName}-metadata.md"),
-                Path.Combine(context.OutputPath, "tool-family-related", $"{familyName}-related.md"),
+                Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md"),
+                Path.Combine(context.OutputPath, "tool-family-metadata", $"{outputFileName}-metadata.md"),
+                Path.Combine(context.OutputPath, "tool-family-related", $"{outputFileName}-related.md"),
                 Path.Combine(context.OutputPath, "reports", $"tool-family-validation-{familyName}.txt"),
             ]);
 
@@ -191,6 +201,43 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         {
             var destinationPath = Path.Combine(destinationDirectory, Path.GetFileName(filePath));
             File.Copy(filePath, destinationPath, overwrite: true);
+        }
+    }
+
+    private static void RemoveStaleFile(string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    private static async Task<string> ResolveFamilyOutputFileNameFromContextAsync(string familyName, PipelineContext context)
+    {
+        var brandMappingPath = Path.Combine(context.DocsGenerationRoot, "data", "brand-to-server-mapping.json");
+        if (!File.Exists(brandMappingPath))
+        {
+            return familyName;
+        }
+
+        try
+        {
+            var json = await File.ReadAllTextAsync(brandMappingPath);
+            var mappings = System.Text.Json.JsonSerializer.Deserialize<List<BrandMapping>>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (mappings == null)
+            {
+                return familyName;
+            }
+
+            var dict = mappings
+                .Where(m => !string.IsNullOrWhiteSpace(m.McpServerName))
+                .ToDictionary(m => m.McpServerName!, m => m);
+            return ToolFileNameBuilder.ResolveFamilyFileName(familyName, dict);
+        }
+        catch
+        {
+            return familyName;
         }
     }
 

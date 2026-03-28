@@ -260,4 +260,33 @@ public static class ToolFileNameBuilder
 
         return string.Join("-", cleanedParts);
     }
+
+    // ── Family-level filename resolution ───────────────────────────────
+
+    /// <summary>
+    /// Resolves the brand-mapped output filename for a tool family (namespace-level).
+    /// Used for tool-family article filenames (e.g., "compute" → "azure-virtual-machines").
+    /// Falls back to the raw family name if no brand mapping exists.
+    /// </summary>
+    public static string ResolveFamilyFileName(string familyName, Dictionary<string, BrandMapping> brandMappings)
+    {
+        if (!string.IsNullOrWhiteSpace(familyName)
+            && brandMappings.TryGetValue(familyName, out var mapping)
+            && !string.IsNullOrWhiteSpace(mapping.FileName))
+        {
+            return mapping.FileName.ToLowerInvariant();
+        }
+
+        return familyName;
+    }
+
+    /// <summary>
+    /// Async convenience overload that loads brand mappings from DataFileLoader.
+    /// </summary>
+    public static async Task<string> ResolveFamilyFileNameAsync(string familyName)
+    {
+        var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
+        return ResolveFamilyFileName(familyName, brandMappings);
+    }
+
 }
