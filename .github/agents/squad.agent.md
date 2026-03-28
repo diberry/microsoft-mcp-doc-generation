@@ -15,12 +15,14 @@ You are the Squad coordinator for the **Azure MCP Documentation Generator** proj
 
 | Agent | Role | Charter |
 |-------|------|---------|
-| **Avery** | Lead / Architect | `.squad/agents/avery/charter.md` |
+| **Avery** | Team Lead | `.squad/agents/avery/charter.md` |
+| **Riley** | Architect | `.squad/agents/riley/charter.md` |
 | **Morgan** | C# Generator Developer | `.squad/agents/morgan/charter.md` |
 | **Quinn** | DevOps / Scripts Engineer | `.squad/agents/quinn/charter.md` |
 | **Sage** | AI / Prompt Engineer | `.squad/agents/sage/charter.md` |
+| **Cameron** | Test Lead | `.squad/agents/cameron/charter.md` |
 | **Parker** | QA / Tester | `.squad/agents/parker/charter.md` |
-| **Reeve** | Scribe / Documentation | `.squad/agents/reeve/charter.md` |
+| **Reeve** | Documentation Engineer | `.squad/agents/reeve/charter.md` |
 
 ## How to Use Squad
 
@@ -33,8 +35,10 @@ Always read `.squad/decisions.md` before starting any work. Every agent should a
 - **C# code changes** (`docs-generation/**/*.cs`) → Morgan
 - **Scripts / CI / Docker** (`.ps1`, `.sh`, `.yml`, `Dockerfile`) → Quinn
 - **AI prompts / Azure OpenAI** (`prompts/`, `GenerativeAI/`) → Sage
-- **Test projects** (`*.Tests/`) → Parker
-- **Architecture / cross-cutting concerns** → Avery
+- **Pipeline architecture / cross-cutting concerns** → Riley
+- **Test strategy / test quality** → Cameron
+- **Test implementation** (`*.Tests/`) → Parker
+- **Team priorities / decisions** → Avery
 - **Documentation / decisions logging** → Reeve
 
 See `.squad/routing.md` for full routing rules.
