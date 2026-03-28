@@ -37,6 +37,7 @@ tool_count: 5
         Assert.Contains("content_well_notification:", result);
         Assert.Contains("  - AI-contribution", result);
         Assert.Contains("ms.custom: build-2025", result);
+        Assert.Contains("ms.reviewer: mbaldwin", result);
     }
 
     [Fact]
@@ -131,6 +132,66 @@ List all Cosmos DB accounts.";
         Assert.Contains("The Azure MCP Server lets you manage Cosmos DB accounts.", result);
         Assert.Contains("## List accounts", result);
         Assert.Contains("List all Cosmos DB accounts.", result);
+    }
+
+    // ── ms.reviewer injection (#284) ────────────────────────────────
+
+    [Fact]
+    public void Enrich_InjectsMsReviewer()
+    {
+        var markdown = @"---
+title: Azure MCP Server tools for Azure Storage
+description: Use Azure MCP Server tools to manage storage.
+ms.service: azure-mcp-server
+ms.topic: concept-article
+tool_count: 5
+---
+
+# Azure MCP Server tools for Azure Storage";
+
+        var result = FrontmatterEnricher.Enrich(markdown);
+
+        Assert.Contains("ms.reviewer: mbaldwin", result);
+    }
+
+    [Fact]
+    public void Enrich_DoesNotDuplicateExistingMsReviewer()
+    {
+        var markdown = @"---
+title: Azure MCP Server tools for Key Vault
+ms.reviewer: mbaldwin
+ms.service: azure-mcp-server
+---
+
+# Azure MCP Server tools for Key Vault";
+
+        var result = FrontmatterEnricher.Enrich(markdown);
+
+        var count = CountOccurrences(result, "ms.reviewer: mbaldwin");
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public void Enrich_MsReviewerIsInsideFrontmatter()
+    {
+        var markdown = @"---
+title: Azure MCP Server tools for Cosmos DB
+ms.service: azure-mcp-server
+---
+
+# Azure MCP Server tools for Cosmos DB
+
+Some body content.";
+
+        var result = FrontmatterEnricher.Enrich(markdown);
+        var normalized = result.Replace("\r\n", "\n");
+
+        // Extract frontmatter block
+        var fmStart = normalized.IndexOf("---");
+        var fmEnd = normalized.IndexOf("\n---", fmStart + 3);
+        var frontmatter = normalized.Substring(fmStart, fmEnd + 4 - fmStart);
+
+        Assert.Contains("ms.reviewer:", frontmatter);
     }
 
     // ── Edge cases ──────────────────────────────────────────────────
