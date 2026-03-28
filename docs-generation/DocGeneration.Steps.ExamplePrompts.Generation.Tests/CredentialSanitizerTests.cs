@@ -482,4 +482,109 @@ public class CredentialSanitizerTests
             Assert.Equal(prompt, result);
         }
     }
+
+    // ── Issue #300: Backslash-escaped angle-bracket placeholders ─────
+
+    [Fact]
+    public void Issue300_PasswordPlaceholder_UsesEscapedAngleBrackets()
+    {
+        var prompt = "Connect with 'Server=myserver.database.windows.net;Password=P@ssw0rd!2026'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        // Must use backslash-escaped angle brackets for MS Learn compatibility
+        Assert.Contains(@"\<secure-password\>", result);
+        // Must NOT contain unescaped angle brackets
+        Assert.DoesNotContain("<secure-password>", result);
+    }
+
+    [Fact]
+    public void Issue300_ApiKeyPlaceholder_UsesEscapedAngleBrackets()
+    {
+        var prompt = "Set api_key=abc123secret for Cosmos DB.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.Contains(@"\<api-key\>", result);
+        Assert.DoesNotContain("<api-key>", result);
+    }
+
+    [Fact]
+    public void Issue300_PrefixedApiKeyPlaceholder_UsesEscapedAngleBrackets()
+    {
+        var prompt = "Store key 'sk_live_4f3b2a' in vault.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.Contains(@"\<api-key\>", result);
+        Assert.DoesNotContain("<api-key>", result);
+    }
+
+    [Fact]
+    public void Issue300_BearerTokenPlaceholder_UsesEscapedAngleBrackets()
+    {
+        var prompt = "Auth with 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.Contains(@"Bearer \<token\>", result);
+        Assert.DoesNotContain("Bearer <token>", result);
+    }
+
+    [Fact]
+    public void Issue300_JwtTokenPlaceholder_UsesEscapedAngleBrackets()
+    {
+        var prompt = "Use token 'eyJhbGciOi' for auth.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.Contains(@"\<token\>", result);
+        Assert.DoesNotContain("<token>", result);
+    }
+
+    [Fact]
+    public void Issue300_QuotedPasswordPlaceholder_UsesEscapedAngleBrackets()
+    {
+        var prompt = "Create secret with value 'P@ssw0rd!2026' in vault.";
+        var result = CredentialSanitizer.Sanitize(prompt);
+
+        Assert.Contains(@"\<secure-password\>", result);
+        Assert.DoesNotContain("<secure-password>", result);
+    }
+
+    [Fact]
+    public void Issue300_NoUnescapedAngleBracketPlaceholders_AnyCredentialType()
+    {
+        // Comprehensive test: ALL credential patterns must produce escaped output
+        var prompts = new[]
+        {
+            "Password=MySecret123",
+            "api_key=xK9mW2pL7qR",
+            "sk_test_7x9m2k",
+            "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWI",
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",
+            "Set value 'Admin#123!' for config.",
+        };
+
+        foreach (var prompt in prompts)
+        {
+            var result = CredentialSanitizer.Sanitize(prompt);
+
+            // No unescaped angle-bracket placeholders (would fail MS Learn validation)
+            Assert.DoesNotMatch(@"(?<!\\)<(secure-password|api-key|token)>", result);
+        }
+    }
+
+    [Fact]
+    public void Issue300_EscapedPlaceholders_AreIdempotent()
+    {
+        // Already-escaped placeholders must pass through unchanged
+        var alreadyEscaped = new[]
+        {
+            @"Connect with Password=\<secure-password\> on server.",
+            @"Set \<api-key\> for Cosmos DB.",
+            @"Auth with Bearer \<token\> for the API.",
+        };
+
+        foreach (var prompt in alreadyEscaped)
+        {
+            var result = CredentialSanitizer.Sanitize(prompt);
+            Assert.Equal(prompt, result);
+        }
+    }
 }
