@@ -69,7 +69,7 @@ public sealed class QualityMetrics
     }
 
     private static string StripFrontmatter(string content) =>
-        Shared.FrontmatterUtility.StripFrontmatter(content);
+        Shared.FrontmatterUtility.StripFrontmatter(content)!;
 
     private static IReadOnlyList<string> ExtractFrontmatterFields(string? frontmatter)
     {

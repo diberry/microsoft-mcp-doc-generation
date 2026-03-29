@@ -168,14 +168,14 @@ public static class FrontmatterUtility
     }
 
     private static readonly Regex StripFrontmatterRegex = new(
-        @"^---\s*\n(.*?\n)?---\s*\n?",
+        @"^---\s*\n(.*?\n)?---\r?\n?",
         RegexOptions.Singleline | RegexOptions.Compiled);
 
     /// <summary>
     /// Strips YAML frontmatter (--- ... ---) from markdown content.
     /// Returns the content after the closing --- delimiter.
     /// </summary>
-    public static string StripFrontmatter(string content)
+    public static string? StripFrontmatter(string? content)
     {
         if (string.IsNullOrEmpty(content))
             return content;

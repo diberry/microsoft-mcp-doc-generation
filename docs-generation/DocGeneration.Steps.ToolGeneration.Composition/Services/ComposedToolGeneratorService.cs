@@ -243,7 +243,7 @@ public class ComposedToolGeneratorService
     }
 
     private static string StripFrontmatter(string content) =>
-        FrontmatterUtility.StripFrontmatter(content);
+        FrontmatterUtility.StripFrontmatter(content)!;
 
     private static string ComposeContent(
         string rawContent,

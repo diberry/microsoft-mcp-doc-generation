@@ -248,5 +248,5 @@ public class PageGenerator
     /// Returns the content after the closing --- delimiter.
     /// </summary>
     internal static string StripFrontmatter(string content) =>
-        Shared.FrontmatterUtility.StripFrontmatter(content);
+        Shared.FrontmatterUtility.StripFrontmatter(content)!;
 }

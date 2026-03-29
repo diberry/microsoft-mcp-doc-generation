@@ -268,7 +268,7 @@ public class ToolReader
     /// Strips YAML frontmatter from markdown content.
     /// </summary>
     private static string StripFrontmatter(string content) =>
-        Shared.FrontmatterUtility.StripFrontmatter(content);
+        Shared.FrontmatterUtility.StripFrontmatter(content)!;
 
     /// <summary>
     /// Builds a sort key from a command that groups by resource type first, then by verb.

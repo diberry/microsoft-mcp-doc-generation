@@ -4,7 +4,7 @@
 using Shared;
 using Xunit;
 
-namespace DocGeneration.Core.Shared.Tests;
+namespace Shared.Tests;
 
 /// <summary>
 /// Tests for FrontmatterUtility.StripFrontmatter — ensures YAML frontmatter
@@ -21,6 +21,7 @@ public class FrontmatterUtilityStripTests
         var input = "---\nms.topic: include\nms.date: 2026-03-20\n---\nDestructive: ❌ | Idempotent: ✅\n";
         var result = FrontmatterUtility.StripFrontmatter(input);
 
+        Assert.NotNull(result);
         Assert.Contains("Destructive: ❌ | Idempotent: ✅", result);
         Assert.DoesNotContain("ms.topic", result);
         Assert.DoesNotContain("---", result.Trim());
@@ -44,7 +45,7 @@ public class FrontmatterUtilityStripTests
     [Fact]
     public void StripFrontmatter_NullString_ReturnsNull()
     {
-        Assert.Null(FrontmatterUtility.StripFrontmatter(null!));
+        Assert.Null(FrontmatterUtility.StripFrontmatter(null));
     }
 
     [Fact]
@@ -53,6 +54,7 @@ public class FrontmatterUtilityStripTests
         var input = "---\nms.topic: include\n---\n";
         var result = FrontmatterUtility.StripFrontmatter(input);
 
+        Assert.NotNull(result);
         Assert.DoesNotContain("ms.topic", result.Trim());
     }
 
@@ -70,11 +72,12 @@ public class FrontmatterUtilityStripTests
             ""
         });
 
-        var result = FrontmatterUtility.StripFrontmatter(input).Trim();
+        var result = FrontmatterUtility.StripFrontmatter(input);
 
+        Assert.NotNull(result);
         Assert.Equal(
             "Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌",
-            result);
+            result.Trim());
     }
 
     // === New edge case tests ===
@@ -119,5 +122,23 @@ public class FrontmatterUtilityStripTests
 
         Assert.Equal("Content after empty frontmatter\n", result);
         Assert.DoesNotContain("---", result);
+    }
+
+    [Fact]
+    public void StripFrontmatter_BodyStartsWithIndentation_PreservesIndentation()
+    {
+        var input = "---\nms.topic: include\n---\n    indented content\n  also indented\n";
+        var result = FrontmatterUtility.StripFrontmatter(input);
+
+        Assert.Equal("    indented content\n  also indented\n", result);
+    }
+
+    [Fact]
+    public void StripFrontmatter_BodyStartsWithBlankLine_PreservesBlankLine()
+    {
+        var input = "---\nms.topic: include\n---\n\nContent after blank line\n";
+        var result = FrontmatterUtility.StripFrontmatter(input);
+
+        Assert.Equal("\nContent after blank line\n", result);
     }
 }
