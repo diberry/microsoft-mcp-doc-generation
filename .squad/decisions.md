@@ -238,7 +238,7 @@ Three separate `StripFrontmatter` implementations exist:
 **Priority:** Low — tracked as tech debt, not blocking.
 
 ### AD-020: User Workflow Directive — Mandatory Development Process
-**Date:** 2026-03-24
+**Date:** 2026-03-24 (updated 2026-03-29)
 **Author:** Dina Berry (via Copilot)
 **Status:** Active
 
@@ -247,8 +247,11 @@ Three separate `StripFrontmatter` implementations exist:
 2. Write failing tests (define the contract before implementation)
 3. Write implementation code (make the tests pass)
 4. Run tests (all must pass, no regressions)
-5. Full team review (architecture, implementation, documentation, tests)
-6. Notify Dina that work is ready for final review
+5. Create PR — **STOP. Do NOT merge.**
+6. Full team review (all 9 reviewers: Avery, Riley, Morgan, Quinn, Sage, Cameron, Parker, Reeve, Copilot)
+7. User (Dina) reviews and merges
+
+**NEVER merge a PR. Only Dina merges.** Sub-agents must NEVER call `gh pr merge`. Their job ends at step 5 (create PR). This applies to all agents — general-purpose, task, and squad members alike.
 
 **Never skip steps or present work before the full team review is complete.** This is a user-mandated workflow to ensure consistency, quality, and accountability across all squad work.
 

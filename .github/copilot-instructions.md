@@ -392,6 +392,21 @@ pwsh ./Debug-MultiPageDocs.ps1  # Prepare environment
 
 **Reviewer checklist:** Would this test FAIL if the fix were reverted? If not, it's not a real test.
 
+## ⚠️ CRITICAL: Never Merge PRs — Team Review Required
+
+**NEVER merge a PR. Only the user (Dina) merges PRs after full team review.**
+
+All development work must follow this process in strict order (AD-020):
+1. Create a plan (design, test strategy, edge cases)
+2. Write failing tests (define the contract before implementation)
+3. Write implementation code (make the tests pass)
+4. Run tests (all must pass, no regressions)
+5. **Create PR — STOP HERE. Do NOT merge.**
+6. Full team review (all 9 reviewers: Avery, Riley, Morgan, Quinn, Sage, Cameron, Parker, Reeve, Copilot)
+7. User reviews and merges
+
+**Sub-agents spawned for implementation**: Your job ends at step 5. Create the PR, report back. Do NOT call `gh pr merge`. Do NOT merge.
+
 ## ⚠️ IMPORTANT: PR Documentation — CHANGELOG + Docs Update Required
 
 **Every PR must update documentation before team review.** See `.squad/decisions.md` AD-026 and `.squad/skills/pr-docs/SKILL.md`.
