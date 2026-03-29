@@ -12,7 +12,6 @@ namespace ToolFamilyCleanup.Services;
 /// </summary>
 public class ToolReader
 {
-    private static readonly Regex FrontmatterRegex = new(@"^---\s*\n.*?\n---\s*\n", RegexOptions.Singleline | RegexOptions.Compiled);
     private static readonly Regex ToolNameRegex = new(@"^#\s+(.+)$", RegexOptions.Multiline | RegexOptions.Compiled);
     private static readonly Regex CommandRegex = new(@"<!--\s*@mcpcli\s+([^>]+?)\s*-->", RegexOptions.Compiled);
     
@@ -268,10 +267,8 @@ public class ToolReader
     /// <summary>
     /// Strips YAML frontmatter from markdown content.
     /// </summary>
-    private string StripFrontmatter(string content)
-    {
-        return FrontmatterRegex.Replace(content, string.Empty);
-    }
+    private static string StripFrontmatter(string content) =>
+        Shared.FrontmatterUtility.StripFrontmatter(content)!;
 
     /// <summary>
     /// Builds a sort key from a command that groups by resource type first, then by verb.

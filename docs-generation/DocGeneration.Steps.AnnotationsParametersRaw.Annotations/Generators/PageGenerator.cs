@@ -247,30 +247,6 @@ public class PageGenerator
     /// Strips YAML frontmatter (--- ... ---) from markdown content.
     /// Returns the content after the closing --- delimiter.
     /// </summary>
-    internal static string StripFrontmatter(string content)
-    {
-        if (string.IsNullOrEmpty(content) || !content.TrimStart().StartsWith("---"))
-            return content;
-
-        var lines = content.Split('\n');
-        var foundStart = false;
-
-        for (var i = 0; i < lines.Length; i++)
-        {
-            if (lines[i].Trim() == "---")
-            {
-                if (!foundStart)
-                {
-                    foundStart = true;
-                }
-                else
-                {
-                    // Return everything after the closing ---
-                    return string.Join('\n', lines.Skip(i + 1));
-                }
-            }
-        }
-
-        return content;
-    }
+    internal static string StripFrontmatter(string content) =>
+        Shared.FrontmatterUtility.StripFrontmatter(content)!;
 }

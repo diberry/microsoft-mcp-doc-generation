@@ -242,47 +242,8 @@ public class ComposedToolGeneratorService
         return $"<!-- Content not found: {contentType} -->";
     }
 
-    private static string StripFrontmatter(string content)
-    {
-        if (string.IsNullOrEmpty(content))
-            return content;
-
-        // Check if content starts with frontmatter (---)
-        if (!content.TrimStart().StartsWith("---"))
-            return content;
-
-        var lines = content.Split('\n');
-        int startLine = 0;
-        int endLine = -1;
-
-        // Find start of frontmatter
-        for (int i = 0; i < lines.Length; i++)
-        {
-            if (lines[i].Trim() == "---")
-            {
-                startLine = i;
-                break;
-            }
-        }
-
-        // Find end of frontmatter
-        for (int i = startLine + 1; i < lines.Length; i++)
-        {
-            if (lines[i].Trim() == "---")
-            {
-                endLine = i;
-                break;
-            }
-        }
-
-        if (endLine > startLine)
-        {
-            // Return content after frontmatter
-            return string.Join('\n', lines.Skip(endLine + 1)).TrimStart();
-        }
-
-        return content;
-    }
+    private static string StripFrontmatter(string content) =>
+        FrontmatterUtility.StripFrontmatter(content)!;
 
     private static string ComposeContent(
         string rawContent,
