@@ -323,6 +323,7 @@ To modify AI-generated content quality or style:
 | [docs/test-strategy.md](docs/test-strategy.md) | Test strategy for the documentation pipeline |
 | [docs/FINGERPRINTING.md](docs/FINGERPRINTING.md) | Baseline fingerprinting tool — snapshot and diff generated output |
 | [docs/acrolinx-compliance-strategy.md](docs/acrolinx-compliance-strategy.md) | Acrolinx compliance strategy for tool-family articles |
+| [docs-generation/DocGeneration.PromptRegression.Tests/README.md](docs-generation/DocGeneration.PromptRegression.Tests/README.md) | Prompt regression testing — baselines, metrics, comparison |
 
 ### AI & Content Generation
 
