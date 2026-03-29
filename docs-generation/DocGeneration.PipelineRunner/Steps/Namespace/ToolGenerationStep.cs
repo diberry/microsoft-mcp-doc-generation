@@ -28,7 +28,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             requiresAiConfiguration: true,
             createsFilteredCliView: true,
             expectedOutputs: ["tools-composed", "tools"],
-            postValidators: [new ToolGenerationOutputValidator()])
+            postValidators: [new ToolGenerationOutputValidator(), new ToolGenerationValidator()])
     {
     }
 

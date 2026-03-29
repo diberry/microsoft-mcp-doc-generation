@@ -18,6 +18,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **AI response archival infrastructure** — `AiResponseArchiveEntry` model and `AiResponseArchiveWriter` in `DocGeneration.Core.Shared`. Writes raw AI responses to `{outputDir}/ai-responses/{step}-{toolName}.json` for audit trail. Enabled by default; set `ARCHIVE_AI_RESPONSES=false` to disable. 15 new tests. (Issue #340)
+- **Post-validator for Step 3 (ToolGeneration)** — `ToolGenerationValidator` detects leaked pipeline template tokens, empty/truncated tool files (<50 chars), and content loss (>50% shorter than raw input). Registered alongside existing `ToolGenerationOutputValidator`. 18 new tests. (Issue #341)
 - **Token usage tracking models** — `TokenUsageRecord` and `TokenUsageSummary` types in `DocGeneration.Core.Shared` for tracking Azure OpenAI token consumption per AI call. `StepResultFile` v3 schema adds nullable `tokenUsage` field. Backward-compatible with v1/v2 results. 12 new tests. (Issue #212)
 
 - **Prompt versioning documentation** — `docs/prompt-versioning.md` covering `PromptHasher`, `PromptSnapshot`, `PromptTokenResolver`, `StepResultFile` v2 schema, usage examples, and future pipeline integration notes. Added to README navigation. (Issue #333)
