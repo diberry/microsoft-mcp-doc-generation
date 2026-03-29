@@ -63,7 +63,7 @@ public sealed record PromptSnapshot(
     string FileName,        // e.g. "system-prompt.txt"
     string ContentHash,     // SHA256 hex string (64 chars)
     long SizeBytes,         // Raw file size on disk
-    DateTimeOffset LastModified);
+    DateTimeOffset LastModified);  // File modification time in UTC
 ```
 
 ### PromptTokenResolver
