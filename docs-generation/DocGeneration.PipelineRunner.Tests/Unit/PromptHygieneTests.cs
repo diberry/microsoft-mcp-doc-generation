@@ -16,7 +16,7 @@ public class PromptHygieneTests
 
     public PromptHygieneTests()
     {
-        _docsGenDir = Path.Combine(FindProjectRoot(), "docs-generation");
+        _docsGenDir = DocGeneration.TestInfrastructure.ProjectRootFinder.FindDocsGenerationRoot();
     }
 
     // ── P1: No legacy duplicate prompts ─────────────────────────────
@@ -160,17 +160,5 @@ public class PromptHygieneTests
             "system-prompt.txt");
         Assert.True(File.Exists(path), $"Step 3 system prompt not found: {path}");
         return File.ReadAllText(path);
-    }
-
-    private static string FindProjectRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null)
-        {
-            if (File.Exists(Path.Combine(dir, "docs-generation.sln")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("Could not find project root (docs-generation.sln)");
     }
 }

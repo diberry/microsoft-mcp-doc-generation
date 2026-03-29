@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Consolidated FindProjectRoot() into shared test utility** — Created `DocGeneration.TestInfrastructure` project with canonical `ProjectRootFinder` class (`FindSolutionRoot()`, `FindDocsGenerationRoot()`). Replaced 7 duplicate implementations across 5 test projects. (Issue #334)
+
 ### Fixed
 
 - **TOCTOU race condition in PromptHasher** — `HashFileAsync` now captures file metadata before reading content and verifies the file wasn't modified during read, throwing `IOException` on mismatch. Prevents inconsistent snapshots where hash comes from old content but size/timestamp from new file. 3 new tests. (Issue #332)

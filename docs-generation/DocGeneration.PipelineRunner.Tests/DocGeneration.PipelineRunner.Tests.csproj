@@ -11,6 +11,7 @@
     <ProjectReference Include="..\DocGeneration.PipelineRunner\DocGeneration.PipelineRunner.csproj" />
     <ProjectReference Include="..\DocGeneration.Steps.ToolFamilyCleanup\DocGeneration.Steps.ToolFamilyCleanup.csproj" />
     <ProjectReference Include="..\DocGeneration.Steps.ToolGeneration.Composition\DocGeneration.Steps.ToolGeneration.Composition.csproj" />
+    <ProjectReference Include="..\DocGeneration.TestInfrastructure\DocGeneration.TestInfrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
