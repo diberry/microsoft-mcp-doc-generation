@@ -152,42 +152,6 @@ Apply these rules to all generated example prompt text — they directly impact 
 - **No wordy phrases:** Use "to" not "in order to", "use" not "utilize", "before" not "prior to".
 - **Brand compliance:** Use official Azure service names on first mention: "Azure Cosmos DB" not "CosmosDB", "Azure Kubernetes Service" not "AKS", "Microsoft Entra ID" not "Azure AD".
 
-## Mandatory Verification Process
-
-**REQUIRED STEPS - Execute for EVERY tool - NO EXCEPTIONS:**
-
-### STEP 1: Create Required Parameters Checklist
-```
-Required Parameters:
-☐ parameter-1-name
-☐ parameter-2-name
-☐ parameter-3-name
-```
-Do NOT proceed until you have listed EVERY parameter marked as "Required"
-
-### STEP 2: Generate Prompts
-Create the requested number of example prompts, ensuring each includes all parameters from your checklist
-
-### STEP 3: Verification Matrix - MANDATORY CHECK
-For EACH example prompt, create a verification checklist:
-
-```
-Prompt 1: "example prompt text here"
-✓ parameter-1-name present? YES/NO
-✓ parameter-2-name present? YES/NO
-✓ parameter-3-name present? YES/NO
-All required params present? YES or FAILED
-```
-
-**If ANY prompt shows "FAILED" or "NO" for ANY required parameter:**
-- STOP immediately
-- Do NOT submit this response
-- Regenerate that prompt to include the missing parameter
-- Re-verify before proceeding
-- Repeat until ALL prompts pass verification
-
-**Only proceed to output when ALL prompts have ALL required parameters verified as YES**
-
 ## COMMON-WORD PARAMETERS — Special Attention Required
 
 Some parameters have names that are common English words (e.g., `account`, `key`, `value`, `name`, `type`, `query`, `filter`, `content`, `label`). When these appear as REQUIRED parameters, the word may naturally appear in your sentence without actually referencing the parameter's VALUE. This is a critical mistake.
@@ -227,191 +191,43 @@ Some parameters have names that are common English words (e.g., `account`, `key`
 
 ## Output Format
 
-Return a JSON object with the tool name as the key and an array of plain example prompt strings as the value. Do NOT wrap prompts in extra quotes or add category prefixes - just return the natural language prompts directly as JSON strings.
+Return a JSON object with the tool name as the key and an array of plain example prompt strings as the value.
 
-**═══════════════════════════════════════════════════════════════**
-**CRITICAL: RESPONSE FORMAT REQUIREMENTS - READ THIS SECTION CAREFULLY**
-**═══════════════════════════════════════════════════════════════**
+**RESPONSE RULES — Output ONLY the JSON object:**
+- **NO PREAMBLE**: No lead-in text like "Here is the response:", "Here are some example prompts:", "Step 1:", etc.
+- **NO VERIFICATION TEXT**: Do not include checklists, verification steps, or reasoning
+- **NO CODE FENCES**: Do not wrap the JSON in ```json or ``` markers
+- **NO EXTRA TEXT**: No explanations before or after the JSON
 
-### YOUR RESPONSE MUST CONTAIN:
-
-1. **ONLY THE JSON OBJECT** - Nothing else
-2. **NO PREAMBLE** - Do not include ANY lead-in text such as "Here is the response:", "Here are some example commands:", "Here are some example prompts:", "Following are:", "Step 1:", etc.
-3. **NO VERIFICATION TEXT** - Do not include your checklist, verification steps, or reasoning
-4. **NO CODE FENCES** - Do not wrap the JSON in ```json or ``` markers
-5. **NO EXTRA TEXT** - Do not add explanations before or after the JSON
-
-### RESPONSE STRUCTURE (EXACT FORMAT):
-
+**JSON structure:**
 ```
 {
   "tool-command-name": [
     "example prompt 1",
-    "example prompt 2",
-    "example prompt 3",
-    "example prompt 4",
-    "..."
+    "example prompt 2"
   ]
 }
 ```
 
-### CORRECT EXAMPLE:
+**CHARACTER ENCODING RULES:**
+- **ONLY STRAIGHT QUOTES**: Use only straight quotes (') and (") — never smart/curly quotes (' ' " ")
+- **NO HTML ENTITIES**: Never write &quot; &apos; &#39; &#34; &amp; — always write plain characters
 
-```
-{
-  "storage account list": [
-    "Show me all storage accounts in resource group 'rg-prod'.",
-    "List the storage accounts in 'rg-dev'."
-  ]
-}
-```
+## Example Output
 
-### INCORRECT EXAMPLES (DO NOT DO THIS):
-
-❌ **With preamble (any variation):**
-```
-Here are the prompts:
-{
-  "storage account list": [...]
-}
-```
-
-❌ **Other preamble variations to AVOID:**
-```
-Here are some example commands:
-```
-```
-Here are some example prompts for using this tool:
-```
-```
-Following are the prompts:
-```
-
-❌ **With verification:**
-```
-Required Parameters:
-☐ --resource-group
-
-{
-  "storage account list": [...]
-}
-```
-
-❌ **With code fences:**
-```
-```json
-{
-  "storage account list": [...]
-}
-```
-```
-
-### CHARACTER ENCODING RULES:
-
-1. **ONLY STRAIGHT QUOTES**: Use ONLY straight quotes (') and (") - keyboard apostrophe and quote keys
-   - ❌ NEVER use smart/curly quotes: ' ' " "
-   - ❌ NEVER use typographical quotes (Unicode U+2018, U+2019, U+201C, U+201D)
-   - ✅ ALWAYS use straight quotes: ' and "
-
-2. **NO HTML ENTITIES**: Do NOT use HTML encoding of any kind
-   - ❌ NEVER write: &quot; &apos; &#39; &#34; &amp; &lt; &gt;
-   - ✅ ALWAYS write plain characters: " ' & < >
-
-3. **CHARACTER EXAMPLES**:
-   - For single quotes: type ' (straight apostrophe, not ' or ')
-   - For double quotes: type " (straight quote, not " or ")
-   - For JSON: write {"key":"value"} not {&quot;key&quot;:&quot;value&quot;}
-
-**═══════════════════════════════════════════════════════════════**
-**END OF RESPONSE FORMAT REQUIREMENTS**
-**═══════════════════════════════════════════════════════════════**
-
-## Example Workflow
-
-**Given a tool with required parameters:** `resource-group`, `storage-account-name`, `container-name`
-
-**STEP 1 - Checklist:**
-```
-Required Parameters:
-☐ resource-group
-☐ storage-account-name
-☐ container-name
-```
-
-**STEP 2 - Generate Prompts:**
-```
-Prompt 1: "Show me all blobs in container 'documents' from storage account 'mystorageacct' in resource group 'rg-prod'."
-Prompt 2: "What's in container 'mydata' for storage account 'companyacct' within resource group 'rg-dev'?"
-Prompt 3: "Get the contents of container 'archives' in storage account 'olddata' from resource group 'rg-test'."
-Prompt 4: "I need to see blobs in container 'backup' from storage account 'backupacct' in resource group 'rg-prod'."
-Prompt 5: "List all items in container 'images' under storage account 'mediaacct' within resource group 'rg-production'."
-```
-
-**STEP 3 - Verify:**
-```
-Prompt 1: "Show me all blobs in container 'documents' from storage account 'mystorageacct' in resource group 'rg-prod'."
-✓ resource-group: 'rg-prod' ✓
-✓ storage-account-name: 'mystorageacct' ✓
-✓ container-name: 'documents' ✓
-All required params: YES ✓
-
-Prompt 2: "What's in container 'mydata' for storage account 'companyacct' within resource group 'rg-dev'?"
-✓ resource-group: 'rg-dev' ✓
-✓ storage-account-name: 'companyacct' ✓
-✓ container-name: 'mydata' ✓
-All required params: YES ✓
-
-[... repeat for prompts 3, 4, 5 ...]
-
-ALL PROMPTS VERIFIED: Every prompt has all required parameters ✓
-```
-
-**Result:** All example prompts contain all required parameters ✓ - Response is valid
-
-## Example Output Format
+For a tool with required parameters `resource-group`, `storage-account-name`, `container-name`:
 
 ```json
 {
-  "tool-name-here": [
-    "Show me all storage containers in 'mystorageaccount' within resource group 'rg-prod'.",
-    "What containers exist in 'myaccount' under resource group 'rg-dev'?",
-    "Get the list of containers for 'storageacct123' in resource group 'rg-test'.",
-    "I need to see all containers in 'prod-storage' from resource group 'rg-production'.",
-    "Display containers available in 'devstorageacct' within resource group 'rg-development'."
+  "storage container list": [
+    "Show me all blobs in container 'documents' from storage account 'mystorageacct' in resource group 'rg-prod'.",
+    "What's in container 'mydata' for storage account 'companyacct' within resource group 'rg-dev'?",
+    "Get the contents of container 'archives' in storage account 'olddata' from resource group 'rg-test'.",
+    "I need to see blobs in container 'backup' from storage account 'backupacct' in resource group 'rg-prod'.",
+    "List all items in container 'images' under storage account 'mediaacct' within resource group 'rg-production'."
   ]
 }
 ```
 
-## FINAL QUALITY CHECK
-
-Before submitting your output, verify EVERY item:
-
-1. ✓ Created checklist of all required parameters
-2. ✓ **EVERY SINGLE PROMPT includes ALL required parameters** (non-negotiable)
-3. ✓ Created verification matrix for all prompts
-4. ✓ All parameter values wrapped in single quotes (e.g., 'my-storage', 'rg-prod', 'my-key')
-5. ✓ NO angle-bracket placeholders (e.g., <account>, <key>) — these are invisible in HTML
-6. ✓ NO backtick-wrapped placeholders (e.g., `account`) — these look like code
-7. ✓ Used realistic Azure resource names following naming conventions:
-   - Storage accounts: lowercase (e.g., 'mystorageacct', 'companydata2024')
-   - Resource groups: kebab-case (e.g., 'rg-prod', 'webapp-dev')
-   - Container registries: lowercase (e.g., 'myregistry', 'acrprod')
-   - Web apps: kebab-case (e.g., 'webapp-prod', 'api-staging')
-   - Containers/blobs: lowercase (e.g., 'documents', 'mycontainer')
-8. ✓ No curly/smart quotes (only straight quotes: ' ")
-9. ✓ No HTML entities (&quot; &apos; etc.)
-10. ✓ Natural, varied language across prompts
-11. ✓ Concise (10-25 words for simple tools, up to 50 words when many required parameters demand it)
-12. ✓ Prompts follow Microsoft Style Guide principles (clear, active voice, present tense)
-13. ✓ No category labels or prefixes (plain natural language only)
-14. ✓ Every prompt ends with proper punctuation (period for statements, question mark for questions)
-15. ✓ **VERIFICATION MATRIX COMPLETE**: All prompts verified to contain all required parameters
-
-**CRITICAL ASSERTION**: If you cannot verify that EVERY SINGLE PROMPT contains EVERY SINGLE REQUIRED PARAMETER, DO NOT SUBMIT. Regenerate until this is 100% true.
-
-**CRITICAL:** If you see any of these characters in your output, you made a mistake: ' ' " " &quot; &apos;
-
-Correct format uses only: ' and "
-
-**CRITICAL:** Verify realistic Azure resource names are used in single quotes, not generic values like 'myresource' or 'example'. Use specific, realistic names like 'my-storage', 'webapp-prod', 'my-registry', 'rg-production'.
+Note: Every prompt includes ALL 3 required parameters with single-quoted concrete values.
 
