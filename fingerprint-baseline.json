@@ -1,0 +1,2432 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-29T14:30:44.1747982Z",
+  "namespaces": {
+    "advisor": {
+      "fileCount": 71,
+      "totalSizeBytes": 4472881,
+      "directories": {
+        "annotations": {
+          "fileCount": 1,
+          "totalSizeBytes": 428
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340743
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "logs": {
+          "fileCount": 5,
+          "totalSizeBytes": 11011
+        },
+        "parameters": {
+          "fileCount": 2,
+          "totalSizeBytes": 1480
+        },
+        "reports": {
+          "fileCount": 1,
+          "totalSizeBytes": 157
+        },
+        "tool-family": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "tools": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "tools-raw": {
+          "fileCount": 1,
+          "totalSizeBytes": 451
+        }
+      },
+      "toolFamilyArticle": null,
+      "horizontalArticle": null,
+      "qualityMetrics": null
+    },
+    "applens": {
+      "fileCount": 90,
+      "totalSizeBytes": 4552364,
+      "directories": {
+        "annotations": {
+          "fileCount": 1,
+          "totalSizeBytes": 422
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341215
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 613
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 3880
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 1,
+          "totalSizeBytes": 432
+        },
+        "example-prompts-validation": {
+          "fileCount": 1,
+          "totalSizeBytes": 400
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 46537
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 5088
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 20525
+        },
+        "parameters": {
+          "fileCount": 2,
+          "totalSizeBytes": 2317
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 665
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 1886
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 3068
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 838
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 230
+        },
+        "tools": {
+          "fileCount": 1,
+          "totalSizeBytes": 2252
+        },
+        "tools-composed": {
+          "fileCount": 1,
+          "totalSizeBytes": 2278
+        },
+        "tools-raw": {
+          "fileCount": 1,
+          "totalSizeBytes": 1107
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "applens.md",
+        "sizeBytes": 3068,
+        "wordCount": 346,
+        "sectionCount": 3,
+        "h2Headings": [
+          "## Diagnose applens resource",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 1
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-applens.md",
+        "sizeBytes": 5088,
+        "wordCount": 600,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure AppLens",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0
+      }
+    },
+    "appservice": {
+      "fileCount": 379,
+      "totalSizeBytes": 4744537,
+      "directories": {
+        "annotations": {
+          "fileCount": 7,
+          "totalSizeBytes": 3135
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341214
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "critical-failures": {
+          "fileCount": 1,
+          "totalSizeBytes": 1891
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 7,
+          "totalSizeBytes": 4934
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 7,
+          "totalSizeBytes": 28377
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 7,
+          "totalSizeBytes": 3624
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 72071
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 51871
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 6972
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 40329
+        },
+        "parameters": {
+          "fileCount": 14,
+          "totalSizeBytes": 17507
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 668
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 1907
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 14999
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 885
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 189
+        },
+        "tools": {
+          "fileCount": 7,
+          "totalSizeBytes": 15319
+        },
+        "tools-composed": {
+          "fileCount": 7,
+          "totalSizeBytes": 14746
+        },
+        "tools-raw": {
+          "fileCount": 7,
+          "totalSizeBytes": 5288
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "appservice.md",
+        "sizeBytes": 14999,
+        "wordCount": 2010,
+        "sectionCount": 9,
+        "h2Headings": [
+          "## Create appservice database",
+          "## Diagnose webapp diagnostic",
+          "## Get webapp deployment",
+          "## Get appservice webapp",
+          "## Get appsettings webapp settings",
+          "## Get webapp diagnostics",
+          "## Update appsettings webapp settings",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 7
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-appservice.md",
+        "sizeBytes": 6972,
+        "wordCount": 845,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure App Service",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 1
+      }
+    },
+    "azuremigrate": {
+      "fileCount": 333,
+      "totalSizeBytes": 4691204,
+      "directories": {
+        "annotations": {
+          "fileCount": 2,
+          "totalSizeBytes": 936
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340741
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 3213
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 14215
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 2,
+          "totalSizeBytes": 2901
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 71898
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 49387
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 6089
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 28218
+        },
+        "parameters": {
+          "fileCount": 4,
+          "totalSizeBytes": 10497
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 751
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 1921
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 12923
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 954
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 181
+        },
+        "tools": {
+          "fileCount": 2,
+          "totalSizeBytes": 12021
+        },
+        "tools-composed": {
+          "fileCount": 2,
+          "totalSizeBytes": 11014
+        },
+        "tools-raw": {
+          "fileCount": 2,
+          "totalSizeBytes": 4733
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "azuremigrate.md",
+        "sizeBytes": 12923,
+        "wordCount": 1679,
+        "sectionCount": 4,
+        "h2Headings": [
+          "## Getguidance azuremigrate platformlandingzone",
+          "## Request azuremigrate platformlandingzone",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.date",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 2
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-azuremigrate.md",
+        "sizeBytes": 6089,
+        "wordCount": 704,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure Migrate",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 1
+      }
+    },
+    "cloudarchitect": {
+      "fileCount": 90,
+      "totalSizeBytes": 4577956,
+      "directories": {
+        "annotations": {
+          "fileCount": 1,
+          "totalSizeBytes": 411
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341215
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 545
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 6760
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 1,
+          "totalSizeBytes": 384
+        },
+        "example-prompts-validation": {
+          "fileCount": 1,
+          "totalSizeBytes": 324
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 46747
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 5301
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 22143
+        },
+        "parameters": {
+          "fileCount": 2,
+          "totalSizeBytes": 10391
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 672
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 1935
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 7472
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 935
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 198
+        },
+        "tools": {
+          "fileCount": 1,
+          "totalSizeBytes": 6670
+        },
+        "tools-composed": {
+          "fileCount": 1,
+          "totalSizeBytes": 6070
+        },
+        "tools-raw": {
+          "fileCount": 1,
+          "totalSizeBytes": 1172
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "cloudarchitect.md",
+        "sizeBytes": 7472,
+        "wordCount": 673,
+        "sectionCount": 3,
+        "h2Headings": [
+          "## Get cloudarchitect design",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 1
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-cloudarchitect.md",
+        "sizeBytes": 5301,
+        "wordCount": 608,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure Cloud Architect",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0
+      }
+    },
+    "compute": {
+      "fileCount": 428,
+      "totalSizeBytes": 4958434,
+      "directories": {
+        "annotations": {
+          "fileCount": 12,
+          "totalSizeBytes": 4905
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341215
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "critical-failures": {
+          "fileCount": 1,
+          "totalSizeBytes": 1858
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 13,
+          "totalSizeBytes": 13115
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 13,
+          "totalSizeBytes": 66468
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 13,
+          "totalSizeBytes": 10593
+        },
+        "example-prompts-validation": {
+          "fileCount": 236,
+          "totalSizeBytes": 72210
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 56351
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 7367
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 78410
+        },
+        "parameters": {
+          "fileCount": 24,
+          "totalSizeBytes": 56164
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 676
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 2361
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 38093
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 1013
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 199
+        },
+        "tools": {
+          "fileCount": 12,
+          "totalSizeBytes": 40057
+        },
+        "tools-composed": {
+          "fileCount": 12,
+          "totalSizeBytes": 38478
+        },
+        "tools-raw": {
+          "fileCount": 12,
+          "totalSizeBytes": 10290
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "compute.md",
+        "sizeBytes": 38093,
+        "wordCount": 5484,
+        "sectionCount": 15,
+        "h2Headings": [
+          "## Create compute disk",
+          "## Create virtual machine",
+          "## Create virtual machine scale set",
+          "## Delete compute disk",
+          "## Delete virtual machine",
+          "## Delete virtual machine scale set",
+          "## Get compute disk",
+          "## Get virtual machine",
+          "## Get virtual machine scale set",
+          "## Update compute disk",
+          "## Update virtual machine",
+          "## Update virtual machine scale set",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 12
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-compute.md",
+        "sizeBytes": 7367,
+        "wordCount": 970,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure Virtual Machines",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0.5789473684210527
+      }
+    },
+    "cosmos": {
+      "fileCount": 327,
+      "totalSizeBytes": 4633389,
+      "directories": {
+        "annotations": {
+          "fileCount": 2,
+          "totalSizeBytes": 841
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341215
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 1047
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 7518
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 2,
+          "totalSizeBytes": 696
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 70512
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "logs": {
+          "fileCount": 8,
+          "totalSizeBytes": 73098
+        },
+        "parameters": {
+          "fileCount": 4,
+          "totalSizeBytes": 4572
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 664
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 4682
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 925
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 185
+        },
+        "tools": {
+          "fileCount": 2,
+          "totalSizeBytes": 4178
+        },
+        "tools-composed": {
+          "fileCount": 2,
+          "totalSizeBytes": 3465
+        },
+        "tools-raw": {
+          "fileCount": 2,
+          "totalSizeBytes": 1180
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "cosmos.md",
+        "sizeBytes": 4682,
+        "wordCount": 587,
+        "sectionCount": 4,
+        "h2Headings": [
+          "## Get Cosmos DB accountses",
+          "## Query database container item",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 2
+      },
+      "horizontalArticle": null,
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 1
+      }
+    },
+    "deploy": {
+      "fileCount": 372,
+      "totalSizeBytes": 4756186,
+      "directories": {
+        "annotations": {
+          "fileCount": 5,
+          "totalSizeBytes": 2108
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341215
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 5,
+          "totalSizeBytes": 2398
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 5,
+          "totalSizeBytes": 28364
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 5,
+          "totalSizeBytes": 1397
+        },
+        "example-prompts-validation": {
+          "fileCount": 247,
+          "totalSizeBytes": 74352
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 53213
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 6708
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 30093
+        },
+        "parameters": {
+          "fileCount": 10,
+          "totalSizeBytes": 32490
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 664
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 2355
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 13119
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 954
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 209
+        },
+        "tools": {
+          "fileCount": 5,
+          "totalSizeBytes": 21714
+        },
+        "tools-composed": {
+          "fileCount": 5,
+          "totalSizeBytes": 20965
+        },
+        "tools-raw": {
+          "fileCount": 5,
+          "totalSizeBytes": 5257
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "deploy.md",
+        "sizeBytes": 13119,
+        "wordCount": 1741,
+        "sectionCount": 7,
+        "h2Headings": [
+          "## Generate architecture diagram",
+          "## Get app logs",
+          "## Get iac rules",
+          "## Get pipeline guidance",
+          "## Get deploy plan",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 5
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-deploy.md",
+        "sizeBytes": 6708,
+        "wordCount": 841,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure Deploy",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0.75
+      }
+    },
+    "deviceregistry": {
+      "fileCount": 90,
+      "totalSizeBytes": 4545856,
+      "directories": {
+        "annotations": {
+          "fileCount": 1,
+          "totalSizeBytes": 435
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340741
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 508
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 3456
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 1,
+          "totalSizeBytes": 355
+        },
+        "example-prompts-validation": {
+          "fileCount": 1,
+          "totalSizeBytes": 339
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 44373
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 5421
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 19630
+        },
+        "parameters": {
+          "fileCount": 2,
+          "totalSizeBytes": 1487
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 672
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 1935
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 2771
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 893
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 241
+        },
+        "tools": {
+          "fileCount": 1,
+          "totalSizeBytes": 1695
+        },
+        "tools-composed": {
+          "fileCount": 1,
+          "totalSizeBytes": 1585
+        },
+        "tools-raw": {
+          "fileCount": 1,
+          "totalSizeBytes": 708
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "deviceregistry.md",
+        "sizeBytes": 2771,
+        "wordCount": 284,
+        "sectionCount": 3,
+        "h2Headings": [
+          "## Get deviceregistry namespaces",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.date",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 1
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-deviceregistry.md",
+        "sizeBytes": 5421,
+        "wordCount": 624,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure Device Registry",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0
+      }
+    },
+    "fileshares": {
+      "fileCount": 446,
+      "totalSizeBytes": 4858854,
+      "directories": {
+        "annotations": {
+          "fileCount": 14,
+          "totalSizeBytes": 6100
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341215
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "critical-failures": {
+          "fileCount": 1,
+          "totalSizeBytes": 1891
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 14,
+          "totalSizeBytes": 8646
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 4,
+          "totalSizeBytes": 1564
+        },
+        "example-prompts-prompts": {
+          "fileCount": 14,
+          "totalSizeBytes": 46755
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 14,
+          "totalSizeBytes": 6068
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 72872
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 54239
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 8250
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 65898
+        },
+        "parameters": {
+          "fileCount": 28,
+          "totalSizeBytes": 34597
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 679
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 1907
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 26878
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 1376
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 185
+        },
+        "tools": {
+          "fileCount": 14,
+          "totalSizeBytes": 29308
+        },
+        "tools-composed": {
+          "fileCount": 14,
+          "totalSizeBytes": 24585
+        },
+        "tools-raw": {
+          "fileCount": 14,
+          "totalSizeBytes": 7230
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "fileshares.md",
+        "sizeBytes": 26878,
+        "wordCount": 3706,
+        "sectionCount": 16,
+        "h2Headings": [
+          "## Check fileshare",
+          "## Create fileshare",
+          "## Create fileshare snapshot",
+          "## Delete fileshare",
+          "## Delete fileshare snapshot",
+          "## Get fileshare",
+          "## Get fileshare private endpoint connection",
+          "## Get fileshare snapshot",
+          "## Get fileshares limits",
+          "## Get fileshares recommendations",
+          "## Update fileshare private endpoint connection",
+          "## Update fileshare snapshot",
+          "## Update fileshare",
+          "## Get fileshares usage",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 14
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-fileshares.md",
+        "sizeBytes": 8250,
+        "wordCount": 1030,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure File Shares",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0.6666666666666666
+      }
+    },
+    "functions": {
+      "fileCount": 88,
+      "totalSizeBytes": 4492225,
+      "directories": {
+        "annotations": {
+          "fileCount": 3,
+          "totalSizeBytes": 1275
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340741
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "critical-failures": {
+          "fileCount": 1,
+          "totalSizeBytes": 2864
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 866
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 6075
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 2,
+          "totalSizeBytes": 532
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "logs": {
+          "fileCount": 7,
+          "totalSizeBytes": 15390
+        },
+        "parameters": {
+          "fileCount": 6,
+          "totalSizeBytes": 3370
+        },
+        "reports": {
+          "fileCount": 1,
+          "totalSizeBytes": 157
+        },
+        "tool-family": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "tools": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "tools-raw": {
+          "fileCount": 3,
+          "totalSizeBytes": 2344
+        }
+      },
+      "toolFamilyArticle": null,
+      "horizontalArticle": null,
+      "qualityMetrics": null
+    },
+    "group": {
+      "fileCount": 330,
+      "totalSizeBytes": 4575101,
+      "directories": {
+        "annotations": {
+          "fileCount": 2,
+          "totalSizeBytes": 799
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341216
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 725
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 6300
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 2,
+          "totalSizeBytes": 367
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 70262
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "logs": {
+          "fileCount": 9,
+          "totalSizeBytes": 19899
+        },
+        "parameters": {
+          "fileCount": 4,
+          "totalSizeBytes": 2462
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 663
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 2355
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 3662
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 983
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 205
+        },
+        "tools": {
+          "fileCount": 2,
+          "totalSizeBytes": 2733
+        },
+        "tools-composed": {
+          "fileCount": 2,
+          "totalSizeBytes": 2591
+        },
+        "tools-raw": {
+          "fileCount": 2,
+          "totalSizeBytes": 1268
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "group.md",
+        "sizeBytes": 3662,
+        "wordCount": 423,
+        "sectionCount": 4,
+        "h2Headings": [
+          "## Get resource groups subscriptions",
+          "## Get group resources",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 2
+      },
+      "horizontalArticle": null,
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0
+      }
+    },
+    "keyvault": {
+      "fileCount": 99,
+      "totalSizeBytes": 4513254,
+      "directories": {
+        "annotations": {
+          "fileCount": 8,
+          "totalSizeBytes": 3327
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340743
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "logs": {
+          "fileCount": 5,
+          "totalSizeBytes": 30605
+        },
+        "parameters": {
+          "fileCount": 16,
+          "totalSizeBytes": 14033
+        },
+        "reports": {
+          "fileCount": 1,
+          "totalSizeBytes": 157
+        },
+        "tool-family": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "tools": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "tools-raw": {
+          "fileCount": 8,
+          "totalSizeBytes": 5778
+        }
+      },
+      "toolFamilyArticle": null,
+      "horizontalArticle": null,
+      "qualityMetrics": null
+    },
+    "monitor": {
+      "fileCount": 467,
+      "totalSizeBytes": 4885686,
+      "directories": {
+        "annotations": {
+          "fileCount": 16,
+          "totalSizeBytes": 7035
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340741
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "critical-failures": {
+          "fileCount": 2,
+          "totalSizeBytes": 11872
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 19,
+          "totalSizeBytes": 12029
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 19,
+          "totalSizeBytes": 80648
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 19,
+          "totalSizeBytes": 8634
+        },
+        "example-prompts-validation": {
+          "fileCount": 238,
+          "totalSizeBytes": 73537
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "logs": {
+          "fileCount": 8,
+          "totalSizeBytes": 66808
+        },
+        "parameters": {
+          "fileCount": 32,
+          "totalSizeBytes": 44655
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 699
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 35654
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 986
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 187
+        },
+        "tools": {
+          "fileCount": 16,
+          "totalSizeBytes": 37057
+        },
+        "tools-composed": {
+          "fileCount": 16,
+          "totalSizeBytes": 34280
+        },
+        "tools-raw": {
+          "fileCount": 16,
+          "totalSizeBytes": 12253
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "monitor.md",
+        "sizeBytes": 35654,
+        "wordCount": 4791,
+        "sectionCount": 18,
+        "h2Headings": [
+          "## Createorupdate monitor webtests",
+          "## Definitions monitor metrics",
+          "## Get healthmodels entity",
+          "## Get monitor webtests",
+          "## Get Learning Resource monitor instrumentation",
+          "## Get monitor activitylogs",
+          "## Get monitor tables",
+          "## Get table types",
+          "## Get monitor workspaces",
+          "## Orchestrator Next monitor instrumentation",
+          "## Orchestrator Start monitor instrumentation",
+          "## Query monitor metrics",
+          "## Query resource log",
+          "## Query workspace log",
+          "## Send Brownfield Analysis monitor instrumentation",
+          "## Send Enhancement Select monitor instrumentation",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 16
+      },
+      "horizontalArticle": null,
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0.75
+      }
+    },
+    "postgres": {
+      "fileCount": 369,
+      "totalSizeBytes": 4716091,
+      "directories": {
+        "annotations": {
+          "fileCount": 6,
+          "totalSizeBytes": 2583
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340744
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 6,
+          "totalSizeBytes": 2695
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 6,
+          "totalSizeBytes": 21716
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 6,
+          "totalSizeBytes": 1469
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 71393
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 49908
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 6820
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 39406
+        },
+        "parameters": {
+          "fileCount": 12,
+          "totalSizeBytes": 18197
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 666
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 2367
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 12549
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 986
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 200
+        },
+        "tools": {
+          "fileCount": 6,
+          "totalSizeBytes": 12126
+        },
+        "tools-composed": {
+          "fileCount": 6,
+          "totalSizeBytes": 10579
+        },
+        "tools-raw": {
+          "fileCount": 6,
+          "totalSizeBytes": 3076
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "postgres.md",
+        "sizeBytes": 12549,
+        "wordCount": 1728,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## Get server config",
+          "## Get server param",
+          "## Get table schema",
+          "## Get postgresql servers databaseses",
+          "## Query postgres database",
+          "## Update server param",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 6
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-postgres.md",
+        "sizeBytes": 6820,
+        "wordCount": 853,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure Database for PostgreSQL",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0
+      }
+    },
+    "quota": {
+      "fileCount": 333,
+      "totalSizeBytes": 4634240,
+      "directories": {
+        "annotations": {
+          "fileCount": 2,
+          "totalSizeBytes": 835
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340741
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 718
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 7103
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 2,
+          "totalSizeBytes": 347
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 70235
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 44476
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 5229
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 23767
+        },
+        "parameters": {
+          "fileCount": 4,
+          "totalSizeBytes": 5380
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 663
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 1872
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 4841
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 1017
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 178
+        },
+        "tools": {
+          "fileCount": 2,
+          "totalSizeBytes": 3800
+        },
+        "tools-composed": {
+          "fileCount": 2,
+          "totalSizeBytes": 3371
+        },
+        "tools-raw": {
+          "fileCount": 2,
+          "totalSizeBytes": 1056
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "quota.md",
+        "sizeBytes": 4841,
+        "wordCount": 541,
+        "sectionCount": 4,
+        "h2Headings": [
+          "## Check quota usage",
+          "## Get region availabilities",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.date",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 2
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-quota.md",
+        "sizeBytes": 5229,
+        "wordCount": 641,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure Quota",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0
+      }
+    },
+    "resourcehealth": {
+      "fileCount": 327,
+      "totalSizeBytes": 4588372,
+      "directories": {
+        "annotations": {
+          "fileCount": 2,
+          "totalSizeBytes": 909
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4341213
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 1235
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 2,
+          "totalSizeBytes": 8569
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 2,
+          "totalSizeBytes": 948
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 72306
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "logs": {
+          "fileCount": 8,
+          "totalSizeBytes": 19498
+        },
+        "parameters": {
+          "fileCount": 4,
+          "totalSizeBytes": 5706
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 672
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 5857
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 949
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 220
+        },
+        "tools": {
+          "fileCount": 2,
+          "totalSizeBytes": 5238
+        },
+        "tools-composed": {
+          "fileCount": 2,
+          "totalSizeBytes": 4639
+        },
+        "tools-raw": {
+          "fileCount": 2,
+          "totalSizeBytes": 1802
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "resourcehealth.md",
+        "sizeBytes": 5857,
+        "wordCount": 721,
+        "sectionCount": 4,
+        "h2Headings": [
+          "## Get resourcehealth availability-status",
+          "## Get resourcehealth health-eventses",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 2
+      },
+      "horizontalArticle": null,
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 0
+      }
+    },
+    "search": {
+      "fileCount": 369,
+      "totalSizeBytes": 4699444,
+      "directories": {
+        "annotations": {
+          "fileCount": 6,
+          "totalSizeBytes": 2505
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340742
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 6,
+          "totalSizeBytes": 3993
+        },
+        "example-prompts-e2e-errors": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "example-prompts-prompts": {
+          "fileCount": 6,
+          "totalSizeBytes": 21053
+        },
+        "example-prompts-raw-output": {
+          "fileCount": 6,
+          "totalSizeBytes": 2961
+        },
+        "example-prompts-validation": {
+          "fileCount": 235,
+          "totalSizeBytes": 70792
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "horizontal-article-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 50917
+        },
+        "horizontal-articles": {
+          "fileCount": 1,
+          "totalSizeBytes": 6697
+        },
+        "logs": {
+          "fileCount": 10,
+          "totalSizeBytes": 31904
+        },
+        "parameters": {
+          "fileCount": 12,
+          "totalSizeBytes": 8265
+        },
+        "reports": {
+          "fileCount": 2,
+          "totalSizeBytes": 664
+        },
+        "skills-relevance": {
+          "fileCount": 2,
+          "totalSizeBytes": 2932
+        },
+        "tool-family": {
+          "fileCount": 1,
+          "totalSizeBytes": 11198
+        },
+        "tool-family-metadata": {
+          "fileCount": 1,
+          "totalSizeBytes": 905
+        },
+        "tool-family-related": {
+          "fileCount": 1,
+          "totalSizeBytes": 182
+        },
+        "tools": {
+          "fileCount": 6,
+          "totalSizeBytes": 11244
+        },
+        "tools-composed": {
+          "fileCount": 6,
+          "totalSizeBytes": 9822
+        },
+        "tools-raw": {
+          "fileCount": 6,
+          "totalSizeBytes": 4057
+        }
+      },
+      "toolFamilyArticle": {
+        "fileName": "search.md",
+        "sizeBytes": 11198,
+        "wordCount": 1491,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## Get search index",
+          "## Get knowledge base",
+          "## Get knowledge source",
+          "## Get search services",
+          "## Query search index",
+          "## Retrieve knowledge base",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "ms.date",
+          "ms.service",
+          "ms.topic",
+          "tool_count",
+          "author",
+          "ms.author",
+          "ms.custom",
+          "content_well_notification"
+        ],
+        "toolCount": 6
+      },
+      "horizontalArticle": {
+        "fileName": "horizontal-article-search.md",
+        "sizeBytes": 6697,
+        "wordCount": 852,
+        "sectionCount": 8,
+        "h2Headings": [
+          "## What is the Azure MCP Server?",
+          "## Prerequisites",
+          "## Where can you use Azure MCP Server?",
+          "## Available tools for Azure AI Search",
+          "## Get started",
+          "## Best practices",
+          "## Related content"
+        ],
+        "frontmatterFields": [
+          "title",
+          "description",
+          "author",
+          "ms.author",
+          "ms.service",
+          "ms.topic",
+          "ms.date",
+          "content_well_notification",
+          "ms.custom"
+        ],
+        "toolCount": null
+      },
+      "qualityMetrics": {
+        "futureTenseViolations": 0,
+        "fabricatedUrlCount": 0,
+        "brandingViolations": 0,
+        "contractionRate": 1
+      }
+    },
+    "storage": {
+      "fileCount": 95,
+      "totalSizeBytes": 4511911,
+      "directories": {
+        "annotations": {
+          "fileCount": 7,
+          "totalSizeBytes": 2876
+        },
+        "cli": {
+          "fileCount": 5,
+          "totalSizeBytes": 4340743
+        },
+        "common-general": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "e2e-test-prompts": {
+          "fileCount": 1,
+          "totalSizeBytes": 104149
+        },
+        "example-prompts": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "h2-headings": {
+          "fileCount": 55,
+          "totalSizeBytes": 14462
+        },
+        "logs": {
+          "fileCount": 5,
+          "totalSizeBytes": 28593
+        },
+        "parameters": {
+          "fileCount": 14,
+          "totalSizeBytes": 15714
+        },
+        "reports": {
+          "fileCount": 1,
+          "totalSizeBytes": 157
+        },
+        "tool-family": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "tools": {
+          "fileCount": 0,
+          "totalSizeBytes": 0
+        },
+        "tools-raw": {
+          "fileCount": 7,
+          "totalSizeBytes": 5217
+        }
+      },
+      "toolFamilyArticle": null,
+      "horizontalArticle": null,
+      "qualityMetrics": null
+    }
+  }
+}
