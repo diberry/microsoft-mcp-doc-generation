@@ -1,0 +1,14 @@
+# Changelog
+
+All notable changes to the Azure MCP Documentation Generator are documented here.
+
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+### Added
+
+- **Baseline fingerprinting tool** (`DocGeneration.Tools.Fingerprint`) — Snapshot and diff generated output for regression detection. Supports `--snapshot` and `--diff` modes with CI-gatable exit codes. 58 tests. (PR #324, Issue #209)
+- **Comprehensive README documentation navigation** — 22 documents organized across 8 categories replacing flat 6-link list. (PR #325)
+- **Prompt review P0/P1 fixes** — Removed redundancy, dead code, and fixed bugs across pipeline prompts. (PR #323, Issue #294)
+- **Shared Acrolinx rules** — Standardized compliance rules across all AI system prompts. (PR #323)

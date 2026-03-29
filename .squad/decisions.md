@@ -465,6 +465,27 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 
 ---
 
+### AD-026: PR Documentation Skill — CHANGELOG + Docs Update Required
+**Date:** 2026-03-29
+**Author:** Dina Berry (via Copilot)
+**Status:** Active
+**Extends:** AD-004
+
+**Every PR must run the `pr-docs` skill before team review.** This means:
+
+1. **CHANGELOG.md** must be updated with a user-facing entry under `## [Unreleased]`
+2. **User-facing documentation** must be updated based on the documentation routing table in `.squad/skills/pr-docs/SKILL.md`
+3. **README navigation** must be updated if new documentation files are created
+
+**Exemptions** (must be stated in PR comment):
+- Test-only changes: "Test coverage addition, no user-facing change"
+- Internal refactors: "Internal refactor, no behavior change"
+- Docs-only PRs: The PR itself IS the docs update (still needs CHANGELOG entry)
+
+**Enforcement:** The `pr-docs` skill is called before the `pr-review` skill. Reeve validates completeness during team review.
+
+---
+
 ## Governance
 
 - All meaningful changes require team consensus
