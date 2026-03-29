@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace Shared;
@@ -30,5 +32,20 @@ public static class StepResultWriter
         var filePath = Path.Combine(directory, FileName);
         var json = JsonSerializer.Serialize(result, SerializerOptions);
         File.WriteAllText(filePath, json);
+    }
+
+    /// <summary>
+    /// Converts <see cref="PromptSnapshot"/> records to <see cref="StepResultFile.PromptSnapshotRecord"/>
+    /// and attaches them to the result. Sets version to 2.
+    /// </summary>
+    public static void AddPromptSnapshots(StepResultFile result, IEnumerable<PromptSnapshot> snapshots)
+    {
+        result.Version = 2;
+        result.PromptSnapshots = snapshots.Select(s => new StepResultFile.PromptSnapshotRecord
+        {
+            FileName = s.FileName,
+            ContentHash = s.ContentHash,
+            SizeBytes = s.SizeBytes
+        }).ToList();
     }
 }
