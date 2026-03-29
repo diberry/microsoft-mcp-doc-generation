@@ -17,4 +17,10 @@
     <ProjectReference Include="../DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
     <ProjectReference Include="../DocGeneration.Core.GenerativeAI/DocGeneration.Core.GenerativeAI.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shared-acrolinx-rules.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>data\shared-acrolinx-rules.txt</Link>
+    </None>
+  </ItemGroup>
 </Project>

@@ -89,6 +89,8 @@ public class PromptContentTests
     {
         var fullPath = Path.Combine(DocsGenRoot, relativePath);
         Assert.True(File.Exists(fullPath), $"Prompt file missing: {relativePath}");
-        return File.ReadAllText(fullPath);
+        var content = File.ReadAllText(fullPath);
+        var dataDir = Path.Combine(DocsGenRoot, "data");
+        return Shared.PromptTokenResolver.Resolve(content, dataDir);
     }
 }

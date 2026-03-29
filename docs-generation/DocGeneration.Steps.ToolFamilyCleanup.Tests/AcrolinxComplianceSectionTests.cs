@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Shared;
 using Xunit;
 
 namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
@@ -35,7 +36,9 @@ public class AcrolinxComplianceSectionTests
     {
         var path = Path.Combine(ProjectRoot, "docs-generation", project, folder, file);
         Assert.True(File.Exists(path), $"Prompt file not found: {path}");
-        return File.ReadAllText(path);
+        var content = File.ReadAllText(path);
+        var dataDir = Path.Combine(ProjectRoot, "docs-generation", "data");
+        return PromptTokenResolver.Resolve(content, dataDir);
     }
 
     // ── Present Tense ───────────────────────────────────────────────
@@ -206,6 +209,8 @@ public class AcrolinxComplianceSectionTests
     {
         var content = File.ReadAllText(Path.Combine(
             ProjectRoot, "docs-generation", "DocGeneration.Steps.ToolGeneration.Improvements", "prompts", "system-prompt.txt"));
+        var dataDir = Path.Combine(ProjectRoot, "docs-generation", "data");
+        content = Shared.PromptTokenResolver.Resolve(content, dataDir);
         Assert.Contains("present tense", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("contraction", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("active voice", content, StringComparison.OrdinalIgnoreCase);
@@ -216,6 +221,8 @@ public class AcrolinxComplianceSectionTests
     {
         var content = File.ReadAllText(Path.Combine(
             ProjectRoot, "docs-generation", "DocGeneration.Steps.ToolFamilyCleanup", "prompts", "tool-family-cleanup-system-prompt.txt"));
+        var dataDir = Path.Combine(ProjectRoot, "docs-generation", "data");
+        content = Shared.PromptTokenResolver.Resolve(content, dataDir);
         Assert.Contains("present tense", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("contraction", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("active voice", content, StringComparison.OrdinalIgnoreCase);

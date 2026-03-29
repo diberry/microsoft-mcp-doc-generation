@@ -3,6 +3,7 @@ using System.Text.Json;
 using ExamplePromptGeneratorStandalone.Models;
 using ExamplePromptGeneratorStandalone.Utilities;
 using GenerativeAI;
+using Shared;
 
 namespace ExamplePromptGeneratorStandalone.Generators;
 
@@ -38,6 +39,7 @@ public sealed class ExamplePromptGenerator
             }
 
             _systemPrompt = File.ReadAllText(systemPromptPath);
+            _systemPrompt = PromptTokenResolver.Resolve(_systemPrompt, Path.Combine(AppContext.BaseDirectory, "data"));
             _userPromptTemplate = File.ReadAllText(userPromptPath);
             Console.WriteLine("  ✅ Prompt templates loaded\n");
         }

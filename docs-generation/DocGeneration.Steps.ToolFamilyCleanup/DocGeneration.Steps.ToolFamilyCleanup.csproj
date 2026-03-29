@@ -20,4 +20,10 @@
       <Link>prompts\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shared-acrolinx-rules.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>data\shared-acrolinx-rules.txt</Link>
+    </None>
+  </ItemGroup>
 </Project>

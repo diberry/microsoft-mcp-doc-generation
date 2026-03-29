@@ -208,6 +208,7 @@ public class CleanupGenerator
         }
 
         _systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
+        _systemPrompt = PromptTokenResolver.Resolve(_systemPrompt, Path.Combine(AppContext.BaseDirectory, "data"));
         _userPromptTemplate = await File.ReadAllTextAsync(userPromptPath);
 
         Console.WriteLine("✓ Prompts loaded");
