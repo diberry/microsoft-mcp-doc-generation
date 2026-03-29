@@ -14,3 +14,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Comprehensive README documentation navigation** — 22 documents organized across 8 categories replacing flat 6-link list. (PR #325)
 - **Prompt review P0/P1 fixes** — Removed redundancy, dead code, and fixed bugs across pipeline prompts. (PR #323, Issue #294)
 - **Shared Acrolinx rules** — Standardized compliance rules across all AI system prompts. (PR #323)
+- **Prompt hygiene tests** — 14 cross-cutting tests enforcing no legacy duplicate prompts, shared Acrolinx rules in all AI steps, and Step 3 scope boundaries. (Issue #294)
+
+### Changed
+
+- **Step 3 prompt scope narrowed** — Removed 35 lines of formatting/style rules (backtick formatting, CLI switch conversion, LLM guidance removal) that duplicated Step 4. Step 3 now focuses on content quality improvement only. (Issue #294)
