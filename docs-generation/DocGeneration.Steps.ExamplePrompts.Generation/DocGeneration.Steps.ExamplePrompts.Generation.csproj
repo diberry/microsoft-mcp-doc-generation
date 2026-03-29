@@ -15,4 +15,10 @@
     <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
     <ProjectReference Include="..\DocGeneration.Core.TemplateEngine\DocGeneration.Core.TemplateEngine.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\data\shared-acrolinx-rules.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>data\shared-acrolinx-rules.txt</Link>
+    </None>
+  </ItemGroup>
 </Project>

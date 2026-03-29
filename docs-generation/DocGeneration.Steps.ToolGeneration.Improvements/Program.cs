@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using GenerativeAI;
+using Shared;
 using ToolGeneration_Improved.Services;
 
 namespace ToolGeneration_Improved;
@@ -115,7 +116,8 @@ internal class Program
             var fullPath = Path.GetFullPath(path);
             if (File.Exists(fullPath))
             {
-                return await File.ReadAllTextAsync(fullPath);
+                var content = await File.ReadAllTextAsync(fullPath);
+                return PromptTokenResolver.Resolve(content, Path.Combine(AppContext.BaseDirectory, "data"));
             }
         }
 

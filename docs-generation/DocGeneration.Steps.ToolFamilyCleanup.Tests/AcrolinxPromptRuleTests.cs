@@ -24,7 +24,9 @@ public class AcrolinxPromptRuleTests
             "prompts",
             "tool-family-cleanup-system-prompt.txt");
 
-        _promptContent = File.ReadAllText(promptPath);
+        var rawContent = File.ReadAllText(promptPath);
+        var dataDir = Path.Combine(FindProjectRoot(), "docs-generation", "data");
+        _promptContent = Shared.PromptTokenResolver.Resolve(rawContent, dataDir);
     }
 
     // ── #143: Split complex overview sentence ───────────────────────

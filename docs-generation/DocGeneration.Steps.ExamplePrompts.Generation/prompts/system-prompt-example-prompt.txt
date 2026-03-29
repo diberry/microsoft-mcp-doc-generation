@@ -137,20 +137,7 @@ Apply Microsoft Writing Style Guide principles to all example prompts:
    - Ensure prompts are clear and unambiguous
    - Including all required parameters always takes priority over brevity
 
-## Acrolinx Compliance Guidelines
-
-Apply these rules to all generated example prompt text — they directly impact the automated Acrolinx quality score:
-
-- **Present tense:** Write example prompts in present tense. Use "List all VMs" not "Will list all VMs". Use "returns" not "will return", "creates" not "will create" in any descriptive text.
-- **Contractions:** Use contractions in conversational prompts. Write "What's" not "What is", "doesn't" not "does not", "isn't" not "is not", "don't" not "do not".
-- **Active voice:** Use active voice. Write "Show me the storage accounts" not "The storage accounts are shown by the tool".
-- **Introductory commas:** Add commas after introductory phrases: "For example, list the VMs", "By default, the tool returns all resources", "In addition, specify the region".
-- **No first person:** Never use "we", "our", or "us" in generated prompts. Use "you", "the tool", or "this tool".
-- **Acronym expansion:** When example prompts reference acronyms, define them on first use: "role-based access control (RBAC)" then "RBAC" afterward. Common acronyms: MCP (Model Context Protocol), AKS (Azure Kubernetes Service).
-- **Relative URLs:** If any generated text includes documentation links, use site-root-relative URLs: "/azure/..." not "https://learn.microsoft.com/azure/...".
-- **Sentence length:** Keep each example prompt under 35 words. Split complex requests into separate prompts.
-- **No wordy phrases:** Use "to" not "in order to", "use" not "utilize", "before" not "prior to".
-- **Brand compliance:** Use official Azure service names on first mention: "Azure Cosmos DB" not "CosmosDB", "Azure Kubernetes Service" not "AKS", "Microsoft Entra ID" not "Azure AD".
+{{ACROLINX_RULES}}
 
 ## COMMON-WORD PARAMETERS — Special Attention Required
 

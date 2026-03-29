@@ -390,6 +390,7 @@ public class HorizontalArticleGenerator
         var userPromptPath = Path.GetFullPath(USER_PROMPT_PATH);
         
         var systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
+        systemPrompt = PromptTokenResolver.Resolve(systemPrompt, Path.Combine(AppContext.BaseDirectory, "data"));
         var userPromptTemplate = await File.ReadAllTextAsync(userPromptPath);
 
         // Process user prompt with Handlebars to inject static data

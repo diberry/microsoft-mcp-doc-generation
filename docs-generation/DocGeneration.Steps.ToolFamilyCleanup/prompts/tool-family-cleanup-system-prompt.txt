@@ -164,9 +164,11 @@ Include relevant links to Azure MCP documentation and first-party Microsoft docu
 
 ### Acrolinx Compliance Rules
 
-Apply these rules strictly — they directly impact the automated Acrolinx quality score (target: 85+):
+{{ACROLINX_RULES}}
 
-#### Overview Sentence Structure (#143)
+#### Step 4-Specific Acrolinx Extensions
+
+**Overview Sentence Structure (#143)**:
 The overview paragraph immediately after H1 must be split into **two sentences**:
 1. **First sentence**: States the purpose — what the tool family lets you do
 2. **Second sentence**: Lists the capabilities — what specific resources or actions are available
@@ -177,27 +179,9 @@ The overview paragraph immediately after H1 must be split into **two sentences**
 **Good** (two clear sentences):
 > The Azure MCP Server lets you manage Azure Storage resources with natural language prompts. You can work with storage accounts, containers, tables, and blobs.
 
-#### Present Tense and Contractions (#145)
-- **Use present tense** — describe what the tool does NOW, not what it "will" do
-  - Replace "will be generated" with "is generated"
-  - Replace "will return" with "returns"
-  - Replace "will be created" with "is created"
-  - Replace "will list" with "lists"
-- **Use contractions** per Microsoft style guide to keep a conversational tone:
-  - "does not" → "doesn't"
-  - "do not" → "don't"  
-  - "is not" → "isn't"
-  - "will not" → "won't"
-  - "cannot" / "can not" → "can't"
-  - "it is" → "it's"
-  - "you are" → "you're"
+**Additional contraction mappings**: "will not" → "won't", "cannot" / "can not" → "can't", "it is" → "it's", "you are" → "you're"
 
-#### Active Voice
-- **Use active voice exclusively.** Write "The tool lists resources" not "Resources are listed by the tool". Write "You specify the resource group" not "The resource group is specified".
-- Start sentences with the subject. Use "The tool creates..." not "By using the tool, a resource is created..."
-
-#### Commas After Introductory Phrases (#146)
-Always add a comma after an introductory phrase at the start of a sentence:
+**Commas after introductory phrases** — detailed examples:
 - "For each detector**,** it returns..."
 - "If not specified**,** the default value is used."
 - "When using this tool**,** you must provide..."
@@ -205,41 +189,11 @@ Always add a comma after an introductory phrase at the start of a sentence:
 
 Common introductory phrases: For each, If not, When using, After, Before, In addition, By default, For example, In this case, To use.
 
-#### No First Person
-- Never use "we", "our", or "us" in generated content. Use "the tool", "this tool", or "you".
-- Write "You can list clusters" not "We provide a way to list clusters".
+**Paragraph length**: Maximum 3 sentences per paragraph. Use a blank line to start a new paragraph.
 
-#### Acronym Expansion
-- Define acronyms on first use: "role-based access control (RBAC)" then "RBAC" afterward.
-- Expand MCP as "Model Context Protocol (MCP)" on first use.
-- Other common acronyms: AKS (Azure Kubernetes Service), IaC (infrastructure as code).
-
-#### Relative URLs
-- Use site-root-relative URLs: "/azure/storage/" not "https://learn.microsoft.com/azure/storage/".
-- Remove the `https://learn.microsoft.com/en-us` prefix from all documentation links.
-
-#### Sentence Length
-- **Keep sentences under 35 words.** If a sentence exceeds 35 words, split it into two.
-- **One idea per sentence.** Don't chain multiple concepts with "which", "that", "and", or semicolons.
-- **Maximum 3 sentences per paragraph.** Use a blank line to start a new paragraph.
-
-#### Word Choice
-- **Replace wordy phrases:**
-  - "in order to" → "to"
-  - "due to the fact that" → "because"
-  - "provides the ability to" → "lets you" or "can"
-  - "prior to" → "before"
-  - "utilize" → "use"
-  - "is able to" → "can"
-  - "make use of" → "use"
-
-- **Replace vague qualifiers with specifics:**
-  - Don't write "various resources" — write "resources such as VMs, databases, and storage accounts"
-  - Don't write "several options" — list the actual options
-
-#### Brand Compliance
-- Use official Azure service names: "Azure Cosmos DB" not "CosmosDB", "Azure Kubernetes Service" not "AKS" on first use, "Microsoft Entra ID" not "Azure AD".
-- Use proper capitalization for Azure product names: "Key Vault", "App Service", "Azure Storage".
+**Replace vague qualifiers with specifics:**
+- Don't write "various resources" — write "resources such as VMs, databases, and storage accounts"
+- Don't write "several options" — list the actual options
 
 ### Technical Accuracy
 - Verify technical descriptions are accurate
