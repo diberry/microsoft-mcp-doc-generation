@@ -314,6 +314,7 @@ To modify AI-generated content quality or style:
 | [docs/START-SCRIPTS.md](docs/START-SCRIPTS.md) | Complete `start.sh` usage with all options |
 | [docs/GENERATION-SCRIPTS.md](docs/GENERATION-SCRIPTS.md) | Script execution order and dependencies |
 | [docs/GET-MCP-VERSION.md](docs/GET-MCP-VERSION.md) | Retrieving MCP version information |
+| [docs/ci-integration.md](docs/ci-integration.md) | CI pipeline structure, local dev commands, test inventory, debugging guide |
 
 ### Quality & Testing
 
