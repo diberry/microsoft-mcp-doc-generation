@@ -98,7 +98,10 @@ internal static partial class MarkdownAnalyzer
         return CosmosDbPattern().Matches(body).Count
             + AzureVmsPattern().Matches(body).Count
             + MssqlPattern().Matches(body).Count
-            + AzureAdPattern().Matches(body).Count;
+            + AzureAdPattern().Matches(body).Count
+            + AzureAdShortPattern().Matches(body).Count
+            + AadPattern().Matches(body).Count
+            + VmssPattern().Matches(body).Count;
     }
 
     private static readonly char[] WordSplitChars = [' ', '\n', '\r', '\t'];
@@ -144,4 +147,13 @@ internal static partial class MarkdownAnalyzer
 
     [GeneratedRegex(@"\bAzure Active Directory\b")]
     private static partial Regex AzureAdPattern();
+
+    [GeneratedRegex(@"\bAzure AD\b")]
+    private static partial Regex AzureAdShortPattern();
+
+    [GeneratedRegex(@"\bAAD\b")]
+    private static partial Regex AadPattern();
+
+    [GeneratedRegex(@"\bVMSS\b")]
+    private static partial Regex VmssPattern();
 }

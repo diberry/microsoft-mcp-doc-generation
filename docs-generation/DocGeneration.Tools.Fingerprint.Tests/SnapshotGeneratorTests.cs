@@ -96,8 +96,8 @@ public class SnapshotGeneratorTests
             var generator = new SnapshotGenerator(tempDir);
             var snapshot = generator.GenerateSnapshot();
 
-            // advisor has 2 files (1 in tool-family, 1 in annotations)
-            Assert.Equal(2, snapshot.Namespaces["advisor"].FileCount);
+            // advisor has 3 files (1 in tool-family, 1 in annotations, 1 in horizontal-articles)
+            Assert.Equal(3, snapshot.Namespaces["advisor"].FileCount);
         }
         finally
         {
@@ -116,6 +116,7 @@ public class SnapshotGeneratorTests
 
             Assert.True(snapshot.Namespaces["advisor"].Directories.ContainsKey("tool-family"));
             Assert.True(snapshot.Namespaces["advisor"].Directories.ContainsKey("annotations"));
+            Assert.True(snapshot.Namespaces["advisor"].Directories.ContainsKey("horizontal-articles"));
         }
         finally
         {
@@ -218,6 +219,28 @@ public class SnapshotGeneratorTests
         }
     }
 
+    [Fact]
+    public void GenerateSnapshot_AnalyzesHorizontalArticle()
+    {
+        var tempDir = CreateTempRepoStructure();
+        try
+        {
+            var generator = new SnapshotGenerator(tempDir);
+            var snapshot = generator.GenerateSnapshot();
+
+            var ha = snapshot.Namespaces["advisor"].HorizontalArticle;
+            Assert.NotNull(ha);
+            Assert.Equal("horizontal-article-advisor.md", ha.FileName);
+            Assert.Contains("## Prerequisites", ha.H2Headings);
+            Assert.Contains("## Best practices", ha.H2Headings);
+            Assert.Contains("title", ha.FrontmatterFields);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
     // --- Helpers ---
 
     private static string CreateTempRepoStructure()
@@ -251,6 +274,30 @@ public class SnapshotGeneratorTests
         var advisorAnnDir = Path.Combine(tempDir, "generated-advisor", "annotations");
         Directory.CreateDirectory(advisorAnnDir);
         File.WriteAllText(Path.Combine(advisorAnnDir, "azure-advisor-get-annotations.md"), "annotation content");
+
+        var advisorHaDir = Path.Combine(tempDir, "generated-advisor", "horizontal-articles");
+        Directory.CreateDirectory(advisorHaDir);
+        File.WriteAllText(Path.Combine(advisorHaDir, "horizontal-article-advisor.md"), """
+            ---
+            title: Azure Advisor overview
+            description: Overview of Azure Advisor capabilities.
+            ms.date: 03/27/2026
+            ---
+
+            # Azure Advisor overview
+
+            ## Prerequisites
+
+            You need an Azure subscription.
+
+            ## Best practices
+
+            Review recommendations regularly.
+
+            ## Related content
+
+            - [Advisor docs](/azure/advisor/)
+            """);
 
         // generated-storage
         var storageTfDir = Path.Combine(tempDir, "generated-storage", "tool-family");

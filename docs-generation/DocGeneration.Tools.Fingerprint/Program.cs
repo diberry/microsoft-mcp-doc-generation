@@ -128,9 +128,14 @@ internal static class Program
         Console.WriteLine($"   Candidate: {candidatePath}");
 
         var baseline = JsonSerializer.Deserialize<FingerprintSnapshot>(
-            File.ReadAllText(baselinePath), JsonOptions)!;
+            File.ReadAllText(baselinePath), JsonOptions);
         var candidate = JsonSerializer.Deserialize<FingerprintSnapshot>(
-            File.ReadAllText(candidatePath), JsonOptions)!;
+            File.ReadAllText(candidatePath), JsonOptions);
+
+        if (baseline is null)
+            return Error($"Failed to parse baseline JSON: {baselinePath}");
+        if (candidate is null)
+            return Error($"Failed to parse candidate JSON: {candidatePath}");
 
         var diff = SnapshotDiffer.ComputeDiff(baseline, candidate);
         var report = SnapshotDiffer.GenerateReport(diff);

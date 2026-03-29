@@ -71,39 +71,37 @@ internal sealed class SnapshotGenerator
         }
 
         // Find tool-family article
-        var toolFamilyDir = Path.Combine(nsDir, "tool-family");
+        string? toolFamilyContent = null;
         ArticleFingerprint? toolFamilyArticle = null;
+        var toolFamilyDir = Path.Combine(nsDir, "tool-family");
         if (Directory.Exists(toolFamilyDir))
         {
-            var mdFiles = Directory.GetFiles(toolFamilyDir, "*.md");
+            var mdFiles = Directory.GetFiles(toolFamilyDir, "*.md").OrderBy(f => f).ToArray();
             if (mdFiles.Length > 0)
             {
-                var mainArticle = mdFiles[0];
-                var content = File.ReadAllText(mainArticle);
-                toolFamilyArticle = MarkdownAnalyzer.AnalyzeArticle(content, Path.GetFileName(mainArticle));
+                toolFamilyContent = File.ReadAllText(mdFiles[0]);
+                toolFamilyArticle = MarkdownAnalyzer.AnalyzeArticle(toolFamilyContent, Path.GetFileName(mdFiles[0]));
             }
         }
 
         // Find horizontal article
-        var horizontalDir = Path.Combine(nsDir, "horizontal-articles");
         ArticleFingerprint? horizontalArticle = null;
+        var horizontalDir = Path.Combine(nsDir, "horizontal-articles");
         if (Directory.Exists(horizontalDir))
         {
-            var mdFiles = Directory.GetFiles(horizontalDir, "*.md");
+            var mdFiles = Directory.GetFiles(horizontalDir, "*.md").OrderBy(f => f).ToArray();
             if (mdFiles.Length > 0)
             {
-                var mainArticle = mdFiles[0];
-                var content = File.ReadAllText(mainArticle);
-                horizontalArticle = MarkdownAnalyzer.AnalyzeArticle(content, Path.GetFileName(mainArticle));
+                var content = File.ReadAllText(mdFiles[0]);
+                horizontalArticle = MarkdownAnalyzer.AnalyzeArticle(content, Path.GetFileName(mdFiles[0]));
             }
         }
 
-        // Quality metrics from the tool-family article (primary content)
+        // Quality metrics from the cached tool-family content (no double read)
         QualityFingerprint? qualityMetrics = null;
-        if (toolFamilyArticle is not null)
+        if (toolFamilyContent is not null)
         {
-            var tfContent = File.ReadAllText(Path.Combine(toolFamilyDir!, Directory.GetFiles(toolFamilyDir!, "*.md")[0]));
-            qualityMetrics = MarkdownAnalyzer.AnalyzeQuality(tfContent);
+            qualityMetrics = MarkdownAnalyzer.AnalyzeQuality(toolFamilyContent);
         }
 
         return new NamespaceFingerprint

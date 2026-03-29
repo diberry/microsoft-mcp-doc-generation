@@ -57,7 +57,7 @@ For each namespace, the tool captures:
 
 ## JSON Schema
 
-The snapshot file (~38KB for 19 namespaces) follows this structure:
+The snapshot file (~63KB for 19 namespaces) follows this structure:
 
 ```json
 {
@@ -91,6 +91,17 @@ The snapshot file (~38KB for 19 namespaces) follows this structure:
   }
 }
 ```
+
+> **Nullable fields:** `toolFamilyArticle`, `horizontalArticle`, `qualityMetrics`, and `toolCount` are `null` when the corresponding content doesn't exist for that namespace (e.g., pipeline hasn't completed all steps yet).
+
+## Quality Metrics Reference
+
+| Metric | What it detects | Regression threshold |
+|--------|----------------|---------------------|
+| `futureTenseViolations` | "will return", "will list", etc. — future tense with action verbs | Any increase |
+| `fabricatedUrlCount` | URLs matching `learn.microsoft.com/…/docs/…` (hallucinated link patterns) | Any increase |
+| `brandingViolations` | Outdated names: "CosmosDB", "Azure VMs", "MSSQL", "Azure Active Directory", "Azure AD", "AAD", "VMSS" | Any increase |
+| `contractionRate` | Ratio of contractions used to total opportunities (e.g., 0.85 = 85% of "do not"/"don't" opportunities use contractions). Higher is better. | Drop > 5 percentage points |
 
 ## Diff Report
 
@@ -140,7 +151,7 @@ git commit -m "chore: Update fingerprint baseline"
 
 ## Test Coverage
 
-47 tests in `DocGeneration.Tools.Fingerprint.Tests/`:
+Tests in `DocGeneration.Tools.Fingerprint.Tests/`:
 
 - **MarkdownAnalyzerTests** (18) — Article analysis, frontmatter extraction, quality detection
 - **SnapshotDifferTests** (16) — Diff computation, regression detection, report generation

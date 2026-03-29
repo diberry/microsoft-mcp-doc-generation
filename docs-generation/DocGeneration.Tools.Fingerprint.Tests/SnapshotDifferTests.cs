@@ -212,6 +212,58 @@ public class SnapshotDifferTests
         Assert.Equal("4.3 MB", SnapshotDiffer.FormatSize(4_500_000));
     }
 
+    [Fact]
+    public void ComputeDiff_BothEmpty_NoNamespaceDiffs()
+    {
+        var diff = SnapshotDiffer.ComputeDiff(new FingerprintSnapshot(), new FingerprintSnapshot());
+        Assert.Empty(diff.NamespaceDiffs);
+    }
+
+    [Theory]
+    [InlineData(0.90, 0.85, false)]  // Exactly 0.05 drop — NOT a regression (< not <=)
+    [InlineData(0.90, 0.849, true)]  // Just past threshold — IS a regression
+    [InlineData(0.90, 0.851, false)] // Just under threshold — NOT a regression
+    [InlineData(0.50, 0.50, false)]  // No change — NOT a regression
+    public void ComputeDiff_ContractionRateThreshold_BoundaryBehavior(
+        double baselineRate, double candidateRate, bool expectRegression)
+    {
+        var baseline = CreateSnapshotWithQuality("test", futureTense: 0, fabricated: 0, branding: 0, contraction: baselineRate);
+        var candidate = CreateSnapshotWithQuality("test", futureTense: 0, fabricated: 0, branding: 0, contraction: candidateRate);
+
+        var diff = SnapshotDiffer.ComputeDiff(baseline, candidate);
+
+        if (expectRegression)
+            Assert.NotEmpty(diff.NamespaceDiffs["test"].QualityRegressions);
+        else
+            Assert.Empty(diff.NamespaceDiffs["test"].QualityRegressions);
+    }
+
+    [Fact]
+    public void ComputeDiff_FabricatedUrlRegression_Detected()
+    {
+        var baseline = CreateSnapshotWithQuality("search", futureTense: 0, fabricated: 0, branding: 0, contraction: 0.8);
+        var candidate = CreateSnapshotWithQuality("search", futureTense: 0, fabricated: 3, branding: 0, contraction: 0.8);
+
+        var diff = SnapshotDiffer.ComputeDiff(baseline, candidate);
+
+        Assert.NotEmpty(diff.NamespaceDiffs["search"].QualityRegressions);
+        Assert.Contains(diff.NamespaceDiffs["search"].QualityRegressions,
+            r => r.Contains("Fabricated URLs"));
+    }
+
+    [Fact]
+    public void ComputeDiff_BrandingRegression_Detected()
+    {
+        var baseline = CreateSnapshotWithQuality("keyvault", futureTense: 0, fabricated: 0, branding: 1, contraction: 0.8);
+        var candidate = CreateSnapshotWithQuality("keyvault", futureTense: 0, fabricated: 0, branding: 4, contraction: 0.8);
+
+        var diff = SnapshotDiffer.ComputeDiff(baseline, candidate);
+
+        Assert.NotEmpty(diff.NamespaceDiffs["keyvault"].QualityRegressions);
+        Assert.Contains(diff.NamespaceDiffs["keyvault"].QualityRegressions,
+            r => r.Contains("Branding violations"));
+    }
+
     // --- Helpers ---
 
     private static FingerprintSnapshot CreateSampleSnapshot(string ns, int fileCount, long sizeBytes)

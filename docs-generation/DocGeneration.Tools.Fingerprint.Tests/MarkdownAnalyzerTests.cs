@@ -168,9 +168,10 @@ public class MarkdownAnalyzerTests
             ---
 
             Use CosmosDB and Azure Active Directory for Azure VMs with MSSQL.
+            Also configure Azure AD and AAD settings for VMSS.
             """;
         var result = MarkdownAnalyzer.AnalyzeQuality(content);
-        Assert.Equal(4, result.BrandingViolations);
+        Assert.Equal(7, result.BrandingViolations);
     }
 
     [Fact]
@@ -223,5 +224,45 @@ public class MarkdownAnalyzerTests
         var result = MarkdownAnalyzer.ExtractH2Headings(content);
         Assert.Single(result);
         Assert.Equal("## H2 heading", result[0]);
+    }
+
+    [Fact]
+    public void AnalyzeArticle_EmptyString_ReturnsZeros()
+    {
+        var result = MarkdownAnalyzer.AnalyzeArticle("", "empty.md");
+        Assert.Equal(0, result.WordCount);
+        Assert.Equal(0, result.SectionCount);
+        Assert.Equal(0, result.SizeBytes);
+        Assert.Empty(result.H2Headings);
+        Assert.Empty(result.FrontmatterFields);
+        Assert.Null(result.ToolCount);
+    }
+
+    [Fact]
+    public void AnalyzeQuality_ZeroContractionOpportunities_ReturnsZeroRate()
+    {
+        var content = """
+            ---
+            title: Test
+            ---
+
+            Azure Storage manages blobs and tables.
+            """;
+        var result = MarkdownAnalyzer.AnalyzeQuality(content);
+        Assert.Equal(0.0, result.ContractionRate);
+    }
+
+    [Fact]
+    public void AnalyzeQuality_DetectsAzureAdShortForm()
+    {
+        var content = """
+            ---
+            title: Test
+            ---
+
+            Configure Azure AD authentication. Use AAD tokens for access.
+            """;
+        var result = MarkdownAnalyzer.AnalyzeQuality(content);
+        Assert.Equal(2, result.BrandingViolations);
     }
 }
