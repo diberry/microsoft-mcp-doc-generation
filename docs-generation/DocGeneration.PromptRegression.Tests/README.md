@@ -4,7 +4,29 @@ This project measures and compares AI-generated output quality across prompt cha
 
 ## Quick Start
 
-### Run all regression tests
+### Using the regression runner (recommended)
+
+```bash
+# First time: seed baselines from current generated output
+./prompt-regression.sh seed
+
+# After making a prompt change: regenerate and compare
+./prompt-regression.sh test 6          # Test Step 6 (horizontal articles)
+./prompt-regression.sh test 4          # Test Step 4 (tool-family)
+./prompt-regression.sh test 4,6        # Test both
+
+# Compare without regenerating (after manual changes)
+./prompt-regression.sh compare
+
+# Check status
+./prompt-regression.sh status
+```
+
+### Representative namespaces
+
+The runner tests 5 namespaces (small → large): `applens`, `cloudarchitect`, `deploy`, `compute`, `fileshares`.
+
+### Run regression tests directly
 
 ```bash
 dotnet test docs-generation/DocGeneration.PromptRegression.Tests/
@@ -12,6 +34,7 @@ dotnet test docs-generation/DocGeneration.PromptRegression.Tests/
 
 ### What the tests check
 
+- **RegressionComparisonTests**: Compare baselines vs candidates — section counts, missing sections, quality metrics, content volume
 - **PromptContentTests**: Verify all 12 prompt files exist and contain expected rules (sentinel tests)
 - **QualityMetricsTests**: Validate metric calculation accuracy
 - **BaselineManagerTests**: Golden file storage/retrieval
