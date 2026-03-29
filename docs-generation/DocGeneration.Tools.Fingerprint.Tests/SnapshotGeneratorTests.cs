@@ -6,7 +6,7 @@ public class SnapshotGeneratorTests
     public void ExtractNamespaceName_RemovesPrefix()
     {
         Assert.Equal("advisor", SnapshotGenerator.ExtractNamespaceName("/repo/generated-advisor"));
-        Assert.Equal("storage", SnapshotGenerator.ExtractNamespaceName("C:\\repo\\generated-storage"));
+        Assert.Equal("storage", SnapshotGenerator.ExtractNamespaceName(Path.Combine("C:", "repo", "generated-storage")));
         Assert.Equal("appservice", SnapshotGenerator.ExtractNamespaceName("generated-appservice"));
     }
 
