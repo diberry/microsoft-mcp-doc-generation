@@ -289,14 +289,69 @@ To modify AI-generated content quality or style:
 3. **Review generated prompts** in `./generated/` to verify changes
 4. **Iterate** until desired output quality is achieved
 
-## Additional Documentation
+## Documentation
 
-- **[docs/QUICK-START.md](docs/QUICK-START.md)** — 5-minute setup guide
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — System architecture, data flow, step details
-- **[docs/START-SCRIPTS.md](docs/START-SCRIPTS.md)** — Complete start.sh documentation with all options
-- **[docs/GENERATION-SCRIPTS.md](docs/GENERATION-SCRIPTS.md)** — Detailed script execution order and dependencies
-- **[docs/PROJECT-GUIDE.md](docs/PROJECT-GUIDE.md)** — Full developer guide (extending, testing, troubleshooting)
-- **[docs-generation/README.md](docs-generation/README.md)** — Generator implementation details
+### Getting Started
+
+| Document | Description |
+|----------|-------------|
+| [docs/QUICK-START.md](docs/QUICK-START.md) | 5-minute setup guide |
+| [docs/PROJECT-GUIDE.md](docs/PROJECT-GUIDE.md) | Full developer guide — extending, testing, troubleshooting |
+
+### Architecture & Design
+
+| Document | Description |
+|----------|-------------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, data flow, pipeline step details |
+| [docs/PRD-PipelineRunner.md](docs/PRD-PipelineRunner.md) | Product requirements for the typed .NET pipeline |
+| [docs-generation/README.md](docs-generation/README.md) | Generator implementation details |
+
+### Pipeline & Scripts
+
+| Document | Description |
+|----------|-------------|
+| [docs/START-SCRIPTS.md](docs/START-SCRIPTS.md) | Complete `start.sh` usage with all options |
+| [docs/GENERATION-SCRIPTS.md](docs/GENERATION-SCRIPTS.md) | Script execution order and dependencies |
+| [docs/GET-MCP-VERSION.md](docs/GET-MCP-VERSION.md) | Retrieving MCP version information |
+
+### Quality & Testing
+
+| Document | Description |
+|----------|-------------|
+| [docs/test-strategy.md](docs/test-strategy.md) | Test strategy for the documentation pipeline |
+| [docs/FINGERPRINTING.md](docs/FINGERPRINTING.md) | Baseline fingerprinting tool — snapshot and diff generated output |
+| [docs/acrolinx-compliance-strategy.md](docs/acrolinx-compliance-strategy.md) | Acrolinx compliance strategy for tool-family articles |
+
+### AI & Content Generation
+
+| Document | Description |
+|----------|-------------|
+| [docs/tool-generation-and-ai-improvements.md](docs/tool-generation-and-ai-improvements.md) | Tool generation and AI enhancement strategies |
+| [docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/README.md](docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/README.md) | Example prompt generation (Step 2) |
+| [docs-generation/DocGeneration.Steps.HorizontalArticles/README.md](docs-generation/DocGeneration.Steps.HorizontalArticles/README.md) | Horizontal article generation (Step 6) |
+
+### Planning & Decisions
+
+| Document | Description |
+|----------|-------------|
+| [.squad/decisions.md](.squad/decisions.md) | Architectural decisions log (AD-001 through AD-025) |
+| [docs/plans/HORIZONTAL-ARTICLE-IMPROVEMENT-PLAN.md](docs/plans/HORIZONTAL-ARTICLE-IMPROVEMENT-PLAN.md) | Plan for horizontal article improvements |
+| [docs/plans/TEMPLATE-ENGINE-EXTRACTION.md](docs/plans/TEMPLATE-ENGINE-EXTRACTION.md) | Plan for template engine extraction |
+
+### Utilities
+
+| Document | Description |
+|----------|-------------|
+| [verify-quantity/README.md](verify-quantity/README.md) | Generated file verification tool |
+| [summary-generator/README.md](summary-generator/README.md) | Documentation summary generator |
+| [test-npm-azure-mcp/README.md](test-npm-azure-mcp/README.md) | MCP CLI metadata extractor |
+
+### Repository Configuration
+
+| Document | Description |
+|----------|-------------|
+| [.github/scripts/README.md](.github/scripts/README.md) | Repository configuration scripts |
+| [.github/how-to/REBRANCH-ON-MAIN.md](.github/how-to/REBRANCH-ON-MAIN.md) | How to rebranch on main |
 
 ## Prerequisites
 
@@ -332,6 +387,8 @@ GITHUB_TOKEN="your-github-token"
 ## Output Structure
 
 ```
+fingerprint-baseline.json        # Known-good output snapshot (see docs/FINGERPRINTING.md)
+
 generated/
 ├── cli/                         # MCP CLI metadata (shared by all)
 │   ├── cli-version.json
