@@ -13,6 +13,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Prompt versioning documentation** — `docs/prompt-versioning.md` covering `PromptHasher`, `PromptSnapshot`, `PromptTokenResolver`, `StepResultFile` v2 schema, usage examples, and future pipeline integration notes. Added to README navigation. (Issue #333)
 - **Prompt versioning system** — `PromptHasher` utility (SHA256) + `PromptSnapshot` record + `StepResultFile` v2 schema with `promptSnapshots` field. Backward-compatible: v1 results still deserialize. 16 new tests. (Issue #211)
 - **Prompt regression testing framework** — Runner script (`prompt-regression.sh`) + 5 regression comparison tests + baselines for 5 representative namespaces. Detects quality regressions when prompts change. (PR #329, Issue #214)
 - **CI integration documentation** — Local development commands, CI pipeline structure, test project inventory, and debugging guide. (PR #328, Issue #213)

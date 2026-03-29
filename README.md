@@ -324,6 +324,7 @@ To modify AI-generated content quality or style:
 | [docs/FINGERPRINTING.md](docs/FINGERPRINTING.md) | Baseline fingerprinting tool — snapshot and diff generated output |
 | [docs/acrolinx-compliance-strategy.md](docs/acrolinx-compliance-strategy.md) | Acrolinx compliance strategy for tool-family articles |
 | [docs-generation/DocGeneration.PromptRegression.Tests/README.md](docs-generation/DocGeneration.PromptRegression.Tests/README.md) | Prompt regression testing — baselines, metrics, comparison |
+| [docs/prompt-versioning.md](docs/prompt-versioning.md) | Prompt versioning — SHA256 hashing, `PromptSnapshot`, `StepResultFile` v2 schema |
 
 ### AI & Content Generation
 
