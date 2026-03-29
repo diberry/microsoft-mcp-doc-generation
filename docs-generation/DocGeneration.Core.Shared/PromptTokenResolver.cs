@@ -31,8 +31,15 @@ public static class PromptTokenResolver
 
         lock (_lock)
         {
-            _acrolinxRules ??= File.ReadAllText(
-                Path.Combine(dataDir, "shared-acrolinx-rules.txt"));
+            if (_acrolinxRules is null)
+            {
+                var filePath = Path.Combine(dataDir, "shared-acrolinx-rules.txt");
+                if (!File.Exists(filePath))
+                    throw new FileNotFoundException(
+                        $"Required shared Acrolinx rules file not found: {filePath}. " +
+                        "Ensure the data file is copied to the output directory via the csproj Content item.");
+                _acrolinxRules = File.ReadAllText(filePath);
+            }
         }
 
         return prompt.Replace(AcrolinxToken, _acrolinxRules);
