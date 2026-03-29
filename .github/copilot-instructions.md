@@ -392,6 +392,25 @@ pwsh ./Debug-MultiPageDocs.ps1  # Prepare environment
 
 **Reviewer checklist:** Would this test FAIL if the fix were reverted? If not, it's not a real test.
 
+## ⚠️ IMPORTANT: PR Documentation — CHANGELOG + Docs Update Required
+
+**Every PR must update documentation before team review.** See `.squad/decisions.md` AD-026 and `.squad/skills/pr-docs/SKILL.md`.
+
+**Before requesting review on any PR:**
+1. **Update `CHANGELOG.md`** — Add entry under `## [Unreleased]` with user-facing description and PR/issue numbers
+2. **Update user-facing docs** — Route to the correct file using the documentation routing table in the pr-docs skill
+3. **Update README navigation** — If a new doc file was created, add it to the Documentation section
+
+**Exemptions** (state in PR comment): test-only changes, internal refactors with no behavior change.
+
+**Documentation routing (quick reference):**
+- New tool/feature → `docs/PROJECT-GUIDE.md`
+- Pipeline changes → `docs/ARCHITECTURE.md`
+- Script changes → `docs/START-SCRIPTS.md`
+- Quality/compliance → `docs/acrolinx-compliance-strategy.md`
+- Config changes → `docs/PROJECT-GUIDE.md`
+- New prereqs → `README.md`
+
 ## ⚠️ IMPORTANT: Testing Projects with Generative AI
 
 **Critical for time management**: Any project that uses generative AI (Azure OpenAI) will make sequential API calls to generate content. This can take **15-30+ minutes** to complete a full run (~200+ tools × ~2-4 seconds per API call).

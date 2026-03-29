@@ -295,6 +295,7 @@ To modify AI-generated content quality or style:
 
 | Document | Description |
 |----------|-------------|
+| [CHANGELOG.md](CHANGELOG.md) | All notable changes to the project |
 | [docs/QUICK-START.md](docs/QUICK-START.md) | 5-minute setup guide |
 | [docs/PROJECT-GUIDE.md](docs/PROJECT-GUIDE.md) | Full developer guide — extending, testing, troubleshooting |
 
