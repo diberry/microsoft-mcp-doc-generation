@@ -173,7 +173,7 @@ public class PromptHasherTests : IDisposable
     }
 
     [Fact]
-    public async Task HashFileAsync_ThrowsIOException_WhenFileModifiedDuringRead()
+    public async Task HashFileAsync_ReturnsConsistentSnapshot_WhenFileIsStableBetweenWrites()
     {
         // If the file is modified between the initial metadata capture and the
         // post-read verification, HashFileAsync must throw to avoid an
@@ -204,6 +204,7 @@ public class PromptHasherTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Race")]
     public async Task HashFileAsync_DetectsTimestampMismatch_ThrowsIOException()
     {
         // Directly test the TOCTOU detection logic: modify the file's timestamp
