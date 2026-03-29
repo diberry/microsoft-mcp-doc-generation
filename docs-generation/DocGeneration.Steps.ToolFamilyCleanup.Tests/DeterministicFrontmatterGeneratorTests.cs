@@ -265,13 +265,6 @@ title: Test
 
     // ── Helpers ──────────────────────────────────────────────────────
 
-    private static string FindProjectRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null && !File.Exists(Path.Combine(dir, "docs-generation.sln")))
-        {
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-        return dir ?? AppContext.BaseDirectory;
-    }
+    private static string FindProjectRoot() =>
+        DocGeneration.TestInfrastructure.ProjectRootFinder.FindSolutionRoot();
 }

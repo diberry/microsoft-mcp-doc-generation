@@ -175,15 +175,6 @@ public class MergeGroupValidatorTests
         Assert.Single(monitorGroup, m => m.MergeRole == "secondary" && m.McpServerName == "workbooks");
     }
 
-    private static string FindProjectRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null)
-        {
-            if (File.Exists(Path.Combine(dir, "docs-generation.sln")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("Could not find project root");
-    }
+    private static string FindProjectRoot() =>
+        DocGeneration.TestInfrastructure.ProjectRootFinder.FindSolutionRoot();
 }

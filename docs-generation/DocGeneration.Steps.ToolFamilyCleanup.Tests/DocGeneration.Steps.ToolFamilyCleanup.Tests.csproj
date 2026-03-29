@@ -15,5 +15,6 @@
   <ItemGroup>
     <ProjectReference Include="..\DocGeneration.Steps.ToolFamilyCleanup\DocGeneration.Steps.ToolFamilyCleanup.csproj" />
     <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="..\DocGeneration.TestInfrastructure\DocGeneration.TestInfrastructure.csproj" />
   </ItemGroup>
 </Project>
