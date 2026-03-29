@@ -129,14 +129,14 @@ public class RegressionComparisonTests
                 var comparison = _manager.Compare(ns, file);
                 if (comparison is null) continue;
 
-                // Word count should not drop by more than 20%
-                var dropPercent = comparison.Baseline.WordCount > 0
-                    ? (double)-comparison.WordDelta / comparison.Baseline.WordCount
-                    : 0;
-
-                Assert.True(dropPercent < 0.20,
-                    $"{ns}/{file}: Word count dropped {dropPercent:P0} " +
-                    $"(baseline: {comparison.Baseline.WordCount}, candidate: {comparison.Candidate.WordCount})");
+                // Only flag drops, not increases
+                if (comparison.WordDelta < 0)
+                {
+                    var dropPercent = (double)-comparison.WordDelta / comparison.Baseline.WordCount;
+                    Assert.True(dropPercent < 0.20,
+                        $"{ns}/{file}: Word count dropped {dropPercent:P0} " +
+                        $"(baseline: {comparison.Baseline.WordCount}, candidate: {comparison.Candidate.WordCount})");
+                }
             }
         }
     }

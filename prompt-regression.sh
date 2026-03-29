@@ -13,7 +13,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$SCRIPT_DIR"
 BASELINES_DIR="$REPO_ROOT/docs-generation/DocGeneration.PromptRegression.Tests/Baselines"
 CANDIDATES_DIR="$REPO_ROOT/docs-generation/DocGeneration.PromptRegression.Tests/Candidates"
 REPORTS_DIR="$REPO_ROOT/docs-generation/DocGeneration.PromptRegression.Tests/Reports"
@@ -159,7 +159,7 @@ cmd_compare() {
     echo ""
     echo "🧪 Running quality metric regression tests..."
     dotnet test "$REPO_ROOT/docs-generation/DocGeneration.PromptRegression.Tests/" \
-        --no-build --verbosity quiet 2>&1 | tail -5
+        --verbosity quiet 2>&1 | tail -5
 
     # Show summary
     echo ""
