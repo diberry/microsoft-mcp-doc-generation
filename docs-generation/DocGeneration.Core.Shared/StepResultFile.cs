@@ -28,9 +28,9 @@ public enum StepResultStatus
 /// Structured result written by generator processes as step-result.json.
 /// Replaces regex-based subprocess error detection with a typed contract.
 ///
-/// Schema v2 (added promptSnapshots):
+/// Schema v3 (added tokenUsage):
 /// {
-///   "version": 2,
+///   "version": 3,
 ///   "status": "success|failure|partial",
 ///   "step": "Step 3 - Tool Generation",
 ///   "namespace": "deploy",
@@ -38,12 +38,13 @@ public enum StepResultStatus
 ///   "warnings": ["warning 1"],
 ///   "errors": ["error 1"],
 ///   "duration": "00:02:15.123",
-///   "promptSnapshots": [{ "fileName": "...", "contentHash": "...", "sizeBytes": 1024 }]
+///   "promptSnapshots": [{ "fileName": "...", "contentHash": "...", "sizeBytes": 1024 }],
+///   "tokenUsage": { "totalPromptTokens": 500, "totalCompletionTokens": 200, ... }
 /// }
 /// </summary>
 public class StepResultFile
 {
-    /// <summary>Schema version for forward compatibility. v2: added promptSnapshots.</summary>
+    /// <summary>Schema version for forward compatibility. v2: added promptSnapshots. v3: added tokenUsage.</summary>
     [JsonPropertyName("version")]
     public int Version { get; set; } = 1;
 
@@ -81,6 +82,13 @@ public class StepResultFile
     /// </summary>
     [JsonPropertyName("promptSnapshots")]
     public List<PromptSnapshotRecord>? PromptSnapshots { get; set; }
+
+    /// <summary>
+    /// v3: Aggregated token usage from Azure OpenAI calls during step execution.
+    /// Nullable for backward compatibility - non-AI steps and v1/v2 results omit this field.
+    /// </summary>
+    [JsonPropertyName("tokenUsage")]
+    public TokenUsageSummary? TokenUsage { get; set; }
 
     /// <summary>
     /// Serialization-friendly record for prompt file metadata.
