@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 using System;
 using System.IO;
 using System.Security.Cryptography;
@@ -51,20 +54,29 @@ public static class PromptHasher
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"Prompt file not found: {filePath}", filePath);
 
-        var content = await File.ReadAllTextAsync(filePath);
+        // Capture metadata BEFORE reading content to avoid TOCTOU race (#332).
         var fileInfo = new FileInfo(filePath);
+        var initialTimestamp = fileInfo.LastWriteTimeUtc;
+        var initialSize = fileInfo.Length;
+
+        var content = await File.ReadAllTextAsync(filePath);
 
         // Resolve tokens if a data directory is provided
         var contentToHash = dataDir is not null
             ? PromptTokenResolver.Resolve(content, dataDir)
             : content;
 
+        // Verify file wasn't modified during read
+        fileInfo.Refresh();
+        if (fileInfo.LastWriteTimeUtc != initialTimestamp)
+            throw new IOException($"Prompt file '{filePath}' was modified during read. Retry the operation.");
+
         var hash = ComputeHash(contentToHash);
 
         return new PromptSnapshot(
             FileName: Path.GetFileName(filePath),
             ContentHash: hash,
-            SizeBytes: fileInfo.Length,
-            LastModified: fileInfo.LastWriteTimeUtc);
+            SizeBytes: initialSize,
+            LastModified: initialTimestamp);
     }
 }
