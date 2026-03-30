@@ -7,6 +7,68 @@
 
 ## Learnings
 
+### 2026-03-30: .NET Consolidation Plan Documentation Impact Review — APPROVED
+
+**Final Verdict:** APPROVED (Minimal documentation impact; 3 tech docs need targeted updates)
+
+**Documentation Impact Summary:**
+- **Risk Level:** 🟢 LOW
+- **User-facing impact:** Minimal (no config/behavior changes; internal refactoring only)
+- **Developer experience:** POSITIVE (cleaner mental model, fewer projects)
+- **Action items for Reeve:** 4 (1 before start, 3 during/after)
+
+**Pre-Implementation Task (PRIORITY 1):**
+- [ ] Write `docs-generation/DocGeneration.Steps.ToolFamilyCleanup.Validation.Tests/README.md` (30 min)
+  - Explain PowerShell integration test design (why zero C# project references)
+  - Document requirements and running instructions
+
+**Post-Implementation Tasks (PRIORITY 2-3):**
+
+**Task 1: Update `docs/ci-integration.md` (Test Projects Inventory)**
+- Remove row: `DocGeneration.Core.NaturalLanguage.Tests` (merged)
+- Update framework status for 3 projects: Now all xUnit (was NUnit)
+- Update header: "All **19 test projects**" (was 20)
+- New summary: "Framework unified: all 19 use **xUnit on .NET 9**"
+- **Owner:** Reeve (post-migration)
+
+**Task 2: Update `docs/test-strategy.md` (Multiple Sections)**
+- Section 1.2: Remove Core.NaturalLanguage.Tests row (count 17; was 18)
+- Section 1.3: Update TextCleanup coverage (tests moved from Core.NaturalLanguage.Tests to Core.Shared.Tests)
+- **Owner:** Reeve (post-consolidation)
+
+**Task 3: Optional Update `docs/ARCHITECTURE.md`**
+- Add version date: "Updated 2026-Q2: Consolidated single-file projects into core libraries"
+- Update project count reference (42 → 38/40)
+- Note: Dependency diagram simplification (Core.NaturalLanguage merge removes edge)
+- **Owner:** Reeve (optional, not blocking)
+
+**Documentation Not Affected:**
+- ✅ `README.md` — Doesn't list removed projects by name
+- ✅ `GENERATION-SCRIPTS.md` — Script orchestration is project-agnostic
+- ✅ `QUICK-START.md` — Entry points remain valid
+- ✅ `PROJECT-GUIDE.md` — High-level, no project details
+
+**CHANGELOG Entry (Template Provided):**
+- Document Actions 1-6 consolidations
+- Note: Breaking change for PostProcessVerifier callers (must use ToolFamilyCleanup `--verify-only`)
+- Include links to consolidation PR
+
+**Developer Onboarding Impact:**
+- **Before consolidation (42 projects):** "Why so many projects?" — confusing mental model
+- **After consolidation (38 projects):** Cleaner "core libraries, pipeline steps, utilities, tests" model
+- **Impact:** ✅ POSITIVE — Easier project comprehension
+
+**Plan Quality Assessment (Reeve's Observations):**
+- ✅ Exceptionally well-written (comprehensive, risk-aware, execution roadmap clear)
+- ✅ Data-driven (full dependency analysis, concrete metrics)
+- ✅ Mitigations documented (namespace preservation, script audit, test verification)
+
+**Decisions filed:** AD-027 (main), AD-028 (quality gates)
+
+**Next:** Write Validation.Tests README before consolidation starts (Action 6 prerequisite).
+
+---
+
 ### 2026-03-24: Multi-Agent PR Review — Documentation Completeness
 
 **PR #200 and PR #201 documentation completeness — BOTH APPROVED:**
@@ -41,5 +103,33 @@ The tests themselves become the documentation of the fix's contract. No separate
 
 ---
 
-- Internal code generation improvements (bug fixes that only affect generated markdown structure/formatting) don't require user-facing docs if they have clear commit messages, excellent inline code comments, and comprehensive tests that meet AD-007/AD-010 standards. The tests themselves become the "documentation" of the fix's contract.
-- Code formatting/standardization changes should include comprehensive test coverage (11+ test cases) to guard against regressions, even for internal pipelines.
+### 2026-03-26: .NET Project Consolidation Impact Review
+
+**Recommendation:** ✅ **Plan APPROVED for documentation requirements. LOW RISK.**
+
+**Full review:** `.squad/decisions/inbox/reeve-consolidation-review.md`
+
+**Key Findings:**
+
+1. **Existing docs are architecture-agnostic** — No user-facing docs reference removed projects (CliAnalyzer, PostProcessVerifier, Core.NaturalLanguage are internal implementation details). README.md, ARCHITECTURE.md, PROJECT-GUIDE.md stay valid.
+
+2. **Documentation updates needed (MINOR):**
+   - CREATE: `docs-generation/DocGeneration.Steps.ToolFamilyCleanup.Validation.Tests/README.md` — explains PowerShell integration test design (Action 6, assigned to Reeve)
+   - UPDATE: `docs/ci-integration.md` Section 3 — remove NaturalLanguage.Tests row, update framework status for 3 projects (xUnit)
+   - UPDATE: `docs/test-strategy.md` Section 1.2 + 1.3 — same changes (test count, framework, TextCleanup location)
+
+3. **Consolidation is NET POSITIVE for onboarding:** 42 → 38 projects is clearer, removes orphaned confusion, makes dependency story simpler.
+
+4. **CHANGELOG entry guidance:** Provided in review doc (PR author should include both description and migration notes).
+
+5. **Plan quality: EXCELLENT** — Comprehensive inventory, clear problem statement, testable success criteria, risk-aware, assigns responsibility per team member. Gaps are minor cross-functional handoffs (expected since Avery is architecture lead, not doc owner).
+
+**Action Items for Reeve:**
+- Write README for Validation.Tests BEFORE consolidation starts (Action 6 blocker)
+- Review each consolidation PR for doc completeness
+- Post-consolidation: update ci-integration.md and test-strategy.md with new project counts
+
+---
+
+- Internal consolidation (project merges) can have ZERO user-facing impact if scoped to implementation details (project boundaries don't affect CLI behavior, config, or architecture). Document carefully which changes are user-visible (flags, namespace usage, config) vs. internal refactoring (compile structure).
+- Cross-functional documentation impact analysis is critical for code restructuring. Create a documentation impact assessment BEFORE implementation starts to catch downstream doc updates early (not as afterthoughts).

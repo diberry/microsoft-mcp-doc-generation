@@ -9,6 +9,87 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-03-30: .NET Consolidation QA Review — FINAL (APPROVED WITH CONTINGENCIES)
+
+**Final Verdict:** APPROVED WITH CONTINGENCIES (9 acceptance criteria required before each phase)
+
+**Complete Assessment Summary:**
+- **~1,100+ tests affected** across 7 actions
+- **0 tests will be lost** (all moved/consolidated, none deleted)
+- **All test coverage preserved** across all consolidation actions
+- **Test framework migration (NUnit→xUnit) has mechanical low risk, verification high importance**
+
+**9 Acceptance Criteria (per reviewer Parker):**
+1. ✅ CliAnalyzer orphan verification (zero references expected)
+2. ⚠️ PostProcessVerifier baseline (old output vs. new `--verify-only` byte-identical on 5+ namespaces)
+3. ⚠️ PostProcessVerifier script audit (zero script/CI references)
+4. ⚠️ NUnit→xUnit baseline (test count match before/after for 3 projects)
+5. ⚠️ Core.NaturalLanguage data file discovery (TextCleanup JSON files load after merge)
+6. ⚠️ HorizontalArticles output consistency (Step 6 output identical before/after Action 3)
+7. ⚠️ Core.Shared.Tests integration (file discovery tests pass; test count increased correctly)
+8. ⚠️ File system cleanup (Fingerprint temp dirs cleaned up properly on Windows)
+9. ⚠️ Baseline path resilience (PromptRegression.Tests paths remain valid)
+
+**File System Test Risks (HIGH priority):**
+- **R1 (TextCleanup JSON discovery):** HIGH — runtime crash if paths break
+- **R2 (Fingerprint temp cleanup):** MEDIUM — Windows temp dir locking issues
+- **R3 (PromptRegression baseline paths):** HIGH — hardcoded relative paths may fail
+
+**Validation Before Each Phase:**
+- Pre-Phase 1: Baseline test count + build time
+- Pre-Phase 2: PostProcessVerifier script audit complete
+- Pre-Phase 3: Core.Shared data file validation + integration tests written
+
+**Test Coverage Preservation (Final Tally):**
+- CliAnalyzer: 0 tests (removed; no test project)
+- PostProcessVerifier: 0 tests (merged; logic tested by ToolFamilyCleanup.Tests)
+- Core.NaturalLanguage: ~25 tests (moved to Core.Shared.Tests; preserved)
+- NUnit→xUnit: ~155 tests (framework migration; logic preserved)
+- StripFrontmatter: ~98 tests (refactored; logic preserved)
+- **Total:** ~1,100+ tests executable after consolidation (invariant: test count unaffected by consolidation)
+
+**Decisions filed:** AD-027 (main), AD-028 (quality gates), AD-029 (data file discovery), AD-032 (test baseline), AD-034 (AI output consistency)
+
+**Next:** Execute quality gates per AD-028 before proceeding to next phase.
+
+---
+
+### 2026-03-26: .NET Consolidation Plan QA Review (Actions 1-7)
+
+**Context:** Avery proposed 7 consolidation actions to reduce 42 projects → 38 (or 32 with future work). Reviewed for test coverage, edge cases, and regression risk.
+
+**Key Findings:**
+- **~700+ tests affected** across 7 actions; **0 tests will be lost** (all moved, none removed)
+- **No orphaned test data:** Test fixtures are either in-memory strings or properly tracked in .csproj files
+- **3 NUnit projects need framework migration** to xUnit (82+ tests total); mechanical conversion, low risk
+- **File system state critical for 4 test projects:** Temp cleanup, baseline paths, JSON data loading must be validated post-merge
+- **CliAnalyzer removal safe:** Zero tests, zero callers, only dead code
+- **PostProcessVerifier consolidation requires script audit:** Quinn must verify all callers before Morgan implements
+
+**Verdict:** APPROVED WITH CONTINGENCIES.
+- **Phase 1 (Actions 1, 5, 6):** Low-risk; execute immediately
+- **Phase 2 (Actions 2, 4):** Gate on baseline test execution + PostProcessVerifier script audit
+- **Phase 3 (Action 3):** Gate on Phase 2 completion + Core.Shared data file validation
+- **All 1,100+ tests must pass after each action** (invariant enforcement)
+
+**Test Execution Plan:**
+- Pre-consolidation baseline: `dotnet test docs-generation.sln` → record count
+- Post-each-action: Repeat test execution; fail if count decreases or failures occur
+- Edge case focus: 52-namespace validation (currently only 3-4 tested); temp file cleanup on Windows; baseline path resilience
+- Regression detection: Fingerprint diff-report + PromptRegression baseline comparison
+
+**Action-Specific Contingencies:**
+- **Action 3 (Core.NaturalLanguage merge):** If data files don't copy, switch from `<CopyToOutputDirectory>` to `<EmbeddedResource>` pattern
+- **Action 4 (xUnit migration):** If async tests break, implement IAsyncLifetime pattern; if reflection tests fail, verify xUnit reflection support
+- **Action 2 (PostProcessVerifier merge):** If scripts break, keep PostProcessVerifier as thin wrapper instead of full consolidation
+
+**Test Coverage Status After Phase 3:**
+- 1,100+ tests (invariant)
+- All frameworks unified to xUnit
+- 0 StripFrontmatter implementations outside FrontmatterUtility
+- File system state properly isolated (temp cleanup, baseline paths)
+- Pipeline passes 52-namespace end-to-end validation
+
 ### 2026-03-24: PR #200 and PR #201 Final Review — Both APPROVED After Morgan Fixes
 
 **Context:** Initial multi-agent review rejected both PRs for template-level test coverage gaps (AD-010 violation). Morgan completed comprehensive fixes; both PRs now meet all requirements.

@@ -9,6 +9,37 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-03-30: .NET Project Consolidation Implementation Review — APPROVED WITH CHANGES
+
+**Verdict:** APPROVE WITH CHANGES (Realistic 7-hour effort estimate for Actions 2-5)
+
+**Key Implementation Findings:**
+
+| Action | Difficulty | Effort | Notes |
+|--------|-----------|--------|-------|
+| 1. Remove CliAnalyzer | 🟢 LOW | 15 min | Straightforward git rm + solution edit |
+| 2. Merge PostProcessVerifier | 🟡 MEDIUM | 90 min | Port Program.cs `.after` suffix logic; exit code preservation critical |
+| 3. Merge Core.NaturalLanguage | 🟡 MEDIUM | 120 min | Data file path verification required; namespace preservation mandatory |
+| 4. NUnit → xUnit | 🟡 MEDIUM | 180 min | 155 tests across 3 projects; assertion rewrites require careful review |
+| 5. Consolidate StripFrontmatter | 🟢 LOW | 5-45 min | **BEHAVIORAL CAVEAT:** Fingerprint has `.TrimStart()` that canonical doesn't. RECOMMEND: Keep Fingerprint local (Option A, 5 min) not add parameter (Option B, 45 min) |
+| 6. Document Validation.Tests | 🟢 LOW | 30 min | README explaining PowerShell integration test design |
+
+**Critical Discoveries:**
+- **Post-processor order (Action 2):** Both tools use identical 10-processor chain (AcronymExpander → JsonSchemaCollapser). Merge is safe if order preserved.
+- **Data file paths (Action 3):** TextCleanup.LoadFiles() expects caller-provided paths. Current callers use `../../../data/` relative paths. After merge, must verify paths still resolve in bin/net9.0/.
+- **NUnit edge cases (Action 4):** No `[TestContext]`, no complex `[SetUp]/[TearDown]` — all 146 tests are mechanical `[Test]` → `[Fact]` refactors. Assertion rewrites require human review (argument order reversal for `Assert.Equal`).
+- **StripFrontmatter behavior (Action 5):** Core.Shared removes frontmatter only; Fingerprint adds `.TrimStart()` removing all leading whitespace. This is intentional for fingerprinting use case — should NOT be merged.
+
+**Team Coordination:**
+- Morgan implements Actions 2-5
+- Riley oversees namespace preservation (Action 3)
+- Parker validates file discovery tests + test count matching (Actions 3, 4)
+- Quinn audits scripts for PostProcessVerifier references (Action 2)
+
+**Decisions filed:** AD-027 (main), AD-029 (data file discovery), AD-030 (exit codes), AD-031 (namespace), AD-032 (test baseline), AD-033 (post-processor order)
+
+---
+
 ### 2026-03-24: Multi-Agent PR Review — Implementation Assessment
 
 **PR #200 and PR #201 implementation review:**
@@ -156,6 +187,51 @@
 **Tests:** 11 new tests; all passing.
 
 **PR:** #222 (MERGED)
+
+---
+
+### 2026-03-30: .NET Project Consolidation Plan — C# Implementation Review
+
+**Task:** Review Avery's 7-action .NET consolidation plan from C# implementation perspective. Assess difficulty, code coupling, build order risks, NuGet conflicts, namespace impacts.
+
+**Key Findings:**
+- **All 7 actions are technically achievable** — no architectural blockers detected
+- **Effort estimates realistic:** 430 minutes total (7 hours) for Actions 1-6
+- **No circular dependencies:** All merges are downward in dependency tree
+- **No NuGet conflicts:** All versions centrally managed in Directory.Packages.props
+
+**Action difficulty reassessment (vs plan):**
+1. CliAnalyzer removal — 🟢 LOW (15 min) — verified zero refs
+2. PostProcessVerifier → ToolFamilyCleanup — 🟡 MEDIUM (90 min) — dry-run logic straightforward
+3. Core.NaturalLanguage → Core.Shared — 🟡 MEDIUM (120 min) — data file paths require runtime audit
+4. NUnit → xUnit — 🟡 MEDIUM (180 min) — 146 tests, mechanical refactor
+5. StripFrontmatter consolidation — 🟢 LOW (5 min) — RECOMMENDATION: keep Fingerprint's local impl (has .TrimStart() behavior)
+6. Validation.Tests documentation — 🟢 LOW (20 min) — documentation-only task
+
+**Hidden Risks Identified:**
+- **Data file path handling (Action 3):** TextCleanup.LoadFiles() expects caller to pass RequiredFiles paths. After merge, must verify all 3 projects (RawTools, Annotations, HorizontalArticles) still find data files at runtime. Runtime-dependent; test against 3+ namespaces.
+- **Namespace mismatch (Action 3):** Plan recommends keeping `DocGeneration.Core.NaturalLanguage` namespace post-merge. Creates semantic confusion (namespace doesn't match project location). Should rename to `DocGeneration.Core.Shared.NaturalLanguage` instead (15 min additional work).
+- **NUnit assertion argument order (Action 4):** xUnit reverses assertion argument order vs NUnit. Easy to introduce silent test failures. Mitigation: convert one project fully, validate, replicate pattern.
+- **StripFrontmatter behavioral difference (Action 5):** Core.Shared.StripFrontmatter() uses regex replacement; Fingerprint uses regex + `.TrimStart()`. Fingerprint output cleaner. DECISION: keep Fingerprint's local implementation (Option A). Document design choice as "intentional optimization for fingerprinting use case."
+
+**Build Order Verification:**
+- All merges downward in dependency tree — zero circular risks
+- After merges: Core.Shared remains leaf node (no outbound deps)
+- Verified project reference chains: PostProcessVerifier → ToolFamilyCleanup → Core.Shared (acyclic)
+- After Core.NaturalLanguage merge: RawTools/Annotations/HorizontalArticles → Core.Shared (simplified, no back-refs)
+
+**Missing: TransitiveDependencyFrameworkVersion**
+- Directory.Packages.props has ManagePackageVersionsCentrally=true but no TransitiveDependencyFrameworkVersion
+- Should add `<TransitiveDependencyFrameworkVersion>net9.0</TransitiveDependencyFrameworkVersion>` for tight alignment
+- Action: Include in Phase 1 (10 min fix)
+
+**Verdict: APPROVE WITH CHANGES**
+- Conditions: (1) Quinn verify no CI refs to CliAnalyzer/PostProcessVerifier, (2) Morgan audit data file paths pre-merge, (3) Parker validate test count before/after NUnit conversion (146→146)
+- Recommendation: Rename Core.NaturalLanguage namespace to Core.Shared.NaturalLanguage (avoid semantic confusion)
+- Recommendation: Keep Fingerprint's StripFrontmatter local (document .TrimStart() as intentional optimization)
+- Recommendation: Execute Action 4 (NUnit → xUnit) before Action 3 (consolidation) — cleaner ecosystem baseline
+
+**Full review:** `.squad/decisions/inbox/morgan-consolidation-review.md`
 
 ---
 

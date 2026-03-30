@@ -9,7 +9,84 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
-### 2026-03-25: Work Prioritization — 14 Issues Created from Team Reviews (UPDATE: ALL MERGED)
+### 2026-03-30: .NET Project Consolidation Plan — Team Review Complete (AD-027 through AD-034)
+
+**Session:** Orchestrated asynchronous review of consolidation plan across 8-member team.
+
+**Decision:** Plan APPROVED WITH CONDITIONS across all 8 reviewers.
+
+**Verdicts:**
+- ✅ Riley (Architect): APPROVE WITH CHANGES
+- ✅ Morgan (C# Dev): APPROVE WITH CHANGES  
+- ✅ Cameron (Test Lead): APPROVE WITH CHANGES
+- ✅ Quinn (DevOps): APPROVED
+- ✅ Parker (QA): APPROVE WITH CONTINGENCIES
+- ✅ Sage (AI/Prompt): RECOMMEND APPROVAL
+- ✅ Reeve (Docs): APPROVED
+
+**Consolidation scope:** 42 → 40 projects (Actions 1-6 approved; Action 7 deferred).
+
+**Actions approved:**
+1. Remove CliAnalyzer (orphaned, 15 min)
+2. Merge PostProcessVerifier → ToolFamilyCleanup (90 min)
+3. Merge Core.NaturalLanguage → Core.Shared (120 min, file discovery validation required)
+4. NUnit → xUnit migration (180 min, test count verification required)
+5. Consolidate StripFrontmatter (5-45 min, behavioral option decision required)
+6. Document Validation.Tests (30 min)
+
+**Action deferred:**
+- Action 7 (Bootstrap sub-step consolidation): Riley rejected — violates subprocess isolation contract (resilience requirement)
+
+**Execution:** 6-8 hours across 2 sprints (Phase 1-3). Quality gates mandatory per AD-028.
+
+**Key decisions filed:**
+- AD-027: Consolidation plan approval
+- AD-028: Quality gate strategy (3 gates)
+- AD-029: Data file discovery requirement
+- AD-030: Exit code preservation requirement
+- AD-031: Namespace preservation for Action 3
+- AD-032: Test baseline verification for Action 4
+- AD-033: Post-processor order verification (Action 2)
+- AD-034: AI output consistency test (Action 3)
+
+**Orchestration log:** 9 files created in `.squad/orchestration-log/2026-03-30T00-45-consolidation-review/` (one per agent + session summary)
+
+**Session log:** `.squad/log/2026-03-30T00-45-consolidation-review.md`
+
+**Decision inbox:** 8 files merged into `decisions.md` as AD-027–AD-034; inbox now empty.
+
+**Next step:** Morgan begins Phase 1 implementation (Actions 1, 6, 5) pending team sign-off.
+
+---
+
+### 2026-03-26: .NET Project Consolidation Investigation
+
+**Session:** Full audit of 42 .csproj files across the repo, mapping dependencies, usage, and consolidation opportunities.
+
+**Key architectural findings:**
+- **Pipeline architecture is subprocess-based:** PipelineRunner invokes each step project via `dotnet run --project`. Step projects MUST remain independent Exe projects. This is the #1 constraint against aggressive consolidation.
+- **42 projects:** 19 Exe (pipeline steps + tools), 5 core libraries, 19 test projects. ~427 .cs files total.
+- **CliAnalyzer is orphaned:** `DocGeneration.Steps.Bootstrap.CliAnalyzer` (8 .cs files) is not referenced by PipelineRunner, not invoked by any script. Dead code with dual JSON library dependency (only project using Newtonsoft.Json + System.Text.Json).
+- **PostProcessVerifier is a 1-file shim:** Reapplies ToolFamilyCleanup's post-processors in dry-run mode. Should be a CLI flag, not a separate project.
+- **Core.NaturalLanguage is 1 file:** Single TextCleanup.cs (472 lines) already depends on Core.Shared. Belongs in Core.Shared.
+- **Core.GenerativeAI MUST stay separate:** Azure.AI.OpenAI/Azure.Identity dependencies should not bleed into Core.Shared (would pollute 24+ downstream projects).
+- **Mixed test frameworks:** 3 NUnit projects among 16 xUnit projects (TextTransformation.Tests, HorizontalArticles.Tests, SkillsRelevance.Tests).
+- **ToolFamilyCleanup.Validation.Tests is orphaned by design:** Tests PowerShell script via Process.Start(), intentionally has zero project references. Needs documentation.
+- **StripFrontmatter (AD-018):** Mostly consolidated — 4 projects correctly delegate to FrontmatterUtility. 2 remaining duplicates in Fingerprint.MarkdownAnalyzer and PromptRegression.Tests.QualityMetrics.
+
+**Consolidation plan:** `docs/proposals/dotnet-consolidation-plan.md` — 7 actions, 42→34 projects (or 32 with future Bootstrap merge). Decision filed in inbox.
+
+**Key file paths:**
+- Solution: `docs-generation.sln`
+- Pipeline orchestrator: `docs-generation/DocGeneration.PipelineRunner/` (44 .cs files, largest project)
+- Step registry: `DocGeneration.PipelineRunner/StepRegistry.cs`
+- Orphaned project: `docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/`
+- Consolidation plan: `docs/proposals/dotnet-consolidation-plan.md`
+- Decision: `.squad/decisions/inbox/avery-dotnet-consolidation.md`
+
+---
+
+### 2026-03-25:Work Prioritization — 14 Issues Created from Team Reviews (UPDATE: ALL MERGED)
 
 **Session:** Synthesized requirements review (#202), test strategy reviews (6 reviewers), AD-020, AD-021, and existing issue backlog into a prioritized issue set. **Status: All 3 merged PRs complete; decision inbox consolidated; user workflow directive enforced.**
 

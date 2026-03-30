@@ -535,3 +535,235 @@ This is the P0 (highest-leverage) item from `docs/acrolinx-compliance-strategy.m
 - **Morgan:** If you modify any system prompt, preserve the Acrolinx section. 42 tests in `AcrolinxComplianceSectionTests.cs` will fail if the section is removed.
 - **Parker:** The new tests are in `DocGeneration.Steps.ToolFamilyCleanup.Tests/AcrolinxComplianceSectionTests.cs`. They read prompt files from disk and assert required keywords.
 - **Quinn:** No pipeline changes needed — prompts are loaded at runtime.
+
+---
+
+### AD-027: .NET Project Consolidation Plan — Team Review and Approval
+**Date:** 2026-03-30  
+**Author:** Avery (Team Lead)  
+**Reviewed by:** Riley, Morgan, Cameron, Quinn, Parker, Sage, Reeve  
+**Status:** APPROVED WITH CONDITIONS  
+**Related:** docs/proposals/dotnet-consolidation-plan.md
+
+**Context:** Investigation identified 42 .NET projects with optimization opportunities: orphaned code (CliAnalyzer), thin shims (PostProcessVerifier), single-file libraries (Core.NaturalLanguage), and mixed test frameworks (NUnit + xUnit).
+
+**Decision:** Consolidate 42 → 40 projects through 6 approved actions + 1 deferred architectural review.
+
+**Actions Approved (1-6):**
+1. Remove CliAnalyzer — orphaned Bootstrap utility, 8 files
+2. Merge PostProcessVerifier → ToolFamilyCleanup — add `--verify-only` flag
+3. Merge Core.NaturalLanguage → Core.Shared — preserve namespace for zero-churn refactor
+4. Standardize NUnit → xUnit — 3 test projects, 155 tests
+5. Consolidate StripFrontmatter duplication — note: Fingerprint has `.TrimStart()` behavior; recommend keeping local implementation (Option A)
+6. Document ToolFamilyCleanup.Validation.Tests — explain PowerShell integration test design
+
+**Action Deferred (7):**
+- Bootstrap sub-step consolidation — Riley rejected (violates subprocess isolation contract; resilience requirement)
+
+**Conditions & Requirements by Reviewer:**
+
+| Reviewer | Verdict | Key Conditions |
+|----------|---------|----------------|
+| Riley (Architect) | APPROVE WITH CHANGES | Namespace preservation (Action 3), exit code preservation (Action 2), Action 7 rejection documented |
+| Morgan (C# Dev) | APPROVE WITH CHANGES | 7-hour implementation estimate; behavioral caveat on Action 5 (Fingerprint StripFrontmatter); test before/after for Actions 4 |
+| Cameron (Test Lead) | APPROVE WITH CHANGES | 3 quality gates: full test pass, pipeline dry-run (3 namespaces), fingerprint regression check |
+| Quinn (DevOps) | APPROVED | No CI/CD changes needed; script audit required (Actions 1-2); deprecation message for CliAnalyzer wrapper |
+| Parker (QA) | APPROVE WITH CONTINGENCIES | 9 acceptance criteria: orphan verification, baseline comparisons, file discovery tests, test count matching |
+| Sage (AI/Prompt) | RECOMMEND APPROVAL | 3 safeguards: post-processor order test (Action 2), output consistency test (Action 3), assertion equivalence (Action 4) |
+| Reeve (Docs) | APPROVED | 3 tech docs need updates (ci-integration.md, test-strategy.md), 1 new README (Validation.Tests) |
+
+**Impact Assessment:**
+- **Build time:** ~5% faster (fewer projects)
+- **Test coverage:** ~1,100+ tests preserved (zero deletions, consolidations only)
+- **CI/CD:** No workflow changes required (auto-discovery continues)
+- **Developers:** Cleaner mental model (fewer projects, unified test framework)
+
+**Execution Timeline:**
+- Phase 1 (Immediate): Actions 1, 6, 5 (~1 hour, low risk)
+- Phase 2 (Same sprint): Actions 2, 4 (~4-5 hours, medium risk)
+- Phase 3 (Next sprint): Action 3 (~2-3 hours, medium-high risk)
+- **Total:** 6-8 hours across 1-2 sprints
+
+**Team Assignments:**
+- **Morgan:** Implement Actions 2-5
+- **Quinn:** Script audit (Actions 1-2), CI validation
+- **Parker:** Run before/after test baselines, file discovery validation
+- **Riley:** Namespace preservation oversight, subprocess isolation protection
+- **Reeve:** Write Validation.Tests README, update documentation
+- **Sage:** Validate post-processor order, AI output consistency
+- **Cameron:** Design quality gates and regression tests
+
+**Rationale:** Consolidation improves code maintainability without sacrificing resilience. Subprocess isolation (ProcessRunner architecture) preserved. Clean dependency graph maintained. All 1,100+ tests remain executable. Conservative approach: don't break what works.
+
+---
+
+### AD-028: Quality Gate Strategy for .NET Consolidation
+**Date:** 2026-03-30  
+**Author:** Cameron (Test Lead)  
+**Status:** Active  
+**Related:** AD-027
+
+**Three mandatory quality gates must pass before consolidation completes:**
+
+**Gate 1: Full Test Pass**
+- Command: `dotnet test docs-generation.sln`
+- Criteria: 0 failures, 0 skipped (unless pre-existing), test count matches baseline
+- Timing: After each consolidation phase
+
+**Gate 2: Pipeline Dry-Run on Representative Namespaces**
+- Scope: 3 namespaces (advisor, storage, compute)
+- Command: `./start.sh --namespace {name} --verify-only` for each
+- Criteria: All 7 steps execute, output directories exist, no runtime file errors
+- Timing: After all Actions 1-5 complete
+
+**Gate 3: Regression Baseline Fingerprinting**
+- Before: `./prompt-regression.sh --baseline`
+- After: `./prompt-regression.sh --verify`
+- Criteria: Fingerprints match or improve (no hallucinations)
+- Timing: Final validation before merge
+
+**Responsibility:** Parker executes all gates; team reviews results before proceeding to next phase.
+
+---
+
+### AD-029: Critical Data File Discovery Requirement (Action 3)
+**Date:** 2026-03-30  
+**Author:** Morgan (C# Developer), Parker (QA)  
+**Status:** Active  
+**Related:** AD-027 (Action 3)
+
+**Before Core.NaturalLanguage merge, data file runtime discovery MUST be verified:**
+
+**Files Affected:**
+- nl-parameters.json
+- static-text-replacement.json
+- nl-parameter-identifiers.json
+
+**Validation Required:**
+1. Audit TextCleanup.cs file loading mechanism (embedded resources vs. relative paths vs. BaseDirectory)
+2. Verify Core.Shared.csproj has `<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>`
+3. Write integration test: `Core.Shared.Tests/TextCleanupRuntimeFileDiscoveryTests.cs`
+4. Run HorizontalArticles (Step 6) on 5 diverse namespaces end-to-end
+5. Verify TextCleanup processes without file-not-found errors
+
+**Risk if missed:** Runtime crash in TextCleanup after merge (data files not found at new location).
+
+**Ownership:** Morgan (implementation), Parker (validation).
+
+---
+
+### AD-030: Exit Code Preservation Requirement (Action 2)
+**Date:** 2026-03-30  
+**Author:** Riley (Architect)  
+**Status:** Active  
+**Related:** AD-027 (Action 2)
+
+**When merging PostProcessVerifier into ToolFamilyCleanup's `--verify-only` flag, exit codes MUST remain unchanged:**
+
+**Exit Code Contract:**
+- Success: exit 0
+- Validation failure: exit 1
+- File not found: exit 2 (or appropriate error code)
+
+**Why:** Scripts and CI workflows may parse exit codes for error handling. Changing exit codes breaks backward compatibility.
+
+**Validation:** Before deletion of PostProcessVerifier, run ToolFamilyCleanup with `--verify-only` on 5+ namespaces and verify exit codes match old tool.
+
+**Ownership:** Morgan (implementation), Quinn (script verification).
+
+---
+
+### AD-031: Namespace Preservation for Core.NaturalLanguage (Action 3)
+**Date:** 2026-03-30  
+**Author:** Riley (Architect), Morgan (C# Developer)  
+**Status:** Active  
+**Related:** AD-027 (Action 3)
+
+**After merging Core.NaturalLanguage → Core.Shared, KEEP namespace as `DocGeneration.Core.NaturalLanguage`:**
+
+**Rationale:** Three downstream projects (Annotations, RawTools, HorizontalArticles) import `using DocGeneration.Core.NaturalLanguage;`. Changing namespace would require updating all 3 projects + 6 test files (churn). Namespace preservation makes this a zero-change refactor.
+
+**Implementation:**
+```csharp
+// File: Core.Shared/NaturalLanguage/TextCleanup.cs
+namespace DocGeneration.Core.NaturalLanguage  // ← KEEP THIS
+{
+    public static class TextCleanup { ... }
+}
+```
+
+**Project reference changes needed:** Update 3 step projects' .csproj to remove `<ProjectReference>` to Core.NaturalLanguage (they already reference Core.Shared).
+
+**Ownership:** Morgan (implementation), Riley (verification).
+
+---
+
+### AD-032: Test Baseline Verification for Framework Migration (Action 4)
+**Date:** 2026-03-30  
+**Author:** Cameron (Test Lead), Morgan (C# Developer)  
+**Status:** Active  
+**Related:** AD-027 (Action 4)
+
+**NUnit → xUnit migration for 3 test projects (155 tests) requires before/after test count matching:**
+
+**Process:**
+1. Before migration: `dotnet test Core.TextTransformation.Tests Core.HorizontalArticles.Tests Core.SkillsRelevance.Tests > baseline.txt` (record test count and results)
+2. Execute migration: Replace NUnit attributes → xUnit, rewrite assertions
+3. After migration: `dotnet test Core.TextTransformation.Tests Core.HorizontalArticles.Tests Core.SkillsRelevance.Tests > migration.txt`
+4. Verification: `diff baseline.txt migration.txt` → must be identical in test count and results
+
+**Why:** NUnit and xUnit have subtle assertion semantic differences (argument order, message formatting). Before/after comparison catches silent assertion failures.
+
+**Risk if skipped:** Silent test regressions due to incorrect assertion rewrites (e.g., `Assert.Equal(expected, actual)` vs. `Assert.Equal(actual, expected)` order matters).
+
+**Ownership:** Cameron (audit), Morgan (migration), Parker (validation).
+
+---
+
+### AD-033: Post-Processor Order Verification (Action 2, AI Safeguard)
+**Date:** 2026-03-30  
+**Author:** Sage (AI/Prompt Engineer), Morgan (C# Developer)  
+**Status:** Active  
+**Related:** AD-027 (Action 2)
+
+**When merging PostProcessVerifier into ToolFamilyCleanup, post-processor order MUST remain identical:**
+
+**Critical Chain (10 post-processors in order):**
+1. AcronymExpander
+2. FrontmatterEnricher
+3. DuplicateExampleStripper
+4. AnnotationSpaceFixer
+5. PresentTenseFixer
+6. ContractionFixer
+7. IntroductoryCommaFixer
+8. ExampleValueBackticker
+9. LearnUrlRelativizer
+10. JsonSchemaCollapser
+
+**Validation:** Run ToolFamilyCleanup with `--verify-only` on 5 diverse namespaces (StorageAccount, KeyVault, CosmosDB, EventGrid, Compute) and verify `.after` files are byte-identical to old PostProcessVerifier output.
+
+**Risk:** Reordering processors changes AI output quality gates and content correctness validation.
+
+**Ownership:** Morgan (implementation), Sage (validation).
+
+---
+
+### AD-034: AI Output Consistency Test for Core.NaturalLanguage Merge (Action 3, AI Safeguard)
+**Date:** 2026-03-30  
+**Author:** Sage (AI/Prompt Engineer), Parker (QA)  
+**Status:** Active  
+**Related:** AD-027 (Action 3)
+
+**After merging Core.NaturalLanguage → Core.Shared, HorizontalArticles (Step 6) AI output MUST remain identical:**
+
+**Validation Process:**
+1. Generate baseline with old Core.NaturalLanguage: Run Step 6 on 5 diverse namespaces, capture output
+2. Execute consolidation (Action 3)
+3. Generate new output with merged Core.Shared: Run Step 6 on same 5 namespaces
+4. Compare: TextCleanup output must be byte-identical (no parameter normalization regressions)
+
+**Namespace Validation:** Run PromptRegression.Tests to verify `.after` files used by regression detection remain compatible.
+
+**Risk:** Data file discovery failure or namespace change breaks TextCleanup runtime, causing Step 6 output degradation.
+
+**Ownership:** Parker (test execution), Sage (output validation).
