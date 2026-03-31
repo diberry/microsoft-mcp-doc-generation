@@ -14,7 +14,7 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// </summary>
 public class AcrolinxComplianceSectionTests
 {
-    private static readonly string ProjectRoot = FindProjectRoot();
+    private static readonly string ProjectRoot = DocGeneration.TestInfrastructure.ProjectRootFinder.FindSolutionRoot();
 
     /// <summary>
     /// All AI system prompt files that generate prose for published articles.
@@ -230,16 +230,4 @@ public class AcrolinxComplianceSectionTests
     }
 
     // ── Helper ──────────────────────────────────────────────────────
-
-    private static string FindProjectRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null)
-        {
-            if (File.Exists(Path.Combine(dir, "docs-generation.sln")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("Could not find project root (docs-generation.sln)");
-    }
 }

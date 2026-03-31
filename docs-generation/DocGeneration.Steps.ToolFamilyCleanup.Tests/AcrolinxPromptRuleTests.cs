@@ -16,16 +16,17 @@ public class AcrolinxPromptRuleTests
 
     public AcrolinxPromptRuleTests()
     {
+        var projectRoot = DocGeneration.TestInfrastructure.ProjectRootFinder.FindSolutionRoot();
         // Load the actual system prompt file
         var promptPath = Path.Combine(
-            FindProjectRoot(),
+            projectRoot,
             "docs-generation",
             "DocGeneration.Steps.ToolFamilyCleanup",
             "prompts",
             "tool-family-cleanup-system-prompt.txt");
 
         var rawContent = File.ReadAllText(promptPath);
-        var dataDir = Path.Combine(FindProjectRoot(), "docs-generation", "data");
+        var dataDir = Path.Combine(projectRoot, "docs-generation", "data");
         _promptContent = Shared.PromptTokenResolver.Resolve(rawContent, dataDir);
     }
 
@@ -79,16 +80,4 @@ public class AcrolinxPromptRuleTests
     }
 
     // ── Helper ──────────────────────────────────────────────────────
-
-    private static string FindProjectRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (dir != null)
-        {
-            if (File.Exists(Path.Combine(dir, "docs-generation.sln")))
-                return dir;
-            dir = Path.GetDirectoryName(dir);
-        }
-        throw new InvalidOperationException("Could not find project root (docs-generation.sln)");
-    }
 }
