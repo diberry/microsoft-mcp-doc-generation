@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **CI workflow for prompt regression testing** — New GitHub Actions workflow (`.github/workflows/prompt-regression.yml`) triggers on PRs modifying prompt files or regression test infrastructure. Supports manual dispatch. Runs prompt content and regression comparison tests against committed baselines. (#350)
+
 ### Changed
 
 - **Consolidated FindProjectRoot() into shared test utility** — Created `DocGeneration.TestInfrastructure` project with canonical `ProjectRootFinder` class (`FindSolutionRoot()`, `FindDocsGenerationRoot()`). Replaced 7 duplicate implementations across 5 test projects. (Issue #334)

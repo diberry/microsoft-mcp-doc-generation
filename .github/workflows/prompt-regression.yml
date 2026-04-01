@@ -1,0 +1,38 @@
+name: Prompt Regression Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs-generation/**/prompts/**'
+      - 'prompt-regression.sh'
+      - 'docs-generation/DocGeneration.PromptRegression.Tests/**'
+  workflow_dispatch:
+
+jobs:
+  prompt-regression:
+    name: Prompt Regression Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup .NET 9.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore docs-generation/DocGeneration.PromptRegression.Tests/DocGeneration.PromptRegression.Tests.csproj
+
+      - name: Build regression test project
+        run: dotnet build docs-generation/DocGeneration.PromptRegression.Tests/DocGeneration.PromptRegression.Tests.csproj --no-restore --configuration Release
+
+      - name: Run prompt regression tests
+        run: dotnet test docs-generation/DocGeneration.PromptRegression.Tests/DocGeneration.PromptRegression.Tests.csproj --no-build --configuration Release --logger "console;verbosity=detailed"
+        env:
+          FOUNDRY_API_KEY: ${{ secrets.FOUNDRY_API_KEY }}
+          FOUNDRY_ENDPOINT: ${{ secrets.FOUNDRY_ENDPOINT }}
+          FOUNDRY_MODEL_NAME: ${{ secrets.FOUNDRY_MODEL_NAME }}
+          FOUNDRY_MODEL_API_VERSION: ${{ secrets.FOUNDRY_MODEL_API_VERSION }}
