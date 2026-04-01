@@ -8,7 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Added parallel AI evaluation document (`docs/parallel-ai-evaluation.md`) (#356)
+- Added parallel AI evaluation document (`docs/parallel-ai-evaluation.md`) (#356) — v2: corrected Step 4 line references and dual-AI-call analysis, added implementation roadmap
 
 ### Changed
 

@@ -2,7 +2,7 @@
 
 > **Issue:** #356 — Evaluate batch/parallel AI calls within a namespace  
 > **Status:** Evaluation complete — recommendation included  
-> **Date:** 2025-07-24
+> **Date:** 2025-07-25 (v2 — corrected line references, added dual-AI-call analysis for Step 4)
 
 ## Overview
 
@@ -32,9 +32,9 @@ start.sh (orchestrator)
 
 | Step | Project | Iterates over | AI calls/item | Explicit delay |
 |------|---------|---------------|---------------|----------------|
-| 2 | `DocGeneration.Steps.ExamplePrompts.Generation` | Tools (`foreach`) | 1 (or deterministic bypass) | None |
+| 2 | `DocGeneration.Steps.ExamplePrompts.Generation` | Tools (`foreach`) | 1 (or deterministic bypass via `DeterministicExamplePromptGenerator.IsEligible()`, line 270) | None |
 | 3 | `DocGeneration.Steps.ToolGeneration.Improvements` | Composed files (`for`) | 1 | 100 ms between calls |
-| 4 | `DocGeneration.Steps.ToolFamilyCleanup` | Tool families (`for`/`foreach`) | 1 per family (metadata) | None |
+| 4 | `DocGeneration.Steps.ToolFamilyCleanup` | Tool families (`for`/`foreach`) | 2 per family (cleanup + metadata) | None |
 | 6 | `DocGeneration.Steps.HorizontalArticles` | Services (`for`) | 1 per service | None |
 
 ### Key sequential patterns (exact locations)
@@ -43,7 +43,7 @@ start.sh (orchestrator)
 |------|------|-------------|---------------------|
 | 2 | `ExamplePrompts.Generation/Program.cs` | 223 (`foreach`) | Line 279 |
 | 3 | `ToolGeneration.Improvements/Services/ImprovedToolGeneratorService.cs` | 111 (`for`) | Line 139 |
-| 4 | `ToolFamilyCleanup/Services/CleanupGenerator.cs` | 101 (`for`) | Line 122 |
+| 4 | `ToolFamilyCleanup/Services/CleanupGenerator.cs` | 101 (`for`) | Line 130 (Phase 1) + line 477 (Phase 2) |
 | 6 | `HorizontalArticles/Generators/HorizontalArticleGenerator.cs` | 161 (`for`) | Line 165 |
 
 ---
@@ -179,7 +179,7 @@ Based on code inspection:
 |------|----------------|---------------------|------------|
 | 2 (ExamplePrompts) | 5-15 tools (many bypass via deterministic) | 2-4 s | ~15-20 calls/min |
 | 3 (ToolGeneration) | 5-15 files + 100 ms delay | 2-4 s + 0.1 s | ~14-18 calls/min |
-| 4 (ToolFamilyCleanup) | 1-3 families | 3-6 s | ~10-15 calls/min |
+| 4 (ToolFamilyCleanup) | 1-3 families × 2 AI calls (cleanup + metadata) | 3-6 s per call | ~10-15 calls/min |
 | 6 (HorizontalArticles) | 1 service | 4-8 s | ~8-12 calls/min |
 
 **Current total AI calls per namespace:** ~10-30 calls (varies by tool count)  
@@ -413,7 +413,7 @@ Assumptions:
 |------|-------------|-----------|
 | **Step 2 (ExamplePrompts)** | ✅ Yes | Highest tool count; independent per-tool processing |
 | **Step 3 (ToolGeneration)** | ✅ Yes | Independent per-file processing; already has 100 ms delay (remove) |
-| Step 4 (ToolFamilyCleanup) | ⬜ No | Only 1-3 families per namespace; negligible benefit |
+| Step 4 (ToolFamilyCleanup) | ⬜ No | Only 1-3 families per namespace; dual AI calls per family (Phase 1 cleanup at line 130 + Phase 2 metadata at line 477) but too few items to benefit |
 | Step 6 (HorizontalArticles) | ⬜ No | Only 1 article per namespace; no loop to parallelize |
 
 ### Implementation prerequisites
@@ -437,3 +437,29 @@ Assumptions:
   rate limiting, making the retry overhead negate the parallelism benefit.
 - **Do not remove the existing retry logic** — it serves as a safety net
   regardless of concurrency level.
+
+---
+
+## 8. Implementation Roadmap
+
+If this evaluation is approved, the following ordered steps are recommended:
+
+1. **Thread safety prerequisite** (must complete first)
+   - Make `TokenUsageSummary.AddCall()` thread-safe (add `lock` or `ConcurrentBag`)
+   - Replace `successCount++` / `failureCount++` with `Interlocked.Increment` in Steps 2 and 3
+   - Add jitter to `ExecuteWithRetryAsync` retry delays
+
+2. **Step 3 parallelism** (lower risk — fewer tools, simpler loop)
+   - Convert `for` loop in `ImprovedToolGeneratorService.cs:111` to `Parallel.ForEachAsync`
+   - Remove the 100 ms `Task.Delay` at line 215 (no longer needed with bounded concurrency)
+   - Add `--concurrency` CLI parameter (default 3)
+
+3. **Step 2 parallelism** (higher tool count, more complex loop body)
+   - Convert `foreach` loop in `Program.cs:223` to `Parallel.ForEachAsync`
+   - Buffer console output per-task
+   - Handle `e2eLogEntries` accumulation with thread-safe collection
+
+4. **Observability & tuning**
+   - Add per-step timing telemetry to compare sequential vs parallel runs
+   - Monitor Azure OpenAI 429 rate in logs across full catalog runs
+   - Tune default concurrency based on observed TPM consumption
