@@ -17,10 +17,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Removed
 
 - Deleted unused `test_coverage.cs` and `test_coverage.csx` from repository root (#349)
+- Removed unused NUnit and NUnit3TestAdapter from central package management (#349)
 
 ### Changed
 
-- **Consolidated FindProjectRoot() into shared test utility** — Created `DocGeneration.TestInfrastructure` project with canonical `ProjectRootFinder` class (`FindSolutionRoot()`, `FindDocsGenerationRoot()`). Replaced 7 duplicate implementations across 5 test projects. (Issue #334)
+- Migrated 3 NUnit test projects (SkillsRelevance, TextTransformation, HorizontalArticles) to xUnit for framework consistency (#349)
+- **Consolidated FindProjectRoot() into shared test utility**— Created `DocGeneration.TestInfrastructure` project with canonical `ProjectRootFinder` class (`FindSolutionRoot()`, `FindDocsGenerationRoot()`). Replaced 7 duplicate implementations across 5 test projects. (Issue #334)
 
 ### Fixed
 

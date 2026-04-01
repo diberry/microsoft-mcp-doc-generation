@@ -1,17 +1,15 @@
-using NUnit.Framework;
+using Xunit;
 using Azure.Mcp.TextTransformation.Models;
 using Azure.Mcp.TextTransformation.Services;
 
 namespace Azure.Mcp.TextTransformation.Tests;
 
-[TestFixture]
 public class FilenameGeneratorTests
 {
-    private TransformationConfig _config = null!;
-    private FilenameGenerator _generator = null!;
+    private readonly TransformationConfig _config;
+    private readonly FilenameGenerator _generator;
 
-    [SetUp]
-    public void Setup()
+    public FilenameGeneratorTests()
     {
         _config = new TransformationConfig
         {
@@ -32,9 +30,9 @@ public class FilenameGeneratorTests
             {
                 Mappings = new List<ServiceMapping>
                 {
-                    new ServiceMapping 
-                    { 
-                        McpName = "aks", 
+                    new ServiceMapping
+                    {
+                        McpName = "aks",
                         ShortName = "aks",
                         Filename = "azure-kubernetes-service"
                     },
@@ -57,103 +55,73 @@ public class FilenameGeneratorTests
         _generator = new FilenameGenerator(_config);
     }
 
-    [Test]
+    [Fact]
     public void GenerateFilename_Tier1_UsesBrandMapping()
     {
-        // Act
         var filename = _generator.GenerateFilename("aks", "get-cluster", "annotations");
-
-        // Assert
-        Assert.That(filename, Is.EqualTo("azure-kubernetes-service-get-cluster-annotations.md"));
+        Assert.Equal("azure-kubernetes-service-get-cluster-annotations.md", filename);
     }
 
-    [Test]
+    [Fact]
     public void GenerateFilename_Tier2_UsesCompoundWords()
     {
-        // Act
         var filename = _generator.GenerateFilename("nodepool", "list", "parameters");
-
-        // Assert
-        Assert.That(filename, Is.EqualTo("node-pool-list-parameters.md"));
+        Assert.Equal("node-pool-list-parameters.md", filename);
     }
 
-    [Test]
+    [Fact]
     public void GenerateFilename_Tier3_UsesOriginalName()
     {
-        // Act
         var filename = _generator.GenerateFilename("unknown", "operation", "type");
-
-        // Assert
-        Assert.That(filename, Is.EqualTo("unknown-operation-type.md"));
+        Assert.Equal("unknown-operation-type.md", filename);
     }
 
-    [Test]
+    [Fact]
     public void CleanFilename_RemovesStopWords()
     {
-        // Act
         var cleaned = _generator.CleanFilename("get-a-list-of-the-items");
-
-        // Assert
-        Assert.That(cleaned, Is.EqualTo("get-list-items"));
+        Assert.Equal("get-list-items", cleaned);
     }
 
-    [Test]
+    [Fact]
     public void CleanFilename_LowercasesAcronyms_WhenCategoryDefaultApplies()
     {
-        // Act
         var cleaned = _generator.CleanFilename("AKS-cluster-VM");
-
-        // Assert
-        Assert.That(cleaned, Is.EqualTo("aks-cluster-vm"));
+        Assert.Equal("aks-cluster-vm", cleaned);
     }
 
-    [Test]
+    [Fact]
     public void GenerateMainServiceFilename_UsesBrandMappingFilename()
     {
-        // Act
         var filename = _generator.GenerateMainServiceFilename("aks");
-
-        // Assert
-        Assert.That(filename, Is.EqualTo("azure-kubernetes-service.md"));
+        Assert.Equal("azure-kubernetes-service.md", filename);
     }
 
-    [Test]
+    [Fact]
     public void GenerateMainServiceFilename_UsesShortName_WhenFilenameNotSet()
     {
-        // Act
         var filename = _generator.GenerateMainServiceFilename("storage");
-
-        // Assert
-        Assert.That(filename, Is.EqualTo("storage.md"));
+        Assert.Equal("storage.md", filename);
     }
 
-    [Test]
+    [Fact]
     public void GenerateMainServiceFilename_UsesOriginalName_WhenNoMapping()
     {
-        // Act
         var filename = _generator.GenerateMainServiceFilename("unknown");
-
-        // Assert
-        Assert.That(filename, Is.EqualTo("unknown.md"));
+        Assert.Equal("unknown.md", filename);
     }
 
-    [Test]
+    [Fact]
     public void GenerateFilename_WithEmptyAreaName_ReturnsEmpty()
     {
-        // Act
         var filename = _generator.GenerateFilename("");
-
-        // Assert
-        Assert.That(filename, Is.EqualTo(string.Empty));
+        Assert.Equal(string.Empty, filename);
     }
 
-    [Test]
+    [Fact]
     public void CleanFilename_HandlesMultipleSeparators()
     {
-        // Act
         var cleaned = _generator.CleanFilename("some_mixed-name with spaces");
-
-        // Assert
-        Assert.That(cleaned, Is.EqualTo("some-mixed-name-with-spaces"));
+        Assert.Equal("some-mixed-name-with-spaces", cleaned);
     }
 }

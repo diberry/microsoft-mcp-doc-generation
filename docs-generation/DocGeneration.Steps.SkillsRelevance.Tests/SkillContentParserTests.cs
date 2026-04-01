@@ -1,17 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using NUnit.Framework;
+using Xunit;
 using SkillsRelevance.Services;
 
 namespace SkillsRelevance.Tests;
 
-[TestFixture]
 public class SkillContentParserTests
 {
     // ── Markdown with YAML frontmatter ────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void Parse_MarkdownWithFrontmatter_ExtractsName()
     {
         var content = """
@@ -25,10 +24,10 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("storage-helper.md", content, "https://github.com/org/repo/storage-helper.md", "https://raw.githubusercontent.com/org/repo/main/storage-helper.md", "Test Source");
 
-        Assert.That(skill.Name, Is.EqualTo("Azure Storage Helper"));
+        Assert.Equal("Azure Storage Helper", skill.Name);
     }
 
-    [Test]
+    [Fact]
     public void Parse_MarkdownWithFrontmatter_ExtractsDescription()
     {
         var content = """
@@ -40,10 +39,10 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("kv.md", content, "https://example.com/kv.md", "https://raw.example.com/kv.md", "Test Source");
 
-        Assert.That(skill.Description, Is.EqualTo("Manages Azure Key Vault secrets"));
+        Assert.Equal("Manages Azure Key Vault secrets", skill.Description);
     }
 
-    [Test]
+    [Fact]
     public void Parse_MarkdownWithFrontmatter_ExtractsTags()
     {
         var content = """
@@ -58,12 +57,12 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("tags-test.md", content, "https://example.com/tags-test.md", "https://raw.example.com/tags-test.md", "Test Source");
 
-        Assert.That(skill.Tags, Contains.Item("azure"));
-        Assert.That(skill.Tags, Contains.Item("storage"));
-        Assert.That(skill.Tags, Contains.Item("blob"));
+        Assert.Contains("azure", skill.Tags);
+        Assert.Contains("storage", skill.Tags);
+        Assert.Contains("blob", skill.Tags);
     }
 
-    [Test]
+    [Fact]
     public void Parse_MarkdownWithFrontmatter_ExtractsAuthorAndVersion()
     {
         var content = """
@@ -76,11 +75,11 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("versioned.md", content, "https://example.com/versioned.md", "https://raw.example.com/versioned.md", "Test Source");
 
-        Assert.That(skill.Author, Is.EqualTo("Jane Doe"));
-        Assert.That(skill.Version, Is.EqualTo("1.2.0"));
+        Assert.Equal("Jane Doe", skill.Author);
+        Assert.Equal("1.2.0", skill.Version);
     }
 
-    [Test]
+    [Fact]
     public void Parse_MarkdownWithFrontmatter_ExtractsLastUpdated()
     {
         var content = """
@@ -92,12 +91,12 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("dated.md", content, "https://example.com/dated.md", "https://raw.example.com/dated.md", "Test Source");
 
-        Assert.That(skill.LastUpdated, Is.Not.Null);
-        Assert.That(skill.LastUpdated!.Value.Year, Is.EqualTo(2024));
-        Assert.That(skill.LastUpdated.Value.Month, Is.EqualTo(3));
+        Assert.NotNull(skill.LastUpdated);
+        Assert.Equal(2024, skill.LastUpdated!.Value.Year);
+        Assert.Equal(3, skill.LastUpdated.Value.Month);
     }
 
-    [Test]
+    [Fact]
     public void Parse_MarkdownNoFrontmatter_FallsBackToH1ForName()
     {
         var content = """
@@ -108,28 +107,28 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("my-skill.md", content, "https://example.com/my-skill.md", "https://raw.example.com/my-skill.md", "Test Source");
 
-        Assert.That(skill.Name, Is.EqualTo("My Skill Title"));
+        Assert.Equal("My Skill Title", skill.Name);
     }
 
-    [Test]
+    [Fact]
     public void Parse_MarkdownNoFrontmatterNoH1_DeriveNameFromFilename()
     {
         var content = "Just some plain text with no headings.";
 
         var skill = SkillContentParser.Parse("my-skill-name.md", content, "https://example.com/my-skill-name.md", "https://raw.example.com/my-skill-name.md", "Test Source");
 
-        Assert.That(skill.Name, Is.EqualTo("my skill name"));
+        Assert.Equal("my skill name", skill.Name);
     }
 
-    [Test]
+    [Fact]
     public void Parse_SetsRawContent()
     {
         var content = "# Title\nSome content here.";
         var skill = SkillContentParser.Parse("skill.md", content, "https://example.com/skill.md", "https://raw.example.com/skill.md", "Source");
-        Assert.That(skill.RawContent, Is.EqualTo(content));
+        Assert.Equal(content, skill.RawContent);
     }
 
-    [Test]
+    [Fact]
     public void Parse_SetsSourceFields()
     {
         var skill = SkillContentParser.Parse(
@@ -139,15 +138,15 @@ public class SkillContentParserTests
             "https://raw.example.com/raw",
             "My Source");
 
-        Assert.That(skill.FileName, Is.EqualTo("skill.md"));
-        Assert.That(skill.SourceUrl, Is.EqualTo("https://example.com/html"));
-        Assert.That(skill.RawContentUrl, Is.EqualTo("https://raw.example.com/raw"));
-        Assert.That(skill.SourceRepository, Is.EqualTo("My Source"));
+        Assert.Equal("skill.md", skill.FileName);
+        Assert.Equal("https://example.com/html", skill.SourceUrl);
+        Assert.Equal("https://raw.example.com/raw", skill.RawContentUrl);
+        Assert.Equal("My Source", skill.SourceRepository);
     }
 
     // ── Plain YAML ────────────────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void Parse_YamlFile_ExtractsFields()
     {
         var content = """
@@ -158,12 +157,12 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("cosmos.yml", content, "https://example.com/cosmos.yml", "https://raw.example.com/cosmos.yml", "Source");
 
-        Assert.That(skill.Name, Is.EqualTo("Cosmos DB Skill"));
-        Assert.That(skill.Description, Is.EqualTo("Helps with Azure Cosmos DB NoSQL queries"));
-        Assert.That(skill.Category, Is.EqualTo("database"));
+        Assert.Equal("Cosmos DB Skill", skill.Name);
+        Assert.Equal("Helps with Azure Cosmos DB NoSQL queries", skill.Description);
+        Assert.Equal("database", skill.Category);
     }
 
-    [Test]
+    [Fact]
     public void Parse_YamlFile_ExtractsServicesList()
     {
         var content = """
@@ -175,13 +174,13 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("multi.yaml", content, "https://example.com/multi.yaml", "https://raw.example.com/multi.yaml", "Source");
 
-        Assert.That(skill.AzureServices, Contains.Item("Azure Monitor"));
-        Assert.That(skill.AzureServices, Contains.Item("Azure Log Analytics"));
+        Assert.Contains("Azure Monitor", skill.AzureServices);
+        Assert.Contains("Azure Log Analytics", skill.AzureServices);
     }
 
     // ── JSON ─────────────────────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void Parse_JsonFile_ExtractsFields()
     {
         var content = """
@@ -196,14 +195,14 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("kv.json", content, "https://example.com/kv.json", "https://raw.example.com/kv.json", "Source");
 
-        Assert.That(skill.Name, Is.EqualTo("Key Vault JSON Skill"));
-        Assert.That(skill.Description, Is.EqualTo("Manages secrets in Azure Key Vault"));
-        Assert.That(skill.Author, Is.EqualTo("DevOps Team"));
-        Assert.That(skill.Version, Is.EqualTo("2.0"));
-        Assert.That(skill.Category, Is.EqualTo("security"));
+        Assert.Equal("Key Vault JSON Skill", skill.Name);
+        Assert.Equal("Manages secrets in Azure Key Vault", skill.Description);
+        Assert.Equal("DevOps Team", skill.Author);
+        Assert.Equal("2.0", skill.Version);
+        Assert.Equal("security", skill.Category);
     }
 
-    [Test]
+    [Fact]
     public void Parse_JsonFile_ExtractsTags()
     {
         var content = """
@@ -215,66 +214,66 @@ public class SkillContentParserTests
 
         var skill = SkillContentParser.Parse("tagged.json", content, "https://example.com/tagged.json", "https://raw.example.com/tagged.json", "Source");
 
-        Assert.That(skill.Tags, Contains.Item("azure"));
-        Assert.That(skill.Tags, Contains.Item("devops"));
-        Assert.That(skill.Tags, Contains.Item("pipelines"));
+        Assert.Contains("azure", skill.Tags);
+        Assert.Contains("devops", skill.Tags);
+        Assert.Contains("pipelines", skill.Tags);
     }
 
-    [Test]
+    [Fact]
     public void Parse_InvalidJson_FallsBackToPlainText()
     {
         var content = "not valid json {{ }}";
         var skill = SkillContentParser.Parse("bad.json", content, "https://example.com/bad.json", "https://raw.example.com/bad.json", "Source");
         // Should not throw; description should be populated with some content
-        Assert.That(skill.Description, Is.Not.Empty);
+        Assert.NotEmpty(skill.Description);
     }
 
     // ── ExtractAzureServices ──────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void ExtractAzureServices_FindsKnownServices()
     {
         var content = "This skill helps you use Azure Key Vault and Azure Monitor for observability.";
         var services = SkillContentParser.ExtractAzureServices(content);
-        Assert.That(services, Contains.Item("Azure Key Vault"));
-        Assert.That(services, Contains.Item("Azure Monitor"));
+        Assert.Contains("Azure Key Vault", services);
+        Assert.Contains("Azure Monitor", services);
     }
 
-    [Test]
+    [Fact]
     public void ExtractAzureServices_IsCaseInsensitive()
     {
         var content = "Connect to azure storage and AZURE SQL databases.";
         var services = SkillContentParser.ExtractAzureServices(content);
-        Assert.That(services, Contains.Item("Azure Storage"));
-        Assert.That(services, Contains.Item("Azure SQL"));
+        Assert.Contains("Azure Storage", services);
+        Assert.Contains("Azure SQL", services);
     }
 
-    [Test]
+    [Fact]
     public void ExtractAzureServices_NoDuplicates()
     {
         var content = "Azure Storage is great. Use Azure Storage for blobs. Azure Storage is fast.";
         var services = SkillContentParser.ExtractAzureServices(content);
-        Assert.That(services.Count(s => s.Equals("Azure Storage", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+        Assert.Equal(1, services.Count(s => s.Equals("Azure Storage", StringComparison.OrdinalIgnoreCase)));
     }
 
-    [Test]
+    [Fact]
     public void ExtractAzureServices_EmptyContent_ReturnsEmptyList()
     {
         var services = SkillContentParser.ExtractAzureServices(string.Empty);
-        Assert.That(services, Is.Empty);
+        Assert.Empty(services);
     }
 
-    [Test]
+    [Fact]
     public void ExtractAzureServices_NoKnownServices_ReturnsEmptyList()
     {
         var content = "This is about JavaScript and Node.js with no Azure services.";
         var services = SkillContentParser.ExtractAzureServices(content);
-        Assert.That(services, Is.Empty);
+        Assert.Empty(services);
     }
 
     // ── ExtractSection ────────────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void ExtractSection_ReturnsContentUnderMatchingHeading()
     {
         var content = """
@@ -290,11 +289,11 @@ public class SkillContentParserTests
             """;
 
         var section = SkillContentParser.ExtractSection(content, "best practice");
-        Assert.That(section, Does.Contain("managed identities"));
-        Assert.That(section, Does.Contain("RBAC"));
+        Assert.Contains("managed identities", section);
+        Assert.Contains("RBAC", section);
     }
 
-    [Test]
+    [Fact]
     public void ExtractSection_StopsAtNextHeading()
     {
         var content = """
@@ -306,10 +305,10 @@ public class SkillContentParserTests
             """;
 
         var section = SkillContentParser.ExtractSection(content, "best practice");
-        Assert.That(section, Does.Not.Contain("should not be included"));
+        Assert.DoesNotContain("should not be included", section);
     }
 
-    [Test]
+    [Fact]
     public void ExtractSection_HeadingNotFound_ReturnsEmpty()
     {
         var content = """
@@ -318,10 +317,10 @@ public class SkillContentParserTests
             """;
 
         var section = SkillContentParser.ExtractSection(content, "troubleshoot");
-        Assert.That(section, Is.Empty);
+        Assert.Empty(section);
     }
 
-    [Test]
+    [Fact]
     public void ExtractSection_IsCaseInsensitive()
     {
         var content = """
@@ -330,6 +329,6 @@ public class SkillContentParserTests
             """;
 
         var section = SkillContentParser.ExtractSection(content, "troubleshoot");
-        Assert.That(section, Does.Contain("Azure Monitor"));
+        Assert.Contains("Azure Monitor", section);
     }
 }

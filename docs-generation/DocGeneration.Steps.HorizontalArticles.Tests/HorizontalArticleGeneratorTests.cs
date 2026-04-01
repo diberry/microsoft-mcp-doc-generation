@@ -6,18 +6,16 @@ using System.Text.Json;
 using CSharpGenerator.Models;
 using GenerativeAI;
 using HorizontalArticleGenerator.Models;
-using NUnit.Framework;
+using Xunit;
 using ArticleGenerator = HorizontalArticleGenerator.Generators.HorizontalArticleGenerator;
 
 namespace HorizontalArticleGenerator.Tests;
 
-[TestFixture]
-public class HorizontalArticleGeneratorTests
+public class HorizontalArticleGeneratorTests : IDisposable
 {
-    private string _outputBasePath = null!;
+    private readonly string _outputBasePath;
 
-    [SetUp]
-    public void SetUp()
+    public HorizontalArticleGeneratorTests()
     {
         _outputBasePath = Path.Combine(Path.GetTempPath(), "horizontal-article-generator-tests", Guid.NewGuid().ToString("N"));
         var cliDirectory = Path.Combine(_outputBasePath, "cli");
@@ -25,8 +23,7 @@ public class HorizontalArticleGeneratorTests
         File.WriteAllText(Path.Combine(cliDirectory, "cli-version.json"), "{\"version\":\"test-version\"}");
     }
 
-    [TearDown]
-    public void TearDown()
+    public void Dispose()
     {
         if (Directory.Exists(_outputBasePath))
         {
@@ -34,7 +31,7 @@ public class HorizontalArticleGeneratorTests
         }
     }
 
-    [Test]
+    [Fact]
     public async Task ExtractStaticData_UsesToolFamilyReferenceLink()
     {
         await WriteCliOutputAsync(new CliOutput
@@ -56,8 +53,8 @@ public class HorizontalArticleGeneratorTests
 
         var staticData = await InvokeExtractStaticDataAsync(generator);
 
-        Assert.That(staticData, Has.Count.EqualTo(1));
-        Assert.That(staticData[0].ToolsReferenceLink, Is.EqualTo("../tool-family/compute.md"));
+        Assert.Equal(1, staticData.Count);
+        Assert.Equal("../tool-family/compute.md", staticData[0].ToolsReferenceLink);
     }
 
     private ArticleGenerator CreateGenerator()
@@ -83,10 +80,10 @@ public class HorizontalArticleGeneratorTests
     private static async Task<List<StaticArticleData>> InvokeExtractStaticDataAsync(ArticleGenerator generator)
     {
         var method = typeof(ArticleGenerator).GetMethod("ExtractStaticData", BindingFlags.Instance | BindingFlags.NonPublic);
-        Assert.That(method, Is.Not.Null);
+        Assert.NotNull(method);
 
         var task = method!.Invoke(generator, null) as Task<List<StaticArticleData>>;
-        Assert.That(task, Is.Not.Null);
+        Assert.NotNull(task);
 
         return await task!;
     }
