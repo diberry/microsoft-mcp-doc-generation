@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "common-parameters.schema.json",
+  "title": "Common Parameters",
+  "description": "Parameters shared across most MCP tools (authentication, retry, subscription, resource-group). Optional common parameters are filtered from per-tool documentation tables; required ones are kept.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["name", "type", "description", "isRequired"],
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "CLI parameter name including leading dashes (e.g. '--tenant').",
+        "pattern": "^--[a-z][a-z0-9-]*$"
+      },
+      "type": {
+        "type": "string",
+        "description": "JSON-Schema-style type of the parameter value.",
+        "enum": ["string", "number", "integer", "boolean"]
+      },
+      "description": {
+        "type": "string",
+        "description": "Human-readable description of the parameter.",
+        "minLength": 10
+      },
+      "isRequired": {
+        "type": "boolean",
+        "description": "Whether the parameter is required. Common parameters are usually optional (false)."
+      }
+    },
+    "additionalProperties": false
+  },
+  "minItems": 1
+}
