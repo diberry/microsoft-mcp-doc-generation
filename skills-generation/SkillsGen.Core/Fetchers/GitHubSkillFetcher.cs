@@ -18,9 +18,9 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
         HttpClient httpClient,
         ILogger<GitHubSkillFetcher> logger,
         string owner = "microsoft",
-        string repo = "copilot-skills",
+        string repo = "GitHub-Copilot-for-Azure",
         string branch = "main",
-        string skillsPath = "skills",
+        string skillsPath = "plugin/skills",
         string? token = null)
     {
         _httpClient = httpClient;
@@ -43,7 +43,7 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
                 return null;
             }
 
-            var triggers = await FetchFileAsync($"{_skillsPath}/{skillName}/triggers.test.ts", ct);
+            var triggers = await FetchFileAsync($"tests/{skillName}/triggers.test.ts", ct);
 
             return new SkillSourceFiles(skillMd, triggers, $"github:{_owner}/{_repo}/{_skillsPath}/{skillName}", _branch);
         }

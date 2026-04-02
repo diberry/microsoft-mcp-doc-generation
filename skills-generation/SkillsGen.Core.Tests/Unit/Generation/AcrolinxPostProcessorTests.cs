@@ -94,4 +94,194 @@ public class AcrolinxPostProcessorTests
         // Should still apply contractions and URL normalization
         result.Should().NotBeEmpty();
     }
+
+    // --- Introductory comma tests ---
+
+    [Theory]
+    [InlineData("However the service is unavailable.", "However, the service is unavailable.")]
+    [InlineData("Therefore you should retry.", "Therefore, you should retry.")]
+    [InlineData("Additionally the tool supports querying.", "Additionally, the tool supports querying.")]
+    [InlineData("Furthermore this skill provides context.", "Furthermore, this skill provides context.")]
+    public void AddIntroductoryCommas_SingleWord_InsertsComma(string input, string expected)
+    {
+        var result = AcrolinxPostProcessor.AddIntroductoryCommas(input);
+        result.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("For example you can create a storage account.", "For example, you can create a storage account.")]
+    [InlineData("By default the tool uses managed identity.", "By default, the tool uses managed identity.")]
+    [InlineData("In addition the skill supports tagging.", "In addition, the skill supports tagging.")]
+    public void AddIntroductoryCommas_Phrase_InsertsComma(string input, string expected)
+    {
+        var result = AcrolinxPostProcessor.AddIntroductoryCommas(input);
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void AddIntroductoryCommas_AlreadyHasComma_NoChange()
+    {
+        var input = "However, the service is available.";
+        var result = AcrolinxPostProcessor.AddIntroductoryCommas(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void AddIntroductoryCommas_MidSentence_NoChange()
+    {
+        var input = "The service is however unavailable.";
+        var result = AcrolinxPostProcessor.AddIntroductoryCommas(input);
+        // "however" mid-sentence shouldn't get a comma
+        result.Should().Be(input);
+    }
+
+    // --- Bare skill name wrapping tests ---
+
+    [Fact]
+    public void WrapBareSkillNames_WrapsBareName()
+    {
+        var input = "The azure-storage skill manages resources.";
+        var result = AcrolinxPostProcessor.WrapBareSkillNames(input);
+        result.Should().Contain("`azure-storage`");
+    }
+
+    [Fact]
+    public void WrapBareSkillNames_DoesNotDoubleWrap()
+    {
+        var input = "Use the `azure-storage` skill.";
+        var result = AcrolinxPostProcessor.WrapBareSkillNames(input);
+        result.Should().Be("Use the `azure-storage` skill.");
+        result.Should().NotContain("``azure-storage``");
+    }
+
+    [Fact]
+    public void WrapBareSkillNames_WrapsMultiSegmentNames()
+    {
+        var input = "Both azure-cosmos-db and azure-key-vault are supported.";
+        var result = AcrolinxPostProcessor.WrapBareSkillNames(input);
+        result.Should().Contain("`azure-cosmos-db`");
+        result.Should().Contain("`azure-key-vault`");
+    }
+
+    [Fact]
+    public void WrapBareSkillNames_IgnoresNonSkillHyphenatedWords()
+    {
+        var input = "This is a well-known approach.";
+        var result = AcrolinxPostProcessor.WrapBareSkillNames(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void WrapBareSkillNames_PreservesUrls()
+    {
+        var input = "**Skill:** `azure-storage` | [Source code](https://github.com/microsoft/GitHub-Copilot-for-Azure/tree/main/plugin/skills/azure-storage)";
+        var result = AcrolinxPostProcessor.WrapBareSkillNames(input);
+        // The URL should not have backticks injected
+        result.Should().Contain("skills/azure-storage)");
+        result.Should().NotContain("skills/`azure-storage`");
+    }
+
+    [Fact]
+    public void WrapBareSkillNames_SkipsHeadings()
+    {
+        var input = "# azure-storage\n\nThe azure-storage skill works.";
+        var result = AcrolinxPostProcessor.WrapBareSkillNames(input);
+        // Heading line should be preserved, body line should be wrapped
+        result.Should().StartWith("# azure-storage");
+        result.Should().Contain("`azure-storage` skill");
+    }
+
+    // --- Long sentence splitting tests ---
+
+    [Fact]
+    public void SplitLongSentences_ShortSentence_Unchanged()
+    {
+        var input = "This skill manages Azure Storage accounts.";
+        var result = AcrolinxPostProcessor.SplitLongSentences(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void SplitLongSentences_LongSentenceWithConjunction_Splits()
+    {
+        // Build a sentence > 35 words with "and" after word 20
+        var input = "This skill provides comprehensive knowledge about Azure Storage account management including blob containers file shares queue storage table storage networking configuration for virtual network integration private endpoint setup and advanced data protection features for enterprise environments.";
+        var result = AcrolinxPostProcessor.SplitLongSentences(input);
+        // Should be split at a conjunction — the original had only a trailing period
+        var periods = result.Count(c => c == '.');
+        periods.Should().BeGreaterThan(1);
+    }
+
+    [Fact]
+    public void SplitLongSentences_SkipsHeadings()
+    {
+        var input = "## This is a long heading with many words about Azure Storage accounts and blob containers and file shares and queue storage and table storage and networking";
+        var result = AcrolinxPostProcessor.SplitLongSentences(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void SplitLongSentences_SkipsListItems()
+    {
+        var input = "- This is a long list item with many words about Azure Storage accounts and blob containers and file shares and queue storage and table storage and networking";
+        var result = AcrolinxPostProcessor.SplitLongSentences(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void SplitLongSentences_SkipsTableRows()
+    {
+        var input = "| This is a long table cell with many words about Azure Storage accounts and blob containers and file shares and queue storage and table storage and networking |";
+        var result = AcrolinxPostProcessor.SplitLongSentences(input);
+        result.Should().Be(input);
+    }
+
+    // --- Integration: Process applies all new features ---
+
+    [Fact]
+    public void Process_AppliesIntroductoryCommas()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var result = processor.Process("However the tool works well.");
+        result.Should().Contain("However, the tool works well.");
+    }
+
+    [Fact]
+    public void Process_WrapsBarSkillNames()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var result = processor.Process("The azure-monitor skill tracks metrics.");
+        result.Should().Contain("`azure-monitor`");
+    }
+
+    [Fact]
+    public void Process_DoesNotWrapSkillNamesInFrontmatter()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var input = "---\ntitle: azure-storage skill\nms.service: azure-mcp-server\n---\n\nThe azure-storage skill works.";
+        var result = processor.Process(input);
+        // Frontmatter should be untouched
+        result.Should().Contain("ms.service: azure-mcp-server");
+        result.Should().NotContain("ms.service: `azure-mcp-server`");
+        // Body should be wrapped
+        result.Should().Contain("`azure-storage` skill works");
+    }
+
+    [Fact]
+    public void SplitFrontmatter_SeparatesCorrectly()
+    {
+        var input = "---\ntitle: Test\n---\n\nBody content.";
+        var (fm, body) = AcrolinxPostProcessor.SplitFrontmatter(input);
+        fm.Should().Contain("title: Test");
+        body.Should().Contain("Body content.");
+    }
+
+    [Fact]
+    public void SplitFrontmatter_NoFrontmatter_ReturnsEmptyPrefix()
+    {
+        var input = "No frontmatter here.";
+        var (fm, body) = AcrolinxPostProcessor.SplitFrontmatter(input);
+        fm.Should().BeEmpty();
+        body.Should().Be(input);
+    }
 }

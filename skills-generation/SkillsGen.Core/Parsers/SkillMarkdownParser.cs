@@ -20,10 +20,34 @@ public partial class SkillMarkdownParser : ISkillParser
         var (frontmatter, body) = SplitFrontmatter(markdownContent);
         var name = ExtractFrontmatterField(frontmatter, "name") ?? skillName;
         var displayName = ExtractFrontmatterField(frontmatter, "display_?name") ?? name;
-        var description = ExtractFrontmatterField(frontmatter, "description") ?? "";
+        var rawDescription = ExtractFrontmatterField(frontmatter, "description") ?? "";
 
-        var useFor = ExtractListFromDescription(description, @"USE\s+FOR:");
-        var doNotUseFor = ExtractListFromDescription(description, @"DO\s+NOT\s+USE\s+FOR:");
+        // Decode HTML entities FIRST so all extraction works on clean text
+        var decodedDescription = DecodeHtmlEntities(rawDescription);
+
+        // Clean the description for display (strip markers, take first 2 sentences)
+        var cleanDescription = CleanDescription(decodedDescription);
+
+        var useFor = ExtractListFromDescription(decodedDescription, @"USE\s+FOR:");
+        var whenItems = ExtractListFromDescription(decodedDescription, @"WHEN\s*:");
+        var doNotUseFor = ExtractListFromDescription(decodedDescription, @"DO\s+NOT\s+USE\s+FOR:");
+        var dontUseWhen = ExtractListFromDescription(decodedDescription, @"DON'?T\s+USE\s+WHEN\s*:");
+
+        // Merge WHEN items into UseFor — clean up quoted trigger phrases
+        foreach (var item in whenItems)
+        {
+            var cleaned = item.Trim().Trim('"', '\'', ',', '.');
+            if (!string.IsNullOrWhiteSpace(cleaned) && cleaned.Length > 3 && !useFor.Contains(cleaned))
+                useFor.Add(cleaned);
+        }
+
+        // Merge DON'T USE WHEN into DoNotUseFor
+        foreach (var item in dontUseWhen)
+        {
+            var cleaned = item.Trim().Trim('"', '\'', ',', '.');
+            if (!string.IsNullOrWhiteSpace(cleaned) && cleaned.Length > 3 && !doNotUseFor.Contains(cleaned))
+                doNotUseFor.Add(cleaned);
+        }
 
         // Also extract from body sections
         if (useFor.Count == 0)
@@ -42,7 +66,7 @@ public partial class SkillMarkdownParser : ISkillParser
         {
             Name = name,
             DisplayName = displayName,
-            Description = description,
+            Description = cleanDescription,
             UseFor = useFor,
             DoNotUseFor = doNotUseFor,
             Services = services,
@@ -81,6 +105,8 @@ public partial class SkillMarkdownParser : ISkillParser
         {
             value = value[1..^1];
         }
+        // Unescape YAML escaped quotes
+        value = value.Replace("\\\"", "\"").Replace("\\'", "'");
         return value;
     }
 
@@ -105,9 +131,20 @@ public partial class SkillMarkdownParser : ISkillParser
     private static List<string> ParseCommaSeparatedOrBullets(string text)
     {
         // Stop at next marker or end of string
-        var stopIdx = Regex.Match(text, @"(DO\s+NOT\s+USE\s+FOR:|USE\s+FOR:)", RegexOptions.IgnoreCase);
-        if (stopIdx.Success)
-            text = text[..stopIdx.Index];
+        var stopPatterns = new[] {
+            @"DO\s+NOT\s+USE",
+            @"DON'?T\s+USE",
+            @"don[\u2019']?t\s+USE",
+        };
+        foreach (var stopPattern in stopPatterns)
+        {
+            var stopIdx = Regex.Match(text, stopPattern, RegexOptions.IgnoreCase);
+            if (stopIdx.Success)
+            {
+                text = text[..stopIdx.Index];
+                break;
+            }
+        }
 
         var items = new List<string>();
         // Try bullet points first
@@ -115,19 +152,46 @@ public partial class SkillMarkdownParser : ISkillParser
         if (bulletMatches.Count > 0)
         {
             foreach (Match m in bulletMatches)
-                items.Add(m.Groups[1].Value.Trim());
-            return items;
+                items.Add(CleanListItem(m.Groups[1].Value));
+            return items.Where(i => !string.IsNullOrWhiteSpace(i)).ToList();
         }
 
-        // Try comma-separated
+        // Try quoted strings: "item1", "item2"
+        var quotedMatches = Regex.Matches(text, @"""([^""]+)""");
+        if (quotedMatches.Count > 0)
+        {
+            foreach (Match m in quotedMatches)
+                items.Add(CleanListItem(m.Groups[1].Value));
+            return items.Where(i => !string.IsNullOrWhiteSpace(i)).ToList();
+        }
+
+        // Fall back to comma-separated
         var parts = text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         foreach (var part in parts)
         {
-            var clean = part.Trim().TrimEnd('.');
+            var clean = CleanListItem(part);
             if (!string.IsNullOrWhiteSpace(clean))
                 items.Add(clean);
         }
         return items;
+    }
+
+    private static string CleanListItem(string item)
+    {
+        var clean = item.Trim();
+        // Remove HTML entities
+        clean = DecodeHtmlEntities(clean);
+        // Strip quotes, periods, trailing markers
+        clean = clean.Trim('"', '\'', '.', ',', ';', ' ');
+        // Remove any remaining control text fragments
+        clean = Regex.Replace(clean, @"\b(USE\s+FOR|DO\s+NOT\s+USE|WHEN\s*:|DON'?T\s+USE)\b.*$", "", RegexOptions.IgnoreCase).Trim();
+        // Remove ALL CAPS words that are internal markers
+        clean = Regex.Replace(clean, @"\b[A-Z]{3,}\b", m =>
+            m.Value is "API" or "CLI" or "SDK" or "MCP" or "RBAC" or "ARM" or "AKS" or "SQL" or "SMB"
+                ? m.Value
+                : m.Value[0] + m.Value[1..].ToLower()
+        );
+        return clean.Trim();
     }
 
     private static List<string> ExtractBulletSection(string body, string headingPattern)
@@ -366,6 +430,52 @@ public partial class SkillMarkdownParser : ISkillParser
         var afterHeading = body[(match.Index + match.Length)..];
         var nextHeading = Regex.Match(afterHeading, @"^##?\s", RegexOptions.Multiline);
         return nextHeading.Success ? afterHeading[..nextHeading.Index].Trim() : afterHeading.Trim();
+    }
+
+    private static string DecodeHtmlEntities(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return text;
+        return text.Replace("\\&quot;", "\"")
+                   .Replace("&quot;", "\"")
+                   .Replace("&#8212;", "—")
+                   .Replace("&#8211;", "–")
+                   .Replace("&amp;", "&")
+                   .Replace("&lt;", "<")
+                   .Replace("&gt;", ">")
+                   .Replace("&#39;", "'")
+                   .Replace("\\\"", "\"");
+    }
+
+    private static string CleanDescription(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description)) return "";
+
+        var clean = description;
+
+        // Strip everything after USE FOR: / WHEN: / DO NOT USE markers
+        var cutPatterns = new[] { @"\bUSE\s+FOR\b", @"\bWHEN\s*:", @"\bDO\s+NOT\s+USE", @"\bDON'?T\s+USE" };
+        foreach (var pattern in cutPatterns)
+        {
+            var match = Regex.Match(clean, pattern, RegexOptions.IgnoreCase);
+            if (match.Success)
+            {
+                clean = clean[..match.Index].TrimEnd(' ', '.', ',', ';');
+                break;
+            }
+        }
+
+        // Take only the first 2 sentences
+        var sentences = Regex.Matches(clean, @"[^.!?]*[.!?]");
+        if (sentences.Count > 2)
+        {
+            clean = string.Join(" ", sentences.Cast<Match>().Take(2).Select(m => m.Value.Trim()));
+        }
+
+        clean = clean.Trim().TrimEnd('.');
+        if (!string.IsNullOrEmpty(clean))
+            clean += ".";
+
+        return clean;
     }
 
     private static string? NullIfEmpty(string value)

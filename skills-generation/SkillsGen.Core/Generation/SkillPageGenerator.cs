@@ -24,8 +24,32 @@ public class SkillPageGenerator : ISkillPageGenerator
         return result;
     }
 
+    private static readonly int MaxExamplePrompts = 10;
+
     private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites)
     {
+        // Build "When to use" from UseFor, falling back to trigger prompts if empty
+        var useForList = skillData.UseFor.Count > 0
+            ? skillData.UseFor
+            : triggerData.ShouldTrigger.Count > 0
+                ? triggerData.ShouldTrigger.Take(7).Select(t => $"Ask: \"{t}\"").ToList()
+                : new List<string> { $"Work with {skillData.DisplayName} resources and configurations in Azure" };
+
+        // Build "When NOT to use" from DoNotUseFor, falling back to shouldNotTrigger
+        var doNotUseForList = skillData.DoNotUseFor.Count > 0
+            ? skillData.DoNotUseFor
+            : triggerData.ShouldNotTrigger.Count > 0
+                ? triggerData.ShouldNotTrigger.Take(3).ToList()
+                : new List<string>();
+
+        // Cap example prompts
+        var examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts).ToList();
+
+        // Build "What it provides" fallback description
+        var whatItProvides = !string.IsNullOrWhiteSpace(skillData.Description)
+            ? $"The {skillData.DisplayName} skill provides GitHub Copilot with specialized knowledge. {skillData.Description}"
+            : $"The {skillData.DisplayName} skill provides GitHub Copilot with specialized knowledge about {skillData.DisplayName} services and workflows in Azure.";
+
         return new Dictionary<string, object?>
         {
             ["name"] = skillData.Name,
@@ -34,8 +58,8 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["tier"] = tierAssessment.Tier,
             ["generatedDate"] = DateTime.UtcNow.ToString("yyyy-MM-dd"),
             ["generatorVersion"] = "1.0.0",
-            ["useFor"] = skillData.UseFor,
-            ["doNotUseFor"] = skillData.DoNotUseFor,
+            ["useFor"] = useForList,
+            ["doNotUseFor"] = doNotUseForList,
             ["services"] = skillData.Services.Select(s => new Dictionary<string, object?>
             {
                 ["name"] = s.Name,
@@ -63,7 +87,7 @@ public class SkillPageGenerator : ISkillPageGenerator
             }).ToList(),
             ["relatedSkills"] = skillData.RelatedSkills,
             ["sdkReferences"] = skillData.SdkReferences,
-            ["shouldTrigger"] = triggerData.ShouldTrigger,
+            ["shouldTrigger"] = examplePrompts,
             ["shouldNotTrigger"] = triggerData.ShouldNotTrigger,
             ["showToolsSection"] = tierAssessment.ShowToolsSection,
             ["showTriggersSection"] = tierAssessment.ShowTriggersSection,
@@ -103,9 +127,10 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["hasDecisionGuidance"] = skillData.DecisionGuidance.Count > 0,
             ["hasRelatedSkills"] = skillData.RelatedSkills.Count > 0,
             ["hasSdkReferences"] = skillData.SdkReferences.Count > 0,
-            ["hasUseFor"] = skillData.UseFor.Count > 0,
-            ["hasDoNotUseFor"] = skillData.DoNotUseFor.Count > 0,
-            ["hasTriggers"] = triggerData.ShouldTrigger.Count > 0,
+            ["hasUseFor"] = useForList.Count > 0,
+            ["hasDoNotUseFor"] = doNotUseForList.Count > 0,
+            ["hasTriggers"] = examplePrompts.Count > 0,
+            ["whatItProvides"] = whatItProvides,
             ["hasRbacRoles"] = prerequisites.RbacRoles.Count > 0,
             ["hasToolPrereqs"] = prerequisites.Tools.Count > 0,
             ["hasResources"] = prerequisites.Resources.Count > 0

@@ -31,6 +31,45 @@ public partial class AcrolinxPostProcessor
         ["that is"] = "that's",
     };
 
+    // Introductory adverbs/phrases that need a comma when starting a sentence
+    private static readonly string[] IntroductoryWords =
+    [
+        "However",
+        "Therefore",
+        "Additionally",
+        "Furthermore",
+        "Moreover",
+        "Meanwhile",
+        "Otherwise",
+        "Alternatively",
+        "Consequently",
+        "Specifically",
+        "Similarly",
+        "Typically",
+    ];
+
+    private static readonly string[] IntroductoryPhrases =
+    [
+        "For example",
+        "By default",
+        "In addition",
+        "In general",
+        "In particular",
+        "For instance",
+        "As a result",
+        "On the other hand",
+    ];
+
+    // Conjunctions for sentence splitting
+    private static readonly string[] SplitConjunctions =
+    [
+        " and ",
+        " but ",
+        " or ",
+        " which ",
+        " that ",
+    ];
+
     public AcrolinxPostProcessor(string? replacementsJson, string? acronymsJson, ILogger<AcrolinxPostProcessor> logger)
     {
         _logger = logger;
@@ -42,7 +81,10 @@ public partial class AcrolinxPostProcessor
     {
         if (string.IsNullOrEmpty(content)) return content;
 
-        var result = content;
+        // Separate frontmatter from body — only post-process the body
+        var (frontmatter, body) = SplitFrontmatter(content);
+
+        var result = body;
 
         // Apply static text replacements with word boundaries
         foreach (var replacement in _replacements)
@@ -64,7 +106,214 @@ public partial class AcrolinxPostProcessor
         // Normalize URLs - strip learn.microsoft.com prefix
         result = NormalizeUrls(result);
 
+        // Add commas after introductory phrases
+        result = AddIntroductoryCommas(result);
+
+        // Wrap bare hyphenated skill names in backticks
+        result = WrapBareSkillNames(result);
+
+        // Split long sentences
+        result = SplitLongSentences(result);
+
+        return frontmatter + result;
+    }
+
+    internal static (string frontmatter, string body) SplitFrontmatter(string content)
+    {
+        if (!content.TrimStart().StartsWith("---"))
+            return ("", content);
+
+        var match = Regex.Match(content, @"^(---\s*\n.*?\n---\s*\n?)", RegexOptions.Singleline);
+        if (!match.Success)
+            return ("", content);
+
+        return (match.Groups[1].Value, content[match.Groups[1].Length..]);
+    }
+
+    internal static string AddIntroductoryCommas(string content)
+    {
+        var result = content;
+
+        // Handle multi-word phrases first (longer match before shorter)
+        foreach (var phrase in IntroductoryPhrases)
+        {
+            // Match phrase at start of line (or after sentence boundary) NOT already followed by comma
+            var pattern = $@"(?<=^|\. ){Regex.Escape(phrase)} (?!,)";
+            result = Regex.Replace(result, pattern, $"{phrase}, ", RegexOptions.Multiline);
+        }
+
+        // Handle single introductory words
+        foreach (var word in IntroductoryWords)
+        {
+            var pattern = $@"(?<=^|\. ){Regex.Escape(word)} (?!,)";
+            result = Regex.Replace(result, pattern, $"{word}, ", RegexOptions.Multiline);
+        }
+
         return result;
+    }
+
+    internal static string WrapBareSkillNames(string content)
+    {
+        // Process line by line to skip headings and frontmatter lines
+        var lines = content.Split('\n');
+        var result = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var trimmed = line.TrimStart();
+            // Skip headings and frontmatter delimiters
+            if (trimmed.StartsWith('#') || trimmed.StartsWith("---"))
+            {
+                result.Add(line);
+                continue;
+            }
+
+            result.Add(WrapBareSkillNamesInLine(line));
+        }
+
+        return string.Join('\n', result);
+    }
+
+    private static string WrapBareSkillNamesInLine(string line)
+    {
+        // Use alternation to skip backtick spans, markdown link URLs, and raw URLs.
+        // Group 1 = backtick span (preserve), Group 2 = link URL (preserve),
+        // Group 3 = raw URL (preserve), Group 4 = bare skill name (wrap)
+        return Regex.Replace(line,
+            @"(`[^`]+`)" +            // backtick span — capture group 1
+            @"|(\]\([^)]+\))" +        // markdown link URL — capture group 2
+            @"|(https?://\S+)" +       // raw URL — capture group 3
+            @"|\b(azure-[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)*)\b", // bare skill name — group 4
+            match =>
+            {
+                if (match.Groups[1].Success) return match.Groups[1].Value;
+                if (match.Groups[2].Success) return match.Groups[2].Value;
+                if (match.Groups[3].Success) return match.Groups[3].Value;
+                return $"`{match.Groups[4].Value}`";
+            });
+    }
+
+    internal static string SplitLongSentences(string content)
+    {
+        var lines = content.Split('\n');
+        var result = new List<string>();
+
+        foreach (var line in lines)
+        {
+            // Skip frontmatter, headings, list items, table rows, and code blocks
+            if (line.TrimStart().StartsWith("---") ||
+                line.TrimStart().StartsWith('#') ||
+                line.TrimStart().StartsWith('-') ||
+                line.TrimStart().StartsWith('|') ||
+                line.TrimStart().StartsWith("```") ||
+                line.TrimStart().StartsWith('`'))
+            {
+                result.Add(line);
+                continue;
+            }
+
+            result.Add(SplitLongSentencesInLine(line));
+        }
+
+        return string.Join('\n', result);
+    }
+
+    private static string SplitLongSentencesInLine(string line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return line;
+
+        // Extract sentences (split on ". " but not inside backticks/links)
+        var sentences = SplitIntoSentences(line);
+        var rebuilt = new List<string>();
+
+        foreach (var sentence in sentences)
+        {
+            var words = sentence.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length <= 35)
+            {
+                rebuilt.Add(sentence);
+                continue;
+            }
+
+            // Find a conjunction after word 20 to split at
+            var split = TrySplitAtConjunction(sentence, words);
+            if (split != null)
+            {
+                rebuilt.Add(split);
+            }
+            else
+            {
+                rebuilt.Add(sentence);
+            }
+        }
+
+        return string.Join(" ", rebuilt);
+    }
+
+    private static List<string> SplitIntoSentences(string text)
+    {
+        var sentences = new List<string>();
+        var current = 0;
+
+        for (int i = 0; i < text.Length - 1; i++)
+        {
+            if (text[i] == '.' && i + 1 < text.Length && text[i + 1] == ' ')
+            {
+                // Don't split inside backticks
+                var beforeDot = text[current..(i + 1)];
+                var backtickCount = beforeDot.Count(c => c == '`');
+                if (backtickCount % 2 == 0)
+                {
+                    sentences.Add(text[current..(i + 1)].Trim());
+                    current = i + 2;
+                }
+            }
+        }
+
+        if (current < text.Length)
+        {
+            var remaining = text[current..].Trim();
+            if (!string.IsNullOrEmpty(remaining))
+                sentences.Add(remaining);
+        }
+
+        return sentences;
+    }
+
+    private static string? TrySplitAtConjunction(string sentence, string[] words)
+    {
+        // Count words up to positions in the original string to find a conjunction after word 20
+        foreach (var conjunction in SplitConjunctions)
+        {
+            var searchStart = 0;
+            // Skip to approximately word 20 by counting spaces
+            var spaceCount = 0;
+            for (int i = 0; i < sentence.Length && spaceCount < 20; i++)
+            {
+                if (sentence[i] == ' ') spaceCount++;
+                searchStart = i;
+            }
+
+            var conjIdx = sentence.IndexOf(conjunction, searchStart, StringComparison.OrdinalIgnoreCase);
+            if (conjIdx > 0)
+            {
+                var before = sentence[..conjIdx].TrimEnd();
+                var after = sentence[(conjIdx + conjunction.Length)..].TrimStart();
+
+                if (string.IsNullOrEmpty(after)) continue;
+
+                // Capitalize the first letter of the new sentence
+                var afterCapitalized = char.ToUpper(after[0]) + after[1..];
+
+                // Ensure the first part ends with a period
+                if (!before.EndsWith('.'))
+                    before += ".";
+
+                return $"{before} {afterCapitalized}";
+            }
+        }
+
+        return null;
     }
 
     private string ExpandAcronymsFirstUse(string content)
