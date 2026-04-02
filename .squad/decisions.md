@@ -2,7 +2,7 @@
 
 ## Active Decisions
 
-### AD-001: Team Charter — Content Correctness as Primary Goal
+### AD-001: Team Charter ΓÇö Content Correctness as Primary Goal
 **Date:** 2026-03-20  
 **Author:** Avery (Lead)  
 **Status:** Active
@@ -11,7 +11,7 @@ The team's primary mission is **consistently correct content across all 52 names
 - Every stage (Steps 0-6) must have defined input/output contracts
 - Quality failures must be caught at the stage that produces them, not downstream
 - AI-generated content (Steps 2, 3b, 4, 6) requires validation gates that block bad output
-- "It works for storage" is not sufficient — all 52 namespaces must pass
+- "It works for storage" is not sufficient ΓÇö all 52 namespaces must pass
 
 ### AD-002: Known Quality Risk Areas (Initial Assessment)
 **Date:** 2026-03-20  
@@ -25,12 +25,12 @@ Pipeline exploration identified these content correctness risks:
 | Token truncation causes AI to produce incomplete content | Steps 2, 3b, 4, 6 | High | Sage + Morgan |
 | Leaked template tokens (`<<<TPL_LABEL_N>>>`) in final output | Step 3 | Medium | Morgan |
 | AI JSON parse failures block horizontal articles | Step 6 | High | Sage |
-| Step dependencies silently degrade (Step 3 fail → Step 4 skip) | Steps 3-4 | High | Quinn + Avery |
+| Step dependencies silently degrade (Step 3 fail ΓåÆ Step 4 skip) | Steps 3-4 | High | Quinn + Avery |
 | GitHub API rate limiting degrades Step 5 | Step 5 | Low | Quinn |
 | No end-to-end integration tests for full pipeline | All | High | Parker |
 | Inconsistent parameter placeholder substitution | Steps 2-3 | Medium | Morgan |
 
-### AD-003: Issue Triage — 18 Open Issues Routed to Team
+### AD-003: Issue Triage ΓÇö 18 Open Issues Routed to Team
 **Date:** 2026-03-20  
 **Author:** Avery (Lead)  
 **Status:** Active
@@ -38,32 +38,32 @@ Pipeline exploration identified these content correctness risks:
 18 open GitHub issues triaged and assigned to team members. See issue routing below.
 
 **Critical (blocks releases):**
-- #158 → Avery + Sage + Morgan: Step 4/6 validation failures for 8 namespaces
-- #148 → Morgan: Cosmos missing entire tool
-- #147 → Morgan: Parameter filtering too aggressive (resource-group)
+- #158 ΓåÆ Avery + Sage + Morgan: Step 4/6 validation failures for 8 namespaces
+- #148 ΓåÆ Morgan: Cosmos missing entire tool
+- #147 ΓåÆ Morgan: Parameter filtering too aggressive (resource-group)
 
 **High (content quality):**
-- #155 → Morgan: Missing required frontmatter fields
-- #154 → Sage: Generic H2 headings
-- #153 → Sage: Duplicate Examples block
-- #140 → Sage: Phantom Examples H2 section
-- #149 → Sage: Cosmos SEO violations
-- #139 → Parker + Morgan: ParameterCoverageChecker false positive
+- #155 ΓåÆ Morgan: Missing required frontmatter fields
+- #154 ΓåÆ Sage: Generic H2 headings
+- #153 ΓåÆ Sage: Duplicate Examples block
+- #140 ΓåÆ Sage: Phantom Examples H2 section
+- #149 ΓåÆ Sage: Cosmos SEO violations
+- #139 ΓåÆ Parker + Morgan: ParameterCoverageChecker false positive
 
 **Medium (style/polish):**
-- #152 → Sage: Missing backticks on example values
-- #151 → Morgan: Missing blank line in annotation rendering
-- #141 → Morgan: CosmosDB branding normalization
-- #150 → Avery: Multi-namespace article support (monitor + workbooks)
+- #152 ΓåÆ Sage: Missing backticks on example values
+- #151 ΓåÆ Morgan: Missing blank line in annotation rendering
+- #141 ΓåÆ Morgan: CosmosDB branding normalization
+- #150 ΓåÆ Avery: Multi-namespace article support (monitor + workbooks)
 
 **Low (Acrolinx compliance):**
-- #146 → Sage: Commas after introductory phrases
-- #145 → Sage: Present tense and contractions
-- #144 → Morgan: Demonstrative pronoun fix (static replacement)
-- #143 → Sage: Split complex overview sentence
-- #142 → Sage: Define MCP acronym on first use
+- #146 ΓåÆ Sage: Commas after introductory phrases
+- #145 ΓåÆ Sage: Present tense and contractions
+- #144 ΓåÆ Morgan: Demonstrative pronoun fix (static replacement)
+- #143 ΓåÆ Sage: Split complex overview sentence
+- #142 ΓåÆ Sage: Define MCP acronym on first use
 
-### AD-006: Issue #158 Resolution — 5/8 Namespaces Fixed
+### AD-006: Issue #158 Resolution ΓÇö 5/8 Namespaces Fixed
 **Date:** 2026-03-21  
 **Author:** Avery (Lead)  
 **Status:** Active
@@ -78,7 +78,7 @@ Remaining 5 failures tracked as:
 - #160: Step 4 generation produces no output (search, postgres, resourcehealth)
 - #161: Step 2 checker too strict for `message-array` and `name` params (foundryextensions, fileshares)
 
-### AD-007: TDD — Tests First, Then Code
+### AD-007: TDD ΓÇö Tests First, Then Code
 **Date:** 2026-03-21 (updated 2026-03-22)  
 **Author:** Avery (Lead)  
 **Status:** Active  
@@ -90,18 +90,18 @@ Workflow for every change:
 1. **Write failing tests** that define the expected behavior (the contract)
 2. **Verify they fail** against the current code (proves the tests are meaningful)
 3. **Implement the fix** to make the failing tests pass
-4. **Verify all tests pass** — new tests + existing tests (no regressions)
-5. **Commit tests and code together** — never commit code without its tests
+4. **Verify all tests pass** ΓÇö new tests + existing tests (no regressions)
+5. **Commit tests and code together** ΓÇö never commit code without its tests
 
 Rules:
-- Bug fix → write tests that reproduce the bug BEFORE writing the fix
-- New feature → write tests that define the feature contract BEFORE implementing
-- Prompt changes → write tests for the validation rules BEFORE changing the prompt
-- Config changes → write tests that verify config loading BEFORE changing config
+- Bug fix ΓåÆ write tests that reproduce the bug BEFORE writing the fix
+- New feature ΓåÆ write tests that define the feature contract BEFORE implementing
+- Prompt changes ΓåÆ write tests for the validation rules BEFORE changing the prompt
+- Config changes ΓåÆ write tests that verify config loading BEFORE changing config
 - If the code under test is `private`, make it `internal` with `[InternalsVisibleTo]`
 - **PRs that contain code changes without corresponding test changes are blocked**
 
-### AD-010: Test Coverage Depth — Tests Must Catch the Bug on Regression
+### AD-010: Test Coverage Depth ΓÇö Tests Must Catch the Bug on Regression
 **Date:** 2026-03-22  
 **Author:** Avery (Lead)  
 **Status:** Active  
@@ -113,12 +113,12 @@ Rules:
 
 | Change Type | Minimum Test Coverage |
 |-------------|----------------------|
-| Bug fix (code path) | ≥1 test that reproduces the exact failure scenario with realistic inputs |
-| Bug fix (error handling) | ≥1 test for the error path + ≥1 test for the happy path to guard regressions |
-| Bug fix (AI-dependent) | ≥1 test simulating AI failure (mock/stub), ≥1 test simulating AI success |
-| New feature | ≥1 test per public method, ≥1 edge case, ≥1 null/empty input |
-| Config/data change | ≥1 test proving the new config value is loaded AND applied |
-| Post-processing step | ≥1 test with input containing the problem pattern, ≥1 test with clean input (no false positives) |
+| Bug fix (code path) | ΓëÑ1 test that reproduces the exact failure scenario with realistic inputs |
+| Bug fix (error handling) | ΓëÑ1 test for the error path + ΓëÑ1 test for the happy path to guard regressions |
+| Bug fix (AI-dependent) | ΓëÑ1 test simulating AI failure (mock/stub), ΓëÑ1 test simulating AI success |
+| New feature | ΓëÑ1 test per public method, ΓëÑ1 edge case, ΓëÑ1 null/empty input |
+| Config/data change | ΓëÑ1 test proving the new config value is loaded AND applied |
+| Post-processing step | ΓëÑ1 test with input containing the problem pattern, ΓëÑ1 test with clean input (no false positives) |
 
 **Test quality checklist (reviewer must verify):**
 - [ ] Test would FAIL if the fix were reverted (not just a type check or reflection test)
@@ -128,10 +128,10 @@ Rules:
 - [ ] If testing a pipeline step, test uses the existing `CallbackProcessRunner`/mock pattern
 
 **Anti-patterns (blocked in review):**
-- ❌ Reflection-only tests (checking method exists, return type, attribute presence) as sole coverage
-- ❌ Tests that pass regardless of whether the fix is present
-- ❌ Tests that only assert `Assert.True(result.Success)` without checking warnings/output
-- ❌ "Smoke tests" that call the method but don't assert meaningful behavior
+- Γ¥î Reflection-only tests (checking method exists, return type, attribute presence) as sole coverage
+- Γ¥î Tests that pass regardless of whether the fix is present
+- Γ¥î Tests that only assert `Assert.True(result.Success)` without checking warnings/output
+- Γ¥î "Smoke tests" that call the method but don't assert meaningful behavior
 
 **Rationale:** PR #172 initially had only 1 reflection test for a 3-file fix. The test would pass even if the exit code logic were reverted. Adding behavioral tests (simulating "exit 0 but no output files") caught the actual scenario. Tests must be written to catch the bug, not just prove the code compiles.
 
@@ -163,7 +163,7 @@ Step dependency chain (what each step reads from disk):
 | Step 3 template/improvement | Steps 3,4 (if `annotations/`, `parameters/`, `example-prompts/` exist) |
 | Token budget (Step 6) | Step 6 only (if `tools/` exists) |
 
-**Always check:** `ls generated-{ns}/tools/` — if empty, you need Step 3. `ls generated-{ns}/example-prompts/` — if empty, you need Step 2. Work backwards from the failing step.
+**Always check:** `ls generated-{ns}/tools/` ΓÇö if empty, you need Step 3. `ls generated-{ns}/example-prompts/` ΓÇö if empty, you need Step 2. Work backwards from the failing step.
 
 ### AD-004: PR Documentation Requirement
 **Date:** 2026-03-20  
@@ -176,21 +176,21 @@ Step dependency chain (what each step reads from disk):
 
 | PR Contains | Docs Required | What To Include |
 |-------------|---------------|-----------------|
-| New feature or pipeline step | ✅ Required | User guide in `docs/`, updated README if public-facing |
-| Bug fix that changes behavior | ✅ Required | Update any docs that described the old behavior |
-| Architecture change | ✅ Required | Engineering docs, updated pipeline stage docs |
-| Prompt changes | ✅ Required | Document what changed and why in prompt file comments + `docs/` |
-| Config file changes | ✅ Required | Update config reference in `docs/` |
-| Internal refactor (no behavior change) | 📝 Exemption OK | PR comment: "Internal refactor, no behavior change" |
-| Test-only changes | 📝 Exemption OK | PR comment: "Test coverage addition, no user-facing change" |
-| Large feature (docs too big for same PR) | 🔗 Follow-up OK | Link to follow-up docs issue in PR description |
+| New feature or pipeline step | Γ£à Required | User guide in `docs/`, updated README if public-facing |
+| Bug fix that changes behavior | Γ£à Required | Update any docs that described the old behavior |
+| Architecture change | Γ£à Required | Engineering docs, updated pipeline stage docs |
+| Prompt changes | Γ£à Required | Document what changed and why in prompt file comments + `docs/` |
+| Config file changes | Γ£à Required | Update config reference in `docs/` |
+| Internal refactor (no behavior change) | ≡ƒô¥ Exemption OK | PR comment: "Internal refactor, no behavior change" |
+| Test-only changes | ≡ƒô¥ Exemption OK | PR comment: "Test coverage addition, no user-facing change" |
+| Large feature (docs too big for same PR) | ≡ƒöù Follow-up OK | Link to follow-up docs issue in PR description |
 
 ### AD-005: All Work Must Go Through PRs
 **Date:** 2026-03-20  
 **Author:** Avery (Lead)  
 **Status:** Active
 
-**No direct commits to main.** All changes — code, prompts, configs, scripts, docs — must go through pull requests with:
+**No direct commits to main.** All changes ΓÇö code, prompts, configs, scripts, docs ΓÇö must go through pull requests with:
 1. At least one team member review (domain specialist)
 2. Reeve's documentation review (blocks if docs missing)
 3. Parker's test validation (for code changes)
@@ -203,12 +203,12 @@ Step dependency chain (what each step reads from disk):
 
 Generated content must NEVER use `~/` (DocFX repo-root) paths. Use only: absolute URLs, site-root-relative (`/azure/...`), or file-relative (`../includes/...`) paths.
 
-### AD-011: Multi-Namespace Merge — Post-Assembly Design
+### AD-011: Multi-Namespace Merge ΓÇö Post-Assembly Design
 **Date:** 2026-03-22  
 **Author:** Avery (Lead)  
 **Status:** Active
 
-Some Azure services span multiple MCP namespaces but publish as a single article (e.g., `monitor` + `workbooks` → `azure-monitor.md`). Rather than threading multi-namespace awareness through all 6 pipeline steps (high risk), we use a **post-assembly merge** pattern:
+Some Azure services span multiple MCP namespaces but publish as a single article (e.g., `monitor` + `workbooks` ΓåÆ `azure-monitor.md`). Rather than threading multi-namespace awareness through all 6 pipeline steps (high risk), we use a **post-assembly merge** pattern:
 
 1. Each namespace generates independently through Steps 1-6 as before
 2. A merge step runs AFTER all namespaces complete
@@ -216,7 +216,7 @@ Some Azure services span multiple MCP namespaces but publish as a single article
    - `mergeGroup`: group identifier (e.g., `"azure-monitor"`)
    - `mergeOrder`: position within group (1 = primary)
    - `mergeRole`: `"primary"` (owns frontmatter/overview/related-content) or `"secondary"` (contributes tool H2 sections only)
-4. Namespaces WITHOUT `mergeGroup` are standalone — fully backward compatible
+4. Namespaces WITHOUT `mergeGroup` are standalone ΓÇö fully backward compatible
 5. Validation rules:
    - Each group must have exactly one `"primary"` namespace
    - `mergeOrder` values must be unique and sequential within a group
@@ -229,15 +229,15 @@ Some Azure services span multiple MCP namespaces but publish as a single article
 **Triggered by:** Architecture review of PR #200
 
 Three separate `StripFrontmatter` implementations exist:
-1. `ToolReader.StripFrontmatter()` — regex-based
-2. `ComposedToolGeneratorService.StripFrontmatter()` — line-by-line parsing
-3. `PageGenerator.StripFrontmatter()` — line-by-line parsing
+1. `ToolReader.StripFrontmatter()` ΓÇö regex-based
+2. `ComposedToolGeneratorService.StripFrontmatter()` ΓÇö line-by-line parsing
+3. `PageGenerator.StripFrontmatter()` ΓÇö line-by-line parsing
 
 **Decision:** When module boundaries are next refactored, consolidate into `DocGeneration.Core` or `DocGeneration.Core.NaturalLanguage`. Until then, duplication is acceptable tech debt (implementations in different project boundaries).
 
-**Priority:** Low — tracked as tech debt, not blocking.
+**Priority:** Low ΓÇö tracked as tech debt, not blocking.
 
-### AD-020: User Workflow Directive — Mandatory Development Process
+### AD-020: User Workflow Directive ΓÇö Mandatory Development Process
 **Date:** 2026-03-24 (updated 2026-03-29)
 **Author:** Dina Berry (via Copilot)
 **Status:** Active
@@ -247,11 +247,11 @@ Three separate `StripFrontmatter` implementations exist:
 2. Write failing tests (define the contract before implementation)
 3. Write implementation code (make the tests pass)
 4. Run tests (all must pass, no regressions)
-5. Create PR — **STOP. Do NOT merge.**
+5. Create PR ΓÇö **STOP. Do NOT merge.**
 6. Full team review (all 9 reviewers: Avery, Riley, Morgan, Quinn, Sage, Cameron, Parker, Reeve, Copilot)
 7. User (Dina) reviews and merges
 
-**NEVER merge a PR. Only Dina merges.** Sub-agents must NEVER call `gh pr merge`. Their job ends at step 5 (create PR). This applies to all agents — general-purpose, task, and squad members alike.
+**NEVER merge a PR. Only Dina merges.** Sub-agents must NEVER call `gh pr merge`. Their job ends at step 5 (create PR). This applies to all agents ΓÇö general-purpose, task, and squad members alike.
 
 **Never skip steps or present work before the full team review is complete.** This is a user-mandated workflow to ensure consistency, quality, and accountability across all squad work.
 
@@ -271,9 +271,9 @@ Three separate `StripFrontmatter` implementations exist:
 3. Asserts on the specific output change
 4. Would FAIL if the template change were reverted
 
-Template-level tests must supplement method-level tests for helper functions — method tests are necessary but not sufficient for template fix PRs.
+Template-level tests must supplement method-level tests for helper functions ΓÇö method tests are necessary but not sufficient for template fix PRs.
 
-**Rationale:** PRs #200 and #201 both fix template bugs but only test helper methods. If template changes were reverted, all tests would pass — an AD-010 violation. The pattern already exists in `ToolFamilyPageTemplateRegressionTests.cs`.
+**Rationale:** PRs #200 and #201 both fix template bugs but only test helper methods. If template changes were reverted, all tests would pass ΓÇö an AD-010 violation. The pattern already exists in `ToolFamilyPageTemplateRegressionTests.cs`.
 
 **Impact:** Affects all contributors modifying `.hbs` files.
 
@@ -289,11 +289,11 @@ Comprehensive architecture review of PipelineRunner, Steps 0-6, cross-step data 
 **Key Findings:**
 
 **Risks (prioritized):**
-1. 🔴 **Risk 1 (Critical):** Bootstrap `ResetOutputDirectory` destroys partial progress. Running `./start.sh advisor 4` after fixing a failed step wipes Steps 1-3 output. Mitigation: Add incremental mode that preserves outputs when `--skip-deps` is active.
-2. 🟠 **Risk 2 (High):** Subprocess error detection via regex is fragile. If a generator changes output format, failures go undetected. Mitigation: Structured error contracts (`step-result.json`).
-3. 🟠 **Risk 3 (Medium):** Implicit dependencies not captured. Steps 5 and 6 depend on Bootstrap metadata but don't declare `dependsOn`. Mitigation: Add explicit `DependsOn` declarations.
-4. 🟡 **Risk 4 (Medium):** Dual merge implementations (shell + C#). Consolidate to single implementation.
-5. 🟡 **Risk 5 (Medium):** Step 4 file matching could cross namespaces if `@mcpcli` annotations are corrupted. Add cross-validation after matching.
+1. ≡ƒö┤ **Risk 1 (Critical):** Bootstrap `ResetOutputDirectory` destroys partial progress. Running `./start.sh advisor 4` after fixing a failed step wipes Steps 1-3 output. Mitigation: Add incremental mode that preserves outputs when `--skip-deps` is active.
+2. ≡ƒƒá **Risk 2 (High):** Subprocess error detection via regex is fragile. If a generator changes output format, failures go undetected. Mitigation: Structured error contracts (`step-result.json`).
+3. ≡ƒƒá **Risk 3 (Medium):** Implicit dependencies not captured. Steps 5 and 6 depend on Bootstrap metadata but don't declare `dependsOn`. Mitigation: Add explicit `DependsOn` declarations.
+4. ≡ƒƒí **Risk 4 (Medium):** Dual merge implementations (shell + C#). Consolidate to single implementation.
+5. ≡ƒƒí **Risk 5 (Medium):** Step 4 file matching could cross namespaces if `@mcpcli` annotations are corrupted. Add cross-validation after matching.
 
 **Opportunities (by impact):**
 1. Incremental Bootstrap mode (save 10-15 min per retry)
@@ -303,9 +303,9 @@ Comprehensive architecture review of PipelineRunner, Steps 0-6, cross-step data 
 5. Add content integrity validation to Step 1
 
 **Component Ratings:**
-- 🟢 Solid: PipelineRunner core, step contracts, StepRegistry, WorkspaceManager, deterministic generators, FamilyFileStitcher, parallel safety
-- 🟡 Acceptable: Bootstrap (destructive reset), Steps 1-3 (regex detection), Steps 5-6 (implicit dependencies), post-assembly merge
-- 🟠 Needs attention: Step 4 (complex file matching + validator complexity)
+- ≡ƒƒó Solid: PipelineRunner core, step contracts, StepRegistry, WorkspaceManager, deterministic generators, FamilyFileStitcher, parallel safety
+- ≡ƒƒí Acceptable: Bootstrap (destructive reset), Steps 1-3 (regex detection), Steps 5-6 (implicit dependencies), post-assembly merge
+- ≡ƒƒá Needs attention: Step 4 (complex file matching + validator complexity)
 
 See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed review.
 
@@ -323,7 +323,7 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 1. **Step 3:** Template token leakage (`<<<TPL_LABEL_N>>>`) in final output goes undetected
 2. **Step 6:** AI JSON parse failures producing incomplete horizontal articles go undetected
 
-**Rationale:** The test strategy audit found that only Step 4 has a post-validator. Steps 3 and 6 produce AI-generated content that feeds directly into the final documentation corpus — if they fail silently, bad content ships. Both risks are already documented in AD-002 but have no mitigation.
+**Rationale:** The test strategy audit found that only Step 4 has a post-validator. Steps 3 and 6 produce AI-generated content that feeds directly into the final documentation corpus ΓÇö if they fail silently, bad content ships. Both risks are already documented in AD-002 but have no mitigation.
 
 **Impact:** Morgan or Sage should implement these validators. Parker will write tests for the validators once implemented. Blocks: any release claiming "full pipeline validation".
 
@@ -339,14 +339,14 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 
 **Decision:** Implement **6-priority remediation plan** combining prompt changes (P0) and deterministic post-processors (P1-P4):
 
-1. **P0 — System prompt update:** Add explicit Acrolinx compliance rules to `tool-family-cleanup-system-prompt.txt` (sentence length ≤25 words, present tense, active voice, contractions, introductory commas, wordy phrase avoidance).
-2. **P1 — JsonSchemaCollapser:** New post-processor to collapse inline JSON schema parameter descriptions into human-readable summaries. Expected +15-20 pts for Deploy.
-3. **P1 — ContractionFixer extension:** Add positive contractions ("it is"→"it's", "you are"→"you're", etc.) to existing ContractionFixer.
-4. **P2 — WordyPhraseFixer + static replacements:** Deterministic removal of "in order to", "due to the fact that", deprecated Microsoft terms ("Azure AD"→"Microsoft Entra ID"), and ableist language ("simply", "just").
-5. **P3 — TenseFixer + AcronymExpander:** Present tense enforcement ("will list"→"lists") and multi-acronym first-use expansion.
-6. **P4 — SentenceLengthWarner:** Diagnostic logging for sentences exceeding 25 words (inform, not auto-fix).
+1. **P0 ΓÇö System prompt update:** Add explicit Acrolinx compliance rules to `tool-family-cleanup-system-prompt.txt` (sentence length Γëñ25 words, present tense, active voice, contractions, introductory commas, wordy phrase avoidance).
+2. **P1 ΓÇö JsonSchemaCollapser:** New post-processor to collapse inline JSON schema parameter descriptions into human-readable summaries. Expected +15-20 pts for Deploy.
+3. **P1 ΓÇö ContractionFixer extension:** Add positive contractions ("it is"ΓåÆ"it's", "you are"ΓåÆ"you're", etc.) to existing ContractionFixer.
+4. **P2 ΓÇö WordyPhraseFixer + static replacements:** Deterministic removal of "in order to", "due to the fact that", deprecated Microsoft terms ("Azure AD"ΓåÆ"Microsoft Entra ID"), and ableist language ("simply", "just").
+5. **P3 ΓÇö TenseFixer + AcronymExpander:** Present tense enforcement ("will list"ΓåÆ"lists") and multi-acronym first-use expansion.
+6. **P4 ΓÇö SentenceLengthWarner:** Diagnostic logging for sentences exceeding 25 words (inform, not auto-fix).
 
-**Rationale:** Post-processing is preferred over prompt-only fixes because it's **deterministic** — a regex that converts "it is" to "it's" always works, while an AI prompt instruction may be ignored 20% of the time. The prompt changes (P0) remain valuable as first-line defense.
+**Rationale:** Post-processing is preferred over prompt-only fixes because it's **deterministic** ΓÇö a regex that converts "it is" to "it's" always works, while an AI prompt instruction may be ignored 20% of the time. The prompt changes (P0) remain valuable as first-line defense.
 
 **Quick win:** Expanding `static-text-replacement.json` with 15 wordy phrases, 8 deprecated terms, and 5 ableist language removals yields +5-10 pts with zero code changes.
 
@@ -354,11 +354,11 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 - **Sage:** Owns prompt change (P0) and all post-processor implementations (P1-P3).
 - **Morgan:** May need to adjust FamilyFileStitcher call order if new post-processors are added.
 - **Parker:** Must write tests for each new post-processor per AD-007 and AD-010.
-- **All namespaces:** Changes apply universally across all 52 namespaces — no service-specific logic.
+- **All namespaces:** Changes apply universally across all 52 namespaces ΓÇö no service-specific logic.
 
 ---
 
-### AD-023: Work Prioritization Framework — Post-Review Issue Set
+### AD-023: Work Prioritization Framework ΓÇö Post-Review Issue Set
 **Date:** 2026-03-25
 **Author:** Avery (Lead / Architect)
 **Status:** Active
@@ -381,34 +381,34 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 
 | # | Title | Priority | Owner |
 |---|-------|----------|-------|
-| #203 | Fix ResetOutputDirectory — destroys partial progress | P0 | Riley |
-| #204 | Add Step 3 post-validator — template token leakage | P0 | Morgan |
-| #205 | Add Step 6 post-validator — incomplete horizontal articles | P0 | Sage |
-| #206 | Add TextCleanup unit tests — high-risk regex chain | P1 | Parker |
+| #203 | Fix ResetOutputDirectory ΓÇö destroys partial progress | P0 | Riley |
+| #204 | Add Step 3 post-validator ΓÇö template token leakage | P0 | Morgan |
+| #205 | Add Step 6 post-validator ΓÇö incomplete horizontal articles | P0 | Sage |
+| #206 | Add TextCleanup unit tests ΓÇö high-risk regex chain | P1 | Parker |
 | #207 | Add failure path tests for all pipeline steps | P1 | Parker |
-| #208 | Add Bootstrap contract tests — step I/O validation | P1 | Avery |
+| #208 | Add Bootstrap contract tests ΓÇö step I/O validation | P1 | Avery |
 | #209 | Implement baseline fingerprinting for generated output | P1 | Avery + Quinn |
 | #210 | Replace regex error detection with structured step-result.json | P1 | Riley |
 | #211 | Add prompt versioning system | P2 | Sage |
 | #212 | Add token usage tracking and observability | P2 | Sage |
 | #213 | Create CI integration documentation | P2 | Quinn |
 | #214 | Build prompt regression testing framework | P2 | Sage |
-| #215 | Acrolinx compliance — automated style fixes | P3 | Sage |
+| #215 | Acrolinx compliance ΓÇö automated style fixes | P3 | Sage |
 | #216 | Consolidate StripFrontmatter implementations | P3 | Morgan |
 
 **Execution Order:**
-1. **Immediate:** P0 issues (#203, #204, #205) — all three can run in parallel
-2. **Next sprint:** P1 issues — #206 and #210 first (highest test/infra leverage), then #207, #208, #209
-3. **Following sprint:** P2 issues — #211 and #214 first (prompt quality loop), then #212, #213
-4. **Backlog:** P3 issues — pick up opportunistically
+1. **Immediate:** P0 issues (#203, #204, #205) ΓÇö all three can run in parallel
+2. **Next sprint:** P1 issues ΓÇö #206 and #210 first (highest test/infra leverage), then #207, #208, #209
+3. **Following sprint:** P2 issues ΓÇö #211 and #214 first (prompt quality loop), then #212, #213
+4. **Backlog:** P3 issues ΓÇö pick up opportunistically
 
-**Rationale:** Prioritization follows a single principle: **prevent harm before adding value.** P0 prevents data loss and silent failures. P1 builds the safety net. P2 makes the team faster. P3 polishes quality. Each tier's value compounds — fingerprinting (P1) enables prompt regression testing (P2), which enables prompt versioning (P2) to be meaningful.
+**Rationale:** Prioritization follows a single principle: **prevent harm before adding value.** P0 prevents data loss and silent failures. P1 builds the safety net. P2 makes the team faster. P3 polishes quality. Each tier's value compounds ΓÇö fingerprinting (P1) enables prompt regression testing (P2), which enables prompt versioning (P2) to be meaningful.
 
 **Impact:** All team members have assigned work. The `squad` label on all issues enables triage routing. Individual `squad:{member}` labels enable filtered views per team member.
 
 ---
 
-### AD-024: LearnUrlRelativizer — Deterministic Post-Processing Backstop for Full URLs
+### AD-024: LearnUrlRelativizer ΓÇö Deterministic Post-Processing Backstop for Full URLs
 **Date:** 2026-03-25
 **Author:** Morgan (C# Generator Developer)
 **Status:** Active
@@ -419,20 +419,20 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 **Decision:** Added `LearnUrlRelativizer` as a deterministic post-processing stage (Stage 12 in FamilyFileStitcher) that converts all full learn.microsoft.com URLs to site-root-relative paths. This is a **belt-and-suspenders** approach: prompts already request relative URLs, but the post-processor enforces it deterministically.
 
 **Key Design Choices:**
-1. **Regex with `[GeneratedRegex]`** — source-generated for performance, handles locale stripping (`/en-us`), query params, and anchors.
-2. **Code-block protection** — skips URLs inside backticks and fenced code blocks (consistent with ContractionFixer, PresentTenseFixer pattern).
-3. **Placed last in pipeline** — Stage 12, after all other text transformations, so it catches any URLs introduced by earlier stages.
-4. **Applies to all learn.microsoft.com paths** — not just `/azure/...` but also `/cli/`, `/dotnet/`, etc.
+1. **Regex with `[GeneratedRegex]`** ΓÇö source-generated for performance, handles locale stripping (`/en-us`), query params, and anchors.
+2. **Code-block protection** ΓÇö skips URLs inside backticks and fenced code blocks (consistent with ContractionFixer, PresentTenseFixer pattern).
+3. **Placed last in pipeline** ΓÇö Stage 12, after all other text transformations, so it catches any URLs introduced by earlier stages.
+4. **Applies to all learn.microsoft.com paths** ΓÇö not just `/azure/...` but also `/cli/`, `/dotnet/`, etc.
 
-**Rationale:** AI content generation is inherently non-deterministic — prompt instructions alone cannot guarantee URL format compliance. Every post-processing service in the pipeline follows this pattern: deterministic fix as backstop for AI behavior. The HorizontalArticles pipeline already had `StripLearnPrefix` for its own content; this extends the same principle to tool-family files.
+**Rationale:** AI content generation is inherently non-deterministic ΓÇö prompt instructions alone cannot guarantee URL format compliance. Every post-processing service in the pipeline follows this pattern: deterministic fix as backstop for AI behavior. The HorizontalArticles pipeline already had `StripLearnPrefix` for its own content; this extends the same principle to tool-family files.
 
-**Impact:** All generated tool-family files will have site-root-relative paths for learn.microsoft.com links. Future AI-generated content that includes full learn URLs will be automatically corrected. Minimal performance impact — regex runs once per file at the end of the pipeline.
+**Impact:** All generated tool-family files will have site-root-relative paths for learn.microsoft.com links. Future AI-generated content that includes full learn URLs will be automatically corrected. Minimal performance impact ΓÇö regex runs once per file at the end of the pipeline.
 
-**Test Coverage:** 17 TDD tests (AD-007) covering all edge cases — locale stripping, query params, anchors, code-block protection, idempotency.
+**Test Coverage:** 17 TDD tests (AD-007) covering all edge cases ΓÇö locale stripping, query params, anchors, code-block protection, idempotency.
 
 ---
 
-### AD-025: Test-Driven Quality Assurance — PR #217 and #218 Assessment
+### AD-025: Test-Driven Quality Assurance ΓÇö PR #217 and #218 Assessment
 **Date:** 2026-03-25
 **Author:** Parker (QA / Tester)
 **Status:** Active
@@ -442,33 +442,33 @@ See `.squad/orchestration-log/2026-03-24T15-06-32Z-riley.md` for full detailed r
 
 **Decision:** Both PRs **APPROVED** for merge based on exceptional test coverage and behavioral alignment with AD-010 standards.
 
-**PR #217 — Generation Report (Quinn):**
+**PR #217 ΓÇö Generation Report (Quinn):**
 - **Verdict:** APPROVE
 - **Test results:** 28/28 passing (Node.js `node:test`)
-- **AD-010 compliance:** ✅ PASS — All 5 exported functions (`loadCommonParams`, `extractNamespaces`, `computeToolStats`, `computeNamespaceSummary`, `generateReport`) have tests asserting on specific output values. Reverting any function logic would break tests.
-- **Edge cases:** ✅ Comprehensive — empty results, missing option arrays, determinism checks, alphabetical sort verification
-- **Test data:** ✅ Realistic — real Azure namespace patterns (acr, cosmos) with production parameter names (`--tenant`, `--retry-*`, etc.) from `common-parameters.json` schema
-- **Coverage gaps (non-blocking):** `readJson()` (npm output parser) and `parseArgs()` untested; integration test for CLI `main()` missing — acceptable for report script
+- **AD-010 compliance:** Γ£à PASS ΓÇö All 5 exported functions (`loadCommonParams`, `extractNamespaces`, `computeToolStats`, `computeNamespaceSummary`, `generateReport`) have tests asserting on specific output values. Reverting any function logic would break tests.
+- **Edge cases:** Γ£à Comprehensive ΓÇö empty results, missing option arrays, determinism checks, alphabetical sort verification
+- **Test data:** Γ£à Realistic ΓÇö real Azure namespace patterns (acr, cosmos) with production parameter names (`--tenant`, `--retry-*`, etc.) from `common-parameters.json` schema
+- **Coverage gaps (non-blocking):** `readJson()` (npm output parser) and `parseArgs()` untested; integration test for CLI `main()` missing ΓÇö acceptable for report script
 
-**PR #218 — Acrolinx Compliance (Morgan):**
+**PR #218 ΓÇö Acrolinx Compliance (Morgan):**
 - **Verdict:** APPROVE
 - **Test results:** 202/202 ToolFamilyCleanup tests + 240/240 Annotations tests = 442/442 passing; full solution 1,149 tests, 0 failures
-- **AD-010 compliance:** ✅ PASS — All services tested behaviorally:
+- **AD-010 compliance:** Γ£à PASS ΓÇö All services tested behaviorally:
   - AcronymExpander: 12 tests asserting exact output ("virtual machine (VM)" appears)
   - IntroductoryCommaFixer: 14 tests asserting comma insertion
-  - PresentTenseFixer: 16 tests asserting tense conversion ("will return" → "returns")
+  - PresentTenseFixer: 16 tests asserting tense conversion ("will return" ΓåÆ "returns")
   - StaticTextReplacement: 20 tests asserting phrase replacements
   - StitcherAcrolinxIntegrationTests: 7 integration tests verifying full pipeline wiring and ordering
 - **Critical strength:** 7 integration tests call `FamilyFileStitcher.Stitch()` end-to-end, verifying correct order and combined behavior
-- **Edge cases:** ✅ Comprehensive — null/empty inputs, idempotency, code-block protection, heading/frontmatter protection, sentence boundaries, mid-sentence exclusion, proper noun handling, plural subject detection
-- **Test data:** ✅ Realistic — Azure-specific content (VM management, AKS, RBAC, storage, Cosmos DB)
-- **Coverage gaps (non-blocking):** Acronym definitions in JSON have no dedicated tests; verb whitelist only 6/16 verbs individually tested; file-loading fallback untested — all use same code paths, low risk
+- **Edge cases:** Γ£à Comprehensive ΓÇö null/empty inputs, idempotency, code-block protection, heading/frontmatter protection, sentence boundaries, mid-sentence exclusion, proper noun handling, plural subject detection
+- **Test data:** Γ£à Realistic ΓÇö Azure-specific content (VM management, AKS, RBAC, storage, Cosmos DB)
+- **Coverage gaps (non-blocking):** Acronym definitions in JSON have no dedicated tests; verb whitelist only 6/16 verbs individually tested; file-loading fallback untested ΓÇö all use same code paths, low risk
 
 **Key Assessment:** Both PRs exemplify expected TDD pattern. Template-level regression tests in both PRs satisfy AD-019. Zero regressions across full solution. Both ready for merge.
 
 ---
 
-### AD-026: PR Documentation Skill — CHANGELOG + Docs Update Required
+### AD-026: PR Documentation Skill ΓÇö CHANGELOG + Docs Update Required
 **Date:** 2026-03-29
 **Author:** Dina Berry (via Copilot)
 **Status:** Active
@@ -507,7 +507,7 @@ Every AI system prompt that generates prose for published articles must include 
 
 ## Rules Added to All Prompts
 
-1. Present tense (no "will return" — use "returns")
+1. Present tense (no "will return" ΓÇö use "returns")
 2. Contractions ("doesn't" not "does not")
 3. Active voice ("The tool lists" not "Resources are listed")
 4. Introductory commas ("For example, ..." "By default, ...")
@@ -534,11 +534,11 @@ This is the P0 (highest-leverage) item from `docs/acrolinx-compliance-strategy.m
 
 - **Morgan:** If you modify any system prompt, preserve the Acrolinx section. 42 tests in `AcrolinxComplianceSectionTests.cs` will fail if the section is removed.
 - **Parker:** The new tests are in `DocGeneration.Steps.ToolFamilyCleanup.Tests/AcrolinxComplianceSectionTests.cs`. They read prompt files from disk and assert required keywords.
-- **Quinn:** No pipeline changes needed — prompts are loaded at runtime.
+- **Quinn:** No pipeline changes needed ΓÇö prompts are loaded at runtime.
 
 ---
 
-### AD-027: .NET Project Consolidation Plan — Team Review and Approval
+### AD-027: .NET Project Consolidation Plan ΓÇö Team Review and Approval
 **Date:** 2026-03-30  
 **Author:** Avery (Team Lead)  
 **Reviewed by:** Riley, Morgan, Cameron, Quinn, Parker, Sage, Reeve  
@@ -547,18 +547,18 @@ This is the P0 (highest-leverage) item from `docs/acrolinx-compliance-strategy.m
 
 **Context:** Investigation identified 42 .NET projects with optimization opportunities: orphaned code (CliAnalyzer), thin shims (PostProcessVerifier), single-file libraries (Core.NaturalLanguage), and mixed test frameworks (NUnit + xUnit).
 
-**Decision:** Consolidate 42 → 40 projects through 6 approved actions + 1 deferred architectural review.
+**Decision:** Consolidate 42 ΓåÆ 40 projects through 6 approved actions + 1 deferred architectural review.
 
 **Actions Approved (1-6):**
-1. Remove CliAnalyzer — orphaned Bootstrap utility, 8 files
-2. Merge PostProcessVerifier → ToolFamilyCleanup — add `--verify-only` flag
-3. Merge Core.NaturalLanguage → Core.Shared — preserve namespace for zero-churn refactor
-4. Standardize NUnit → xUnit — 3 test projects, 155 tests
-5. Consolidate StripFrontmatter duplication — note: Fingerprint has `.TrimStart()` behavior; recommend keeping local implementation (Option A)
-6. Document ToolFamilyCleanup.Validation.Tests — explain PowerShell integration test design
+1. Remove CliAnalyzer ΓÇö orphaned Bootstrap utility, 8 files
+2. Merge PostProcessVerifier ΓåÆ ToolFamilyCleanup ΓÇö add `--verify-only` flag
+3. Merge Core.NaturalLanguage ΓåÆ Core.Shared ΓÇö preserve namespace for zero-churn refactor
+4. Standardize NUnit ΓåÆ xUnit ΓÇö 3 test projects, 155 tests
+5. Consolidate StripFrontmatter duplication ΓÇö note: Fingerprint has `.TrimStart()` behavior; recommend keeping local implementation (Option A)
+6. Document ToolFamilyCleanup.Validation.Tests ΓÇö explain PowerShell integration test design
 
 **Action Deferred (7):**
-- Bootstrap sub-step consolidation — Riley rejected (violates subprocess isolation contract; resilience requirement)
+- Bootstrap sub-step consolidation ΓÇö Riley rejected (violates subprocess isolation contract; resilience requirement)
 
 **Conditions & Requirements by Reviewer:**
 
@@ -679,14 +679,14 @@ This is the P0 (highest-leverage) item from `docs/acrolinx-compliance-strategy.m
 **Status:** Active  
 **Related:** AD-027 (Action 3)
 
-**After merging Core.NaturalLanguage → Core.Shared, KEEP namespace as `DocGeneration.Core.NaturalLanguage`:**
+**After merging Core.NaturalLanguage ΓåÆ Core.Shared, KEEP namespace as `DocGeneration.Core.NaturalLanguage`:**
 
 **Rationale:** Three downstream projects (Annotations, RawTools, HorizontalArticles) import `using DocGeneration.Core.NaturalLanguage;`. Changing namespace would require updating all 3 projects + 6 test files (churn). Namespace preservation makes this a zero-change refactor.
 
 **Implementation:**
 ```csharp
 // File: Core.Shared/NaturalLanguage/TextCleanup.cs
-namespace DocGeneration.Core.NaturalLanguage  // ← KEEP THIS
+namespace DocGeneration.Core.NaturalLanguage  // ΓåÉ KEEP THIS
 {
     public static class TextCleanup { ... }
 }
@@ -704,13 +704,13 @@ namespace DocGeneration.Core.NaturalLanguage  // ← KEEP THIS
 **Status:** Active  
 **Related:** AD-027 (Action 4)
 
-**NUnit → xUnit migration for 3 test projects (155 tests) requires before/after test count matching:**
+**NUnit ΓåÆ xUnit migration for 3 test projects (155 tests) requires before/after test count matching:**
 
 **Process:**
 1. Before migration: `dotnet test Core.TextTransformation.Tests Core.HorizontalArticles.Tests Core.SkillsRelevance.Tests > baseline.txt` (record test count and results)
-2. Execute migration: Replace NUnit attributes → xUnit, rewrite assertions
+2. Execute migration: Replace NUnit attributes ΓåÆ xUnit, rewrite assertions
 3. After migration: `dotnet test Core.TextTransformation.Tests Core.HorizontalArticles.Tests Core.SkillsRelevance.Tests > migration.txt`
-4. Verification: `diff baseline.txt migration.txt` → must be identical in test count and results
+4. Verification: `diff baseline.txt migration.txt` ΓåÆ must be identical in test count and results
 
 **Why:** NUnit and xUnit have subtle assertion semantic differences (argument order, message formatting). Before/after comparison catches silent assertion failures.
 
@@ -754,7 +754,7 @@ namespace DocGeneration.Core.NaturalLanguage  // ← KEEP THIS
 **Status:** Active  
 **Related:** AD-027 (Action 3)
 
-**After merging Core.NaturalLanguage → Core.Shared, HorizontalArticles (Step 6) AI output MUST remain identical:**
+**After merging Core.NaturalLanguage ΓåÆ Core.Shared, HorizontalArticles (Step 6) AI output MUST remain identical:**
 
 **Validation Process:**
 1. Generate baseline with old Core.NaturalLanguage: Run Step 6 on 5 diverse namespaces, capture output
