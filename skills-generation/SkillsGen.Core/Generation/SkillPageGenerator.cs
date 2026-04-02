@@ -37,6 +37,9 @@ public class SkillPageGenerator : ISkillPageGenerator
 
         // Naturalize the bullet points — convert keyword fragments into sentences
         var useForList = NaturalizeItems(rawUseFor, skillData.DisplayName);
+        // Cap at 10 items max to keep the section focused
+        if (useForList.Count > 10)
+            useForList = useForList.Take(10).ToList();
 
         // Build "When NOT to use" — only from explicit DoNotUseFor in SKILL.md
         // Do NOT fall back to shouldNotTrigger: those are test prompts, not customer guidance
@@ -158,6 +161,13 @@ public class SkillPageGenerator : ISkillPageGenerator
 
             // Skip items that are too short to be meaningful
             if (trimmed.Length < 4) continue;
+
+            // Skip question-like items (leaked trigger prompts, not use cases)
+            if (trimmed.StartsWith("How ", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("What ", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Or ", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Show ", StringComparison.OrdinalIgnoreCase))
+                continue;
 
             var wordCount = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 
