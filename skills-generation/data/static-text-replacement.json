@@ -1,0 +1,164 @@
+[
+    {
+        "Parameter": "e.g.",
+        "NaturalLanguage": "for example"
+    },
+    {
+        "Parameter": "i.e.",
+        "NaturalLanguage": "in other words"
+    },
+    {
+        "Parameter": "id",
+        "NaturalLanguage": "ID"
+    },
+    {
+        "Parameter": "uri",
+        "NaturalLanguage": "URI"
+    },
+    {
+        "Parameter": "url",
+        "NaturalLanguage": "URL"
+    },
+    {
+        "Parameter": "ai",
+        "NaturalLanguage": "AI"
+    },
+    {
+        "Parameter": "sku",
+        "NaturalLanguage": "SKU"
+    },
+    {
+        "Parameter": "VMSS",
+        "NaturalLanguage": "Virtual machine scale set (VMSS)"
+    },
+    {
+        "Parameter": "CosmosDB",
+        "NaturalLanguage": "Azure Cosmos DB"
+    },
+    {
+        "Parameter": "This is a logical container",
+        "NaturalLanguage": "This resource group is a logical container"
+    },
+    {
+        "Parameter": "etc.",
+        "NaturalLanguage": "and more"
+    },
+    {
+        "Parameter": "in order to",
+        "NaturalLanguage": "to"
+    },
+    {
+        "Parameter": "make sure",
+        "NaturalLanguage": "ensure"
+    },
+    {
+        "Parameter": "a number of",
+        "NaturalLanguage": "several"
+    },
+    {
+        "Parameter": "utilize",
+        "NaturalLanguage": "use"
+    },
+    {
+        "Parameter": "functionality",
+        "NaturalLanguage": "feature"
+    },
+    {
+        "Parameter": "Azure Ad",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "azure ad",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "Entra id",
+        "NaturalLanguage": "Entra ID"
+    },
+    {
+        "Parameter": "via",
+        "NaturalLanguage": "through"
+    },
+    {
+        "Parameter": "leverage",
+        "NaturalLanguage": "use"
+    },
+    {
+        "Parameter": "prior to",
+        "NaturalLanguage": "before"
+    },
+    {
+        "Parameter": "Azure Active Directory",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "Azure AD",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "AAD",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "whitelist",
+        "NaturalLanguage": "allowlist"
+    },
+    {
+        "Parameter": "blacklist",
+        "NaturalLanguage": "blocklist"
+    },
+    {
+        "Parameter": "master branch",
+        "NaturalLanguage": "main branch"
+    },
+    {
+        "Parameter": "sanity check",
+        "NaturalLanguage": "validation check"
+    },
+    {
+        "Parameter": "dummy",
+        "NaturalLanguage": "placeholder"
+    },
+    {
+        "Parameter": "due to the fact that",
+        "NaturalLanguage": "because"
+    },
+    {
+        "Parameter": "provides the ability to",
+        "NaturalLanguage": "lets you"
+    },
+    {
+        "Parameter": "in the event that",
+        "NaturalLanguage": "if"
+    },
+    {
+        "Parameter": "is able to",
+        "NaturalLanguage": "can"
+    },
+    {
+        "Parameter": "as well as",
+        "NaturalLanguage": "and"
+    },
+    {
+        "Parameter": "in addition to",
+        "NaturalLanguage": "besides"
+    },    {
+        "Parameter": "backend",
+        "NaturalLanguage": "back end"
+    },
+    {
+        "Parameter": "frontend",
+        "NaturalLanguage": "front end"
+    },    {
+        "Parameter": "the cloud",
+        "NaturalLanguage": "cloud"
+    },
+    {
+        "Parameter": "auto-instrumentation",
+        "NaturalLanguage": "autoinstrumentation"
+    },
+    {
+        "Parameter": "auto-upgrades",
+        "NaturalLanguage": "automatic upgrades"
+    }
+]

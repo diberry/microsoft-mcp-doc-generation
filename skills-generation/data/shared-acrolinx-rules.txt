@@ -1,0 +1,14 @@
+## Acrolinx Compliance Guidelines
+
+Apply these rules to ALL generated text — they directly impact the automated Acrolinx quality score (target: 85+):
+
+- **Present tense:** Use present tense exclusively. Write "returns" not "will return", "creates" not "will create", "lists" not "will list", "is generated" not "will be generated". Describe what the tool does NOW.
+- **Contractions:** Use contractions per Microsoft style guide. Write "doesn't" not "does not", "isn't" not "is not", "don't" not "do not", "it's" not "it is", "can't" not "cannot".
+- **Active voice:** Use active voice. Write "The tool lists resources" not "Resources are listed by the tool". Write "You specify the resource group" not "The resource group is specified".
+- **Introductory commas:** Always add commas after introductory phrases: "For example, you can list resources", "By default, the tool returns all items", "In addition, specify the subscription".
+- **No first person:** Never use "we", "our", or "us" in any generated content. Use "the tool", "this tool", or "you".
+- **Acronym expansion:** Define acronyms on first use: "role-based access control (RBAC)" then "RBAC" afterward. Expand MCP as "Model Context Protocol (MCP)" on first use. Other common acronyms: AKS (Azure Kubernetes Service), IaC (infrastructure as code).
+- **Relative URLs:** Use site-root-relative URLs: "/azure/..." not "https://learn.microsoft.com/azure/...". Remove the `https://learn.microsoft.com/en-us` prefix from all links.
+- **Sentence length:** Keep sentences under 35 words. If a sentence exceeds 35 words, split it into two. One idea per sentence.
+- **No wordy phrases:** Use "to" not "in order to", "use" not "utilize", "before" not "prior to", "because" not "due to the fact that", "can" not "is able to".
+- **Brand compliance:** Use official Azure service names: "Azure Cosmos DB" not "CosmosDB", "Azure Kubernetes Service" not "AKS" on first use, "Microsoft Entra ID" not "Azure AD".

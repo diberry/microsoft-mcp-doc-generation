@@ -6,6 +6,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Azure Skills documentation generation pipeline (`skills-generation/`) — generates customer-facing docs for 24 Azure Skills (#365)
+- `start-azure-skills.sh` entry point script
+- 77 xUnit tests with 81.6% line coverage
+- Skills Generation CI workflow (`.github/workflows/skills-generation-ci.yml`)
+
 ### Changed
 
 - **Consolidated FindProjectRoot() into shared test utility** — Created `DocGeneration.TestInfrastructure` project with canonical `ProjectRootFinder` class (`FindSolutionRoot()`, `FindDocsGenerationRoot()`). Replaced 7 duplicate implementations across 5 test projects. (Issue #334)
