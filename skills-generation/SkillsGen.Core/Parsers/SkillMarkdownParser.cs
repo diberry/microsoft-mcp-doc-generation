@@ -212,10 +212,15 @@ public partial class SkillMarkdownParser : ISkillParser
         clean = clean.Trim('"', '\'', '.', ',', ';', ' ');
         // Remove any remaining control text fragments
         clean = Regex.Replace(clean, @"\b(USE\s+FOR|DO\s+NOT\s+USE|WHEN\s*:|DON'?T\s+USE)\b.*$", "", RegexOptions.IgnoreCase).Trim();
-        // Remove ALL CAPS words that are internal markers
-        clean = Regex.Replace(clean, @"\b[A-Z]{3,}\b", m =>
-            m.Value is "API" or "CLI" or "SDK" or "MCP" or "RBAC" or "ARM" or "AKS" or "SQL" or "SMB"
-                ? m.Value
+        // Preserve known acronyms, downcase other ALL-CAPS words that are internal markers
+        var keepUpperInItems = new HashSet<string> {
+            "API", "CLI", "SDK", "MCP", "RBAC", "ARM", "AKS", "SQL", "SMB",
+            "AWS", "GCP", "KQL", "ADX", "MSAL", "OAuth", "IoT", "SaaS", "PaaS", "IaaS",
+            "VM", "VMs", "VMSS", "HTTP", "HTTPS", "REST", "JSON", "YAML", "DNS", "CDN",
+            "SSH", "SSL", "TLS", "SKU", "SLA", "URL", "URI"
+        };
+        clean = Regex.Replace(clean, @"\b[A-Z]{2,}\b", m =>
+            keepUpperInItems.Contains(m.Value) ? m.Value
                 : m.Value[0] + m.Value[1..].ToLower()
         );
         return clean.Trim();
@@ -480,7 +485,8 @@ public partial class SkillMarkdownParser : ISkillParser
     private static string DeriveDisplayName(string slug)
     {
         var acronyms = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            { "ai", "sdk", "rbac", "mcp", "api", "cli", "sql", "smb", "aks" };
+            { "ai", "sdk", "rbac", "mcp", "api", "cli", "sql", "smb", "aks",
+              "aws", "gcp", "kql", "adx", "msal", "iot", "vm", "http", "dns", "cdn" };
 
         var words = slug.Split('-', StringSplitOptions.RemoveEmptyEntries);
         var result = words.Select(w =>
@@ -509,7 +515,13 @@ public partial class SkillMarkdownParser : ISkillParser
         }
 
         // Downcase ALL-CAPS words (except known acronyms) for readability
-        var keepUpper = new HashSet<string> { "AI", "API", "CLI", "SDK", "MCP", "RBAC", "AKS", "SQL", "SMB", "ARM", "NOT", "OR", "AND" };
+        var keepUpper = new HashSet<string> {
+            "AI", "API", "CLI", "SDK", "MCP", "RBAC", "AKS", "SQL", "SMB", "ARM",
+            "AWS", "GCP", "KQL", "ADX", "MSAL", "OAuth", "IoT", "SaaS", "PaaS", "IaaS",
+            "VM", "VMs", "VMSS", "HTTP", "HTTPS", "REST", "JSON", "YAML", "DNS", "CDN",
+            "SSH", "SSL", "TLS", "TCP", "UDP", "IP", "URL", "URI", "SKU", "SLA",
+            "NOT", "OR", "AND", "FOR", "USE"
+        };
         clean = Regex.Replace(clean, @"\b[A-Z]{2,}(?:-[A-Z]+)*\b", m =>
             keepUpper.Contains(m.Value) ? m.Value : m.Value.ToLower());
 
