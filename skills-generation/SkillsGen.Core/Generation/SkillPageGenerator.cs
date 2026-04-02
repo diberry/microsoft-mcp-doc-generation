@@ -38,12 +38,11 @@ public class SkillPageGenerator : ISkillPageGenerator
         // Naturalize the bullet points — convert keyword fragments into sentences
         var useForList = NaturalizeItems(rawUseFor, skillData.DisplayName);
 
-        // Build "When NOT to use" from DoNotUseFor, falling back to shouldNotTrigger
+        // Build "When NOT to use" — only from explicit DoNotUseFor in SKILL.md
+        // Do NOT fall back to shouldNotTrigger: those are test prompts, not customer guidance
         var rawDoNotUseFor = skillData.DoNotUseFor.Count > 0
             ? skillData.DoNotUseFor
-            : triggerData.ShouldNotTrigger.Count > 0
-                ? triggerData.ShouldNotTrigger.Take(3).ToList()
-                : new List<string>();
+            : new List<string>();
         var doNotUseForList = NaturalizeItems(rawDoNotUseFor, skillData.DisplayName);
 
         // Cap example prompts
@@ -158,9 +157,13 @@ public class SkillPageGenerator : ISkillPageGenerator
             if (string.IsNullOrWhiteSpace(trimmed)) continue;
 
             // Skip items that are too short to be meaningful
-            if (trimmed.Length < 2) continue;
+            if (trimmed.Length < 4) continue;
 
             var wordCount = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
+            // Skip single-word items that are verbs/keywords without context
+            if (wordCount == 1 && (StartsWithVerb(trimmed) || LooksLikeVerbForm(trimmed)))
+                continue;
 
             if (wordCount >= 5)
             {
@@ -176,20 +179,16 @@ public class SkillPageGenerator : ISkillPageGenerator
                 continue;
             }
 
-            // Single-word items that look like verb forms: capitalize and keep as-is
-            if (wordCount == 1 && LooksLikeVerbForm(trimmed))
-            {
-                FlushShortItems(shortItems, result);
-                result.Add(CapitalizeFirst(trimmed));
-                continue;
-            }
-
             shortItems.Add(trimmed);
             if (shortItems.Count >= 4)
                 FlushShortItems(shortItems, result);
         }
 
         FlushShortItems(shortItems, result);
+
+        // Fix acronym casing in all results
+        result = result.Select(FixAcronymCasing).ToList();
+
         return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
@@ -259,6 +258,33 @@ public class SkillPageGenerator : ISkillPageGenerator
     {
         if (string.IsNullOrEmpty(text)) return text;
         return char.ToUpper(text[0]) + text[1..];
+    }
+
+    private static readonly (System.Text.RegularExpressions.Regex pattern, string replacement)[] AcronymFixups =
+    [
+        (new System.Text.RegularExpressions.Regex(@"\b[Aa][Ii]\b"), "AI"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Aa][Ww][Ss]\b"), "AWS"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Gg][Cc][Pp]\b"), "GCP"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Kk][Qq][Ll]\b"), "KQL"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Mm][Ss][Aa][Ll]\b"), "MSAL"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Ll][Ll][Mm]\b"), "LLM"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Vv][Mm]\b"), "VM"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Aa][Pp][Ii]\b"), "API"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Ss][Dd][Kk]\b"), "SDK"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Aa][Kk][Ss]\b"), "AKS"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Aa][Dd][Xx]\b"), "ADX"),
+        (new System.Text.RegularExpressions.Regex(@"\b[Ii][Dd]\b"), "ID"),
+    ];
+
+    /// <summary>
+    /// Fixes mis-cased acronyms (e.g., "Ai" → "AI", "Sdk" → "SDK") using word-boundary regex.
+    /// </summary>
+    internal static string FixAcronymCasing(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        foreach (var (pattern, replacement) in AcronymFixups)
+            text = pattern.Replace(text, replacement);
+        return text;
     }
 
     private static void RegisterHelpers(IHandlebars handlebars)

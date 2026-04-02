@@ -24,7 +24,8 @@ public partial class SkillMarkdownParser : ISkillParser
         var rawDescription = ExtractFrontmatterField(frontmatter, "description") ?? "";
 
         // Decode HTML entities FIRST so all extraction works on clean text
-        var decodedDescription = DecodeHtmlEntities(rawDescription);
+        // Double-decode to handle double-encoded entities (e.g., &amp;quot; → &quot; → ")
+        var decodedDescription = DecodeHtmlEntities(DecodeHtmlEntities(rawDescription));
 
         // Clean the description for display (strip markers, take first 2 sentences)
         var cleanDescription = CleanDescription(decodedDescription);

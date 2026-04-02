@@ -191,4 +191,24 @@ public class SkillMarkdownParserTests
         var result = _parser.Parse("test", content);
         result.Description.Should().NotContain(". azure/");
     }
+
+    // === Issue 2: Double-encoded HTML entities ===
+
+    [Fact]
+    public void Parse_DoubleEncodedEntities_DecodedInDescription()
+    {
+        var content = "---\nname: azure-cost\ndescription: Helps with &amp;quot;Azure costs&amp;quot; and billing.\n---\n\nBody.\n";
+        var result = _parser.Parse("azure-cost", content);
+        result.Description.Should().NotContain("&quot;");
+        result.Description.Should().NotContain("&amp;");
+    }
+
+    [Fact]
+    public void Parse_DoubleEncodedEntities_DecodedInUseForItems()
+    {
+        var content = "---\nname: azure-cost\ndescription: Helps. USE FOR: &amp;quot;cost analysis&amp;quot;, budgets\n---\n\nBody.\n";
+        var result = _parser.Parse("azure-cost", content);
+        result.UseFor.Should().NotContain(s => s.Contains("&quot;"));
+        result.UseFor.Should().NotContain(s => s.Contains("&amp;"));
+    }
 }
