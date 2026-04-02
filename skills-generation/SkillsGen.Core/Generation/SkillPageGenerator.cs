@@ -60,7 +60,7 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["displayName"] = skillData.DisplayName,
             ["description"] = skillData.Description,
             ["tier"] = tierAssessment.Tier,
-            ["generatedDate"] = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+            ["generatedDate"] = DateTime.UtcNow.ToString("M/d/yyyy"),
             ["generatorVersion"] = "1.0.0",
             ["useFor"] = useForList,
             ["doNotUseFor"] = doNotUseForList,
