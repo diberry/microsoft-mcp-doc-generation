@@ -728,6 +728,38 @@ All generators, validators, transformations, prompts, templates, and tests MUST 
 
 If a bug is found in one service's generated output, the fix MUST be a generic rule that catches the same class of problem across all services.
 
+## Skills Generation Pipeline (skills-generation/)
+
+### Overview
+Independent .NET pipeline in `skills-generation/` that generates 24 Azure Skills documentation pages from GitHub Copilot for Azure source data.
+
+### Key Commands
+- **Build**: `dotnet build skills-generation/skills-generation.slnx --configuration Release`
+- **Test**: `dotnet test skills-generation/skills-generation.slnx`
+- **Generate (local)**: `dotnet run --project skills-generation/SkillsGen.Cli -- generate-skills --all --no-llm --source local --source-path <path-to-skills> --tests-path <path-to-tests> --out ./generated-skills/`
+- **Start script**: `./start-azure-skills.sh`
+- **Vale lint**: `./skills-generation/scripts/lint-vale.ps1`
+- **Coverage check**: `./skills-generation/scripts/check-coverage.ps1`
+
+### Architecture
+8-module pipeline: fetcher → skill-parser → trigger-parser → tier-assessor → template-filler + llm-rewriter → acrolinx-post-processor → validator → orchestrator
+
+### Important Patterns
+- **Always use local source** — clone `microsoft/GitHub-Copilot-for-Azure` once and use `--source local` to avoid GitHub API rate limits
+- **Vale before push** — run Vale lint locally before pushing generated content to catch Microsoft style issues
+- **Triple-curly Handlebars** — template uses `{{{var}}}` (raw output) not `{{var}}` (HTML-escaped) since output is markdown
+- **Acrolinx post-processor** — applies static text replacements, acronym expansion, contractions, URL normalization, and technical term wrapping
+- **Display names from inventory** — `skills-inventory.json` provides display names; parser derives from slug as fallback
+- **Smart prerequisites** — detected from source file extensions (.ps1→PowerShell, .bicep→Bicep, .tf→Terraform)
+
+### CI Gates
+- `skills-generation-ci.yml` — build + 152 tests + coverage threshold (80% line, 70% branch) + MCP regression check
+- `vale-lint` job — Vale prose linting on generated output (report only, non-blocking)
+
+### Test Coverage
+- 152 xUnit tests, 81%+ line coverage
+- TDD required per AD-007/AD-010
+
 ## Last Updated
 
 March 28, 2026
