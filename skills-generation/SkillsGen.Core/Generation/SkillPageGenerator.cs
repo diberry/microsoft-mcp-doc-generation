@@ -157,6 +157,9 @@ public class SkillPageGenerator : ISkillPageGenerator
             var trimmed = item.Trim();
             if (string.IsNullOrWhiteSpace(trimmed)) continue;
 
+            // Skip items that are too short to be meaningful
+            if (trimmed.Length < 2) continue;
+
             var wordCount = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 
             if (wordCount >= 5)
@@ -173,6 +176,14 @@ public class SkillPageGenerator : ISkillPageGenerator
                 continue;
             }
 
+            // Single-word items that look like verb forms: capitalize and keep as-is
+            if (wordCount == 1 && LooksLikeVerbForm(trimmed))
+            {
+                FlushShortItems(shortItems, result);
+                result.Add(CapitalizeFirst(trimmed));
+                continue;
+            }
+
             shortItems.Add(trimmed);
             if (shortItems.Count >= 4)
                 FlushShortItems(shortItems, result);
@@ -182,6 +193,17 @@ public class SkillPageGenerator : ISkillPageGenerator
         return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    /// <summary>
+    /// Returns true if a single word looks like a verb form (-ing, -ed, -tion)
+    /// rather than a noun, indicating it should not be prefixed with "Work with".
+    /// </summary>
+    private static bool LooksLikeVerbForm(string word)
+    {
+        return word.EndsWith("ing", StringComparison.OrdinalIgnoreCase) ||
+               word.EndsWith("ed", StringComparison.OrdinalIgnoreCase) ||
+               word.EndsWith("tion", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static void FlushShortItems(List<string> shortItems, List<string> result)
     {
         if (shortItems.Count == 0) return;
@@ -189,6 +211,10 @@ public class SkillPageGenerator : ISkillPageGenerator
         if (shortItems.Count == 1)
         {
             result.Add($"Work with {shortItems[0]}");
+        }
+        else if (shortItems.Count == 2)
+        {
+            result.Add($"Work with {shortItems[0]} and {shortItems[1]}");
         }
         else
         {

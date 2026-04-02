@@ -144,6 +144,10 @@ public class SkillPipelineOrchestrator
                 itemSw.Stop();
                 results.Add(CreateFailResult(skill.Name, itemSw, ex.Message));
             }
+
+            // Brief delay between skills to avoid bursting the GitHub API
+            if (i < skills.Count - 1)
+                await Task.Delay(100, ct);
         }
 
         totalSw.Stop();

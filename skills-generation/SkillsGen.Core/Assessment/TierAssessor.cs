@@ -4,7 +4,33 @@ namespace SkillsGen.Core.Assessment;
 
 public class TierAssessor : ITierAssessor
 {
-    private const int Tier1Threshold = 4;
+    private readonly int _tier1Threshold;
+
+    /// <summary>
+    /// Azure service keywords used for Q5 scoring. This list should be kept in sync
+    /// with the Azure service catalog to ensure accurate tier assessment.
+    /// </summary>
+    private static readonly HashSet<string> AzureServiceKeywords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Azure Storage", "Key Vault", "Cosmos DB", "App Service", "Azure SQL",
+        "Azure Functions", "Service Bus", "Event Hub", "Event Grid", "Azure Monitor",
+        "Application Insights", "Azure DevOps", "Container Apps", "Azure Kubernetes",
+        "Azure AI", "Cognitive Services", "Azure OpenAI", "Azure Cache", "Azure SignalR",
+        "Azure Search", "Azure Blob", "Azure Queue", "Azure Table", "Azure File",
+        "Azure DNS", "Azure CDN", "Azure Front Door", "Azure Firewall",
+        "Virtual Machine", "Azure VM", "Azure Batch", "Azure Logic App",
+        "Azure API Management", "Azure Notification Hub", "Azure IoT",
+        "Microsoft Entra", "Azure Active Directory", "Azure AD",
+        "Container Instances", "Batch", "Data Factory", "Logic Apps",
+        "Event Grid", "Event Hubs", "Service Bus", "API Management",
+        "Front Door", "CDN", "Bastion", "Firewall", "Load Balancer",
+        "Traffic Manager", "Virtual Network", "DNS"
+    };
+
+    public TierAssessor(int tier1Threshold = 4)
+    {
+        _tier1Threshold = tier1Threshold;
+    }
 
     public TierAssessment Assess(SkillData skillData, TriggerData triggerData)
     {
@@ -44,25 +70,13 @@ public class TierAssessor : ITierAssessor
             q4Answer, $"Description length: {skillData.Description?.Length ?? 0}"));
 
         // Q5: Services or McpTools reference specific Azure service names → +1
-        var azureServiceKeywords = new[]
-        {
-            "Azure Storage", "Key Vault", "Cosmos DB", "App Service", "Azure SQL",
-            "Azure Functions", "Service Bus", "Event Hub", "Event Grid", "Azure Monitor",
-            "Application Insights", "Azure DevOps", "Container Apps", "Azure Kubernetes",
-            "Azure AI", "Cognitive Services", "Azure OpenAI", "Azure Cache", "Azure SignalR",
-            "Azure Search", "Azure Blob", "Azure Queue", "Azure Table", "Azure File",
-            "Azure DNS", "Azure CDN", "Azure Front Door", "Azure Firewall",
-            "Virtual Machine", "Azure VM", "Azure Batch", "Azure Logic App",
-            "Azure API Management", "Azure Notification Hub", "Azure IoT",
-            "Microsoft Entra", "Azure Active Directory", "Azure AD"
-        };
         var q5Answer = skillData.Services.Any(s =>
-                azureServiceKeywords.Any(k => s.Name.Contains(k, StringComparison.OrdinalIgnoreCase))) ||
+                AzureServiceKeywords.Any(k => s.Name.Contains(k, StringComparison.OrdinalIgnoreCase))) ||
             skillData.McpTools.Any(t =>
-                azureServiceKeywords.Any(k =>
+                AzureServiceKeywords.Any(k =>
                     t.Command.Contains(k, StringComparison.OrdinalIgnoreCase) ||
                     t.ToolName.Contains(k, StringComparison.OrdinalIgnoreCase)));
-        var matchedKeywords = azureServiceKeywords
+        var matchedKeywords = AzureServiceKeywords
             .Where(k => skillData.Services.Any(s => s.Name.Contains(k, StringComparison.OrdinalIgnoreCase)) ||
                          skillData.McpTools.Any(t => t.Command.Contains(k, StringComparison.OrdinalIgnoreCase) ||
                                                       t.ToolName.Contains(k, StringComparison.OrdinalIgnoreCase)))
@@ -73,8 +87,8 @@ public class TierAssessor : ITierAssessor
             "Q5", "Do services or MCP tools reference specific Azure services?",
             q5Answer, $"Matched Azure services: {(matchedKeywords.Count > 0 ? string.Join(", ", matchedKeywords) : "none")}"));
 
-        var tier = score >= Tier1Threshold ? 1 : 2;
-        var rationale = $"Score {score}/{Tier1Threshold + 3}: {(tier == 1 ? "Tier 1 (comprehensive)" : "Tier 2 (essential)")}";
+        var tier = score >= _tier1Threshold ? 1 : 2;
+        var rationale = $"Score {score}/{_tier1Threshold + 3}: {(tier == 1 ? "Tier 1 (comprehensive)" : "Tier 2 (essential)")}";
 
         return new TierAssessment(
             Tier: tier,

@@ -50,9 +50,9 @@ ms.service: azure-mcp-server
 {{/each}}
 {{/if}}
 
+{{#if hasUseFor}}
 ## When to use this skill
 
-{{#if hasUseFor}}
 Use the **{{displayName}}** skill when you need to:
 
 {{#each useFor}}
@@ -83,7 +83,6 @@ Don't use this skill for:
 | {{name}} | {{useWhen}} |
 {{/each}}
 {{/if}}
-
 {{#if showToolsSection}}
 {{#if hasMcpTools}}
 ### Related tools

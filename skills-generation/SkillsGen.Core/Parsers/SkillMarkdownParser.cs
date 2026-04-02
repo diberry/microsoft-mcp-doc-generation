@@ -94,41 +94,67 @@ public partial class SkillMarkdownParser : ISkillParser
     {
         if (string.IsNullOrEmpty(frontmatter)) return null;
 
-        var regex = new Regex($@"^{fieldPattern}\s*:\s*(.+)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
-        var match = regex.Match(frontmatter);
-        if (!match.Success) return null;
-
-        var value = match.Groups[1].Value.Trim();
-        // Strip surrounding quotes
-        if ((value.StartsWith('"') && value.EndsWith('"')) ||
-            (value.StartsWith('\'') && value.EndsWith('\'')))
+        try
         {
-            value = value[1..^1];
+            var regex = new Regex($@"^{fieldPattern}\s*:\s*(.+)$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+            var match = regex.Match(frontmatter);
+            if (!match.Success) return null;
+
+            var value = match.Groups[1].Value.Trim();
+            // Strip surrounding quotes
+            if ((value.StartsWith('"') && value.EndsWith('"')) ||
+                (value.StartsWith('\'') && value.EndsWith('\'')))
+            {
+                value = value[1..^1];
+            }
+            // Unescape YAML escaped quotes
+            value = value.Replace("\\\"", "\"").Replace("\\'", "'");
+            return value;
         }
-        // Unescape YAML escaped quotes
-        value = value.Replace("\\\"", "\"").Replace("\\'", "'");
-        return value;
+        catch (RegexParseException)
+        {
+            return null;
+        }
     }
 
     private static List<string> ExtractListFromDescription(string description, string marker)
     {
-        var idx = description.IndexOf(marker.Replace(@"\s+", " ").Replace(@"\s*", ""), StringComparison.OrdinalIgnoreCase);
-        if (idx < 0)
+        try
         {
-            // Try regex match
-            var markerMatch = Regex.Match(description, marker, RegexOptions.IgnoreCase);
-            if (!markerMatch.Success) return [];
-            idx = markerMatch.Index;
-            var afterMarker = description[(idx + markerMatch.Length)..].Trim();
-            return ParseCommaSeparatedOrBullets(afterMarker);
-        }
+            var idx = description.IndexOf(marker.Replace(@"\s+", " ").Replace(@"\s*", ""), StringComparison.OrdinalIgnoreCase);
+            if (idx < 0)
+            {
+                // Try regex match
+                var markerMatch = Regex.Match(description, marker, RegexOptions.IgnoreCase);
+                if (!markerMatch.Success) return [];
+                idx = markerMatch.Index;
+                var afterMarker = description[(idx + markerMatch.Length)..].Trim();
+                return ParseCommaSeparatedOrBullets(afterMarker);
+            }
 
-        var markerLen = Regex.Match(description[idx..], marker, RegexOptions.IgnoreCase);
-        var after = description[(idx + markerLen.Length)..].Trim();
-        return ParseCommaSeparatedOrBullets(after);
+            var markerLen = Regex.Match(description[idx..], marker, RegexOptions.IgnoreCase);
+            var after = description[(idx + markerLen.Length)..].Trim();
+            return ParseCommaSeparatedOrBullets(after);
+        }
+        catch (RegexParseException)
+        {
+            return [];
+        }
     }
 
     private static List<string> ParseCommaSeparatedOrBullets(string text)
+    {
+        try
+        {
+            return ParseCommaSeparatedOrBulletsCore(text);
+        }
+        catch (RegexParseException)
+        {
+            return [];
+        }
+    }
+
+    private static List<string> ParseCommaSeparatedOrBulletsCore(string text)
     {
         // Stop at next marker or end of string
         var stopPatterns = new[] {

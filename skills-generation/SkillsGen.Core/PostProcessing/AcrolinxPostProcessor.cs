@@ -86,36 +86,73 @@ public partial class AcrolinxPostProcessor
 
         var result = body;
 
-        // Apply static text replacements with word boundaries
-        foreach (var replacement in _replacements)
-        {
-            var pattern = $@"\b{Regex.Escape(replacement.Parameter)}\b";
-            result = Regex.Replace(result, pattern, replacement.NaturalLanguage, RegexOptions.None);
-        }
+        // 1. Wrap bare skill names FIRST — backticked content is then protected
+        result = WrapBareSkillNames(result);
 
-        // Apply contractions
-        foreach (var (phrase, contraction) in Contractions)
+        // 2. Static text replacements (protect backtick spans)
+        result = ApplyWithBacktickProtection(result, text =>
         {
-            var pattern = $@"\b{Regex.Escape(phrase)}\b";
-            result = Regex.Replace(result, pattern, contraction, RegexOptions.IgnoreCase);
-        }
+            foreach (var replacement in _replacements)
+            {
+                var pattern = $@"\b{Regex.Escape(replacement.Parameter)}\b";
+                text = Regex.Replace(text, pattern, replacement.NaturalLanguage, RegexOptions.None);
+            }
+            return text;
+        });
 
-        // Expand acronyms on first use
+        // 3. Contractions (protect backtick spans)
+        result = ApplyWithBacktickProtection(result, text =>
+        {
+            foreach (var (phrase, contraction) in Contractions)
+            {
+                var pattern = $@"\b{Regex.Escape(phrase)}\b";
+                text = Regex.Replace(text, pattern, contraction, RegexOptions.IgnoreCase);
+            }
+            return text;
+        });
+
+        // 4. Expand acronyms on first use — after all other text is settled
         result = ExpandAcronymsFirstUse(result);
 
-        // Normalize URLs - strip learn.microsoft.com prefix
+        // 5. Normalize URLs - strip learn.microsoft.com prefix
         result = NormalizeUrls(result);
 
         // Add commas after introductory phrases
         result = AddIntroductoryCommas(result);
 
-        // Wrap bare hyphenated skill names in backticks
-        result = WrapBareSkillNames(result);
-
         // Split long sentences
         result = SplitLongSentences(result);
 
         return frontmatter + result;
+    }
+
+    /// <summary>
+    /// Temporarily extracts backtick spans, applies a transform, then restores them.
+    /// This prevents transforms from modifying content inside backticks.
+    /// </summary>
+    private static string ApplyWithBacktickProtection(string text, Func<string, string> transform)
+    {
+        var placeholders = new Dictionary<string, string>();
+        int counter = 0;
+
+        // Replace backtick spans with placeholders
+        var protectedText = Regex.Replace(text, @"`[^`]+`", match =>
+        {
+            var placeholder = $"\x00BTCK{counter++}\x00";
+            placeholders[placeholder] = match.Value;
+            return placeholder;
+        });
+
+        // Apply the transform
+        protectedText = transform(protectedText);
+
+        // Restore backtick spans
+        foreach (var (placeholder, original) in placeholders)
+        {
+            protectedText = protectedText.Replace(placeholder, original);
+        }
+
+        return protectedText;
     }
 
     internal static (string frontmatter, string body) SplitFrontmatter(string content)

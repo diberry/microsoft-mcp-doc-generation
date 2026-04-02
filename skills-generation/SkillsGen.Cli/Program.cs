@@ -116,6 +116,38 @@ static SkillPipelineOrchestrator BuildOrchestrator(
     string templatePath, string outputDir,
     bool noLlm, bool dryRun, bool force)
 {
+    var startupLogger = loggerFactory.CreateLogger("Startup");
+
+    // --- Startup file validation ---
+    // REQUIRED files — fail fast if missing
+    var inventoryPath = Path.Combine(dataPath, "skills-inventory.json");
+    if (!File.Exists(inventoryPath))
+    {
+        Console.Error.WriteLine($"❌ FATAL: Required file missing: {inventoryPath}");
+        Environment.Exit(1);
+    }
+    if (!File.Exists(templatePath))
+    {
+        Console.Error.WriteLine($"❌ FATAL: Required file missing: {templatePath}");
+        Environment.Exit(1);
+    }
+
+    // OPTIONAL files — warn if missing
+    var replacementsPath = Path.Combine(dataPath, "static-text-replacement.json");
+    var acronymsPath = Path.Combine(dataPath, "acronym-definitions.json");
+    if (!File.Exists(replacementsPath))
+        startupLogger.LogWarning("⚠️ Missing {Filename} — Acrolinx compliance will be degraded", "static-text-replacement.json");
+    if (!File.Exists(acronymsPath))
+        startupLogger.LogWarning("⚠️ Missing {Filename} — Acrolinx compliance will be degraded", "acronym-definitions.json");
+
+    var systemPromptPath = Path.Combine(Path.GetDirectoryName(templatePath) ?? ".", "..", "prompts", "skill-page-system-prompt.txt");
+    var userPromptPath = Path.Combine(Path.GetDirectoryName(templatePath) ?? ".", "..", "prompts", "skill-page-user-prompt-intro.txt");
+    if (!File.Exists(systemPromptPath))
+        startupLogger.LogWarning("⚠️ Missing prompt file: {Path}", systemPromptPath);
+    if (!File.Exists(userPromptPath))
+        startupLogger.LogWarning("⚠️ Missing prompt file: {Path}", userPromptPath);
+
+    // --- Build components ---
     // Fetcher
     ISkillSourceFetcher fetcher = source == "github"
         ? new GitHubSkillFetcher(new HttpClient(), loggerFactory.CreateLogger<GitHubSkillFetcher>())
@@ -142,8 +174,6 @@ static SkillPipelineOrchestrator BuildOrchestrator(
 
         if (!string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(endpoint))
         {
-            var systemPromptPath = Path.Combine(Path.GetDirectoryName(templatePath) ?? ".", "..", "prompts", "skill-page-system-prompt.txt");
-            var userPromptPath = Path.Combine(Path.GetDirectoryName(templatePath) ?? ".", "..", "prompts", "skill-page-user-prompt-intro.txt");
             var acrolinxPath = Path.Combine(dataPath, "shared-acrolinx-rules.txt");
 
             var systemPrompt = File.Exists(systemPromptPath) ? File.ReadAllText(systemPromptPath) : "You are a technical writer.";
@@ -168,8 +198,6 @@ static SkillPipelineOrchestrator BuildOrchestrator(
     var pageGenerator = new SkillPageGenerator(templateContent, loggerFactory.CreateLogger<SkillPageGenerator>());
 
     // Post-processor
-    var replacementsPath = Path.Combine(dataPath, "static-text-replacement.json");
-    var acronymsPath = Path.Combine(dataPath, "acronym-definitions.json");
     var replacementsJson = File.Exists(replacementsPath) ? File.ReadAllText(replacementsPath) : null;
     var acronymsJson = File.Exists(acronymsPath) ? File.ReadAllText(acronymsPath) : null;
     var postProcessor = new AcrolinxPostProcessor(replacementsJson, acronymsJson,
