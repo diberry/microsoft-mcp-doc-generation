@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SkillsGen.Cli/SkillsGen.Cli.csproj" />
+  <Project Path="SkillsGen.Core.Tests/SkillsGen.Core.Tests.csproj" />
+  <Project Path="SkillsGen.Core/SkillsGen.Core.csproj" />
+</Solution>
