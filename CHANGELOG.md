@@ -14,6 +14,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - 77 xUnit tests with 81.6% line coverage
 - Skills Generation CI workflow (`.github/workflows/skills-generation-ci.yml`)
 
+### Removed
+
+- Deleted unused `test_coverage.cs` and `test_coverage.csx` from repository root (#349)
+
 ### Changed
 
 - **Consolidated FindProjectRoot() into shared test utility** — Created `DocGeneration.TestInfrastructure` project with canonical `ProjectRootFinder` class (`FindSolutionRoot()`, `FindDocsGenerationRoot()`). Replaced 7 duplicate implementations across 5 test projects. (Issue #334)
