@@ -12,6 +12,7 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
     private readonly string _repo;
     private readonly string _branch;
     private readonly string _skillsPath;
+    private readonly string? _token;
 
     public GitHubSkillFetcher(
         HttpClient httpClient,
@@ -19,7 +20,8 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
         string owner = "microsoft",
         string repo = "copilot-skills",
         string branch = "main",
-        string skillsPath = "skills")
+        string skillsPath = "skills",
+        string? token = null)
     {
         _httpClient = httpClient;
         _logger = logger;
@@ -27,6 +29,7 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
         _repo = repo;
         _branch = branch;
         _skillsPath = skillsPath;
+        _token = token;
     }
 
     public async Task<SkillSourceFiles?> FetchAsync(string skillName, CancellationToken ct = default)
@@ -57,6 +60,8 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("Accept", "application/vnd.github.v3.raw");
         request.Headers.Add("User-Agent", "SkillsGen");
+        if (!string.IsNullOrEmpty(_token))
+            request.Headers.Add("Authorization", $"Bearer {_token}");
 
         var response = await _httpClient.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)

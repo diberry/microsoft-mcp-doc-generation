@@ -69,17 +69,26 @@ public partial class AcrolinxPostProcessor
 
     private string ExpandAcronymsFirstUse(string content)
     {
+        // Apply replacements in reverse order of match position to avoid index shifting
+        var allMatches = new List<(int Index, int Length, string Replacement)>();
+
         foreach (var (acronym, expansion) in _acronyms)
         {
             var pattern = $@"\b{Regex.Escape(acronym)}\b";
             var match = Regex.Match(content, pattern);
             if (match.Success)
             {
-                // Replace first occurrence with expanded form
                 var expanded = $"{expansion} ({acronym})";
-                content = content[..match.Index] + expanded + content[(match.Index + match.Length)..];
+                allMatches.Add((match.Index, match.Length, expanded));
             }
         }
+
+        // Sort by index descending so later replacements don't shift earlier indices
+        foreach (var m in allMatches.OrderByDescending(x => x.Index))
+        {
+            content = content[..m.Index] + m.Replacement + content[(m.Index + m.Length)..];
+        }
+
         return content;
     }
 

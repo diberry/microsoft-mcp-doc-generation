@@ -24,16 +24,24 @@ public class LocalSkillFetcher : ISkillSourceFetcher
             return Task.FromResult<SkillSourceFiles?>(null);
         }
 
-        var skillMd = File.ReadAllText(skillMdPath);
-
-        string? triggers = null;
-        var triggersPath = Path.Combine(skillDir, "triggers.test.ts");
-        if (File.Exists(triggersPath))
+        try
         {
-            triggers = File.ReadAllText(triggersPath);
-        }
+            var skillMd = File.ReadAllText(skillMdPath);
 
-        return Task.FromResult<SkillSourceFiles?>(
-            new SkillSourceFiles(skillMd, triggers, skillDir, null));
+            string? triggers = null;
+            var triggersPath = Path.Combine(skillDir, "triggers.test.ts");
+            if (File.Exists(triggersPath))
+            {
+                triggers = File.ReadAllText(triggersPath);
+            }
+
+            return Task.FromResult<SkillSourceFiles?>(
+                new SkillSourceFiles(skillMd, triggers, skillDir, null));
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "Failed to read skill files from {Path}", skillDir);
+            return Task.FromResult<SkillSourceFiles?>(null);
+        }
     }
 }

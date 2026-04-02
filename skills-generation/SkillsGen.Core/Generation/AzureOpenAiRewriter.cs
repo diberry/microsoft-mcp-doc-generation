@@ -32,7 +32,7 @@ public class AzureOpenAiRewriter : ILlmRewriter
         // Replace {{ACROLINX_RULES}} placeholder with actual rules
         _systemPromptIntro = systemPromptIntro.Replace("{{ACROLINX_RULES}}", acrolinxRules ?? "");
         _userPromptIntroTemplate = userPromptIntroTemplate;
-        _systemPromptKnowledge = systemPromptIntro.Replace("{{ACROLINX_RULES}}", acrolinxRules ?? "");
+        _systemPromptKnowledge = _systemPromptIntro; // Same system prompt for both (knowledge reuse)
     }
 
     public async Task<string> RewriteIntroAsync(string skillName, string rawDescription, CancellationToken ct = default)
@@ -68,6 +68,10 @@ public class AzureOpenAiRewriter : ILlmRewriter
 
             _logger.LogDebug("Calling Azure OpenAI with {PromptLength} char prompt", userPrompt.Length);
             var response = await _chatClient.CompleteChatAsync(messages, options, ct);
+
+            if (response.Value.Content.Count == 0)
+                throw new InvalidOperationException("Azure OpenAI returned empty content");
+
             var result = response.Value.Content[0].Text;
             _logger.LogDebug("Received {ResponseLength} char response", result.Length);
 
