@@ -149,4 +149,46 @@ public class SkillMarkdownParserTests
         result.McpTools.Should().BeEmpty();
         result.WorkflowSteps.Should().BeEmpty();
     }
+
+    [Theory]
+    [InlineData("azure-storage", "Azure Storage")]
+    [InlineData("azure-ai", "Azure AI")]
+    [InlineData("azure-hosted-copilot-sdk", "Azure Hosted Copilot SDK")]
+    [InlineData("entra-app-registration", "Entra App Registration")]
+    [InlineData("microsoft-foundry", "Microsoft Foundry")]
+    [InlineData("appinsights-instrumentation", "Appinsights Instrumentation")]
+    [InlineData("azure-rbac", "Azure RBAC")]
+    public void Parse_DerivesDisplayNameFromSlug(string slug, string expectedDisplayName)
+    {
+        var content = $"---\nname: {slug}\ndescription: Test\n---\n\nBody content.\n";
+        var result = _parser.Parse(slug, content);
+        result.DisplayName.Should().Be(expectedDisplayName);
+    }
+
+    [Fact]
+    public void Parse_CleanDescription_AllCapsDowncasedToLowercase()
+    {
+        var content = "---\nname: test\ndescription: The ALREADY-prepared DEPLOYMENT was READY.\n---\n\nBody.\n";
+        var result = _parser.Parse("test", content);
+        result.Description.Should().Contain("already");
+        result.Description.Should().NotContain("Already");
+        result.Description.Should().NotContain("ALREADY");
+    }
+
+    [Fact]
+    public void Parse_CleanDescription_DuplicateAcronymExpansionCollapsed()
+    {
+        var content = "---\nname: test\ndescription: Azure Kubernetes Service (Azure Kubernetes Service (AKS)) is great.\n---\n\nBody.\n";
+        var result = _parser.Parse("test", content);
+        result.Description.Should().Contain("Azure Kubernetes Service (AKS)");
+        result.Description.Should().NotContain("Azure Kubernetes Service (Azure Kubernetes Service (AKS))");
+    }
+
+    [Fact]
+    public void Parse_CleanDescription_DotAzurePathPreserved()
+    {
+        var content = "---\nname: test\ndescription: Uses the.azure/config file for settings.\n---\n\nBody.\n";
+        var result = _parser.Parse("test", content);
+        result.Description.Should().NotContain(". azure/");
+    }
 }

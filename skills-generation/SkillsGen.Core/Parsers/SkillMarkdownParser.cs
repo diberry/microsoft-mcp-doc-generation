@@ -511,11 +511,7 @@ public partial class SkillMarkdownParser : ISkillParser
         // Downcase ALL-CAPS words (except known acronyms) for readability
         var keepUpper = new HashSet<string> { "AI", "API", "CLI", "SDK", "MCP", "RBAC", "AKS", "SQL", "SMB", "ARM", "NOT", "OR", "AND" };
         clean = Regex.Replace(clean, @"\b[A-Z]{2,}(?:-[A-Z]+)*\b", m =>
-            keepUpper.Contains(m.Value) ? m.Value : m.Value[0] + m.Value[1..].ToLower());
-
-        // Fix orphaned periods (". azure/" → ".azure/")
-        clean = Regex.Replace(clean, @"\.\s+(?=[a-z])", ". ");
-        clean = clean.Replace(". azure/", ".azure/").Replace(". Azure/", ".azure/");
+            keepUpper.Contains(m.Value) ? m.Value : m.Value.ToLower());
 
         // Take only the first 2 sentences
         var sentences = Regex.Matches(clean, @"[^.!?]*[.!?]");
@@ -523,6 +519,12 @@ public partial class SkillMarkdownParser : ISkillParser
         {
             clean = string.Join(" ", sentences.Cast<Match>().Take(2).Select(m => m.Value.Trim()));
         }
+
+        // Fix orphaned periods (". azure/" → ".azure/") — must run AFTER sentence join
+        clean = clean.Replace(". azure/", ".azure/").Replace(". Azure/", ".azure/");
+
+        // Remove duplicate acronym expansions: "ServiceName (ServiceName (ACRONYM))" → "ServiceName (ACRONYM)"
+        clean = Regex.Replace(clean, @"(\w[\w\s]+?)\s*\(\1\s*\((\w+)\)\)", "$1 ($2)");
 
         clean = clean.Trim().TrimEnd('.');
         if (!string.IsNullOrEmpty(clean))

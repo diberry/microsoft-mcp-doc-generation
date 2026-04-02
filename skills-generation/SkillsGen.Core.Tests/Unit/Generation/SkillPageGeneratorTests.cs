@@ -7,6 +7,68 @@ using Xunit;
 
 namespace SkillsGen.Core.Tests.Unit.Generation;
 
+public class NaturalizeItemsTests
+{
+    [Fact]
+    public void NaturalizeItems_EmptyList_ReturnsEmpty()
+    {
+        var result = SkillPageGenerator.NaturalizeItems([], "Azure Storage");
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void NaturalizeItems_VerbLedItems_KeptAsIs()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["Create storage accounts", "Deploy to Azure"], "Azure Storage");
+
+        result.Should().Contain("Create storage accounts");
+        result.Should().Contain("Deploy to Azure");
+    }
+
+    [Fact]
+    public void NaturalizeItems_ShortKeywords_GroupedWithWorkWith()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["AI Search", "vector search", "hybrid search", "semantic search"], "Azure AI");
+
+        result.Should().ContainSingle();
+        result[0].Should().StartWith("Work with ");
+        result[0].Should().Contain("AI Search");
+        result[0].Should().Contain("semantic search");
+    }
+
+    [Fact]
+    public void NaturalizeItems_TwoItems_NoOxfordComma()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["blob", "queues"], "Azure Storage");
+
+        result.Should().ContainSingle();
+        result[0].Should().Be("Work with blob and queues");
+    }
+
+    [Fact]
+    public void NaturalizeItems_LongPhrases_KeptAsIs()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["Configure lifecycle management for blobs"], "Azure Storage");
+
+        result.Should().ContainSingle();
+        result[0].Should().Be("Configure lifecycle management for blobs");
+    }
+
+    [Fact]
+    public void NaturalizeItems_SingleShortItem_PrefixedWithWorkWith()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["storage"], "Azure Storage");
+
+        result.Should().ContainSingle();
+        result[0].Should().Be("Work with storage");
+    }
+}
+
 public class SkillPageGeneratorTests
 {
     private static readonly string SimpleTemplate = @"---

@@ -145,7 +145,7 @@ public class SkillPageGenerator : ISkillPageGenerator
     /// Converts raw keyword fragments into natural-language bullet points.
     /// Groups related short items and adds verb phrases to bare nouns.
     /// </summary>
-    private static List<string> NaturalizeItems(List<string> items, string skillDisplayName)
+    internal static List<string> NaturalizeItems(List<string> items, string skillDisplayName)
     {
         if (items.Count == 0) return items;
 

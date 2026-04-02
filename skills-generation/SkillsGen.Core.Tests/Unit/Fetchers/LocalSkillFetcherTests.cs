@@ -66,4 +66,56 @@ public class LocalSkillFetcherTests
         result.Should().NotBeNull();
         result!.SourcePath.Should().Contain("azure-storage");
     }
+
+    [Fact]
+    public async Task FetchAsync_WithTestsPath_FindsTriggersInTestsDir()
+    {
+        var basePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "local-skills-testspath");
+        var testsPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "local-skills-testspath-tests");
+        Directory.CreateDirectory(Path.Combine(basePath, "azure-test"));
+        Directory.CreateDirectory(Path.Combine(testsPath, "azure-test"));
+        File.WriteAllText(Path.Combine(basePath, "azure-test", "SKILL.md"), "---\nname: azure-test\n---\n# Test");
+        File.WriteAllText(Path.Combine(testsPath, "azure-test", "triggers.test.ts"),
+            "const shouldTriggerPrompts = ['from tests dir'];");
+
+        var fetcher = new LocalSkillFetcher(basePath, _logger, testsPath);
+        var result = await fetcher.FetchAsync("azure-test");
+
+        result.Should().NotBeNull();
+        result!.TriggersTestSource.Should().Contain("from tests dir");
+    }
+
+    [Fact]
+    public async Task FetchAsync_WithTestsPath_FallsBackToColocated()
+    {
+        var basePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "local-skills-fallback");
+        var testsPath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "local-skills-fallback-tests");
+        Directory.CreateDirectory(Path.Combine(basePath, "azure-test"));
+        Directory.CreateDirectory(testsPath); // empty tests dir — no trigger here
+        File.WriteAllText(Path.Combine(basePath, "azure-test", "SKILL.md"), "---\nname: azure-test\n---\n# Test");
+        File.WriteAllText(Path.Combine(basePath, "azure-test", "triggers.test.ts"),
+            "const shouldTriggerPrompts = ['from colocated'];");
+
+        var fetcher = new LocalSkillFetcher(basePath, _logger, testsPath);
+        var result = await fetcher.FetchAsync("azure-test");
+
+        result.Should().NotBeNull();
+        result!.TriggersTestSource.Should().Contain("from colocated");
+    }
+
+    [Fact]
+    public async Task FetchAsync_NullTestsPath_UsesColocatedPath()
+    {
+        var basePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "local-skills-nulltests");
+        Directory.CreateDirectory(Path.Combine(basePath, "azure-test"));
+        File.WriteAllText(Path.Combine(basePath, "azure-test", "SKILL.md"), "---\nname: azure-test\n---\n# Test");
+        File.WriteAllText(Path.Combine(basePath, "azure-test", "triggers.test.ts"),
+            "const shouldTriggerPrompts = ['colocated triggers'];");
+
+        var fetcher = new LocalSkillFetcher(basePath, _logger, testsPath: null);
+        var result = await fetcher.FetchAsync("azure-test");
+
+        result.Should().NotBeNull();
+        result!.TriggersTestSource.Should().Contain("colocated triggers");
+    }
 }
