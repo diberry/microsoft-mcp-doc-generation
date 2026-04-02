@@ -84,6 +84,14 @@ public partial class AcrolinxPostProcessor
         // Separate frontmatter from body — only post-process the body
         var (frontmatter, body) = SplitFrontmatter(content);
 
+        // Apply key static replacements to frontmatter description too
+        var processedFrontmatter = frontmatter;
+        foreach (var replacement in _replacements)
+        {
+            var pattern = $@"\b{Regex.Escape(replacement.Parameter)}\b";
+            processedFrontmatter = Regex.Replace(processedFrontmatter, pattern, replacement.NaturalLanguage, RegexOptions.None);
+        }
+
         var result = body;
 
         // 1. Wrap bare skill names FIRST — backticked content is then protected
@@ -120,13 +128,41 @@ public partial class AcrolinxPostProcessor
         // 6. Normalize URLs - strip learn.microsoft.com prefix
         result = NormalizeUrls(result);
 
+        // 7. Wrap technical API terms in backticks
+        result = WrapTechnicalTerms(result);
+
         // Add commas after introductory phrases
         result = AddIntroductoryCommas(result);
 
         // Split long sentences
         result = SplitLongSentences(result);
 
-        return frontmatter + result;
+        return processedFrontmatter + result;
+    }
+
+    /// <summary>
+    /// Wraps known technical/API terms in backticks so Acrolinx treats them as code.
+    /// Only wraps terms NOT already inside backtick spans.
+    /// </summary>
+    private static string WrapTechnicalTerms(string content)
+    {
+        var terms = new[]
+        {
+            "DefaultAzureCredential", "CopilotClient", "createSession", "sendAndWait",
+            "eventhub", "servicebus", "azureservicebus", "EventProcessorHost",
+            "AMQP", "Amqp", "BYOM", "Byom",
+            "copilot-SDK", "copilot-SDK-service", "@github/copilot-SDK",
+            "azd", "azqr", "az login", "az quota", "az bicep",
+            "dev/test", "nspell"
+        };
+        
+        foreach (var term in terms)
+        {
+            // Only wrap if not already inside backticks
+            var pattern = $@"(?<!`)(\b{Regex.Escape(term)}\b)(?!`)";
+            content = Regex.Replace(content, pattern, $"`{term}`");
+        }
+        return content;
     }
 
     /// <summary>

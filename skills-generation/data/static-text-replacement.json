@@ -64,6 +64,18 @@
         "NaturalLanguage": "feature"
     },
     {
+        "Parameter": "Azure Ad",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "azure ad",
+        "NaturalLanguage": "Microsoft Entra ID"
+    },
+    {
+        "Parameter": "Entra id",
+        "NaturalLanguage": "Entra ID"
+    },
+    {
         "Parameter": "via",
         "NaturalLanguage": "through"
     },
