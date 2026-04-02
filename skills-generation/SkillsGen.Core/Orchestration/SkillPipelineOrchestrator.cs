@@ -55,7 +55,7 @@ public class SkillPipelineOrchestrator
         _force = force;
     }
 
-    public async Task<SkillGenerationResult> ProcessSkillAsync(string skillName, CancellationToken ct = default)
+    public async Task<SkillGenerationResult> ProcessSkillAsync(string skillName, string? displayName = null, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
 
@@ -71,6 +71,9 @@ public class SkillPipelineOrchestrator
 
             // Parse
             var skillData = _parser.Parse(skillName, sources.SkillMarkdown);
+            // Override display name from inventory if provided
+            if (!string.IsNullOrEmpty(displayName))
+                skillData = skillData with { DisplayName = displayName };
             var triggerData = _triggerParser.Parse(sources.TriggersTestSource);
             _logger.LogParseResult(skillName, skillData.Services.Count, skillData.McpTools.Count, triggerData.ShouldTrigger.Count);
 
@@ -132,7 +135,7 @@ public class SkillPipelineOrchestrator
 
             try
             {
-                var result = await ProcessSkillAsync(skill.Name, ct);
+                var result = await ProcessSkillAsync(skill.Name, skill.DisplayName, ct);
                 results.Add(result);
 
                 var status = result.Validation.IsValid ? "✅ passed" : "❌ failed";

@@ -25,6 +25,7 @@ var outOption = new Option<string>("--out", () => "./generated-skills/", "Output
 var forceOption = new Option<bool>("--force", "Write even if validation fails");
 var verboseOption = new Option<bool>("--verbose", "Verbose output");
 var sourcePathOption = new Option<string>("--source-path", () => "./skills-source/", "Path to local skills source directory");
+var testsPathOption = new Option<string?>("--tests-path", "Path to tests directory (for triggers.test.ts). If not set, looks in source-path.");
 var dataPathOption = new Option<string>("--data-path", () => "./data/", "Path to data directory");
 var templatePathOption = new Option<string>("--template-path", () => "./templates/skill-page-template.hbs", "Path to Handlebars template");
 
@@ -33,13 +34,13 @@ var rootCommand = new RootCommand("Azure Skills Documentation Generator");
 var generateSkillCommand = new Command("generate-skill", "Generate documentation for a single Azure skill")
 {
     skillNameArg, noLlmOption, dryRunOption, sourceOption, outOption, forceOption, verboseOption,
-    sourcePathOption, dataPathOption, templatePathOption
+    sourcePathOption, testsPathOption, dataPathOption, templatePathOption
 };
 
 var generateSkillsCommand = new Command("generate-skills", "Generate documentation for all Azure skills")
 {
     allOption, noLlmOption, dryRunOption, sourceOption, outOption, forceOption, verboseOption,
-    sourcePathOption, dataPathOption, templatePathOption
+    sourcePathOption, testsPathOption, dataPathOption, templatePathOption
 };
 
 generateSkillCommand.SetHandler(async (context) =>
@@ -51,10 +52,11 @@ generateSkillCommand.SetHandler(async (context) =>
     var outputDir = context.ParseResult.GetValueForOption(outOption) ?? "./generated-skills/";
     var force = context.ParseResult.GetValueForOption(forceOption);
     var sourcePath = context.ParseResult.GetValueForOption(sourcePathOption) ?? "./skills-source/";
+    var testsPath = context.ParseResult.GetValueForOption(testsPathOption);
     var dataPath = context.ParseResult.GetValueForOption(dataPathOption) ?? "./data/";
     var templatePath = context.ParseResult.GetValueForOption(templatePathOption) ?? "./templates/skill-page-template.hbs";
 
-    var orchestrator = BuildOrchestrator(loggerFactory, source, sourcePath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
+    var orchestrator = BuildOrchestrator(loggerFactory, source, sourcePath, testsPath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
     var result = await orchestrator.ProcessSkillAsync(skillName);
 
     var status = result.Validation.IsValid ? "✅ PASSED" : "❌ FAILED";
@@ -79,6 +81,7 @@ generateSkillsCommand.SetHandler(async (context) =>
     var outputDir = context.ParseResult.GetValueForOption(outOption) ?? "./generated-skills/";
     var force = context.ParseResult.GetValueForOption(forceOption);
     var sourcePath = context.ParseResult.GetValueForOption(sourcePathOption) ?? "./skills-source/";
+    var testsPath = context.ParseResult.GetValueForOption(testsPathOption);
     var dataPath = context.ParseResult.GetValueForOption(dataPathOption) ?? "./data/";
     var templatePath = context.ParseResult.GetValueForOption(templatePathOption) ?? "./templates/skill-page-template.hbs";
 
@@ -95,7 +98,7 @@ generateSkillsCommand.SetHandler(async (context) =>
 
     Console.WriteLine($"[skills-gen] Found {skills.Count} skills in inventory.");
 
-    var orchestrator = BuildOrchestrator(loggerFactory, source, sourcePath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
+    var orchestrator = BuildOrchestrator(loggerFactory, source, sourcePath, testsPath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
     var report = await orchestrator.ProcessBatchAsync(skills);
 
     var succeeded = report.Results.Count(r => r.Validation.IsValid);
@@ -112,7 +115,7 @@ return await rootCommand.InvokeAsync(args);
 
 static SkillPipelineOrchestrator BuildOrchestrator(
     ILoggerFactory loggerFactory,
-    string source, string sourcePath, string dataPath,
+    string source, string sourcePath, string? testsPath, string dataPath,
     string templatePath, string outputDir,
     bool noLlm, bool dryRun, bool force)
 {
@@ -151,7 +154,7 @@ static SkillPipelineOrchestrator BuildOrchestrator(
     // Fetcher
     ISkillSourceFetcher fetcher = source == "github"
         ? new GitHubSkillFetcher(new HttpClient(), loggerFactory.CreateLogger<GitHubSkillFetcher>())
-        : new LocalSkillFetcher(sourcePath, loggerFactory.CreateLogger<LocalSkillFetcher>());
+        : new LocalSkillFetcher(sourcePath, loggerFactory.CreateLogger<LocalSkillFetcher>(), testsPath);
 
     // Parsers
     var parser = new SkillMarkdownParser();

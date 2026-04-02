@@ -19,7 +19,8 @@ public partial class SkillMarkdownParser : ISkillParser
 
         var (frontmatter, body) = SplitFrontmatter(markdownContent);
         var name = ExtractFrontmatterField(frontmatter, "name") ?? skillName;
-        var displayName = ExtractFrontmatterField(frontmatter, "display_?name") ?? name;
+        var rawDisplayName = ExtractFrontmatterField(frontmatter, "display_?name");
+        var displayName = rawDisplayName ?? DeriveDisplayName(name);
         var rawDescription = ExtractFrontmatterField(frontmatter, "description") ?? "";
 
         // Decode HTML entities FIRST so all extraction works on clean text
@@ -472,6 +473,23 @@ public partial class SkillMarkdownParser : ISkillParser
                    .Replace("\\\"", "\"");
     }
 
+    /// <summary>
+    /// Converts a skill slug like "azure-deploy" to a display name like "Azure Deploy".
+    /// Handles special cases: "ai" → "AI", "sdk" → "SDK", "rbac" → "RBAC", etc.
+    /// </summary>
+    private static string DeriveDisplayName(string slug)
+    {
+        var acronyms = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "ai", "sdk", "rbac", "mcp", "api", "cli", "sql", "smb", "aks" };
+
+        var words = slug.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        var result = words.Select(w =>
+            acronyms.Contains(w) ? w.ToUpperInvariant()
+            : char.ToUpper(w[0]) + w[1..]
+        );
+        return string.Join(" ", result);
+    }
+
     private static string CleanDescription(string description)
     {
         if (string.IsNullOrWhiteSpace(description)) return "";
@@ -489,6 +507,15 @@ public partial class SkillMarkdownParser : ISkillParser
                 break;
             }
         }
+
+        // Downcase ALL-CAPS words (except known acronyms) for readability
+        var keepUpper = new HashSet<string> { "AI", "API", "CLI", "SDK", "MCP", "RBAC", "AKS", "SQL", "SMB", "ARM", "NOT", "OR", "AND" };
+        clean = Regex.Replace(clean, @"\b[A-Z]{2,}(?:-[A-Z]+)*\b", m =>
+            keepUpper.Contains(m.Value) ? m.Value : m.Value[0] + m.Value[1..].ToLower());
+
+        // Fix orphaned periods (". azure/" → ".azure/")
+        clean = Regex.Replace(clean, @"\.\s+(?=[a-z])", ". ");
+        clean = clean.Replace(". azure/", ".azure/").Replace(". Azure/", ".azure/");
 
         // Take only the first 2 sentences
         var sentences = Regex.Matches(clean, @"[^.!?]*[.!?]");

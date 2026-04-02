@@ -60,7 +60,7 @@ public class SkillMarkdownParserTests
         var result = _parser.Parse("azure-fallback", content);
 
         result.Name.Should().Be("azure-fallback");
-        result.DisplayName.Should().Be("azure-fallback");
+        result.DisplayName.Should().Be("Azure Fallback");
         result.RawBody.Should().Contain("My Skill");
     }
 
