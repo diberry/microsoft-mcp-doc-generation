@@ -503,16 +503,20 @@ public partial class SkillMarkdownParser : ISkillParser
 
         var clean = description;
 
-        // Strip everything after USE FOR: / WHEN: / DO NOT USE markers
+        // Strip everything after the EARLIEST of: USE FOR / WHEN / DO NOT USE markers
         var cutPatterns = new[] { @"\bUSE\s+FOR\b", @"\bWHEN\s*:", @"\bDO\s+NOT\s+USE", @"\bDON'?T\s+USE" };
+        int earliestCut = clean.Length;
         foreach (var pattern in cutPatterns)
         {
             var match = Regex.Match(clean, pattern, RegexOptions.IgnoreCase);
-            if (match.Success)
+            if (match.Success && match.Index < earliestCut)
             {
-                clean = clean[..match.Index].TrimEnd(' ', '.', ',', ';');
-                break;
+                earliestCut = match.Index;
             }
+        }
+        if (earliestCut < clean.Length)
+        {
+            clean = clean[..earliestCut].TrimEnd(' ', '.', ',', ';');
         }
 
         // Downcase ALL-CAPS words (except known acronyms) for readability
@@ -537,7 +541,7 @@ public partial class SkillMarkdownParser : ISkillParser
         clean = clean.Replace(". azure/", ".azure/").Replace(". Azure/", ".azure/");
 
         // Remove duplicate acronym expansions: "ServiceName (ServiceName (ACRONYM))" → "ServiceName (ACRONYM)"
-        clean = Regex.Replace(clean, @"(\w[\w\s]+?)\s*\(\1\s*\((\w+)\)\)", "$1 ($2)");
+        clean = Regex.Replace(clean, @"(\w[\w\s]+?)\s*\(\1\s*\((\w+)\)\)", "$1 ($2)", RegexOptions.IgnoreCase);
 
         clean = clean.Trim().TrimEnd('.');
         if (!string.IsNullOrEmpty(clean))

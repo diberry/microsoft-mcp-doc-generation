@@ -115,7 +115,7 @@ public partial class AcrolinxPostProcessor
         result = ExpandAcronymsFirstUse(result);
 
         // 5. Remove duplicate acronym expansions introduced by expansion step
-        result = Regex.Replace(result, @"(\w[\w\s]+?)\s*\(\1\s*\((\w+)\)\)", "$1 ($2)");
+        result = Regex.Replace(result, @"(\w[\w\s]+?)\s*\(\1\s*\((\w+)\)\)", "$1 ($2)", RegexOptions.IgnoreCase);
 
         // 6. Normalize URLs - strip learn.microsoft.com prefix
         result = NormalizeUrls(result);

@@ -1,18 +1,18 @@
 ---
-title: {{displayName}}
-description: {{description}}
+title: {{{displayName}}}
+description: {{{description}}}
 ms.topic: reference
-ms.date: {{generatedDate}}
+ms.date: {{{generatedDate}}}
 author: diberry
 ms.author: diberry
 ms.service: azure-mcp-server
 ---
 
-# {{displayName}}
+# {{{displayName}}}
 
-{{description}}
+{{{description}}}
 
-**Skill:** `{{name}}` | [Source code](https://github.com/microsoft/GitHub-Copilot-for-Azure/tree/main/plugin/skills/{{name}})
+**Skill:** `{{{name}}}` | [Source code](https://github.com/microsoft/GitHub-Copilot-for-Azure/tree/main/plugin/skills/{{{name}}})
 
 ## Prerequisites
 
@@ -30,7 +30,7 @@ ms.service: azure-mcp-server
 | Role | Scope | Reason |
 |------|-------|--------|
 {{#each prerequisites.rbacRoles}}
-| {{roleName}} | {{scope}} | {{reason}} |
+| {{{roleName}}} | {{{scope}}} | {{{reason}}} |
 {{/each}}
 {{/if}}
 {{#if hasToolPrereqs}}
@@ -38,7 +38,7 @@ ms.service: azure-mcp-server
 ### Required tools
 
 {{#each prerequisites.tools}}
-- **{{name}}**{{#if minVersion}} (v{{minVersion}}+){{/if}}{{#if installCommand}} — Install: `{{installCommand}}`{{/if}}
+- **{{{name}}}**{{#if minVersion}} (v{{{minVersion}}}+){{/if}}{{#if installCommand}} — Install: `{{{installCommand}}}`{{/if}}
 {{/each}}
 {{/if}}
 {{#if hasResources}}
@@ -46,23 +46,23 @@ ms.service: azure-mcp-server
 ### Required resources
 
 {{#each prerequisites.resources}}
-- **{{resourceType}}** — {{description}}{{#if quickCreateCommand}} Quick create: `{{quickCreateCommand}}`{{/if}}
+- **{{{resourceType}}}** — {{{description}}}{{#if quickCreateCommand}} Quick create: `{{{quickCreateCommand}}}`{{/if}}
 {{/each}}
 {{/if}}
 
 {{#if hasUseFor}}
 ## When to use this skill
 
-Use the **{{displayName}}** skill when you need to:
+Use the **{{{displayName}}}** skill when you need to:
 
 {{#each useFor}}
-- {{this}}
+- {{{this}}}
 {{/each}}
 {{/if}}
 
 ## What it provides
 
-{{whatItProvides}}
+{{{whatItProvides}}}
 
 {{#if hasServices}}
 ### Azure services knowledge
@@ -70,7 +70,7 @@ Use the **{{displayName}}** skill when you need to:
 | Service | When to use |
 |---------|------------|
 {{#each services}}
-| {{name}} | {{useWhen}} |
+| {{{name}}} | {{{useWhen}}} |
 {{/each}}
 {{/if}}
 {{#if showToolsSection}}
@@ -80,7 +80,7 @@ Use the **{{displayName}}** skill when you need to:
 | Tool | Command | Purpose |
 |------|---------|---------|
 {{#each mcpTools}}
-| {{toolName}} | `{{command}}` | {{purpose}} |
+| {{{toolName}}} | `{{{command}}}` | {{{purpose}}} |
 {{/each}}
 {{/if}}
 {{/if}}
@@ -89,12 +89,12 @@ Use the **{{displayName}}** skill when you need to:
 ## Decision guidance
 
 {{#each decisionGuidance}}
-### {{topic}}
+### {{{topic}}}
 
 | Option | Best for | Tradeoff |
 |--------|----------|----------|
 {{#each options}}
-| {{option}} | {{bestFor}} | {{tradeoff}} |
+| {{{option}}} | {{{bestFor}}} | {{{tradeoff}}} |
 {{/each}}
 
 {{/each}}
@@ -104,7 +104,7 @@ Use the **{{displayName}}** skill when you need to:
 ## Suggested workflow
 
 {{#each workflowSteps}}
-- {{this}}
+- {{{this}}}
 {{/each}}
 {{/if}}
 
@@ -114,7 +114,7 @@ Use the **{{displayName}}** skill when you need to:
 Try these prompts with GitHub Copilot to activate this skill:
 
 {{#each shouldTrigger}}
-- "{{this}}"
+- "{{{this}}}"
 {{/each}}
 {{/if}}
 
@@ -122,7 +122,7 @@ Try these prompts with GitHub Copilot to activate this skill:
 ## Related skills
 
 {{#each relatedSkills}}
-- [{{this}}](/azure/copilot/skills/{{this}})
+- [{{{this}}}](/azure/copilot/skills/{{{this}}})
 {{/each}}
 {{/if}}
 
