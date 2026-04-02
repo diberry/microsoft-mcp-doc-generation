@@ -130,3 +130,94 @@ DocGeneration.PromptRegression.Tests/
 - **➖ No change**: Metrics identical (prompt change had no measurable effect)
 
 When a regression is detected, investigate before merging — the prompt change may have unintended side effects.
+
+## CI Integration
+
+The **Prompt Regression Tests** workflow (`.github/workflows/prompt-regression-ci.yml`) runs automatically on PRs that modify prompt files or regression test infrastructure.
+
+### Trigger paths
+
+The CI job runs when a PR changes any of:
+
+- `docs-generation/**/prompts/**` — AI system/user prompt files
+- `prompt-regression.sh` — Regression runner script
+- `docs-generation/DocGeneration.PromptRegression.Tests/**` — Test code or baselines
+- `.github/workflows/prompt-regression-ci.yml` — The workflow itself
+
+PRs that don't touch these paths skip the job entirely.
+
+### What CI runs
+
+The CI job executes `dotnet test` on the `DocGeneration.PromptRegression.Tests` project. This runs:
+
+| Test class | Runs in CI? | What it checks |
+|---|---|---|
+| **PromptContentTests** | ✅ Always | Prompt files exist and contain expected rules |
+| **QualityMetricsTests** | ✅ Always | Metric calculation accuracy |
+| **BaselineManagerTests** | ✅ Always | Baseline file storage and retrieval |
+| **MetricsComparisonTests** | ✅ Always | Regression/improvement detection logic |
+| **DiffReporterTests** | ✅ Always | Report generation |
+| **RegressionComparisonTests** | ⏭️ Skips | Requires candidates (populated by `prompt-regression.sh compare`) |
+
+The `RegressionComparisonTests` gracefully skip when no candidates directory is populated — this is by design. Full regression comparison requires AI regeneration and is performed locally via `prompt-regression.sh test`.
+
+### Manual trigger
+
+You can also trigger the workflow manually from the Actions tab using **workflow_dispatch**.
+
+### AI credentials
+
+The workflow has access to `FOUNDRY_*` repository secrets for future expansion of AI-powered regression tests in CI.
+
+## Baseline Management
+
+### When to update baselines
+
+Update baselines after **intentional** prompt improvements that result in better output quality. Never update baselines to mask a regression.
+
+### How to update baselines
+
+```bash
+# 1. Make your prompt changes
+
+# 2. Regenerate output for representative namespaces
+./start.sh applens 4,6 --skip-deps
+./start.sh cloudarchitect 4,6 --skip-deps
+./start.sh deploy 4,6 --skip-deps
+./start.sh compute 4,6 --skip-deps
+./start.sh fileshares 4,6 --skip-deps
+
+# 3. Compare against current baselines
+./prompt-regression.sh compare
+
+# 4. Review the regression report
+./prompt-regression.sh report
+
+# 5. If output improved, re-seed baselines
+./prompt-regression.sh seed
+
+# 6. Commit updated baselines alongside your prompt changes
+git add docs-generation/DocGeneration.PromptRegression.Tests/Baselines/
+git commit -m "chore: update regression baselines for prompt improvements"
+```
+
+### Baseline files
+
+Baselines live in `Baselines/{namespace}/` with two articles per namespace:
+
+- `tool-family.md` — Step 4 output (tool-family assembly)
+- `horizontal-article.md` — Step 6 output (horizontal overview article)
+
+These are committed to git and serve as the golden reference for quality comparison.
+
+### Representative namespaces
+
+The 5 namespaces cover a range of service sizes and complexity:
+
+| Namespace | Size | Why selected |
+|---|---|---|
+| `applens` | Small (1 tool) | Minimum viable article |
+| `cloudarchitect` | Small (2 tools) | Simple multi-tool service |
+| `deploy` | Medium (5 tools) | Moderate complexity |
+| `compute` | Large (10+ tools) | High tool count |
+| `fileshares` | Medium (4 tools) | File-oriented operations |

@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Prompt regression CI workflow** — New `.github/workflows/prompt-regression-ci.yml` runs prompt content validation and regression infrastructure tests on PRs touching `docs-generation/**/prompts/**` or `prompt-regression.sh`. Includes baseline management documentation. (#350)
 - Azure Skills documentation generation pipeline (`skills-generation/`) — generates customer-facing docs for 24 Azure Skills (#365)
 - `start-azure-skills.sh` entry point script
 - 77 xUnit tests with 81.6% line coverage
