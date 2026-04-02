@@ -47,15 +47,14 @@ This article describes a test scenario for Azure services.
 "@ | Set-Content $cleanFile
 
         $result = & $scriptPath -TargetDir $fixtureDir 2>&1
-        # Vale may still find issues in minimal content, so we verify it runs
-        $LASTEXITCODE | Should -BeIn @(0, 1)
+        $LASTEXITCODE | Should -Be 0
     }
 
     It "Should find Vale executable" {
         $docsGenDir = Join-Path $PSScriptRoot ".." ".."
         $valeExists = (Test-Path "$docsGenDir/tools/vale.exe") -or
                       (Get-Command vale -ErrorAction SilentlyContinue) -or
-                      (Test-Path (Join-Path (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $docsGenDir))) "vale_bin" "vale.exe"))
+                      (Test-Path (Join-Path (Split-Path -Parent $docsGenDir) "vale_bin" "vale.exe"))
         $valeExists | Should -BeTrue
     }
 
