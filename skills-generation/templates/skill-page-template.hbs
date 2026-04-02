@@ -17,12 +17,12 @@ ms.service: azure-mcp-server
 ## Prerequisites
 
 {{#if prerequisites.azure.requiresAzureLogin}}
-- **Azure authentication** — Sign in with `az login` or use a service principal.
+- **Azure authentication**—Sign in with `az login` or use a service principal.
 {{/if}}
 {{#if prerequisites.azure.requiresSubscription}}
-- **Azure subscription** — An active Azure subscription is required.
+- **Azure subscription**—An active Azure subscription is required.
 {{/if}}
-- **GitHub Copilot** — GitHub Copilot with the Azure extension enabled.
+- **GitHub Copilot**—GitHub Copilot with the Azure extension enabled.
 {{#if hasRbacRoles}}
 
 ### Required roles
@@ -38,7 +38,7 @@ ms.service: azure-mcp-server
 ### Required tools
 
 {{#each prerequisites.tools}}
-- **{{{name}}}**{{#if minVersion}} (v{{{minVersion}}}+){{/if}}{{#if installCommand}} — Install: `{{{installCommand}}}`{{/if}}
+- **{{{name}}}**{{#if minVersion}} (v{{{minVersion}}}+){{/if}}{{#if installCommand}}—Install: `{{{installCommand}}}`{{/if}}
 {{/each}}
 {{/if}}
 {{#if hasResources}}
@@ -46,7 +46,7 @@ ms.service: azure-mcp-server
 ### Required resources
 
 {{#each prerequisites.resources}}
-- **{{{resourceType}}}** — {{{description}}}{{#if quickCreateCommand}} Quick create: `{{{quickCreateCommand}}}`{{/if}}
+- **{{{resourceType}}}**—{{{description}}}{{#if quickCreateCommand}} Quick create: `{{{quickCreateCommand}}}`{{/if}}
 {{/each}}
 {{/if}}
 
