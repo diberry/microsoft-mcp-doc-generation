@@ -1,0 +1,5 @@
+Write a 2-3 sentence introduction (max 60 words) for the Azure Skill "{{skillName}}".
+
+The skill description is: {{description}}
+
+Write for developers who want to know what this skill does and why they'd use it. Don't copy the description verbatim — rewrite for a customer audience.

@@ -1,0 +1,70 @@
+name: Skills Generation CI
+
+on:
+  pull_request:
+    paths:
+      - 'skills-generation/**'
+      - 'start-azure-skills.sh'
+  push:
+    branches: [main]
+    paths:
+      - 'skills-generation/**'
+      - 'start-azure-skills.sh'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Restore
+        run: dotnet restore skills-generation/skills-generation.slnx
+
+      - name: Build
+        run: dotnet build skills-generation/skills-generation.slnx --configuration Release --no-restore
+
+      - name: Test with coverage
+        run: dotnet test skills-generation/skills-generation.slnx --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory skills-generation/TestResults
+
+      - name: Check coverage threshold
+        shell: pwsh
+        run: ./skills-generation/scripts/check-coverage.ps1 -MinLineCoverage 80 -MinBranchCoverage 70 -ResultsDir skills-generation/TestResults
+
+      - name: Verify MCP pipeline unaffected
+        run: dotnet build docs-generation.sln --configuration Release --verbosity quiet
+
+  vale-lint:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+
+      - name: Install Vale
+        run: |
+          wget -qO- https://github.com/errata-ai/vale/releases/download/v3.9.5/vale_3.9.5_Linux_64-bit.tar.gz | tar xz -C /usr/local/bin vale
+
+      - name: Build pipeline
+        run: dotnet build skills-generation/skills-generation.slnx --configuration Release
+
+      - name: Generate from fixtures
+        run: |
+          dotnet run --project skills-generation/SkillsGen.Cli --configuration Release --no-build -- \
+            generate-skills --all --no-llm --source local \
+            --source-path skills-generation/SkillsGen.Core.Tests/Fixtures \
+            --out ./vale-test-output/ || true
+
+      - name: Run Vale lint
+        run: vale --config skills-generation/.vale.ini ./vale-test-output/ || true
+        # Non-blocking for now — report only

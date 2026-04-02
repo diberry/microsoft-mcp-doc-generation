@@ -7,7 +7,74 @@
 
 ## Learnings
 
-<!-- Append new learnings below. Each entry is something lasting about the project. -->
+### 2026-03-30: .NET Consolidation Plan AI Impact Review — RECOMMEND APPROVAL
+
+**Final Verdict:** RECOMMEND APPROVAL with 3 conditions for Actions 2-4
+
+**AI Pipeline Safety Assessment:**
+
+| Action | AI Stages Affected | Risk | Conditions | Status |
+|--------|-------------------|------|-----------|--------|
+| 1. CliAnalyzer | None | 🟢 LOW | — | ✅ APPROVED |
+| 2. PostProcessVerifier→ToolFamilyCleanup | Step 4 | 🟡 MED | Post-processor order test | ✅ CONDITIONAL |
+| 3. NaturalLanguage→Core.Shared | Step 6 | 🟡 MED | Data file discovery + output consistency | ✅ CONDITIONAL |
+| 4. NUnit→xUnit | Steps 4, 6 | 🟢 LOW | Test count match | ✅ CONDITIONAL |
+| 5. StripFrontmatter dedup | PromptRegression | 🟢 LOW | — | ✅ APPROVED |
+| 6. Document Validation.Tests | None | 🟢 LOW | — | ✅ APPROVED |
+
+**Three Critical Safeguards (Sage enforcement):**
+
+**Safeguard 1: Post-Processor Order Test (Action 2)**
+- Verify 10-processor chain runs in identical order: AcronymExpander → JsonSchemaCollapser
+- Test on 5 diverse namespaces (StorageAccount, KeyVault, CosmosDB, EventGrid, Compute)
+- Byte-compare `.after` files: Old PostProcessVerifier vs. New `--verify-only` (must be identical)
+- Risk if skipped: AI output quality gates break; PromptRegression.Tests baseline compatibility compromised
+
+**Safeguard 2: HorizontalArticles Output Consistency (Action 3)**
+- Run Step 6 on 5 diverse namespaces with old vs. new Core.NaturalLanguage
+- Verify TextCleanup output byte-identical
+- Test PromptRegression.Tests compatibility
+- Risk if skipped: Data file discovery failure causes runtime crash; TextCleanup parameter normalization regressions
+
+**Safeguard 3: Test Assertion Equivalence (Action 4)**
+- NUnit→xUnit migration: All 155 tests must pass with identical test count
+- Focus on HorizontalArticles.Tests (410 tests) — validates Step 6 AI output
+- Risk if skipped: Silent test failures mask AI quality gate breakage
+
+**AI Projects Status:**
+- ✅ Core.GenerativeAI stays independent (Azure.AI.OpenAI dependencies mustn't pollute Core.Shared)
+- ✅ No AI-critical projects deleted (CliAnalyzer not AI-involved)
+- ✅ Prompt files unchanged (only data file location updated for Action 3)
+- ✅ Fabrication detection unaffected (ArticleContentProcessor stays in Step 4)
+
+**Prompt File Impact:** Zero. `static-text-replacement.json` and `nl-parameters.json` ownership clarified but no behavior changes.
+
+**Decisions filed:** AD-027 (main), AD-028 (quality gates), AD-033 (post-processor order), AD-034 (AI output consistency)
+
+---
+
+### 2026-03-26: .NET Consolidation Plan AI Impact Review
+
+**Task:** Review Avery's .NET project consolidation plan for AI pipeline impacts (prompt files, content validation, fabrication detection).
+
+**Findings:**
+
+1. **Zero AI pipeline damage identified.** Of 7 consolidation actions, none delete AI-critical projects. Core.GenerativeAI correctly stays independent per architectural design.
+
+2. **3 actions require safeguards:**
+   - **Action 2 (PostProcessVerifier → ToolFamilyCleanup):** Post-processor order MUST stay identical. Risk: If `--verify-only` mode runs processors in different sequence, Step 4 output quality changes. Mitigation: Byte-compare `.after` files on 5 diverse namespaces.
+   - **Action 3 (NaturalLanguage → Core.Shared):** Data file discovery risk. TextCleanup loads `nl-parameters.json` at runtime. If file copy rules aren't set up, Step 6 fails silently. Mitigation: Verify Core.Shared.csproj includes data file copy rules + test HorizontalArticles on 5 namespaces.
+   - **Action 4 (NUnit → xUnit):** Low risk, but test count MUST match before/after. No semantic test changes allowed.
+
+3. **Prompt file impact:** No consolidation moves or deletes prompt directories. `static-text-replacement.json` ownership is clarified (stays in ToolFamilyCleanup). `nl-parameters.json` moves with NaturalLanguage → Core.Shared (expected, no behavioral change).
+
+4. **Fabrication detection unaffected.** ArticleContentProcessor (10 post-processors) and JSON schema validation stay in Step 4. No anti-hallucination logic is touched.
+
+5. **Key insight — Action 2 is highest risk:** PostProcessVerifier is used by `PromptRegression.Tests` to generate regression baselines (`.after` files). If the new `--verify-only` flag produces different output, regression detection breaks silently. Must preserve byte-identical output.
+
+**Output:** `.squad/decisions/inbox/sage-consolidation-review.md` — 3 conditional approvals, 3 unconditional approvals, 1 future deferral. Recommended execution: Phase 1 (low-risk: CliAnalyzer, Validation.Tests docs, StripFrontmatter), Phase 2 (medium-risk: PostProcessVerifier merge, NUnit→xUnit), Phase 3 (NaturalLanguage merge with safeguards).
+
+**Key Learning:** Consolidation risk isn't code quantity — it's behavioral coupling. Merging a 1-file tool (PostProcessVerifier) that's indirectly used by regression testing is higher-risk than keeping a 1-file library (NaturalLanguage) that just needs a file discovery fix.
 
 ### 2026-03-25: Acrolinx Compliance Research
 

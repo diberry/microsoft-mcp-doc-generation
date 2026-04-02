@@ -1,0 +1,132 @@
+---
+title: {{{displayName}}}
+description: {{{description}}}
+ms.topic: reference
+ms.date: {{{generatedDate}}}
+author: diberry
+ms.author: diberry
+ms.service: azure-mcp-server
+---
+
+# {{{displayName}}}
+
+{{{description}}}
+
+**Skill:** `{{{name}}}` | [Source code](https://github.com/microsoft/GitHub-Copilot-for-Azure/tree/main/plugin/skills/{{{name}}})
+
+## Prerequisites
+
+{{#if prerequisites.azure.requiresAzureLogin}}
+- **Azure authentication**—Sign in with `az login` or use a service principal.
+{{/if}}
+{{#if prerequisites.azure.requiresSubscription}}
+- **Azure subscription**—An active Azure subscription is required.
+{{/if}}
+- **GitHub Copilot**—GitHub Copilot with the Azure extension enabled.
+{{#if hasRbacRoles}}
+
+### Required roles
+
+| Role | Scope | Reason |
+|------|-------|--------|
+{{#each prerequisites.rbacRoles}}
+| {{{roleName}}} | {{{scope}}} | {{{reason}}} |
+{{/each}}
+{{/if}}
+{{#if hasToolPrereqs}}
+
+### Required tools
+
+{{#each prerequisites.tools}}
+- **{{{name}}}**{{#if minVersion}} (v{{{minVersion}}}+){{/if}}{{#if installCommand}}—Install: `{{{installCommand}}}`{{/if}}
+{{/each}}
+{{/if}}
+{{#if hasResources}}
+
+### Required resources
+
+{{#each prerequisites.resources}}
+- **{{{resourceType}}}**—{{{description}}}{{#if quickCreateCommand}} Quick create: `{{{quickCreateCommand}}}`{{/if}}
+{{/each}}
+{{/if}}
+
+{{#if hasUseFor}}
+## When to use this skill
+
+Use the **{{{displayName}}}** skill when you need to:
+
+{{#each useFor}}
+- {{{this}}}
+{{/each}}
+{{/if}}
+
+## What it provides
+
+{{{whatItProvides}}}
+
+{{#if hasServices}}
+### Azure services knowledge
+
+| Service | When to use |
+|---------|------------|
+{{#each services}}
+| {{{name}}} | {{{useWhen}}} |
+{{/each}}
+{{/if}}
+{{#if showToolsSection}}
+{{#if hasMcpTools}}
+### Related tools
+
+| Tool | Command | Purpose |
+|------|---------|---------|
+{{#each mcpTools}}
+| {{{toolName}}} | `{{{command}}}` | {{{purpose}}} |
+{{/each}}
+{{/if}}
+{{/if}}
+
+{{#if showDecisionGuidance}}
+## Decision guidance
+
+{{#each decisionGuidance}}
+### {{{topic}}}
+
+| Option | Best for | Tradeoff |
+|--------|----------|----------|
+{{#each options}}
+| {{{option}}} | {{{bestFor}}} | {{{tradeoff}}} |
+{{/each}}
+
+{{/each}}
+{{/if}}
+
+{{#if showWorkflow}}
+## Suggested workflow
+
+{{#each workflowSteps}}
+- {{{this}}}
+{{/each}}
+{{/if}}
+
+{{#if hasTriggers}}
+## Example triggers
+
+Try these prompts with GitHub Copilot to activate this skill:
+
+{{#each shouldTrigger}}
+- "{{{this}}}"
+{{/each}}
+{{/if}}
+
+{{#if hasRelatedSkills}}
+## Related skills
+
+{{#each relatedSkills}}
+- [{{{this}}}](/azure/copilot/skills/{{{this}}})
+{{/each}}
+{{/if}}
+
+## Related content
+
+- [Azure MCP Server overview](/azure/developer/azure-mcp-server/overview)
+- [GitHub Copilot for Azure documentation](/azure/developer/github-copilot-azure/introduction)
