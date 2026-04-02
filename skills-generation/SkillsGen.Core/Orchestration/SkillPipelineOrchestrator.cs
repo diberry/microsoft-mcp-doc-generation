@@ -128,6 +128,7 @@ public class SkillPipelineOrchestrator
         {
             var skill = skills[i];
             _logger.LogInfo($"[{i + 1}/{skills.Count}] {skill.Name} →");
+            var itemSw = Stopwatch.StartNew();
 
             try
             {
@@ -140,7 +141,8 @@ public class SkillPipelineOrchestrator
             catch (Exception ex)
             {
                 _logger.LogError(skill.Name, $"Batch processing failed: {ex.Message}", ex);
-                results.Add(CreateFailResult(skill.Name, Stopwatch.StartNew(), ex.Message));
+                itemSw.Stop();
+                results.Add(CreateFailResult(skill.Name, itemSw, ex.Message));
             }
         }
 

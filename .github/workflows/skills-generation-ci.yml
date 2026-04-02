@@ -1,0 +1,31 @@
+name: Skills Generation CI
+
+on:
+  pull_request:
+    paths:
+      - 'skills-generation/**'
+      - 'start-azure-skills.sh'
+  push:
+    branches: [main]
+    paths:
+      - 'skills-generation/**'
+      - 'start-azure-skills.sh'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
+      - name: Restore
+        run: dotnet restore skills-generation/skills-generation.slnx
+      - name: Build
+        run: dotnet build skills-generation/skills-generation.slnx --configuration Release --no-restore
+      - name: Test
+        run: dotnet test skills-generation/skills-generation.slnx --configuration Release --no-build --collect:"XPlat Code Coverage"
+      - name: Verify MCP pipeline unaffected
+        run: dotnet build docs-generation.sln --configuration Release --verbosity quiet

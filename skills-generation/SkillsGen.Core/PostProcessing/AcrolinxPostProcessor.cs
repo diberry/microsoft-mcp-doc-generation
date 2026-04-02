@@ -101,23 +101,32 @@ public partial class AcrolinxPostProcessor
         return content;
     }
 
-    private static List<TextReplacement> LoadReplacements(string? json)
+    private List<TextReplacement> LoadReplacements(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return [];
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            _logger.LogWarning("Text replacements data not provided (null or empty)");
+            return [];
+        }
 
         try
         {
             return JsonSerializer.Deserialize<List<TextReplacement>>(json, JsonOptions) ?? [];
         }
-        catch
+        catch (JsonException ex)
         {
+            _logger.LogWarning(ex, "Failed to parse text replacements JSON, using empty list");
             return [];
         }
     }
 
-    private static Dictionary<string, string> LoadAcronyms(string? json)
+    private Dictionary<string, string> LoadAcronyms(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return new();
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            _logger.LogWarning("Acronyms data not provided (null or empty)");
+            return new();
+        }
 
         try
         {
@@ -130,8 +139,9 @@ public partial class AcrolinxPostProcessor
             }
             return dict;
         }
-        catch
+        catch (JsonException ex)
         {
+            _logger.LogWarning(ex, "Failed to parse acronyms JSON, using empty dictionary");
             return new();
         }
     }

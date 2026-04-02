@@ -43,16 +43,35 @@ public class TierAssessor : ITierAssessor
             "Q4", "Is the description 200+ characters?",
             q4Answer, $"Description length: {skillData.Description?.Length ?? 0}"));
 
-        // Q5: Services or McpTools reference Azure → +1
-        var q5Answer = skillData.Services.Any(s => s.Name.Contains("Azure", StringComparison.OrdinalIgnoreCase)) ||
-                       skillData.McpTools.Any(t => t.Command.Contains("azure", StringComparison.OrdinalIgnoreCase) ||
-                                                    t.ToolName.Contains("azure", StringComparison.OrdinalIgnoreCase)) ||
-                       skillData.Services.Count > 0 || skillData.McpTools.Count > 0;
+        // Q5: Services or McpTools reference specific Azure service names → +1
+        var azureServiceKeywords = new[]
+        {
+            "Azure Storage", "Key Vault", "Cosmos DB", "App Service", "Azure SQL",
+            "Azure Functions", "Service Bus", "Event Hub", "Event Grid", "Azure Monitor",
+            "Application Insights", "Azure DevOps", "Container Apps", "Azure Kubernetes",
+            "Azure AI", "Cognitive Services", "Azure OpenAI", "Azure Cache", "Azure SignalR",
+            "Azure Search", "Azure Blob", "Azure Queue", "Azure Table", "Azure File",
+            "Azure DNS", "Azure CDN", "Azure Front Door", "Azure Firewall",
+            "Virtual Machine", "Azure VM", "Azure Batch", "Azure Logic App",
+            "Azure API Management", "Azure Notification Hub", "Azure IoT",
+            "Microsoft Entra", "Azure Active Directory", "Azure AD"
+        };
+        var q5Answer = skillData.Services.Any(s =>
+                azureServiceKeywords.Any(k => s.Name.Contains(k, StringComparison.OrdinalIgnoreCase))) ||
+            skillData.McpTools.Any(t =>
+                azureServiceKeywords.Any(k =>
+                    t.Command.Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                    t.ToolName.Contains(k, StringComparison.OrdinalIgnoreCase)));
+        var matchedKeywords = azureServiceKeywords
+            .Where(k => skillData.Services.Any(s => s.Name.Contains(k, StringComparison.OrdinalIgnoreCase)) ||
+                         skillData.McpTools.Any(t => t.Command.Contains(k, StringComparison.OrdinalIgnoreCase) ||
+                                                      t.ToolName.Contains(k, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
         var q5Score = q5Answer ? 1 : 0;
         score += q5Score;
         questions.Add(new QuestionResult(
-            "Q5", "Do services or MCP tools reference Azure?",
-            q5Answer, $"Azure references found: {q5Answer}"));
+            "Q5", "Do services or MCP tools reference specific Azure services?",
+            q5Answer, $"Matched Azure services: {(matchedKeywords.Count > 0 ? string.Join(", ", matchedKeywords) : "none")}"));
 
         var tier = score >= Tier1Threshold ? 1 : 2;
         var rationale = $"Score {score}/{Tier1Threshold + 3}: {(tier == 1 ? "Tier 1 (comprehensive)" : "Tier 2 (essential)")}";

@@ -7,4 +7,8 @@ Rules:
 - Keep sentences under 35 words
 - Use "you" to address the reader, never "we"
 
+- NEVER invent Azure service names, features, or capabilities not in the source data
+- NEVER add example prompts not grounded in the trigger test data
+- If the source data is insufficient, say "This skill provides guidance for..." and keep it short
+
 {{ACROLINX_RULES}}

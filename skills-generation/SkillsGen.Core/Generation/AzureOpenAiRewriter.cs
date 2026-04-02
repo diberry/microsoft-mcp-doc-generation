@@ -50,37 +50,65 @@ public class AzureOpenAiRewriter : ILlmRewriter
         return await CallLlmAsync(_systemPromptKnowledge, userPrompt, ct);
     }
 
+    private const int MaxRetries = 5;
+    private static readonly int[] RetryDelaysMs = [1000, 2000, 4000, 8000, 16000];
+
     private async Task<string> CallLlmAsync(string systemPrompt, string userPrompt, CancellationToken ct)
     {
-        try
+        var messages = new List<ChatMessage>
         {
-            var messages = new List<ChatMessage>
-            {
-                new SystemChatMessage(systemPrompt),
-                new UserChatMessage(userPrompt)
-            };
+            new SystemChatMessage(systemPrompt),
+            new UserChatMessage(userPrompt)
+        };
 
-            var options = new ChatCompletionOptions
-            {
-                Temperature = 0.3f,
-                MaxOutputTokenCount = 500
-            };
-
-            _logger.LogDebug("Calling Azure OpenAI with {PromptLength} char prompt", userPrompt.Length);
-            var response = await _chatClient.CompleteChatAsync(messages, options, ct);
-
-            if (response.Value.Content.Count == 0)
-                throw new InvalidOperationException("Azure OpenAI returned empty content");
-
-            var result = response.Value.Content[0].Text;
-            _logger.LogDebug("Received {ResponseLength} char response", result.Length);
-
-            return result;
-        }
-        catch (Exception ex)
+        var options = new ChatCompletionOptions
         {
-            _logger.LogError(ex, "LLM call failed");
-            throw;
+            Temperature = 0.3f,
+            MaxOutputTokenCount = 500
+        };
+
+        for (int attempt = 0; attempt <= MaxRetries; attempt++)
+        {
+            try
+            {
+                _logger.LogDebug("Calling Azure OpenAI with {PromptLength} char prompt (attempt {Attempt})", userPrompt.Length, attempt + 1);
+                var response = await _chatClient.CompleteChatAsync(messages, options, ct);
+
+                if (response.Value.Content.Count == 0)
+                    throw new InvalidOperationException("Azure OpenAI returned empty content");
+
+                var result = response.Value.Content[0].Text;
+                _logger.LogDebug("Received {ResponseLength} char response", result.Length);
+
+                return result;
+            }
+            catch (Exception ex) when (attempt < MaxRetries && IsRateLimitError(ex))
+            {
+                var delay = RetryDelaysMs[attempt];
+                _logger.LogWarning("Rate limit hit on attempt {Attempt}/{MaxRetries}, retrying in {Delay}ms: {Message}",
+                    attempt + 1, MaxRetries + 1, delay, ex.Message);
+                await Task.Delay(delay, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "LLM call failed (attempt {Attempt})", attempt + 1);
+                throw;
+            }
         }
+
+        // Unreachable — final attempt throws in the catch above
+        throw new InvalidOperationException("Exhausted all retry attempts");
+    }
+
+    private static bool IsRateLimitError(Exception ex)
+    {
+        if (ex is Azure.RequestFailedException rfe && rfe.Status == 429)
+            return true;
+
+        var message = ex.Message;
+        return message.Contains("rate limit", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("too many requests", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("429", StringComparison.Ordinal)
+            || message.Contains("quota", StringComparison.OrdinalIgnoreCase);
     }
 }

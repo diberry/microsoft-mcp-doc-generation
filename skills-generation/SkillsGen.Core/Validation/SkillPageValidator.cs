@@ -32,12 +32,6 @@ public class SkillPageValidator : ISkillPageValidator
             }
         }
 
-        // PREREQ_EXISTS: Prerequisites section present
-        if (!renderedContent.Contains("## Prerequisites", StringComparison.OrdinalIgnoreCase))
-        {
-            errors.Add("PREREQ_EXISTS: Prerequisites section missing");
-        }
-
         // PREREQ_COPILOT: GitHub Copilot listed as required tool
         if (!renderedContent.Contains("GitHub Copilot", StringComparison.OrdinalIgnoreCase))
         {

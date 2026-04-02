@@ -174,12 +174,56 @@ public class TierAssessorTests
     }
 
     [Fact]
-    public void Assess_ReturnsAllFiveQuestions()
+    public void Assess_Q5_SpecificAzureServiceName_ReturnsTrue()
     {
-        var skill = CreateSkillData();
+        var skill = new SkillData
+        {
+            Name = "test-skill",
+            DisplayName = "Test Skill",
+            Description = "Test",
+            Services = [new ServiceEntry("Azure Storage", "Store blobs")],
+        };
         var result = _assessor.Assess(skill, CreateTriggerData());
 
-        result.Questions.Should().HaveCount(5);
-        result.Questions.Select(q => q.Id).Should().Contain(["Q1", "Q2", "Q3", "Q4", "Q5"]);
+        result.Questions.First(q => q.Id == "Q5").Answer.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Assess_Q5_GenericServiceName_ReturnsFalse()
+    {
+        var skill = new SkillData
+        {
+            Name = "test-skill",
+            DisplayName = "Test Skill",
+            Description = "Test",
+            Services = [new ServiceEntry("My Custom Service", "Does stuff")],
+        };
+        var result = _assessor.Assess(skill, CreateTriggerData());
+
+        result.Questions.First(q => q.Id == "Q5").Answer.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Assess_Q5_NoServicesOrTools_ReturnsFalse()
+    {
+        var skill = CreateSkillData(serviceCount: 0, mcpToolCount: 0);
+        var result = _assessor.Assess(skill, CreateTriggerData());
+
+        result.Questions.First(q => q.Id == "Q5").Answer.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Assess_Q5_McpToolWithAzureKeyword_ReturnsTrue()
+    {
+        var skill = new SkillData
+        {
+            Name = "test-skill",
+            DisplayName = "Test Skill",
+            Description = "Test",
+            McpTools = [new McpToolEntry("cosmos-query", "Azure Cosmos DB query", "Query data")],
+        };
+        var result = _assessor.Assess(skill, CreateTriggerData());
+
+        result.Questions.First(q => q.Id == "Q5").Answer.Should().BeTrue();
     }
 }
