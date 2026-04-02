@@ -89,8 +89,8 @@ public class SkillPipelineOrchestrator
 
             var updatedSkillData = skillData with { Description = rewrittenDescription };
 
-            // Build prerequisites
-            var prerequisites = BuildPrerequisites(skillData);
+            // Build prerequisites from skill data + source file analysis
+            var prerequisites = BuildPrerequisites(skillData, sources.FileExtensions);
 
             // Generate
             var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites);
@@ -170,18 +170,57 @@ public class SkillPipelineOrchestrator
         return report;
     }
 
-    private static SkillPrerequisites BuildPrerequisites(SkillData skillData)
+    private static SkillPrerequisites BuildPrerequisites(SkillData skillData, HashSet<string> fileExtensions)
     {
+        // Core tools every skill needs
         var tools = new List<ToolRequirement>
         {
-            new("GitHub Copilot", Required: true),
-            new("Azure CLI", MinVersion: "2.60.0", InstallCommand: "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash")
+            new("GitHub Copilot", Required: true)
         };
+
+        // Detect additional tools from source file extensions
+        if (fileExtensions.Contains(".ps1"))
+            tools.Add(new("PowerShell", MinVersion: "7.4", InstallCommand: "winget install Microsoft.PowerShell", Required: true));
+
+        if (fileExtensions.Contains(".js") || fileExtensions.Contains(".ts") || fileExtensions.Contains(".mjs"))
+            tools.Add(new("Node.js", MinVersion: "LTS", InstallCommand: "https://nodejs.org", Required: true));
+
+        if (fileExtensions.Contains(".bicep"))
+            tools.Add(new("Azure CLI with Bicep", MinVersion: "2.60.0", InstallCommand: "az bicep install", Required: true));
+
+        if (fileExtensions.Contains(".tf") || fileExtensions.Contains(".tfvars"))
+            tools.Add(new("Terraform", MinVersion: "1.5", InstallCommand: "https://developer.hashicorp.com/terraform/install", Required: true));
+
+        if (fileExtensions.Contains(".py"))
+            tools.Add(new("Python", MinVersion: "3.10", InstallCommand: "https://python.org", Required: true));
+
+        if (fileExtensions.Contains(".sh"))
+            tools.Add(new("Bash", Required: true));
+
+        if (fileExtensions.Contains(".yml") || fileExtensions.Contains(".yaml"))
+            tools.Add(new("Azure CLI", MinVersion: "2.60.0", InstallCommand: "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"));
+
+        // If no special tools detected, still add Azure CLI as recommended
+        if (tools.Count == 1)
+            tools.Add(new("Azure CLI", MinVersion: "2.60.0", InstallCommand: "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"));
+
+        // Detect resource requirements from SKILL.md content
+        var resources = new List<ResourceRequirement>();
+        var body = skillData.RawBody.ToLowerInvariant();
+        if (body.Contains("key vault"))
+            resources.Add(new("Azure Key Vault", "Key vault for secrets and certificate management"));
+        if (body.Contains("storage account") || body.Contains("blob storage"))
+            resources.Add(new("Azure Storage account", "Storage account for blob, file, queue, or table data"));
+        if (body.Contains("kubernetes") || body.Contains(" aks "))
+            resources.Add(new("Azure Kubernetes Service cluster", "AKS cluster for container orchestration"));
+        if (body.Contains("cosmos db") || body.Contains("cosmosdb"))
+            resources.Add(new("Azure Cosmos DB account", "Cosmos DB account for NoSQL data"));
 
         return new SkillPrerequisites
         {
             Azure = new AzureRequirements(),
-            Tools = tools
+            Tools = tools,
+            Resources = resources
         };
     }
 

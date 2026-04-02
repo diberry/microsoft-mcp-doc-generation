@@ -61,8 +61,17 @@ public class LocalSkillFetcher : ISkillSourceFetcher
             else
                 _logger.LogWarning("No triggers.test.ts found for {Skill}", skillName);
 
+            // Scan file extensions in skill directory for prerequisite detection
+            var extensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                foreach (var file in Directory.EnumerateFiles(skillDir, "*", SearchOption.AllDirectories))
+                    extensions.Add(Path.GetExtension(file).ToLowerInvariant());
+            }
+            catch { /* non-critical */ }
+
             return Task.FromResult<SkillSourceFiles?>(
-                new SkillSourceFiles(skillMd, triggers, skillDir, null));
+                new SkillSourceFiles(skillMd, triggers, skillDir, null, extensions));
         }
         catch (IOException ex)
         {

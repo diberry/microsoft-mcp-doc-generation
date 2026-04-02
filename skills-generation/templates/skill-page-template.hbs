@@ -60,16 +60,6 @@ Use the **{{displayName}}** skill when you need to:
 {{/each}}
 {{/if}}
 
-{{#if hasDoNotUseFor}}
-### When NOT to use this skill
-
-Don't use this skill for:
-
-{{#each doNotUseFor}}
-- {{this}}
-{{/each}}
-{{/if}}
-
 ## What it provides
 
 {{whatItProvides}}
@@ -119,9 +109,9 @@ Don't use this skill for:
 {{/if}}
 
 {{#if hasTriggers}}
-## Example prompts
+## Example triggers
 
-Try these prompts with GitHub Copilot:
+Try these prompts with GitHub Copilot to activate this skill:
 
 {{#each shouldTrigger}}
 - "{{this}}"

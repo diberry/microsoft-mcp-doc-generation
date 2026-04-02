@@ -175,7 +175,11 @@ public class SkillPageGenerator : ISkillPageGenerator
             if (StartsWithVerb(trimmed))
             {
                 FlushShortItems(shortItems, result);
-                result.Add(CapitalizeFirst(trimmed));
+                // Short verb phrases (2-3 words) need context — append "in Azure" unless already has it
+                if (wordCount <= 3 && !trimmed.Contains("Azure", StringComparison.OrdinalIgnoreCase))
+                    result.Add(CapitalizeFirst(trimmed) + " in Azure");
+                else
+                    result.Add(CapitalizeFirst(trimmed));
                 continue;
             }
 

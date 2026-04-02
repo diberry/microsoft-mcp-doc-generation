@@ -17,12 +17,14 @@ public class NaturalizeItemsTests
     }
 
     [Fact]
-    public void NaturalizeItems_VerbLedItems_KeptAsIs()
+    public void NaturalizeItems_VerbLedItems_KeptOrExtended()
     {
         var result = SkillPageGenerator.NaturalizeItems(
             ["Create storage accounts", "Deploy to Azure"], "Azure Storage");
 
-        result.Should().Contain("Create storage accounts");
+        // 3-word verb phrase without "Azure" gets " in Azure" suffix
+        result.Should().Contain("Create storage accounts in Azure");
+        // Already contains "Azure" — no suffix
         result.Should().Contain("Deploy to Azure");
     }
 
@@ -129,7 +131,7 @@ public class NaturalizeItemsTests
         var result = SkillPageGenerator.NaturalizeItems(
             ["Recommend", "Create storage accounts", "Connect"], "Azure Storage");
         result.Should().ContainSingle()
-            .Which.Should().Be("Create storage accounts");
+            .Which.Should().Be("Create storage accounts in Azure");
     }
 
     [Fact]
