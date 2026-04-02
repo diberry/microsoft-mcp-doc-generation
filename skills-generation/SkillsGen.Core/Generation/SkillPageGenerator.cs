@@ -29,18 +29,22 @@ public class SkillPageGenerator : ISkillPageGenerator
     private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites)
     {
         // Build "When to use" from UseFor, falling back to trigger prompts if empty
-        var useForList = skillData.UseFor.Count > 0
+        var rawUseFor = skillData.UseFor.Count > 0
             ? skillData.UseFor
             : triggerData.ShouldTrigger.Count > 0
-                ? triggerData.ShouldTrigger.Take(7).Select(t => $"Ask: \"{t}\"").ToList()
+                ? triggerData.ShouldTrigger.Take(7).ToList()
                 : new List<string> { $"Work with {skillData.DisplayName} resources and configurations in Azure" };
 
+        // Naturalize the bullet points — convert keyword fragments into sentences
+        var useForList = NaturalizeItems(rawUseFor, skillData.DisplayName);
+
         // Build "When NOT to use" from DoNotUseFor, falling back to shouldNotTrigger
-        var doNotUseForList = skillData.DoNotUseFor.Count > 0
+        var rawDoNotUseFor = skillData.DoNotUseFor.Count > 0
             ? skillData.DoNotUseFor
             : triggerData.ShouldNotTrigger.Count > 0
                 ? triggerData.ShouldNotTrigger.Take(3).ToList()
                 : new List<string>();
+        var doNotUseForList = NaturalizeItems(rawDoNotUseFor, skillData.DisplayName);
 
         // Cap example prompts
         var examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts).ToList();
@@ -135,6 +139,100 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["hasToolPrereqs"] = prerequisites.Tools.Count > 0,
             ["hasResources"] = prerequisites.Resources.Count > 0
         };
+    }
+
+    /// <summary>
+    /// Converts raw keyword fragments into natural-language bullet points.
+    /// Groups related short items and adds verb phrases to bare nouns.
+    /// </summary>
+    private static List<string> NaturalizeItems(List<string> items, string skillDisplayName)
+    {
+        if (items.Count == 0) return items;
+
+        var result = new List<string>();
+        var shortItems = new List<string>();
+
+        foreach (var item in items)
+        {
+            var trimmed = item.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) continue;
+
+            var wordCount = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
+            if (wordCount >= 5)
+            {
+                FlushShortItems(shortItems, result);
+                result.Add(CapitalizeFirst(trimmed));
+                continue;
+            }
+
+            if (StartsWithVerb(trimmed))
+            {
+                FlushShortItems(shortItems, result);
+                result.Add(CapitalizeFirst(trimmed));
+                continue;
+            }
+
+            shortItems.Add(trimmed);
+            if (shortItems.Count >= 4)
+                FlushShortItems(shortItems, result);
+        }
+
+        FlushShortItems(shortItems, result);
+        return result.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    private static void FlushShortItems(List<string> shortItems, List<string> result)
+    {
+        if (shortItems.Count == 0) return;
+
+        if (shortItems.Count == 1)
+        {
+            result.Add($"Work with {shortItems[0]}");
+        }
+        else
+        {
+            var last = shortItems[^1];
+            var rest = shortItems.Take(shortItems.Count - 1);
+            result.Add($"Work with {string.Join(", ", rest)}, and {last}");
+        }
+        shortItems.Clear();
+    }
+
+    private static bool StartsWithVerb(string text)
+    {
+        var verbs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "add", "adding", "analyze", "analyzing", "assign", "assigning",
+            "build", "building", "check", "checking", "choose", "choosing",
+            "compare", "comparing", "configure", "configuring", "connect",
+            "connecting", "create", "creating", "debug", "debugging",
+            "deploy", "deploying", "design", "designing", "diagnose",
+            "diagnosing", "enable", "enabling", "evaluate", "evaluating",
+            "execute", "executing", "find", "finding", "fix", "fixing",
+            "get", "getting", "help", "helping", "implement", "implementing",
+            "inspect", "inspecting", "install", "installing", "integrate",
+            "integrating", "list", "listing", "manage", "managing",
+            "migrate", "migrating", "monitor", "monitoring", "move", "moving",
+            "optimize", "optimizing", "plan", "planning", "prepare", "preparing",
+            "provision", "provisioning", "query", "querying", "recommend",
+            "recommending", "request", "requesting", "resolve", "resolving",
+            "review", "reviewing", "run", "running", "scale", "scaling",
+            "search", "searching", "secure", "securing", "select", "selecting",
+            "set", "setting", "setup", "test", "testing", "trace", "tracing",
+            "troubleshoot", "troubleshooting", "understand", "understanding",
+            "update", "updating", "upgrade", "upgrading", "upload", "uploading",
+            "use", "using", "validate", "validating", "verify", "verifying",
+            "view", "viewing", "visualize", "visualizing", "work", "working"
+        };
+        var firstWord = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        return verbs.Contains(firstWord.TrimEnd(',', '.', ':', ';'));
+    }
+
+    private static string CapitalizeFirst(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        return char.ToUpper(text[0]) + text[1..];
     }
 
     private static void RegisterHelpers(IHandlebars handlebars)
