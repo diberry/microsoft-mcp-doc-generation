@@ -16,7 +16,7 @@
     { "name": "azure-kubernetes", "displayName": "Azure Kubernetes", "category": "Infrastructure and Compute" },
     { "name": "azure-cloud-migrate", "displayName": "Azure Cloud Migration", "category": "Migration" },
     { "name": "appinsights-instrumentation", "displayName": "App Insights Instrumentation", "category": "Monitoring and Diagnostics" },
-    { "name": "azure-cost-optimization", "displayName": "Azure Cost Optimization", "category": "Monitoring and Diagnostics" },
+    { "name": "azure-cost", "displayName": "Azure Cost Optimization", "category": "Monitoring and Diagnostics" },
     { "name": "azure-diagnostics", "displayName": "Azure Diagnostics", "category": "Monitoring and Diagnostics" },
     { "name": "azure-quotas", "displayName": "Azure Quotas", "category": "Monitoring and Diagnostics" },
     { "name": "azure-resource-lookup", "displayName": "Azure Resource Lookup", "category": "Monitoring and Diagnostics" },
