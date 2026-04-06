@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "brand-to-server-mapping.schema.json",
+  "title": "Brand-to-Server Mapping",
+  "description": "Maps MCP server namespace identifiers to Azure brand names, short names, filenames, and optional merge-group configuration for multi-namespace services.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["brandName", "mcpServerName", "shortName", "fileName"],
+    "properties": {
+      "brandName": {
+        "type": "string",
+        "description": "Official Azure product brand name (e.g. 'Azure Cosmos DB')."
+      },
+      "mcpServerName": {
+        "type": "string",
+        "description": "MCP CLI namespace identifier (e.g. 'cosmos'). Must be unique across the array.",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "shortName": {
+        "type": "string",
+        "description": "Abbreviated display name used in generated docs (e.g. 'Cosmos DB')."
+      },
+      "fileName": {
+        "type": "string",
+        "description": "Base filename for generated markdown (e.g. 'azure-cosmos-db'). No extension.",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "mergeGroup": {
+        "type": "string",
+        "description": "Group identifier for multi-namespace merge (e.g. 'azure-monitor'). All entries sharing a mergeGroup are merged into a single article.",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "mergeOrder": {
+        "type": "integer",
+        "description": "Position within the merge group. 1 = primary namespace.",
+        "minimum": 1
+      },
+      "mergeRole": {
+        "type": "string",
+        "description": "Role in the merge group. 'primary' owns frontmatter/overview; 'secondary' contributes tool sections only.",
+        "enum": ["primary", "secondary"]
+      }
+    },
+    "additionalProperties": false,
+    "dependencies": {
+      "mergeGroup": ["mergeOrder", "mergeRole"],
+      "mergeOrder": ["mergeGroup", "mergeRole"],
+      "mergeRole": ["mergeGroup", "mergeOrder"]
+    }
+  },
+  "minItems": 1,
+  "uniqueItems": true
+}

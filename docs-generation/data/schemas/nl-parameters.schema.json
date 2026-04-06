@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "nl-parameters.schema.json",
+  "title": "Natural Language Parameters",
+  "description": "Maps CLI parameter names to human-readable natural-language equivalents used in generated documentation text.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["Parameter", "NaturalLanguage"],
+    "properties": {
+      "Parameter": {
+        "type": "string",
+        "description": "CLI parameter name or identifier (without leading dashes).",
+        "minLength": 1
+      },
+      "NaturalLanguage": {
+        "type": "string",
+        "description": "Human-readable replacement text.",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "minItems": 1
+}
