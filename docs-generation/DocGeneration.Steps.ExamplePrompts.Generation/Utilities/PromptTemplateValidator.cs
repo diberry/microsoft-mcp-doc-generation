@@ -55,13 +55,38 @@ public static partial class PromptTemplateValidator
         }
 
         // Check for unreplaced Handlebars expressions like {{name}}, {{description}}
-        // but exclude angle-bracket placeholders like <subscription> which are intentional
+        // but exclude patterns that appear in parameter descriptions as examples
         if (HandlebarsExpressionRegex().IsMatch(prompt))
         {
             var matches = HandlebarsExpressionRegex().Matches(prompt);
             foreach (Match match in matches)
             {
-                problems.Add($"Unreplaced Handlebars expression: {match.Value}");
+                // Skip matches that are clearly documentation examples, not unreplaced template variables
+                // Check if the match is preceded by context words indicating it's an example
+                int matchStart = match.Index;
+                int contextStart = Math.Max(0, matchStart - 50); // Look back 50 chars for context
+                string precedingContext = prompt.Substring(contextStart, matchStart - contextStart).ToLowerInvariant();
+                
+                // These words indicate the {{...}} is a documentation example, not a template variable
+                string[] exampleIndicators = 
+                [
+                    "like ",
+                    "such as ",
+                    "example ",
+                    "examples ",
+                    "placeholder",
+                    "e.g.",
+                    "for example",
+                    "including "
+                ];
+                
+                bool isDocumentationExample = exampleIndicators.Any(indicator => 
+                    precedingContext.Contains(indicator));
+                
+                if (!isDocumentationExample)
+                {
+                    problems.Add($"Unreplaced Handlebars expression: {match.Value}");
+                }
             }
         }
 
