@@ -18,6 +18,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Project consolidation evaluation document (`docs/project-consolidation-evaluation.md`) (#353)
 - Core.Shared extraction plan document (`docs/core-shared-extraction-plan.md`) (#354)
 - Text transformation migration plan document (`docs/text-transformation-migration-plan.md`) (#351)
+- Parallel AI evaluation document (`docs/parallel-ai-evaluation.md`) (#356)
 
 ### Removed
 
