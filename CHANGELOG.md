@@ -16,6 +16,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - JSON schemas for core configuration files in `docs-generation/data/schemas/` (#355)
 - Configuration registry document (`docs/configuration-registry.md`) (#355)
 - Project consolidation evaluation document (`docs/project-consolidation-evaluation.md`) (#353)
+- Core.Shared extraction plan document (`docs/core-shared-extraction-plan.md`) (#354)
 
 ### Removed
 
