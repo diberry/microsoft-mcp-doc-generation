@@ -152,6 +152,52 @@ public class PromptTemplateValidatorTests
         Assert.Contains(problems, p => p.Contains("{{/each}}"));
     }
 
+    // --- Validate: example-indicator suppression (line-scoped lookback) ---
+
+    [Fact]
+    public void Validate_IndicatorWordSuppressesHandlebarsOnSameLine_ReturnsEmpty()
+    {
+        // "like" immediately before {{javaVersion}} → treated as doc example
+        var prompt = "Use a version string like {{javaVersion}} in your config.";
+
+        var problems = PromptTemplateValidator.Validate(prompt);
+        Assert.Empty(problems);
+    }
+
+    [Fact]
+    public void Validate_BareHandlebarsWithNoIndicator_ReturnsProblem()
+    {
+        // No indicator word anywhere → must be flagged
+        var prompt = "{{name}} in a sentence";
+
+        var problems = PromptTemplateValidator.Validate(prompt);
+
+        Assert.Single(problems);
+        Assert.Contains("{{name}}", problems[0]);
+    }
+
+    [Fact]
+    public void Validate_IndicatorWordFarBeforeOnSameLine_StillSuppresses()
+    {
+        // Indicator word more than 50 chars before {{var}} but on same line → suppressed
+        var prompt = "For example, this is a very long line of padding text that goes on and on {{someVar}} here.";
+
+        var problems = PromptTemplateValidator.Validate(prompt);
+        Assert.Empty(problems);
+    }
+
+    [Fact]
+    public void Validate_IndicatorWordOnDifferentLine_StillFlags()
+    {
+        // "like" on line 1 must NOT suppress {{templateVar}} on line 2
+        var prompt = "Use a version like 11\n{{templateVar}} should be flagged";
+
+        var problems = PromptTemplateValidator.Validate(prompt);
+
+        Assert.Single(problems);
+        Assert.Contains("{{templateVar}}", problems[0]);
+    }
+
     // --- ValidateAndLog ---
 
     [Fact]

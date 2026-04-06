@@ -22,6 +22,21 @@ public static partial class PromptTemplateValidator
     ];
 
     /// <summary>
+    /// Words that indicate the {{...}} is a documentation example, not a template variable.
+    /// </summary>
+    private static readonly string[] ExampleIndicators =
+    [
+        "like ",
+        "such as ",
+        "example ",
+        "examples ",
+        "placeholder",
+        "e.g.",
+        "for example",
+        "including "
+    ];
+
+    /// <summary>
     /// Validates that the prompt has no unreplaced template tokens.
     /// Returns a list of problems found (empty = valid).
     /// </summary>
@@ -62,25 +77,12 @@ public static partial class PromptTemplateValidator
             foreach (Match match in matches)
             {
                 // Skip matches that are clearly documentation examples, not unreplaced template variables
-                // Check if the match is preceded by context words indicating it's an example
+                // Check if the match is preceded by context words on the same line
                 int matchStart = match.Index;
-                int contextStart = Math.Max(0, matchStart - 50); // Look back 50 chars for context
-                string precedingContext = prompt.Substring(contextStart, matchStart - contextStart).ToLowerInvariant();
+                int lineStart = prompt.LastIndexOf('\n', Math.Max(0, matchStart - 1)) + 1;
+                string precedingContext = prompt.Substring(lineStart, matchStart - lineStart).ToLowerInvariant();
                 
-                // These words indicate the {{...}} is a documentation example, not a template variable
-                string[] exampleIndicators = 
-                [
-                    "like ",
-                    "such as ",
-                    "example ",
-                    "examples ",
-                    "placeholder",
-                    "e.g.",
-                    "for example",
-                    "including "
-                ];
-                
-                bool isDocumentationExample = exampleIndicators.Any(indicator => 
+                bool isDocumentationExample = ExampleIndicators.Any(indicator => 
                     precedingContext.Contains(indicator));
                 
                 if (!isDocumentationExample)
