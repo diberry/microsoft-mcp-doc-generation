@@ -35,3 +35,42 @@ jobs:
 
       - name: Run tests
         run: dotnet test docs-generation.sln --no-build --configuration Release --verbosity normal
+
+  vale-lint:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Vale
+        run: |
+          wget -qO- https://github.com/errata-ai/vale/releases/download/v3.9.5/vale_3.9.5_Linux_64-bit.tar.gz | tar xz -C /usr/local/bin vale
+
+      - name: Validate Vale config
+        run: vale --config docs-generation/.vale.ini ls-config
+
+      - name: Create sample markdown for lint check
+        run: |
+          mkdir -p vale-sample-output
+          # If generated output exists, sample it; otherwise create a minimal test
+          if [ -d generated/multi-page ] && [ "$(ls generated/multi-page/*.md 2>/dev/null | head -5)" ]; then
+            cp $(ls generated/multi-page/*.md | head -20) vale-sample-output/
+          else
+            cat > vale-sample-output/sample.md << 'EOF'
+          ---
+          title: Sample Tool Reference
+          ms.topic: reference
+          ms.date: 4/2/2026
+          ---
+
+          # Sample tool reference
+
+          This article describes a sample Azure MCP tool for validation purposes.
+          EOF
+          fi
+
+      - name: Run Vale lint
+        run: vale --config docs-generation/.vale.ini vale-sample-output/ || true

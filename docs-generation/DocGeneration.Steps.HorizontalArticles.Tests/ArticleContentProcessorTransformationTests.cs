@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using NUnit.Framework;
+using Xunit;
 using Azure.Mcp.TextTransformation.Models;
 using Azure.Mcp.TextTransformation.Services;
 using HorizontalArticleGenerator.Generators;
@@ -9,14 +9,12 @@ using HorizontalArticleGenerator.Models;
 
 namespace HorizontalArticleGenerator.Tests;
 
-[TestFixture]
 public class ArticleContentProcessorTransformationTests
 {
-    private TransformationEngine _engine = null!;
-    private ArticleContentProcessor _processor = null!;
+    private readonly TransformationEngine _engine;
+    private readonly ArticleContentProcessor _processor;
 
-    [SetUp]
-    public void Setup()
+    public ArticleContentProcessorTransformationTests()
     {
         var config = new TransformationConfig
         {
@@ -41,7 +39,7 @@ public class ArticleContentProcessorTransformationTests
 
     // ===== Core bug: TransformDescription adds periods, TransformText does not =====
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_ServiceShortDescription_DoesNotGetTrailingPeriod()
     {
         var data = CreateMinimalData();
@@ -49,11 +47,11 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.ApplyTransformations(data);
 
-        Assert.That(data.ServiceShortDescription, Does.Not.EndWith("."));
-        Assert.That(data.ServiceShortDescription, Is.EqualTo("web applications and database connections"));
+        Assert.False(data.ServiceShortDescription.EndsWith("."));
+        Assert.Equal("web applications and database connections", data.ServiceShortDescription);
     }
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_ServiceOverview_GetsTrailingPeriod()
     {
         var data = CreateMinimalData();
@@ -61,10 +59,10 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.ApplyTransformations(data);
 
-        Assert.That(data.ServiceOverview, Does.EndWith("."));
+        Assert.EndsWith(".", data.ServiceOverview);
     }
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_Capabilities_DoNotGetTrailingPeriods()
     {
         var data = CreateMinimalData();
@@ -79,11 +77,11 @@ public class ArticleContentProcessorTransformationTests
 
         foreach (var cap in data.Capabilities)
         {
-            Assert.That(cap, Does.Not.EndWith("."), $"Capability should not end with period: '{cap}'");
+            Assert.False(cap.EndsWith("."), $"Capability should not end with period: '{cap}'");
         }
     }
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_BestPracticeTitles_DoNotGetTrailingPeriods()
     {
         var data = CreateMinimalData();
@@ -99,12 +97,12 @@ public class ArticleContentProcessorTransformationTests
 
         foreach (var bp in data.BestPractices)
         {
-            Assert.That(bp.Title, Does.Not.EndWith("."), $"Best practice title should not end with period: '{bp.Title}'");
-            Assert.That(bp.Description, Does.EndWith("."), $"Best practice description should end with period: '{bp.Description}'");
+            Assert.False(bp.Title.EndsWith("."), $"Best practice title should not end with period: '{bp.Title}'");
+            Assert.True(bp.Description.EndsWith("."), $"Best practice description should end with period: '{bp.Description}'");
         }
     }
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_ScenarioTitles_DoNotGetTrailingPeriods()
     {
         var data = CreateMinimalData();
@@ -121,12 +119,12 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.ApplyTransformations(data);
 
-        Assert.That(data.Scenarios[0].Title, Does.Not.EndWith("."));
-        Assert.That(data.Scenarios[0].Description, Does.EndWith("."));
-        Assert.That(data.Scenarios[0].ExpectedOutcome, Does.EndWith("."));
+        Assert.False(data.Scenarios[0].Title.EndsWith("."));
+        Assert.EndsWith(".", data.Scenarios[0].Description);
+        Assert.EndsWith(".", data.Scenarios[0].ExpectedOutcome);
     }
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_PrerequisiteDescriptions_GetTrailingPeriods()
     {
         var data = CreateMinimalData();
@@ -137,10 +135,10 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.ApplyTransformations(data);
 
-        Assert.That(data.ServiceSpecificPrerequisites[0].Description, Does.EndWith("."));
+        Assert.EndsWith(".", data.ServiceSpecificPrerequisites[0].Description);
     }
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_RolePurposes_GetTrailingPeriods()
     {
         var data = CreateMinimalData();
@@ -151,12 +149,12 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.ApplyTransformations(data);
 
-        Assert.That(data.RequiredRoles[0].Purpose, Does.EndWith("."));
+        Assert.EndsWith(".", data.RequiredRoles[0].Purpose);
     }
 
     // ===== Static text replacement integration =====
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_ReplacesAzureActiveDirectory_WithEntraID()
     {
         var data = CreateMinimalData();
@@ -170,12 +168,12 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.ApplyTransformations(data);
 
-        Assert.That(data.BestPractices[0].Title, Is.EqualTo("Use Microsoft Entra ID"));
-        Assert.That(data.BestPractices[0].Description, Does.Contain("Microsoft Entra ID"));
-        Assert.That(data.BestPractices[0].Description, Does.Not.Contain("Azure Active Directory"));
+        Assert.Equal("Use Microsoft Entra ID", data.BestPractices[0].Title);
+        Assert.Contains("Microsoft Entra ID", data.BestPractices[0].Description);
+        Assert.DoesNotContain("Azure Active Directory", data.BestPractices[0].Description);
     }
 
-    [Test]
+    [Fact]
     public void ApplyTransformations_ReplacesAzureActiveDirectory_InServiceOverview()
     {
         var data = CreateMinimalData();
@@ -183,13 +181,13 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.ApplyTransformations(data);
 
-        Assert.That(data.ServiceOverview, Does.Contain("Microsoft Entra ID"));
-        Assert.That(data.ServiceOverview, Does.Not.Contain("Azure Active Directory"));
+        Assert.Contains("Microsoft Entra ID", data.ServiceOverview);
+        Assert.DoesNotContain("Azure Active Directory", data.ServiceOverview);
     }
 
     // ===== Full pipeline: Validate + Transform =====
 
-    [Test]
+    [Fact]
     public void Process_FullPipeline_ServiceShortDescription_NeverEndsWithPeriod()
     {
         // This is THE critical test — simulates the exact bug:
@@ -199,12 +197,12 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.Process(data, "TestService");
 
-        Assert.That(data.ServiceShortDescription, Does.Not.EndWith("."),
+        Assert.False(data.ServiceShortDescription.EndsWith("."),
             "After full pipeline, serviceShortDescription must NEVER end with a period");
-        Assert.That(data.ServiceShortDescription, Is.EqualTo("web applications and APIs"));
+        Assert.Equal("web applications and APIs", data.ServiceShortDescription);
     }
 
-    [Test]
+    [Fact]
     public void Process_FullPipeline_Capabilities_NeverEndWithPeriods()
     {
         var data = CreateMinimalData();
@@ -219,12 +217,12 @@ public class ArticleContentProcessorTransformationTests
 
         foreach (var cap in data.Capabilities)
         {
-            Assert.That(cap, Does.Not.EndWith("."),
+            Assert.False(cap.EndsWith("."),
                 $"After full pipeline, capability must NOT end with period: '{cap}'");
         }
     }
 
-    [Test]
+    [Fact]
     public void Process_FullPipeline_BestPracticeTitles_NeverEndWithPeriods()
     {
         var data = CreateMinimalData();
@@ -240,12 +238,12 @@ public class ArticleContentProcessorTransformationTests
 
         foreach (var bp in data.BestPractices)
         {
-            Assert.That(bp.Title, Does.Not.EndWith("."),
+            Assert.False(bp.Title.EndsWith("."),
                 $"After full pipeline, best practice title must NOT end with period: '{bp.Title}'");
         }
     }
 
-    [Test]
+    [Fact]
     public void Process_FullPipeline_RenderedFrontmatter_HasNoBreak()
     {
         // End-to-end: simulate the template interpolation that was producing broken text
@@ -256,18 +254,18 @@ public class ArticleContentProcessorTransformationTests
 
         // Simulate template: description: Learn how to ... manage {{genai-serviceShortDescription}} through AI-powered ...
         var frontmatter = $"description: Learn how to use the Azure MCP Server to manage {data.ServiceShortDescription} through AI-powered natural language interactions.";
-        Assert.That(frontmatter, Does.Not.Contain(". through"));
+        Assert.DoesNotContain(". through", frontmatter);
 
         // Simulate template: Manage {{genai-serviceShortDescription}} using natural language ...
         var intro = $"Manage {data.ServiceShortDescription} using natural language conversations.";
-        Assert.That(intro, Does.Not.Contain(". using"));
+        Assert.DoesNotContain(". using", intro);
 
         // Simulate template: I want to manage {{genai-serviceShortDescription}} using natural language ...
         var customerIntent = $"I want to manage {data.ServiceShortDescription} using natural language conversations.";
-        Assert.That(customerIntent, Does.Not.Contain(". using"));
+        Assert.DoesNotContain(". using", customerIntent);
     }
 
-    [Test]
+    [Fact]
     public void Process_FullPipeline_OverviewStillGetsPeriod()
     {
         var data = CreateMinimalData();
@@ -275,8 +273,7 @@ public class ArticleContentProcessorTransformationTests
 
         _processor.Process(data, "TestService");
 
-        Assert.That(data.ServiceOverview, Does.EndWith("."),
-            "ServiceOverview is a full sentence and should end with a period");
+        Assert.EndsWith(".", data.ServiceOverview);
     }
 
     // ===== Helper =====

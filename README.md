@@ -304,6 +304,7 @@ To modify AI-generated content quality or style:
 | Document | Description |
 |----------|-------------|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, data flow, pipeline step details |
+| [docs/configuration-registry.md](docs/configuration-registry.md) | Configuration files inventory, load order, schemas, duplication analysis |
 | [docs/PRD-PipelineRunner.md](docs/PRD-PipelineRunner.md) | Product requirements for the typed .NET pipeline |
 | [docs-generation/README.md](docs-generation/README.md) | Generator implementation details |
 

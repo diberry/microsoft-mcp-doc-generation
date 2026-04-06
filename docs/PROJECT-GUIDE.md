@@ -802,6 +802,37 @@ The pipeline includes layered quality assurance:
 - **Post-assembly checking** → Verify all tools appear in both tool list and capability descriptions
 - **Content coverage** → AI-generated examples, scenarios, and limitations
 - **Brand consistency** → Acronym normalization (ETag, OAuth, JSON, etc.), term standardization
+- **Prose linting (Vale CLI)** → Microsoft style guide enforcement on generated markdown output
+
+#### Vale Prose Linting
+
+[Vale CLI](https://vale.sh/) enforces Microsoft Writing Style Guide rules on generated markdown. Configuration lives in `docs-generation/.vale.ini` with Microsoft style rules in `docs-generation/styles/Microsoft/`.
+
+**Run locally:**
+
+```bash
+# Bash — lint all generated output
+./docs-generation/scripts/lint-vale.sh
+
+# Bash — lint a specific directory
+./docs-generation/scripts/lint-vale.sh ./generated-advisor/
+
+# PowerShell — lint all generated output
+pwsh ./docs-generation/scripts/lint-vale.ps1
+
+# PowerShell — lint a specific directory
+pwsh ./docs-generation/scripts/lint-vale.ps1 -TargetDir ./generated-advisor/
+```
+
+**Suppressed rules** (false positives for MCP documentation):
+- `Microsoft.FirstPerson` — Tool descriptions use "I" as the AI assistant
+- `Microsoft.Dashes` — CLI parameter formatting uses dashes
+- `Microsoft.Quotes` — Code examples use straight quotes
+- `Microsoft.HeadingAcronyms` — Azure service acronyms are valid headings
+
+**CI integration:** The `vale-lint` job in `.github/workflows/build-and-test.yml` runs Vale on PRs (non-blocking, `continue-on-error: true`).
+
+**Feeding findings back:** Common Vale findings should be added to `docs-generation/data/static-text-replacement.json` so the pipeline auto-corrects them during generation.
 
 ### Future: Architecture Modernization
 
