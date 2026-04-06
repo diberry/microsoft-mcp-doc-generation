@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "stop-words.schema.json",
+  "title": "Stop Words",
+  "description": "Lowercase words removed from include-file filenames during filename generation (e.g. 'a', 'the', 'and').",
+  "type": "array",
+  "items": {
+    "type": "string",
+    "description": "A stop word to strip from filenames.",
+    "minLength": 1,
+    "pattern": "^[a-z]+$"
+  },
+  "minItems": 1,
+  "uniqueItems": true
+}

@@ -1,21 +1,18 @@
-using NUnit.Framework;
+using Xunit;
 using Azure.Mcp.TextTransformation.Models;
 
 namespace Azure.Mcp.TextTransformation.Tests;
 
-[TestFixture]
-public class ConfigLoaderTests
+public class ConfigLoaderTests : IDisposable
 {
-    private string _testConfigPath = null!;
+    private readonly string _testConfigPath;
 
-    [SetUp]
-    public void Setup()
+    public ConfigLoaderTests()
     {
         _testConfigPath = Path.Combine(Path.GetTempPath(), "test-transformation-config.json");
     }
 
-    [TearDown]
-    public void Teardown()
+    public void Dispose()
     {
         if (File.Exists(_testConfigPath))
         {
@@ -23,7 +20,7 @@ public class ConfigLoaderTests
         }
     }
 
-    [Test]
+    [Fact]
     public async Task LoadAsync_WithValidConfig_LoadsSuccessfully()
     {
         // Arrange
@@ -48,23 +45,23 @@ public class ConfigLoaderTests
         var config = await loader.LoadAsync();
 
         // Assert
-        Assert.That(config, Is.Not.Null);
-        Assert.That(config.Lexicon.Acronyms.ContainsKey("id"), Is.True);
-        Assert.That(config.Lexicon.Acronyms["id"].Canonical, Is.EqualTo("ID"));
-        Assert.That(config.Lexicon.StopWords.Count, Is.EqualTo(2));
+        Assert.NotNull(config);
+        Assert.True(config.Lexicon.Acronyms.ContainsKey("id"));
+        Assert.Equal("ID", config.Lexicon.Acronyms["id"].Canonical);
+        Assert.Equal(2, config.Lexicon.StopWords.Count);
     }
 
-    [Test]
-    public void LoadAsync_WithMissingFile_ThrowsFileNotFoundException()
+    [Fact]
+    public async Task LoadAsync_WithMissingFile_ThrowsFileNotFoundException()
     {
         // Arrange
         var loader = new ConfigLoader("/nonexistent/path/config.json");
 
         // Act & Assert
-        Assert.ThrowsAsync<FileNotFoundException>(async () => await loader.LoadAsync());
+        await Assert.ThrowsAsync<FileNotFoundException>(async () => await loader.LoadAsync());
     }
 
-    [Test]
+    [Fact]
     public async Task LoadAsync_ResolvesLexiconReferences()
     {
         // Arrange
@@ -93,10 +90,10 @@ public class ConfigLoaderTests
         var config = await loader.LoadAsync();
 
         // Assert
-        Assert.That(config.Services.Mappings[0].ShortName, Is.EqualTo("AKS"));
+        Assert.Equal("AKS", config.Services.Mappings[0].ShortName);
     }
 
-    [Test]
+    [Fact]
     public async Task LoadAsync_CachesConfiguration()
     {
         // Arrange
@@ -109,6 +106,6 @@ public class ConfigLoaderTests
         var config2 = await loader.LoadAsync();
 
         // Assert
-        Assert.That(config1, Is.SameAs(config2));
+        Assert.Same(config1, config2);
     }
 }

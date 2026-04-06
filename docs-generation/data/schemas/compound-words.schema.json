@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "compound-words.schema.json",
+  "title": "Compound Words",
+  "description": "Maps concatenated CLI token fragments to their hyphenated or expanded forms for include-file filename generation. Keys are the source token (lowercase); values are the replacement.",
+  "type": "object",
+  "patternProperties": {
+    "^[a-z][a-z0-9-]*$": {
+      "type": "string",
+      "description": "Hyphenated or expanded replacement (e.g. 'activitylog' → 'activity-log').",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false,
+  "minProperties": 1
+}

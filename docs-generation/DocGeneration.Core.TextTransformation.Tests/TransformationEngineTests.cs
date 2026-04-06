@@ -1,17 +1,15 @@
-using NUnit.Framework;
+using Xunit;
 using Azure.Mcp.TextTransformation.Models;
 using Azure.Mcp.TextTransformation.Services;
 
 namespace Azure.Mcp.TextTransformation.Tests;
 
-[TestFixture]
 public class TransformationEngineTests
 {
-    private TransformationConfig _config = null!;
-    private TransformationEngine _engine = null!;
+    private readonly TransformationConfig _config;
+    private readonly TransformationEngine _engine;
 
-    [SetUp]
-    public void Setup()
+    public TransformationEngineTests()
     {
         _config = new TransformationConfig
         {
@@ -32,9 +30,9 @@ public class TransformationEngineTests
             {
                 Mappings = new List<ServiceMapping>
                 {
-                    new ServiceMapping 
-                    { 
-                        McpName = "aks", 
+                    new ServiceMapping
+                    {
+                        McpName = "aks",
                         ShortName = "AKS",
                         BrandName = "Azure Kubernetes Service"
                     }
@@ -55,162 +53,97 @@ public class TransformationEngineTests
         _engine = new TransformationEngine(_config);
     }
 
-    [Test]
+    [Fact]
     public void GetServiceDisplayName_WithMapping_ReturnsBrandName()
     {
-        // Act
-        var displayName = _engine.GetServiceDisplayName("aks");
-
-        // Assert
-        Assert.That(displayName, Is.EqualTo("Azure Kubernetes Service"));
+        Assert.Equal("Azure Kubernetes Service", _engine.GetServiceDisplayName("aks"));
     }
 
-    [Test]
+    [Fact]
     public void GetServiceDisplayName_WithoutMapping_ReturnsTitleCase()
     {
-        // Act
-        var displayName = _engine.GetServiceDisplayName("storage");
-
-        // Assert
-        Assert.That(displayName, Is.EqualTo("Storage"));
+        Assert.Equal("Storage", _engine.GetServiceDisplayName("storage"));
     }
 
-    [Test]
+    [Fact]
     public void GetServiceShortName_WithMapping_ReturnsShortName()
     {
-        // Act
-        var shortName = _engine.GetServiceShortName("aks");
-
-        // Assert
-        Assert.That(shortName, Is.EqualTo("AKS"));
+        Assert.Equal("AKS", _engine.GetServiceShortName("aks"));
     }
 
-    [Test]
+    [Fact]
     public void GetServiceShortName_WithoutMapping_ReturnsMcpName()
     {
-        // Act
-        var shortName = _engine.GetServiceShortName("storage");
-
-        // Assert
-        Assert.That(shortName, Is.EqualTo("storage"));
+        Assert.Equal("storage", _engine.GetServiceShortName("storage"));
     }
 
-    [Test]
+    [Fact]
     public void TransformDescription_ReplacesAbbreviations()
     {
-        // Arrange
-        var description = "This is an example eg a test";
-
-        // Act
-        var transformed = _engine.TransformDescription(description);
-
-        // Assert
-        Assert.That(transformed, Does.Contain("e.g."));
+        var transformed = _engine.TransformDescription("This is an example eg a test");
+        Assert.Contains("e.g.", transformed);
     }
 
-    [Test]
+    [Fact]
     public void TransformDescription_EnsuresEndsPeriod()
     {
-        // Arrange
-        var description = "This is a test";
-
-        // Act
-        var transformed = _engine.TransformDescription(description);
-
-        // Assert
-        Assert.That(transformed, Does.EndWith("."));
+        var transformed = _engine.TransformDescription("This is a test");
+        Assert.EndsWith(".", transformed);
     }
 
-    [Test]
+    [Fact]
     public void TransformDescription_DoesNotAddPeriod_WhenAlreadyPresent()
     {
-        // Arrange
-        var description = "This is a test.";
-
-        // Act
-        var transformed = _engine.TransformDescription(description);
-
-        // Assert
-        Assert.That(transformed, Is.EqualTo("This is a test."));
+        var transformed = _engine.TransformDescription("This is a test.");
+        Assert.Equal("This is a test.", transformed);
     }
 
-    [Test]
+    [Fact]
     public void TextNormalizer_NormalizeParameter_UsesMappingWhenAvailable()
     {
-        // Act
-        var normalized = _engine.TextNormalizer.NormalizeParameter("subscriptionId");
-
-        // Assert
-        Assert.That(normalized, Is.EqualTo("subscription ID"));
+        Assert.Equal("subscription ID", _engine.TextNormalizer.NormalizeParameter("subscriptionId"));
     }
 
-    [Test]
+    [Fact]
     public void TextNormalizer_SplitAndTransformProgrammaticName_SplitsCamelCase()
     {
-        // Act
-        var transformed = _engine.TextNormalizer.SplitAndTransformProgrammaticName("resourceGroupName");
-
-        // Assert
-        Assert.That(transformed, Is.EqualTo("resource group name"));
+        Assert.Equal("resource group name", _engine.TextNormalizer.SplitAndTransformProgrammaticName("resourceGroupName"));
     }
 
-    [Test]
+    [Fact]
     public void TextNormalizer_SplitAndTransformProgrammaticName_HandlesAcronyms()
     {
-        // Act
-        var transformed = _engine.TextNormalizer.SplitAndTransformProgrammaticName("vmId");
-
-        // Assert
-        Assert.That(transformed, Is.EqualTo("VM ID"));
+        Assert.Equal("VM ID", _engine.TextNormalizer.SplitAndTransformProgrammaticName("vmId"));
     }
 
-    [Test]
+    [Fact]
     public void TextNormalizer_ToTitleCase_PreservesAcronyms()
     {
-        // Act
-        var titleCase = _engine.TextNormalizer.ToTitleCase("get vm id");
-
-        // Assert
-        Assert.That(titleCase, Is.EqualTo("Get VM ID"));
+        Assert.Equal("Get VM ID", _engine.TextNormalizer.ToTitleCase("get vm id"));
     }
 
-    [Test]
+    [Fact]
     public void TextNormalizer_ToTitleCase_LowercasesStopWords()
     {
-        // Act
-        var titleCase = _engine.TextNormalizer.ToTitleCase("get a list of the items", "titleCase");
-
-        // Assert
-        Assert.That(titleCase, Is.EqualTo("Get a List of the Items"));
+        Assert.Equal("Get a List of the Items", _engine.TextNormalizer.ToTitleCase("get a list of the items", "titleCase"));
     }
 
-    [Test]
+    [Fact]
     public void TextNormalizer_ToTitleCase_CapitalizesFirstStopWord()
     {
-        // Act
-        var titleCase = _engine.TextNormalizer.ToTitleCase("a list of items", "titleCase");
-
-        // Assert
-        Assert.That(titleCase, Is.EqualTo("A List of Items"));
+        Assert.Equal("A List of Items", _engine.TextNormalizer.ToTitleCase("a list of items", "titleCase"));
     }
 
-    [Test]
+    [Fact]
     public void TextNormalizer_ReplaceStaticText_HandlesMultipleReplacements()
     {
-        // Arrange
-        var text = "Use eg for examples";
-
-        // Act
-        var replaced = _engine.TextNormalizer.ReplaceStaticText(text);
-
-        // Assert
-        Assert.That(replaced, Does.Contain("e.g."));
+        var replaced = _engine.TextNormalizer.ReplaceStaticText("Use eg for examples");
+        Assert.Contains("e.g.", replaced);
     }
 
-    [Test]
+    [Fact]
     public void Config_IsAccessible()
     {
-        // Assert
-        Assert.That(_engine.Config, Is.SameAs(_config));
+        Assert.Same(_config, _engine.Config);
     }
 }
