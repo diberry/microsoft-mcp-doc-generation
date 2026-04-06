@@ -1,78 +1,77 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using NUnit.Framework;
+using Xunit;
 using SkillsRelevance.Models;
 using SkillsRelevance.Services;
 
 namespace SkillsRelevance.Tests;
 
-[TestFixture]
 public class SkillRelevanceAnalyzerTests
 {
     // ── BuildSearchTerms ────────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void BuildSearchTerms_ReturnsRawInput()
     {
         var terms = SkillRelevanceAnalyzer.BuildSearchTerms("storage");
-        Assert.That(terms, Contains.Item("storage"));
+        Assert.Contains("storage", terms);
     }
 
-    [Test]
+    [Fact]
     public void BuildSearchTerms_AksExpandsToKubernetesAndK8s()
     {
         var terms = SkillRelevanceAnalyzer.BuildSearchTerms("aks");
-        Assert.That(terms, Contains.Item("kubernetes"));
-        Assert.That(terms, Contains.Item("k8s"));
+        Assert.Contains("kubernetes", terms);
+        Assert.Contains("k8s", terms);
     }
 
-    [Test]
+    [Fact]
     public void BuildSearchTerms_KeyvaultExpandsToSecretAndCertificate()
     {
         var terms = SkillRelevanceAnalyzer.BuildSearchTerms("keyvault");
-        Assert.That(terms, Contains.Item("key vault"));
-        Assert.That(terms, Contains.Item("secret"));
-        Assert.That(terms, Contains.Item("certificate"));
+        Assert.Contains("key vault", terms);
+        Assert.Contains("secret", terms);
+        Assert.Contains("certificate", terms);
     }
 
-    [Test]
+    [Fact]
     public void BuildSearchTerms_SplitsHyphenatedInput()
     {
         var terms = SkillRelevanceAnalyzer.BuildSearchTerms("azure-storage");
-        Assert.That(terms, Contains.Item("azure"));
-        Assert.That(terms, Contains.Item("storage"));
+        Assert.Contains("azure", terms);
+        Assert.Contains("storage", terms);
     }
 
-    [Test]
+    [Fact]
     public void BuildSearchTerms_FiltersShortParts()
     {
         // Parts of length ≤ 2 should not be added as separate terms
         var terms = SkillRelevanceAnalyzer.BuildSearchTerms("vm");
         // "vm" is the raw input so it stays; no additional split items since it's only one part
-        Assert.That(terms, Contains.Item("vm"));
+        Assert.Contains("vm", terms);
     }
 
-    [Test]
+    [Fact]
     public void BuildSearchTerms_NoDuplicates()
     {
         var terms = SkillRelevanceAnalyzer.BuildSearchTerms("storage");
         // "storage" should appear exactly once
-        Assert.That(terms.Count(t => string.Equals(t, "storage", StringComparison.OrdinalIgnoreCase)), Is.EqualTo(1));
+        Assert.Equal(1, terms.Count(t => string.Equals(t, "storage", StringComparison.OrdinalIgnoreCase)));
     }
 
     // ── Score ────────────────────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void Score_NameMatch_ReturnsHighScore()
     {
         var analyzer = new SkillRelevanceAnalyzer("keyvault");
         var skill = new SkillInfo { Name = "Azure Key Vault Best Practices", FileName = "keyvault-tips.md" };
         var score = analyzer.Score(skill);
-        Assert.That(score, Is.GreaterThanOrEqualTo(0.4));
+        Assert.True(score >= 0.4);
     }
 
-    [Test]
+    [Fact]
     public void Score_NoMatch_ReturnsZero()
     {
         var analyzer = new SkillRelevanceAnalyzer("cosmosdb");
@@ -85,10 +84,10 @@ public class SkillRelevanceAnalyzerTests
             Tags = new List<string> { "github", "pr" }
         };
         var score = analyzer.Score(skill);
-        Assert.That(score, Is.EqualTo(0.0));
+        Assert.Equal(0.0, score);
     }
 
-    [Test]
+    [Fact]
     public void Score_DescriptionMatch_AddsScore()
     {
         var analyzer = new SkillRelevanceAnalyzer("storage");
@@ -99,11 +98,11 @@ public class SkillRelevanceAnalyzerTests
             Description = "Use Azure Storage blobs for large file uploads."
         };
         var score = analyzer.Score(skill);
-        Assert.That(score, Is.GreaterThan(0.0));
-        Assert.That(skill.RelevanceReasons, Has.Some.Contains("Description mentions"));
+        Assert.True(score > 0.0);
+        Assert.Contains(skill.RelevanceReasons, r => r.Contains("Description mentions"));
     }
 
-    [Test]
+    [Fact]
     public void Score_TagMatch_AddsScore()
     {
         var analyzer = new SkillRelevanceAnalyzer("sql");
@@ -114,11 +113,11 @@ public class SkillRelevanceAnalyzerTests
             Tags = new List<string> { "azure sql", "relational" }
         };
         var score = analyzer.Score(skill);
-        Assert.That(score, Is.GreaterThan(0.0));
-        Assert.That(skill.RelevanceReasons, Has.Some.Contains("Tag"));
+        Assert.True(score > 0.0);
+        Assert.Contains(skill.RelevanceReasons, r => r.Contains("Tag"));
     }
 
-    [Test]
+    [Fact]
     public void Score_ContentMatches_AddsScore()
     {
         var analyzer = new SkillRelevanceAnalyzer("monitor");
@@ -129,10 +128,10 @@ public class SkillRelevanceAnalyzerTests
             RawContent = "Use Azure Monitor to collect metrics. Azure Monitor alerts help you."
         };
         var score = analyzer.Score(skill);
-        Assert.That(score, Is.GreaterThan(0.0));
+        Assert.True(score > 0.0);
     }
 
-    [Test]
+    [Fact]
     public void Score_CapsAt1()
     {
         var analyzer = new SkillRelevanceAnalyzer("aks");
@@ -147,10 +146,10 @@ public class SkillRelevanceAnalyzerTests
             RawContent = string.Concat(Enumerable.Repeat("aks kubernetes k8s ", 20))
         };
         var score = analyzer.Score(skill);
-        Assert.That(score, Is.LessThanOrEqualTo(1.0));
+        Assert.True(score <= 1.0);
     }
 
-    [Test]
+    [Fact]
     public void Score_PopulatesRelevanceReasons()
     {
         var analyzer = new SkillRelevanceAnalyzer("storage");
@@ -161,12 +160,12 @@ public class SkillRelevanceAnalyzerTests
             RawContent = "storage"
         };
         analyzer.Score(skill);
-        Assert.That(skill.RelevanceReasons, Is.Not.Empty);
+        Assert.NotEmpty(skill.RelevanceReasons);
     }
 
     // ── FilterAndSort ────────────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void FilterAndSort_ExcludesBelowMinScore()
     {
         var analyzer = new SkillRelevanceAnalyzer("cosmosdb");
@@ -177,10 +176,10 @@ public class SkillRelevanceAnalyzerTests
         };
 
         var results = analyzer.FilterAndSort(skills, minScore: 0.1);
-        Assert.That(results, Has.All.Matches<SkillInfo>(s => s.RelevanceScore >= 0.1));
+        Assert.All(results, s => Assert.True(s.RelevanceScore >= 0.1));
     }
 
-    [Test]
+    [Fact]
     public void FilterAndSort_OrdersByScoreDescending()
     {
         var analyzer = new SkillRelevanceAnalyzer("sql");
@@ -192,14 +191,14 @@ public class SkillRelevanceAnalyzerTests
         };
 
         var results = analyzer.FilterAndSort(skills, minScore: 0.0);
-        Assert.That(results.Count, Is.GreaterThan(0));
+        Assert.True(results.Count > 0);
         for (int i = 1; i < results.Count; i++)
         {
-            Assert.That(results[i - 1].RelevanceScore, Is.GreaterThanOrEqualTo(results[i].RelevanceScore));
+            Assert.True(results[i - 1].RelevanceScore >= results[i].RelevanceScore);
         }
     }
 
-    [Test]
+    [Fact]
     public void FilterAndSort_AllSkillsMode_ReturnsAllWhenMinScoreIsZero()
     {
         var analyzer = new SkillRelevanceAnalyzer("openai");
@@ -210,6 +209,6 @@ public class SkillRelevanceAnalyzerTests
         };
 
         var results = analyzer.FilterAndSort(skills, minScore: 0.0);
-        Assert.That(results.Count, Is.EqualTo(2));
+        Assert.Equal(2, results.Count);
     }
 }

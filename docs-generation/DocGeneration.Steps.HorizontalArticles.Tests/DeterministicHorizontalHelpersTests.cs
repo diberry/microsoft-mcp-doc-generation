@@ -4,50 +4,50 @@
 using CSharpGenerator.Models;
 using HorizontalArticleGenerator.Generators;
 using HorizontalArticleGenerator.Models;
-using NUnit.Framework;
+using Xunit;
 
 namespace HorizontalArticleGenerator.Tests;
 
-[TestFixture]
 public class DeterministicHorizontalHelpersTests
 {
     // ── ClassifyToolPlane ────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void ClassifyToolPlane_ReadOnlyMetadata_ReturnsData()
     {
         var tool = MakeTool("keyvault secret get", readOnly: true);
-        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo("data"));
+        Assert.Equal("data", DeterministicHorizontalHelpers.ClassifyToolPlane(tool));
     }
 
-    [Test]
+    [Fact]
     public void ClassifyToolPlane_DestructiveMetadata_ReturnsManagement()
     {
         var tool = MakeTool("sql database delete", destructive: true);
-        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo("management"));
+        Assert.Equal("management", DeterministicHorizontalHelpers.ClassifyToolPlane(tool));
     }
 
-    [TestCase("storage account create", "management")]
-    [TestCase("keyvault secret delete", "management")]
-    [TestCase("appservice webapp update", "management")]
-    [TestCase("storage account list", "data")]
-    [TestCase("cosmos container get", "data")]
+    [Theory]
+    [InlineData("storage account create", "management")]
+    [InlineData("keyvault secret delete", "management")]
+    [InlineData("appservice webapp update", "management")]
+    [InlineData("storage account list", "data")]
+    [InlineData("cosmos container get", "data")]
     public void ClassifyToolPlane_ByCommandVerb(string command, string expectedPlane)
     {
         var tool = MakeTool(command);
-        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo(expectedPlane));
+        Assert.Equal(expectedPlane, DeterministicHorizontalHelpers.ClassifyToolPlane(tool));
     }
 
-    [Test]
+    [Fact]
     public void ClassifyToolPlane_NoMetadataNoVerb_DefaultsToData()
     {
         var tool = MakeTool("monitor query");
-        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo("data"));
+        Assert.Equal("data", DeterministicHorizontalHelpers.ClassifyToolPlane(tool));
     }
 
     // ── OrderToolsByPlane ───────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void OrderToolsByPlane_ManagementBeforeData()
     {
         var tools = new List<HorizontalToolSummary>
@@ -61,13 +61,13 @@ public class DeterministicHorizontalHelpersTests
         var ordered = DeterministicHorizontalHelpers.OrderToolsByPlane(tools);
 
         // Management (create) first, then data (get)
-        Assert.That(ordered[0].Command, Does.Contain("create"));
-        Assert.That(ordered[1].Command, Does.Contain("create"));
-        Assert.That(ordered[2].Command, Does.Contain("get"));
-        Assert.That(ordered[3].Command, Does.Contain("get"));
+        Assert.Contains("create", ordered[0].Command);
+        Assert.Contains("create", ordered[1].Command);
+        Assert.Contains("get", ordered[2].Command);
+        Assert.Contains("get", ordered[3].Command);
     }
 
-    [Test]
+    [Fact]
     public void OrderToolsByPlane_AlphabeticalWithinPlane()
     {
         var tools = new List<HorizontalToolSummary>
@@ -79,12 +79,12 @@ public class DeterministicHorizontalHelpersTests
 
         var ordered = DeterministicHorizontalHelpers.OrderToolsByPlane(tools);
 
-        Assert.That(ordered[0].Command, Is.EqualTo("storage account list"));
-        Assert.That(ordered[1].Command, Is.EqualTo("storage blob list"));
-        Assert.That(ordered[2].Command, Is.EqualTo("storage table list"));
+        Assert.Equal("storage account list", ordered[0].Command);
+        Assert.Equal("storage blob list", ordered[1].Command);
+        Assert.Equal("storage table list", ordered[2].Command);
     }
 
-    [Test]
+    [Fact]
     public void OrderToolsByPlane_PreservesAllTools()
     {
         var tools = new List<HorizontalToolSummary>
@@ -95,12 +95,12 @@ public class DeterministicHorizontalHelpersTests
         };
 
         var ordered = DeterministicHorizontalHelpers.OrderToolsByPlane(tools);
-        Assert.That(ordered, Has.Count.EqualTo(3));
+        Assert.Equal(3, ordered.Count);
     }
 
     // ── ExtractCapability ───────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void ExtractCapability_FromDescription_ReturnsCleanCapability()
     {
         var tool = MakeTool("storage account list");
@@ -108,11 +108,11 @@ public class DeterministicHorizontalHelpersTests
 
         var capability = DeterministicHorizontalHelpers.ExtractCapability(tool);
 
-        Assert.That(capability, Does.Not.EndWith("."));
-        Assert.That(capability, Is.Not.Empty);
+        Assert.False(capability.EndsWith("."));
+        Assert.NotEmpty(capability);
     }
 
-    [Test]
+    [Fact]
     public void ExtractCapability_StripsTrailingPeriod()
     {
         var tool = MakeTool("keyvault secret create");
@@ -120,10 +120,10 @@ public class DeterministicHorizontalHelpersTests
 
         var capability = DeterministicHorizontalHelpers.ExtractCapability(tool);
 
-        Assert.That(capability, Does.Not.EndWith("."));
+        Assert.False(capability.EndsWith("."));
     }
 
-    [Test]
+    [Fact]
     public void ExtractCapability_TruncatesLongDescription()
     {
         var tool = MakeTool("deploy generate_plan");
@@ -132,32 +132,32 @@ public class DeterministicHorizontalHelpersTests
         var capability = DeterministicHorizontalHelpers.ExtractCapability(tool);
 
         var wordCount = capability.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        Assert.That(wordCount, Is.LessThanOrEqualTo(15));
+        Assert.True(wordCount <= 15);
     }
 
     // ── TruncateDescription ─────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void TruncateDescription_ShortEnough_ReturnsAsIs()
     {
         var result = DeterministicHorizontalHelpers.TruncateDescription(
             "List all storage accounts", maxWords: 10);
-        Assert.That(result, Is.EqualTo("List all storage accounts"));
+        Assert.Equal("List all storage accounts", result);
     }
 
-    [Test]
+    [Fact]
     public void TruncateDescription_TooLong_TruncatesAndAddsSuffix()
     {
         var result = DeterministicHorizontalHelpers.TruncateDescription(
             "Generate a very detailed and comprehensive deployment plan for Azure resources", maxWords: 5);
 
         var wordCount = result.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-        Assert.That(wordCount, Is.LessThanOrEqualTo(6)); // 5 words + possible suffix
+        Assert.True(wordCount <= 6); // 5 words + possible suffix
     }
 
     // ── PreComputeCapabilities ──────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void PreComputeCapabilities_OnePerTool()
     {
         var tools = new List<HorizontalToolSummary>
@@ -169,13 +169,13 @@ public class DeterministicHorizontalHelpersTests
 
         var capabilities = DeterministicHorizontalHelpers.PreComputeCapabilities(tools);
 
-        Assert.That(capabilities, Has.Count.EqualTo(3));
-        Assert.That(capabilities.Values, Has.All.Not.EndsWith("."));
+        Assert.Equal(3, capabilities.Count);
+        Assert.All(capabilities.Values, v => Assert.False(v.EndsWith(".")));
     }
 
     // ── PreComputeShortDescriptions ─────────────────────────────────
 
-    [Test]
+    [Fact]
     public void PreComputeShortDescriptions_ReturnsMapByCommand()
     {
         var tools = new List<HorizontalToolSummary>
@@ -186,12 +186,12 @@ public class DeterministicHorizontalHelpersTests
 
         var descriptions = DeterministicHorizontalHelpers.PreComputeShortDescriptions(tools);
 
-        Assert.That(descriptions, Has.Count.EqualTo(2));
-        Assert.That(descriptions.ContainsKey("storage account list"), Is.True);
-        Assert.That(descriptions.ContainsKey("storage blob get"), Is.True);
+        Assert.Equal(2, descriptions.Count);
+        Assert.True(descriptions.ContainsKey("storage account list"));
+        Assert.True(descriptions.ContainsKey("storage blob get"));
     }
 
-    [Test]
+    [Fact]
     public void PreComputeShortDescriptions_MaxTenToFifteenWords()
     {
         var tools = new List<HorizontalToolSummary>
@@ -202,12 +202,12 @@ public class DeterministicHorizontalHelpersTests
         var descriptions = DeterministicHorizontalHelpers.PreComputeShortDescriptions(tools);
         var words = descriptions["deploy plan"].Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 
-        Assert.That(words, Is.LessThanOrEqualTo(15));
+        Assert.True(words <= 15);
     }
 
     // ── Idempotent ──────────────────────────────────────────────────
 
-    [Test]
+    [Fact]
     public void OrderAndCapabilities_SameInput_SameOutput()
     {
         var tools = new List<HorizontalToolSummary>
@@ -221,13 +221,13 @@ public class DeterministicHorizontalHelpersTests
         var order2 = DeterministicHorizontalHelpers.OrderToolsByPlane(tools);
         var caps2 = DeterministicHorizontalHelpers.PreComputeCapabilities(tools);
 
-        Assert.That(order1.Select(t => t.Command), Is.EqualTo(order2.Select(t => t.Command)));
-        Assert.That(caps1.Values, Is.EqualTo(caps2.Values));
+        Assert.Equal(order1.Select(t => t.Command), order2.Select(t => t.Command));
+        Assert.Equal(caps1.Values, caps2.Values);
     }
 
     // ── Edge cases (review feedback) ────────────────────────────────
 
-    [Test]
+    [Fact]
     public void ClassifyToolPlane_NullMetadata_DefaultsToVerbClassification()
     {
         var tool = new HorizontalToolSummary
@@ -236,10 +236,10 @@ public class DeterministicHorizontalHelpersTests
             Description = "Create account",
             Metadata = null!
         };
-        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo("management"));
+        Assert.Equal("management", DeterministicHorizontalHelpers.ClassifyToolPlane(tool));
     }
 
-    [Test]
+    [Fact]
     public void ClassifyToolPlane_EmptyMetadata_DefaultsToVerbClassification()
     {
         var tool = new HorizontalToolSummary
@@ -248,26 +248,27 @@ public class DeterministicHorizontalHelpersTests
             Description = "Get container",
             Metadata = new Dictionary<string, MetadataValue>()
         };
-        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo("data"));
+        Assert.Equal("data", DeterministicHorizontalHelpers.ClassifyToolPlane(tool));
     }
 
-    [TestCase("appconfig createorupdate", "management")]
-    [TestCase("compute deploy", "management")]
-    [TestCase("functionapp publish", "management")]
+    [Theory]
+    [InlineData("appconfig createorupdate", "management")]
+    [InlineData("compute deploy", "management")]
+    [InlineData("functionapp publish", "management")]
     public void ClassifyToolPlane_CompoundVerbs_CorrectlyClassified(string command, string expected)
     {
         var tool = MakeTool(command);
-        Assert.That(DeterministicHorizontalHelpers.ClassifyToolPlane(tool), Is.EqualTo(expected));
+        Assert.Equal(expected, DeterministicHorizontalHelpers.ClassifyToolPlane(tool));
     }
 
-    [Test]
+    [Fact]
     public void OrderToolsByPlane_EmptyList_ReturnsEmpty()
     {
         var result = DeterministicHorizontalHelpers.OrderToolsByPlane(new List<HorizontalToolSummary>());
-        Assert.That(result, Is.Empty);
+        Assert.Empty(result);
     }
 
-    [Test]
+    [Fact]
     public void PreComputeCapabilities_DuplicateCommands_FirstWins()
     {
         var tools = new List<HorizontalToolSummary>
@@ -277,22 +278,22 @@ public class DeterministicHorizontalHelpersTests
         };
 
         var caps = DeterministicHorizontalHelpers.PreComputeCapabilities(tools);
-        Assert.That(caps, Has.Count.EqualTo(1));
-        Assert.That(caps["storage list"], Is.EqualTo("First description"));
+        Assert.Equal(1, caps.Count);
+        Assert.Equal("First description", caps["storage list"]);
     }
 
-    [Test]
+    [Fact]
     public void TruncateDescription_EmptyString_ReturnsEmpty()
     {
         var result = DeterministicHorizontalHelpers.TruncateDescription("", maxWords: 10);
-        Assert.That(result, Is.EqualTo(""));
+        Assert.Equal("", result);
     }
 
-    [Test]
+    [Fact]
     public void TruncateDescription_SingleWord_ReturnsTrimmed()
     {
         var result = DeterministicHorizontalHelpers.TruncateDescription("List.", maxWords: 10);
-        Assert.That(result, Is.EqualTo("List"));
+        Assert.Equal("List", result);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────
