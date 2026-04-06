@@ -22,6 +22,21 @@ public static partial class PromptTemplateValidator
     ];
 
     /// <summary>
+    /// Words that indicate the {{...}} is a documentation example, not a template variable.
+    /// </summary>
+    private static readonly string[] ExampleIndicators =
+    [
+        "like ",
+        "such as ",
+        "example ",
+        "examples ",
+        "placeholder",
+        "e.g.",
+        "for example",
+        "including "
+    ];
+
+    /// <summary>
     /// Validates that the prompt has no unreplaced template tokens.
     /// Returns a list of problems found (empty = valid).
     /// </summary>
@@ -55,13 +70,25 @@ public static partial class PromptTemplateValidator
         }
 
         // Check for unreplaced Handlebars expressions like {{name}}, {{description}}
-        // but exclude angle-bracket placeholders like <subscription> which are intentional
+        // but exclude patterns that appear in parameter descriptions as examples
         if (HandlebarsExpressionRegex().IsMatch(prompt))
         {
             var matches = HandlebarsExpressionRegex().Matches(prompt);
             foreach (Match match in matches)
             {
-                problems.Add($"Unreplaced Handlebars expression: {match.Value}");
+                // Skip matches that are clearly documentation examples, not unreplaced template variables
+                // Check if the match is preceded by context words on the same line
+                int matchStart = match.Index;
+                int lineStart = prompt.LastIndexOf('\n', Math.Max(0, matchStart - 1)) + 1;
+                string precedingContext = prompt.Substring(lineStart, matchStart - lineStart).ToLowerInvariant();
+                
+                bool isDocumentationExample = ExampleIndicators.Any(indicator => 
+                    precedingContext.Contains(indicator));
+                
+                if (!isDocumentationExample)
+                {
+                    problems.Add($"Unreplaced Handlebars expression: {match.Value}");
+                }
             }
         }
 
