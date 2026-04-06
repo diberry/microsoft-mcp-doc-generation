@@ -1,19 +1,17 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using NUnit.Framework;
+using Xunit;
 using HorizontalArticleGenerator.Generators;
 using HorizontalArticleGenerator.Models;
 
 namespace HorizontalArticleGenerator.Tests;
 
-[TestFixture]
 public class ArticleContentProcessorValidationTests
 {
-    private ArticleContentProcessor _processor = null!;
+    private readonly ArticleContentProcessor _processor;
 
-    [SetUp]
-    public void Setup()
+    public ArticleContentProcessorValidationTests()
     {
         // No transformation engine — tests pure validation logic
         _processor = new ArticleContentProcessor();
@@ -21,7 +19,7 @@ public class ArticleContentProcessorValidationTests
 
     // ===== Trailing Period Stripping =====
 
-    [Test]
+    [Fact]
     public void Validate_StripsTrailingPeriod_FromServiceShortDescription()
     {
         var data = CreateMinimalData();
@@ -29,11 +27,11 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceShortDescription, Is.EqualTo("web applications and APIs"));
-        Assert.That(result.Corrections, Has.Some.Contains("serviceShortDescription"));
+        Assert.Equal("web applications and APIs", data.ServiceShortDescription);
+        Assert.Contains(result.Corrections, c => c.Contains("serviceShortDescription"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_StripsTrailingPeriodAndSpace_FromServiceShortDescription()
     {
         var data = CreateMinimalData();
@@ -41,10 +39,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceShortDescription, Is.EqualTo("web applications and APIs"));
+        Assert.Equal("web applications and APIs", data.ServiceShortDescription);
     }
 
-    [Test]
+    [Fact]
     public void Validate_NoChange_WhenServiceShortDescriptionHasNoPeriod()
     {
         var data = CreateMinimalData();
@@ -52,11 +50,11 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceShortDescription, Is.EqualTo("keys, secrets, and certificates"));
-        Assert.That(result.Corrections, Has.None.Contains("serviceShortDescription"));
+        Assert.Equal("keys, secrets, and certificates", data.ServiceShortDescription);
+        Assert.DoesNotContain(result.Corrections, c => c.Contains("serviceShortDescription"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_StripsTrailingPeriods_FromAllCapabilities()
     {
         var data = CreateMinimalData();
@@ -69,12 +67,12 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.Capabilities[0], Is.EqualTo("Create and manage virtual machines"));
-        Assert.That(data.Capabilities[1], Is.EqualTo("Configure network security groups"));
-        Assert.That(data.Capabilities[2], Is.EqualTo("Monitor resource utilization metrics"));
+        Assert.Equal("Create and manage virtual machines", data.Capabilities[0]);
+        Assert.Equal("Configure network security groups", data.Capabilities[1]);
+        Assert.Equal("Monitor resource utilization metrics", data.Capabilities[2]);
     }
 
-    [Test]
+    [Fact]
     public void Validate_StripsTrailingPeriods_FromBestPracticeTitles()
     {
         var data = CreateMinimalData();
@@ -88,13 +86,13 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.BestPractices[0].Title, Is.EqualTo("Use managed identities"));
-        Assert.That(data.BestPractices[1].Title, Is.EqualTo("Monitor performance"));
+        Assert.Equal("Use managed identities", data.BestPractices[0].Title);
+        Assert.Equal("Monitor performance", data.BestPractices[1].Title);
         // Descriptions should NOT be stripped (they are full sentences)
-        Assert.That(data.BestPractices[0].Description, Is.EqualTo("Desc."));
+        Assert.Equal("Desc.", data.BestPractices[0].Description);
     }
 
-    [Test]
+    [Fact]
     public void Validate_StripsTrailingPeriods_FromPrerequisiteTitles()
     {
         var data = CreateMinimalData();
@@ -105,11 +103,11 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceSpecificPrerequisites[0].Title, Is.EqualTo("Existing Storage Account"));
-        Assert.That(data.ServiceSpecificPrerequisites[0].Description, Is.EqualTo("Required."));
+        Assert.Equal("Existing Storage Account", data.ServiceSpecificPrerequisites[0].Title);
+        Assert.Equal("Required.", data.ServiceSpecificPrerequisites[0].Description);
     }
 
-    [Test]
+    [Fact]
     public void Validate_StripsTrailingPeriods_FromScenarioTitles()
     {
         var data = CreateMinimalData();
@@ -126,12 +124,12 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.Scenarios[0].Title, Is.EqualTo("Add a database connection"));
+        Assert.Equal("Add a database connection", data.Scenarios[0].Title);
     }
 
     // ===== Broken Sentence Fix =====
 
-    [Test]
+    [Fact]
     public void Validate_FixesBrokenSentence_InServiceShortDescription()
     {
         var data = CreateMinimalData();
@@ -139,10 +137,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceShortDescription, Is.EqualTo("web applications and APIs"));
+        Assert.Equal("web applications and APIs", data.ServiceShortDescription);
     }
 
-    [Test]
+    [Fact]
     public void Validate_FixesBrokenSentence_InServiceOverview()
     {
         var data = CreateMinimalData();
@@ -150,10 +148,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceOverview, Is.EqualTo("is a platform for building apps"));
+        Assert.Equal("is a platform for building apps", data.ServiceOverview);
     }
 
-    [Test]
+    [Fact]
     public void Validate_PreservesLegitimateAbbreviations_InServiceOverview()
     {
         var data = CreateMinimalData();
@@ -162,12 +160,12 @@ public class ArticleContentProcessorValidationTests
         _processor.Validate(data, "Test");
 
         // "period + uppercase I" should NOT be modified
-        Assert.That(data.ServiceOverview, Is.EqualTo("is a platform. It provides scaling."));
+        Assert.Equal("is a platform. It provides scaling.", data.ServiceOverview);
     }
 
     // ===== Redundant Words =====
 
-    [Test]
+    [Fact]
     public void Validate_RemovesRedundantWord_AtStartOfOverview()
     {
         var data = CreateMinimalData();
@@ -175,10 +173,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceOverview, Is.EqualTo("Search enables full-text searching."));
+        Assert.Equal("Search enables full-text searching.", data.ServiceOverview);
     }
 
-    [Test]
+    [Fact]
     public void Validate_NoChange_WhenNoRedundantWord()
     {
         var data = CreateMinimalData();
@@ -186,12 +184,12 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceOverview, Is.EqualTo("is a cloud search service."));
+        Assert.Equal("is a cloud search service.", data.ServiceOverview);
     }
 
     // ===== RBAC Role Validation =====
 
-    [Test]
+    [Fact]
     public void Validate_BlocksInventedRbacRoles()
     {
         var data = CreateMinimalData();
@@ -202,11 +200,11 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.HasCriticalErrors, Is.True);
-        Assert.That(result.CriticalErrors, Has.Some.Contains("INVENTED RBAC ROLE"));
+        Assert.True(result.HasCriticalErrors);
+        Assert.Contains(result.CriticalErrors, e => e.Contains("INVENTED RBAC ROLE"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_AllowsOfficialRbacRoles()
     {
         var data = CreateMinimalData();
@@ -219,10 +217,10 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.HasCriticalErrors, Is.False);
+        Assert.False(result.HasCriticalErrors);
     }
 
-    [Test]
+    [Fact]
     public void Validate_AllowsContributorReaderRoles()
     {
         var data = CreateMinimalData();
@@ -234,10 +232,10 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.HasCriticalErrors, Is.False);
+        Assert.False(result.HasCriticalErrors);
     }
 
-    [Test]
+    [Fact]
     public void Validate_BlocksAdministratorSuffix()
     {
         // "Administrator" is never used in Azure built-in RBAC roles
@@ -249,11 +247,11 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.HasCriticalErrors, Is.True);
-        Assert.That(result.CriticalErrors, Has.Some.Contains("Administrator"));
+        Assert.True(result.HasCriticalErrors);
+        Assert.Contains(result.CriticalErrors, e => e.Contains("Administrator"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_BlocksGenericPrefixRoles()
     {
         // "Database Contributor" is too generic — real role would be "SQL DB Contributor"
@@ -265,13 +263,14 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.HasCriticalErrors, Is.True);
-        Assert.That(result.CriticalErrors, Has.Some.Contains("too generic"));
+        Assert.True(result.HasCriticalErrors);
+        Assert.Contains(result.CriticalErrors, e => e.Contains("too generic"));
     }
 
-    [TestCase("Database Reader")]
-    [TestCase("Application Contributor")]
-    [TestCase("Resource Contributor")]
+    [Theory]
+    [InlineData("Database Reader")]
+    [InlineData("Application Contributor")]
+    [InlineData("Resource Contributor")]
     public void Validate_BlocksVariousGenericPrefixRoles(string roleName)
     {
         var data = CreateMinimalData();
@@ -282,15 +281,16 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.HasCriticalErrors, Is.True);
+        Assert.True(result.HasCriticalErrors);
     }
 
-    [TestCase("SQL DB Contributor")]
-    [TestCase("SQL Server Contributor")]
-    [TestCase("Website Contributor")]
-    [TestCase("Web Plan Contributor")]
-    [TestCase("Storage Account Contributor")]
-    [TestCase("Key Vault Contributor")]
+    [Theory]
+    [InlineData("SQL DB Contributor")]
+    [InlineData("SQL Server Contributor")]
+    [InlineData("Website Contributor")]
+    [InlineData("Web Plan Contributor")]
+    [InlineData("Storage Account Contributor")]
+    [InlineData("Key Vault Contributor")]
     public void Validate_AllowsOfficialServiceSpecificRoles(string roleName)
     {
         var data = CreateMinimalData();
@@ -301,12 +301,12 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.HasCriticalErrors, Is.False);
+        Assert.False(result.HasCriticalErrors);
     }
 
     // ===== Tool Description Quality =====
 
-    [Test]
+    [Fact]
     public void Validate_WarnsOnShortToolDescription()
     {
         var data = CreateMinimalData();
@@ -317,10 +317,10 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.Some.Contains("too short"));
+        Assert.Contains(result.Warnings, w => w.Contains("too short"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_WarnsOnGenericToolDescription()
     {
         var data = CreateMinimalData();
@@ -331,10 +331,10 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.Some.Contains("generic description"));
+        Assert.Contains(result.Warnings, w => w.Contains("generic description"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_NoWarning_WhenToolDescriptionIsGoodQuality()
     {
         var data = CreateMinimalData();
@@ -345,13 +345,13 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.None.Contains("too short"));
-        Assert.That(result.Warnings, Has.None.Contains("generic description"));
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("too short"));
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("generic description"));
     }
 
     // ===== Best Practice Count =====
 
-    [Test]
+    [Fact]
     public void Validate_WarnsWhenFewerThanThreeBestPractices()
     {
         var data = CreateMinimalData();
@@ -363,10 +363,10 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.Some.Contains("best practices"));
+        Assert.Contains(result.Warnings, w => w.Contains("best practices"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_NoWarning_WhenThreeOrMoreBestPractices()
     {
         var data = CreateMinimalData();
@@ -380,12 +380,12 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.None.Contains("best practices"));
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("best practices"));
     }
 
     // ===== Combined: trailing period on serviceShortDescription mid-sentence =====
 
-    [Test]
+    [Fact]
     public void Validate_PreventsBrokenFrontmatter_WhenDescriptionHasTrailingPeriod()
     {
         // Simulates the exact bug: "manage web applications and APIs. through AI-powered"
@@ -396,11 +396,11 @@ public class ArticleContentProcessorValidationTests
 
         // After validation, the period should be gone
         var rendered = $"Learn how to manage {data.ServiceShortDescription} through AI-powered interactions.";
-        Assert.That(rendered, Does.Not.Contain(". through"));
-        Assert.That(rendered, Is.EqualTo("Learn how to manage web applications and APIs through AI-powered interactions."));
+        Assert.DoesNotContain(". through", rendered);
+        Assert.Equal("Learn how to manage web applications and APIs through AI-powered interactions.", rendered);
     }
 
-    [Test]
+    [Fact]
     public void Validate_PreventsBrokenIntro_WhenDescriptionHasTrailingPeriod()
     {
         // Simulates: "Manage web applications and APIs. using natural language"
@@ -410,13 +410,13 @@ public class ArticleContentProcessorValidationTests
         _processor.Validate(data, "Test");
 
         var rendered = $"Manage {data.ServiceShortDescription} using natural language conversations.";
-        Assert.That(rendered, Does.Not.Contain(". using"));
-        Assert.That(rendered, Is.EqualTo("Manage web applications and APIs using natural language conversations."));
+        Assert.DoesNotContain(". using", rendered);
+        Assert.Equal("Manage web applications and APIs using natural language conversations.", rendered);
     }
 
     // ===== Link URL Validation =====
 
-    [Test]
+    [Fact]
     public void Validate_StripsLearnPrefixFromServiceDocLink()
     {
         var data = CreateMinimalData();
@@ -424,11 +424,11 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.ServiceDocLink, Is.EqualTo("/azure/storage/blobs/overview"));
-        Assert.That(result.Corrections, Has.Some.Contains("Stripped learn.microsoft.com prefix from serviceDocLink"));
+        Assert.Equal("/azure/storage/blobs/overview", data.ServiceDocLink);
+        Assert.Contains(result.Corrections, c => c.Contains("Stripped learn.microsoft.com prefix from serviceDocLink"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_StripsLearnPrefixFromAdditionalLinks()
     {
         var data = CreateMinimalData();
@@ -440,11 +440,11 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks[0].Url, Is.EqualTo("/azure/key-vault/general/best-practices"));
-        Assert.That(result.Corrections, Has.Some.Contains("Stripped learn.microsoft.com prefix"));
+        Assert.Equal("/azure/key-vault/general/best-practices", data.AdditionalLinks[0].Url);
+        Assert.Contains(result.Corrections, c => c.Contains("Stripped learn.microsoft.com prefix"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_RemovesCatchAllServiceDocLink()
     {
         var data = CreateMinimalData();
@@ -452,11 +452,11 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Azure Extension", "extension");
 
-        Assert.That(data.ServiceDocLink, Is.Null);
-        Assert.That(result.Corrections, Has.Some.Contains("Removed invalid serviceDocLink for catch-all namespace 'extension'"));
+        Assert.Null(data.ServiceDocLink);
+        Assert.Contains(result.Corrections, c => c.Contains("Removed invalid serviceDocLink for catch-all namespace 'extension'"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_RemovesLinksWithFabricatedDocsPath()
     {
         var data = CreateMinimalData();
@@ -469,12 +469,12 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(1));
-        Assert.That(data.AdditionalLinks[0].Title, Is.EqualTo("Partitioning Guide"));
-        Assert.That(result.Corrections, Has.Some.Contains("fabricated URL pattern"));
+        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Equal("Partitioning Guide", data.AdditionalLinks[0].Title);
+        Assert.Contains(result.Corrections, c => c.Contains("fabricated URL pattern"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_KeepsNonFabricatedLinks()
     {
         var data = CreateMinimalData();
@@ -487,10 +487,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(2));
+        Assert.Equal(2, data.AdditionalLinks.Count);
     }
 
-    [Test]
+    [Fact]
     public void Validate_NoErrorWhenAdditionalLinksEmpty()
     {
         var data = CreateMinimalData();
@@ -499,12 +499,12 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.HasCriticalErrors, Is.False);
+        Assert.False(result.HasCriticalErrors);
     }
 
     // ===== Deduplicate Additional Links =====
 
-    [Test]
+    [Fact]
     public void Validate_RemovesDuplicateExactUrlMatch()
     {
         var data = CreateMinimalData();
@@ -517,12 +517,12 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(1));
-        Assert.That(data.AdditionalLinks[0].Title, Is.EqualTo("Quickstart"));
-        Assert.That(result.Corrections, Has.Some.Contains("Removed duplicate additional link"));
+        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Equal("Quickstart", data.AdditionalLinks[0].Title);
+        Assert.Contains(result.Corrections, c => c.Contains("Removed duplicate additional link"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_RemovesDuplicateDocumentationTitle()
     {
         var data = CreateMinimalData();
@@ -535,12 +535,12 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(1));
-        Assert.That(data.AdditionalLinks[0].Title, Is.EqualTo("Best Practices"));
-        Assert.That(result.Corrections, Has.Some.Contains("Removed duplicate additional link"));
+        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Equal("Best Practices", data.AdditionalLinks[0].Title);
+        Assert.Contains(result.Corrections, c => c.Contains("Removed duplicate additional link"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_KeepsLinksFromDifferentServiceArea()
     {
         var data = CreateMinimalData();
@@ -552,10 +552,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(1));
+        Assert.Equal(1, data.AdditionalLinks.Count);
     }
 
-    [Test]
+    [Fact]
     public void Validate_KeepsNonDocumentationLinksInSameServiceArea()
     {
         var data = CreateMinimalData();
@@ -568,10 +568,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(2));
+        Assert.Equal(2, data.AdditionalLinks.Count);
     }
 
-    [Test]
+    [Fact]
     public void Validate_RemovesFabricatedAndDuplicateLinksEndToEnd()
     {
         // Verifies fabricated /docs path removal and near-duplicate detection together
@@ -586,14 +586,14 @@ public class ArticleContentProcessorValidationTests
         var result = _processor.Validate(data, "Test");
 
         // The fabricated /docs link should be removed
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(1));
-        Assert.That(data.AdditionalLinks[0].Title, Is.EqualTo("Voice Gallery"));
-        Assert.That(result.Corrections, Has.Some.Contains("fabricated URL pattern").Or.Contains("Removed duplicate"));
+        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Equal("Voice Gallery", data.AdditionalLinks[0].Title);
+        Assert.Contains(result.Corrections, c => c.Contains("fabricated URL pattern") || c.Contains("Removed duplicate"));
     }
 
     // ===== Capability-to-Tool Ratio Validation =====
 
-    [Test]
+    [Fact]
     public void Validate_WarnsWhenCapabilitiesExceedToolCount()
     {
         var data = CreateMinimalData();
@@ -609,10 +609,10 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.Some.Contains("Capabilities (2) exceed tool count (1)"));
+        Assert.Contains(result.Warnings, w => w.Contains("Capabilities (2) exceed tool count (1)"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_NoWarningWhenCapabilitiesMatchToolCount()
     {
         var data = CreateMinimalData();
@@ -631,10 +631,10 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.None.Contains("exceed tool count"));
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("exceed tool count"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_NoWarningWhenSingleToolHasSingleCapability()
     {
         var data = CreateMinimalData();
@@ -649,12 +649,12 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(result.Warnings, Has.None.Contains("exceed tool count"));
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("exceed tool count"));
     }
 
     // ===== Empty URL Link Removal =====
 
-    [Test]
+    [Fact]
     public void Validate_RemovesLinksWithEmptyUrl()
     {
         var data = CreateMinimalData();
@@ -667,12 +667,12 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(1));
-        Assert.That(data.AdditionalLinks[0].Title, Is.EqualTo("Metrics Overview"));
-        Assert.That(result.Corrections, Has.Some.Contains("Removed link with empty URL"));
+        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Equal("Metrics Overview", data.AdditionalLinks[0].Title);
+        Assert.Contains(result.Corrections, c => c.Contains("Removed link with empty URL"));
     }
 
-    [Test]
+    [Fact]
     public void Validate_RemovesLinksWithWhitespaceOnlyUrl()
     {
         var data = CreateMinimalData();
@@ -685,9 +685,9 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.That(data.AdditionalLinks, Has.Count.EqualTo(1));
-        Assert.That(data.AdditionalLinks[0].Title, Is.EqualTo("Cluster Security"));
-        Assert.That(result.Corrections, Has.Some.Contains("Removed link with empty URL"));
+        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Equal("Cluster Security", data.AdditionalLinks[0].Title);
+        Assert.Contains(result.Corrections, c => c.Contains("Removed link with empty URL"));
     }
 
     // ===== Helper =====

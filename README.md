@@ -304,6 +304,7 @@ To modify AI-generated content quality or style:
 | Document | Description |
 |----------|-------------|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, data flow, pipeline step details |
+| [docs/configuration-registry.md](docs/configuration-registry.md) | Configuration files inventory, load order, schemas, duplication analysis |
 | [docs/PRD-PipelineRunner.md](docs/PRD-PipelineRunner.md) | Product requirements for the typed .NET pipeline |
 | [docs-generation/README.md](docs-generation/README.md) | Generator implementation details |
 
@@ -341,6 +342,7 @@ To modify AI-generated content quality or style:
 | [.squad/decisions.md](.squad/decisions.md) | Architectural decisions log (AD-001 through AD-025) |
 | [docs/plans/HORIZONTAL-ARTICLE-IMPROVEMENT-PLAN.md](docs/plans/HORIZONTAL-ARTICLE-IMPROVEMENT-PLAN.md) | Plan for horizontal article improvements |
 | [docs/plans/TEMPLATE-ENGINE-EXTRACTION.md](docs/plans/TEMPLATE-ENGINE-EXTRACTION.md) | Plan for template engine extraction |
+| [docs/text-transformation-migration-plan.md](docs/text-transformation-migration-plan.md) | NaturalLanguage → TextTransformation migration plan (#351) |
 
 ### Utilities
 
