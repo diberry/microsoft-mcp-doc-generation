@@ -18,11 +18,11 @@ public class SkillPageValidatorTests
 
     private static string CreateValidTier1Content() => """
         ---
-        title: Azure Storage
+        title: Azure skill for Azure Storage
         description: Work with Azure Storage accounts and resources.
         ---
 
-        # Azure Storage
+        # Azure skill for Azure Storage
 
         Work with Azure Storage accounts and resources for blob containers and file shares.
 
@@ -31,7 +31,7 @@ public class SkillPageValidatorTests
         - GitHub Copilot with Azure extension
         - Azure subscription
 
-        ## When to use this skill
+        ### When to use this skill
 
         Use this skill when managing storage accounts and working with blob containers and queues and tables.
 
@@ -46,11 +46,11 @@ public class SkillPageValidatorTests
 
     private static string CreateValidTier2Content() => """
         ---
-        title: Azure Quotas
+        title: Azure skill for Azure Quotas
         description: Check Azure quotas.
         ---
 
-        # Azure Quotas
+        # Azure skill for Azure Quotas
 
         Check and manage your Azure subscription quotas and usage limits effectively with GitHub Copilot assistance today.
 
@@ -58,7 +58,7 @@ public class SkillPageValidatorTests
 
         - GitHub Copilot
 
-        ## When to use this skill
+        ### When to use this skill
 
         Use this skill to check quotas.
 
@@ -95,14 +95,14 @@ public class SkillPageValidatorTests
     {
         var content = """
             ---
-            title: Test
+            title: Azure skill for Test
             description: Test
             ---
-            # Test
+            # Azure skill for Test
 
             Some content about this skill.
 
-            ## When to use this skill
+            ### When to use this skill
 
             Use it.
 
@@ -147,7 +147,7 @@ public class SkillPageValidatorTests
     {
         var content = """
             ---
-            title: Test
+            title: Azure skill for Test
             description: Test content here
             ---
 
@@ -157,7 +157,7 @@ public class SkillPageValidatorTests
 
             - Azure CLI
 
-            ## When to use this skill
+            ### When to use this skill
 
             Use it.
 
@@ -175,7 +175,7 @@ public class SkillPageValidatorTests
     {
         var content = """
             ---
-            title: Test
+            title: Azure skill for Test
             description: Test
             ---
 
@@ -185,7 +185,7 @@ public class SkillPageValidatorTests
 
             - GitHub Copilot
 
-            ## When to use this skill
+            ### When to use this skill
 
             Use it.
 

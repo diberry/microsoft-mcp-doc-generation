@@ -4,6 +4,6 @@ display_name: Azure Quotas
 description: "Check and manage Azure subscription quotas and usage limits."
 ---
 
-# Azure Quotas
+# Azure skill for Azure Quotas
 
 Check Azure subscription quotas.
