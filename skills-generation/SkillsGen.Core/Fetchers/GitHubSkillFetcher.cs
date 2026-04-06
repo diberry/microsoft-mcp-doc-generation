@@ -21,9 +21,9 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
         HttpClient httpClient,
         ILogger<GitHubSkillFetcher> logger,
         string owner = "microsoft",
-        string repo = "GitHub-Copilot-for-Azure",
+        string repo = "azure-skills",
         string branch = "main",
-        string skillsPath = "plugin/skills",
+        string skillsPath = "skills",
         string? token = null)
     {
         _httpClient = httpClient;
