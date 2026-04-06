@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "static-text-replacement.schema.json",
+  "title": "Static Text Replacement",
+  "description": "Find-and-replace pairs applied to generated documentation text. Used for terminology standardization (e.g. 'Azure AD' → 'Microsoft Entra ID'), style corrections, and acronym normalization. The 'Parameter' field is the search string; 'NaturalLanguage' is the replacement.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["Parameter", "NaturalLanguage"],
+    "properties": {
+      "Parameter": {
+        "type": "string",
+        "description": "Text to find (case-sensitive match).",
+        "minLength": 1
+      },
+      "NaturalLanguage": {
+        "type": "string",
+        "description": "Replacement text.",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "minItems": 1
+}

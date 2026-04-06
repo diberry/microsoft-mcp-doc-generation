@@ -13,6 +13,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `start-azure-skills.sh` entry point script
 - 77 xUnit tests with 81.6% line coverage
 - Skills Generation CI workflow (`.github/workflows/skills-generation-ci.yml`)
+- JSON schemas for core configuration files in `docs-generation/data/schemas/` (#355)
+- Configuration registry document (`docs/configuration-registry.md`) (#355)
 - Project consolidation evaluation document (`docs/project-consolidation-evaluation.md`) (#353)
 
 ### Removed
