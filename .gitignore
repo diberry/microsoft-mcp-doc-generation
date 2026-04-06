@@ -51,3 +51,5 @@ docs-generation/skills-source/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
 skills-generation/TestResults/
+
+vale_bin/
