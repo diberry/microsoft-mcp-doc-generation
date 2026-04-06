@@ -342,6 +342,7 @@ To modify AI-generated content quality or style:
 | [.squad/decisions.md](.squad/decisions.md) | Architectural decisions log (AD-001 through AD-025) |
 | [docs/plans/HORIZONTAL-ARTICLE-IMPROVEMENT-PLAN.md](docs/plans/HORIZONTAL-ARTICLE-IMPROVEMENT-PLAN.md) | Plan for horizontal article improvements |
 | [docs/plans/TEMPLATE-ENGINE-EXTRACTION.md](docs/plans/TEMPLATE-ENGINE-EXTRACTION.md) | Plan for template engine extraction |
+| [docs/text-transformation-migration-plan.md](docs/text-transformation-migration-plan.md) | NaturalLanguage → TextTransformation migration plan (#351) |
 
 ### Utilities
 
