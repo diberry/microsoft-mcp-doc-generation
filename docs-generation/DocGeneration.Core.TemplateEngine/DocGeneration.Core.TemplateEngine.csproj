@@ -9,4 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Handlebars.Net" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
+  </ItemGroup>
 </Project>

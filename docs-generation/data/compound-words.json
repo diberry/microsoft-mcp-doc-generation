@@ -1,5 +1,6 @@
 {
   "activitylog": "activity-log",
+  "loganalytics": "log-analytics",
   "app-lens": "app-lens",
   "azqr": "compliance-review",
   "bestpractices": "best-practices",

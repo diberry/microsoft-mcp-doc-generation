@@ -33,6 +33,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **H2 title generation — verb-first, compound words, area prefix removal** — `getSimpleToolName` Handlebars helper now produces verb-first headings (e.g., "List Activity Logs" instead of "Activitylog List"), splits compound CLI commands using `compound-words.json` (e.g., "loganalytics" → "Log Analytics"), maps verb aliases (show→Get, remove→Delete), pluralizes resources for list operations, and strips area prefix patterns. Added `loganalytics` to `compound-words.json`. 47 new tests. (#383)
 - **TOCTOU race condition in PromptHasher** — `HashFileAsync` now captures file metadata before reading content and verifies the file wasn't modified during read, throwing `IOException` on mismatch. Prevents inconsistent snapshots where hash comes from old content but size/timestamp from new file. 3 new tests. (Issue #332)
 - **Copyright headers** — Added missing MIT license headers to `PromptHasher.cs` and `PromptHasherTests.cs` to match project convention. (Issue #335)
 
