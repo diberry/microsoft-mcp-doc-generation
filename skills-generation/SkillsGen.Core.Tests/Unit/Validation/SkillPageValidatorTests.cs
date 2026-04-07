@@ -206,4 +206,68 @@ public class SkillPageValidatorTests
 
         result.SectionCount.Should().BeGreaterThan(0);
     }
+
+    [Fact]
+    public void Validate_DuplicateGitHubCopilotPrereq_ReturnsWarning()
+    {
+        var content = """
+            ---
+            title: Azure skill for Test
+            description: Test skill
+            ---
+
+            # Azure skill for Test
+
+            ## Prerequisites
+
+            - **GitHub Copilot**—GitHub Copilot with the Azure extension enabled.
+
+            ### Required tools
+
+            - **GitHub Copilot**
+            - **Azure CLI** (v2.60.0+)
+
+            ### When to use this skill
+
+            Use this skill to manage things.
+
+            ## What it provides
+
+            Knowledge about GitHub Copilot and Azure things.
+            """;
+        var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().Contain(w => w.Contains("PREREQ_DUPLICATE"));
+    }
+
+    [Fact]
+    public void Validate_WorkWithFragmentInBullets_ReturnsWarning()
+    {
+        var content = """
+            ---
+            title: Azure skill for Test
+            description: Test skill
+            ---
+
+            # Azure skill for Test
+
+            ## Prerequisites
+
+            - **GitHub Copilot**—Required.
+
+            ### When to use this skill
+
+            Use this skill when you need to:
+
+            - Work with blob storage and file shares
+            - Work with queues
+
+            ## What it provides
+
+            Knowledge about GitHub Copilot and storage.
+            """;
+        var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().Contain(w => w.Contains("FRAGMENT"));
+    }
 }

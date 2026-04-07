@@ -394,17 +394,45 @@ public partial class AcrolinxPostProcessor
 
     private string ExpandAcronymsFirstUse(string content)
     {
-        // Apply replacements in reverse order of match position to avoid index shifting
         var allMatches = new List<(int Index, int Length, string Replacement)>();
 
         foreach (var (acronym, expansion) in _acronyms)
         {
+            // Match the acronym only when NOT already expanded (not preceded by "expansion (")
             var pattern = $@"\b{Regex.Escape(acronym)}\b";
             var match = Regex.Match(content, pattern);
             if (match.Success)
             {
-                var expanded = $"{expansion} ({acronym})";
-                allMatches.Add((match.Index, match.Length, expanded));
+                // Skip if already expanded — check if preceded by "expansion ("
+                var alreadyExpanded = false;
+                var expectedPrefix = $"{expansion} (";
+                if (match.Index >= expectedPrefix.Length)
+                {
+                    var preceding = content[(match.Index - expectedPrefix.Length)..match.Index];
+                    if (preceding.Equals(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+                        alreadyExpanded = true;
+                }
+
+                // Also skip if inside parentheses following the expansion
+                if (!alreadyExpanded && match.Index > 0)
+                {
+                    var beforeMatch = content[..match.Index];
+                    var lastOpenParen = beforeMatch.LastIndexOf('(');
+                    var lastCloseParen = beforeMatch.LastIndexOf(')');
+                    if (lastOpenParen > lastCloseParen && lastOpenParen >= 0)
+                    {
+                        // Inside parentheses — check if the text before "(" is the expansion
+                        var textBeforeParen = content[..lastOpenParen].TrimEnd();
+                        if (textBeforeParen.EndsWith(expansion, StringComparison.OrdinalIgnoreCase))
+                            alreadyExpanded = true;
+                    }
+                }
+
+                if (!alreadyExpanded)
+                {
+                    var expanded = $"{expansion} ({acronym})";
+                    allMatches.Add((match.Index, match.Length, expanded));
+                }
             }
         }
 
