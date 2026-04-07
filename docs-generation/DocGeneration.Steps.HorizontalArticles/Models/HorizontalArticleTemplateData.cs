@@ -63,6 +63,22 @@ public class HorizontalArticleTemplateData
     
     [JsonPropertyName("genai-additionalLinks")]
     public List<AdditionalLink> AdditionalLinks { get; set; } = new();
+
+    // ===== Skills from Step 5 (optional, may be empty) =====
+
+    public List<SkillEntry> Skills { get; set; } = new();
+}
+
+/// <summary>
+/// Skill entry for rendering in horizontal articles.
+/// Separate read model — not coupled to SkillsRelevance step internals.
+/// </summary>
+public class SkillEntry
+{
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string SourceUrl { get; set; } = string.Empty;
+    public double RelevanceScore { get; set; }
 }
 
 /// <summary>

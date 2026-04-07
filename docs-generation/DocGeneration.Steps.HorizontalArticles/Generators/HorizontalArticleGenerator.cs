@@ -5,6 +5,7 @@ using System.Text.Json;
 using GenerativeAI;
 using CSharpGenerator.Models;
 using HorizontalArticleGenerator.Models;
+using HorizontalArticleGenerator.Services;
 using TemplateEngine;
 using Shared;
 using Azure.Mcp.TextTransformation.Models;
@@ -88,6 +89,11 @@ public class HorizontalArticleGenerator
             
             // Merge static + AI data
             var templateData = MergeData(staticData, aiData);
+
+            // Load skills from Step 5 output (optional, graceful fallback)
+            var skills = await SkillsJsonReader.LoadSkillsAsync(_outputBasePath, staticData.ServiceIdentifier);
+            templateData.Skills = skills;
+
             // Render and save
             await RenderAndSaveArticle(templateData);
             Console.WriteLine($"{progress} ✓ Generated: horizontal-article-{staticData.ServiceIdentifier}.md");
@@ -616,6 +622,14 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
                 ["command"] = t.Command,
                 ["moreInfoLink"] = t.MoreInfoLink,
                 ["genai-shortDescription"] = t.ShortDescription
+            }).ToList(),
+
+            // Skills from Step 5 (optional)
+            ["skills"] = templateData.Skills.Select(s => new Dictionary<string, object>
+            {
+                ["name"] = s.Name,
+                ["description"] = s.Description,
+                ["sourceUrl"] = s.SourceUrl
             }).ToList()
         };
         

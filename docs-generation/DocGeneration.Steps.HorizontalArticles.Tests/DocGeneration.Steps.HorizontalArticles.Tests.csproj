@@ -15,5 +15,6 @@
   <ItemGroup>
     <ProjectReference Include="..\DocGeneration.Steps.HorizontalArticles\DocGeneration.Steps.HorizontalArticles.csproj" />
     <ProjectReference Include="..\DocGeneration.Core.TextTransformation\DocGeneration.Core.TextTransformation.csproj" />
+    <ProjectReference Include="..\DocGeneration.Steps.SkillsRelevance\DocGeneration.Steps.SkillsRelevance.csproj" />
   </ItemGroup>
 </Project>

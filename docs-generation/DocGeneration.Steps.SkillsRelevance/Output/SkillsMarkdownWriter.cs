@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using SkillsRelevance.Models;
 
@@ -135,6 +136,38 @@ public static class SkillsMarkdownWriter
         sb.AppendLine();
 
         await File.WriteAllTextAsync(filePath, sb.ToString(), Encoding.UTF8);
+    }
+
+    /// <summary>
+    /// Writes a JSON file containing skills relevance data for downstream consumption.
+    /// Uses the service identifier (not display name) for the filename.
+    /// </summary>
+    public static async Task WriteServiceJsonAsync(
+        string outputDir,
+        string serviceIdentifier,
+        List<SkillInfo> relevantSkills)
+    {
+        Directory.CreateDirectory(outputDir);
+
+        var jsonOutput = new SkillsRelevanceJsonOutput
+        {
+            ServiceName = serviceIdentifier,
+            GeneratedAt = DateTime.UtcNow.ToString("o"),
+            Skills = relevantSkills.Select(SkillJsonEntry.FromSkillInfo).ToList()
+        };
+
+        var fileName = $"{SanitizeFileName(serviceIdentifier)}-skills-relevance.json";
+        var filePath = Path.Combine(outputDir, fileName);
+
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        var json = JsonSerializer.Serialize(jsonOutput, options);
+        await File.WriteAllTextAsync(filePath, json, Encoding.UTF8);
+        Console.WriteLine($"  ✅ {fileName} (JSON, {relevantSkills.Count} skills)");
     }
 
     private static void WriteSkillSection(StringBuilder sb, SkillInfo skill, int index)

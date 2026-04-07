@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Skills PRD Phase 1: JSON output + horizontal article integration** — Step 5 (SkillsRelevance) now outputs structured JSON alongside markdown for downstream consumption. Step 6 (HorizontalArticles) reads the JSON and renders a "GitHub Copilot extensions" section in horizontal articles when relevant skills exist. Graceful fallback when Step 5 output is missing. (#297)
 - **Vale CLI prose linter for docs-generation** — Integrated Vale with Microsoft style rules into the docs-generation pipeline. Includes `.vale.ini` config, `lint-vale.sh`/`lint-vale.ps1` scripts, Pester tests, and a non-blocking CI job in `build-and-test.yml`. Suppresses same false positives as skills-generation (FirstPerson, Dashes, Quotes, HeadingAcronyms). (#368)
 - Azure Skills documentation generation pipeline (`skills-generation/`) — generates customer-facing docs for 24 Azure Skills (#365)
 - `start-azure-skills.sh` entry point script
