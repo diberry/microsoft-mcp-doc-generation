@@ -20,6 +20,25 @@ The remote URL is configured in `config.json`:
 
 The app downloads the file from `remoteUrl` (or `remoteUrlTemplate` with a branch override) on each run and saves it locally as `localFileName` before parsing. When called by BootstrapStep, the `--file` flag provides a pre-fetched file, skipping the download.
 
+## CLI Flags
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `<outputFile>` | Positional — path to write parsed JSON | `parsed.json` |
+| `--file <path>` | Pre-fetched input file (skips download) | `--file /tmp/e2eTestPrompts.md` |
+| `--branch <name>` | Override branch in `remoteUrlTemplate` (standalone use) | `--branch main` |
+| `--format <type>` | Output format: `json` (default) or `summary` | `--format summary` |
+
+**Pipeline mode** (called by BootstrapStep):
+```bash
+dotnet run -- parsed.json --file /tmp/mcp-upstream-e2eTestPrompts.md
+```
+
+**Standalone mode** (downloads from upstream):
+```bash
+dotnet run -- parsed.json --branch release/azure/2.x
+```
+
 ## Data Model
 
 ```

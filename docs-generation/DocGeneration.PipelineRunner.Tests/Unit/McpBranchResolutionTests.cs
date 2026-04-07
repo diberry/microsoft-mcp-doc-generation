@@ -3,6 +3,7 @@ using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
 
+[Collection("EnvironmentState")]
 public class McpBranchResolutionTests
 {
     [Fact]

@@ -159,10 +159,11 @@ $e2eOutputFile = Join-Path $e2eOutputDir "parsed.json"
 $e2eProject = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.E2eTestPromptParser/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj"
 
 # Fetch e2e test prompts from upstream, then pass to parser via --file
+# NOTE: URL path pattern must stay in sync with BootstrapStep.McpDocsPath (source of truth)
 $e2eRemoteUrl = "https://raw.githubusercontent.com/microsoft/mcp/$McpBranch/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md"
 $e2eTempFile = Join-Path ([System.IO.Path]::GetTempPath()) "mcp-upstream-e2eTestPrompts.md"
 try {
-    Invoke-WebRequest -Uri $e2eRemoteUrl -OutFile $e2eTempFile -ErrorAction Stop
+    Invoke-WebRequest -Uri $e2eRemoteUrl -OutFile $e2eTempFile -TimeoutSec 30 -ErrorAction Stop
     Write-Host "  Downloaded e2eTestPrompts.md from upstream" -ForegroundColor Gray
     & dotnet run --project $e2eProject --configuration Release --no-build -- $e2eOutputFile --file $e2eTempFile
 } catch {
@@ -178,11 +179,12 @@ Write-Host ""
 
 # Step 7: Fetch and parse azmcp-commands.md from upstream
 Write-Host "Fetching and parsing azmcp-commands.md (branch: $McpBranch)..." -ForegroundColor Yellow
+# NOTE: URL path pattern must stay in sync with BootstrapStep.McpDocsPath (source of truth)
 $azmcpRemoteUrl = "https://raw.githubusercontent.com/microsoft/mcp/$McpBranch/servers/Azure.Mcp.Server/docs/azmcp-commands.md"
 $azmcpLocalFallback = Join-Path $docsGenDir "azure-mcp/azmcp-commands.md"
 $azmcpTempFile = Join-Path ([System.IO.Path]::GetTempPath()) "mcp-upstream-azmcp-commands.md"
 try {
-    Invoke-WebRequest -Uri $azmcpRemoteUrl -OutFile $azmcpTempFile -ErrorAction Stop
+    Invoke-WebRequest -Uri $azmcpRemoteUrl -OutFile $azmcpTempFile -TimeoutSec 30 -ErrorAction Stop
     $azmcpSourceFile = $azmcpTempFile
     Write-Host "  Downloaded azmcp-commands.md from upstream" -ForegroundColor Gray
 } catch {

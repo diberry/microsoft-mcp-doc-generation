@@ -135,6 +135,8 @@ public class ParserConfigTests
             RemoteUrlTemplate = "https://example.com/{branch}/file.md"
         };
 
-        Assert.Equal("https://example.com/main/file.md", config.GetEffectiveUrl("  main  "));
+        // Use a branch different from fallback URL to prove template substitution actually happened
+        Assert.Equal("https://example.com/release/azure/2.x/file.md",
+            config.GetEffectiveUrl("  release/azure/2.x  "));
     }
 }

@@ -78,6 +78,9 @@ The `--mcp-branch` flag controls which branch of `microsoft/mcp` is used to fetc
 
 # Generate docs from 1.x branch
 ./start.sh advisor --mcp-branch release/azure/1.x
+
+# Override via environment variable
+MCP_BRANCH=main ./start.sh
 ```
 
 **Resolution order**: CLI flag `--mcp-branch` > environment variable `MCP_BRANCH` > default (`release/azure/2.x`).

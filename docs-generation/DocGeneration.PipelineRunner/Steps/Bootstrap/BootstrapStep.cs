@@ -15,6 +15,11 @@ public sealed class BootstrapStep : StepDefinition
     internal const string McpDocsPath = "servers/Azure.Mcp.Server/docs";
 
     /// <summary>
+    /// Shared HttpClient for upstream file fetching. Static to avoid socket exhaustion.
+    /// </summary>
+    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+    /// <summary>
     /// Constructs a raw GitHub URL for a file in the microsoft/mcp repo on the given branch.
     /// </summary>
     internal static string BuildUpstreamUrl(string branch, string fileName)
@@ -434,17 +439,20 @@ public sealed class BootstrapStep : StepDefinition
         CancellationToken cancellationToken)
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"mcp-upstream-{displayName}");
-        using var http = new HttpClient();
-        http.Timeout = TimeSpan.FromSeconds(30);
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             context.Reports.Info($"Fetching {displayName} from {remoteUrl}");
-            var content = await http.GetStringAsync(remoteUrl, cancellationToken);
+            var content = await SharedHttpClient.GetStringAsync(remoteUrl, cancellationToken);
             await File.WriteAllTextAsync(tempPath, content, cancellationToken);
             context.Reports.Info($"Fetched {displayName} ({content.Length:N0} bytes)");
             return tempPath;
         }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw; // Propagate user cancellation (Ctrl+C), don't fall back
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             warnings.Add($"Failed to fetch {displayName} from upstream: {ex.Message}. Using local fallback.");
             if (File.Exists(localFallback))
