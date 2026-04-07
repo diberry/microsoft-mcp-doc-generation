@@ -31,7 +31,8 @@
 param(
     [string]$OutputPath = "",
     [switch]$SkipBuild,
-    [switch]$SkipEnvValidation
+    [switch]$SkipEnvValidation,
+    [string]$McpBranch = "release/azure/2.x"
 )
 
 $ErrorActionPreference = "Stop"
@@ -151,12 +152,23 @@ try {
 Write-Host ""
 
 # Step 6: Download and parse e2e test prompts from upstream
-Write-Host "Downloading and parsing e2e test prompts..." -ForegroundColor Yellow
+Write-Host "Downloading and parsing e2e test prompts (branch: $McpBranch)..." -ForegroundColor Yellow
 $e2eOutputDir = Join-Path $OutputPath "e2e-test-prompts"
 New-Item -ItemType Directory -Path $e2eOutputDir -Force | Out-Null
 $e2eOutputFile = Join-Path $e2eOutputDir "parsed.json"
 $e2eProject = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.E2eTestPromptParser/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj"
-& dotnet run --project $e2eProject --configuration Release --no-build -- $e2eOutputFile
+
+# Fetch e2e test prompts from upstream, then pass to parser via --file
+$e2eRemoteUrl = "https://raw.githubusercontent.com/microsoft/mcp/$McpBranch/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md"
+$e2eTempFile = Join-Path ([System.IO.Path]::GetTempPath()) "mcp-upstream-e2eTestPrompts.md"
+try {
+    Invoke-WebRequest -Uri $e2eRemoteUrl -OutFile $e2eTempFile -ErrorAction Stop
+    Write-Host "  Downloaded e2eTestPrompts.md from upstream" -ForegroundColor Gray
+    & dotnet run --project $e2eProject --configuration Release --no-build -- $e2eOutputFile --file $e2eTempFile
+} catch {
+    Write-Host "  ⚠ Failed to fetch from upstream: $_. Falling back to config.json default." -ForegroundColor Yellow
+    & dotnet run --project $e2eProject --configuration Release --no-build -- $e2eOutputFile
+}
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠ WARNING: E2e test prompt parsing failed (non-blocking)" -ForegroundColor Yellow
 } else {
@@ -164,9 +176,19 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Host ""
 
-# Step 7: Parse azmcp-commands.md into structured JSON
-Write-Host "Parsing azmcp-commands.md..." -ForegroundColor Yellow
-$azmcpSourceFile = Join-Path $docsGenDir "azure-mcp/azmcp-commands.md"
+# Step 7: Fetch and parse azmcp-commands.md from upstream
+Write-Host "Fetching and parsing azmcp-commands.md (branch: $McpBranch)..." -ForegroundColor Yellow
+$azmcpRemoteUrl = "https://raw.githubusercontent.com/microsoft/mcp/$McpBranch/servers/Azure.Mcp.Server/docs/azmcp-commands.md"
+$azmcpLocalFallback = Join-Path $docsGenDir "azure-mcp/azmcp-commands.md"
+$azmcpTempFile = Join-Path ([System.IO.Path]::GetTempPath()) "mcp-upstream-azmcp-commands.md"
+try {
+    Invoke-WebRequest -Uri $azmcpRemoteUrl -OutFile $azmcpTempFile -ErrorAction Stop
+    $azmcpSourceFile = $azmcpTempFile
+    Write-Host "  Downloaded azmcp-commands.md from upstream" -ForegroundColor Gray
+} catch {
+    Write-Host "  ⚠ Failed to fetch from upstream: $_. Using local fallback." -ForegroundColor Yellow
+    $azmcpSourceFile = $azmcpLocalFallback
+}
 $azmcpOutputFile = Join-Path $OutputPath "cli/azmcp-commands.json"
 $azmcpProject = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.CommandParser/DocGeneration.Steps.Bootstrap.CommandParser.csproj"
 & dotnet run --project $azmcpProject --configuration Release --no-build -- --file $azmcpSourceFile --output $azmcpOutputFile

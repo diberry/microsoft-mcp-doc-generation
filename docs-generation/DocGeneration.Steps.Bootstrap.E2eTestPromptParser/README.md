@@ -12,12 +12,13 @@ The remote URL is configured in `config.json`:
 
 ```json
 {
-  "remoteUrl": "https://raw.githubusercontent.com/microsoft/mcp/main/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md",
+  "remoteUrl": "https://raw.githubusercontent.com/microsoft/mcp/release/azure/2.x/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md",
+  "remoteUrlTemplate": "https://raw.githubusercontent.com/microsoft/mcp/{branch}/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md",
   "localFileName": "e2eTestPrompts.md"
 }
 ```
 
-The app downloads the file from `remoteUrl` on each run and saves it locally as `localFileName` before parsing.
+The app downloads the file from `remoteUrl` (or `remoteUrlTemplate` with a branch override) on each run and saves it locally as `localFileName` before parsing. When called by BootstrapStep, the `--file` flag provides a pre-fetched file, skipping the download.
 
 ## Data Model
 
@@ -181,7 +182,7 @@ The parser relies on these structural conventions:
 
 1. **Download the new file and inspect it**:
    ```bash
-   curl -o /tmp/e2eTestPrompts.md https://raw.githubusercontent.com/microsoft/mcp/main/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md
+   curl -o /tmp/e2eTestPrompts.md https://raw.githubusercontent.com/microsoft/mcp/release/azure/2.x/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md
    head -50 /tmp/e2eTestPrompts.md
    ```
 

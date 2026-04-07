@@ -8,8 +8,32 @@ public sealed record PipelineRequest(
     bool SkipValidation,
     bool DryRun,
     bool SkipEnvValidation = false,
-    bool SkipDependencyValidation = false)
+    bool SkipDependencyValidation = false,
+    string? McpBranch = null)
 {
+    /// <summary>
+    /// Default upstream branch for fetching files from the microsoft/mcp repository.
+    /// </summary>
+    public const string DefaultMcpBranch = "release/azure/2.x";
+
+    /// <summary>
+    /// Resolves the effective MCP branch: CLI flag > MCP_BRANCH env var > default constant.
+    /// Blank values are treated as unset.
+    /// </summary>
+    public string ResolvedMcpBranch
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(McpBranch))
+                return McpBranch.Trim();
+
+            var envValue = Environment.GetEnvironmentVariable("MCP_BRANCH");
+            if (!string.IsNullOrWhiteSpace(envValue))
+                return envValue.Trim();
+
+            return DefaultMcpBranch;
+        }
+    }
     public static IReadOnlyList<int> DefaultSteps { get; } = [1, 2, 3, 4, 5, 6];
 
     public static string GetDefaultOutputPath(string? targetNamespace)

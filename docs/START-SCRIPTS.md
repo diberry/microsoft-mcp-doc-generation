@@ -58,11 +58,31 @@ These flags are passed through to the .NET runner:
 | `--namespace <name>` | all | Process single namespace |
 | `--steps <csv>` | `1,2,3,4,5,6` | Comma-separated step IDs |
 | `--output <path>` | auto | Output directory |
+| `--mcp-branch <branch>` | `release/azure/2.x` | Branch of `microsoft/mcp` for upstream files |
 | `--skip-build` | false | Reuse existing Release build |
 | `--skip-validation` | false | Skip post-assembly validation |
 | `--skip-env-validation` | false | Skip Azure OpenAI env check |
 | `--skip-deps` | false | Skip step dependency validation |
 | `--dry-run` | false | Print execution plan only |
+
+### Switching MCP Upstream Branch
+
+The `--mcp-branch` flag controls which branch of `microsoft/mcp` is used to fetch upstream documentation files (`azmcp-commands.md` and `e2eTestPrompts.md`). The default is `release/azure/2.x`.
+
+```bash
+# Generate docs from 2.x release branch (default)
+./start.sh
+
+# Generate docs from main branch (preview/next)
+./start.sh --mcp-branch main
+
+# Generate docs from 1.x branch
+./start.sh advisor --mcp-branch release/azure/1.x
+```
+
+**Resolution order**: CLI flag `--mcp-branch` > environment variable `MCP_BRANCH` > default (`release/azure/2.x`).
+
+If the upstream fetch fails (e.g., network issue), the pipeline falls back to the local copy at `docs-generation/azure-mcp/azmcp-commands.md` with a warning.
 
 ## Parallel Execution (Fan-Out)
 
