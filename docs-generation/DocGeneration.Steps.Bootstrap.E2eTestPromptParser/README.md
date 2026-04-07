@@ -12,7 +12,7 @@ The remote URL is configured in `config.json`:
 
 ```json
 {
-  "remoteUrl": "https://raw.githubusercontent.com/microsoft/mcp/main/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md",
+  "remoteUrl": "https://raw.githubusercontent.com/microsoft/mcp/release/azure/2.x/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md",
   "localFileName": "e2eTestPrompts.md"
 }
 ```
@@ -181,7 +181,7 @@ The parser relies on these structural conventions:
 
 1. **Download the new file and inspect it**:
    ```bash
-   curl -o /tmp/e2eTestPrompts.md https://raw.githubusercontent.com/microsoft/mcp/main/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md
+   curl -o /tmp/e2eTestPrompts.md https://raw.githubusercontent.com/microsoft/mcp/release/azure/2.x/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md
    head -50 /tmp/e2eTestPrompts.md
    ```
 

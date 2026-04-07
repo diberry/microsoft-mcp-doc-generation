@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **E2E test prompts now fetched from `release/azure/2.x` branch** — Updated E2eTestPromptParser config to fetch `e2eTestPrompts.md` from the `release/azure/2.x` branch of `microsoft/mcp` instead of `main`. This ensures documentation generation uses the correct 2.x-versioned test prompts. (#387)
+
 ### Added
 
 - **Vale CLI prose linter for docs-generation** — Integrated Vale with Microsoft style rules into the docs-generation pipeline. Includes `.vale.ini` config, `lint-vale.sh`/`lint-vale.ps1` scripts, Pester tests, and a non-blocking CI job in `build-and-test.yml`. Suppresses same false positives as skills-generation (FirstPerson, Dashes, Quotes, HeadingAcronyms). (#368)

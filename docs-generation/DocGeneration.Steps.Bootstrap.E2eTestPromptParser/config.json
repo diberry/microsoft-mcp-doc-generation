@@ -1,4 +1,4 @@
 {
-  "remoteUrl": "https://raw.githubusercontent.com/microsoft/mcp/main/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md",
+  "remoteUrl": "https://raw.githubusercontent.com/microsoft/mcp/release/azure/2.x/servers/Azure.Mcp.Server/docs/e2eTestPrompts.md",
   "localFileName": "e2eTestPrompts.md"
 }
