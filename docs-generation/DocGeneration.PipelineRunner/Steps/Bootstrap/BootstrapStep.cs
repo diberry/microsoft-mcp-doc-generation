@@ -494,6 +494,7 @@ public sealed class BootstrapStep : StepDefinition
         if (context.CliOutput?.Tools == null || context.CliOutput.Tools.Count == 0) return;
 
         var tools = context.CliOutput.Tools;
+        var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
 
         // Group tools by namespace (first segment of command)
         var byNamespace = tools
@@ -508,7 +509,7 @@ public sealed class BootstrapStep : StepDefinition
                 .Select(t => (command: t.Command, description: t.Description))
                 .ToList();
 
-            var headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData!);
+            var headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData!, compoundWords);
 
             // Write to the appropriate output directory
             var nsOutputDir = string.IsNullOrWhiteSpace(context.Request.Namespace)

@@ -433,6 +433,7 @@ public class CleanupGenerator
                 Console.Write($"{progress}   Phase 1.5: Applying H2 headings... ");
                 var h2HeadingsPath = Path.GetFullPath(Path.Combine("../generated", "h2-headings", $"{familyName}.json"));
                 Dictionary<string, string> headings;
+                var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
 
                 if (File.Exists(h2HeadingsPath))
                 {
@@ -447,7 +448,7 @@ public class CleanupGenerator
                     var toolData = familyContent.Tools
                         .Select(t => (command: t.Command ?? "", description: t.Description))
                         .ToList();
-                    headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData);
+                    headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData, compoundWords);
                     Console.WriteLine($"✓ (deterministic fallback, {headings.Count} headings)");
                 }
 
@@ -466,7 +467,7 @@ public class CleanupGenerator
 
                     var heading = headings.TryGetValue(command ?? "", out var h)
                         ? h
-                        : DeterministicH2HeadingGenerator.GenerateHeading(command ?? "", tool.Description);
+                        : DeterministicH2HeadingGenerator.GenerateHeading(command ?? "", tool.Description, compoundWords);
                     tool.Content = ReplaceH2Heading(tool.Content, heading);
                     // Update ToolName so Phase 2 metadata uses the deterministic heading
                     tool.ToolName = heading;
