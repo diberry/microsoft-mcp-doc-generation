@@ -4,7 +4,7 @@ display_name: Azure Storage
 description: "Work with Azure Storage accounts, blobs, queues, tables, and file shares. USE FOR: creating storage accounts, managing blobs, configuring access policies, monitoring storage metrics, troubleshooting connectivity. DO NOT USE FOR: Azure Cosmos DB operations, Azure SQL Database queries, non-Azure storage providers."
 ---
 
-# Azure Storage
+# Azure skill for Azure Storage
 
 The Azure Storage skill helps you manage Azure Storage accounts and their sub-resources including blob containers, file shares, queues, and tables.
 

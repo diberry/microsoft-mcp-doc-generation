@@ -174,7 +174,7 @@ public class AcrolinxPostProcessorTests
     [Fact]
     public void WrapBareSkillNames_PreservesUrls()
     {
-        var input = "**Skill:** `azure-storage` | [Source code](https://github.com/microsoft/GitHub-Copilot-for-Azure/tree/main/plugin/skills/azure-storage)";
+        var input = "**Skill:** `azure-storage` | [Source code](https://github.com/microsoft/azure-skills/tree/main/skills/azure-storage)";
         var result = AcrolinxPostProcessor.WrapBareSkillNames(input);
         // The URL should not have backticks injected
         result.Should().Contain("skills/azure-storage)");

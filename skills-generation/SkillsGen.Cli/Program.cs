@@ -21,7 +21,7 @@ var allOption = new Option<bool>("--all", "Generate all skills from inventory");
 var noLlmOption = new Option<bool>("--no-llm", "Disable LLM rewriting");
 var dryRunOption = new Option<bool>("--dry-run", "Parse and validate only");
 var sourceOption = new Option<string>("--source", () => "local", "Source: github or local");
-var outOption = new Option<string>("--out", () => "./generated-skills/", "Output directory");
+var outOption = new Option<string>("--out", () => "../generated-skills/", "Output directory");
 var forceOption = new Option<bool>("--force", "Write even if validation fails");
 var verboseOption = new Option<bool>("--verbose", "Verbose output");
 var sourcePathOption = new Option<string>("--source-path", () => "./skills-source/", "Path to local skills source directory");

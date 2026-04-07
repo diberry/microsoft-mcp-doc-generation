@@ -147,9 +147,9 @@ public class NaturalizeItemsTests
 public class BuildContextDoNotUseForTests
 {
     private static readonly string SimpleTemplate = @"---
-title: {{displayName}}
+title: Azure skill for {{displayName}}
 ---
-# {{displayName}}
+# Azure skill for {{displayName}}
 {{#if hasDoNotUseFor}}
 ## When NOT to use
 {{#each doNotUseFor}}
@@ -227,10 +227,10 @@ title: {{displayName}}
 public class SkillPageGeneratorTests
 {
     private static readonly string SimpleTemplate = @"---
-title: {{displayName}}
+title: Azure skill for {{displayName}}
 description: {{description}}
 ---
-# {{displayName}}
+# Azure skill for {{displayName}}
 
 {{description}}
 
@@ -239,7 +239,7 @@ description: {{description}}
 - **GitHub Copilot** — Required.
 {{#if hasUseFor}}
 
-## When to use this skill
+### When to use this skill
 
 {{#each useFor}}
 - {{this}}
@@ -297,7 +297,7 @@ The skill provides knowledge about {{displayName}}.
         var result = generator.Generate(skill, triggers, tier, prereqs);
 
         result.Should().Contain("---");
-        result.Should().Contain("title: Azure Storage");
+        result.Should().Contain("title: Azure skill for Azure Storage");
         result.Should().Contain("description: Manage Azure Storage");
     }
 
