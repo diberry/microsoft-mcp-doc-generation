@@ -63,6 +63,9 @@ public class FamilyFileStitcher
         // 9. Post-processing: apply contractions per Microsoft style guide (#145)
         markdown = ContractionFixer.Fix(markdown);
 
+        // 9a. Post-processing: compound words, double-plurals, and wordy phrases (#393)
+        markdown = StyleGuidePostProcessor.Fix(markdown);
+
         // 10. Post-processing: insert commas after introductory phrases (#146, #215)
         markdown = IntroductoryCommaFixer.Fix(markdown);
 
