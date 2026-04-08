@@ -374,3 +374,64 @@ The skill provides knowledge about {{displayName}}.
         result.Should().Contain("GitHub Copilot");
     }
 }
+
+// === MCP Tools Template Rendering (Issue #369) ===
+
+public class McpToolsTemplateRenderingTests
+{
+    private readonly ILogger<SkillPageGenerator> _logger = Substitute.For<ILogger<SkillPageGenerator>>();
+
+    [Fact]
+    public void Generate_WithMcpTools_RendersMcpToolsSection()
+    {
+        var templatePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "templates", "skill-page-template.hbs");
+        var template = File.ReadAllText(templatePath);
+        var generator = new SkillPageGenerator(template, _logger);
+
+        var skill = new SkillData
+        {
+            Name = "azure-deploy",
+            DisplayName = "Azure Deploy",
+            Description = "Deploy applications.",
+            McpTools =
+            [
+                new McpToolEntry("mcp_azure_mcp_subscription_list", "subscription list", "List available subscriptions"),
+                new McpToolEntry("mcp_azure_mcp_azd", "azd", "Execute AZD commands")
+            ]
+        };
+        var triggers = new TriggerData(["Deploy my app"], [], null);
+        var tier = new TierAssessment(1, [], "Test", true, true, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var result = generator.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().Contain("## MCP tools");
+        result.Should().Contain("mcp_azure_mcp_subscription_list");
+        result.Should().Contain("List available subscriptions");
+        result.Should().Contain("mcp_azure_mcp_azd");
+        result.Should().Contain("Execute AZD commands");
+    }
+
+    [Fact]
+    public void Generate_WithoutMcpTools_OmitsMcpToolsSection()
+    {
+        var templatePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "templates", "skill-page-template.hbs");
+        var template = File.ReadAllText(templatePath);
+        var generator = new SkillPageGenerator(template, _logger);
+
+        var skill = new SkillData
+        {
+            Name = "azure-quotas",
+            DisplayName = "Azure Quotas",
+            Description = "Check quotas.",
+            McpTools = []
+        };
+        var triggers = new TriggerData(["Check my quotas"], [], null);
+        var tier = new TierAssessment(1, [], "Test", true, true, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var result = generator.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().NotContain("## MCP tools");
+    }
+}

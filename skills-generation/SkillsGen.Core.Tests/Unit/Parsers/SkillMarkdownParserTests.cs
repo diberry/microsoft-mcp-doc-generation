@@ -211,4 +211,303 @@ public class SkillMarkdownParserTests
         result.UseFor.Should().NotContain(s => s.Contains("&quot;"));
         result.UseFor.Should().NotContain(s => s.Contains("&amp;"));
     }
+
+    // === MCP Tools Extraction (Issue #369) ===
+
+    [Fact]
+    public void Parse_McpTools_TwoColumnTable_ExtractsToolAndPurpose()
+    {
+        var content = """
+            ---
+            name: azure-deploy
+            description: Deploy apps.
+            ---
+
+            # Azure Deploy
+
+            ## MCP Tools
+
+            | Tool | Purpose |
+            |------|---------|
+            | `mcp_azure_mcp_subscription_list` | List available subscriptions |
+            | `mcp_azure_mcp_group_list` | List resource groups in subscription |
+            | `mcp_azure_mcp_azd` | Execute AZD commands |
+            """;
+        var result = _parser.Parse("azure-deploy", content);
+
+        result.McpTools.Should().HaveCount(3);
+        result.McpTools[0].ToolName.Should().Be("mcp_azure_mcp_subscription_list");
+        result.McpTools[0].Purpose.Should().Be("List available subscriptions");
+        result.McpTools[1].ToolName.Should().Be("mcp_azure_mcp_group_list");
+        result.McpTools[2].ToolName.Should().Be("mcp_azure_mcp_azd");
+    }
+
+    [Fact]
+    public void Parse_McpTools_ThreeColumnTable_ExtractsToolAndPurpose()
+    {
+        var content = """
+            ---
+            name: azure-kubernetes
+            description: AKS skill.
+            ---
+
+            # AKS
+
+            ## MCP Tools
+
+            | Tool | Purpose | Key Parameters |
+            |------|---------|----------------|
+            | `mcp_azure_mcp_aks` | AKS MCP entry point | Discover callable tools |
+            """;
+        var result = _parser.Parse("azure-kubernetes", content);
+
+        result.McpTools.Should().HaveCount(1);
+        result.McpTools[0].ToolName.Should().Be("mcp_azure_mcp_aks");
+        result.McpTools[0].Purpose.Should().Be("AKS MCP entry point");
+    }
+
+    [Fact]
+    public void Parse_McpTools_BacktickToolNames_StrippedFromCells()
+    {
+        var content = """
+            ---
+            name: test
+            description: Test.
+            ---
+
+            ## MCP Tools
+
+            | Tool | Purpose |
+            |------|---------|
+            | `mcp_azure_mcp_test` | Run tests |
+            """;
+        var result = _parser.Parse("test", content);
+
+        result.McpTools.Should().HaveCount(1);
+        result.McpTools[0].ToolName.Should().Be("mcp_azure_mcp_test");
+        result.McpTools[0].ToolName.Should().NotContain("`");
+    }
+
+    [Fact]
+    public void Parse_McpTools_McpServerSection_MatchesHeading()
+    {
+        var content = """
+            ---
+            name: azure-ai
+            description: AI services.
+            ---
+
+            # Azure AI
+
+            ## MCP Server (Preferred)
+
+            ### AI Search
+            - `azure__search` with command `search_index_list` - List search indexes
+            - `azure__search` with command `search_query` - Query search index
+
+            ### Speech
+            - `azure__speech` with command `speech_transcribe` - Speech to text
+            """;
+        var result = _parser.Parse("azure-ai", content);
+
+        result.McpTools.Should().HaveCount(3);
+        result.McpTools.Should().Contain(t => t.ToolName == "azure__search" && t.Command == "search_index_list");
+        result.McpTools.Should().Contain(t => t.ToolName == "azure__search" && t.Command == "search_query");
+        result.McpTools.Should().Contain(t => t.ToolName == "azure__speech" && t.Command == "speech_transcribe");
+    }
+
+    [Fact]
+    public void Parse_McpTools_InlineBulletWithCommand_ParsedCorrectly()
+    {
+        var content = """
+            ---
+            name: test
+            description: Test.
+            ---
+
+            ## Tools
+
+            - `azure__search` with command `search_index_list` - List search indexes
+            - `azure__speech` with command `speech_synthesize` - Text to speech
+            """;
+        var result = _parser.Parse("test", content);
+
+        result.McpTools.Should().HaveCount(2);
+        result.McpTools[0].ToolName.Should().Be("azure__search");
+        result.McpTools[0].Command.Should().Be("search_index_list");
+        result.McpTools[0].Purpose.Should().Be("List search indexes");
+    }
+
+    [Fact]
+    public void Parse_McpTools_CodeBlockReferences_Extracted()
+    {
+        var content = """
+            ---
+            name: azure-diagnostics
+            description: Debug Azure issues.
+            ---
+
+            # Azure Diagnostics
+
+            ## MCP Tools
+
+            ### AppLens
+
+            ```
+            mcp_azure_mcp_applens
+              command: "diagnose"
+            ```
+
+            ### Azure Monitor
+
+            ```
+            mcp_azure_mcp_monitor
+              command: "logs_query"
+            ```
+            """;
+        var result = _parser.Parse("azure-diagnostics", content);
+
+        result.McpTools.Should().HaveCountGreaterOrEqualTo(2);
+        result.McpTools.Should().Contain(t => t.ToolName == "mcp_azure_mcp_applens");
+        result.McpTools.Should().Contain(t => t.ToolName == "mcp_azure_mcp_monitor");
+    }
+
+    [Fact]
+    public void Parse_McpTools_NoToolsSection_ReturnsEmpty()
+    {
+        var content = """
+            ---
+            name: test
+            description: A skill with no MCP tools.
+            ---
+
+            # Test Skill
+
+            ## Overview
+
+            This skill has no MCP tools section.
+            """;
+        var result = _parser.Parse("test", content);
+
+        result.McpTools.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Parse_McpTools_Deduplication_PreservesRicherEntry()
+    {
+        var content = """
+            ---
+            name: test
+            description: Test.
+            ---
+
+            ## MCP Tools
+
+            | Tool | Purpose |
+            |------|---------|
+            | `mcp_azure_mcp_aks` | AKS MCP entry point for cluster operations |
+
+            ## Also uses
+
+            ```
+            mcp_azure_mcp_aks
+              command: "list"
+            ```
+            """;
+        var result = _parser.Parse("test", content);
+
+        // Should not have duplicates
+        result.McpTools.Where(t => t.ToolName == "mcp_azure_mcp_aks").Should().HaveCount(1);
+        // Should keep the richer table entry
+        result.McpTools.First(t => t.ToolName == "mcp_azure_mcp_aks")
+            .Purpose.Should().Contain("AKS MCP entry point");
+    }
+
+    [Fact]
+    public void Parse_McpTools_InlineProseReferences_NotExtractedAsFalsePositive()
+    {
+        var content = """
+            ---
+            name: azure-rbac
+            description: RBAC roles.
+            ---
+
+            # Azure RBAC
+
+            Use the 'azure__documentation' tool to find the minimal role definition.
+            Then use the 'azure__extension_cli_generate' tool to create a custom role.
+            """;
+        var result = _parser.Parse("azure-rbac", content);
+
+        // Inline prose mentions should NOT be extracted as MCP tools
+        result.McpTools.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Parse_McpTools_QuickReferenceTable_Extracted()
+    {
+        var content = """
+            ---
+            name: azure-kubernetes
+            description: AKS.
+            ---
+
+            ## Quick Reference
+
+            | Property | Value |
+            |----------|-------|
+            | Best for | AKS cluster planning |
+            | MCP Tools | `mcp_azure_mcp_aks` |
+            | CLI | `az aks create` |
+            """;
+        var result = _parser.Parse("azure-kubernetes", content);
+
+        result.McpTools.Should().HaveCount(1);
+        result.McpTools[0].ToolName.Should().Be("mcp_azure_mcp_aks");
+    }
+
+    [Fact]
+    public void Parse_McpTools_MixedFormats_AllExtracted()
+    {
+        var content = """
+            ---
+            name: test
+            description: Test.
+            ---
+
+            ## MCP Tools
+
+            | Tool | Purpose |
+            |------|---------|
+            | `mcp_azure_mcp_subscription_list` | List subscriptions |
+
+            - `azure__search` with command `search_query` - Query search index
+            """;
+        var result = _parser.Parse("test", content);
+
+        result.McpTools.Should().HaveCountGreaterOrEqualTo(2);
+        result.McpTools.Should().Contain(t => t.ToolName == "mcp_azure_mcp_subscription_list");
+        result.McpTools.Should().Contain(t => t.ToolName == "azure__search");
+    }
+
+    [Fact]
+    public void Parse_McpTools_PurposeWithPipesOrSpecialChars_HandledGracefully()
+    {
+        var content = """
+            ---
+            name: test
+            description: Test.
+            ---
+
+            ## MCP Tools
+
+            | Tool | Purpose |
+            |------|---------|
+            | `mcp_azure_mcp_test` | List items (filter by name) |
+            """;
+        var result = _parser.Parse("test", content);
+
+        result.McpTools.Should().HaveCount(1);
+        result.McpTools[0].Purpose.Should().Be("List items (filter by name)");
+    }
 }
