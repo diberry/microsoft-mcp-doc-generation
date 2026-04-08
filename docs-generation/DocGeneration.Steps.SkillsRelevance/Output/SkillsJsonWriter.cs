@@ -35,7 +35,7 @@ public static class SkillsJsonWriter
         var output = new SkillRelevanceOutput
         {
             Service = serviceName,
-            GeneratedAt = timestamp.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            GeneratedAt = timestamp.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ"),
             Sources = sources.Select(s => new SkillSourceEntry
             {
                 Name = s.DisplayName,
@@ -51,7 +51,7 @@ public static class SkillsJsonWriter
                 RelevanceLevel = OutputHelpers.GetRelevanceLevel(s.RelevanceScore),
                 Description = s.Description,
                 Tags = s.Tags,
-                LastUpdated = s.LastUpdated?.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                LastUpdated = s.LastUpdated?.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                 RelevanceReasons = s.RelevanceReasons
             }).ToList()
         };
