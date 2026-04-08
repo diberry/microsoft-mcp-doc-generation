@@ -133,7 +133,7 @@ public class OutputStructureValidatorTests : IDisposable
     }
 
     [Fact]
-    public void ValidateNoLeakedTokens_TripleHandlebars_DetectsLeak()
+    public void ValidateNoLeakedTokens_TripleHandlebars_DetectsExactlyOneLeak()
     {
         var outputPath = CreateOutputDir();
         SeedFile(outputPath, "annotations/ann.md",
@@ -142,8 +142,8 @@ public class OutputStructureValidatorTests : IDisposable
         var result = OutputStructureValidator.ValidateNoLeakedTokens(outputPath);
 
         Assert.False(result.Success);
-        // Triple braces match both {{...}} and {{{...}}} patterns
-        Assert.True(result.Issues.Count >= 1);
+        Assert.Single(result.Issues);
+        Assert.Contains("{{{RAW_CONTENT}}}", result.Issues[0]);
     }
 
     [Fact]
@@ -394,6 +394,8 @@ tool_count: 5
     [InlineData("---\ntitle: T\ntool_count: 0\n---", 0)]
     [InlineData("---\ntitle: T\n---", null)]
     [InlineData("tool_count: not_a_number", null)]
+    [InlineData("---\ntitle: T\n---\n\ntool_count: 99", null)]  // tool_count outside frontmatter
+    [InlineData("# No frontmatter\ntool_count: 5", null)]       // no frontmatter at all
     public void ExtractToolCountFromFrontmatter_VariousInputs(string content, int? expected)
     {
         Assert.Equal(expected, OutputStructureValidator.ExtractToolCountFromFrontmatter(content));

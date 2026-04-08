@@ -43,8 +43,8 @@ public static class OutputStructureValidator
     /// </summary>
     private static readonly Regex[] LeakedTokenPatterns =
     {
-        new(@"\{\{[A-Z_]+\}\}", RegexOptions.Compiled),         // {{PLACEHOLDER}}
-        new(@"\{\{\{[A-Z_]+\}\}\}", RegexOptions.Compiled),     // {{{RAW_PLACEHOLDER}}}
+        new(@"(?<!\{)\{\{(?!\{)[A-Z_]+\}\}(?!\})", RegexOptions.Compiled),  // {{PLACEHOLDER}} but not {{{...}}}
+        new(@"\{\{\{[A-Z_]+\}\}\}", RegexOptions.Compiled),              // {{{RAW_PLACEHOLDER}}}
         new(@"<<<TPL_\w+>>>", RegexOptions.Compiled),            // <<<TPL_TOKEN>>>
         new(@"__TPL_\w+__", RegexOptions.Compiled),              // __TPL_TOKEN__
     };
@@ -228,14 +228,40 @@ public static class OutputStructureValidator
     }
 
     /// <summary>
-    /// Extracts tool_count value from YAML frontmatter.
+    /// Extracts tool_count value from YAML frontmatter only.
+    /// Parses frontmatter boundaries (between opening --- and closing \n---) first,
+    /// then searches for tool_count within that region.
     /// </summary>
     internal static int? ExtractToolCountFromFrontmatter(string content)
     {
-        var match = Regex.Match(content, @"^tool_count:\s*(\d+)", RegexOptions.Multiline);
+        var frontmatter = ExtractFrontmatter(content);
+        if (frontmatter is null)
+            return null;
+
+        var match = Regex.Match(frontmatter, @"^tool_count:\s*(\d+)", RegexOptions.Multiline);
         if (match.Success && int.TryParse(match.Groups[1].Value, out var count))
             return count;
         return null;
+    }
+
+    /// <summary>
+    /// Extracts the YAML frontmatter region from content (between opening --- and closing \n---).
+    /// Returns null if no valid frontmatter is found.
+    /// </summary>
+    internal static string? ExtractFrontmatter(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return null;
+
+        var trimmed = content.TrimStart();
+        if (!trimmed.StartsWith("---"))
+            return null;
+
+        var closingIndex = trimmed.IndexOf("\n---", 3, StringComparison.Ordinal);
+        if (closingIndex <= 0)
+            return null;
+
+        return trimmed[3..closingIndex];
     }
 
     /// <summary>
