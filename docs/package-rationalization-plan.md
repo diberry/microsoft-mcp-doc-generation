@@ -2,7 +2,7 @@
 
 > **Status**: Plan only — no implementation.
 > **Author**: Riley (Architect)
-> **Date**: 2025-07-17
+> **Date**: 2026-04-08
 >
 > **This is a plan document. Implementation requires separate team approval.**
 
@@ -155,6 +155,8 @@ Both solution trees use `Directory.Packages.props` for centralized version manag
 | Handlebars.Net | 2.1.6 | 2.1.6 | ✅ |
 | Azure.AI.OpenAI | 2.1.0 | 2.1.0 | ✅ |
 | Microsoft.Extensions.AI | **10.4.0** | **9.5.0** | ❌ CONFLICT |
+
+> ⚠️ **Breaking change warning:** The Microsoft.Extensions.AI conflict crosses a **major version boundary** (10.x vs 9.x). This likely involves breaking API changes, removed or renamed types, and behavioral differences. Resolving this requires a migration effort — not just a version bump. Consult the [Microsoft.Extensions.AI migration guide](https://learn.microsoft.com/dotnet/ai/migration-guide) before upgrading.
 | Microsoft.Extensions.AI.OpenAI | **10.4.0** | **10.3.0** | ❌ CONFLICT |
 | Microsoft.Extensions.Logging | **8.0.0** | **9.0.0** | ❌ CONFLICT |
 | Microsoft.Extensions.Logging.Console | **8.0.0** | **9.0.0** | ❌ CONFLICT |
