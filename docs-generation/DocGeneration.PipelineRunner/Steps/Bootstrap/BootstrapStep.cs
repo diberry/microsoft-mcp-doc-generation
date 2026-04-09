@@ -17,7 +17,11 @@ public sealed class BootstrapStep : StepDefinition
     /// <summary>
     /// Shared HttpClient for upstream file fetching. Static to avoid socket exhaustion.
     /// </summary>
-    private static readonly HttpClient SharedHttpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(30),
+        DefaultRequestHeaders = { { "User-Agent", "AzureMcpDocGen/1.0" } },
+    };
 
     /// <summary>
     /// Constructs a raw GitHub URL for a file in the microsoft/mcp repo on the given branch.
@@ -438,7 +442,7 @@ public sealed class BootstrapStep : StepDefinition
         ICollection<string> warnings,
         CancellationToken cancellationToken)
     {
-        var tempPath = Path.Combine(Path.GetTempPath(), $"mcp-upstream-{displayName}");
+        var tempPath = Path.Combine(Path.GetTempPath(), $"mcp-upstream-{Environment.ProcessId}-{displayName}");
         try
         {
             cancellationToken.ThrowIfCancellationRequested();

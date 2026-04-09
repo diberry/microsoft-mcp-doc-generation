@@ -246,12 +246,6 @@ public static class DeterministicH2HeadingGenerator
         return (ExtractResourceFromDescription(verb, description), true);
     }
 
-    private static bool AreSimilar(string a, string b)
-    {
-        return a.StartsWith(b, StringComparison.OrdinalIgnoreCase)
-            || b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
-    }
-
     private static string ExpandAbbreviation(string segment, Dictionary<string, string>? compoundWords = null)
     {
         if (Abbreviations.TryGetValue(segment, out var expanded))
