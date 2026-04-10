@@ -17,23 +17,23 @@ public class SkillPageGenerator : ISkillPageGenerator
         _compiledTemplate = handlebars.Compile(templateContent);
     }
 
-    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites)
+    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null)
     {
-        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites);
+        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor);
         var result = _compiledTemplate(context);
         return result;
     }
 
     private static readonly int MaxExamplePrompts = 10;
 
-    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites)
+    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null)
     {
         // Build "When to use" from UseFor, falling back to trigger prompts if empty
         var rawUseFor = skillData.UseFor.Count > 0
             ? skillData.UseFor
             : triggerData.ShouldTrigger.Count > 0
                 ? triggerData.ShouldTrigger.Take(7).ToList()
-                : new List<string> { $"Work with {skillData.DisplayName} resources and configurations in Azure" };
+                : new List<string> { $"Manage and configure {skillData.DisplayName} resources in Azure" };
 
         // Naturalize the bullet points — convert keyword fragments into sentences
         var useForList = NaturalizeItems(rawUseFor, skillData.DisplayName);
@@ -48,13 +48,13 @@ public class SkillPageGenerator : ISkillPageGenerator
             : new List<string>();
         var doNotUseForList = NaturalizeItems(rawDoNotUseFor, skillData.DisplayName);
 
-        // Cap example prompts
-        var examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts).ToList();
+        // Cap example prompts and optionally post-process them
+        var examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts)
+            .Select(t => triggerProcessor != null ? triggerProcessor(t) : t)
+            .ToList();
 
-        // Build "What it provides" fallback description
-        var whatItProvides = !string.IsNullOrWhiteSpace(skillData.Description)
-            ? $"The {skillData.DisplayName} skill provides GitHub Copilot with specialized knowledge. {skillData.Description}"
-            : $"The {skillData.DisplayName} skill provides GitHub Copilot with specialized knowledge about {skillData.DisplayName} services and workflows in Azure.";
+        // Build "What it provides" with concrete capabilities from services/tools
+        var whatItProvides = BuildWhatItProvides(skillData);
 
         return new Dictionary<string, object?>
         {
@@ -144,6 +144,55 @@ public class SkillPageGenerator : ISkillPageGenerator
     }
 
     /// <summary>
+    /// Builds a concrete "What it provides" section from services and tools data
+    /// instead of just echoing the skill description.
+    /// </summary>
+    private static string BuildWhatItProvides(SkillData skillData)
+    {
+        var parts = new List<string>();
+
+        // Opening sentence — always present
+        parts.Add($"The {skillData.DisplayName} skill gives GitHub Copilot specialized knowledge about {skillData.DisplayName} in Azure.");
+
+        // Add concrete capabilities from services
+        if (skillData.Services.Count > 0)
+        {
+            var serviceNames = skillData.Services.Select(s => s.Name).ToList();
+            var serviceList = serviceNames.Count switch
+            {
+                1 => serviceNames[0],
+                2 => $"{serviceNames[0]} and {serviceNames[1]}",
+                _ => $"{string.Join(", ", serviceNames.Take(serviceNames.Count - 1))}, and {serviceNames[^1]}"
+            };
+            parts.Add($"This includes capabilities for {serviceList}.");
+        }
+
+        // Add concrete capabilities from tools
+        if (skillData.McpTools.Count > 0)
+        {
+            var purposes = skillData.McpTools
+                .Where(t => !string.IsNullOrWhiteSpace(t.Purpose))
+                .Select(t => t.Purpose.TrimEnd('.').ToLowerInvariant())
+                .Distinct()
+                .Take(5)
+                .ToList();
+
+            if (purposes.Count > 0)
+            {
+                var purposeList = purposes.Count switch
+                {
+                    1 => purposes[0],
+                    2 => $"{purposes[0]} and {purposes[1]}",
+                    _ => $"{string.Join(", ", purposes.Take(purposes.Count - 1))}, and {purposes[^1]}"
+                };
+                parts.Add($"Use this skill to {purposeList}.");
+            }
+        }
+
+        return string.Join(" ", parts);
+    }
+
+    /// <summary>
     /// Converts raw keyword fragments into natural-language bullet points.
     /// Groups related short items and adds verb phrases to bare nouns.
     /// </summary>
@@ -221,20 +270,13 @@ public class SkillPageGenerator : ISkillPageGenerator
     {
         if (shortItems.Count == 0) return;
 
-        if (shortItems.Count == 1)
-        {
-            result.Add($"Work with {shortItems[0]}");
-        }
-        else if (shortItems.Count == 2)
-        {
-            result.Add($"Work with {shortItems[0]} and {shortItems[1]}");
-        }
-        else
-        {
-            var last = shortItems[^1];
-            var rest = shortItems.Take(shortItems.Count - 1);
-            result.Add($"Work with {string.Join(", ", rest)}, and {last}");
-        }
+        var joined = shortItems.Count == 1
+            ? shortItems[0]
+            : shortItems.Count == 2
+                ? $"{shortItems[0]} and {shortItems[1]}"
+                : $"{string.Join(", ", shortItems.Take(shortItems.Count - 1))}, and {shortItems[^1]}";
+
+        result.Add($"Manage and configure {joined} in Azure");
         shortItems.Clear();
     }
 

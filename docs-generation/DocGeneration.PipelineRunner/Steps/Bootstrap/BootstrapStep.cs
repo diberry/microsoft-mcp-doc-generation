@@ -1,4 +1,5 @@
 using System.Text.Json;
+using PipelineRunner.Cli;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
@@ -8,6 +9,26 @@ namespace PipelineRunner.Steps;
 
 public sealed class BootstrapStep : StepDefinition
 {
+    /// <summary>
+    /// Base path within the microsoft/mcp repo where upstream doc files live.
+    /// </summary>
+    internal const string McpDocsPath = "servers/Azure.Mcp.Server/docs";
+
+    /// <summary>
+    /// Shared HttpClient for upstream file fetching. Static to avoid socket exhaustion.
+    /// </summary>
+    private static readonly HttpClient SharedHttpClient = new()
+    {
+        Timeout = TimeSpan.FromSeconds(30),
+        DefaultRequestHeaders = { { "User-Agent", "AzureMcpDocGen/1.0" } },
+    };
+
+    /// <summary>
+    /// Constructs a raw GitHub URL for a file in the microsoft/mcp repo on the given branch.
+    /// </summary>
+    internal static string BuildUpstreamUrl(string branch, string fileName)
+        => $"https://raw.githubusercontent.com/microsoft/mcp/{branch}/{McpDocsPath}/{fileName}";
+
     private static readonly string[] BaseOutputDirectories =
     [
         "cli",
@@ -48,6 +69,8 @@ public sealed class BootstrapStep : StepDefinition
 
         try
         {
+            context.Reports.Info($"Upstream MCP branch: {context.McpBranch}");
+
             if (NeedsAiConfiguration(context))
             {
                 if (context.Request.SkipEnvValidation)
@@ -217,9 +240,31 @@ public sealed class BootstrapStep : StepDefinition
 
             var e2eOutputFile = Path.Combine(context.OutputPath, "e2e-test-prompts", "parsed.json");
             var e2eProject = Path.Combine(context.DocsGenerationRoot, "DocGeneration.Steps.Bootstrap.E2eTestPromptParser", "DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj");
+
+            // Centralized fetch: Bootstrap downloads e2eTestPrompts.md from the resolved branch,
+            // then passes the local file to the parser (no branch/URL logic in the parser itself).
+            var e2eLocalFallback = Path.Combine(context.DocsGenerationRoot, "azure-mcp", "e2eTestPrompts.md");
+            var e2eRemoteUrl = BuildUpstreamUrl(context.McpBranch, "e2eTestPrompts.md");
+            string? e2eFetchedFile = null;
+            try
+            {
+                e2eFetchedFile = await FetchUpstreamFileAsync(
+                    e2eRemoteUrl, e2eLocalFallback, "e2eTestPrompts.md", context, warnings, cancellationToken);
+            }
+            catch (FileNotFoundException)
+            {
+                warnings.Add("e2eTestPrompts.md not available from upstream or locally (non-blocking).");
+            }
+
+            var e2eArgs = new List<string> { e2eOutputFile };
+            if (e2eFetchedFile is not null)
+            {
+                e2eArgs.AddRange(["--file", e2eFetchedFile]);
+            }
+
             var e2eResult = await context.ProcessRunner.RunDotNetProjectAsync(
                 e2eProject,
-                [e2eOutputFile],
+                e2eArgs.ToArray(),
                 noBuild: true,
                 context.DocsGenerationRoot,
                 cancellationToken);
@@ -229,7 +274,10 @@ public sealed class BootstrapStep : StepDefinition
                 AddProcessIssue(e2eResult, warnings, "E2E test prompt parsing failed (non-blocking)");
             }
 
-            var azmcpSourceFile = Path.Combine(context.DocsGenerationRoot, "azure-mcp", "azmcp-commands.md");
+            var azmcpLocalFallback = Path.Combine(context.DocsGenerationRoot, "azure-mcp", "azmcp-commands.md");
+            var azmcpRemoteUrl = BuildUpstreamUrl(context.McpBranch, "azmcp-commands.md");
+            var azmcpSourceFile = await FetchUpstreamFileAsync(
+                azmcpRemoteUrl, azmcpLocalFallback, "azmcp-commands.md", context, warnings, cancellationToken);
             var azmcpOutputFile = Path.Combine(cliDirectory, "azmcp-commands.json");
             var azmcpProject = Path.Combine(context.DocsGenerationRoot, "DocGeneration.Steps.Bootstrap.CommandParser", "DocGeneration.Steps.Bootstrap.CommandParser.csproj");
             var azmcpResult = await context.ProcessRunner.RunDotNetProjectAsync(
@@ -383,6 +431,44 @@ public sealed class BootstrapStep : StepDefinition
         }
     }
 
+    /// <summary>
+    /// Downloads a file from the upstream microsoft/mcp repo. Falls back to a local copy on failure.
+    /// </summary>
+    internal static async Task<string> FetchUpstreamFileAsync(
+        string remoteUrl,
+        string localFallback,
+        string displayName,
+        PipelineContext context,
+        ICollection<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"mcp-upstream-{Environment.ProcessId}-{displayName}");
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            context.Reports.Info($"Fetching {displayName} from {remoteUrl}");
+            var content = await SharedHttpClient.GetStringAsync(remoteUrl, cancellationToken);
+            await File.WriteAllTextAsync(tempPath, content, cancellationToken);
+            context.Reports.Info($"Fetched {displayName} ({content.Length:N0} bytes)");
+            return tempPath;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw; // Propagate user cancellation (Ctrl+C), don't fall back
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            warnings.Add($"Failed to fetch {displayName} from upstream: {ex.Message}. Using local fallback.");
+            if (File.Exists(localFallback))
+            {
+                return localFallback;
+            }
+
+            throw new FileNotFoundException(
+                $"Neither upstream ({remoteUrl}) nor local fallback ({localFallback}) for {displayName} is available.");
+        }
+    }
+
     private StepResult BuildResult(
         PipelineContext context,
         IReadOnlyCollection<ProcessExecutionResult> processResults,
@@ -412,6 +498,7 @@ public sealed class BootstrapStep : StepDefinition
         if (context.CliOutput?.Tools == null || context.CliOutput.Tools.Count == 0) return;
 
         var tools = context.CliOutput.Tools;
+        var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
 
         // Group tools by namespace (first segment of command)
         var byNamespace = tools
@@ -426,7 +513,7 @@ public sealed class BootstrapStep : StepDefinition
                 .Select(t => (command: t.Command, description: t.Description))
                 .ToList();
 
-            var headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData!);
+            var headings = DeterministicH2HeadingGenerator.GenerateHeadings(toolData!, compoundWords);
 
             // Write to the appropriate output directory
             var nsOutputDir = string.IsNullOrWhiteSpace(context.Request.Namespace)

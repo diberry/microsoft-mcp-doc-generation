@@ -158,22 +158,22 @@ describe('generateReport', () => {
   });
 
   it('has a markdown table with correct headers', () => {
-    assert.ok(report.includes('| Namespace | Tools | Total Params | Non-Global Params |'));
+    assert.ok(report.includes('| Namespace | Tools | Non-Global Params |'));
   });
 
   it('has a separator row after headers', () => {
-    assert.ok(report.includes('| --- | --- | --- | --- |'));
+    assert.ok(report.includes('| --- | --- | --- |'));
   });
 
   it('includes acr row with correct counts', () => {
-    // acr: 2 tools, 18 total params, 4 non-global
-    const acrRow = report.match(/\| acr \| 2 \| 18 \| 4 \|/);
+    // acr: 2 tools, 4 non-global
+    const acrRow = report.match(/\| acr \| 2 \| 4 \|/);
     assert.ok(acrRow, 'acr row should have correct values');
   });
 
   it('includes cosmos row with correct counts', () => {
-    // cosmos: 2 tools, 20 total params, 6 non-global
-    const cosmosRow = report.match(/\| cosmos \| 2 \| 20 \| 6 \|/);
+    // cosmos: 2 tools, 6 non-global
+    const cosmosRow = report.match(/\| cosmos \| 2 \| 6 \|/);
     assert.ok(cosmosRow, 'cosmos row should have correct values');
   });
 

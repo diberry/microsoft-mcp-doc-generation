@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../DocGeneration.Steps.Bootstrap.E2eTestPromptParser/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj" />
+    <ProjectReference Include="../DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

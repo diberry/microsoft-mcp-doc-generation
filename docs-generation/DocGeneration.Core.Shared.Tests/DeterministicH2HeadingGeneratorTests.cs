@@ -7,6 +7,115 @@ namespace Shared.Tests;
 
 public class DeterministicH2HeadingGeneratorTests
 {
+    // ─── Bug #390: Source-aware pluralization ──────────────────────────
+
+    [Fact]
+    public void GenerateHeading_DescriptionResource_SkipsPluralizeOnList()
+    {
+        // "storage list" → verb="list" (from VerbMap), resource extracted from description
+        // Description already has "accounts" (plural) → should NOT re-pluralize
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "storage list", "List storage accounts");
+        Assert.Contains("accounts", heading, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("accountses", heading, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void GenerateHeading_CommandResource_PluralizesOnList()
+    {
+        // "compute vm list" → verb="list", resource from command segment ["vm"]
+        // Command-sourced resource SHOULD be pluralized
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "compute vm list", "List virtual machines");
+        Assert.Contains("machines", heading, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ─── Bug #390: Pluralize safety net (belt-and-suspenders) ────────
+
+    [Theory]
+    [InlineData("databases", "databases")]       // Already plural — must NOT become "databaseses"
+    [InlineData("resources", "resources")]        // Already plural
+    [InlineData("servers", "servers")]            // Already plural
+    [InlineData("indexes", "indexes")]            // Already plural (ends in "xes")
+    [InlineData("addresses", "addresses")]        // Already plural (ends in "ses")
+    [InlineData("disk", "disks")]                 // Singular — should pluralize
+    [InlineData("machine", "machines")]           // Singular — should pluralize
+    [InlineData("cluster", "clusters")]           // Singular — should pluralize
+    [InlineData("index", "indexes")]              // Singular ending in x — should add es
+    [InlineData("cache", "caches")]               // Singular ending in che — should add s
+    public void Pluralize_HandlesAlreadyPluralWords(string input, string expected)
+    {
+        var result = DeterministicH2HeadingGenerator.Pluralize(input);
+        Assert.Equal(expected, result);
+    }
+
+    // ─── Bug #383 Issue #2: Compound words ──────────────────────────
+
+    [Fact]
+    public void GenerateHeading_ExpandsCompoundWords()
+    {
+        var compoundWords = new Dictionary<string, string>
+        {
+            ["webtests"] = "web-tests",
+            ["loganalytics"] = "log-analytics",
+        };
+        // "monitor webtests list" → verb=list, resource=["webtests"]
+        // With compound words: "webtests" → "web tests" → pluralized → "web tests"
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "monitor webtests list", "List web tests", compoundWords);
+        Assert.Contains("web tests", heading, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("webtests", heading, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void GenerateHeading_ExpandsLogAnalytics()
+    {
+        var compoundWords = new Dictionary<string, string>
+        {
+            ["loganalytics"] = "log-analytics",
+        };
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "monitor loganalytics query", "Query log analytics data", compoundWords);
+        Assert.Contains("log analytics", heading, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("loganalytics", heading, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // ─── Bug #383 Issue #3: No namespace prefix for single-word resources ─
+
+    [Fact]
+    public void GenerateHeading_NoNamespacePrefix()
+    {
+        // "compute disk create" → should be "Create disk" NOT "Create compute disk"
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "compute disk create", "Create a new Azure managed disk");
+        Assert.Equal("Create disk", heading);
+    }
+
+    [Fact]
+    public void GenerateHeadings_ComputeNamespace_NoNamespacePrefix_StillUnique()
+    {
+        // After removing namespace prefix, disambiguation should still produce unique headings
+        var tools = new[]
+        {
+            ("compute disk create", "Create a new Azure managed disk"),
+            ("compute disk delete", "Delete an Azure managed disk"),
+            ("compute disk get", "Get details of a managed disk"),
+            ("compute vm create", "Create a new virtual machine"),
+            ("compute vm delete", "Delete a virtual machine"),
+            ("compute vm get", "Get details of a virtual machine"),
+        };
+
+        var headings = DeterministicH2HeadingGenerator.GenerateHeadings(
+            tools.Select(t => (t.Item1, (string?)t.Item2)));
+
+        Assert.Equal(6, headings.Count);
+        Assert.Equal(headings.Values.Distinct().Count(), headings.Count);
+
+        // "disk" headings should NOT contain "compute" prefix
+        var diskCreate = headings["compute disk create"];
+        Assert.DoesNotContain("compute", diskCreate, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ─── Verb Mapping Tests ───────────────────────────────────────────
 
     [Theory]
@@ -15,7 +124,7 @@ public class DeterministicH2HeadingGeneratorTests
     [InlineData("compute vm create", "Create a new VM", "Create virtual machine")]
     [InlineData("compute vm delete", "Delete a virtual machine", "Delete virtual machine")]
     [InlineData("compute vm update", "Update a virtual machine", "Update virtual machine")]
-    [InlineData("search index query", "Query documents in an index", "Query search index")]
+    [InlineData("search index query", "Query documents in an index", "Query index")]
     public void GenerateHeading_VerbMapping(string command, string description, string expected)
     {
         var heading = DeterministicH2HeadingGenerator.GenerateHeading(command, description);
@@ -196,12 +305,13 @@ public class DeterministicH2HeadingGeneratorTests
     [Fact]
     public void GenerateHeading_PreservesProperNounsInSentenceCase()
     {
-        // Namespace "aks" is recognized as proper noun AKS in sentence case
+        // "compute vmss get" expands vmss to "virtual machine scale set"
+        // Sentence case should lowercase non-proper-noun words
         var heading = DeterministicH2HeadingGenerator.GenerateHeading(
-            "aks cluster get", "Get details of a Kubernetes cluster");
-        Assert.Contains("AKS", heading);
-        // "cluster" is not a proper noun — should be lowercase
-        Assert.Contains("cluster", heading);
+            "compute vmss get", "Get details of a virtual machine scale set");
+        Assert.StartsWith("Get", heading);
+        // "virtual" should be lowercase (not a proper noun)
+        Assert.Contains("virtual", heading);
     }
 
     [Fact]

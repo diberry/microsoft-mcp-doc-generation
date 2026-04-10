@@ -121,11 +121,11 @@ function generateReport({ cliOutput, cliNamespace, cliVersion, commonParams }) {
   // ── Namespace Summary Table ──
   lines.push('## Namespace Summary');
   lines.push('');
-  lines.push('| Namespace | Tools | Total Params | Non-Global Params |');
-  lines.push('| --- | --- | --- | --- |');
+  lines.push('| Namespace | Tools | Non-Global Params |');
+  lines.push('| --- | --- | --- |');
   for (const ns of sortedNamespaces) {
     const s = nsSummary[ns];
-    lines.push(`| ${ns} | ${s.toolCount} | ${s.totalParams} | ${s.nonGlobalParams} |`);
+    lines.push(`| ${ns} | ${s.toolCount} | ${s.nonGlobalParams} |`);
   }
   lines.push('');
 

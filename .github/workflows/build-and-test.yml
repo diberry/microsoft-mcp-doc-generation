@@ -6,12 +6,18 @@ on:
     paths:
       - 'docs-generation/**'
       - 'docs-generation.sln'
+      - 'skills-generation/**'
+      - 'start-azure-skills.sh'
+      - 'test-npm-azure-mcp/**'
       - '.github/workflows/build-and-test.yml'
   pull_request:
     branches: [main]
     paths:
       - 'docs-generation/**'
       - 'docs-generation.sln'
+      - 'skills-generation/**'
+      - 'start-azure-skills.sh'
+      - 'test-npm-azure-mcp/**'
       - '.github/workflows/build-and-test.yml'
 
 jobs:
@@ -74,3 +80,21 @@ jobs:
 
       - name: Run Vale lint
         run: vale --config docs-generation/.vale.ini vale-sample-output/ || true
+
+  npm-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: cd test-npm-azure-mcp && npm ci
+
+      - name: Run tests
+        run: cd test-npm-azure-mcp && npm run test:report
