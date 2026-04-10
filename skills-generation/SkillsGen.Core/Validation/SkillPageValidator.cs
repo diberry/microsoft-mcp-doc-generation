@@ -85,6 +85,22 @@ public class SkillPageValidator : ISkillPageValidator
             warnings.Add("ACROLINX_URLS: Content contains absolute learn.microsoft.com URLs");
         }
 
+        // PREREQ_DUPLICATE: Check for duplicate "GitHub Copilot" in prerequisites
+        var copilotMatches = Regex.Matches(renderedContent,
+            @"(?:^|\n)\s*-\s+\*{0,2}GitHub Copilot\*{0,2}", RegexOptions.IgnoreCase);
+        if (copilotMatches.Count > 1)
+        {
+            warnings.Add("PREREQ_DUPLICATE: 'GitHub Copilot' appears multiple times in prerequisites");
+        }
+
+        // FRAGMENT: Check for "Work with X" fragment pattern in bullet points
+        var fragmentMatches = Regex.Matches(renderedContent,
+            @"^[ \t]*-\s+Work with\s+", RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        if (fragmentMatches.Count > 0)
+        {
+            warnings.Add($"FRAGMENT: {fragmentMatches.Count} bullet(s) use vague 'Work with' fragment pattern");
+        }
+
         var sectionCount = Regex.Matches(renderedContent, @"^## ", RegexOptions.Multiline).Count;
 
         return new SkillValidationResult(errors.Count == 0, errors, warnings, wordCount, sectionCount);

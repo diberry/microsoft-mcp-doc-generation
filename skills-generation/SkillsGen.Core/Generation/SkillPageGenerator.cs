@@ -33,7 +33,7 @@ public class SkillPageGenerator : ISkillPageGenerator
             ? skillData.UseFor
             : triggerData.ShouldTrigger.Count > 0
                 ? triggerData.ShouldTrigger.Take(7).ToList()
-                : new List<string> { $"Work with {skillData.DisplayName} resources and configurations in Azure" };
+                : new List<string> { $"Manage and configure {skillData.DisplayName} resources in Azure" };
 
         // Naturalize the bullet points — convert keyword fragments into sentences
         var useForList = NaturalizeItems(rawUseFor, skillData.DisplayName);
@@ -53,10 +53,8 @@ public class SkillPageGenerator : ISkillPageGenerator
             .Select(t => triggerProcessor != null ? triggerProcessor(t) : t)
             .ToList();
 
-        // Build "What it provides" — use description directly, no boilerplate
-        var whatItProvides = !string.IsNullOrWhiteSpace(skillData.Description)
-            ? skillData.Description
-            : $"This skill enables GitHub Copilot to help you work with {skillData.DisplayName} services in Azure.";
+        // Build "What it provides" with concrete capabilities from services/tools
+        var whatItProvides = BuildWhatItProvides(skillData);
 
         return new Dictionary<string, object?>
         {
@@ -143,6 +141,55 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["hasToolPrereqs"] = prerequisites.Tools.Count > 0,
             ["hasResources"] = prerequisites.Resources.Count > 0
         };
+    }
+
+    /// <summary>
+    /// Builds a concrete "What it provides" section from services and tools data
+    /// instead of just echoing the skill description.
+    /// </summary>
+    private static string BuildWhatItProvides(SkillData skillData)
+    {
+        var parts = new List<string>();
+
+        // Opening sentence — always present
+        parts.Add($"The {skillData.DisplayName} skill gives GitHub Copilot specialized knowledge about {skillData.DisplayName} in Azure.");
+
+        // Add concrete capabilities from services
+        if (skillData.Services.Count > 0)
+        {
+            var serviceNames = skillData.Services.Select(s => s.Name).ToList();
+            var serviceList = serviceNames.Count switch
+            {
+                1 => serviceNames[0],
+                2 => $"{serviceNames[0]} and {serviceNames[1]}",
+                _ => $"{string.Join(", ", serviceNames.Take(serviceNames.Count - 1))}, and {serviceNames[^1]}"
+            };
+            parts.Add($"This includes capabilities for {serviceList}.");
+        }
+
+        // Add concrete capabilities from tools
+        if (skillData.McpTools.Count > 0)
+        {
+            var purposes = skillData.McpTools
+                .Where(t => !string.IsNullOrWhiteSpace(t.Purpose))
+                .Select(t => t.Purpose.TrimEnd('.').ToLowerInvariant())
+                .Distinct()
+                .Take(5)
+                .ToList();
+
+            if (purposes.Count > 0)
+            {
+                var purposeList = purposes.Count switch
+                {
+                    1 => purposes[0],
+                    2 => $"{purposes[0]} and {purposes[1]}",
+                    _ => $"{string.Join(", ", purposes.Take(purposes.Count - 1))}, and {purposes[^1]}"
+                };
+                parts.Add($"Use this skill to {purposeList}.");
+            }
+        }
+
+        return string.Join(" ", parts);
     }
 
     /// <summary>
