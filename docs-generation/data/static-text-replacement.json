@@ -130,6 +130,22 @@
     {
         "Parameter": "in addition to",
         "NaturalLanguage": "besides"
+    },
+    {
+        "Parameter": "for the purpose of",
+        "NaturalLanguage": "to"
+    },
+    {
+        "Parameter": "has the ability to",
+        "NaturalLanguage": "can"
+    },
+    {
+        "Parameter": "it is important to note that",
+        "NaturalLanguage": "note that"
+    },
+    {
+        "Parameter": "at this point in time",
+        "NaturalLanguage": "now"
     }
 
 ]

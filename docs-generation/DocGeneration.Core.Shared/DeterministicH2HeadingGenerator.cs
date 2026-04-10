@@ -116,7 +116,8 @@ public static class DeterministicH2HeadingGenerator
     /// <summary>
     /// Generate a single heading from command + description.
     /// </summary>
-    public static string GenerateHeading(string command, string? description)
+    public static string GenerateHeading(string command, string? description,
+        Dictionary<string, string>? compoundWords = null)
     {
         var segments = (command ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (segments.Length == 0)
@@ -163,10 +164,11 @@ public static class DeterministicH2HeadingGenerator
         }
 
         var displayVerb = MapVerb(verb);
-        var resourcePhrase = BuildResourcePhrase(namespaceName, resourceSegments, verb, description);
+        var (resourcePhrase, fromDescription) = BuildResourcePhrase(namespaceName, resourceSegments, verb, description, compoundWords);
 
-        // For "list" verb, pluralize the resource
-        var needsPlural = verb.Equals("list", StringComparison.OrdinalIgnoreCase);
+        // For "list" verb, pluralize the resource — but only when resource came from
+        // command segments. Description-extracted resources are already in natural form.
+        var needsPlural = verb.Equals("list", StringComparison.OrdinalIgnoreCase) && !fromDescription;
         if (needsPlural && !string.IsNullOrEmpty(resourcePhrase))
         {
             resourcePhrase = Pluralize(resourcePhrase);
@@ -183,7 +185,8 @@ public static class DeterministicH2HeadingGenerator
     /// Generate all headings for a namespace, ensuring uniqueness.
     /// </summary>
     public static Dictionary<string, string> GenerateHeadings(
-        IEnumerable<(string command, string? description)> tools)
+        IEnumerable<(string command, string? description)> tools,
+        Dictionary<string, string>? compoundWords = null)
     {
         var toolList = tools.ToList();
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -191,7 +194,7 @@ public static class DeterministicH2HeadingGenerator
         // Phase 1: Generate initial headings
         foreach (var (command, description) in toolList)
         {
-            result[command] = GenerateHeading(command, description);
+            result[command] = GenerateHeading(command, description, compoundWords);
         }
 
         // Phase 2: Disambiguate duplicates
@@ -227,37 +230,29 @@ public static class DeterministicH2HeadingGenerator
         return TitleCase(verb.Replace("-", " "));
     }
 
-    private static string BuildResourcePhrase(string namespaceName, string[] resourceSegments, string verb, string? description)
+    private static (string phrase, bool fromDescription) BuildResourcePhrase(string namespaceName,
+        string[] resourceSegments, string verb, string? description,
+        Dictionary<string, string>? compoundWords = null)
     {
         if (resourceSegments.Length > 0)
         {
-            var expanded = resourceSegments.Select(ExpandAbbreviation);
+            var expanded = resourceSegments.Select(s => ExpandAbbreviation(s, compoundWords));
             var phrase = string.Join(" ", expanded);
 
-            // If expanded resource is a single word, prepend namespace for context
-            // (unless namespace is similar to the resource, e.g. "fileshares" ~ "fileshare")
-            var wordCount = phrase.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
-            if (wordCount == 1 && !AreSimilar(namespaceName, phrase))
-            {
-                phrase = $"{namespaceName} {phrase}";
-            }
-
-            return phrase;
+            return (phrase, false);
         }
 
-        // No resource segments — extract from description
-        return ExtractResourceFromDescription(verb, description);
+        // No resource segments — extract from description (already in natural form)
+        return (ExtractResourceFromDescription(verb, description), true);
     }
 
-    private static bool AreSimilar(string a, string b)
+    private static string ExpandAbbreviation(string segment, Dictionary<string, string>? compoundWords = null)
     {
-        return a.StartsWith(b, StringComparison.OrdinalIgnoreCase)
-            || b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string ExpandAbbreviation(string segment)
-    {
-        return Abbreviations.TryGetValue(segment, out var expanded) ? expanded : segment;
+        if (Abbreviations.TryGetValue(segment, out var expanded))
+            return expanded;
+        if (compoundWords != null && compoundWords.TryGetValue(segment, out var compound))
+            return compound.Replace("-", " ");
+        return segment;
     }
 
     private static string ExtractVerbFromDescription(string? description)
@@ -502,12 +497,16 @@ public static class DeterministicH2HeadingGenerator
             .ToList();
     }
 
-    private static string Pluralize(string phrase)
+    internal static string Pluralize(string phrase)
     {
         if (string.IsNullOrWhiteSpace(phrase)) return phrase;
 
         var words = phrase.Split(' ');
         var lastWord = words[^1];
+
+        // If the word already looks plural, don't double-pluralize
+        if (IsLikelyPlural(lastWord))
+            return phrase;
 
         // Simple pluralization rules
         if (lastWord.EndsWith("s", StringComparison.OrdinalIgnoreCase) ||
@@ -529,6 +528,45 @@ public static class DeterministicH2HeadingGenerator
         }
 
         return string.Join(" ", words);
+    }
+
+    /// <summary>
+    /// Detects words that are already plural to prevent double-pluralization.
+    /// Only checks suffixes that would cause the pluralizer to produce incorrect results
+    /// (e.g., "databases" + "es" → "databaseses").
+    /// </summary>
+    internal static bool IsLikelyPlural(string word)
+    {
+        if (word.Length < 4) return false;
+        var lower = word.ToLowerInvariant();
+
+        // Ends in "ses" (databases, addresses), "zes", "xes", "shes", "ches" —
+        // these are already the result of adding "es" to s/z/x/sh/ch endings
+        if (lower.EndsWith("ses") || lower.EndsWith("zes") ||
+            lower.EndsWith("xes") || lower.EndsWith("shes") ||
+            lower.EndsWith("ches"))
+            return true;
+
+        // Ends in "ies" (entries, queries) — already result of y→ies
+        if (lower.EndsWith("ies"))
+            return true;
+
+        // Common consonant+s plural patterns
+        if (lower.EndsWith("ts") || lower.EndsWith("ds") ||
+            lower.EndsWith("rs") || lower.EndsWith("ns") ||
+            lower.EndsWith("ls") || lower.EndsWith("ms") ||
+            lower.EndsWith("ps") || lower.EndsWith("ks") ||
+            lower.EndsWith("gs") || lower.EndsWith("ws"))
+            return true;
+
+        // Common vowel-consonant-e-s patterns (resources, machines, caches, etc.)
+        if (lower.EndsWith("ces") || lower.EndsWith("ges") ||
+            lower.EndsWith("les") || lower.EndsWith("nes") ||
+            lower.EndsWith("res") || lower.EndsWith("tes") ||
+            lower.EndsWith("ves"))
+            return true;
+
+        return false;
     }
 
     private static string TitleCase(string input)
