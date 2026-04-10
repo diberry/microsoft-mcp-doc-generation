@@ -10,6 +10,7 @@ namespace CSharpGenerator.Tests;
 /// Tests ParameterGenerator.BuildRequiredText.
 /// Priority: P0 — parameter generation is Step 1 of the pipeline.
 /// </summary>
+[Collection("StaticState")]
 public class ParameterGeneratorTests
 {
     // ── BuildRequiredText ──────────────────────────────────────

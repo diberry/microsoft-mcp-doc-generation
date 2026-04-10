@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-using NaturalLanguageGenerator;
+using Azure.Mcp.TextTransformation.Services;
 using Xunit;
 
 namespace CSharpGenerator.Tests;
@@ -14,11 +14,11 @@ namespace CSharpGenerator.Tests;
 [Collection("StaticState")]
 public class NormalizeParameterTests
 {
-    private readonly TextCleanupFixture _fixture;
+    private readonly TextNormalizer _normalizer;
 
-    public NormalizeParameterTests(TextCleanupFixture fixture)
+    public NormalizeParameterTests(TransformationEngineFixture fixture)
     {
-        _fixture = fixture;
+        _normalizer = fixture.Normalizer;
     }
 
     // ── Type Qualifier Preservation (Core Requirement) ──────────────
@@ -37,7 +37,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_PreservesNameQualifier(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -52,7 +52,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_PreservesIdQualifier(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -67,7 +67,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_PreservesUriAndUrlQualifiers(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -79,7 +79,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_SingleWordParameter_Capitalizes()
     {
         // Act
-        var result = TextCleanup.NormalizeParameter("location");
+        var result = _normalizer.NormalizeParameter("location");
 
         // Assert
         Assert.Equal("Location", result);
@@ -89,7 +89,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_EmptyString_ReturnsUnknown()
     {
         // Act
-        var result = TextCleanup.NormalizeParameter("");
+        var result = _normalizer.NormalizeParameter("");
 
         // Assert
         Assert.Equal("Unknown", result);
@@ -100,7 +100,7 @@ public class NormalizeParameterTests
     {
         // Act
         string? input = null;
-        var result = TextCleanup.NormalizeParameter(input!);
+        var result = _normalizer.NormalizeParameter(input!);
 
         // Assert
         Assert.Equal("Unknown", result);
@@ -116,7 +116,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_WithDoubleHyphens_StripsAndPreservesQualifiers(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -131,7 +131,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_MultipleQualifiers_PreservesAll(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -149,7 +149,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_WithAcronyms_PreservesAcronymsAndQualifiers(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -166,7 +166,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_CommonParameters_CorrectFormat(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -182,7 +182,7 @@ public class NormalizeParameterTests
         // Expected: "resource-group-name" → "Resource group name" (CORRECT)
 
         // Act
-        var result = TextCleanup.NormalizeParameter("resource-group-name");
+        var result = _normalizer.NormalizeParameter("resource-group-name");
 
         // Assert
         Assert.NotEqual("Resource group", result);
@@ -193,7 +193,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_SecretName_NotTruncatedToSecret()
     {
         // Act
-        var result = TextCleanup.NormalizeParameter("secret-name");
+        var result = _normalizer.NormalizeParameter("secret-name");
 
         // Assert
         Assert.NotEqual("Secret", result);
@@ -204,7 +204,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_StorageAccountName_NotTruncatedToStorageAccount()
     {
         // Act
-        var result = TextCleanup.NormalizeParameter("storage-account-name");
+        var result = _normalizer.NormalizeParameter("storage-account-name");
 
         // Assert
         Assert.NotEqual("Storage account", result);
@@ -220,7 +220,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_PreservesAllWords_CorrectSpacing(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -234,7 +234,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_NonHyphenSeparators_NotSplit(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -249,7 +249,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_MixedCase_NormalizesCorrectly(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -271,7 +271,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_AzureServiceParameters_PreservesNameQualifier(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -290,7 +290,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_SingleWordQualifiers_FormattedCorrectly(string input, string expected)
     {
         // Act
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
 
         // Assert
         Assert.Equal(expected, result);
@@ -321,7 +321,7 @@ public class NormalizeParameterTests
     [InlineData("template", "Template name")]
     public void NormalizeParameter_BareResourceIdentifier_AppendsNameSuffix(string input, string expected)
     {
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
         Assert.Equal(expected, result);
     }
 
@@ -333,7 +333,7 @@ public class NormalizeParameterTests
     [InlineData("--account", "Account name")]
     public void NormalizeParameter_BareResourceIdentifierWithPrefix_AppendsNameSuffix(string input, string expected)
     {
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
         Assert.Equal(expected, result);
     }
 
@@ -344,7 +344,7 @@ public class NormalizeParameterTests
     [InlineData("account-name", "Account name")]
     public void NormalizeParameter_ResourceIdentifierWithNameSuffix_StillWorks(string input, string expected)
     {
-        var result = TextCleanup.NormalizeParameter(input);
+        var result = _normalizer.NormalizeParameter(input);
         Assert.Equal(expected, result);
     }
 
@@ -352,7 +352,7 @@ public class NormalizeParameterTests
     public void NormalizeParameter_ResourceIdentifierMapping_DoesNotAffectStaticTextReplacement()
     {
         var text = "The database is required for this operation.";
-        var result = TextCleanup.ReplaceStaticText(text);
+        var result = _normalizer.ReplaceStaticText(text);
         Assert.DoesNotContain("Database name", result);
     }
 
@@ -362,7 +362,7 @@ public class NormalizeParameterTests
         // "database" exists in nl-parameter-identifiers.json as "Database name".
         // If it were also added to nl-parameters.json, the identifier mapping should still win
         // because it is checked first (Issue #270 / PR #317 overlap detection).
-        var result = TextCleanup.NormalizeParameter("database");
+        var result = _normalizer.NormalizeParameter("database");
         Assert.Equal("Database name", result);
     }
 }

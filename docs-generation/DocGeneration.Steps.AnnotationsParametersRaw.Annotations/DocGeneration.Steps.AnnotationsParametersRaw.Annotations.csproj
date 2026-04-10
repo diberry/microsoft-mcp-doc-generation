@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../DocGeneration.Core.NaturalLanguage/DocGeneration.Core.NaturalLanguage.csproj" />
+    <ProjectReference Include="../DocGeneration.Core.TextTransformation/DocGeneration.Core.TextTransformation.csproj" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../DocGeneration.Core.TemplateEngine/DocGeneration.Core.TemplateEngine.csproj" />

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 using CSharpGenerator.Models;
-using NaturalLanguageGenerator;
 
 namespace CSharpGenerator.Generators;
 
@@ -24,7 +23,7 @@ public static class ParameterSorting
     {
         return parameters
             .OrderByDescending(p => p.Required)
-            .ThenBy(p => TextCleanup.NormalizeParameter(p.Name ?? ""),
+            .ThenBy(p => Config.TextNormalizer.NormalizeParameter(p.Name ?? ""),
                     StringComparer.OrdinalIgnoreCase);
     }
 }
