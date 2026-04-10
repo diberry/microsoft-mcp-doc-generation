@@ -319,6 +319,14 @@ public class NormalizeParameterTests
     [InlineData("user", "User name")]
     [InlineData("webtest", "Web test name")]
     [InlineData("template", "Template name")]
+    [InlineData("deployment", "Deployment name")]
+    [InlineData("knowledge-base", "Knowledge base name")]
+    [InlineData("knowledge-source", "Knowledge source name")]
+    [InlineData("webtest-resource", "Web test resource name")]
+    [InlineData("health-model", "Health model name")]
+    [InlineData("network-security-group", "Network security group name")]
+    [InlineData("public-ip-address", "Public IP address name")]
+    [InlineData("virtual-network", "Virtual network name")]
     public void NormalizeParameter_BareResourceIdentifier_AppendsNameSuffix(string input, string expected)
     {
         var result = TextCleanup.NormalizeParameter(input);
@@ -331,6 +339,14 @@ public class NormalizeParameterTests
     [InlineData("--vault", "Vault name")]
     [InlineData("--container", "Container name")]
     [InlineData("--account", "Account name")]
+    [InlineData("--deployment", "Deployment name")]
+    [InlineData("--knowledge-base", "Knowledge base name")]
+    [InlineData("--knowledge-source", "Knowledge source name")]
+    [InlineData("--webtest-resource", "Web test resource name")]
+    [InlineData("--health-model", "Health model name")]
+    [InlineData("--network-security-group", "Network security group name")]
+    [InlineData("--public-ip-address", "Public IP address name")]
+    [InlineData("--virtual-network", "Virtual network name")]
     public void NormalizeParameter_BareResourceIdentifierWithPrefix_AppendsNameSuffix(string input, string expected)
     {
         var result = TextCleanup.NormalizeParameter(input);

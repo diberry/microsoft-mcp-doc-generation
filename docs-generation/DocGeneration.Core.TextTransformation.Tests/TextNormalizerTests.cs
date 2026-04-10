@@ -170,6 +170,49 @@ public class TextNormalizerTests
         Assert.Equal("Account name", result);
     }
 
+    [Theory]
+    [InlineData("deployment", "Deployment name")]
+    [InlineData("knowledge-base", "Knowledge base name")]
+    [InlineData("knowledge-source", "Knowledge source name")]
+    [InlineData("webtest-resource", "Web test resource name")]
+    [InlineData("health-model", "Health model name")]
+    [InlineData("network-security-group", "Network security group name")]
+    [InlineData("public-ip-address", "Public IP address name")]
+    [InlineData("virtual-network", "Virtual network name")]
+    public void NormalizeParameter_MultiWordResourceIdentifier_AppendsNameSuffix(string input, string expected)
+    {
+        var config = new TransformationConfig
+        {
+            Lexicon = new Lexicon
+            {
+                Acronyms = new Dictionary<string, AcronymEntry>
+                {
+                    { "ip", new AcronymEntry { Canonical = "IP" } }
+                },
+                Abbreviations = new Dictionary<string, AbbreviationEntry>(),
+                StopWords = new List<string>()
+            },
+            Parameters = new ParameterConfig
+            {
+                Identifiers = new List<ParameterMapping>
+                {
+                    new ParameterMapping { Parameter = "deployment", Display = "Deployment name" },
+                    new ParameterMapping { Parameter = "knowledge-base", Display = "Knowledge base name" },
+                    new ParameterMapping { Parameter = "knowledge-source", Display = "Knowledge source name" },
+                    new ParameterMapping { Parameter = "webtest-resource", Display = "Web test resource name" },
+                    new ParameterMapping { Parameter = "health-model", Display = "Health model name" },
+                    new ParameterMapping { Parameter = "network-security-group", Display = "Network security group name" },
+                    new ParameterMapping { Parameter = "public-ip-address", Display = "Public IP address name" },
+                    new ParameterMapping { Parameter = "virtual-network", Display = "Virtual network name" }
+                },
+                Mappings = new List<ParameterMapping>()
+            }
+        };
+        var normalizer = new TextNormalizer(config);
+        var result = normalizer.NormalizeParameter(input);
+        Assert.Equal(expected, result);
+    }
+
     [Fact]
     public void NormalizeParameter_NoIdentifierOrMapping_FallsThrough()
     {
