@@ -108,6 +108,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Tools.Fingerp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.TestInfrastructure", "docs-generation\DocGeneration.TestInfrastructure\DocGeneration.TestInfrastructure.csproj", "{F2AD7AFC-92BC-438A-AAD4-9C339425A522}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.E2E.Tests", "docs-generation\DocGeneration.E2E.Tests\DocGeneration.E2E.Tests.csproj", "{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -646,6 +648,18 @@ Global
 		{F2AD7AFC-92BC-438A-AAD4-9C339425A522}.Release|x64.Build.0 = Release|Any CPU
 		{F2AD7AFC-92BC-438A-AAD4-9C339425A522}.Release|x86.ActiveCfg = Release|Any CPU
 		{F2AD7AFC-92BC-438A-AAD4-9C339425A522}.Release|x86.Build.0 = Release|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Debug|x64.Build.0 = Debug|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Debug|x86.Build.0 = Debug|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Release|x64.ActiveCfg = Release|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Release|x64.Build.0 = Release|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Release|x86.ActiveCfg = Release|Any CPU
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -678,5 +692,6 @@ Global
 		{858DB81C-6634-4E95-9BF0-8DB411F61595} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{8F464DF9-1EF0-450D-92D1-2A6B9F90F422} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{F2AD7AFC-92BC-438A-AAD4-9C339425A522} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
+		{8F8A1739-D29A-47D3-9F53-86B7E19F3F07} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 	EndGlobalSection
 EndGlobal

@@ -92,8 +92,8 @@ public class SkillPipelineOrchestrator
             // Build prerequisites from skill data + source file analysis
             var prerequisites = BuildPrerequisites(skillData, sources.FileExtensions);
 
-            // Generate
-            var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites);
+            // Generate (with trigger post-processing)
+            var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText);
 
             // Post-process
             rendered = _postProcessor.Process(rendered);

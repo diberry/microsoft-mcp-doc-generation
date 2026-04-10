@@ -141,6 +141,35 @@ public partial class AcrolinxPostProcessor
     }
 
     /// <summary>
+    /// Applies lightweight text-level transformations (static replacements and contractions)
+    /// to a plain-text string. Safe for trigger prompts and other non-markdown content.
+    /// Does NOT apply frontmatter splitting, skill name wrapping, URL normalization,
+    /// acronym expansion, or sentence splitting.
+    /// </summary>
+    public string ProcessText(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+
+        var result = text;
+
+        // Static text replacements
+        foreach (var replacement in _replacements)
+        {
+            var pattern = $@"\b{Regex.Escape(replacement.Parameter)}\b";
+            result = Regex.Replace(result, pattern, replacement.NaturalLanguage, RegexOptions.None);
+        }
+
+        // Contractions
+        foreach (var (phrase, contraction) in Contractions)
+        {
+            var pattern = $@"\b{Regex.Escape(phrase)}\b";
+            result = Regex.Replace(result, pattern, contraction, RegexOptions.IgnoreCase);
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Wraps known technical/API terms in backticks so Acrolinx treats them as code.
     /// Only wraps terms NOT already inside backtick spans.
     /// </summary>

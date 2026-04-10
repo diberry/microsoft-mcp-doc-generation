@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -30,15 +31,14 @@ public class NaturalizeItemsTests
     }
 
     [Fact]
-    public void NaturalizeItems_ShortKeywords_GroupedAsCompleteSentence()
+    public void NaturalizeItems_ShortKeywords_GroupedWithManageAndConfigure()
     {
         var result = SkillPageGenerator.NaturalizeItems(
             ["AI Search", "vector search", "hybrid search", "semantic search"], "Azure AI");
 
         result.Should().ContainSingle();
-        // Should NOT use the vague "Work with" fragment pattern
+        result[0].Should().StartWith("Manage and configure ");
         result[0].Should().NotStartWith("Work with ");
-        // Should be a complete sentence with concrete verb
         result[0].Should().Contain("AI Search");
         result[0].Should().Contain("semantic search");
     }
@@ -50,10 +50,7 @@ public class NaturalizeItemsTests
             ["blob", "queues"], "Azure Storage");
 
         result.Should().ContainSingle();
-        // Should NOT produce "Work with blob and queues" fragment
-        result[0].Should().NotStartWith("Work with ");
-        result[0].Should().Contain("blob");
-        result[0].Should().Contain("queues");
+        result[0].Should().Be("Manage and configure blob and queues in Azure");
     }
 
     [Fact]
@@ -67,15 +64,13 @@ public class NaturalizeItemsTests
     }
 
     [Fact]
-    public void NaturalizeItems_SingleShortItem_CompleteSentenceNotFragment()
+    public void NaturalizeItems_SingleShortItem_ManageAndConfigure()
     {
         var result = SkillPageGenerator.NaturalizeItems(
             ["storage"], "Azure Storage");
 
         result.Should().ContainSingle();
-        // Should NOT produce fragment "Work with storage"
-        result[0].Should().NotStartWith("Work with ");
-        result[0].Should().Contain("storage");
+        result[0].Should().Be("Manage and configure storage in Azure");
     }
 
     // === Issue 1: Acronym casing fixes ===
@@ -112,12 +107,11 @@ public class NaturalizeItemsTests
     [Fact]
     public void NaturalizeItems_AcronymCasing_ShortItemsAlsoFixed()
     {
-        // Short items get sentence prefix, and acronyms still get fixed
+        // Short items get "Manage and configure" prefix, but acronyms still get fixed
         var result = SkillPageGenerator.NaturalizeItems(
             ["ai Search"], "Azure AI");
         result.Should().ContainSingle();
-        result[0].Should().Contain("AI Search");
-        result[0].Should().NotStartWith("Work with ");
+        result[0].Should().Be("Manage and configure AI Search in Azure");
     }
 
     // === Issue 3: Single-word verb filtering ===
@@ -187,10 +181,8 @@ title: Azure skill for {{displayName}}
         var result = gen.Generate(skill, triggers, tier, prereqs);
 
         result.Should().Contain("When NOT to use");
-        // Should NOT contain "Work with" fragment
         result.Should().NotContain("Work with Cosmos");
-        result.Should().Contain("Cosmos DB operations");
-        result.Should().Contain("Network security groups");
+        result.Should().Contain("Manage and configure Cosmos DB operations and Network security groups in Azure");
     }
 
     [Fact]
@@ -442,12 +434,68 @@ Use the **{{{displayName}}}** skill when you need to:
 - [Azure MCP Server](/azure/developer/azure-mcp-server/overview)
 ";
 
+    // Use the real template for integration-level tests
+    private static string LoadRealTemplate()
+    {
+        // Navigate from test bin to templates directory
+        var dir = AppContext.BaseDirectory;
+        while (dir != null && !File.Exists(Path.Combine(dir, "skills-generation.slnx")))
+            dir = Directory.GetParent(dir)?.FullName;
+        if (dir == null) throw new InvalidOperationException("Cannot find solution root");
+        return File.ReadAllText(Path.Combine(dir, "templates", "skill-page-template.hbs"));
+    }
+
     private SkillPageGenerator CreateGenerator(string? template = null)
     {
         return new SkillPageGenerator(template ?? FullTemplate, _logger);
     }
 
-    // --- "What it provides" should not just echo the description ---
+    // --- Fix 1: No more "Work with X" sentence fragments ---
+
+    [Fact]
+    public void FlushShortItems_DoesNotProduceWorkWithPattern()
+    {
+        // Short noun phrases should NOT produce "Work with X"
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["blob storage", "file shares", "table storage"], "Azure Storage");
+        result.Should().NotContain(s => s.StartsWith("Work with", StringComparison.OrdinalIgnoreCase),
+            "FlushShortItems should not produce 'Work with' fragments");
+    }
+
+    [Fact]
+    public void FlushShortItems_ProducesCompleteSentence()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["blob storage", "file shares", "table storage"], "Azure Storage");
+
+        result.Should().ContainSingle();
+        // Should be a complete action sentence
+        result[0].Should().StartWith("Manage and configure");
+        result[0].Should().Contain("blob storage");
+        result[0].Should().Contain("table storage");
+    }
+
+    [Fact]
+    public void FlushShortItems_SingleItem_ProducesCompleteSentence()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(["AI Search"], "Azure AI");
+        result.Should().ContainSingle();
+        result[0].Should().StartWith("Manage and configure");
+        result[0].Should().Contain("AI Search");
+        result[0].Should().NotStartWith("Work with");
+    }
+
+    [Fact]
+    public void FlushShortItems_TwoItems_ProducesCompleteSentence()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(["blob", "queues"], "Azure Storage");
+        result.Should().ContainSingle();
+        result[0].Should().StartWith("Manage and configure");
+        result[0].Should().Contain("blob");
+        result[0].Should().Contain("queues");
+    }
+
+    // --- Fix 2: "What it provides" should not just echo the description ---
 
     [Fact]
     public void WhatItProvides_DoesNotRepeatDescriptionVerbatim()
@@ -538,10 +586,10 @@ Use the **{{{displayName}}}** skill when you need to:
         whatContent.Should().ContainAny("query", "Query", "metrics", "logs", "alert");
     }
 
-    // --- Prerequisite deduplication ---
+    // --- Fix 3: GitHub Copilot appears via tools list (template handles dedup) ---
 
     [Fact]
-    public void Generate_DeduplicatesGitHubCopilotFromToolsList()
+    public void Generate_GitHubCopilotAppearsInToolsList()
     {
         var gen = CreateGenerator();
         var skill = new SkillData
@@ -563,22 +611,107 @@ Use the **{{{displayName}}}** skill when you need to:
 
         var result = gen.Generate(skill, triggers, tier, prereqs);
 
-        // The "Required tools" section should NOT contain "GitHub Copilot" (already in main prereqs)
-        // But the main prerequisites section should still have it
+        // Both tools should appear — template handles dedup, not code
         result.Should().Contain("GitHub Copilot");
+        result.Should().Contain("Azure CLI");
+    }
 
-        // If Required tools section exists, it should only have Azure CLI
-        if (result.Contains("### Required tools"))
+    [Fact]
+    public void Template_NoDuplicateGitHubCopilot()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = new SkillData
         {
-            var toolsIdx = result.IndexOf("### Required tools");
-            var afterTools = result[(toolsIdx + "### Required tools".Length)..];
-            var nextSection = afterTools.IndexOf("\n#");
-            var toolsContent = nextSection > 0 ? afterTools[..nextSection] : afterTools;
+            Name = "azure-storage",
+            DisplayName = "Azure Storage",
+            Description = "Test description."
+        };
+        var triggers = new TriggerData(["Create a storage account"], [], null);
+        var tier = new TierAssessment(1, [], "Test", true, true, false, false, true);
+        var prereqs = new SkillPrerequisites
+        {
+            Tools = [new ToolRequirement("GitHub Copilot", Required: true),
+                     new ToolRequirement("Azure CLI", MinVersion: "2.60.0")]
+        };
 
-            toolsContent.Should().NotContain("GitHub Copilot",
-                "GitHub Copilot should be removed from Required tools to avoid duplication");
-            toolsContent.Should().Contain("Azure CLI");
-        }
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        // Count occurrences of "GitHub Copilot" as a prerequisite bullet
+        var copilotBulletCount = Regex.Matches(result, @"^\s*-\s+\*\*GitHub Copilot\*\*", RegexOptions.Multiline).Count;
+        copilotBulletCount.Should().Be(1,
+            "GitHub Copilot should appear as a prerequisite bullet exactly once, not duplicated");
+    }
+
+    [Fact]
+    public void Template_GitHubCopilotAppearsViaToolPrereqs()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = new SkillData
+        {
+            Name = "azure-storage",
+            DisplayName = "Azure Storage",
+            Description = "Test description."
+        };
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites
+        {
+            Tools = [new ToolRequirement("GitHub Copilot", Required: true)]
+        };
+
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        // Should still appear in Required tools section
+        result.Should().Contain("**GitHub Copilot**");
+    }
+
+    // --- Fix 4: Trigger post-processing ---
+
+    [Fact]
+    public void Generate_AppliesTriggerProcessorToExamplePrompts()
+    {
+        var template = @"{{#each shouldTrigger}}- ""{{{this}}}""
+{{/each}}";
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = new SkillData
+        {
+            Name = "azure-storage",
+            DisplayName = "Azure Storage",
+            Description = "Test."
+        };
+        var triggers = new TriggerData(["setup Azure Active Directory auth"], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, true);
+        var prereqs = new SkillPrerequisites();
+
+        // Provide a trigger processor that uppercases text
+        var result = gen.Generate(skill, triggers, tier, prereqs, t => t.ToUpperInvariant());
+
+        result.Should().Contain("SETUP AZURE ACTIVE DIRECTORY AUTH",
+            "Trigger processor should be applied to example prompts");
+    }
+
+    [Fact]
+    public void Generate_WithoutTriggerProcessor_TriggersUnchanged()
+    {
+        var template = @"{{#each shouldTrigger}}- ""{{{this}}}""
+{{/each}}";
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = new SkillData
+        {
+            Name = "azure-storage",
+            DisplayName = "Azure Storage",
+            Description = "Test."
+        };
+        var triggers = new TriggerData(["Create a storage account"], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, true);
+        var prereqs = new SkillPrerequisites();
+
+        // No trigger processor — should remain unchanged
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().Contain("Create a storage account");
     }
 
     // --- Full-page "When to use" bullets should be complete sentences ---

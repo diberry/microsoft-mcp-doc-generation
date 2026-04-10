@@ -17,16 +17,16 @@ public class SkillPageGenerator : ISkillPageGenerator
         _compiledTemplate = handlebars.Compile(templateContent);
     }
 
-    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites)
+    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null)
     {
-        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites);
+        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor);
         var result = _compiledTemplate(context);
         return result;
     }
 
     private static readonly int MaxExamplePrompts = 10;
 
-    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites)
+    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null)
     {
         // Build "When to use" from UseFor, falling back to trigger prompts if empty
         var rawUseFor = skillData.UseFor.Count > 0
@@ -48,16 +48,13 @@ public class SkillPageGenerator : ISkillPageGenerator
             : new List<string>();
         var doNotUseForList = NaturalizeItems(rawDoNotUseFor, skillData.DisplayName);
 
-        // Cap example prompts
-        var examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts).ToList();
+        // Cap example prompts and optionally post-process them
+        var examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts)
+            .Select(t => triggerProcessor != null ? triggerProcessor(t) : t)
+            .ToList();
 
         // Build "What it provides" with concrete capabilities from services/tools
         var whatItProvides = BuildWhatItProvides(skillData);
-
-        // Deduplicate "GitHub Copilot" from tools list — it's already hardcoded in the template
-        var deduplicatedTools = prerequisites.Tools
-            .Where(t => !t.Name.Contains("GitHub Copilot", StringComparison.OrdinalIgnoreCase))
-            .ToList();
 
         return new Dictionary<string, object?>
         {
@@ -116,7 +113,7 @@ public class SkillPageGenerator : ISkillPageGenerator
                     ["scope"] = r.Scope,
                     ["reason"] = r.Reason
                 }).ToList(),
-                ["tools"] = deduplicatedTools.Select(t => new Dictionary<string, object?>
+                ["tools"] = prerequisites.Tools.Select(t => new Dictionary<string, object?>
                 {
                     ["name"] = t.Name,
                     ["minVersion"] = t.MinVersion,
@@ -141,7 +138,7 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["hasTriggers"] = examplePrompts.Count > 0,
             ["whatItProvides"] = whatItProvides,
             ["hasRbacRoles"] = prerequisites.RbacRoles.Count > 0,
-            ["hasToolPrereqs"] = deduplicatedTools.Count > 0,
+            ["hasToolPrereqs"] = prerequisites.Tools.Count > 0,
             ["hasResources"] = prerequisites.Resources.Count > 0
         };
     }
@@ -273,20 +270,13 @@ public class SkillPageGenerator : ISkillPageGenerator
     {
         if (shortItems.Count == 0) return;
 
-        if (shortItems.Count == 1)
-        {
-            result.Add($"Manage and configure {shortItems[0]} resources");
-        }
-        else if (shortItems.Count == 2)
-        {
-            result.Add($"Manage and configure {shortItems[0]} and {shortItems[1]} resources");
-        }
-        else
-        {
-            var last = shortItems[^1];
-            var rest = shortItems.Take(shortItems.Count - 1);
-            result.Add($"Manage and configure {string.Join(", ", rest)}, and {last} resources");
-        }
+        var joined = shortItems.Count == 1
+            ? shortItems[0]
+            : shortItems.Count == 2
+                ? $"{shortItems[0]} and {shortItems[1]}"
+                : $"{string.Join(", ", shortItems.Take(shortItems.Count - 1))}, and {shortItems[^1]}";
+
+        result.Add($"Manage and configure {joined} in Azure");
         shortItems.Clear();
     }
 
