@@ -56,69 +56,104 @@ public class GeneratedOutputTests
         return Path.Combine(repoRoot, namespaceDirName);
     }
 
-    [Theory]
+    [Fact]
     [Trait("Category", "E2E")]
-    [MemberData(nameof(GetGeneratedNamespaces))]
-    public void Namespace_HasExpectedDirectoryStructure(string namespaceDirName)
+    public void Namespace_HasExpectedDirectoryStructure()
     {
-        var outputPath = GetOutputPath(namespaceDirName);
-        var result = OutputStructureValidator.ValidateDirectoryStructure(outputPath);
+        var namespaces = GetGeneratedNamespaces().ToList();
+        if (namespaces.Count == 0)
+            return;
 
-        Assert.True(result.Success,
-            $"Directory structure issues in {namespaceDirName}:\n" +
-            string.Join("\n", result.Issues));
+        foreach (var ns in namespaces)
+        {
+            var namespaceDirName = (string)ns[0];
+            var outputPath = GetOutputPath(namespaceDirName);
+            var result = OutputStructureValidator.ValidateDirectoryStructure(outputPath);
+
+            Assert.True(result.Success,
+                $"Directory structure issues in {namespaceDirName}:\n" +
+                string.Join("\n", result.Issues));
+        }
     }
 
-    [Theory]
+    [Fact]
     [Trait("Category", "E2E")]
-    [MemberData(nameof(GetGeneratedNamespaces))]
-    public void Namespace_NoLeakedTemplateTokens(string namespaceDirName)
+    public void Namespace_NoLeakedTemplateTokens()
     {
-        var outputPath = GetOutputPath(namespaceDirName);
-        var result = OutputStructureValidator.ValidateNoLeakedTokens(outputPath);
+        var namespaces = GetGeneratedNamespaces().ToList();
+        if (namespaces.Count == 0)
+            return;
 
-        Assert.True(result.Success,
-            $"Leaked template tokens in {namespaceDirName}:\n" +
-            string.Join("\n", result.Issues));
+        foreach (var ns in namespaces)
+        {
+            var namespaceDirName = (string)ns[0];
+            var outputPath = GetOutputPath(namespaceDirName);
+            var result = OutputStructureValidator.ValidateNoLeakedTokens(outputPath);
+
+            Assert.True(result.Success,
+                $"Leaked template tokens in {namespaceDirName}:\n" +
+                string.Join("\n", result.Issues));
+        }
     }
 
-    [Theory]
+    [Fact]
     [Trait("Category", "E2E")]
-    [MemberData(nameof(GetGeneratedNamespaces))]
-    public void Namespace_AllPublishableMarkdownHasValidFrontmatter(string namespaceDirName)
+    public void Namespace_AllPublishableMarkdownHasValidFrontmatter()
     {
-        var outputPath = GetOutputPath(namespaceDirName);
-        var result = OutputStructureValidator.ValidateMarkdownFrontmatter(outputPath);
+        var namespaces = GetGeneratedNamespaces().ToList();
+        if (namespaces.Count == 0)
+            return;
 
-        Assert.True(result.Success,
-            $"Frontmatter issues in {namespaceDirName}:\n" +
-            string.Join("\n", result.Issues));
+        foreach (var ns in namespaces)
+        {
+            var namespaceDirName = (string)ns[0];
+            var outputPath = GetOutputPath(namespaceDirName);
+            var result = OutputStructureValidator.ValidateMarkdownFrontmatter(outputPath);
+
+            Assert.True(result.Success,
+                $"Frontmatter issues in {namespaceDirName}:\n" +
+                string.Join("\n", result.Issues));
+        }
     }
 
-    [Theory]
+    [Fact]
     [Trait("Category", "E2E")]
-    [MemberData(nameof(GetGeneratedNamespaces))]
-    public void Namespace_NoEmptyOrTruncatedFiles(string namespaceDirName)
+    public void Namespace_NoEmptyOrTruncatedFiles()
     {
-        var outputPath = GetOutputPath(namespaceDirName);
-        var result = OutputStructureValidator.ValidateFileIntegrity(outputPath);
+        var namespaces = GetGeneratedNamespaces().ToList();
+        if (namespaces.Count == 0)
+            return;
 
-        Assert.True(result.Success,
-            $"File integrity issues in {namespaceDirName}:\n" +
-            string.Join("\n", result.Issues));
+        foreach (var ns in namespaces)
+        {
+            var namespaceDirName = (string)ns[0];
+            var outputPath = GetOutputPath(namespaceDirName);
+            var result = OutputStructureValidator.ValidateFileIntegrity(outputPath);
+
+            Assert.True(result.Success,
+                $"File integrity issues in {namespaceDirName}:\n" +
+                string.Join("\n", result.Issues));
+        }
     }
 
-    [Theory]
+    [Fact]
     [Trait("Category", "E2E")]
-    [MemberData(nameof(GetGeneratedNamespaces))]
-    public void Namespace_ToolFamilyArticleHasValidToolCount(string namespaceDirName)
+    public void Namespace_ToolFamilyArticleHasValidToolCount()
     {
-        var outputPath = GetOutputPath(namespaceDirName);
-        var result = OutputStructureValidator.ValidateToolCount(outputPath);
+        var namespaces = GetGeneratedNamespaces().ToList();
+        if (namespaces.Count == 0)
+            return;
 
-        Assert.True(result.Success,
-            $"Tool count issues in {namespaceDirName}:\n" +
-            string.Join("\n", result.Issues));
+        foreach (var ns in namespaces)
+        {
+            var namespaceDirName = (string)ns[0];
+            var outputPath = GetOutputPath(namespaceDirName);
+            var result = OutputStructureValidator.ValidateToolCount(outputPath);
+
+            Assert.True(result.Success,
+                $"Tool count issues in {namespaceDirName}:\n" +
+                string.Join("\n", result.Issues));
+        }
     }
 
     /// <summary>
