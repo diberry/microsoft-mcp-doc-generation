@@ -63,6 +63,14 @@ public class HorizontalArticleTemplateData
     
     [JsonPropertyName("genai-additionalLinks")]
     public List<AdditionalLink> AdditionalLinks { get; set; } = new();
+    
+    // ===== Skills data (from Step 5 skills-relevance JSON) =====
+    
+    /// <summary>
+    /// Relevant GitHub Copilot skills/extensions for this service.
+    /// Populated from Step 5 output. Null or empty means no skills section rendered.
+    /// </summary>
+    public List<SkillTemplateData>? Skills { get; set; }
 }
 
 /// <summary>

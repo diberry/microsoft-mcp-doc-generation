@@ -98,6 +98,18 @@ When using Azure MCP Server with {{serviceBrandName}}:
 - **Review actions before confirming**: Carefully review destructive operations before confirming them.
 {{/if}}
 
+{{#if skills}}
+## GitHub Copilot extensions
+
+The following GitHub Copilot extensions can help you work with {{serviceBrandName}}:
+
+| Extension | Description |
+|-----------|-------------|
+{{#each skills}}
+| [{{name}}]({{sourceUrl}}) | {{description}} |
+{{/each}}
+{{/if}}
+
 ## Related content
 
 * [Azure MCP Server overview](../overview.md)
