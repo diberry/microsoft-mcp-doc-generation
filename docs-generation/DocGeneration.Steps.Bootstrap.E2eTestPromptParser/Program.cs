@@ -18,6 +18,8 @@ internal static class Program
     {
         var format = "json";
         string? outputFile = null;
+        string? branchOverride = null;
+        string? inputFile = null;
 
         for (int i = 0; i < args.Length; i++)
         {
@@ -25,43 +27,68 @@ internal static class Program
             {
                 format = args[++i].ToLowerInvariant();
             }
+            else if (args[i] == "--branch" && i + 1 < args.Length)
+            {
+                branchOverride = args[++i];
+            }
+            else if (args[i] == "--file" && i + 1 < args.Length)
+            {
+                inputFile = args[++i];
+            }
             else if (!args[i].StartsWith("--", StringComparison.Ordinal))
             {
                 outputFile = args[i];
             }
         }
 
-        // Load config
-        var configPath = Path.Combine(AppContext.BaseDirectory, "config.json");
-        if (!File.Exists(configPath))
-        {
-            Console.Error.WriteLine($"Error: config.json not found at {configPath}");
-            return 1;
-        }
+        string localPath;
 
-        var configJson = await File.ReadAllTextAsync(configPath);
-        var config = JsonSerializer.Deserialize<ParserConfig>(configJson);
-        if (config is null || string.IsNullOrWhiteSpace(config.RemoteUrl))
+        if (!string.IsNullOrWhiteSpace(inputFile))
         {
-            Console.Error.WriteLine("Error: config.json is missing or has empty remoteUrl");
-            return 1;
-        }
+            // Pre-fetched file provided by caller (e.g., BootstrapStep)
+            if (!File.Exists(inputFile))
+            {
+                Console.Error.WriteLine($"Error: input file not found: {inputFile}");
+                return 1;
+            }
 
-        // Download remote file
-        Console.WriteLine($"Downloading: {config.RemoteUrl}");
-        var localPath = Path.Combine(AppContext.BaseDirectory, config.LocalFileName);
-
-        using var httpClient = new HttpClient();
-        try
-        {
-            var markdown = await httpClient.GetStringAsync(config.RemoteUrl);
-            await File.WriteAllTextAsync(localPath, markdown);
-            Console.WriteLine($"Saved to:    {localPath}");
+            localPath = inputFile;
+            Console.WriteLine($"Using pre-fetched file: {localPath}");
         }
-        catch (HttpRequestException ex)
+        else
         {
-            Console.Error.WriteLine($"Error downloading file: {ex.Message}");
-            return 1;
+            // Standalone mode: download from upstream using config.json
+            var configPath = Path.Combine(AppContext.BaseDirectory, "config.json");
+            if (!File.Exists(configPath))
+            {
+                Console.Error.WriteLine($"Error: config.json not found at {configPath}");
+                return 1;
+            }
+
+            var configJson = await File.ReadAllTextAsync(configPath);
+            var config = JsonSerializer.Deserialize<ParserConfig>(configJson);
+            if (config is null || string.IsNullOrWhiteSpace(config.RemoteUrl))
+            {
+                Console.Error.WriteLine("Error: config.json is missing or has empty remoteUrl");
+                return 1;
+            }
+
+            var effectiveUrl = config.GetEffectiveUrl(branchOverride);
+            Console.WriteLine($"Downloading: {effectiveUrl}");
+            localPath = Path.Combine(AppContext.BaseDirectory, config.LocalFileName);
+
+            using var httpClient = new HttpClient();
+            try
+            {
+                var markdown = await httpClient.GetStringAsync(effectiveUrl);
+                await File.WriteAllTextAsync(localPath, markdown);
+                Console.WriteLine($"Saved to:    {localPath}");
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.Error.WriteLine($"Error downloading file: {ex.Message}");
+                return 1;
+            }
         }
 
         // Parse
