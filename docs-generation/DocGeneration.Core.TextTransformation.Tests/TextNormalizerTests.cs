@@ -216,8 +216,18 @@ public class TextNormalizerTests
     [Fact]
     public void NormalizeParameter_NoIdentifierOrMapping_FallsThrough()
     {
-        // "resourceGroupName" is not in identifiers or mappings — falls to camelCase split.
+        // "resourceGroupName" is not in identifiers or mappings — falls to hyphen split.
+        // Since it has no hyphens, it stays as a single token (capitalized).
+        // CamelCase splitting is available via SplitAndTransformProgrammaticName() for other uses.
         var result = _normalizer.NormalizeParameter("resourceGroupName");
-        Assert.Equal("resource group name", result);
+        Assert.Equal("ResourceGroupName", result);
+    }
+
+    [Fact]
+    public void NormalizeParameter_HyphenatedName_SplitsCorrectly()
+    {
+        // "resource-group-name" splits on hyphens for natural language output.
+        var result = _normalizer.NormalizeParameter("resource-group-name");
+        Assert.Equal("Resource group name", result);
     }
 }

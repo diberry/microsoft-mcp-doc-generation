@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using NaturalLanguageGenerator;
+using Azure.Mcp.TextTransformation.Services;
+using CSharpGenerator.Tests;
 using Xunit;
 
 namespace DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests;
@@ -11,8 +12,14 @@ namespace DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests;
 /// in parameter descriptions are wrapped in backticks at the source level.
 /// Fixes: #190
 /// </summary>
-public class WrapExampleValuesTests
+public class WrapExampleValuesTests : IClassFixture<TransformationEngineFixture>
 {
+    private readonly TextNormalizer _normalizer;
+
+    public WrapExampleValuesTests(TransformationEngineFixture fixture)
+    {
+        _normalizer = fixture.Normalizer;
+    }
     // ── Core fix: wrap bare values in backticks ─────────────────────
 
     [Theory]
@@ -27,7 +34,7 @@ public class WrapExampleValuesTests
         "The server FQDN (for example, `myserver.database.windows.net`).")]
     public void WrapExampleValues_SingleBareValue_WrapsInBackticks(string input, string expected)
     {
-        var result = TextCleanup.WrapExampleValues(input);
+        var result = _normalizer.WrapExampleValues(input);
         Assert.Equal(expected, result);
     }
 
@@ -35,7 +42,7 @@ public class WrapExampleValuesTests
     public void WrapExampleValues_CommaSeparatedValues_WrapsEachValue()
     {
         var input = "The type (for example, SqlServer, MySQL, PostgreSQL).";
-        var result = TextCleanup.WrapExampleValues(input);
+        var result = _normalizer.WrapExampleValues(input);
 
         Assert.Equal("The type (for example, `SqlServer`, `MySQL`, `PostgreSQL`).", result);
     }
@@ -48,7 +55,7 @@ public class WrapExampleValuesTests
     [InlineData("The timestamp (for example, `2023-01-01T00:00:00Z`).")]
     public void WrapExampleValues_AlreadyBackticked_NoChange(string input)
     {
-        var result = TextCleanup.WrapExampleValues(input);
+        var result = _normalizer.WrapExampleValues(input);
         Assert.Equal(input, result);
     }
 
@@ -66,7 +73,7 @@ public class WrapExampleValuesTests
         "The period (for example, `P1D` for 1 day).")]
     public void WrapExampleValues_ValueWithExplanation_OnlyBackticksValueToken(string input, string expected)
     {
-        var result = TextCleanup.WrapExampleValues(input);
+        var result = _normalizer.WrapExampleValues(input);
         Assert.Equal(expected, result);
     }
 
@@ -74,7 +81,7 @@ public class WrapExampleValuesTests
     public void WrapExampleValues_MultipleValuesWithExplanations_BackticksEachValueOnly()
     {
         var input = "The interval (for example, PT1H for 1 hour, PT5M for 5 minutes).";
-        var result = TextCleanup.WrapExampleValues(input);
+        var result = _normalizer.WrapExampleValues(input);
 
         Assert.Equal("The interval (for example, `PT1H` for 1 hour, `PT5M` for 5 minutes).", result);
     }
@@ -83,7 +90,7 @@ public class WrapExampleValuesTests
     public void WrapExampleValues_MixedPlainAndExplanationValues_HandledCorrectly()
     {
         var input = "The unit (for example, PT1H for 1 hour, Percent, ByteSeconds for byte-seconds).";
-        var result = TextCleanup.WrapExampleValues(input);
+        var result = _normalizer.WrapExampleValues(input);
 
         Assert.Equal("The unit (for example, `PT1H` for 1 hour, `Percent`, `ByteSeconds` for byte-seconds).", result);
     }
@@ -93,27 +100,27 @@ public class WrapExampleValuesTests
     [Fact]
     public void WrapExampleValues_NullInput_ReturnsNull()
     {
-        Assert.Null(TextCleanup.WrapExampleValues(null!));
+        Assert.Null(_normalizer.WrapExampleValues(null!));
     }
 
     [Fact]
     public void WrapExampleValues_EmptyInput_ReturnsEmpty()
     {
-        Assert.Equal("", TextCleanup.WrapExampleValues(""));
+        Assert.Equal("", _normalizer.WrapExampleValues(""));
     }
 
     [Fact]
     public void WrapExampleValues_NoExamplePattern_ReturnsUnchanged()
     {
         var input = "The name of the storage account.";
-        Assert.Equal(input, TextCleanup.WrapExampleValues(input));
+        Assert.Equal(input, _normalizer.WrapExampleValues(input));
     }
 
     [Fact]
     public void WrapExampleValues_InParameterTable_WrapsCorrectly()
     {
         var input = "| **App** |  Required | The name of the Azure App Service (for example, my-webapp). |";
-        var result = TextCleanup.WrapExampleValues(input);
+        var result = _normalizer.WrapExampleValues(input);
 
         Assert.Contains("(for example, `my-webapp`)", result);
     }
