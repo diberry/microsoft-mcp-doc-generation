@@ -56,6 +56,13 @@ public class ServiceConfig
 public class ParameterConfig
 {
     /// <summary>
+    /// Resource identifier mappings checked before generic mappings.
+    /// Maps bare resource type names (e.g., "database") to "{ResourceType} name" format.
+    /// </summary>
+    [JsonPropertyName("identifiers")]
+    public List<ParameterMapping> Identifiers { get; set; } = new();
+
+    /// <summary>
     /// List of parameter name mappings.
     /// </summary>
     [JsonPropertyName("mappings")]

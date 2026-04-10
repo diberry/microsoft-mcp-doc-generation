@@ -30,6 +30,12 @@ public sealed class PipelineContext
 
     public required IReportWriter Reports { get; init; }
 
+    /// <summary>
+    /// The resolved upstream branch for fetching files from microsoft/mcp.
+    /// Delegates to <see cref="PipelineRequest.ResolvedMcpBranch"/>.
+    /// </summary>
+    public string McpBranch => Request.ResolvedMcpBranch;
+
     public string? CliVersion { get; set; }
 
     public CliMetadataSnapshot? CliOutput { get; set; }
