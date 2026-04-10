@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Branch-aware content generation (`--mcp-branch`)** — The pipeline now fetches upstream files (`azmcp-commands.md`, `e2eTestPrompts.md`) from a configurable branch of `microsoft/mcp`. Default: `release/azure/2.x`. Override via `--mcp-branch <branch>` CLI flag or `MCP_BRANCH` environment variable. Local fallback preserved for offline use. (#387)
 - **Vale CLI prose linter for docs-generation** — Integrated Vale with Microsoft style rules into the docs-generation pipeline. Includes `.vale.ini` config, `lint-vale.sh`/`lint-vale.ps1` scripts, Pester tests, and a non-blocking CI job in `build-and-test.yml`. Suppresses same false positives as skills-generation (FirstPerson, Dashes, Quotes, HeadingAcronyms). (#368)
 - Azure Skills documentation generation pipeline (`skills-generation/`) — generates customer-facing docs for 24 Azure Skills (#365)
 - `start-azure-skills.sh` entry point script
