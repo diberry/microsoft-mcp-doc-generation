@@ -72,16 +72,17 @@ Use the **{{{displayName}}}** skill when you need to:
 | {{{name}}} | {{{useWhen}}} |
 {{/each}}
 {{/if}}
-{{#if showToolsSection}}
 {{#if hasMcpTools}}
-### Related tools
 
-| Tool | Command | Purpose |
-|------|---------|---------|
+## MCP tools
+
+The following MCP tools are available with this skill:
+
+| Tool | Description |
+|------|-------------|
 {{#each mcpTools}}
-| {{{toolName}}} | `{{{command}}}` | {{{purpose}}} |
+| `{{{toolName}}}` | {{{purpose}}} |
 {{/each}}
-{{/if}}
 {{/if}}
 
 {{#if showDecisionGuidance}}

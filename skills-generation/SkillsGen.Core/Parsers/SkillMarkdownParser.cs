@@ -287,29 +287,110 @@ public partial class SkillMarkdownParser : ISkillParser
 
     private static List<McpToolEntry> ExtractMcpTools(string body)
     {
-        var section = ExtractSectionContent(body, @"##?\s*(?:MCP\s+)?Tools");
-        if (string.IsNullOrEmpty(section)) return [];
-
         var tools = new List<McpToolEntry>();
-        // Parse table: | ToolName | Command | Purpose | ToolPage |
-        var rows = Regex.Matches(section, @"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]*?)\s*\|?\s*$", RegexOptions.Multiline);
-        foreach (Match row in rows)
-        {
-            var toolName = row.Groups[1].Value.Trim();
-            if (toolName.StartsWith("---") || toolName.Equals("ToolName", StringComparison.OrdinalIgnoreCase) ||
-                toolName.Equals("Tool", StringComparison.OrdinalIgnoreCase) ||
-                toolName.Equals("Name", StringComparison.OrdinalIgnoreCase)) continue;
 
-            var command = row.Groups[2].Value.Trim();
-            var purpose = row.Groups[3].Value.Trim();
-            var toolPage = NullIfEmpty(row.Groups[4].Value.Trim());
-            tools.Add(new McpToolEntry(toolName, command, purpose, toolPage));
+        // 1. Extract from dedicated MCP Tools / MCP Server sections
+        var section = ExtractSectionContent(body, @"##?\s*(?:MCP\s+)?(?:Tools|Server)(?:\s*\([^)]*\))?");
+        if (!string.IsNullOrEmpty(section))
+        {
+            // Parse tables with dynamic column detection
+            tools.AddRange(ParseToolTable(section));
+
+            // Parse bullet format: - `tool` with command `cmd` - description
+            tools.AddRange(ParseToolBullets(section));
+
+            // Parse code block tool references within the section
+            tools.AddRange(ParseCodeBlockTools(section));
         }
 
-        // Bullet format: - `command` — purpose
+        // 2. Extract from Quick Reference key-value table
+        var quickRefSection = ExtractSectionContent(body, @"##?\s*Quick\s+Reference");
+        if (!string.IsNullOrEmpty(quickRefSection))
+        {
+            tools.AddRange(ParseQuickReferenceTools(quickRefSection));
+        }
+
+        // Deduplicate: prefer richer entries (longer Purpose) for same ToolName+Command
+        return DeduplicateTools(tools);
+    }
+
+    private static List<McpToolEntry> ParseToolTable(string section)
+    {
+        var tools = new List<McpToolEntry>();
+
+        // Find all table rows (any column count)
+        var rows = Regex.Matches(section, @"^\|(.+)\|?\s*$", RegexOptions.Multiline);
+        if (rows.Count < 2) return tools;
+
+        // Parse header row to detect column semantics
+        var headerCells = SplitTableRow(rows[0].Groups[1].Value);
+        if (headerCells.Count == 0) return tools;
+
+        // Map column indices by normalized header name
+        int toolCol = -1, commandCol = -1, purposeCol = -1, toolPageCol = -1;
+        for (int i = 0; i < headerCells.Count; i++)
+        {
+            var h = headerCells[i].Trim().ToLowerInvariant();
+            if (h is "tool" or "toolname" or "name")
+                toolCol = i;
+            else if (h is "command" or "cmd")
+                commandCol = i;
+            else if (h is "purpose" or "description" or "use when")
+                purposeCol = i;
+            else if (h is "toolpage" or "tool page")
+                toolPageCol = i;
+        }
+
+        if (toolCol < 0) return tools;
+
+        // Parse data rows (skip header and separator)
+        for (int r = 1; r < rows.Count; r++)
+        {
+            var cells = SplitTableRow(rows[r].Groups[1].Value);
+            if (cells.Count <= toolCol) continue;
+
+            var rawTool = StripBackticks(cells[toolCol].Trim());
+            if (string.IsNullOrWhiteSpace(rawTool) || rawTool.StartsWith("---")) continue;
+            // Skip header-like values
+            if (rawTool.Equals("Tool", StringComparison.OrdinalIgnoreCase) ||
+                rawTool.Equals("ToolName", StringComparison.OrdinalIgnoreCase) ||
+                rawTool.Equals("Name", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var command = commandCol >= 0 && cells.Count > commandCol
+                ? StripBackticks(cells[commandCol].Trim()) : "";
+            var purpose = purposeCol >= 0 && cells.Count > purposeCol
+                ? StripBackticks(cells[purposeCol].Trim()) : "";
+            var toolPage = toolPageCol >= 0 && cells.Count > toolPageCol
+                ? NullIfEmpty(StripBackticks(cells[toolPageCol].Trim())) : null;
+
+            tools.Add(new McpToolEntry(rawTool, command, purpose, toolPage));
+        }
+
+        return tools;
+    }
+
+    private static List<McpToolEntry> ParseToolBullets(string section)
+    {
+        var tools = new List<McpToolEntry>();
+
+        // Format: - `tool` with command `cmd` - description
+        var withCommand = Regex.Matches(section,
+            @"^[-*]\s+`([^`]+)`\s+with\s+command\s+`([^`]+)`\s*[-—–]\s*(.+)$",
+            RegexOptions.Multiline);
+        foreach (Match m in withCommand)
+        {
+            tools.Add(new McpToolEntry(
+                m.Groups[1].Value.Trim(),
+                m.Groups[2].Value.Trim(),
+                m.Groups[3].Value.Trim()));
+        }
+
+        // Format: - `command` — purpose (simple bullet, only if no "with command" matches)
         if (tools.Count == 0)
         {
-            var bullets = Regex.Matches(section, @"^[-*]\s+`(.+?)`\s*[—–-]\s*(.+)$", RegexOptions.Multiline);
+            var bullets = Regex.Matches(section,
+                @"^[-*]\s+`([^`]+)`\s*[—–-]\s*(.+)$",
+                RegexOptions.Multiline);
             foreach (Match b in bullets)
             {
                 var cmd = b.Groups[1].Value.Trim();
@@ -320,6 +401,116 @@ public partial class SkillMarkdownParser : ISkillParser
         }
 
         return tools;
+    }
+
+    private static List<McpToolEntry> ParseCodeBlockTools(string section)
+    {
+        var tools = new List<McpToolEntry>();
+
+        // Match mcp_azure_mcp_* or azure__* at the start of a code block line
+        var codeBlocks = Regex.Matches(section, @"```[^\n]*\n(.*?)```", RegexOptions.Singleline);
+        foreach (Match block in codeBlocks)
+        {
+            var blockContent = block.Groups[1].Value;
+            var toolMatch = Regex.Match(blockContent, @"^\s*(mcp_azure_mcp_\w+|azure__\w+)", RegexOptions.Multiline);
+            if (!toolMatch.Success) continue;
+
+            var toolName = toolMatch.Groups[1].Value.Trim();
+            var commandMatch = Regex.Match(blockContent, @"command:\s*""([^""]+)""", RegexOptions.IgnoreCase);
+            var command = commandMatch.Success ? commandMatch.Groups[1].Value.Trim() : "";
+
+            tools.Add(new McpToolEntry(toolName, command, ""));
+        }
+
+        return tools;
+    }
+
+    private static List<McpToolEntry> ParseQuickReferenceTools(string section)
+    {
+        var tools = new List<McpToolEntry>();
+
+        // Quick Reference tables are key-value: | Property | Value |
+        // Look for rows where property is "MCP Tools"
+        var rows = Regex.Matches(section, @"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|?\s*$", RegexOptions.Multiline);
+        foreach (Match row in rows)
+        {
+            var property = row.Groups[1].Value.Trim();
+            if (!property.Contains("MCP", StringComparison.OrdinalIgnoreCase) ||
+                !property.Contains("Tool", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var value = row.Groups[2].Value.Trim();
+            // Extract backtick-wrapped tool names
+            var toolRefs = Regex.Matches(value, @"`([^`]+)`");
+            foreach (Match t in toolRefs)
+            {
+                var toolName = t.Groups[1].Value.Trim();
+                tools.Add(new McpToolEntry(toolName, "", ""));
+            }
+        }
+
+        return tools;
+    }
+
+    private static List<McpToolEntry> DeduplicateTools(List<McpToolEntry> tools)
+    {
+        if (tools.Count == 0) return tools;
+
+        // Group by ToolName+Command (or just ToolName if Command matches)
+        var result = new List<McpToolEntry>();
+        var seen = new Dictionary<string, McpToolEntry>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tool in tools)
+        {
+            var key = $"{tool.ToolName}|{tool.Command}";
+            if (seen.TryGetValue(key, out var existing))
+            {
+                // Prefer the entry with more information
+                if (tool.Purpose.Length > existing.Purpose.Length)
+                    seen[key] = tool;
+            }
+            else
+            {
+                // Also check by ToolName alone for entries with empty command
+                var nameKey = $"{tool.ToolName}|";
+                if (tool.Command == "" && seen.ContainsKey(nameKey))
+                {
+                    // Skip: we already have an entry for this tool name with no command
+                    if (tool.Purpose.Length > seen[nameKey].Purpose.Length)
+                        seen[nameKey] = tool;
+                }
+                else if (tool.Command == "")
+                {
+                    // Check if any existing entry has this tool name with a command
+                    var existingWithCommand = seen.Values
+                        .FirstOrDefault(t => t.ToolName.Equals(tool.ToolName, StringComparison.OrdinalIgnoreCase));
+                    if (existingWithCommand != null)
+                        continue; // Already have a richer entry
+                    seen[nameKey] = tool;
+                }
+                else
+                {
+                    seen[key] = tool;
+                }
+            }
+        }
+
+        return seen.Values.ToList();
+    }
+
+    private static List<string> SplitTableRow(string rowContent)
+    {
+        // Split on | but handle edge cases (leading/trailing pipes already stripped by caller)
+        return rowContent.Split('|')
+            .Select(c => c.Trim())
+            .Where(c => !string.IsNullOrEmpty(c))
+            .ToList();
+    }
+
+    private static string StripBackticks(string value)
+    {
+        if (value.StartsWith('`') && value.EndsWith('`'))
+            return value[1..^1];
+        return value;
     }
 
     private static List<string> ExtractWorkflowSteps(string body)
