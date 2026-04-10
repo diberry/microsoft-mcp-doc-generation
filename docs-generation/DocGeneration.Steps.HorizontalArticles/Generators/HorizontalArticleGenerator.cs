@@ -88,6 +88,10 @@ public class HorizontalArticleGenerator
             
             // Merge static + AI data
             var templateData = MergeData(staticData, aiData);
+            
+            // Load skills from Step 5 output (warn-only, never blocks)
+            templateData.Skills = SkillsRelevanceReader.LoadRelevantSkills(_outputBasePath, staticData.ServiceIdentifier);
+            
             // Render and save
             await RenderAndSaveArticle(templateData);
             Console.WriteLine($"{progress} ✓ Generated: horizontal-article-{staticData.ServiceIdentifier}.md");
@@ -618,6 +622,17 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
                 ["genai-shortDescription"] = t.ShortDescription
             }).ToList()
         };
+        
+        // Add skills data if available (from Step 5 output)
+        if (templateData.Skills != null && templateData.Skills.Count > 0)
+        {
+            data["skills"] = templateData.Skills.Select(s => new Dictionary<string, object>
+            {
+                ["name"] = s.Name,
+                ["description"] = s.Description,
+                ["sourceUrl"] = s.SourceUrl
+            }).ToList();
+        }
         
         var renderedContent = await HandlebarsTemplateEngine.ProcessTemplateAsync(templatePath, data);
         
