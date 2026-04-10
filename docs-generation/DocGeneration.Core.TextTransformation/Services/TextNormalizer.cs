@@ -22,6 +22,8 @@ public class TextNormalizer
 
     /// <summary>
     /// Normalizes a parameter name to natural language.
+    /// Checks identifier mappings first (resource type names), then generic mappings,
+    /// then falls back to camelCase splitting.
     /// </summary>
     public string NormalizeParameter(string parameterName)
     {
@@ -30,7 +32,21 @@ public class TextNormalizer
             return string.Empty;
         }
 
-        // Check for direct mapping
+        // Strip CLI-style "--" prefix before lookup
+        if (parameterName.StartsWith("--"))
+        {
+            parameterName = parameterName.Substring(2);
+        }
+
+        // Check identifier mappings first (e.g., "database" -> "Database name")
+        var identifier = _config.Parameters.Identifiers.FirstOrDefault(m =>
+            m.Parameter.Equals(parameterName, StringComparison.OrdinalIgnoreCase));
+        if (identifier != null)
+        {
+            return identifier.Display;
+        }
+
+        // Check for generic direct mapping
         var mapping = _config.Parameters.Mappings.FirstOrDefault(m => 
             m.Parameter.Equals(parameterName, StringComparison.OrdinalIgnoreCase));
         if (mapping != null)
@@ -217,6 +233,66 @@ public class TextNormalizer
         }
 
         return char.ToUpperInvariant(word[0]) + word.Substring(1).ToLowerInvariant();
+    }
+
+    private static readonly Regex BareExampleValuePattern = new(
+        @"\(for example, ([^)`]+)\)",
+        RegexOptions.Compiled);
+
+    /// <summary>
+    /// Wraps bare example values in backticks within "(for example, ...)" patterns.
+    /// Idempotent - already-backticked values pass through unchanged.
+    /// </summary>
+    public string WrapExampleValues(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+
+        return BareExampleValuePattern.Replace(text, match =>
+        {
+            var values = match.Groups[1].Value;
+            var parts = values.Split(", ");
+            var backticked = parts.Select(v =>
+            {
+                var trimmed = v.Trim();
+                var spaceIdx = trimmed.IndexOf(' ');
+                if (spaceIdx > 0)
+                {
+                    var value = trimmed.Substring(0, spaceIdx);
+                    var explanation = trimmed.Substring(spaceIdx);
+                    return $"`{value}`{explanation}";
+                }
+                return $"`{trimmed}`";
+            });
+            return $"(for example, {string.Join(", ", backticked)})";
+        });
+    }
+
+    /// <summary>
+    /// Cleans AI-generated text by replacing smart quotes with straight quotes
+    /// and HTML entities with plain characters.
+    /// </summary>
+    public string CleanAIGeneratedText(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return text;
+
+        // Replace smart/curly quotes with straight quotes
+        text = text.Replace('\u2018', '\'');  // left single
+        text = text.Replace('\u2019', '\'');  // right single
+        text = text.Replace('\u201C', '"');   // left double
+        text = text.Replace('\u201D', '"');   // right double
+
+        // Replace HTML entities with their plain character equivalents
+        text = text.Replace("&quot;", "\"");
+        text = text.Replace("&#34;", "\"");
+        text = text.Replace("&apos;", "'");
+        text = text.Replace("&#39;", "'");
+        text = text.Replace("&amp;", "&");
+        text = text.Replace("&lt;", "<");
+        text = text.Replace("&gt;", ">");
+
+        return text;
     }
 
     /// <summary>

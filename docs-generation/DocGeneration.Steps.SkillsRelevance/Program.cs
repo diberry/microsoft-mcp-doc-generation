@@ -110,6 +110,7 @@ internal static class Program
             // Write output
             Console.WriteLine($"Writing output to: {outputDir}");
             await SkillsMarkdownWriter.WriteServiceSummaryAsync(outputDir, serviceName, relevantSkills, sources);
+            await SkillsJsonWriter.WriteServiceSummaryJsonAsync(outputDir, serviceName, relevantSkills, sources);
             await SkillsMarkdownWriter.WriteIndexAsync(outputDir, new List<string> { serviceName });
 
             Console.WriteLine();
