@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using CSharpGenerator.Models;
-using NaturalLanguageGenerator;
 using Shared;
 using TemplateEngine;
 using ToolFamilyCleanup.Services;
@@ -131,13 +130,13 @@ public class ParameterGenerator
                 return new ParameterManifestEntry
                 {
                     Name = parameterName,
-                    DisplayName = TextCleanup.NormalizeParameter(parameterName),
+                    DisplayName = Config.TextNormalizer.NormalizeParameter(parameterName),
                     Required = opt.Required,
                     RequiredText = BuildRequiredText(opt.Required, parameterName, conditionalParameters),
                     IsConditionalRequired = conditionalParameters.Contains(parameterName),
                     Description = ParameterDescriptionBackticker.Apply(
-                        TextCleanup.WrapExampleValues(
-                            TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? string.Empty))))
+                        Config.TextNormalizer.WrapExampleValues(
+                            Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(opt.Description ?? string.Empty))))
                 };
             })
             .ToList();

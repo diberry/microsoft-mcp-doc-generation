@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CSharpGenerator.Models;
-using NaturalLanguageGenerator;
 using Shared;
 using TemplateEngine;
 using ToolFamilyCleanup.Services;
@@ -63,7 +62,7 @@ public class PageGenerator
                 {
                     Name = tool.Name,
                     Command = tool.Command,
-                    Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(tool.Description ?? "")),
+                    Description = Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(tool.Description ?? "")),
                     SourceFile = tool.SourceFile,
                     Area = tool.Area,
                     Metadata = tool.Metadata
@@ -103,13 +102,13 @@ public class PageGenerator
                         {
                             Name = opt.Name,
                             // IMPORTANT: Preserves ALL words including type qualifiers like "name"
-                            NL_Name = TextCleanup.NormalizeParameter(opt.Name ?? ""),
+                            NL_Name = Config.TextNormalizer.NormalizeParameter(opt.Name ?? ""),
                             Type = opt.Type,
                             Required = opt.Required,
                             RequiredText = opt.Required == true ? "Required" : "Optional",
                             Description = ParameterDescriptionBackticker.Apply(
-                                TextCleanup.WrapExampleValues(
-                                    TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(opt.Description ?? "")))),
+                                Config.TextNormalizer.WrapExampleValues(
+                                    Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(opt.Description ?? "")))),
                         })
                         .ToList();
                 }

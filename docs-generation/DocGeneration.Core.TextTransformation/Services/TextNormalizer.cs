@@ -11,6 +11,17 @@ public class TextNormalizer
 {
     private readonly TransformationConfig _config;
 
+    // Precompiled combined dictionary for O(1) lookups (NormalizeParameter per-word + ReplaceStaticText).
+    // Built from Lexicon.Abbreviations at construction time. Case-insensitive.
+    private readonly Dictionary<string, string> _combinedDict;
+
+    // Precompiled single-pass alternation regex for ReplaceStaticText.
+    // Uses lookaround boundaries matching TextCleanup behaviour.
+    private readonly Regex? _replacerRegex;
+
+    // Known acronym canonical forms for fast membership checks.
+    private readonly HashSet<string> _acronymCanonicalSet;
+
     /// <summary>
     /// Initializes a new instance of the TextNormalizer class.
     /// </summary>
@@ -18,18 +29,57 @@ public class TextNormalizer
     public TextNormalizer(TransformationConfig config)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
+
+        // Build combined dictionary from Abbreviations AND Parameters.Mappings.
+        // In production (via TransformationConfigFactory), Abbreviations already contains
+        // the merged nl-parameters + static-text-replacement data. But in unit tests,
+        // Parameters.Mappings may be populated separately, so we include both.
+        _combinedDict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mapping in _config.Parameters.Mappings)
+        {
+            if (!string.IsNullOrEmpty(mapping.Parameter))
+                _combinedDict[mapping.Parameter] = mapping.Display;
+        }
+        foreach (var abbrev in _config.Lexicon.Abbreviations)
+        {
+            // Abbreviations override mappings when keys overlap (consistent with
+            // TextCleanup where static-text-replacement entries override nl-parameters
+            // for the same key — but in practice they don't overlap).
+            _combinedDict[abbrev.Key] = abbrev.Value.Canonical;
+        }
+
+        // Build precompiled regex with lookaround boundaries (matches TextCleanup exactly).
+        var keys = _combinedDict.Keys
+            .Where(k => !string.IsNullOrEmpty(k))
+            .OrderByDescending(k => k.Length)
+            .ToArray();
+
+        if (keys.Length > 0)
+        {
+            var patternParts = keys.Select(k => $"(?<![A-Za-z0-9_-]){Regex.Escape(k)}(?![A-Za-z0-9_-])");
+            var pattern = string.Join("|", patternParts);
+            _replacerRegex = new Regex(pattern, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        }
+
+        // Build canonical-form set for fast IsAcronym checks.
+        _acronymCanonicalSet = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var acronym in _config.Lexicon.Acronyms.Values)
+        {
+            _acronymCanonicalSet.Add(acronym.Canonical);
+        }
     }
 
     /// <summary>
-    /// Normalizes a parameter name to natural language.
+    /// Normalizes a programmatic parameter name to natural language format.
     /// Checks identifier mappings first (resource type names), then generic mappings,
-    /// then falls back to camelCase splitting.
+    /// then falls back to hyphen-splitting with per-word transformation.
+    /// Matches legacy TextCleanup.NormalizeParameter behaviour exactly.
     /// </summary>
     public string NormalizeParameter(string parameterName)
     {
-        if (string.IsNullOrWhiteSpace(parameterName))
+        if (string.IsNullOrEmpty(parameterName))
         {
-            return string.Empty;
+            return "Unknown";
         }
 
         // Strip CLI-style "--" prefix before lookup
@@ -46,20 +96,79 @@ public class TextNormalizer
             return identifier.Display;
         }
 
-        // Check for generic direct mapping
-        var mapping = _config.Parameters.Mappings.FirstOrDefault(m => 
-            m.Parameter.Equals(parameterName, StringComparison.OrdinalIgnoreCase));
-        if (mapping != null)
+        // Check combined dict for full-name direct mapping
+        if (_combinedDict.TryGetValue(parameterName, out var directMapping))
         {
-            return mapping.Display;
+            return directMapping;
         }
 
-        // Split camelCase/PascalCase and transform
-        return SplitAndTransformProgrammaticName(parameterName);
+        // Fallback: split on hyphens and transform per-word (matches TextCleanup)
+        return NormalizeHyphenatedName(parameterName);
+    }
+
+    /// <summary>
+    /// Splits a hyphenated parameter name and applies per-word transformations.
+    /// Matches TextCleanup.SplitAndTransformProgrammaticName + NormalizeParameter post-processing.
+    /// </summary>
+    private string NormalizeHyphenatedName(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+        {
+            return "Unknown";
+        }
+
+        var words = name.Split('-');
+
+        if (words.Length == 0 || words[0].Length == 0)
+        {
+            return "Unknown";
+        }
+
+        // Transform each word: check acronyms, then combined dict, then capitalize
+        for (int i = 0; i < words.Length; i++)
+        {
+            var word = words[i];
+            if (string.IsNullOrEmpty(word)) continue;
+
+            // Check acronym table first
+            var acronym = _config.Lexicon.Acronyms
+                .FirstOrDefault(a => a.Key.Equals(word, StringComparison.OrdinalIgnoreCase));
+            if (acronym.Key != null)
+            {
+                words[i] = acronym.Value.Canonical;
+            }
+            // Check combined dict for single-word mapping
+            else if (_combinedDict.TryGetValue(word, out var nlValue))
+            {
+                words[i] = nlValue;
+            }
+            else
+            {
+                // Capitalize first letter
+                words[i] = char.ToUpper(word[0]) + word.Substring(1);
+            }
+        }
+
+        // Lowercase non-first non-acronym words (matches TextCleanup.NormalizeParameter)
+        for (int i = 1; i < words.Length; i++)
+        {
+            if (!_acronymCanonicalSet.Contains(words[i]))
+            {
+                words[i] = words[i].ToLowerInvariant();
+            }
+        }
+
+        var result = string.Join(" ", words);
+
+        // Remove any periods to avoid "Resource. group." format
+        result = result.Replace(".", "");
+
+        return result;
     }
 
     /// <summary>
     /// Splits a programmatic name and applies acronym transformations.
+    /// Uses camelCase splitting for PascalCase/camelCase identifiers.
     /// </summary>
     public string SplitAndTransformProgrammaticName(string name)
     {
@@ -146,27 +255,45 @@ public class TextNormalizer
     }
 
     /// <summary>
-    /// Replaces static text patterns in descriptions.
+    /// Replaces static text patterns in descriptions using precompiled regex.
+    /// Uses lookaround word-boundary matching to avoid replacing inside longer tokens.
+    /// Matches legacy TextCleanup.ReplaceStaticText behaviour exactly.
     /// </summary>
     public string ReplaceStaticText(string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrEmpty(text) || _combinedDict.Count == 0)
         {
-            return string.Empty;
+            return text;
         }
 
-        var result = text;
-
-        // Replace abbreviations
-        foreach (var abbrev in _config.Lexicon.Abbreviations)
+        if (_replacerRegex != null)
         {
-            result = Regex.Replace(result, 
-                $@"\b{Regex.Escape(abbrev.Key)}\b", 
-                abbrev.Value.Canonical, 
-                RegexOptions.IgnoreCase);
+            text = _replacerRegex.Replace(text, m =>
+            {
+                if (_combinedDict.TryGetValue(m.Value, out var replacement))
+                {
+                    return replacement ?? string.Empty;
+                }
+                return m.Value;
+            });
+        }
+        else
+        {
+            // Fallback: ordered per-key regex replacement with boundary lookarounds
+            var orderedKeys = _combinedDict.Keys
+                .Where(k => !string.IsNullOrEmpty(k))
+                .OrderByDescending(k => k.Length)
+                .ToList();
+
+            foreach (var key in orderedKeys)
+            {
+                var replacement = _combinedDict[key] ?? string.Empty;
+                var pattern = $"(?<![A-Za-z0-9_-]){Regex.Escape(key)}(?![A-Za-z0-9_-])";
+                text = Regex.Replace(text, pattern, replacement, RegexOptions.IgnoreCase);
+            }
         }
 
-        return result;
+        return text;
     }
 
     /// <summary>
@@ -296,21 +423,36 @@ public class TextNormalizer
     }
 
     /// <summary>
-    /// Ensures text ends with a period.
+    /// Ensures text ends with a period, adding one if missing.
+    /// Matches legacy TextCleanup.EnsureEndsPeriod behaviour exactly,
+    /// including trailing-quote awareness.
     /// </summary>
     public string EnsureEndsPeriod(string text)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrEmpty(text))
         {
-            return string.Empty;
+            return text;
         }
 
-        text = text.TrimEnd();
-        if (!text.EndsWith('.') && !text.EndsWith('!') && !text.EndsWith('?'))
+        text = text.Trim();
+
+        // Skip if already ends with punctuation
+        if (text.EndsWith(".") || text.EndsWith("?") || text.EndsWith("!"))
         {
-            return text + ".";
+            return text;
         }
 
-        return text;
+        // Check for punctuation before trailing closing quotes
+        var lastChar = text[^1];
+        if (lastChar == '\'' || lastChar == '"' || lastChar == '`')
+        {
+            var i = text.Length - 1;
+            while (i > 0 && (text[i] == '\'' || text[i] == '"' || text[i] == '`'))
+                i--;
+            if (i >= 0 && (text[i] == '.' || text[i] == '?' || text[i] == '!'))
+                return text;
+        }
+
+        return text + ".";
     }
 }

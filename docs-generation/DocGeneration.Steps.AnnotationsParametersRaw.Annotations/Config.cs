@@ -3,7 +3,8 @@ using System.IO;
 using System.Collections.Generic;
 using System.Text.Json;
 using Shared;
-using NaturalLanguageGenerator; // Added namespace for TextCleanup
+using Azure.Mcp.TextTransformation;
+using Azure.Mcp.TextTransformation.Services;
 
 namespace CSharpGenerator;
 
@@ -20,6 +21,17 @@ public class Config
 {
     public static string? NLParametersPath { get; set; } // Made static to resolve object reference error
     public static string? TextReplacerParametersPath { get; set; } // Made static to resolve object reference error
+
+    /// <summary>
+    /// TransformationEngine instance created from legacy data files during Config.Load.
+    /// Provides TextNormalizer for all text transformation operations.
+    /// </summary>
+    public static TransformationEngine? TextTransformationEngine { get; private set; }
+
+    /// <summary>
+    /// Shorthand accessor for the TextNormalizer on the current engine.
+    /// </summary>
+    public static TextNormalizer TextNormalizer => TextTransformationEngine!.TextNormalizer;
 
     public List<string> RequiredFiles { get; set; } = new();
     public static bool Load(string configPath)
@@ -76,9 +88,15 @@ public class Config
         LogFileHelper.WriteDebug($"TextReplacerParametersPath: {TextReplacerParametersPath}");
         LogFileHelper.WriteDebug($"RequiredFiles: {JsonSerializer.Serialize(config.RequiredFiles, new JsonSerializerOptions { WriteIndented = true })}");
 
-        var success = TextCleanup.LoadFiles(config.RequiredFiles);
-        if (!success)
+        // Build TransformationEngine from legacy data files (replaces TextCleanup.LoadFiles)
+        try
         {
+            var txConfig = TransformationConfigFactory.CreateFromLegacyFiles(config.RequiredFiles);
+            TextTransformationEngine = new TransformationEngine(txConfig);
+        }
+        catch (Exception ex)
+        {
+            LogFileHelper.WriteDebug($"Error creating TransformationEngine: {ex.Message}");
             return false;
         }
 

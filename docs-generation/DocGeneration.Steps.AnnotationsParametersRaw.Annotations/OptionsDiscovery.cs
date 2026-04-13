@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Text.RegularExpressions;
-using NaturalLanguageGenerator;
 using Shared;
 using CSharpGenerator.Models;
 
@@ -13,7 +12,7 @@ public static class OptionsDiscovery
 
     public static async Task<List<CommonParameter>> DiscoverCommonParametersFromSource()
     {
-        // TextCleanup is initialized by Config.Load previously; use it directly
+        // Config.TextNormalizer is initialized by Config.Load previously; use it directly
         var commonParams = new List<CommonParameter>();
 
         // Try to find OptionDefinitions.cs in different possible locations
@@ -58,7 +57,7 @@ public static class OptionsDiscovery
                     IsHidden = false,
                     Source = mapping.ClassName,
                     RequiredText = "Optional",
-                    NL_Name = TextCleanup.NormalizeParameter(mapping.ParameterName)
+                    NL_Name = Config.TextNormalizer.NormalizeParameter(mapping.ParameterName)
                 });
             }
             
@@ -89,12 +88,12 @@ public static class OptionsDiscovery
                     Name = matchingOption.ParameterName,
                     Type = MapCSharpTypeToJsonType(mapping.PropertyType.Replace("?", "")),
                     IsRequired = matchingOption.IsRequired,
-                    Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(matchingOption.Description)),
+                    Description = Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(matchingOption.Description)),
                     UsagePercent = 100,
                     IsHidden = matchingOption.IsHidden,
                     Source = matchingOption.ClassName,
                     RequiredText = matchingOption.IsRequired ? "Required" : "Optional",
-                    NL_Name = TextCleanup.NormalizeParameter(matchingOption.ParameterName ?? "")
+                    NL_Name = Config.TextNormalizer.NormalizeParameter(matchingOption.ParameterName ?? "")
                 });
             }
         }
@@ -111,12 +110,12 @@ public static class OptionsDiscovery
                     Name = option.ParameterName ?? "Unknown",
                     Type = MapCSharpTypeToJsonType(option.Type),
                     IsRequired = option.IsRequired,
-                    Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(option.Description)),
+                    Description = Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(option.Description)),
                     UsagePercent = 100,
                     IsHidden = option.IsHidden,
                     Source = option.ClassName,
                     RequiredText = option.IsRequired ? "Required" : "Optional",
-                    NL_Name = TextCleanup.NormalizeParameter(option.ParameterName ?? "")
+                    NL_Name = Config.TextNormalizer.NormalizeParameter(option.ParameterName ?? "")
                 };
 
                 if (newParameter.Name == "Unknown")
@@ -225,7 +224,7 @@ public static class OptionsDiscovery
                 var desc = descMatch.Groups[1].Value;
                 if (!desc.StartsWith("--") && desc.Length > 10) // Skip parameter names, keep descriptions
                 {
-                    descriptions.Add(TextCleanup.ReplaceStaticText(desc));
+                    descriptions.Add(Config.TextNormalizer.ReplaceStaticText(desc));
                 }
             }
 
@@ -268,7 +267,7 @@ public static class OptionsDiscovery
                 PropertyName = propertyName,
                 ParameterName = paramName,
                 Type = type,
-                Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(description)),
+                Description = Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(description)),
                 IsRequired = isRequired,
                 IsHidden = isHidden
             });

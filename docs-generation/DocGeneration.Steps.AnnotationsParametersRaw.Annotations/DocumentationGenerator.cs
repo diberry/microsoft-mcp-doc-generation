@@ -3,7 +3,6 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using NaturalLanguageGenerator;
 using Shared;
 using CSharpGenerator.Models;
 using CSharpGenerator.Generators;
@@ -406,12 +405,12 @@ public static class DocumentationGenerator
             Name = p.Name,
             Type = p.Type,
             IsRequired = p.IsRequired,
-            Description = TextCleanup.EnsureEndsPeriod(TextCleanup.ReplaceStaticText(p.Description)),
+            Description = Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(p.Description)),
             UsagePercent = 100,
             IsHidden = false,
             Source = "common-parameters.json",
             RequiredText = p.IsRequired ? "Required" : "Optional",
-            NL_Name = TextCleanup.NormalizeParameter(p.Name)
+            NL_Name = Config.TextNormalizer.NormalizeParameter(p.Name)
         }).ToList();
     }
 
