@@ -270,8 +270,8 @@ public class ToolFamilyCleanupStepTests
             var context = CreateContextWithBrandMapping(testRoot, processRunner);
             context.Items["Namespace"] = "compute";
 
-            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-virtual-machines-list.md"), "compute list");
-            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-virtual-machines-show.md"), "compute show");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-compute-show.md"), "compute show");
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
 
             processRunner.OnRun = spec =>
@@ -280,9 +280,9 @@ public class ToolFamilyCleanupStepTests
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "azure-virtual-machines-metadata.md"), "metadata");
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "azure-virtual-machines-related.md"), "related");
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "azure-virtual-machines.md"), "final article");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "azure-compute-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "azure-compute-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "azure-compute.md"), "final article");
                 return CallbackProcessRunner.Success(spec);
             };
 
@@ -290,8 +290,8 @@ public class ToolFamilyCleanupStepTests
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.True(File.Exists(Path.Combine(context.OutputPath, "tool-family", "azure-virtual-machines.md")));
-            Assert.Equal("final article", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family", "azure-virtual-machines.md")));
+            Assert.True(File.Exists(Path.Combine(context.OutputPath, "tool-family", "azure-compute.md")));
+            Assert.Equal("final article", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family", "azure-compute.md")));
         }
         finally
         {
@@ -309,7 +309,7 @@ public class ToolFamilyCleanupStepTests
             var context = CreateContextWithBrandMapping(testRoot, processRunner);
             context.Items["Namespace"] = "compute";
 
-            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-virtual-machines-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-compute-list.md"), "compute list");
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
             SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), "stale old content");
 
@@ -319,9 +319,9 @@ public class ToolFamilyCleanupStepTests
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "azure-virtual-machines-metadata.md"), "metadata");
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "azure-virtual-machines-related.md"), "related");
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "azure-virtual-machines.md"), "new article");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "azure-compute-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "azure-compute-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "azure-compute.md"), "new article");
                 return CallbackProcessRunner.Success(spec);
             };
 
@@ -329,7 +329,7 @@ public class ToolFamilyCleanupStepTests
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.True(File.Exists(Path.Combine(context.OutputPath, "tool-family", "azure-virtual-machines.md")));
+            Assert.True(File.Exists(Path.Combine(context.OutputPath, "tool-family", "azure-compute.md")));
             Assert.False(File.Exists(Path.Combine(context.OutputPath, "tool-family", "compute.md")));
         }
         finally
@@ -346,7 +346,7 @@ public class ToolFamilyCleanupStepTests
         Directory.CreateDirectory(outputPath);
         var brandMappings = System.Text.Json.JsonSerializer.Serialize(new[]
         {
-            new { brandName = "Azure Virtual Machines", mcpServerName = "compute", shortName = "Virtual Machines", fileName = "azure-virtual-machines" }
+            new { brandName = "Azure Compute", mcpServerName = "compute", shortName = "Compute", fileName = "azure-compute" }
         });
         File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappings);
         var context = new PipelineContext
