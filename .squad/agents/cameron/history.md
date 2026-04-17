@@ -32,7 +32,7 @@
 **Three Mandatory Quality Gates (AD-028):**
 
 **Gate 1: Full Test Pass**
-- Command: `dotnet test docs-generation.sln`
+- Command: `dotnet test mcp-doc-generation.sln`
 - Criteria: 0 failures, 0 skipped (unless pre-existing), test count matches baseline
 - Timing: After each consolidation phase
 

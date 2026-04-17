@@ -122,19 +122,19 @@ jobs:
         echo ""
         
         echo "=== Creating .env file ==="
-        mkdir -p docs-generation
+        mkdir -p mcp-tools
         {
           echo "FOUNDRY_API_KEY=${{ secrets.FOUNDRY_API_KEY }}"
           echo "FOUNDRY_ENDPOINT=${{ secrets.FOUNDRY_ENDPOINT }}"
           echo "FOUNDRY_MODEL_NAME=${{ secrets.FOUNDRY_MODEL_NAME }}"
           echo "FOUNDRY_MODEL_API_VERSION=${{ secrets.FOUNDRY_MODEL_API_VERSION }}"
-        } > docs-generation/.env
+        } > mcp-tools/.env
         echo "✅ .env file created"
         echo "📄 .env contents (keys only):"
-        grep -E '^[A-Z_]+=' docs-generation/.env | cut -d= -f1
+        grep -E '^[A-Z_]+=' mcp-tools/.env | cut -d= -f1
         echo "📄 Variable values check:"
-        echo "  FOUNDRY_API_KEY: $(grep FOUNDRY_API_KEY docs-generation/.env | cut -d= -f2 | cut -c1-6)...[MASKED]"
-        echo "  FOUNDRY_ENDPOINT: $(grep FOUNDRY_ENDPOINT docs-generation/.env | cut -d= -f2)"
+        echo "  FOUNDRY_API_KEY: $(grep FOUNDRY_API_KEY mcp-tools/.env | cut -d= -f2 | cut -c1-6)...[MASKED]"
+        echo "  FOUNDRY_ENDPOINT: $(grep FOUNDRY_ENDPOINT mcp-tools/.env | cut -d= -f2)"
 
     - name: Run generative AI (example prompts)
       run: |

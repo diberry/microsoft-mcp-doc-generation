@@ -236,7 +236,7 @@ Follows the same license as the parent project.
 
 ## Related Files
 
-- **Source PowerShell:** `../docs-generation/Generate-MultiPageDocs.ps1` (lines 370-682)
+- **Source PowerShell:** `../mcp-tools/Generate-MultiPageDocs.ps1` (lines 370-682)
 - **CLI Output:** `../generated/cli/cli-output.json`
 - **Generated Docs:** `../generated/tools/*.md`
 - **Summary Output:** `../generated/generation-summary.md`

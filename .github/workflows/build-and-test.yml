@@ -4,8 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs-generation/**'
-      - 'docs-generation.sln'
+      - 'mcp-tools/**'
+      - 'shared/**'
+      - 'mcp-doc-generation.sln'
       - 'skills-generation/**'
       - 'start-azure-skills.sh'
       - 'test-npm-azure-mcp/**'
@@ -13,8 +14,9 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'docs-generation/**'
-      - 'docs-generation.sln'
+      - 'mcp-tools/**'
+      - 'shared/**'
+      - 'mcp-doc-generation.sln'
       - 'skills-generation/**'
       - 'start-azure-skills.sh'
       - 'test-npm-azure-mcp/**'
@@ -28,19 +30,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup .NET 9.0
+      - name: Setup .NET SDKs
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: |
+            9.0.x
+            10.0.x
+          include-prerelease: true
 
       - name: Restore dependencies
-        run: dotnet restore docs-generation.sln
+        run: dotnet restore mcp-doc-generation.sln
 
       - name: Build solution
-        run: dotnet build docs-generation.sln --no-restore --configuration Release
+        run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test docs-generation.sln --no-build --configuration Release --verbosity normal
+        run: dotnet test mcp-doc-generation.sln --no-build --configuration Release --verbosity normal
 
   vale-lint:
     runs-on: ubuntu-latest
@@ -56,7 +61,7 @@ jobs:
           wget -qO- https://github.com/errata-ai/vale/releases/download/v3.9.5/vale_3.9.5_Linux_64-bit.tar.gz | tar xz -C /usr/local/bin vale
 
       - name: Validate Vale config
-        run: vale --config docs-generation/.vale.ini ls-config
+        run: vale --config mcp-tools/.vale.ini ls-config
 
       - name: Create sample markdown for lint check
         run: |
@@ -79,7 +84,7 @@ jobs:
           fi
 
       - name: Run Vale lint
-        run: vale --config docs-generation/.vale.ini vale-sample-output/ || true
+        run: vale --config mcp-tools/.vale.ini vale-sample-output/ || true
 
   npm-tests:
     runs-on: ubuntu-latest

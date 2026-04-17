@@ -138,7 +138,7 @@ body:
         - [ ] compute passes Step 4 on first try (no retries)
         - [ ] Tests added for phantom H2 stripping in ReplaceH2Heading
         - [ ] No regression in the 8 currently-passing namespaces
-        - [ ] `dotnet test docs-generation.sln` — all tests pass
+        - [ ] `dotnet test mcp-doc-generation.sln` — all tests pass
     validations:
       required: true
 

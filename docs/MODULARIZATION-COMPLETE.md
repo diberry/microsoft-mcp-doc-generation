@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully completed the transformation of the monolithic `Generate.ps1` orchestration into a clean, hierarchical modular architecture with 10 specialized scripts organized in `docs-generation/scripts/`.
+Successfully completed the transformation of the monolithic `Generate.ps1` orchestration into a clean, hierarchical modular architecture with 10 specialized scripts organized in `mcp-tools/scripts/`.
 
 ## Architecture
 
@@ -27,7 +27,7 @@ Generate.ps1  (Main Orchestrator)
 
 ## Scripts Location
 
-All modular scripts are located in: `docs-generation/scripts/`
+All modular scripts are located in: `mcp-tools/scripts/`
 
 ### Base Generation Scripts
 - **Generate-Annotations.ps1** - Creates 208 annotation metadata files
@@ -85,7 +85,7 @@ pwsh ./Generate-MultiPageDocs.ps1
 ### Generate Only Base Documentation (Steps 1-6)
 ```powershell
 # Manually call individual scripts, or modify Generate-MultiPageDocs.ps1
-cd docs-generation/scripts
+cd mcp-tools/scripts
 pwsh ./Generate-Annotations.ps1
 pwsh ./Generate-Parameters.ps1
 # ... etc
@@ -93,7 +93,7 @@ pwsh ./Generate-Parameters.ps1
 
 ### Generate Only Tool Documentation
 ```powershell
-cd docs-generation/scripts
+cd mcp-tools/scripts
 pwsh ./Generate-ToolPages.ps1 -OutputPath ../generated
 ```
 
@@ -108,10 +108,10 @@ pwsh ./scripts/Generate-ToolPages.ps1 -OutputPath ../generated `
 ## File Changes Made
 
 ### New Files Created
-- ✅ `docs-generation/scripts/Generate-ToolPages.ps1` - Tool pages orchestrator (128 lines)
+- ✅ `mcp-tools/scripts/Generate-ToolPages.ps1` - Tool pages orchestrator (128 lines)
 
 ### Files Modified
-- ✅ `docs-generation/Generate-MultiPageDocs.ps1` - Updated Step 7 to call orchestrator
+- ✅ `mcp-tools/Generate-MultiPageDocs.ps1` - Updated Step 7 to call orchestrator
   - Changed from 2 separate script calls to single orchestrator call
   - Removed inline tool generation comments
   - Maintained all error handling and progress messaging
@@ -130,7 +130,7 @@ pwsh ./scripts/Generate-ToolPages.ps1 -OutputPath ../generated `
 ## Dependencies & Prerequisites
 
 ### Environment Variables (for example prompts)
-Set in `docs-generation/.env`:
+Set in `mcp-tools/.env`:
 ```
 FOUNDRY_API_KEY=<azure-openai-api-key>
 FOUNDRY_ENDPOINT=<azure-openai-endpoint>
@@ -186,7 +186,7 @@ generated/
 
 1. **Quick Test**: Run individual script from `scripts/` directory
    ```powershell
-   cd docs-generation/scripts
+   cd mcp-tools/scripts
    pwsh ./Generate-Annotations.ps1
    ```
 
@@ -198,7 +198,7 @@ generated/
 
 3. **Tool Generation Only**: Skip base docs
    ```powershell
-   cd docs-generation/scripts
+   cd mcp-tools/scripts
    pwsh ./scripts/Generate-ToolPages.ps1
    ```
 
@@ -212,7 +212,7 @@ generated/
 ## Maintenance Notes
 
 ### Adding New Base Generation Step
-1. Create new script in `docs-generation/scripts/Generate-YourFeature.ps1`
+1. Create new script in `mcp-tools/scripts/Generate-YourFeature.ps1`
 2. Add step to `Generate-MultiPageDocs.ps1` (insert between steps)
 3. Follow existing script patterns for parameter handling and error checking
 
@@ -235,4 +235,4 @@ generated/
 
 **Status**: ✅ **MODULARIZATION COMPLETE**
 
-The documentation generation system is now fully modularized with clear separation of concerns, hierarchical orchestration, and all 10 scripts properly organized in `docs-generation/scripts/`.
+The documentation generation system is now fully modularized with clear separation of concerns, hierarchical orchestration, and all 10 scripts properly organized in `mcp-tools/scripts/`.

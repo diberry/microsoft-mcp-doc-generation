@@ -12,12 +12,12 @@
 ## What I Own
 
 - `start.sh` — Root orchestrator for full catalog generation
-- `docs-generation/scripts/` — All helper scripts including `preflight.ps1`, `start-only.sh`
-- `docs-generation/Generate.ps1` — Main PowerShell orchestrator
+- `mcp-tools/scripts/` — All helper scripts including `preflight.ps1`, `start-only.sh`
+- `mcp-tools/Generate.ps1` — Main PowerShell orchestrator
 - `Dockerfile` and `run-docker.sh` — Container build and execution
 - `azure.yaml` — Azure Developer CLI configuration
 - `.env` file management and validation
-- Build pipeline: `dotnet build docs-generation.sln`
+- Build pipeline: `dotnet build mcp-doc-generation.sln`
 - CI/CD workflows
 
 ## How I Work

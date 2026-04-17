@@ -130,5 +130,5 @@ The token usage infrastructure is in place but **AI clients don't yet record usa
 
 - [Prompt versioning](prompt-versioning.md) — Prompt hash tracking (v2 schema)
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Pipeline step details and data flow
-- Source: `docs-generation/DocGeneration.Core.Shared/TokenUsage.cs`
-- Source: `docs-generation/DocGeneration.Core.Shared/StepResultFile.cs`
+- Source: `mcp-tools/DocGeneration.Core.Shared/TokenUsage.cs`
+- Source: `mcp-tools/DocGeneration.Core.Shared/StepResultFile.cs`

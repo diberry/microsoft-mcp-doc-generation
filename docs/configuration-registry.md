@@ -1,6 +1,6 @@
 # Configuration Registry
 
-> Inventory, load order, and schema coverage for all JSON configuration files in `docs-generation/data/`.
+> Inventory, load order, and schema coverage for all JSON configuration files in `mcp-tools/data/`.
 
 ## Configuration files inventory
 

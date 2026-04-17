@@ -14,10 +14,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$SCRIPT_DIR"
-BASELINES_DIR="$REPO_ROOT/docs-generation/DocGeneration.PromptRegression.Tests/Baselines"
-CANDIDATES_DIR="$REPO_ROOT/docs-generation/DocGeneration.PromptRegression.Tests/Candidates"
-REPORTS_DIR="$REPO_ROOT/docs-generation/DocGeneration.PromptRegression.Tests/Reports"
-FINGERPRINT_PROJECT="$REPO_ROOT/docs-generation/DocGeneration.Tools.Fingerprint"
+BASELINES_DIR="$REPO_ROOT/mcp-tools/DocGeneration.PromptRegression.Tests/Baselines"
+CANDIDATES_DIR="$REPO_ROOT/mcp-tools/DocGeneration.PromptRegression.Tests/Candidates"
+REPORTS_DIR="$REPO_ROOT/mcp-tools/DocGeneration.PromptRegression.Tests/Reports"
+FINGERPRINT_PROJECT="$REPO_ROOT/mcp-tools/DocGeneration.Tools.Fingerprint"
 
 # Representative namespaces for regression testing
 NAMESPACES=(applens cloudarchitect deploy compute fileshares)
@@ -158,7 +158,7 @@ cmd_compare() {
     # Run xUnit regression tests (uses BaselineManager to compare articles)
     echo ""
     echo "🧪 Running quality metric regression tests..."
-    dotnet test "$REPO_ROOT/docs-generation/DocGeneration.PromptRegression.Tests/" \
+    dotnet test "$REPO_ROOT/mcp-tools/DocGeneration.PromptRegression.Tests/" \
         --verbosity quiet 2>&1 | tail -5
 
     # Show summary

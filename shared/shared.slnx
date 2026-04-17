@@ -1,0 +1,13 @@
+<Solution>
+  <Project Path="DocGeneration.Core.GenerativeAI.Tests/DocGeneration.Core.GenerativeAI.Tests.csproj" />
+  <Project Path="DocGeneration.Core.GenerativeAI/DocGeneration.Core.GenerativeAI.csproj" />
+  <Project Path="DocGeneration.Core.NaturalLanguage.Tests/DocGeneration.Core.NaturalLanguage.Tests.csproj" />
+  <Project Path="DocGeneration.Core.NaturalLanguage/DocGeneration.Core.NaturalLanguage.csproj" />
+  <Project Path="DocGeneration.Core.Shared.Tests/DocGeneration.Core.Shared.Tests.csproj" />
+  <Project Path="DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+  <Project Path="DocGeneration.Core.TemplateEngine.Tests/DocGeneration.Core.TemplateEngine.Tests.csproj" />
+  <Project Path="DocGeneration.Core.TemplateEngine/DocGeneration.Core.TemplateEngine.csproj" />
+  <Project Path="DocGeneration.Core.TextTransformation.Tests/DocGeneration.Core.TextTransformation.Tests.csproj" />
+  <Project Path="DocGeneration.Core.TextTransformation/DocGeneration.Core.TextTransformation.csproj" />
+  <Project Path="DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
+</Solution>

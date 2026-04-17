@@ -1,0 +1,251 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using CSharpGenerator.Models;
+using Shared;
+using TemplateEngine;
+using ToolFamilyCleanup.Services;
+
+namespace CSharpGenerator.Generators;
+
+/// <summary>
+/// Generates various documentation pages (area pages, index, commands, common tools, service options)
+/// </summary>
+public class PageGenerator
+{
+    private readonly Func<List<Tool>, List<CommonParameter>> _extractCommonParameters;
+
+    public PageGenerator(
+        Func<List<Tool>, List<CommonParameter>> extractCommonParameters)
+    {
+        _extractCommonParameters = extractCommonParameters;
+    }
+
+    /// <summary>
+    /// Generates a documentation page for a specific service area
+    /// </summary>
+    public async Task GenerateAreaPageAsync(
+        string areaName, 
+        AreaData areaData, 
+        TransformedData data, 
+        string outputDir, 
+        string templateFile)
+    {
+        try
+        {
+            var areaNameForFile = areaName.ToLowerInvariant().Replace(" ", "-");
+            var fileName = $"{areaNameForFile}.md";
+            var outputFile = Path.Combine(outputDir, fileName);
+
+            // Get common parameter names to filter them out
+            var commonParameters = data.SourceDiscoveredCommonParams.Any() 
+                ? data.SourceDiscoveredCommonParams 
+                : _extractCommonParameters(data.Tools);
+            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
+
+            // Annotations directory path (at parent level)
+            var parentDirCandidate = Path.GetDirectoryName(outputDir);
+            var parentDir = string.IsNullOrWhiteSpace(parentDirCandidate) ? outputDir : parentDirCandidate;
+            var annotationsDir = Path.Combine(parentDir, "annotations");
+            
+            // Load shared data files for filename generation
+            var nameContext = await FileNameContext.CreateAsync();
+
+            // Filter out common parameters from tools for area pages and add annotation content
+            var toolsWithFilteredParamsTasks = areaData.Tools.Select(async tool => 
+            {
+                var filteredTool = new Tool
+                {
+                    Name = tool.Name,
+                    Command = tool.Command,
+                    Description = Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(tool.Description ?? "")),
+                    SourceFile = tool.SourceFile,
+                    Area = tool.Area,
+                    Metadata = tool.Metadata
+                };
+                
+                // Read annotation file content if it exists
+                if (!string.IsNullOrEmpty(tool.Command))
+                {
+                    // Use shared deterministic filename builder
+                    var annotationFileName = ToolFileNameBuilder.BuildAnnotationFileName(
+                        tool.Command, nameContext);
+                    var annotationFilePath = Path.Combine(annotationsDir, annotationFileName);
+                    
+                    if (File.Exists(annotationFilePath))
+                    {
+                        try
+                        {
+                            var rawContent = File.ReadAllText(annotationFilePath);
+                            filteredTool.AnnotationContent = StripFrontmatter(rawContent).Trim();
+                            filteredTool.AnnotationFileName = annotationFileName;
+                        }
+                        catch
+                        {
+                            // Silently ignore if annotation file can't be read
+                            filteredTool.AnnotationContent = "";
+                        }
+                    }
+                }
+                
+                if (tool.Option != null)
+                {
+                    var filteredOptions = tool.Option
+                        .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames));
+
+                    filteredTool.Option = filteredOptions
+                        .Select(opt => new Option
+                        {
+                            Name = opt.Name,
+                            // IMPORTANT: Preserves ALL words including type qualifiers like "name"
+                            NL_Name = Config.TextNormalizer.NormalizeParameter(opt.Name ?? ""),
+                            Type = opt.Type,
+                            Required = opt.Required,
+                            RequiredText = opt.Required == true ? "Required" : "Optional",
+                            Description = ParameterDescriptionBackticker.Apply(
+                                Config.TextNormalizer.WrapExampleValues(
+                                    Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(opt.Description ?? "")))),
+                        })
+                        .ToList();
+                }
+                
+                return filteredTool;
+            });
+
+            var toolsWithFilteredParams = (await Task.WhenAll(toolsWithFilteredParamsTasks)).ToList();
+
+            var areaPageData = new Dictionary<string, object>
+            {
+                ["areaName"] = areaName,
+                ["areaData"] = areaData,
+                ["tools"] = toolsWithFilteredParams,
+                ["version"] = data.Version,
+                ["generatedAt"] = data.GeneratedAt,
+                ["generateAreaPage"] = true
+            };
+
+            var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, areaPageData);
+
+            await File.WriteAllTextAsync(outputFile, result);
+            LogFileHelper.WriteDebug($"Generated area page: {fileName}");
+        }
+        catch (Exception ex)
+        {
+            LogFileHelper.WriteDebug($"Error generating area page for {areaName}: {ex.Message}");
+            LogFileHelper.WriteDebug(ex.StackTrace ?? "No stack trace");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Generates the common tools documentation page
+    /// </summary>
+    public async Task GenerateCommonToolsPageAsync(
+        TransformedData data, 
+        string outputDir, 
+        string templateFile)
+    {
+        // Use source-discovered parameters if available, otherwise fall back to CLI-discovered
+        var commonParameters = data.SourceDiscoveredCommonParams.Any() 
+            ? data.SourceDiscoveredCommonParams 
+            : _extractCommonParameters(data.Tools);
+        
+        var commonPageData = new Dictionary<string, object>
+        {
+            ["version"] = data.Version,
+            ["generatedAt"] = data.GeneratedAt,
+            ["commonParameters"] = commonParameters
+        };
+
+        var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, commonPageData);
+
+        // Generate in common-general directory under the provided output folder
+        var commonGeneralDir = Path.Combine(outputDir, "common-general");
+        Directory.CreateDirectory(commonGeneralDir);
+        var outputFile = Path.Combine(commonGeneralDir, "common-tools.md");
+        await File.WriteAllTextAsync(outputFile, result);
+        LogFileHelper.WriteDebug("Generated common tools page: common-general/common-tools.md");
+    }
+
+    /// <summary>
+    /// Generates the index documentation page
+    /// </summary>
+    public async Task GenerateIndexPageAsync(
+        TransformedData data, 
+        string outputDir, 
+        string templateFile)
+    {
+        var indexPageData = new Dictionary<string, object>
+        {
+            ["version"] = data.Version,
+            ["generatedAt"] = data.GeneratedAt,
+            ["tools"] = data.Tools,
+            ["areas"] = data.Areas,
+            ["generateIndex"] = true
+        };
+
+        var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, indexPageData);
+
+        // Generate in common-general directory under the provided output folder
+        var commonGeneralDir = Path.Combine(outputDir, "common-general");
+        Directory.CreateDirectory(commonGeneralDir);
+        var outputFile = Path.Combine(commonGeneralDir, "index.md");
+        await File.WriteAllTextAsync(outputFile, result);
+        LogFileHelper.WriteDebug("Generated index page: common-general/index.md");
+    }
+
+    /// <summary>
+    /// Generates the commands documentation page
+    /// </summary>
+    public async Task GenerateCommandsPageAsync(
+        TransformedData data, 
+        string outputDir, 
+        string templateFile)
+    {
+        // Use source-discovered parameters if available, otherwise fall back to CLI-discovered
+        var commonParameters = data.SourceDiscoveredCommonParams.Any() 
+            ? data.SourceDiscoveredCommonParams 
+            : _extractCommonParameters(data.Tools);
+        
+        var commandsPageData = new Dictionary<string, object>
+        {
+            ["version"] = data.Version,
+            ["generatedAt"] = data.GeneratedAt,
+            ["tools"] = data.Tools,
+            ["areas"] = data.Areas,
+            ["commonParameters"] = commonParameters
+        };
+
+        var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, commandsPageData);
+
+        // Generate in common-general directory under the provided output folder
+        var commonGeneralDir = Path.Combine(outputDir, "common-general");
+        Directory.CreateDirectory(commonGeneralDir);
+        var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
+        await File.WriteAllTextAsync(outputFile, result);
+        LogFileHelper.WriteDebug("Generated commands page: common-general/azmcp-commands.md");
+    }
+
+    /// <summary>
+    /// Filters a tool's options to exclude common parameters that are optional.
+    /// Required common parameters are kept so they appear in the parameter table.
+    /// </summary>
+    internal static List<Option> FilterToolOptions(
+        IEnumerable<Option> options, HashSet<string> commonParameterNames)
+    {
+        return options
+            .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Strips YAML frontmatter (--- ... ---) from markdown content.
+    /// Returns the content after the closing --- delimiter.
+    /// </summary>
+    internal static string StripFrontmatter(string content) =>
+        Shared.FrontmatterUtility.StripFrontmatter(content)!;
+}

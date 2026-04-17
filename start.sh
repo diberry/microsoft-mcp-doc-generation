@@ -20,7 +20,7 @@ EXTRA_ARGS=()
 
 # If first arg starts with -, pass all args through directly to DocGeneration.PipelineRunner
 if [[ $# -gt 0 && "$1" =~ ^- ]]; then
-    dotnet run --project "$ROOT_DIR/docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "$@"
+    dotnet run --project "$ROOT_DIR/mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "$@"
     exit $?
 fi
 
@@ -61,7 +61,7 @@ echo "Start: Documentation Generation Orchestrator"
 echo "==================================================================="
 echo ""
 
-dotnet run --project "$ROOT_DIR/docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "${RUNNER_ARGS[@]}"
+dotnet run --project "$ROOT_DIR/mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "${RUNNER_ARGS[@]}"
 PIPELINE_EXIT=$?
 
 # Post-assembly: merge multi-namespace articles (AD-011)

@@ -16,7 +16,7 @@ Generate Azure MCP documentation in 5 minutes.
    cd microsoft-mcp-doc-generation
    ```
 
-2. **Configure AI credentials** (create `docs-generation/.env`):
+2. **Configure AI credentials** (create `mcp-tools/.env`):
    ```env
    FOUNDRY_API_KEY=your-key-here
    FOUNDRY_ENDPOINT=https://your-endpoint.openai.azure.com/

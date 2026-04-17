@@ -81,7 +81,7 @@ The pipeline already has **588 passing tests** across the solution. That is a st
 
 The generation repo already has the shape needed for a typed orchestration layer:
 
-- Solution: `docs-generation.sln`
+- Solution: `mcp-doc-generation.sln`
 - Runtime center of gravity: `.NET 9`
 - Existing generator projects are executable console apps
 - Existing test projects use **xUnit** and follow consistent `.Tests` conventions
@@ -188,7 +188,7 @@ PipelineRunner.Tests/
 ### End-state flow
 
 1. `start.sh` becomes a thin shell wrapper.
-2. `start.sh` delegates to `dotnet run --project docs-generation/PipelineRunner -- ...`.
+2. `start.sh` delegates to `dotnet run --project mcp-tools/PipelineRunner -- ...`.
 3. `PipelineRunner` parses arguments, creates a `PipelineContext`, resolves selected steps, validates dependencies, and executes steps in order.
 4. Steps call existing generators primarily through a shared `IProcessRunner` abstraction.
 5. Post-validators run through explicit validator hooks instead of being hidden inside step scripts.
@@ -248,7 +248,7 @@ public sealed class PipelineContext
 {
     public required PipelineRequest Request { get; init; }
     public required string RepoRoot { get; init; }
-    public required string DocsGenerationRoot { get; init; }
+    public required string McpToolsRoot { get; init; }
     public required string OutputPath { get; init; }
     public required IProcessRunner ProcessRunner { get; init; }
     public required IWorkspaceManager Workspaces { get; init; }
@@ -420,7 +420,7 @@ Bootstrap responsibilities:
 ## 9.1 Canonical runner command
 
 ```bash
-dotnet run --project docs-generation/PipelineRunner -- \
+dotnet run --project mcp-tools/PipelineRunner -- \
   --namespace compute \
   --steps 1,2,3,4 \
   --output ./generated-compute
@@ -496,7 +496,7 @@ dotnet run --project docs-generation/PipelineRunner -- \
 `start.sh` should do only three things:
 
 1. normalize legacy positional arguments into named arguments
-2. call `dotnet run --project docs-generation/PipelineRunner -- ...`
+2. call `dotnet run --project mcp-tools/PipelineRunner -- ...`
 3. pass through exit codes unchanged
 
 `start-only.sh` may exist only during migration. It is not part of the end-state architecture.

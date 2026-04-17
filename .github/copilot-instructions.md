@@ -10,11 +10,11 @@ This is the Azure MCP Documentation Generator - an automated system that generat
 
 Files under `generated/` and `generated-*/` directories are **programmatically generated output**. Do NOT modify these files directly unless the user explicitly requests it. Instead, fix the **source code** that generates them:
 
-- **Typed steps** (`docs-generation/DocGeneration.PipelineRunner/Steps/`)
-- **Generator projects** (`docs-generation/DocGeneration.Steps.*/*.cs`)
-- **Templates** (`docs-generation/templates/*.hbs`, project-specific `templates/` dirs)
-- **Configuration files** (`docs-generation/data/*.json`)
-- **AI prompts** (`docs-generation/prompts/`, project-specific `prompts/` dirs)
+- **Typed steps** (`mcp-tools/DocGeneration.PipelineRunner/Steps/`)
+- **Generator projects** (`mcp-tools/DocGeneration.Steps.*/*.cs`)
+- **Templates** (`mcp-tools/templates/*.hbs`, project-specific `templates/` dirs)
+- **Configuration files** (`mcp-tools/data/*.json`)
+- **AI prompts** (`mcp-tools/prompts/`, project-specific `prompts/` dirs)
 
 After fixing the source, the user will regenerate the output with `bash start.sh <namespace>`.
 
@@ -64,7 +64,7 @@ Every step implements `IPipelineStep` with typed dependency declarations, failur
 | Workspace manager | `DocGeneration.PipelineRunner/Services/WorkspaceManager.cs` |
 
 ### TemplateEngine (shared library)
-**Directory**: `docs-generation/TemplateEngine/`
+**Directory**: `mcp-tools/TemplateEngine/`
 
 Shared Handlebars template rendering library used by CSharpGenerator, HorizontalArticleGenerator, and ExamplePromptGeneratorStandalone. Wraps `Handlebars.Net` with custom helpers split into:
 - `Helpers/CoreHelpers.cs` - Generic helpers (dates, strings, math)
@@ -99,7 +99,7 @@ Other configs:
 ### Parameter Counting Logic
 **Critical**: The parameter count shown in console output and `generation-summary.md` reflects only **non-common parameters** that appear in the documentation parameter tables.
 
-- **Common parameters** are defined in `docs-generation/data/common-parameters.json`:
+- **Common parameters** are defined in `mcp-tools/data/common-parameters.json`:
   - `--tenant`, `--auth-method` (infrastructure params)
   - `--retry-delay`, `--retry-max-delay`, `--retry-max-retries`, `--retry-mode`, `--retry-network-timeout`
   - `--subscription` (scoping param — filtered when optional, kept when required)
@@ -140,7 +140,7 @@ Other configs:
   - `./generated/example-prompts/{tool}-example-prompts.md` (AI-generated prompt files)
   - `./generated/example-prompts-prompts/{tool}-input-prompt.md` (input prompts for debugging)
 
-**Environment Variables Required** (from `.env` in `docs-generation/`):
+**Environment Variables Required** (from `.env` in `mcp-tools/`):
 - `FOUNDRY_API_KEY` - Azure OpenAI API key
 - `FOUNDRY_ENDPOINT` - Azure OpenAI endpoint URL
 - `FOUNDRY_MODEL_NAME` - Model deployment name (e.g., "gpt-4o-mini")
@@ -297,7 +297,7 @@ generated/
 **NEW**: Root-level scripts for full catalog generation
 
 **start.sh (Orchestrator)**:
-- Calls `docs-generation/scripts/preflight.ps1` ONCE which:
+- Calls `mcp-tools/scripts/preflight.ps1` ONCE which:
   - Validates .env file exists with required AI credentials (STOPS if missing/invalid)
   - Cleans previous generation output  
   - Creates output directory structure
@@ -305,10 +305,10 @@ generated/
   - Generates CLI metadata for all namespaces
   - Runs brand mapping validation (Step 0)
 - Iterates over all 52 namespaces (or single specified namespace)
-- Calls `docs-generation/scripts/start-only.sh` for each namespace
+- Calls `mcp-tools/scripts/start-only.sh` for each namespace
 - Tracks success/failure and reports summary
 
-**start-only.sh (Worker)** (located at `docs-generation/scripts/start-only.sh`):
+**start-only.sh (Worker)** (located at `mcp-tools/scripts/start-only.sh`):
 - Takes a single namespace parameter
 - Uses existing CLI metadata files (no regeneration)
 - Generates documentation for that namespace only
@@ -330,9 +330,9 @@ generated/
 ./start.sh advisor 4 --skip-deps   # Run step 4 without requiring steps 1-3
 
 # Direct worker call (requires preflight setup first)
-./docs-generation/scripts/start-only.sh advisor         # All steps for advisor
-./docs-generation/scripts/start-only.sh advisor 1       # Step 1 only for advisor
-./docs-generation/scripts/start-only.sh advisor 1,2,3   # Steps 1-3 for advisor
+./mcp-tools/scripts/start-only.sh advisor         # All steps for advisor
+./mcp-tools/scripts/start-only.sh advisor 1       # Step 1 only for advisor
+./mcp-tools/scripts/start-only.sh advisor 1,2,3   # Steps 1-3 for advisor
 ```
 
 **Benefits**:
@@ -483,8 +483,8 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
 - `.contextdocs` - Comprehensive LLM context
 - `docs/ARCHITECTURE.md` - Architecture guide
 - `docs/QUICK-START.md` - 5-minute guide
-- `docs-generation/README.md` - Generator details
-- `docs-generation/CSharpGenerator/Generators/COMPLETE-TOOLS-README.md` - Complete tools feature (NEW)
+- `mcp-tools/README.md` - Generator details
+- `mcp-tools/CSharpGenerator/Generators/COMPLETE-TOOLS-README.md` - Complete tools feature (NEW)
 
 ### Workflows
 - `.github/workflows/generate-docs.yml` - CI/CD (140 lines, 70% reduction)
@@ -511,12 +511,12 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
 7. **Modularization**: Isolate new features into separate modules when possible
    - PowerShell: Create separate `.ps1` files for distinct functionality (e.g., `validate-env.ps1`, `preflight.ps1`)
    - Bash: Create separate `.sh` files for reusable scripts
-   - C#: Create separate projects or packages in `docs-generation/` (e.g., `GenerativeAI`, `Shared`)
+   - C#: Create separate projects or packages in `mcp-tools/` (e.g., `GenerativeAI`, `Shared`)
    - Node.js: Create separate npm packages when appropriate
    - Benefits: Testability, reusability, maintainability, clear separation of concerns
    - Example: Environment validation extracted to `validate-env.ps1` instead of inline in preflight script
 8. **Cross-platform (bash ↔ PowerShell)**: See "Cross-Platform Script Interop" section below
-9. **Project README**: Every .NET project and standalone package in `docs-generation/` MUST have a `README.md` in its project root directory. When creating a new project, include a README covering: purpose, usage, architecture/key files, dependencies, and how to run tests. When modifying an existing project (adding features, changing behavior, updating CLI options, etc.), review the project's README and update it if the changes affect anything documented there.
+9. **Project README**: Every .NET project and standalone package in `mcp-tools/` MUST have a `README.md` in its project root directory. When creating a new project, include a README covering: purpose, usage, architecture/key files, dependencies, and how to run tests. When modifying an existing project (adding features, changing behavior, updating CLI options, etc.), review the project's README and update it if the changes affect anything documented there.
 
 ## When Helping with Code
 
@@ -581,21 +581,21 @@ When a `.ps1` script is called via `pwsh -File` from bash:
 
 #### Script directory and path resolution
 
-All `.ps1` scripts live in `docs-generation/scripts/`. When referencing sibling directories:
+All `.ps1` scripts live in `mcp-tools/scripts/`. When referencing sibling directories:
 
 ```powershell
-$scriptDir = $PSScriptRoot                    # → docs-generation/scripts/
-$docsGenDir = Split-Path -Parent $scriptDir   # → docs-generation/
+$scriptDir = $PSScriptRoot                    # → mcp-tools/scripts/
+$docsGenDir = Split-Path -Parent $scriptDir   # → mcp-tools/
 
 # Reference project directories via $docsGenDir, NOT $scriptDir
 $csharpGen = Join-Path $docsGenDir "CSharpGenerator"      # ✅
 $brandMap  = Join-Path $docsGenDir "data/brand-to-server-mapping.json"  # ✅
-$sln       = Join-Path (Split-Path $docsGenDir -Parent) "docs-generation.sln"  # ✅
+$sln       = Join-Path (Split-Path $docsGenDir -Parent) "mcp-doc-generation.sln"  # ✅
 
 # Reference sibling scripts via $scriptDir
 & "$scriptDir\Generate-Annotations.ps1"  # ✅
 
-# Default OutputPath should account for script depth (scripts/ → docs-generation/ → repo root)
+# Default OutputPath should account for script depth (scripts/ → mcp-tools/ → repo root)
 [string]$OutputPath = "../../generated"  # ✅ (relative to $scriptDir)
 ```
 
@@ -615,11 +615,11 @@ pwsh -File "$SCRIPT_DIR/MyScript.ps1" -ToolFamily "$TOOL_FAMILY" -Steps "$STEPS"
 - Use Central Package Management (no versions in .csproj)
 - Update `Config.cs` for new configuration files
 - Test with `dotnet build` before running
-- **Zero warnings policy**: The CI build uses `--configuration Release` which treats warnings as errors. All compiler warnings (nullable, unused variables, etc.) must be resolved before pushing. Run `dotnet build docs-generation.sln --configuration Release` locally and fix any warnings.
+- **Zero warnings policy**: The CI build uses `--configuration Release` which treats warnings as errors. All compiler warnings (nullable, unused variables, etc.) must be resolved before pushing. Run `dotnet build mcp-doc-generation.sln --configuration Release` locally and fix any warnings.
 - **Branch protection**: The `build-and-test` CI workflow must pass before merging. All tests (668+ across 12 test projects) run automatically on every PR.
-- **For new .NET projects**: Always add to `docs-generation.sln` (`dotnet sln add`) and verify the full solution builds (`dotnet build docs-generation.sln`). This ensures the project is included in CI build and test via `.github/workflows/build-and-test.yml`. If the project includes tests, add a corresponding `.Tests` project to the solution as well. **Every new project MUST include a `README.md`** in its directory covering purpose, usage, architecture, and dependencies.
+- **For new .NET projects**: Always add to `mcp-doc-generation.sln` (`dotnet sln add`) and verify the full solution builds (`dotnet build mcp-doc-generation.sln`). This ensures the project is included in CI build and test via `.github/workflows/build-and-test.yml`. If the project includes tests, add a corresponding `.Tests` project to the solution as well. **Every new project MUST include a `README.md`** in its directory covering purpose, usage, architecture, and dependencies.
 - **When modifying existing projects**: Review the project's `README.md` and update it if the changes affect documented behavior, CLI options, architecture, dependencies, or usage patterns.
-- **Every bug fix MUST include tests**: When fixing a bug or error, add one or more unit tests that reproduce the bug and verify the fix. Tests must be placed in a `.Tests` project that is part of `docs-generation.sln` so that CI (`dotnet test docs-generation.sln`) runs them automatically. If no `.Tests` project exists for the affected project, create one (xunit, CPM, added to the solution). If the code under test has `private` methods that need testing, change them to `internal` and add `<InternalsVisibleTo Include="ProjectName.Tests" />` to the source project's `.csproj`.
+- **Every bug fix MUST include tests**: When fixing a bug or error, add one or more unit tests that reproduce the bug and verify the fix. Tests must be placed in a `.Tests` project that is part of `mcp-doc-generation.sln` so that CI (`dotnet test mcp-doc-generation.sln`) runs them automatically. If no `.Tests` project exists for the affected project, create one (xunit, CPM, added to the solution). If the code under test has `private` methods that need testing, change them to `internal` and add `<InternalsVisibleTo Include="ProjectName.Tests" />` to the source project's `.csproj`.
 - **For new generators**: Place in `Generators/` directory, follow existing patterns
   - Use dependency injection for shared functions (brand mapping, filename cleaning)
   - Filter infrastructure parameters (tenant, auth-method, retry-*) and scoping params (subscription) using `common-parameters.json` — all are filtered when optional, kept when required
@@ -694,7 +694,7 @@ For comprehensive architecture details, workflows, and troubleshooting:
 ## Debugging & Troubleshooting
 
 ### Example Prompts Not Generating
-1. **Check environment variables** in `docs-generation/.env`:
+1. **Check environment variables** in `mcp-tools/.env`:
    - `FOUNDRY_API_KEY`, `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME` must be set
    - Generator will skip example prompts if credentials are missing (with warning)
 2. **Check console output** - should see "DEBUG: Generating example prompt for..." for each tool

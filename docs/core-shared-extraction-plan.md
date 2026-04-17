@@ -12,7 +12,7 @@
 
 ## Methodology
 
-Every caller count below is based on `grep` searches across all `.cs` files in `docs-generation/`. A **production caller** is any non-test project outside `DocGeneration.Core.Shared` itself. Test projects are tracked separately.
+Every caller count below is based on `grep` searches across all `.cs` files in `mcp-tools/`. A **production caller** is any non-test project outside `DocGeneration.Core.Shared` itself. Test projects are tracked separately.
 
 ## Project Metadata
 
