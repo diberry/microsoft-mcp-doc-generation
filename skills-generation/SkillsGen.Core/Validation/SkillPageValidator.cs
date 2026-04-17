@@ -12,6 +12,16 @@ public class SkillPageValidator : ISkillPageValidator
         "## What it provides"
     ];
 
+    // Known typo patterns in generated links
+    private static readonly Regex[] BadLinkPatterns =
+    [
+        new(@"github-cilot", RegexOptions.IgnoreCase),
+        new(@"github-copiliot", RegexOptions.IgnoreCase),
+        new(@"micosoft|microsft|microsfot", RegexOptions.IgnoreCase),
+        new(@"/docs/azure/", RegexOptions.IgnoreCase),
+        new(@"learn\.microsoft\.com/en-us/en-us/", RegexOptions.IgnoreCase),
+    ];
+
     public SkillValidationResult Validate(string renderedContent, int tier, SkillData skillData, TriggerData triggerData)
     {
         var errors = new List<string>();
@@ -99,6 +109,20 @@ public class SkillPageValidator : ISkillPageValidator
         if (fragmentMatches.Count > 0)
         {
             warnings.Add($"FRAGMENT: {fragmentMatches.Count} bullet(s) use vague 'Work with' fragment pattern");
+        }
+
+        // LINK_TYPO: Check for known bad link patterns
+        var linkMatches = Regex.Matches(renderedContent, @"\[([^\]]*)\]\(([^)]+)\)");
+        foreach (Match linkMatch in linkMatches)
+        {
+            var url = linkMatch.Groups[2].Value;
+            foreach (var badPattern in BadLinkPatterns)
+            {
+                if (badPattern.IsMatch(url))
+                {
+                    warnings.Add($"LINK_TYPO: Suspicious URL pattern in '{url}' — possible typo");
+                }
+            }
         }
 
         var sectionCount = Regex.Matches(renderedContent, @"^## ", RegexOptions.Multiline).Count;

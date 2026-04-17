@@ -4,11 +4,16 @@ Rules:
 - Write in present tense
 - Use contractions (doesn't, isn't, can't)
 - Use active voice
-- Keep sentences under 35 words
+- Keep sentences under 25 words where possible; never exceed 30 words
 - Use "you" to address the reader, never "we"
 
 - NEVER invent Azure service names, features, or capabilities not in the source data
 - NEVER add example prompts not grounded in the trigger test data
 - If the source data is insufficient, say "This skill provides guidance for..." and keep it short
+
+- "What it provides" section must add NEW information beyond the description/H1. Do NOT repeat or paraphrase the article description. Instead, list specific capabilities, knowledge areas, or tool actions.
+- Use goal-before-action phrasing: write "To list resources, use the command" NOT "Run the command to list resources"
+- All list items in "When to use" MUST be bulleted (use "- " prefix)
+- Prerequisite labels must NOT have colons after the bold: write "**Azure CLI** Install version 2.60+" NOT "**Azure CLI:** Install version 2.60+"
 
 {{ACROLINX_RULES}}
