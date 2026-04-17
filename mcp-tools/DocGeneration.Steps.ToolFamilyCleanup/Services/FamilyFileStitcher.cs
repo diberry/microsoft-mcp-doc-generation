@@ -84,6 +84,9 @@ public class FamilyFileStitcher
         // 14. Post-processing: strip HTML scaffolding comments (preserve @mcpcli markers)
         markdown = ScaffoldingCommentStripper.Strip(markdown);
 
+        // 15. Post-processing: escape bare <placeholder> values for MS Learn validation (#416)
+        markdown = PlaceholderEscaper.Escape(markdown);
+
         return markdown;
     }
 
