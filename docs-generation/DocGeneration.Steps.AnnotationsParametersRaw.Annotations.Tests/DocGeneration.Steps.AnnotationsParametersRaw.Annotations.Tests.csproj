@@ -9,9 +9,9 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj" />
-    <ProjectReference Include="../DocGeneration.Core.TemplateEngine/DocGeneration.Core.TemplateEngine.csproj" />
-    <ProjectReference Include="../DocGeneration.Core.TextTransformation/DocGeneration.Core.TextTransformation.csproj" />
-    <ProjectReference Include="../DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.Core.TemplateEngine/DocGeneration.Core.TemplateEngine.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.Core.TextTransformation/DocGeneration.Core.TextTransformation.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

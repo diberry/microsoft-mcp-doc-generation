@@ -11,9 +11,9 @@
     <InternalsVisibleTo Include="DocGeneration.Steps.ExamplePrompts.Generation.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.TemplateEngine\DocGeneration.Core.TemplateEngine.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.TemplateEngine\DocGeneration.Core.TemplateEngine.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shared-acrolinx-rules.txt">

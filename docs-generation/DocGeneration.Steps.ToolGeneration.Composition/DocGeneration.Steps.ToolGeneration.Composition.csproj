@@ -11,6 +11,6 @@
     <RootNamespace>DocGeneration.Steps.ToolGeneration.Composition</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
   </ItemGroup>
 </Project>

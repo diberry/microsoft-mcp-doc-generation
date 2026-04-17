@@ -14,7 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocGeneration.Steps.HorizontalArticles\DocGeneration.Steps.HorizontalArticles.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.TextTransformation\DocGeneration.Core.TextTransformation.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.TemplateEngine\DocGeneration.Core.TemplateEngine.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.TextTransformation\DocGeneration.Core.TextTransformation.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.TemplateEngine\DocGeneration.Core.TemplateEngine.csproj" />
   </ItemGroup>
 </Project>

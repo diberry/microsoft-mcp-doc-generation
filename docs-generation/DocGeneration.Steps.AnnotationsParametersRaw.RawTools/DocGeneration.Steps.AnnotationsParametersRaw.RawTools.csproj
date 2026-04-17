@@ -11,7 +11,7 @@
     <RootNamespace>DocGeneration.Steps.AnnotationsParametersRaw.RawTools</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
-    <ProjectReference Include="../DocGeneration.Core.NaturalLanguage/DocGeneration.Core.NaturalLanguage.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.Core.NaturalLanguage/DocGeneration.Core.NaturalLanguage.csproj" />
   </ItemGroup>
 </Project>

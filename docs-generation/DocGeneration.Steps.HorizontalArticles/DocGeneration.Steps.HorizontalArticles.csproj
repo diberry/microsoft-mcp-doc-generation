@@ -13,11 +13,11 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.NaturalLanguage\DocGeneration.Core.NaturalLanguage.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.TextTransformation\DocGeneration.Core.TextTransformation.csproj" />
-    <ProjectReference Include="..\DocGeneration.Core.TemplateEngine\DocGeneration.Core.TemplateEngine.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.NaturalLanguage\DocGeneration.Core.NaturalLanguage.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.TextTransformation\DocGeneration.Core.TextTransformation.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.TemplateEngine\DocGeneration.Core.TemplateEngine.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\data\shared-acrolinx-rules.txt">

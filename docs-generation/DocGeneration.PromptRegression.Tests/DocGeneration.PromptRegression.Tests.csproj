@@ -16,8 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
-    <ProjectReference Include="../DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
