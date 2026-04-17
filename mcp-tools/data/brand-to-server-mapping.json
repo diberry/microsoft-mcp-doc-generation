@@ -153,13 +153,19 @@
     "brandName": "Azure Functions",
     "mcpServerName": "functionapp",
     "shortName": "Functions",
-    "fileName": "azure-functions"
+    "fileName": "azure-functions",
+    "mergeGroup": "azure-functions",
+    "mergeOrder": 1,
+    "mergeRole": "primary"
   },
   {
     "brandName": "Azure Functions",
     "mcpServerName": "functions",
     "shortName": "Functions",
-    "fileName": "azure-functions-development"
+    "fileName": "azure-functions-development",
+    "mergeGroup": "azure-functions",
+    "mergeOrder": 2,
+    "mergeRole": "secondary"
   },
   {
     "brandName": "Azure Get",
