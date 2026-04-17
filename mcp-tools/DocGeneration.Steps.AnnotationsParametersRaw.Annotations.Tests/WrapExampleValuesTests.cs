@@ -8,7 +8,7 @@ using Xunit;
 namespace DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests;
 
 /// <summary>
-/// Tests for TextCleanup.WrapExampleValues — ensures "for example" values
+/// Tests for TextNormalizer.WrapExampleValues — ensures "for example" values
 /// in parameter descriptions are wrapped in backticks at the source level.
 /// Fixes: #190
 /// </summary>

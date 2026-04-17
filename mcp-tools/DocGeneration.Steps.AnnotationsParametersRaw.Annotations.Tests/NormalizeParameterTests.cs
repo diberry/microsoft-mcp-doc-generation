@@ -6,7 +6,7 @@ using Xunit;
 namespace CSharpGenerator.Tests;
 
 /// <summary>
-/// Tests for TextCleanup.NormalizeParameter to ensure parameter names
+/// Tests for TextNormalizer.NormalizeParameter to ensure parameter names
 /// with type qualifiers (like "name") are fully preserved.
 /// Priority: P0 — parameter name transformation affects all documentation.
 /// Related PR: #40 — copilot/remove-name-type-parameter

@@ -8,16 +8,13 @@ namespace Azure.Mcp.TextTransformation;
 /// <summary>
 /// Builds a <see cref="TransformationConfig"/> from the legacy NaturalLanguage JSON data files
 /// (nl-parameters.json, static-text-replacement.json, nl-parameter-identifiers.json).
-/// Used during Phase 2 migration so callers can switch from TextCleanup to TransformationEngine
-/// with zero behavioral change.
 /// </summary>
 public static class TransformationConfigFactory
 {
     /// <summary>
     /// Creates a TransformationConfig from legacy required-files list.
-    /// Replicates TextCleanup.LoadFiles behaviour: reads nl-parameters.json and
-    /// static-text-replacement.json from the list, auto-discovers
-    /// nl-parameter-identifiers.json from the nl-parameters.json directory,
+    /// Reads nl-parameters.json and static-text-replacement.json from the list,
+    /// auto-discovers nl-parameter-identifiers.json from the nl-parameters.json directory,
     /// and populates the config with combined mappings (first-entry-wins dedup).
     /// </summary>
     public static TransformationConfig CreateFromLegacyFiles(List<string> requiredFiles)
@@ -45,7 +42,7 @@ public static class TransformationConfigFactory
         combined.AddRange(nlParams);
         combined.AddRange(staticReplacements);
 
-        // Deduplicate case-insensitively, first entry wins (matches TextCleanup.LoadFiles)
+        // Deduplicate case-insensitively, first entry wins
         var deduped = combined
             .GroupBy(m => m.Parameter, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
@@ -99,7 +96,7 @@ public static class TransformationConfigFactory
             }
         }
 
-        // Lexicon.Acronyms ← hardcoded acronym table matching TextCleanup.TransformAcronyms
+        // Lexicon.Acronyms ← hardcoded acronym table matching standard acronym transformations
         config.Lexicon.Acronyms = BuildLegacyAcronyms();
 
         return config;
@@ -116,7 +113,7 @@ public static class TransformationConfigFactory
 
     private static Dictionary<string, AcronymEntry> BuildLegacyAcronyms()
     {
-        // Must match TextCleanup.TransformAcronyms + IsAcronym exactly
+        // Must match the standard acronym transformations + IsAcronym exactly
         var acronyms = new Dictionary<string, AcronymEntry>(StringComparer.OrdinalIgnoreCase)
         {
             ["id"] = new() { Canonical = "ID" },

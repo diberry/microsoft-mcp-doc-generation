@@ -12,6 +12,5 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../shared/DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
-    <ProjectReference Include="../../shared/DocGeneration.Core.NaturalLanguage/DocGeneration.Core.NaturalLanguage.csproj" />
   </ItemGroup>
 </Project>
