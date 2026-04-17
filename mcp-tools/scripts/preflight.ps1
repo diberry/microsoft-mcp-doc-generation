@@ -40,7 +40,7 @@ $ErrorActionPreference = "Stop"
 # Calculate paths relative to script location
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-Path (Join-Path $scriptDir "../..")
-$docsGenDir = Join-Path $repoRoot "mcp-tools"
+$mcpToolsDir = Join-Path $repoRoot "mcp-tools"
 $testNpmDir = Join-Path $repoRoot "test-npm-azure-mcp"
 
 # Determine output directory
@@ -61,7 +61,7 @@ if ($SkipEnvValidation) {
     Write-Host "Skipping .env validation (handled by DocGeneration.PipelineRunner)..." -ForegroundColor Yellow
 } else {
     $validateEnvScript = Join-Path $scriptDir "validate-env.ps1"
-    & $validateEnvScript -DocsGenDir $docsGenDir
+    & $validateEnvScript -McpToolsDir $mcpToolsDir
 
     if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
         Write-Host "⛔ PIPELINE HALTED: .env validation failed" -ForegroundColor Red
@@ -132,7 +132,7 @@ Write-Host ""
 
 # Step 5: Validate brand mappings (CRITICAL - stops pipeline if validation fails)
 Write-Host "Running brand mapping validation..." -ForegroundColor Yellow
-Push-Location $docsGenDir
+Push-Location $mcpToolsDir
 try {
     $validationScript = Join-Path $scriptDir "0-Validate-BrandMappings.ps1"
     & $validationScript -OutputPath $OutputPath -SkipBuild
@@ -141,7 +141,7 @@ try {
         Write-Host ""
         Write-Host "⛔ PIPELINE HALTED: Brand mapping validation failed (exit code: $LASTEXITCODE)" -ForegroundColor Red
         Write-Host "   Review suggestions at: $OutputPath/reports/brand-mapping-suggestions.json" -ForegroundColor Yellow
-        Write-Host "   Add missing mappings to: $docsGenDir/data/brand-to-server-mapping.json" -ForegroundColor Yellow
+        Write-Host "   Add missing mappings to: $mcpToolsDir/data/brand-to-server-mapping.json" -ForegroundColor Yellow
         Write-Host "   Then re-run this script." -ForegroundColor Yellow
         exit $LASTEXITCODE
     }
@@ -156,7 +156,7 @@ Write-Host "Downloading and parsing e2e test prompts (branch: $McpBranch)..." -F
 $e2eOutputDir = Join-Path $OutputPath "e2e-test-prompts"
 New-Item -ItemType Directory -Path $e2eOutputDir -Force | Out-Null
 $e2eOutputFile = Join-Path $e2eOutputDir "parsed.json"
-$e2eProject = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.E2eTestPromptParser/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj"
+$e2eProject = Join-Path $mcpToolsDir "DocGeneration.Steps.Bootstrap.E2eTestPromptParser/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj"
 
 # Fetch e2e test prompts from upstream, then pass to parser via --file
 # NOTE: URL path pattern must stay in sync with BootstrapStep.McpDocsPath (source of truth)
@@ -181,7 +181,7 @@ Write-Host ""
 Write-Host "Fetching and parsing azmcp-commands.md (branch: $McpBranch)..." -ForegroundColor Yellow
 # NOTE: URL path pattern must stay in sync with BootstrapStep.McpDocsPath (source of truth)
 $azmcpRemoteUrl = "https://raw.githubusercontent.com/microsoft/mcp/$McpBranch/servers/Azure.Mcp.Server/docs/azmcp-commands.md"
-$azmcpLocalFallback = Join-Path $docsGenDir "azure-mcp/azmcp-commands.md"
+$azmcpLocalFallback = Join-Path $mcpToolsDir "azure-mcp/azmcp-commands.md"
 $azmcpTempFile = Join-Path ([System.IO.Path]::GetTempPath()) "mcp-upstream-azmcp-commands.md"
 try {
     Invoke-WebRequest -Uri $azmcpRemoteUrl -OutFile $azmcpTempFile -TimeoutSec 30 -ErrorAction Stop
@@ -192,7 +192,7 @@ try {
     $azmcpSourceFile = $azmcpLocalFallback
 }
 $azmcpOutputFile = Join-Path $OutputPath "cli/azmcp-commands.json"
-$azmcpProject = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.CommandParser/DocGeneration.Steps.Bootstrap.CommandParser.csproj"
+$azmcpProject = Join-Path $mcpToolsDir "DocGeneration.Steps.Bootstrap.CommandParser/DocGeneration.Steps.Bootstrap.CommandParser.csproj"
 & dotnet run --project $azmcpProject --configuration Release --no-build -- --file $azmcpSourceFile --output $azmcpOutputFile
 if ($LASTEXITCODE -ne 0) {
     Write-Host "⚠ WARNING: azmcp-commands.md parsing failed (non-blocking)" -ForegroundColor Yellow

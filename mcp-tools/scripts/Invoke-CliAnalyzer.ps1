@@ -62,8 +62,8 @@ function Write-Error { param([string]$Message) Write-Host "ERROR: $Message" -For
 try {
     # Resolve paths from script location
     $scriptDir = $PSScriptRoot                        # mcp-tools/scripts/
-    $docsGenDir = Split-Path -Parent $scriptDir       # mcp-tools/
-    $repoRoot = Split-Path -Parent $docsGenDir        # repo root
+    $mcpToolsDir = Split-Path -Parent $scriptDir       # mcp-tools/
+    $repoRoot = Split-Path -Parent $mcpToolsDir        # repo root
     
     # Resolve output path (relative to script directory)
     $outputDir = if ([System.IO.Path]::IsPathRooted($OutputPath)) { 

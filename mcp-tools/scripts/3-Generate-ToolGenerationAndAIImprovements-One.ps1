@@ -69,7 +69,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
-    $docsGenDir = Split-Path -Parent $scriptDir
+    $mcpToolsDir = Split-Path -Parent $scriptDir
     $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"
@@ -131,7 +131,7 @@ try {
             Write-Host ""
         }
 
-        Push-Location $docsGenDir
+        Push-Location $mcpToolsDir
         try {
             $composedArgs = @(
                 "--project", "DocGeneration.Steps.ToolGeneration.Composition",
@@ -178,7 +178,7 @@ try {
             Write-Host "  Run Step 3 without -SkipComposed to generate composed tools first."
             Write-Host ""
         } else {
-            Push-Location $docsGenDir
+            Push-Location $mcpToolsDir
             try {
                 $improvedArgs = @(
                     "--project", "DocGeneration.Steps.ToolGeneration.Improvements",

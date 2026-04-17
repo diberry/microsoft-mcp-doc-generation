@@ -93,13 +93,13 @@ Write-Host "Creating output directories..."
     }
 }
 # Get the mcp-tools directory (parent of scripts/)
-$docsGenDir = Split-Path -Parent $PSScriptRoot
+$mcpToolsDir = Split-Path -Parent $PSScriptRoot
 
 Write-Host ""
 
 # Build DocGeneration.Steps.ToolFamilyCleanup
 Write-Host "Building DocGeneration.Steps.ToolFamilyCleanup..."
-Push-Location "$docsGenDir/DocGeneration.Steps.ToolFamilyCleanup"
+Push-Location "$mcpToolsDir/DocGeneration.Steps.ToolFamilyCleanup"
 try {
     $buildOutput = dotnet build --configuration Release 2>&1
     if ($LASTEXITCODE -ne 0) {
@@ -116,10 +116,10 @@ finally {
 
 # Run Tool Family Cleanup in multi-phase mode
 Write-Host "Running Tool Family Cleanup (Multi-Phase)..."
-$exePath = "$docsGenDir/DocGeneration.Steps.ToolFamilyCleanup/bin/Release/net9.0/DocGeneration.Steps.ToolFamilyCleanup.dll"
+$exePath = "$mcpToolsDir/DocGeneration.Steps.ToolFamilyCleanup/bin/Release/net9.0/DocGeneration.Steps.ToolFamilyCleanup.dll"
 
 # Run from mcp-tools directory so relative paths work correctly
-Push-Location $docsGenDir
+Push-Location $mcpToolsDir
 try {
     dotnet $exePath --multi-phase
     

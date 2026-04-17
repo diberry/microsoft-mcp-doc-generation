@@ -40,7 +40,7 @@ public sealed class PipelineContextFactory
     public async ValueTask<PipelineContext> CreateAsync(PipelineRequest request, CancellationToken cancellationToken)
     {
         var repoRoot = ResolveRepoRoot(_repoRootOverride);
-        var McpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
+        var mcpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
         var outputPath = Path.GetFullPath(
             Path.IsPathRooted(request.OutputPath)
                 ? request.OutputPath
@@ -50,7 +50,7 @@ public sealed class PipelineContextFactory
         {
             Request = request,
             RepoRoot = repoRoot,
-            McpToolsRoot = McpToolsRoot,
+            McpToolsRoot = mcpToolsRoot,
             OutputPath = outputPath,
             ProcessRunner = _processRunner,
             Workspaces = _workspaceManager,

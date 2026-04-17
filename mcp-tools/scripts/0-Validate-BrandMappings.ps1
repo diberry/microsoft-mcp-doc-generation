@@ -42,7 +42,7 @@ function Write-Err { param([string]$Message) Write-Host "ERROR: $Message" -Foreg
 
 $scriptDir = $PSScriptRoot
 if (-not $scriptDir) { $scriptDir = Get-Location }
-$docsGenDir = Split-Path -Parent $scriptDir
+$mcpToolsDir = Split-Path -Parent $scriptDir
 
 # Resolve paths
 $resolvedOutput = if ([System.IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $scriptDir $OutputPath }
@@ -52,7 +52,7 @@ if ([string]::IsNullOrWhiteSpace($CliOutputPath)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($BrandMappingPath)) {
-    $BrandMappingPath = Join-Path $docsGenDir "data" "brand-to-server-mapping.json"
+    $BrandMappingPath = Join-Path $mcpToolsDir "data" "brand-to-server-mapping.json"
 }
 
 Write-Host ""
@@ -79,7 +79,7 @@ Write-Info "Brand mapping: $BrandMappingPath"
 Write-Host ""
 
 # Build the DocGeneration.Steps.Bootstrap.BrandMappings project
-$projectDir = Join-Path $docsGenDir "DocGeneration.Steps.Bootstrap.BrandMappings"
+$projectDir = Join-Path $mcpToolsDir "DocGeneration.Steps.Bootstrap.BrandMappings"
 $projectFile = Join-Path $projectDir "DocGeneration.Steps.Bootstrap.BrandMappings.csproj"
 
 if (-not (Test-Path $projectFile)) {

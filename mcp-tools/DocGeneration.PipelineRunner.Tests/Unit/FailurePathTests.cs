@@ -733,16 +733,16 @@ public class FailurePathTests
 
     private static PipelineContext CreateContext(string testRoot, IProcessRunner processRunner, bool skipValidation, IReadOnlyList<string> toolCommands)
     {
-        var McpToolsRoot = Path.Combine(testRoot, "mcp-tools");
+        var mcpToolsRoot = Path.Combine(testRoot, "mcp-tools");
         var outputPath = Path.Combine(testRoot, "generated-compute");
-        Directory.CreateDirectory(McpToolsRoot);
+        Directory.CreateDirectory(mcpToolsRoot);
         Directory.CreateDirectory(outputPath);
 
         return new PipelineContext
         {
             Request = new PipelineRequest("compute", [1], outputPath, SkipBuild: true, SkipValidation: skipValidation, DryRun: false),
             RepoRoot = testRoot,
-            McpToolsRoot = McpToolsRoot,
+            McpToolsRoot = mcpToolsRoot,
             OutputPath = outputPath,
             ProcessRunner = processRunner,
             Workspaces = new WorkspaceManager(),

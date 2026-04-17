@@ -61,7 +61,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
-    $docsGenDir = Split-Path -Parent $scriptDir
+    $mcpToolsDir = Split-Path -Parent $scriptDir
     $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"
@@ -101,7 +101,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    Push-Location $docsGenDir
+    Push-Location $mcpToolsDir
     try {
         # Run with single service flag and output path
         $transformArg = if ($UseTextTransformation) { "--transform" } else { "" }

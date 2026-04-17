@@ -88,9 +88,9 @@ try {
     Write-Info ""
     
     $rawToolsDir = Join-Path $outputDir "tools-raw"
-    $docsGenDir = $scriptDir
+    $mcpToolsDir = $scriptDir
     
-    Push-Location $docsGenDir
+    Push-Location $mcpToolsDir
     try {
         $rawArgs = @(
             "--project", "DocGeneration.Steps.AnnotationsParametersRaw.RawTools",

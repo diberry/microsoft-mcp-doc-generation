@@ -360,7 +360,7 @@ public sealed class BootstrapStep : StepDefinition
     private static string GetNpmExecutable()
         => OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
 
-    private static IReadOnlyList<string> GetRequiredArtifacts(string McpToolsRoot, IReadOnlyList<IPipelineStep> plannedSteps)
+    private static IReadOnlyList<string> GetRequiredArtifacts(string mcpToolsRoot, IReadOnlyList<IPipelineStep> plannedSteps)
     {
         var requiredProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -388,7 +388,7 @@ public sealed class BootstrapStep : StepDefinition
         }
 
         return requiredProjects
-            .Select(project => Path.Combine(McpToolsRoot, project, "bin", "Release", "net9.0", $"{project}.dll"))
+            .Select(project => Path.Combine(mcpToolsRoot, project, "bin", "Release", "net9.0", $"{project}.dll"))
             .ToArray();
     }
 

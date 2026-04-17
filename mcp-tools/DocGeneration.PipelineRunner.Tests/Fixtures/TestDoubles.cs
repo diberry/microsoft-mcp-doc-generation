@@ -65,7 +65,7 @@ internal sealed class StubBuildCoordinator : IBuildCoordinator
 
 internal sealed class StubAiCapabilityProbe : IAiCapabilityProbe
 {
-    public ValueTask<AiCapabilityResult> ProbeAsync(string McpToolsRoot, CancellationToken cancellationToken)
+    public ValueTask<AiCapabilityResult> ProbeAsync(string mcpToolsRoot, CancellationToken cancellationToken)
         => ValueTask.FromResult(new AiCapabilityResult(true, Array.Empty<string>()));
 }
 

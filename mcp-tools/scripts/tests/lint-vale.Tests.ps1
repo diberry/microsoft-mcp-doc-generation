@@ -51,10 +51,10 @@ This article describes a test scenario for Azure services.
     }
 
     It "Should find Vale executable" {
-        $docsGenDir = Join-Path $PSScriptRoot ".." ".."
-        $valeExists = (Test-Path "$docsGenDir/tools/vale.exe") -or
+        $mcpToolsDir = Join-Path $PSScriptRoot ".." ".."
+        $valeExists = (Test-Path "$mcpToolsDir/tools/vale.exe") -or
                       (Get-Command vale -ErrorAction SilentlyContinue) -or
-                      (Test-Path (Join-Path (Split-Path -Parent $docsGenDir) "vale_bin" "vale.exe"))
+                      (Test-Path (Join-Path (Split-Path -Parent $mcpToolsDir) "vale_bin" "vale.exe"))
         $valeExists | Should -BeTrue
     }
 

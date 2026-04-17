@@ -196,7 +196,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
-    $docsGenDir = Split-Path -Parent $scriptDir
+    $mcpToolsDir = Split-Path -Parent $scriptDir
     $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"

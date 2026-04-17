@@ -50,8 +50,10 @@ public static class DataFileLoader
                 return docsDataDir;
         }
 
-        // Fallback to the old relative path for backward compatibility
-        return Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data");
+        // Last-resort fallback: no fingerprinted data/ directory found within 8 levels.
+        // This will likely fail downstream, but provides a consistent error path.
+        throw new InvalidOperationException(
+            $"Could not locate a data/ directory containing {fingerprint} within 8 levels above {AppContext.BaseDirectory}");
     }
 
     /// <summary>

@@ -16,7 +16,7 @@
     - FOUNDRY_MODEL_API_VERSION: API version
     - TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME: Model for cleanup step
 
-.PARAMETER DocsGenDir
+.PARAMETER McpToolsDir
     Path to the mcp-tools directory (default: ../.. from script location)
 
 .PARAMETER WarnOnly
@@ -32,20 +32,20 @@
 #>
 
 param(
-    [string]$DocsGenDir = "",
+    [string]$mcpToolsDir = "",
     [switch]$WarnOnly = $false
 )
 
 $ErrorActionPreference = "Stop"
 
 # Calculate paths
-if ([string]::IsNullOrWhiteSpace($DocsGenDir)) {
+if ([string]::IsNullOrWhiteSpace($mcpToolsDir)) {
     $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-    $DocsGenDir = Resolve-Path (Join-Path $scriptDir "..")
+    $mcpToolsDir = Resolve-Path (Join-Path $scriptDir "..")
 }
 
-$envFile = Join-Path $DocsGenDir ".env"
-$sampleEnvFile = Join-Path $DocsGenDir "sample.env"
+$envFile = Join-Path $mcpToolsDir ".env"
+$sampleEnvFile = Join-Path $mcpToolsDir "sample.env"
 $envIssues = @()
 
 Write-Host "Validating .env configuration..." -ForegroundColor Yellow

@@ -369,8 +369,8 @@ function Invoke-DotnetBuild {
     }
 
     Write-Progress "Building .NET packages..."
-    $docsGenDir = Split-Path -Parent $PSScriptRoot
-    $solutionFile = Join-Path (Split-Path $docsGenDir -Parent) "mcp-doc-generation.sln"
+    $mcpToolsDir = Split-Path -Parent $PSScriptRoot
+    $solutionFile = Join-Path (Split-Path $mcpToolsDir -Parent) "mcp-doc-generation.sln"
     if (Test-Path $solutionFile) {
         & dotnet build $solutionFile --configuration Release --verbosity quiet
         if ($LASTEXITCODE -ne 0) {

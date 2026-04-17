@@ -340,20 +340,20 @@ public class ToolFamilyCleanupStepTests
 
     private static PipelineContext CreateContextWithBrandMapping(string testRoot, IProcessRunner processRunner)
     {
-        var McpToolsRoot = Path.Combine(testRoot, "mcp-tools");
+        var mcpToolsRoot = Path.Combine(testRoot, "mcp-tools");
         var outputPath = Path.Combine(testRoot, "generated-compute");
-        Directory.CreateDirectory(Path.Combine(McpToolsRoot, "data"));
+        Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
         Directory.CreateDirectory(outputPath);
         var brandMappings = System.Text.Json.JsonSerializer.Serialize(new[]
         {
             new { brandName = "Azure Virtual Machines", mcpServerName = "compute", shortName = "Virtual Machines", fileName = "azure-virtual-machines" }
         });
-        File.WriteAllText(Path.Combine(McpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappings);
+        File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappings);
         var context = new PipelineContext
         {
             Request = new PipelineRequest("compute", [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
             RepoRoot = testRoot,
-            McpToolsRoot = McpToolsRoot,
+            McpToolsRoot = mcpToolsRoot,
             OutputPath = outputPath,
             ProcessRunner = processRunner,
             Workspaces = new WorkspaceManager(),
@@ -372,9 +372,9 @@ public class ToolFamilyCleanupStepTests
 
     private static PipelineContext CreateCosmosContext(string testRoot, IProcessRunner processRunner)
     {
-        var McpToolsRoot = Path.Combine(testRoot, "mcp-tools");
+        var mcpToolsRoot = Path.Combine(testRoot, "mcp-tools");
         var outputPath = Path.Combine(testRoot, "generated-cosmos");
-        Directory.CreateDirectory(Path.Combine(McpToolsRoot, "data"));
+        Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
         Directory.CreateDirectory(outputPath);
         
         // Seed brand mappings with cosmos entry for testing
@@ -382,13 +382,13 @@ public class ToolFamilyCleanupStepTests
         {
             new { brandName = "Azure Cosmos DB", mcpServerName = "cosmos", shortName = "Cosmos DB", fileName = "azure-cosmos-db" }
         });
-        File.WriteAllText(Path.Combine(McpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappings);
+        File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappings);
 
         var context = new PipelineContext
         {
             Request = new PipelineRequest("cosmos", [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
             RepoRoot = testRoot,
-            McpToolsRoot = McpToolsRoot,
+            McpToolsRoot = mcpToolsRoot,
             OutputPath = outputPath,
             ProcessRunner = processRunner,
             Workspaces = new WorkspaceManager(),
@@ -411,17 +411,17 @@ public class ToolFamilyCleanupStepTests
 
     private static PipelineContext CreateContext(string testRoot, IProcessRunner processRunner)
     {
-        var McpToolsRoot = Path.Combine(testRoot, "mcp-tools");
+        var mcpToolsRoot = Path.Combine(testRoot, "mcp-tools");
         var outputPath = Path.Combine(testRoot, "generated-compute");
-        Directory.CreateDirectory(Path.Combine(McpToolsRoot, "data"));
+        Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
         Directory.CreateDirectory(outputPath);
-        File.WriteAllText(Path.Combine(McpToolsRoot, "data", "brand-to-server-mapping.json"), "[]");
+        File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), "[]");
 
         return new PipelineContext
         {
             Request = new PipelineRequest("compute", [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
             RepoRoot = testRoot,
-            McpToolsRoot = McpToolsRoot,
+            McpToolsRoot = mcpToolsRoot,
             OutputPath = outputPath,
             ProcessRunner = processRunner,
             Workspaces = new WorkspaceManager(),

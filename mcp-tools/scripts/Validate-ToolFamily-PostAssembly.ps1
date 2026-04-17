@@ -543,7 +543,7 @@ function Get-BrandingIssues {
 try {
     $namespaceLower = $Namespace.ToLowerInvariant()
     $outputDir = Resolve-OutputDir $OutputPath
-    $docsGenDir = Split-Path -Parent $PSScriptRoot
+    $mcpToolsDir = Split-Path -Parent $PSScriptRoot
     $toolsDir = Join-Path $outputDir 'tools'
     $articlePath = Join-Path $outputDir "tool-family\$namespaceLower.md"
     $reportDir = Join-Path $outputDir 'reports'
@@ -557,7 +557,7 @@ try {
         throw "Tool-family article not found: $articlePath"
     }
 
-    $prefixes = Get-NamespaceFilePrefixes -NamespaceName $namespaceLower -DocsGenRoot $docsGenDir
+    $prefixes = Get-NamespaceFilePrefixes -NamespaceName $namespaceLower -DocsGenRoot $mcpToolsDir
     $toolFiles = Get-NamespaceToolFiles -ToolsDirectory $toolsDir -NamespaceName $namespaceLower -Prefixes $prefixes
     $toolFileCount = $toolFiles.Count
 

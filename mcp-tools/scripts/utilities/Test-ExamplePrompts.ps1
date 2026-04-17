@@ -24,7 +24,7 @@ try {
     
     # Resolve paths
     $scriptDir = $PSScriptRoot
-    $docsGenDir = Split-Path -Parent $scriptDir
+    $mcpToolsDir = Split-Path -Parent $scriptDir
     $outputDir = Join-Path $scriptDir $OutputPath | Resolve-Path
     
     Write-Info "Script directory: $scriptDir"
@@ -59,7 +59,7 @@ try {
     Write-Info "Existing example prompt files: $($existingFiles.Count)"
     
     # Navigate to DocGeneration.Steps.AnnotationsParametersRaw.Annotations
-    $generatorDir = Join-Path $docsGenDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
+    $generatorDir = Join-Path $mcpToolsDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
     if (-not (Test-Path $generatorDir)) {
         throw "Generator directory not found: $generatorDir"
     }

@@ -78,7 +78,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
-    $docsGenDir = Split-Path -Parent $scriptDir
+    $mcpToolsDir = Split-Path -Parent $scriptDir
     $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"
@@ -112,7 +112,7 @@ try {
     Write-Divider
     Write-Host ""
     
-    $csharpGeneratorDir = Join-Path $docsGenDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
+    $csharpGeneratorDir = Join-Path $mcpToolsDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations"
     Push-Location $csharpGeneratorDir
     try {
         $noBuildArg = if ($SkipBuild) { "--no-build" } else { "" }
@@ -154,7 +154,7 @@ try {
     Write-Host ""
 
     $rawToolsDir = Join-Path $outputDir "tools-raw"
-    Push-Location $docsGenDir
+    Push-Location $mcpToolsDir
     try {
         $rawArgs = @(
             "--project", "DocGeneration.Steps.AnnotationsParametersRaw.RawTools",

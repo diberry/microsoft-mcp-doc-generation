@@ -40,7 +40,7 @@ function Clear-PreviousOutput {
 }
 
 # Set paths and variables
-$docsGenDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$mcpToolsDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $rootDir = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $cliOutputPath = Join-Path $rootDir "generated/cli/cli-output.json"
 $outputDir = Join-Path $rootDir "generated"
@@ -74,7 +74,7 @@ if (Test-Path $cliOutputPath) {
 # Step 2: Build C# generator
 Write-Progress "Step 2: Building C# generator..."
 
-Push-Location (Join-Path $docsGenDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations")
+Push-Location (Join-Path $mcpToolsDir "DocGeneration.Steps.AnnotationsParametersRaw.Annotations")
 & dotnet build --configuration Debug
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to build C# generator"

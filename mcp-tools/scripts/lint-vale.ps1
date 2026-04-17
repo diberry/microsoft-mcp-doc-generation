@@ -6,8 +6,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$docsGenDir = Split-Path -Parent $scriptDir
-$repoRoot = Split-Path -Parent $docsGenDir
+$mcpToolsDir = Split-Path -Parent $scriptDir
+$repoRoot = Split-Path -Parent $mcpToolsDir
 
 # Default target: scan all generated-* directories and generated/multi-page
 if (-not $TargetDir) {
@@ -29,10 +29,10 @@ if (-not $TargetDir) {
 $valeExe = $null
 if (Get-Command vale -ErrorAction SilentlyContinue) {
     $valeExe = "vale"
-} elseif (Test-Path "$docsGenDir/tools/vale.exe") {
-    $valeExe = "$docsGenDir/tools/vale.exe"
-} elseif (Test-Path "$docsGenDir/tools/vale") {
-    $valeExe = "$docsGenDir/tools/vale"
+} elseif (Test-Path "$mcpToolsDir/tools/vale.exe") {
+    $valeExe = "$mcpToolsDir/tools/vale.exe"
+} elseif (Test-Path "$mcpToolsDir/tools/vale") {
+    $valeExe = "$mcpToolsDir/tools/vale"
 } elseif (Test-Path (Join-Path $repoRoot "vale_bin" "vale.exe")) {
     $valeExe = Join-Path $repoRoot "vale_bin" "vale.exe"
 } else {
@@ -40,7 +40,7 @@ if (Get-Command vale -ErrorAction SilentlyContinue) {
     exit 1
 }
 
-$valeConfig = Join-Path $docsGenDir ".vale.ini"
+$valeConfig = Join-Path $mcpToolsDir ".vale.ini"
 $overallExit = 0
 
 foreach ($target in $targets) {

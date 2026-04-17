@@ -69,7 +69,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
-    $docsGenDir = Split-Path -Parent $scriptDir
+    $mcpToolsDir = Split-Path -Parent $scriptDir
     $outputDir = Resolve-OutputDir $OutputPath
 
     Write-Info "Output directory: $outputDir"
@@ -123,7 +123,7 @@ try {
     
     Write-Info "Using tools from: $toolsInputDir ($($toolFiles.Count) files)"
 
-    $toolFamilyDir = Join-Path $docsGenDir "DocGeneration.Steps.ToolFamilyCleanup"
+    $toolFamilyDir = Join-Path $mcpToolsDir "DocGeneration.Steps.ToolFamilyCleanup"
 
     # Run Tool Family Cleanup (multi-phase) in a temporary workspace to limit to this family
     Write-Divider
@@ -152,7 +152,7 @@ try {
         Write-Warning "cli-version.json not found at $cliVersionFile - mcp-cli.version will be 'unknown'"
     }
 
-    $brandMappingPath = Join-Path $docsGenDir "data/brand-to-server-mapping.json"
+    $brandMappingPath = Join-Path $mcpToolsDir "data/brand-to-server-mapping.json"
     if (Test-Path $brandMappingPath) {
         Copy-Item -Path $brandMappingPath -Destination $tempDocs -Force
     }
@@ -186,7 +186,7 @@ try {
     $prefixes.Add($familyNameLower)
 
     # Try to load brand-to-server mapping for alternate filename prefixes
-    $brandMappingPath = Join-Path $docsGenDir "data/brand-to-server-mapping.json"
+    $brandMappingPath = Join-Path $mcpToolsDir "data/brand-to-server-mapping.json"
     if (Test-Path $brandMappingPath) {
         try {
             $brandMappings = Get-Content $brandMappingPath -Raw | ConvertFrom-Json

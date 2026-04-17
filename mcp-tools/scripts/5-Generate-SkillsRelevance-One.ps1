@@ -57,7 +57,7 @@ try {
     Write-Host ""
 
     $scriptDir = $PSScriptRoot
-    $docsGenDir = Split-Path -Parent $scriptDir
+    $mcpToolsDir = Split-Path -Parent $scriptDir
     $outputDir = Resolve-OutputDir $OutputPath
     $skillsOutputDir = Join-Path $outputDir "skills-relevance"
 
@@ -83,10 +83,10 @@ try {
     Write-Divider
     Write-Host ""
 
-    $skillsProject = Join-Path $docsGenDir "DocGeneration.Steps.SkillsRelevance"
+    $skillsProject = Join-Path $mcpToolsDir "DocGeneration.Steps.SkillsRelevance"
     $noBuildArg = if ($SkipBuild) { "--no-build" } else { "" }
 
-    Push-Location $docsGenDir
+    Push-Location $mcpToolsDir
     try {
         & dotnet run --project $skillsProject --configuration Release $noBuildArg -- `
             $ServiceArea `

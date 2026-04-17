@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'mcp-tools/**'
+      - 'shared/**'
       - 'mcp-doc-generation.sln'
       - 'skills-generation/**'
       - 'start-azure-skills.sh'
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'mcp-tools/**'
+      - 'shared/**'
       - 'mcp-doc-generation.sln'
       - 'skills-generation/**'
       - 'start-azure-skills.sh'
@@ -28,10 +30,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Setup .NET 9.0
+      - name: Setup .NET SDKs
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: |
+            9.0.x
+            10.0.x
+          include-prerelease: true
 
       - name: Restore dependencies
         run: dotnet restore mcp-doc-generation.sln
