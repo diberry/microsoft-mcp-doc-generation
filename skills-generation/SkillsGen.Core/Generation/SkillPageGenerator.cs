@@ -139,7 +139,39 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["whatItProvides"] = whatItProvides,
             ["hasRbacRoles"] = prerequisites.RbacRoles.Count > 0,
             ["hasToolPrereqs"] = prerequisites.Tools.Count > 0,
-            ["hasResources"] = prerequisites.Resources.Count > 0
+            ["hasResources"] = prerequisites.Resources.Count > 0,
+            // Sub-skills
+            ["subSkills"] = skillData.SubSkills.Select(s => new Dictionary<string, object?>
+            {
+                ["name"] = s.Name,
+                ["displayName"] = s.DisplayName,
+                ["description"] = s.Description,
+                ["useFor"] = s.UseFor,
+                ["hasUseFor"] = s.UseFor.Count > 0,
+                ["services"] = s.Services.Select(svc => new Dictionary<string, object?>
+                {
+                    ["name"] = svc.Name,
+                    ["useWhen"] = svc.UseWhen
+                }).ToList(),
+                ["hasServices"] = s.Services.Count > 0,
+                ["mcpTools"] = s.McpTools.Select(t => new Dictionary<string, object?>
+                {
+                    ["toolName"] = t.ToolName,
+                    ["command"] = t.Command,
+                    ["purpose"] = t.Purpose
+                }).ToList(),
+                ["hasMcpTools"] = s.McpTools.Count > 0
+            }).ToList(),
+            ["hasSubSkills"] = skillData.SubSkills.Count > 0,
+            // Activation triggers
+            ["activation"] = skillData.Activation != null ? new Dictionary<string, object?>
+            {
+                ["directive"] = skillData.Activation.Directive,
+                ["preferOver"] = skillData.Activation.PreferOver,
+                ["detectionMarkers"] = skillData.Activation.DetectionMarkers,
+                ["hasDetectionMarkers"] = skillData.Activation.DetectionMarkers?.Count > 0
+            } : null,
+            ["hasActivation"] = skillData.Activation != null
         };
     }
 

@@ -57,6 +57,67 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
         }
     }
 
+    /// <summary>
+    /// Discovers sub-skill directories under a skill and fetches their SKILL.md files.
+    /// Returns a list of (subSkillName, markdownContent) tuples.
+    /// </summary>
+    public async Task<List<(string Name, string Content)>> FetchSubSkillsAsync(string skillName, CancellationToken ct = default)
+    {
+        var subSkills = new List<(string Name, string Content)>();
+        try
+        {
+            var subdirectories = await ListSubdirectoriesAsync($"{_skillsPath}/{skillName}", ct);
+            foreach (var subDir in subdirectories)
+            {
+                var subSkillMd = await FetchFileAsync($"{_skillsPath}/{skillName}/{subDir}/SKILL.md", ct);
+                if (subSkillMd != null)
+                {
+                    _logger.LogInformation("Found sub-skill {SubSkill} under {Skill}", subDir, skillName);
+                    subSkills.Add((subDir, subSkillMd));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to fetch sub-skills for {Skill}", skillName);
+        }
+        return subSkills;
+    }
+
+    /// <summary>
+    /// Lists subdirectory names under a given path using GitHub Contents API.
+    /// </summary>
+    internal async Task<List<string>> ListSubdirectoriesAsync(string path, CancellationToken ct)
+    {
+        var subdirs = new List<string>();
+        var url = $"https://api.github.com/repos/{_owner}/{_repo}/contents/{path}?ref={_branch}";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Accept", "application/vnd.github.v3+json");
+        request.Headers.Add("User-Agent", "SkillsGen");
+        if (!string.IsNullOrEmpty(_token))
+            request.Headers.Add("Authorization", $"Bearer {_token}");
+
+        var response = await _httpClient.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode) return subdirs;
+
+        var content = await response.Content.ReadAsStringAsync(ct);
+        using var doc = JsonDocument.Parse(content);
+        foreach (var element in doc.RootElement.EnumerateArray())
+        {
+            if (element.TryGetProperty("type", out var typeProp) &&
+                typeProp.GetString() == "dir" &&
+                element.TryGetProperty("name", out var nameProp))
+            {
+                var name = nameProp.GetString();
+                if (name != null && !name.StartsWith('.'))
+                    subdirs.Add(name);
+            }
+        }
+
+        return subdirs;
+    }
+
     internal async Task<string?> FetchFileAsync(string path, CancellationToken ct)
     {
         var url = $"https://api.github.com/repos/{_owner}/{_repo}/contents/{path}?ref={_branch}";

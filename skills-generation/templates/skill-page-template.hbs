@@ -126,6 +126,55 @@ Try these prompts with GitHub Copilot to activate this skill:
 {{/each}}
 {{/if}}
 
+{{#if hasSubSkills}}
+## Sub-skills
+
+This skill includes the following specialized sub-skills:
+
+{{#each subSkills}}
+### {{{displayName}}}
+
+{{{description}}}
+
+{{#if hasUseFor}}
+**Use when:**
+{{#each useFor}}
+- {{{this}}}
+{{/each}}
+{{/if}}
+
+{{#if hasMcpTools}}
+**MCP tools:**
+
+| Tool | Description |
+|------|-------------|
+{{#each mcpTools}}
+| `{{{toolName}}}` | {{{purpose}}} |
+{{/each}}
+{{/if}}
+
+{{/each}}
+{{/if}}
+
+{{#if hasActivation}}
+## Automatic activation
+
+{{activation.directive}}
+
+{{#if activation.hasDetectionMarkers}}
+This skill automatically activates when your codebase contains any of the following markers:
+
+{{#each activation.detectionMarkers}}
+- `{{{this}}}`
+{{/each}}
+{{/if}}
+{{#if activation.preferOver}}
+
+> [!NOTE]
+> When auto-activation conditions are met, this skill takes priority over **{{{activation.preferOver}}}**.
+{{/if}}
+{{/if}}
+
 ## Related content
 
 - [Azure MCP Server overview](/azure/developer/azure-mcp-server/overview)
