@@ -40,5 +40,21 @@
     {
         "Acronym": "ACR",
         "Expansion": "Azure Container Registry"
+    },
+    {
+        "Acronym": "IDE",
+        "Expansion": "integrated development environment"
+    },
+    {
+        "Acronym": "CLI",
+        "Expansion": "command-line interface"
+    },
+    {
+        "Acronym": "CI/CD",
+        "Expansion": "continuous integration and continuous deployment"
+    },
+    {
+        "Acronym": "ARM",
+        "Expansion": "Azure Resource Manager"
     }
 ]

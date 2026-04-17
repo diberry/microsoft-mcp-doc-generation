@@ -9,6 +9,6 @@ Apply these rules to ALL generated text — they directly impact the automated A
 - **No first person:** Never use "we", "our", or "us" in any generated content. Use "the tool", "this tool", or "you".
 - **Acronym expansion:** Define acronyms on first use: "role-based access control (RBAC)" then "RBAC" afterward. Expand MCP as "Model Context Protocol (MCP)" on first use. Other common acronyms: AKS (Azure Kubernetes Service), IaC (infrastructure as code).
 - **Relative URLs:** Use site-root-relative URLs: "/azure/..." not "https://learn.microsoft.com/azure/...". Remove the `https://learn.microsoft.com/en-us` prefix from all links.
-- **Sentence length:** Keep sentences under 35 words. If a sentence exceeds 35 words, split it into two. One idea per sentence.
+- **Sentence length:** Keep sentences under 25 words where possible. Never exceed 30 words. If a sentence exceeds 30 words, split it into two. One idea per sentence.
 - **No wordy phrases:** Use "to" not "in order to", "use" not "utilize", "before" not "prior to", "because" not "due to the fact that", "can" not "is able to".
 - **Brand compliance:** Use official Azure service names: "Azure Cosmos DB" not "CosmosDB", "Azure Kubernetes Service" not "AKS" on first use, "Microsoft Entra ID" not "Azure AD".
