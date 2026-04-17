@@ -916,3 +916,174 @@ public class AcrolinxPostProcessorIdempotenceTests
         secondPass.Should().Be(firstPass, "post-processing should be idempotent");
     }
 }
+
+// === Issue #421: Template restructure per PR #8712 review ===
+
+public class TemplateRestructureTests
+{
+    private readonly ILogger<SkillPageGenerator> _logger = Substitute.For<ILogger<SkillPageGenerator>>();
+
+    private static string LoadRealTemplate()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null && !File.Exists(Path.Combine(dir, "skills-generation.slnx")))
+            dir = Directory.GetParent(dir)?.FullName;
+        if (dir == null) throw new InvalidOperationException("Cannot find solution root");
+        return File.ReadAllText(Path.Combine(dir, "templates", "skill-page-template.hbs"));
+    }
+
+    private static SkillData CreateFullSkillData() => new()
+    {
+        Name = "azure-storage",
+        DisplayName = "Azure Storage",
+        Description = "Manage Azure Storage accounts.",
+        UseFor = ["Creating storage accounts", "Managing blob containers"],
+        Services = [new ServiceEntry("Blob Storage", "Unstructured data")],
+        McpTools = [new McpToolEntry("storage_list", "storage list", "List accounts")]
+    };
+
+    private static SkillPrerequisites CreateFullPrereqs() => new()
+    {
+        Azure = new AzureRequirements { RequiresAzureLogin = true, RequiresSubscription = true },
+        Tools =
+        [
+            new ToolRequirement("GitHub Copilot", Required: true),
+            new ToolRequirement("Azure CLI", MinVersion: "2.60.0", InstallCommand: "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash")
+        ],
+        Resources = [new ResourceRequirement("Azure Storage account", "Storage account for blob data")],
+        RbacRoles = [new RbacRequirement("Storage Blob Data Reader", "Resource group", "Read blob data")]
+    };
+
+    [Fact]
+    public void Template_SectionOrder_WhatItProvidesBeforePrerequisites()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = CreateFullSkillData();
+        var triggers = new TriggerData(["Create a storage account"], [], null);
+        var tier = new TierAssessment(1, [], "Test", true, true, false, false, true);
+        var prereqs = CreateFullPrereqs();
+
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        var whatIdx = result.IndexOf("## What it provides");
+        var prereqIdx = result.IndexOf("## Prerequisites");
+        var whenIdx = result.IndexOf("## When to use this skill");
+        var exampleIdx = result.IndexOf("## Example prompts");
+        var relatedIdx = result.IndexOf("## Related content");
+
+        whatIdx.Should().BeGreaterThan(-1, "What it provides section must exist");
+        prereqIdx.Should().BeGreaterThan(-1, "Prerequisites section must exist");
+
+        whatIdx.Should().BeLessThan(prereqIdx, "What it provides must appear before Prerequisites");
+        prereqIdx.Should().BeLessThan(whenIdx, "Prerequisites must appear before When to use");
+        whenIdx.Should().BeLessThan(exampleIdx, "When to use must appear before Example prompts");
+        exampleIdx.Should().BeLessThan(relatedIdx, "Example prompts must appear before Related content");
+    }
+
+    [Fact]
+    public void Template_PrerequisitesFlat_NoSubheadings()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = CreateFullSkillData();
+        var triggers = new TriggerData(["Create a storage account"], [], null);
+        var tier = new TierAssessment(1, [], "Test", true, true, false, false, true);
+        var prereqs = CreateFullPrereqs();
+
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().NotContain("### Required tools");
+        result.Should().NotContain("### Required resources");
+        result.Should().NotContain("### Required roles");
+
+        // All prereq items should be flat bullets under ## Prerequisites
+        result.Should().Contain("## Prerequisites");
+        result.Should().Contain("**Azure CLI**");
+        result.Should().Contain("**Azure Storage account**");
+        result.Should().Contain("**Storage Blob Data Reader**");
+    }
+
+    [Fact]
+    public void Template_ExamplePrompts_NotExampleTriggers()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = CreateFullSkillData();
+        var triggers = new TriggerData(["Create a storage account"], [], null);
+        var tier = new TierAssessment(1, [], "Test", true, true, false, false, true);
+        var prereqs = new SkillPrerequisites();
+
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().Contain("## Example prompts");
+        result.Should().NotContain("## Example triggers");
+        result.Should().Contain("Try these prompts to activate this skill:");
+        result.Should().NotContain("Try these prompts with GitHub Copilot to activate this skill:");
+    }
+
+    [Fact]
+    public void Template_SourceCodeLink_PointsToSkillMd()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = CreateFullSkillData();
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().Contain("https://github.com/microsoft/azure-skills/blob/main/skills/azure-storage/skill.md");
+        result.Should().NotContain("/tree/main/skills/azure-storage)");
+    }
+
+    [Fact]
+    public void Template_RelatedContent_NoGitHubCopilotForAzureLink()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = CreateFullSkillData();
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().NotContain("GitHub Copilot for Azure documentation");
+        result.Should().NotContain("/azure/developer/github-copilot-azure/introduction");
+        result.Should().Contain("Skill source code");
+        result.Should().Contain("https://github.com/microsoft/azure-skills/blob/main/skills/azure-storage/skill.md");
+    }
+
+    [Fact]
+    public void Template_NoPluginTerminology()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = CreateFullSkillData();
+        var triggers = new TriggerData(["Create a storage account"], [], null);
+        var tier = new TierAssessment(1, [], "Test", true, true, false, false, true);
+        var prereqs = CreateFullPrereqs();
+
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().NotContainEquivalentOf("plugin");
+    }
+
+    [Fact]
+    public void Template_McpToolsSection_UsesCallsLanguage()
+    {
+        var template = LoadRealTemplate();
+        var gen = new SkillPageGenerator(template, _logger);
+        var skill = CreateFullSkillData();
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", true, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var result = gen.Generate(skill, triggers, tier, prereqs);
+
+        result.Should().Contain("uses the following Azure MCP tools");
+        result.Should().NotContain("available with this skill");
+    }
+}
