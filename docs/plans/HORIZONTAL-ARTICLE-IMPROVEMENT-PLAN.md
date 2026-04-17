@@ -145,7 +145,7 @@ With transformation:
 | Tool Annotations | `generated/annotations/` | Tool usage hints and best practices |
 | Composed Tools | `generated/tools-composed/` | AI-improved tool descriptions |
 | Tool Metadata | `generated/cli/cli-output.json` | Tool characteristics (destructive, secret-requiring) |
-| Common Parameters | `docs-generation/common-parameters.json` | Shared parameters to filter |
+| Common Parameters | `mcp-tools/common-parameters.json` | Shared parameters to filter |
 
 **Why It Matters**:
 - Example prompts are real, tested natural language commands (better than AI generating new ones)

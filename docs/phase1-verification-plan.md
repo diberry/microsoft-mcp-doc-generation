@@ -27,7 +27,7 @@ Validate that the Phase 1 IChatClient migration keeps the public GenerativeAI su
 
 **Command**
 ```powershell
-dotnet build .\docs-generation.sln --nologo --tl:off -clp:Summary -v:minimal
+dotnet build .\mcp-doc-generation.sln --nologo --tl:off -clp:Summary -v:minimal
 ```
 
 **Pass criteria**
@@ -44,7 +44,7 @@ dotnet build .\docs-generation.sln --nologo --tl:off -clp:Summary -v:minimal
 
 **Command**
 ```powershell
-dotnet test .\docs-generation.sln --nologo --tl:off -v:minimal
+dotnet test .\mcp-doc-generation.sln --nologo --tl:off -v:minimal
 ```
 
 **Pass criteria**

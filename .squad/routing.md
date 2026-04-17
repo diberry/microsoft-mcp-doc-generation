@@ -8,7 +8,7 @@ How to decide who handles what.
 |-----------|----------|----------|
 | Pipeline architecture / cross-stage issues | Riley | Data flow changes, new pipeline stages, quality gates between stages, step contracts, template architecture |
 | Pipeline orchestrator / step contracts | Riley | PipelineRunner, step registration, dependencies, workspace isolation, retry logic, merge orchestration |
-| C# generator code (`docs-generation/**/*.cs`) | Morgan | Generator bug fixes, new generators, template changes, config file updates |
+| C# generator code (`mcp-tools/**/*.cs`) | Morgan | Generator bug fixes, new generators, template changes, config file updates |
 | Scripts / CI / Docker (`.ps1`, `.sh`, `.yml`, `Dockerfile`) | Quinn | Script fixes, Docker builds, CI pipeline, preflight validation |
 | AI prompts / Azure OpenAI (`prompts/`, `GenerativeAI/`) | Sage | Prompt design, AI output validation, fabrication detection, content transformation |
 | Test projects (`*.Tests/`, `verify-quantity/`) | Parker | New tests, test data, content validation, regression detection |

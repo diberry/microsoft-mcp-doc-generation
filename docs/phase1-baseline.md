@@ -8,10 +8,10 @@
 
 ## Solution discovery
 - No solution files were found under `docs-generation\`.
-- Baseline build used the repo root solution: `docs-generation.sln`.
+- Baseline build used the repo root solution: `mcp-doc-generation.sln`.
 
 ## Build baseline
-- **Command:** `dotnet build .\docs-generation.sln --nologo --tl:off -clp:Summary -v:minimal`
+- **Command:** `dotnet build .\mcp-doc-generation.sln --nologo --tl:off -clp:Summary -v:minimal`
 - **Result:** Success
 - **Warnings:** 0
 - **Errors:** 0

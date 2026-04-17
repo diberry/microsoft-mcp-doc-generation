@@ -6,10 +6,10 @@ The fingerprint tool creates lightweight JSON snapshots of all generated documen
 
 ```bash
 # Generate a snapshot of current output
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- snapshot
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- snapshot
 
 # Compare two snapshots
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- diff --baseline before.json --candidate after.json
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- diff --baseline before.json --candidate after.json
 ```
 
 ## Commands
@@ -19,21 +19,21 @@ dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- diff --
 Scans all `generated-*` directories and produces a JSON fingerprint file.
 
 ```bash
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- snapshot [options]
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- snapshot [options]
 ```
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--namespace, -n` | Fingerprint a single namespace | All namespaces |
 | `--output, -o` | Output file path | `./fingerprint-baseline.json` |
-| `--repo-root, -r` | Repository root directory | Auto-detect via `docs-generation.sln` |
+| `--repo-root, -r` | Repository root directory | Auto-detect via `mcp-doc-generation.sln` |
 
 ### diff
 
 Compares two snapshot JSON files and generates a markdown diff report.
 
 ```bash
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- diff [options]
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- diff [options]
 ```
 
 | Option | Description | Default |
@@ -117,23 +117,23 @@ The diff report is a markdown document with:
 
 ```bash
 # 1. Snapshot current state
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- snapshot --output before.json
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- snapshot --output before.json
 
 # 2. Make your prompt change and regenerate
 ./start.sh advisor 4
 
 # 3. Snapshot new state
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- snapshot --output after.json
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- snapshot --output after.json
 
 # 4. Compare
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- diff -b before.json -c after.json -o diff-report.md
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- diff -b before.json -c after.json -o diff-report.md
 ```
 
 ### In CI
 
 ```bash
 # Compare against committed baseline
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- diff \
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- diff \
   --baseline fingerprint-baseline.json \
   --candidate current-snapshot.json
 # Exit code 1 = quality regressions detected
@@ -144,7 +144,7 @@ dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- diff \
 When output improves (new features, better prompts), update the committed baseline:
 
 ```bash
-dotnet run --project docs-generation/DocGeneration.Tools.Fingerprint/ -- snapshot
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/ -- snapshot
 git add fingerprint-baseline.json
 git commit -m "chore: Update fingerprint baseline"
 ```

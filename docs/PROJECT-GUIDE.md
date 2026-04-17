@@ -36,7 +36,7 @@ node --version    # Should output v18+
 
 #### Create Your `.env` File
 
-Navigate to the `docs-generation/` directory and create a `.env` file (template: `docs-generation/sample.env`):
+Navigate to the `mcp-tools/` directory and create a `.env` file (template: `mcp-tools/sample.env`):
 
 ```bash
 cd docs-generation
@@ -135,7 +135,7 @@ Each generator is a standalone .NET console application. You can invoke them dir
 #### CSharpGenerator — Annotations & Parameters
 
 ```bash
-cd docs-generation/CSharpGenerator
+cd mcp-tools/CSharpGenerator
 dotnet run generate-docs <filtered-cli.json> <output-dir> --annotations --version <version>
 dotnet run generate-docs <filtered-cli.json> <output-dir> --parameters --version <version>
 ```
@@ -152,7 +152,7 @@ dotnet run generate-docs <filtered-cli.json> <output-dir> --parameters --version
 #### ToolGeneration_Raw — Raw Tool Markdown
 
 ```bash
-cd docs-generation/ToolGeneration_Raw
+cd mcp-tools/ToolGeneration_Raw
 dotnet run <filtered-cli.json> <output-dir>
 ```
 
@@ -161,7 +161,7 @@ dotnet run <filtered-cli.json> <output-dir>
 #### ExamplePromptGeneratorStandalone — Example Usage Prompts
 
 ```bash
-cd docs-generation/ExamplePromptGeneratorStandalone
+cd mcp-tools/ExamplePromptGeneratorStandalone
 dotnet run <filtered-cli.json> <output-dir> <version> \
   --param-manifests <parameter-dir>
 ```
@@ -173,7 +173,7 @@ dotnet run <filtered-cli.json> <output-dir> <version> \
 #### ToolGeneration_Improved — AI-Enhanced Tool Markdown
 
 ```bash
-cd docs-generation/ToolGeneration_Improved
+cd mcp-tools/ToolGeneration_Improved
 dotnet run <output-dir> <version>
 ```
 
@@ -183,7 +183,7 @@ dotnet run <output-dir> <version>
 #### HorizontalArticleGenerator — Cross-Service Articles
 
 ```bash
-cd docs-generation/HorizontalArticleGenerator
+cd mcp-tools/HorizontalArticleGenerator
 dotnet run <output-dir> <version>
 ```
 
@@ -232,11 +232,11 @@ dotnet test CSharpGenerator.Tests/CSharpGenerator.Tests.csproj
 **Cause:** `FOUNDRY_API_KEY` or `FOUNDRY_ENDPOINT` not set in `.env`  
 **Solution:**
 ```bash
-# Verify .env exists in docs-generation/
-cat docs-generation/.env | grep FOUNDRY
+# Verify .env exists in mcp-tools/
+cat mcp-tools/.env | grep FOUNDRY
 
 # If missing, copy from sample
-cp docs-generation/sample.env docs-generation/.env
+cp mcp-tools/sample.env mcp-tools/.env
 # Edit .env and add your credentials
 ```
 
@@ -392,7 +392,7 @@ public sealed class MyCustomStep : NamespaceStepBase  // or inherit StepDefiniti
             projectPath,
             ["arg1", "arg2"],
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
     }
 }
@@ -459,7 +459,7 @@ public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context
         generatorProject,
         [context.OutputPath, cliVersion],
         context.Request.SkipBuild,
-        context.DocsGenerationRoot,
+        context.McpToolsRoot,
         cancellationToken);
 
     if (!processResult.Succeeded)
@@ -480,7 +480,7 @@ public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context
 
 **How to create a new generator project:**
 
-1. Create a new C# console project in `docs-generation/MyGenerator/`
+1. Create a new C# console project in `mcp-tools/MyGenerator/`
 2. Define command-line arguments using `System.CommandLine`
 3. Read from input files (CLI JSON, templates, etc.)
 4. Write output to the specified directory
@@ -489,7 +489,7 @@ public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context
 
 **Example generator structure:**
 ```
-docs-generation/
+mcp-tools/
 ├── MyGenerator/
 │   ├── Program.cs              # Entry point, argument parsing
 │   ├── MyGeneratorLogic.cs      # Core implementation
@@ -529,10 +529,10 @@ var response = await aiClient.GenerateAsync(
 
 #### 3. Store Prompts Centrally
 
-Prompts for AI-powered steps are stored in `docs-generation/prompts/`:
+Prompts for AI-powered steps are stored in `mcp-tools/prompts/`:
 
 ```
-docs-generation/prompts/
+mcp-tools/prompts/
 ├── tool-generation-prompt.txt
 ├── example-prompts-prompt.txt
 └── horizontal-articles-prompt.txt
@@ -540,7 +540,7 @@ docs-generation/prompts/
 
 Load a prompt:
 ```csharp
-var promptPath = Path.Combine(context.DocsGenerationRoot, "prompts", "my-prompt.txt");
+var promptPath = Path.Combine(context.McpToolsRoot, "prompts", "my-prompt.txt");
 var prompt = await File.ReadAllTextAsync(promptPath, cancellationToken);
 ```
 
@@ -648,12 +648,12 @@ Before merging any PR:
 
 1. **Solution must build:**
    ```bash
-   dotnet build docs-generation/
+   dotnet build mcp-tools/
    ```
 
 2. **All existing tests must pass:**
    ```bash
-   dotnet test docs-generation/
+   dotnet test mcp-tools/
    ```
 
 3. **If you add new functionality:**
@@ -679,7 +679,7 @@ Before merging any PR:
 
 - **Each developer creates their own `.env`:**
   ```bash
-  cp docs-generation/sample.env docs-generation/.env
+  cp mcp-tools/sample.env mcp-tools/.env
   # Add your FOUNDRY_API_KEY and other credentials
   ```
 
@@ -714,12 +714,12 @@ generated/
 
 ### Templates and Prompts
 
-- **Handlebars templates:** `docs-generation/templates/`
+- **Handlebars templates:** `mcp-tools/templates/`
   - `tool-markdown.hbs` — Template for single tool markdown
   - `tool-family-article.hbs` — Template for assembled namespace article
   - `horizontal-article.hbs` — Template for cross-cutting articles
 
-- **AI prompts:** `docs-generation/prompts/`
+- **AI prompts:** `mcp-tools/prompts/`
   - One `.txt` file per AI-powered step
   - Prompts include context, instructions, and output format specifications
   - When modifying prompts, regenerate sample output and review for quality
@@ -806,22 +806,22 @@ The pipeline includes layered quality assurance:
 
 #### Vale Prose Linting
 
-[Vale CLI](https://vale.sh/) enforces Microsoft Writing Style Guide rules on generated markdown. Configuration lives in `docs-generation/.vale.ini` with Microsoft style rules in `docs-generation/styles/Microsoft/`.
+[Vale CLI](https://vale.sh/) enforces Microsoft Writing Style Guide rules on generated markdown. Configuration lives in `mcp-tools/.vale.ini` with Microsoft style rules in `mcp-tools/styles/Microsoft/`.
 
 **Run locally:**
 
 ```bash
 # Bash — lint all generated output
-./docs-generation/scripts/lint-vale.sh
+./mcp-tools/scripts/lint-vale.sh
 
 # Bash — lint a specific directory
-./docs-generation/scripts/lint-vale.sh ./generated-advisor/
+./mcp-tools/scripts/lint-vale.sh ./generated-advisor/
 
 # PowerShell — lint all generated output
-pwsh ./docs-generation/scripts/lint-vale.ps1
+pwsh ./mcp-tools/scripts/lint-vale.ps1
 
 # PowerShell — lint a specific directory
-pwsh ./docs-generation/scripts/lint-vale.ps1 -TargetDir ./generated-advisor/
+pwsh ./mcp-tools/scripts/lint-vale.ps1 -TargetDir ./generated-advisor/
 ```
 
 **Suppressed rules** (false positives for MCP documentation):
@@ -832,7 +832,7 @@ pwsh ./docs-generation/scripts/lint-vale.ps1 -TargetDir ./generated-advisor/
 
 **CI integration:** The `vale-lint` job in `.github/workflows/build-and-test.yml` runs Vale on PRs (non-blocking, `continue-on-error: true`).
 
-**Feeding findings back:** Common Vale findings should be added to `docs-generation/data/static-text-replacement.json` so the pipeline auto-corrects them during generation.
+**Feeding findings back:** Common Vale findings should be added to `mcp-tools/data/static-text-replacement.json` so the pipeline auto-corrects them during generation.
 
 ### Future: Architecture Modernization
 
@@ -897,7 +897,7 @@ cd docs-generation && dotnet build -p:TreatWarningsAsErrors=true
 ```
 project-root/
 ├── start.sh                              # Entry point
-├── docs-generation/
+├── mcp-tools/
 │   ├── sample.env                        # .env template (do not edit)
 │   ├── .env                              # Local config (created by developer, never committed)
 │   ├── PipelineRunner/

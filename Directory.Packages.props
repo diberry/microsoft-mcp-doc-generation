@@ -1,0 +1,42 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- CLI -->
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+
+    <!-- Core / Serialization -->
+    <PackageVersion Include="System.Text.Json" Version="10.0.4" />
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+
+    <!-- Template engine -->
+    <PackageVersion Include="Handlebars.Net" Version="2.1.6" />
+
+    <!-- AI -->
+    <PackageVersion Include="Azure.AI.OpenAI" Version="2.1.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI" Version="10.4.0" />
+    <PackageVersion Include="Microsoft.Extensions.AI.OpenAI" Version="10.4.0" />
+
+    <!-- Azure identity -->
+    <PackageVersion Include="Azure.Identity" Version="1.19.0" />
+
+    <!-- DI / Hosting / Logging -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.0" />
+
+    <!-- Code analysis -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
+
+    <!-- Testing -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="FluentAssertions" Version="7.0.0" />
+  </ItemGroup>
+</Project>

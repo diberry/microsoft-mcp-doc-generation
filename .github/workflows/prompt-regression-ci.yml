@@ -4,9 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'docs-generation/**/prompts/**'
+      - 'mcp-tools/**/prompts/**'
       - 'prompt-regression.sh'
-      - 'docs-generation/DocGeneration.PromptRegression.Tests/**'
+      - 'mcp-tools/DocGeneration.PromptRegression.Tests/**'
       - '.github/workflows/prompt-regression-ci.yml'
   workflow_dispatch:
 
@@ -25,15 +25,15 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore docs-generation.sln
+        run: dotnet restore mcp-doc-generation.sln
 
       - name: Build solution
-        run: dotnet build docs-generation.sln --no-restore --configuration Release
+        run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
 
       - name: Run prompt regression tests
         run: >
           dotnet test
-          docs-generation/DocGeneration.PromptRegression.Tests/DocGeneration.PromptRegression.Tests.csproj
+          mcp-tools/DocGeneration.PromptRegression.Tests/DocGeneration.PromptRegression.Tests.csproj
           --no-build
           --configuration Release
           --verbosity normal

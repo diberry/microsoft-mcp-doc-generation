@@ -335,7 +335,7 @@ After migration, configuration should consolidate into `transformation-config.js
    - `DocGeneration.Core.NaturalLanguage.Tests/` (entire directory)
 
 2. **Remove from solution:**
-   - Remove project entries from `docs-generation.sln`
+   - Remove project entries from `mcp-doc-generation.sln`
 
 3. **Remove project references:**
    - Remove `<ProjectReference>` to NaturalLanguage from all `.csproj` files
@@ -406,7 +406,7 @@ After migration, configuration should consolidate into `transformation-config.js
 
 2. **Run all tests:**
    ```bash
-   dotnet test docs-generation/docs-generation.sln
+   dotnet test mcp-tools/mcp-doc-generation.sln
    ```
    Record pass/fail counts as baseline.
 
@@ -414,7 +414,7 @@ After migration, configuration should consolidate into `transformation-config.js
 
 | Verification | Command | Pass Criteria |
 |---|---|---|
-| Unit tests | `dotnet test docs-generation/docs-generation.sln` | Same pass count as baseline, zero new failures |
+| Unit tests | `dotnet test mcp-tools/mcp-doc-generation.sln` | Same pass count as baseline, zero new failures |
 | NaturalLanguage tests | `dotnet test DocGeneration.Core.NaturalLanguage.Tests` | All pass (adapter is transparent) |
 | TextTransformation tests | `dotnet test DocGeneration.Core.TextTransformation.Tests` | All pass (new methods have tests) |
 | Output comparison | `./start.sh advisor 1` then `diff -r` against baseline | Zero diff in generated markdown |
@@ -424,8 +424,8 @@ After migration, configuration should consolidate into `transformation-config.js
 
 | Verification | Command | Pass Criteria |
 |---|---|---|
-| Unit tests | `dotnet test docs-generation/docs-generation.sln` | All pass |
-| No legacy imports | `grep -r "NaturalLanguageGenerator" --include="*.cs" docs-generation/` | Zero matches (except adapter if still present) |
+| Unit tests | `dotnet test mcp-tools/mcp-doc-generation.sln` | All pass |
+| No legacy imports | `grep -r "NaturalLanguageGenerator" --include="*.cs" mcp-tools/` | Zero matches (except adapter if still present) |
 | Output comparison | `./start.sh advisor 1` then `diff -r` against Phase 1 baseline | Zero diff |
 | Full pipeline | `./start.sh advisor` (all steps) | Succeeds with identical output |
 
@@ -433,9 +433,9 @@ After migration, configuration should consolidate into `transformation-config.js
 
 | Verification | Command | Pass Criteria |
 |---|---|---|
-| Solution builds | `dotnet build docs-generation/docs-generation.sln` | Zero errors |
-| All tests | `dotnet test docs-generation/docs-generation.sln` | All pass |
-| No orphan references | `grep -r "TextCleanup\|NaturalLanguage\|nl-parameters" --include="*.cs" --include="*.csproj" --include="*.json" docs-generation/` | Zero matches |
+| Solution builds | `dotnet build mcp-tools/mcp-doc-generation.sln` | Zero errors |
+| All tests | `dotnet test mcp-tools/mcp-doc-generation.sln` | All pass |
+| No orphan references | `grep -r "TextCleanup\|NaturalLanguage\|nl-parameters" --include="*.cs" --include="*.csproj" --include="*.json" mcp-tools/` | Zero matches |
 | Output comparison | `./start.sh advisor` then `diff -r` against Phase 2 baseline | Zero diff |
 | Full catalog spot-check | `./start.sh storage 1` and `./start.sh compute 1` | Succeeds with reasonable output |
 

@@ -2,6 +2,30 @@
 
 ## Learnings
 
+### 2026-04-17: Skills Generation — Customer-Facing Page Design
+
+**Context:** Dina directed that generated skill doc pages must NOT duplicate SKILL.md (anthropic-spec agent instruction files). Pages must be customer-facing reference docs answering "what do I need to know to use this skill successfully?"
+
+**Key architectural findings:**
+
+1. **SKILL.md has 5 archetypes** (Service Catalog, Workflow, Router, Complex/Sub-skills, Guidance) — but all should normalize to the same customer-facing template structure. Archetype only determines which sections have data, not what sections exist.
+
+2. **Three template sections must be removed:** "What it provides" (boilerplate), "Suggested workflow" (agent execution flow), "Decision guidance" (agent routing tables). These surface agent-internal details, not customer knowledge.
+
+3. **The LLM call scope is too narrow** — it currently rewrites only `description`. It needs `UseFor` and service names to produce useful customer intro paragraphs.
+
+4. **Parser must strip agent-internal content before LLM sees it** — `⛔ STOP`, `MANDATORY:`, `PREFER OVER:` blocks should be extracted into `InternalDirectiveBlocks` and kept out of `RawBodyCleaned` (the LLM input).
+
+5. **`DoNotUseFor` is already parsed but never rendered** — it needs template wiring. The template has a gap between what the parser extracts and what the template renders.
+
+6. **`BuildPrerequisites()` heuristics are good but incomplete** — agent MANDATORY patterns throughout the body contain prerequisite information that the current heuristics miss. Extend with pattern-based MANDATORY block parsing.
+
+**Decision filed:** `.squad/decisions/inbox/riley-skills-customer-facing-design.md`
+
+**Coordination:** Sage owns prompts (#4), Morgan owns parser + template + generator (#1, #2, #3, #5, #6), Parker owns tests, Avery owns orchestrator call sites.
+
+---
+
 ### 2026-03-30: .NET Project Consolidation Architecture Review — APPROVED WITH CHANGES
 
 **Verdict:** APPROVE WITH CHANGES (Actions 1-6 approved; Action 7 rejected on architectural grounds)
@@ -107,3 +131,13 @@
 - Tool merges must preserve behavioral contracts (exit codes, file paths, namespaces)
 
 ---
+
+### 2026-04-17: Skills Customer-Facing Design Decision — Merged to Active Decisions (Scribe)
+
+**Status:** Decision documented and merged by Scribe to .squad/decisions.md
+
+**File:** .squad/decisions/inbox/riley-skills-customer-facing-design.md → MERGED
+
+**Summary:** This session's output from Riley on customer-facing skills page architecture has been merged into the active decisions log. The architectural recommendations (8-section template, parser enhancements, archetype normalization) are now part of team decision memory for implementation phase.
+
+**Next:** Awaiting implementation by Morgan (parser + template) and Avery (orchestrator call site expansion).

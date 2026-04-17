@@ -14,7 +14,7 @@
 - CLI metadata lives in `test-npm-azure-mcp/{version}/tools-list.json` (same schema as `cli-output.json`)
 - Namespace JSON (`31-namespace.json`) has npm output prefix before JSON — any reader must handle that
 - 55 namespaces, 235 tools in beta.31 — up from the 52 referenced in older docs
-- Common params (7 total) are defined in `docs-generation/data/common-parameters.json`
+- Common params (7 total) are defined in `mcp-tools/data/common-parameters.json`
 - `node:test` + `node:assert/strict` (built-in to Node 22) works well for zero-dep test suites in this project
 - Tool `option[]` array uses `required: true` flag (not `isRequired`) — different from `common-parameters.json` which uses `isRequired`
 
@@ -57,5 +57,5 @@
 - **Core.NaturalLanguage merge:** Pure C# refactoring. Moving TextCleanup.cs to Core.Shared has zero impact on script orchestration (already referenced as Core.Shared dependency)
 - **Test framework migration (NUnit→xUnit):** Both frameworks auto-discovered by `dotnet test`. No CI workflow changes needed after migration
 - **New preflight check:** Recommend adding `validate-consolidation.ps1` to verify project refs, test counts, and solution file consistency post-merge
-- **Build verification:** `dotnet build docs-generation.sln --configuration Release` will continue to work after all consolidations. No matrix changes needed
+- **Build verification:** `dotnet build mcp-doc-generation.sln --configuration Release` will continue to work after all consolidations. No matrix changes needed
 - **Docker/devcontainer:** No changes required — consolidation doesn't affect runtime dependencies or container image

@@ -73,7 +73,7 @@
 - **All 1,100+ tests must pass after each action** (invariant enforcement)
 
 **Test Execution Plan:**
-- Pre-consolidation baseline: `dotnet test docs-generation.sln` → record count
+- Pre-consolidation baseline: `dotnet test mcp-doc-generation.sln` → record count
 - Post-each-action: Repeat test execution; fail if count decreases or failures occur
 - Edge case focus: 52-namespace validation (currently only 3-4 tested); temp file cleanup on Windows; baseline path resilience
 - Regression detection: Fingerprint diff-report + PromptRegression baseline comparison

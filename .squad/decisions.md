@@ -266,7 +266,7 @@ Three separate `StripFrontmatter` implementations exist:
 **Extends:** AD-010
 
 **Decision:** Any PR that modifies a Handlebars template (`.hbs` file) must include at least one test that:
-1. Loads the actual template from `docs-generation/templates/`
+1. Loads the actual template from `mcp-tools/templates/`
 2. Renders it using `HandlebarsTemplateEngine.ProcessTemplateString()`
 3. Asserts on the specific output change
 4. Would FAIL if the template change were reverted
@@ -606,7 +606,7 @@ This is the P0 (highest-leverage) item from `docs/acrolinx-compliance-strategy.m
 **Three mandatory quality gates must pass before consolidation completes:**
 
 **Gate 1: Full Test Pass**
-- Command: `dotnet test docs-generation.sln`
+- Command: `dotnet test mcp-doc-generation.sln`
 - Criteria: 0 failures, 0 skipped (unless pre-existing), test count matches baseline
 - Timing: After each consolidation phase
 
@@ -767,3 +767,782 @@ namespace DocGeneration.Core.NaturalLanguage  // ← KEEP THIS
 **Risk:** Data file discovery failure or namespace change breaks TextCleanup runtime, causing Step 6 output degradation.
 
 **Ownership:** Parker (test execution), Sage (output validation).
+
+
+---
+
+### 2026-04-17T06:02:15Z: User directive — Skills page content purpose
+**By:** Dina (via Copilot)
+**What:** Generated skill documentation pages must NOT be a duplication of the SKILL.md file. They should be a consolidated explanation of what a customer needs to know in order to use the skill successfully. The SKILL.md is an anthropic-spec agent instruction file; the generated doc page is a customer-facing reference.
+**Why:** User request — this reframes the entire generation approach. The template, prompts, and extraction logic should all orient around "what does a customer need to know?" not "mirror the SKILL.md structure."
+
+
+---
+
+### 2026-04-16T17:39:33Z: User directive
+**By:** Dina (via Copilot)
+**What:** The only format the engineering team provides is the anthropic spec (SKILL.md files). These files are inconsistent across skills. The content generation must map whatever structure exists in the SKILL.md files to consistent documentation sections. Do not expect a standardized schema — build the mapping from what's actually there.
+**Why:** User request — captured for team memory
+
+
+---
+
+# Skills Generation: Customer-Facing Page Design
+
+**Date:** 2026-04-17  
+**Author:** Riley (Pipeline Architect)  
+**Status:** RECOMMENDATION  
+**Priority:** P0 — reframes the entire generation approach  
+**Requested by:** Dina  
+**Relates to:** Sage's `sage-skills-llm-prompt-redesign.md`, directive `copilot-directive-skills-customer-purpose.md`
+
+---
+
+## Framing Principle
+
+SKILL.md files are **anthropic-spec agent instruction files**. They describe how an AI agent should behave: what to detect, when to route, what to check before proceeding. They are not product documentation.
+
+The generated doc page answers a different question: **"What does a developer need to know to successfully use this skill?"**
+
+These are two completely different information architectures. The current pipeline treats them as the same, which is why current output reads like agent instructions.
+
+---
+
+## 1. Customer-Facing Section Design
+
+The following sections belong on every generated skill page. Sections without data are omitted (not left empty).
+
+### Section Map
+
+| # | Section | Source in SKILL.md | Notes |
+|---|---------|-------------------|-------|
+| 1 | **Title + one-line description** | `display_name` + description intro | LLM rewrites to customer voice |
+| 2 | **When to use this skill** | `USE FOR:` items | Direct extraction — these are customer scenarios |
+| 3 | **Prerequisites** | MANDATORY checks → customer responsibilities | Parser + `BuildPrerequisites()` heuristics |
+| 4 | **What Azure services does it work with?** | Services table or bullets | Table: Service + What you can do with it |
+| 5 | **What can I ask it to do?** (example triggers) | Trigger test `.json` | Max 8 real prompts from `shouldTrigger` |
+| 6 | **MCP tools it uses** | MCP Tools section / Quick Reference | Table: Tool + What it enables for you |
+| 7 | **Related skills** | `@azure-*` cross-references | Only skills explicitly referenced |
+| 8 | **Related content** | Static links | Always present |
+
+### Section Justification
+
+**Keep:** "When to use" — `USE FOR:` items in SKILL.md are genuinely customer scenarios. They're the best signal in the file of *why a developer would invoke this*.
+
+**Keep:** "Prerequisites" — Translated from agent checklists to customer responsibilities. The current `BuildPrerequisites()` heuristic approach is correct but incomplete (see parser changes below).
+
+**Keep:** "Azure services" — Developers need to know which Azure services this skill touches before they commit to using it. The current services table is good.
+
+**Keep:** "Example triggers" — Concrete prompts are the most actionable part of any skill page. Developers copy-paste these to start.
+
+**Keep:** "MCP tools" — Tells developers what operations the skill can execute on their behalf. Necessary for understanding scope and RBAC implications.
+
+**REMOVE from template:** "Suggested workflow" — Workflow steps in SKILL.md describe *agent execution flow*, not customer experience. The parser is already extracting numbered steps like "Parse JSON → Validate schema → Generate report" — these are internal. A customer doesn't need to know the agent's internal sequence; they need outcomes.
+
+**REMOVE from template:** "Decision guidance" — Decision trees in SKILL.md describe *agent routing logic* (Router archetype C, e.g., azure-compute). "Should I use VM A or VM B?" is router logic for the agent, not customer guidance. Customer decision needs are better served by the "When to use" section and example prompts.
+
+**CONDITIONAL: "What it provides"** — The current hardcoded-string approach (`BuildWhatItProvides()` in `SkillPageGenerator.cs`) produces boilerplate: "The X skill gives GitHub Copilot specialized knowledge about X in Azure." This section has no value as currently generated. It should be **replaced by the LLM-rewritten introduction paragraph** (Sage's work), and the template section removed. The LLM intro already covers this ground better.
+
+---
+
+## 2. What Must Be Excluded from Generated Pages
+
+### Hard Exclusion List (parser must skip or LLM must remove)
+
+| Source Pattern | Reason |
+|----------------|--------|
+| `⛔ STOP:` conditions | Agent error handlers — not customer knowledge |
+| `MANDATORY:` steps | Agent execution requirements — translate to prerequisites or omit |
+| `PREFER OVER:` routing | Agent decision logic — not customer choice |
+| `FORBIDDEN:` directives | Agent constraints — not relevant to customers |
+| Numbered workflow execution steps | Agent procedures (parse → validate → transform) — omit entirely |
+| Codebase detection patterns (regex, file discovery) | Agent implementation — omit |
+| "If user says X, route to Y" patterns | Agent routing — omit |
+| Agent-to-agent handoff rules | Internal plumbing — omit |
+| "Works best combined with skill-X" agent routing | Agent orchestration — convert to "See also" only if there's real customer value |
+| Sub-skill tables (Archetype D: microsoft-foundry) | Agent orchestration metadata — omit the routing table; keep the capability descriptions |
+
+### Signals the Parser Should Detect and Skip
+
+The following regex patterns indicate agent-internal content that should be stripped before the LLM sees it (or flagged so the LLM knows to exclude):
+
+```
+⛔\s*STOP
+MANDATORY\s*:
+PREFER\s+OVER\s*:
+FORBIDDEN\s*:
+PREREQUISITE\s+CHECK
+DO\s+NOT\s+USE\s+WHEN
+```
+
+These blocks can span multiple lines. The parser should extract them into a separate field (`InternalDirectives`) and **not** include them in `RawBody` passed to the LLM.
+
+---
+
+## 3. Template Changes
+
+### Current Template Problems
+
+The current `skill-page-template.hbs` has these structural issues:
+
+1. **"What it provides" section** (line 62–64) renders `{{{whatItProvides}}}` — a hardcoded string from `BuildWhatItProvides()`. This is boilerplate. Remove this section; the LLM-rewritten intro paragraph already covers it.
+
+2. **"Suggested workflow" section** (lines 103–109) renders `workflowSteps` — agent execution flow. Remove.
+
+3. **"Decision guidance" section** (lines 88–101) renders `decisionGuidance` — agent routing tables. Remove.
+
+4. **Prerequisites section** (lines 17–60) is well-structured. Keep. Add a `doNotUseFor` rendering block after the "When to use" section.
+
+5. **"When NOT to use"** is extracted by the parser (`DoNotUseFor`) but has no template section. Add it as a conditional block after "When to use."
+
+### Proposed Template Structure
+
+```
+---
+[frontmatter]
+---
+
+# Azure skill for {{{displayName}}}
+
+{{{llmIntroduction}}}              ← LLM-rewritten introduction (replaces description + whatItProvides)
+
+**Skill:** `{{{name}}}` | [Source code](...)
+
+## Prerequisites
+[Azure auth, subscription, RBAC, tools, resources — unchanged]
+
+## When to use this skill
+[useFor bullets — unchanged]
+
+## When NOT to use this skill          ← NEW (conditional, from DoNotUseFor)
+[doNotUseFor bullets]
+
+## Azure services
+[services table — unchanged]
+
+## MCP tools
+[mcpTools table — unchanged]
+
+## Example triggers
+[shouldTrigger bullets — unchanged, max 8]
+
+## Related skills                       ← Move before related content
+[relatedSkills — unchanged]
+
+## Related content
+[static links — unchanged]
+```
+
+### Removed Sections
+
+- `## What it provides` — replaced by `{{{llmIntroduction}}}` at top
+- `## Decision guidance` — removed (agent routing logic)
+- `## Suggested workflow` — removed (agent execution steps)
+
+### New Template Variables
+
+| Variable | Source | Notes |
+|----------|--------|-------|
+| `llmIntroduction` | LLM rewrite of full skill intro | Replaces `description` + `whatItProvides` |
+| `hasDoNotUseFor` | `DoNotUseFor.Count > 0` | New conditional |
+| `doNotUseFor` | Parsed from `DO NOT USE FOR:` | Already parsed; needs template wiring |
+
+---
+
+## 4. LLM Rewrite Step Changes
+
+Sage's `sage-skills-llm-prompt-redesign.md` covers this ground thoroughly. Riley's additions from an architecture perspective:
+
+### Scope Expansion (Architectural Change)
+
+The current LLM call rewrites **only the description** (line 86 of `SkillPipelineOrchestrator.cs`). This is insufficient.
+
+**Proposed:** The LLM should receive the full skill context and produce the **entire introduction paragraph**, not just rewrite a single field.
+
+```csharp
+// Current (too narrow)
+var rewrittenDescription = await _llmRewriter.RewriteIntroAsync(skillName, skillData.Description, ct);
+
+// Proposed (full context)
+var llmIntro = await _llmRewriter.RewriteIntroAsync(
+    skillName: skillName,
+    rawDescription: skillData.Description,
+    useFor: skillData.UseFor,
+    services: skillData.Services.Select(s => s.Name).ToList(),
+    ct: ct
+);
+var updatedSkillData = skillData with { LlmIntroduction = llmIntro };
+```
+
+**Why:** The LLM needs `UseFor` to translate agent capability listings into customer value. Without it, the LLM rewrites only a description that may itself be agent-internal language.
+
+**Boundary:** The LLM writes the intro paragraph only. It does **not** rewrite services, MCP tools, triggers, or prerequisites — those are deterministically extracted and should remain that way (reliable, predictable, testable).
+
+### What the Prompt Must Instruct
+
+See Sage's doc for the full prompt. Riley's requirements for the prompt from a pipeline contract perspective:
+
+1. **Output contract:** The LLM must return only the introduction paragraph text — no markdown headers, no bullet lists, no JSON. The pipeline expects plain prose.
+2. **Length contract:** 2–4 sentences. Max 80 words. (Current max 60 is too tight for complex skills like microsoft-foundry.)
+3. **Fallback contract:** If source material is too agent-internal to produce customer value, return: `"This skill provides specialized {DisplayName} capabilities for GitHub Copilot in Azure."` — a safe fallback the validator can detect and flag as low-quality but not fail-block.
+
+---
+
+## 5. Archetype Impact
+
+All five archetypes must normalize to the **same output template**. The sections that render are conditional on data availability. Here's how each archetype maps:
+
+| Section | A: Service Catalog | B: Workflow | C: Router | D: Complex/Sub-skills | E: Guidance |
+|---------|-------------------|-------------|-----------|----------------------|-------------|
+| LLM Introduction | ✅ Describe service catalog scope | ✅ Describe workflow outcomes | ✅ Describe decision domain | ✅ Describe sub-skill landscape | ✅ Describe guidance scope |
+| When to use | ✅ From USE_FOR | ✅ From USE_FOR | ✅ From USE_FOR | ✅ From USE_FOR | ✅ From USE_FOR |
+| Prerequisites | ✅ Azure auth + RBAC + tools | ✅ Tools (Terraform, AZD, etc.) | ✅ Azure auth + subscription | ✅ Complex toolchain | ✅ Azure auth |
+| Azure services | ✅ Rich (primary source) | ⚠️ Sparse or absent | ⚠️ Single domain | ✅ Multiple services | ⚠️ Sparse |
+| MCP tools | ✅ Rich tool table | ✅ Deployment tools | ✅ Compute tools | ✅ Foundry tools | ⚠️ Sparse |
+| Example triggers | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Decision guidance | ❌ REMOVED | ❌ REMOVED | ❌ REMOVED | ❌ REMOVED | ❌ REMOVED |
+| Suggested workflow | ❌ REMOVED | ❌ REMOVED | ❌ REMOVED | ❌ REMOVED | ❌ REMOVED |
+
+### Archetype-Specific Notes
+
+**Archetype C (Router — azure-compute):** The decision tree content in the SKILL.md is the most tempting to preserve. However, "should I use VM or Container App?" is agent routing logic. On the customer page, this should appear only as example triggers like *"Which Azure compute option suits my API service?"* — letting the user ask the question naturally, not exposing the routing table.
+
+**Archetype D (Complex — microsoft-foundry):** The sub-skill table lists other skills the agent orchestrates. Do not render this table. Instead, extract the sub-skills as `relatedSkills` entries so they appear in the "Related skills" section as navigation links.
+
+**Archetype B (Workflow — azure-deploy, azure-cloud-migrate):** Numbered workflow steps from SKILL.md describe agent execution. Do NOT render as "Suggested workflow." The customer sees this through example triggers ("Deploy my Bicep template to production") and the LLM introduction ("Use this skill when you need to...").
+
+**Archetype E (Guidance — appinsights, azure-rbac):** These skills have minimal services/tools data. The LLM introduction is the primary content. The "When to use" section is critical for these — extract it carefully from the description's USE FOR block.
+
+---
+
+## 6. Parser Changes
+
+### Current Parser Weaknesses Against the New Directive
+
+1. **`RawBody` includes agent-internal content** — sections like `## Workflow`, `## Decision Guidance`, `## Prerequisites (Agent Checks)`, MANDATORY/STOP blocks all flow into `RawBody` which is passed to the LLM. The LLM must then filter them. Better: strip them before they reach the LLM.
+
+2. **`ExtractWorkflowSteps()` should be deprecated** — extracted steps are agent execution flow. The parser should stop populating `WorkflowSteps` or rename it `AgentWorkflowSteps` with a note that it's not for customer pages.
+
+3. **`ExtractDecisionGuidance()` should be deprecated** — decision tables are agent routing. The parser should stop populating `DecisionGuidance` for customer page generation (or isolate it into a separate field not wired to the template).
+
+4. **`ExtractPrerequisites()` is too shallow** — it only extracts bullet text from a `## Prerequisites` section. It doesn't handle agent-style prerequisites like:
+   - `MANDATORY: Check if .bicep files exist` → should translate to `Azure CLI with Bicep extension`
+   - `PREREQUISITE CHECK: Active subscription required` → should translate to `Azure subscription`
+   - These patterns appear throughout the body, not just in a `## Prerequisites` section
+
+5. **No `DoNotUseFor` template wiring** — the parser already extracts `DoNotUseFor` but the template has no section for it.
+
+### Proposed Parser Changes
+
+#### 1. Add `InternalDirectivesBody` field to `SkillData`
+
+```csharp
+public record SkillData
+{
+    // ... existing fields ...
+    public string RawBody { get; init; } = "";
+    public string RawBodyCleaned { get; init; } = "";  // NEW: RawBody with agent-internal stripped
+    public List<string> InternalDirectiveBlocks { get; init; } = [];  // NEW: for audit/debug
+}
+```
+
+#### 2. Pre-clean `RawBody` before LLM receives it
+
+Add `StripAgentDirectives(string body)` method:
+
+```csharp
+private static string StripAgentDirectives(string body)
+{
+    // Strip lines starting with agent-internal markers
+    var lines = body.Split('\n');
+    var cleaned = lines.Where(line =>
+    {
+        var trimmed = line.TrimStart();
+        return !trimmed.StartsWith("⛔") &&
+               !Regex.IsMatch(trimmed, @"^(MANDATORY|PREFER OVER|FORBIDDEN|PREREQUISITE CHECK)\s*:", 
+                   RegexOptions.IgnoreCase);
+    }).ToArray();
+    
+    // Also strip entire sections that are agent-internal
+    var result = string.Join('\n', cleaned);
+    result = Regex.Replace(result, 
+        @"^##\s+(?:Workflow|Decision Guidance|Internal Logic|Agent Behavior|Execution Steps)\s*$.*?(?=^##|\z)",
+        "", RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    
+    return result;
+}
+```
+
+#### 3. Deprecate `WorkflowSteps` and `DecisionGuidance` for customer page generation
+
+Mark them as `[Obsolete]` or add a `[ExcludeFromCustomerPage]` attribute. The `SkillPageGenerator.BuildContext()` should not include these in the template context.
+
+#### 4. Improve prerequisite extraction from agent-check patterns
+
+Extend `ExtractPrerequisites()` to scan the full body for MANDATORY patterns and translate them:
+
+```csharp
+// Pattern: MANDATORY: Check if .bicep files present
+// → Add resource: "Azure CLI with Bicep extension (if using Bicep templates)"
+
+// Pattern: ⛔ STOP if no Azure subscription
+// → Add Azure.RequiresSubscription = true
+
+// Pattern: Required: Active Azure subscription with Owner/Contributor role
+// → Add RBAC requirement
+```
+
+These complement the heuristic file-extension approach in `BuildPrerequisites()`.
+
+#### 5. Add `DoNotUseFor` to template context (already parsed, not wired)
+
+`SkillPageGenerator.BuildContext()` already passes `doNotUseFor` but the template needs the `hasDoNotUseFor` conditional and section.
+
+---
+
+## 7. Pipeline Contract Changes
+
+### `SkillData` Model Changes
+
+| Field | Change | Reason |
+|-------|--------|--------|
+| `RawBody` | Keep (internal use) | Needed by parser helpers |
+| `RawBodyCleaned` | **Add** | Passed to LLM instead of `RawBody` |
+| `InternalDirectiveBlocks` | **Add** | Audit trail of what was stripped |
+| `LlmIntroduction` | **Add** | Populated after LLM call; replaces `Description` in template |
+| `WorkflowSteps` | Mark as not-for-customer-page | Agent execution steps — not rendered |
+| `DecisionGuidance` | Mark as not-for-customer-page | Agent routing — not rendered |
+
+### `ILlmRewriter` Interface Changes
+
+```csharp
+// New signature — adds UseFor and Services for richer context
+Task<string> RewriteIntroAsync(
+    string skillName,
+    string rawDescription,
+    List<string>? useFor = null,      // NEW: USE_FOR items
+    List<string>? services = null,    // NEW: service names
+    CancellationToken ct = default
+);
+```
+
+### `SkillPipelineOrchestrator` Changes
+
+```csharp
+// After parse, clean body
+var cleanedBody = SkillMarkdownParser.StripAgentDirectives(skillData.RawBody);
+var cleanedSkillData = skillData with { RawBodyCleaned = cleanedBody };
+
+// LLM call with richer context
+var llmIntro = await _llmRewriter.RewriteIntroAsync(
+    skillName: skillName,
+    rawDescription: cleanedSkillData.Description,
+    useFor: cleanedSkillData.UseFor,
+    services: cleanedSkillData.Services.Select(s => s.Name).ToList(),
+    ct: ct
+);
+var updatedSkillData = cleanedSkillData with { LlmIntroduction = llmIntro };
+
+// Generator uses LlmIntroduction, not Description
+var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText);
+```
+
+---
+
+## 8. Sequencing and Ownership
+
+Riley's recommendation for execution order:
+
+| # | Task | Owner | Blocks |
+|---|------|-------|--------|
+| 1 | Add `StripAgentDirectives()` to parser + tests | Morgan | LLM call quality |
+| 2 | Add `RawBodyCleaned` and `LlmIntroduction` to `SkillData` | Morgan | Template wiring |
+| 3 | Update `ILlmRewriter.RewriteIntroAsync` signature | Sage | Prompt testing |
+| 4 | Update system + user prompts (Sage's doc) | Sage | Nothing after |
+| 5 | Update `skill-page-template.hbs` (remove 3 sections, add doNotUseFor, wire `llmIntroduction`) | Morgan | Generation |
+| 6 | Update `SkillPageGenerator.BuildContext()` (remove deprecated fields) | Morgan | Template |
+| 7 | Update `SkillPipelineOrchestrator` call sites | Avery/Morgan | E2E |
+| 8 | Write tests: parse → strip → LLM → render pipeline (per AD-007) | Parker | PR gate |
+
+**AD-020 compliance:** All work must go through PRs, no direct commits. Dina merges.
+
+---
+
+## 9. Summary of Net Changes
+
+### What changes:
+- Template loses 3 sections (What it provides, Suggested workflow, Decision guidance)
+- Template gains 1 section (When NOT to use — already parsed, not yet wired)
+- LLM intro replaces hardcoded `BuildWhatItProvides()` boilerplate
+- Parser strips agent-internal content before LLM receives it
+- LLM call expands context to include `UseFor` and service names
+
+### What doesn't change:
+- Services table extraction
+- MCP tools extraction
+- Trigger extraction (example prompts)
+- Prerequisites structure (`SkillPrerequisites` model)
+- Related skills extraction
+- TierAssessor (tier determines which sections render — still valid)
+- AcrolinxPostProcessor (downstream, no changes needed)
+- Validator (checks rendered output — no changes needed)
+- All existing tests (additive changes only)
+
+### Risk: zero regressions expected
+All changes are additive (new fields on `SkillData`, new LLM context) or subtractive (template sections removed). The template sections being removed produce content that Dina's directive says should not be there — removing them cannot regress customer-facing quality.
+
+---
+
+**Document Owner:** Riley (Pipeline Architect)  
+**Last Updated:** 2026-04-17  
+**AD Number:** Pending assignment by Avery
+
+
+---
+
+# Skills Generation: LLM Rewrite Prompt Redesign
+
+**Date:** 2026-03-31  
+**Requester:** Dina  
+**Owner:** Sage (AI/Prompt Engineer)  
+**Status:** RECOMMENDATION  
+**Priority:** P1
+
+---
+
+## Executive Summary
+
+The skills-generation pipeline's LLM rewrite step currently treats SKILL.md (an anthropic-spec agent instruction file) as source material for customer documentation. This creates duplication—the generated docs read like agent instructions rather than customer value propositions.
+
+**Dina's directive:** Generated documentation should be a **consolidated explanation of what a customer needs to know to use the skill successfully**, not a rephrasing of agent-internal procedures.
+
+**Recommendation:** Redesign the LLM rewrite prompt to explicitly translate from "agent-centric" to "customer-centric" by:
+1. Stripping internal agent directives (⛔ STOP, MANDATORY, FORBIDDEN, etc.)
+2. Converting "agent does X" → "this skill helps you X"
+3. Extracting customer value from skill USE_FOR items
+4. Removing agent routing logic and workflow execution instructions
+5. Synthesizing prerequisites and resources from agent checklists
+
+---
+
+## Problem Analysis
+
+### Current State
+
+**Source Material (SKILL.md):** Anthropic-spec agent instruction files containing:
+- Internal directives: ⛔ STOP conditions, MANDATORY steps, PREFER OVER routing
+- Agent execution procedures: "When user says X, route to skill Y"
+- Codebase detection logic: Regex patterns, file discovery procedures
+- Agent-to-agent handoff rules: When to invoke other agents
+- Implementation checklists: Step-by-step agent instructions
+
+**Current Orchestrator Flow (SkillPipelineOrchestrator.cs, line 86):**
+```csharp
+var rewrittenDescription = await _llmRewriter.RewriteIntroAsync(skillName, skillData.Description, ct);
+```
+
+The LLM rewrite is called **only on the description**, with current prompts at:
+- System: `skill-page-system-prompt.txt` (14 lines, generic documentation rules)
+- User: `skill-page-user-prompt-intro.txt` (6 lines, "rewrite for customer audience")
+
+**Current System Prompt Weaknesses:**
+- No explicit instruction to REMOVE agent-speak
+- No guidance on translating agent procedures to customer scenarios
+- No distinction between agent-internal logic vs. customer-facing capability
+- Generic "don't invent" rule but no pattern-matching guidance on what IS agent-internal
+
+**Result:** Generated docs often retain agent patterns:
+- "When you trigger this skill, it will perform X check before proceeding" (agent language)
+- Routing logic: "This skill works best when combined with skill-Y" (agent handoff, not customer workflow)
+- Prerequisite checklists read like agent requirements, not customer needs
+
+### Ideal State
+
+**Customer-Facing Skill Documentation Should Answer:**
+1. **What does this skill do?** (customer value, not agent procedures)
+2. **When should I use it?** (customer scenarios from USE_FOR, not agent routing)
+3. **What do I need?** (prerequisites as customer responsibilities, not agent checks)
+4. **What can I ask it to do?** (concrete capabilities, not internal routing rules)
+
+**Translation Examples:**
+
+| Agent-Speak (SKILL.md) | Customer-Speak (Generated Docs) |
+|---|---|
+| ⛔ STOP: If no Azure subscription detected, exit. | **Required:** An active Azure subscription. |
+| MANDATORY: Check codebase for .bicep files before routing. | **Prerequisites:** If using Bicep, Azure CLI with Bicep extension installed. |
+| PREFER OVER: When user mentions "deploy," route to deploy-skill if infrastructure exists. | **When to use:** Use this skill when you need to deploy infrastructure. |
+| "Agent detects resource group context from local CLI state" | "Provide your resource group name or use the default." |
+| Implementation step: "Parse JSON schema from tool output, validate against config/schemas.json" | (Omit entirely—this is agent implementation) |
+
+---
+
+## Proposed Changes
+
+### A. LLM Rewrite Prompt Redesign
+
+#### New System Prompt
+
+**File:** `skills-generation/prompts/skill-page-system-prompt.txt`
+
+```
+You are a customer-facing technical documentation writer for Azure Skills in GitHub Copilot.
+
+Your job: Transform anthropic-spec SKILL.md content (written for AI agents) into customer documentation that explains what users need to know to successfully use the skill.
+
+## Transformation Rules
+
+### 1. Strip Agent-Internal Directives
+REMOVE entirely:
+- ⛔ STOP conditions and error handlers
+- MANDATORY/PREFER OVER/FORBIDDEN routing instructions
+- Agent-to-agent handoff rules
+- Codebase detection procedures (regex patterns, file discovery)
+- Agent execution procedures ("if user says X, route to Y")
+
+These are agent implementation details, not customer capabilities.
+
+### 2. Translate "Agent Does X" → "This Skill Helps You X"
+
+Agent SKILL.md language → Customer documentation language:
+
+**Agent:** "Before proceeding, the agent checks for Azure subscription context"
+**Customer:** "You need an active Azure subscription"
+
+**Agent:** "Agent detects prerequisite tools from source file extensions"
+**Customer:** "Required tools: PowerShell, Node.js, Azure CLI (depending on your use case)"
+
+**Agent:** "When invoked, the skill validates credentials and IAM permissions"
+**Customer:** "You need Azure Owner, Contributor, or appropriate RBAC role for the resources you're working with"
+
+**Agent:** "Prefer this skill when combined with deploy-skill for infrastructure workflows"
+**Customer:** (Omit—this is agent routing. Instead, mention use cases where infrastructure deployment is needed.)
+
+### 3. Extract Customer Value from "Use For" Section
+
+The SKILL.md USE_FOR items describe what the skill does for users. These become "When to use this skill" guidance:
+
+**SKILL.md USE_FOR:**
+- Deploy infrastructure to Azure
+- Validate infrastructure configuration
+- Troubleshoot deployment errors
+
+**Generated Docs:**
+"Use this skill when you need to:
+- Deploy infrastructure to Azure
+- Validate infrastructure configuration
+- Troubleshoot deployment errors"
+
+### 4. Convert Workflow Steps from "Agent Execution" to "What Happens"
+
+**Agent SKILL.md:**
+"Workflow: Parse tool output → Validate schema → Apply transformations → Generate report"
+
+**Customer Docs:**
+"When you use this skill, it:
+- Analyzes your infrastructure
+- Validates configuration against best practices
+- Suggests improvements
+- Generates a deployment-ready report"
+
+Do NOT expose implementation steps. Focus on outcomes the user experiences.
+
+### 5. Synthesize Prerequisites from Agent Checklists
+
+**Agent SKILL.md:**
+"MANDATORY: Check if .bicep files exist in codebase. If yes, require Azure CLI ≥2.60.0"
+
+**Customer Docs:**
+"Prerequisites:
+- Azure CLI (v2.60.0 or higher) — if using Bicep templates
+- PowerShell 7.4+ — if using PowerShell-based automation"
+
+### 6. Style Rules (Unchanged)
+- Write in present tense
+- Use contractions (doesn't, isn't, can't)
+- Use active voice
+- Keep sentences under 35 words
+- Address readers as "you" (not "we" or "one")
+- NEVER invent capabilities not mentioned in SKILL.md
+- If source material is agent-internal only, write: "This skill provides guidance for..."
+
+{{ACROLINX_RULES}}
+```
+
+#### New User Prompt
+
+**File:** `skills-generation/prompts/skill-page-user-prompt-intro.txt` (updated)
+
+```
+Write a 2–3 sentence introduction (max 60 words) for the Azure Skill "{{{skillName}}}".
+
+Raw SKILL.md description: "{{{rawDescription}}}"
+
+USE_FOR capabilities: {{{useFor}}}
+
+Instructions:
+1. Extract customer value from the description and USE_FOR section.
+2. REMOVE agent-speak (routing logic, codebase checks, execution procedures).
+3. Translate to: "What does this skill do for you?" and "Why would you use it?"
+4. Do NOT copy the SKILL.md description verbatim.
+5. Write as if explaining to a developer who wants to get work done, not understand agent internals.
+```
+
+---
+
+### B. Content Transformations for LLM
+
+The LLM rewrite should perform these transformations:
+
+#### Pattern Recognition & Removal
+
+| Pattern | Source | Action |
+|---------|--------|--------|
+| `⛔ STOP:` | Agent directives | Remove entirely |
+| `MANDATORY:`, `PREFER OVER:` | Routing logic | Convert to "When to use" or remove |
+| `"Agent checks for..."` | Implementation | Remove |
+| `"If user says X, route to Y"` | Routing logic | Remove |
+| `Regex patterns, file discovery` | Agent procedures | Remove |
+| `"Parse JSON, validate schema"` | Implementation details | Translate to customer outcomes |
+
+#### Translation Patterns
+
+| Source Pattern | Translate To |
+|---|---|
+| "Agent validates prerequisites" | "You need [prerequisites]" |
+| "Codebase detection for [tool]" | "If using [tool], you'll need [resource]" |
+| "Workflow step: validate output" | "Validates your configuration" |
+| "Combined with skill-X for scenario-Y" | "For scenario-Y, you can extend with [feature]" |
+
+---
+
+### C. Integration Points
+
+#### 1. **RewriteIntroAsync** Enhancement
+
+**Current usage (line 86 of SkillPipelineOrchestrator.cs):**
+```csharp
+var rewrittenDescription = await _llmRewriter.RewriteIntroAsync(skillName, skillData.Description, ct);
+```
+
+**Enhanced call (optional):**
+```csharp
+var rewrittenDescription = await _llmRewriter.RewriteIntroAsync(
+    skillName: skillName,
+    rawDescription: skillData.Description,
+    useFor: skillData.UseFor,  // Add USE_FOR items to context
+    ct: ct
+);
+```
+
+This provides the LLM with customer value propositions, enabling better translation.
+
+#### 2. **New Optional Method: RewriteFullIntroductionAsync**
+
+Consider adding to `ILlmRewriter`:
+```csharp
+Task<string> RewriteFullIntroductionAsync(
+    string skillName, 
+    string rawSkillmarkdown,  // Full SKILL.md content
+    SkillData skillData,       // Parsed skill (USE_FOR, Prerequisites)
+    CancellationToken ct = default
+);
+```
+
+This would enable **wholesale rewrite** (not just description) if needed for future updates, with full context.
+
+---
+
+## Implementation Checklist
+
+- [ ] Update `skill-page-system-prompt.txt` with new transformation rules
+- [ ] Update `skill-page-user-prompt-intro.txt` with new context (USE_FOR items)
+- [ ] Test on 3–5 real skills:
+  - [ ] Skill with heavy agent routing logic
+  - [ ] Skill with complex prerequisites
+  - [ ] Skill with minimal USE_FOR (edge case)
+- [ ] Compare generated descriptions before/after (should remove agent-speak)
+- [ ] Validate generated docs against template (`skill-page-template.hbs`)
+- [ ] Run Acrolinx compliance check (ensure no style regressions)
+
+---
+
+## Success Criteria
+
+✅ **Generated docs read like customer guidance, not agent instructions.**
+
+Specific checks:
+1. No ⛔ STOP, MANDATORY, PREFER OVER language in output
+2. No agent routing logic ("works best combined with skill-X")
+3. Prerequisites stated as customer responsibilities, not agent checks
+4. USE_FOR items translated to "When to use" section
+5. All sentences in present tense, active voice
+6. Acrolinx score improvement (or no regression)
+
+---
+
+## Risks & Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| Over-removal: LLM removes important capabilities | Explicit rule: "NEVER remove or invent—only translate" |
+| Incomplete translation: Agent-speak still present | Test on diverse skills before full rollout; review samples |
+| Token usage increase: Larger prompts → higher costs | New prompts are modest size; likely no measurable cost impact |
+| Fallback degradation: If USE_FOR unavailable | User prompt includes fallback: "If USE_FOR unavailable, rewrite description only" |
+
+---
+
+## Related Decisions
+
+- **AD-022:** Acrolinx Compliance Strategy (ensures generated docs maintain style standards)
+- **AD-007:** TDD requirement (tests should verify translation rules before implementation)
+
+---
+
+## Next Steps
+
+1. **Review & Approve** (Dina sign-off on prompt strategy)
+2. **Implement** (Update prompts, test on real skills)
+3. **Monitor** (Track Acrolinx scores, customer feedback)
+4. **Iterate** (Refine translation rules based on early output)
+
+---
+
+## Appendix: Example Before/After
+
+### Example: Compliance Skill
+
+**SKILL.md Excerpt:**
+```
+## Description
+Checks Azure compliance configuration against organizational policies.
+
+## USE_FOR
+- Audit resource compliance
+- Identify policy violations
+- Generate compliance reports
+
+## Internal Logic
+⛔ STOP: If no Key Vault found, skip secrets audit.
+MANDATORY: Validate Azure subscription context before proceeding.
+Workflow: Fetch resources → Parse config → Compare against policies.json → Generate report.
+```
+
+**Current Generated Output (Problem):**
+"This skill checks Azure compliance. It validates your subscription, fetches resources, and generates reports. Works best when combined with deploy-skill for infrastructure validation."
+
+**Desired Generated Output (After Redesign):**
+"This skill audits your Azure resources against organizational compliance policies, identifies violations, and generates detailed reports. Use it to maintain compliance governance and track policy adherence across your infrastructure."
+
+**Translation applied:**
+- ✅ Removed ⛔ STOP (Key Vault check is agent-internal)
+- ✅ Removed MANDATORY (subscription validation is automatic)
+- ✅ Removed workflow steps (implementation detail)
+- ✅ Extracted USE_FOR items (audit, identify, generate reports)
+- ✅ Removed "works best combined with" (agent routing)
+- ✅ Reframed as customer value (compliance governance, policy adherence)
+
+---
+
+**Document Owner:** Sage  
+**Last Updated:** 2026-03-31
+

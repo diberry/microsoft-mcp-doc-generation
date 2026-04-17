@@ -23,7 +23,7 @@ const path = require('path');
 
 const rootDir = process.cwd();
 const dryRun = process.env.DRY_RUN_FLAG === 'true';
-const brandPath = path.join(rootDir, 'docs-generation', 'data', 'brand-to-server-mapping.json');
+const brandPath = path.join(rootDir, 'mcp-tools', 'data', 'brand-to-server-mapping.json');
 const mappings = JSON.parse(fs.readFileSync(brandPath, 'utf8'));
 
 // Find merge groups

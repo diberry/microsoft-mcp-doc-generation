@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>DocGeneration.Steps.Bootstrap.BrandMappings.Tests</AssemblyName>
+    <RootNamespace>DocGeneration.Steps.Bootstrap.BrandMappings.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../DocGeneration.Steps.Bootstrap.BrandMappings/DocGeneration.Steps.Bootstrap.BrandMappings.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="TestData/**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

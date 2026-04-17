@@ -75,4 +75,4 @@ If files are missing:
 
 - Node.js 14+ (uses ES modules)
 - Generated toollist.txt in `generated/cli/`
-- Configuration files in `docs-generation/`
+- Configuration files in `mcp-tools/`

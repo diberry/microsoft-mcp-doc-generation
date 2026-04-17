@@ -7,6 +7,30 @@
 
 ## Learnings
 
+### 2026-03-31: Skills Generation LLM Prompt Redesign — Agent-to-Customer Translation
+
+**Task:** Redesign the LLM rewrite step to transform SKILL.md (agent-internal anthropic-spec) into customer-facing documentation.
+
+**Finding:** Current system treats SKILL.md as raw source material, causing generated docs to retain agent-speak (routing logic, codebase checks, implementation procedures). Dina's directive: generate docs should consolidate **what customers need to know**, not duplicate agent instructions.
+
+**Analysis:**
+- SKILL.md contains: ⛔ STOP directives, MANDATORY/PREFER OVER routing, agent workflow steps, codebase detection logic, agent-to-agent handoffs
+- Current LLM prompt (14-line system + 6-line user) lacks explicit translation rules
+- RewriteIntroAsync only receives description, missing USE_FOR context (customer value propositions)
+- Result: Generated docs read like "agent validates prerequisites" instead of "you need [prerequisites]"
+
+**Recommendation:**
+1. Expand system prompt with 6 transformation rules: strip agent directives, translate agent-speak to customer-speak, extract customer value from USE_FOR, convert workflow steps to outcomes, synthesize prerequisites from checklists
+2. Enhance user prompt to include USE_FOR items and explicit examples
+3. Optional: Add RewriteFullIntroductionAsync to ILlmRewriter for complete SKILL.md context
+4. Success criteria: No agent-speak in output, prerequisites stated as customer responsibilities, USE_FOR translated to guidance
+
+**Output:** `.squad/decisions/inbox/sage-skills-llm-prompt-redesign.md` — comprehensive redesign with implementation checklist, success criteria, before/after example, and risk mitigations.
+
+**Key Learning:** The gap between source material (agent instructions) and output (customer docs) requires explicit transformation rules in the LLM prompt. Generic "rewrite for customer audience" is insufficient for this 2-context translation. Pattern recognition (⛔, MANDATORY, agent-specific keywords) + concrete translation examples are necessary.
+
+---
+
 ### 2026-03-30: .NET Consolidation Plan AI Impact Review — RECOMMEND APPROVAL
 
 **Final Verdict:** RECOMMEND APPROVAL with 3 conditions for Actions 2-4
@@ -100,7 +124,7 @@
 - Each section is tailored to the prompt's context (e.g., Step 2 focuses on conversational prompt style, Step 6 targets genai- JSON fields).
 - Wrote 42 new tests (`AcrolinxComplianceSectionTests.cs`) that verify all prompt files contain required instructions. Tests are parameterized across all 4 step-specific prompts + 2 shared copies.
 
-**Key Insight:** The shared `docs-generation/prompts/system-prompt.txt` is only 1 line — it's NOT a copy of the Step 3 prompt. The step-specific prompts in each `DocGeneration.Steps.*/prompts/` directory are the actual runtime prompts.
+**Key Insight:** The shared `mcp-tools/prompts/system-prompt.txt` is only 1 line — it's NOT a copy of the Step 3 prompt. The step-specific prompts in each `DocGeneration.Steps.*/prompts/` directory are the actual runtime prompts.
 
 **PR:** #223
 ### 2026-03-25: Acrolinx Compliance P0+P1 Implementation — 4 Services + 9 Static Entries
@@ -140,3 +164,13 @@
 ### 2026-03-25: Acrolinx Compliance Research
 
 **Task:** Researched how to make tool-family articles score 80+ on Acrolinx.
+
+### 2026-04-17: Skills LLM Prompt Redesign Decision — Merged to Active Decisions (Scribe)
+
+**Status:** Decision documented and merged by Scribe to .squad/decisions.md
+
+**File:** .squad/decisions/inbox/sage-skills-llm-prompt-redesign.md → MERGED
+
+**Summary:** This session's output from Sage on LLM rewrite prompt strategy for customer-facing skills documentation has been merged into the active decisions log. The comprehensive redesign with transformation rules, pattern recognition, and success criteria is now part of team knowledge for implementation phase.
+
+**Next:** Awaiting approval and implementation on 3–5 test skills before full rollout.

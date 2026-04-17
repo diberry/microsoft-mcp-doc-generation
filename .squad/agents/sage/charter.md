@@ -12,7 +12,7 @@
 ## What I Own
 
 - All AI prompt files:
-  - `docs-generation/prompts/` — Shared prompt templates
+  - `mcp-tools/prompts/` — Shared prompt templates
   - `ExamplePromptGeneratorStandalone/prompts/` — System/user prompts for example generation
   - `HorizontalArticleGenerator/prompts/` — System/user prompts for horizontal articles
 - `GenerativeAI/` — Azure OpenAI client wrapper with retry logic

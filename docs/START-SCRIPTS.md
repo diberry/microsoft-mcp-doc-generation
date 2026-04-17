@@ -85,7 +85,7 @@ MCP_BRANCH=main ./start.sh
 
 **Resolution order**: CLI flag `--mcp-branch` > environment variable `MCP_BRANCH` > default (`release/azure/2.x`).
 
-If the upstream fetch fails (e.g., network issue), the pipeline falls back to the local copy at `docs-generation/azure-mcp/azmcp-commands.md` with a warning.
+If the upstream fetch fails (e.g., network issue), the pipeline falls back to the local copy at `mcp-tools/azure-mcp/azmcp-commands.md` with a warning.
 
 ## Parallel Execution (Fan-Out)
 

@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <WarningsNotAsErrors>NU1701</WarningsNotAsErrors>
+    <AssemblyName>DocGeneration.Steps.AnnotationsParametersRaw.Annotations</AssemblyName>
+    <RootNamespace>DocGeneration.Steps.AnnotationsParametersRaw.Annotations</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../shared/DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="../DocGeneration.Steps.ToolFamilyCleanup/DocGeneration.Steps.ToolFamilyCleanup.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../shared/DocGeneration.Core.NaturalLanguage/DocGeneration.Core.NaturalLanguage.csproj" />
+    <ProjectReference Include="../../shared/DocGeneration.Core.TextTransformation/DocGeneration.Core.TextTransformation.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../shared/DocGeneration.Core.TemplateEngine/DocGeneration.Core.TemplateEngine.csproj" />
+  </ItemGroup>
+</Project>

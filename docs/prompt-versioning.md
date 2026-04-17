@@ -181,14 +181,14 @@ The prompt versioning infrastructure is in place but **steps don't yet call `Pro
 
 - Every AI step (2, 3, 4, 6) will record its prompt hashes in `step-result.json`.
 - The pipeline runner can compare hashes across runs to detect prompt drift.
-- CI can flag builds where prompts changed but baselines weren't updated, complementing the [prompt regression testing framework](../docs-generation/DocGeneration.PromptRegression.Tests/README.md).
+- CI can flag builds where prompts changed but baselines weren't updated, complementing the [prompt regression testing framework](../mcp-tools/DocGeneration.PromptRegression.Tests/README.md).
 
 ## Related
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — Pipeline step details and data flow
-- [Prompt regression testing](../docs-generation/DocGeneration.PromptRegression.Tests/README.md) — Baseline comparison for output quality
+- [Prompt regression testing](../mcp-tools/DocGeneration.PromptRegression.Tests/README.md) — Baseline comparison for output quality
 - [FINGERPRINTING.md](FINGERPRINTING.md) — Snapshot and diff generated output for regression detection
-- Source: `docs-generation/DocGeneration.Core.Shared/PromptHasher.cs`
-- Source: `docs-generation/DocGeneration.Core.Shared/StepResultFile.cs`
-- Source: `docs-generation/DocGeneration.Core.Shared/StepResultWriter.cs`
-- Source: `docs-generation/DocGeneration.Core.Shared/PromptTokenResolver.cs`
+- Source: `mcp-tools/DocGeneration.Core.Shared/PromptHasher.cs`
+- Source: `mcp-tools/DocGeneration.Core.Shared/StepResultFile.cs`
+- Source: `mcp-tools/DocGeneration.Core.Shared/StepResultWriter.cs`
+- Source: `mcp-tools/DocGeneration.Core.Shared/PromptTokenResolver.cs`

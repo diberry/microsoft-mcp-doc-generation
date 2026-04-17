@@ -17,7 +17,7 @@ start.sh
 ├── preflight.ps1
 │   ├── validate-env.ps1
 │   └── 0-Validate-BrandMappings.ps1
-└── docs-generation/scripts/start-only.sh
+└── mcp-tools/scripts/start-only.sh
     └── Generate-ToolFamily.ps1
         ├── 1-Generate-AnnotationsParametersRaw-One.ps1
         ├── 2-Generate-ExamplePrompts-One.ps1
@@ -30,7 +30,7 @@ start.sh
 
 ## Execution Order
 
-### Preflight (`start.sh` → `docs-generation/scripts/preflight.ps1`)
+### Preflight (`start.sh` → `mcp-tools/scripts/preflight.ps1`)
 
 Runs once before namespace processing begins.
 
@@ -117,12 +117,12 @@ Runs automatically inside Step 4.
 ./start.sh advisor 4 --skip-deps    # Skip dependency validation for fast iteration
 ```
 
-### Worker (`docs-generation/scripts/start-only.sh`)
+### Worker (`mcp-tools/scripts/start-only.sh`)
 
 **Usage**:
 ```bash
-./docs-generation/scripts/start-only.sh advisor
-./docs-generation/scripts/start-only.sh advisor 1,2,3,4
+./mcp-tools/scripts/start-only.sh advisor
+./mcp-tools/scripts/start-only.sh advisor 1,2,3,4
 ```
 
 ### Development Shortcut
