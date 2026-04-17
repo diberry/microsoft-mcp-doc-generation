@@ -9,9 +9,9 @@ public sealed class AiCapabilityProbe : IAiCapabilityProbe
         "FOUNDRY_MODEL_NAME",
     ];
 
-    public async ValueTask<AiCapabilityResult> ProbeAsync(string docsGenerationRoot, CancellationToken cancellationToken)
+    public async ValueTask<AiCapabilityResult> ProbeAsync(string McpToolsRoot, CancellationToken cancellationToken)
     {
-        var envFilePath = Path.Combine(docsGenerationRoot, ".env");
+        var envFilePath = Path.Combine(McpToolsRoot, ".env");
         var envValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var key in RequiredKeys)

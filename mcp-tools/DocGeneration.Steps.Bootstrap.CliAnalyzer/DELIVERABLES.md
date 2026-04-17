@@ -30,14 +30,14 @@ All components have been successfully created, tested, and documented.
 
 ### 1. Build the Project
 ```bash
-cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 dotnet build
 ```
 
 ### 2. Run Analysis
 ```bash
 cd ../..  # Back to repo root
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 ### 3. View Results
@@ -94,7 +94,7 @@ dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ## File Structure
 
 ```
-docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/
+mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer/
 ├── DocGeneration.Steps.Bootstrap.CliAnalyzer.csproj                    # Project configuration
 ├── Program.cs                            # Entry point
 │
@@ -130,7 +130,7 @@ docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/
 
 ```bash
 # Navigate to project
-cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 
 # Build
 dotnet build
@@ -148,34 +148,34 @@ dotnet clean
 
 **Full Analysis:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 **Namespace Analysis:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql
 ```
 
 **Tool Analysis:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"
 ```
 
 **HTML Report Only:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 ```
 
 **Custom Paths:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
   --file ./custom-cli.json \
   --output ./reports/analysis.html
 ```
 
 **Get Help:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --help
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --help
 ```
 
 ## Output Files
@@ -304,5 +304,5 @@ The **DocGeneration.Steps.Bootstrap.CliAnalyzer** project is a complete, product
 **Test Status**: ✅ **PASSING**
 **Documentation**: ✅ **COMPREHENSIVE**
 
-**Location**: `docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/`
+**Location**: `mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer/`
 **Date Completed**: February 9, 2026

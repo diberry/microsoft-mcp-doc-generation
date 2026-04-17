@@ -30,13 +30,13 @@ The parser runs automatically as Step 7 of the preflight script. Output goes to 
 
 ```bash
 # Output JSON to file
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CommandParser -- \
-  --file docs-generation/azure-mcp/azmcp-commands.md \
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CommandParser -- \
+  --file mcp-tools/azure-mcp/azmcp-commands.md \
   --output azmcp-commands.json
 
 # Output JSON to stdout
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CommandParser -- \
-  --file docs-generation/azure-mcp/azmcp-commands.md
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CommandParser -- \
+  --file mcp-tools/azure-mcp/azmcp-commands.md
 ```
 
 ### CLI Options
@@ -91,7 +91,7 @@ DocGeneration.Steps.Bootstrap.CommandParser/
 ## Tests
 
 ```bash
-dotnet test docs-generation/DocGeneration.Steps.Bootstrap.CommandParser.Tests
+dotnet test mcp-tools/DocGeneration.Steps.Bootstrap.CommandParser.Tests
 ```
 
 30 unit tests covering: title/intro extraction, global options, service sections, metadata flags, multi-line commands, parameter parsing (required/optional/flag/allowed values), sub-sections, example vs definition distinction, area name derivation, serialization roundtrip.

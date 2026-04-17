@@ -355,7 +355,7 @@ public class ToolGenerationValidatorTests : IDisposable
     {
         Request = new PipelineRequest("test", [3], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
         RepoRoot = outputPath,
-        DocsGenerationRoot = outputPath,
+        McpToolsRoot = outputPath,
         OutputPath = outputPath,
         ProcessRunner = new RecordingProcessRunner(),
         Workspaces = new WorkspaceManager(),

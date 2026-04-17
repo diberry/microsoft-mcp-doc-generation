@@ -8,7 +8,7 @@ Created a minimal .NET library wrapper for Azure OpenAI SDK chat completions, de
 
 ### Library: `AzureOpenAIClient`
 
-**Location**: `docs-generation/AzureOpenAIClient/`
+**Location**: `mcp-tools/AzureOpenAIClient/`
 
 **Files Created**:
 - `AzureOpenAIClient.cs` - Main client wrapper
@@ -26,7 +26,7 @@ Created a minimal .NET library wrapper for Azure OpenAI SDK chat completions, de
 
 ### Test Project: `AzureOpenAIClient.Tests`
 
-**Location**: `docs-generation/AzureOpenAIClient.Tests/`
+**Location**: `mcp-tools/AzureOpenAIClient.Tests/`
 
 **Files Created**:
 - `IntegrationTests.cs` - Integration test (skipped by default)
@@ -143,10 +143,10 @@ var text = response.Value.Content[0].Text;
 
 ```bash
 # Build and test (test will be skipped)
-dotnet test docs-generation/AzureOpenAIClient.Tests
+dotnet test mcp-tools/AzureOpenAIClient.Tests
 
 # Build entire solution
-dotnet build docs-generation/docs-generation.sln
+dotnet build mcp-tools/mcp-doc-generation.sln
 ```
 
 ### Test Output
@@ -180,17 +180,17 @@ var examplePrompt = await client.GetChatCompletionAsync(
 ## Files Summary
 
 ### Created
-- `docs-generation/AzureOpenAIClient/AzureOpenAIClient.cs`
-- `docs-generation/AzureOpenAIClient/AzureOpenAIOptions.cs`
-- `docs-generation/AzureOpenAIClient/AzureOpenAIClient.csproj`
-- `docs-generation/AzureOpenAIClient/README.md`
-- `docs-generation/AzureOpenAIClient/.env.example`
-- `docs-generation/AzureOpenAIClient.Tests/IntegrationTests.cs`
-- `docs-generation/AzureOpenAIClient.Tests/AzureOpenAIClient.Tests.csproj`
+- `mcp-tools/AzureOpenAIClient/AzureOpenAIClient.cs`
+- `mcp-tools/AzureOpenAIClient/AzureOpenAIOptions.cs`
+- `mcp-tools/AzureOpenAIClient/AzureOpenAIClient.csproj`
+- `mcp-tools/AzureOpenAIClient/README.md`
+- `mcp-tools/AzureOpenAIClient/.env.example`
+- `mcp-tools/AzureOpenAIClient.Tests/IntegrationTests.cs`
+- `mcp-tools/AzureOpenAIClient.Tests/AzureOpenAIClient.Tests.csproj`
 
 ### Modified
-- `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj` (updated ProjectReference)
-- `docs-generation/docs-generation.sln` (added new projects, removed old ones)
+- `mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj` (updated ProjectReference)
+- `mcp-tools/mcp-doc-generation.sln` (added new projects, removed old ones)
 
 ## Package Dependencies
 

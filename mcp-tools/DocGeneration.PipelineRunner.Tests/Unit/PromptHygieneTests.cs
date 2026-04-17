@@ -22,7 +22,7 @@ public class PromptHygieneTests
     // ── P1: No legacy duplicate prompts ─────────────────────────────
 
     /// <summary>
-    /// The top-level docs-generation/prompts/ directory must NOT contain prompt files
+    /// The top-level mcp-tools/prompts/ directory must NOT contain prompt files
     /// that duplicate step-specific prompts. These were cleaned up and must not be
     /// re-introduced. The only allowed subdirectory is instruction-generation/.
     /// </summary>

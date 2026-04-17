@@ -206,7 +206,7 @@ public class HorizontalArticleOutputValidatorTests : IDisposable
         {
             Request = new PipelineRequest(ns, [6], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
             RepoRoot = outputPath,
-            DocsGenerationRoot = outputPath,
+            McpToolsRoot = outputPath,
             OutputPath = outputPath,
             ProcessRunner = new RecordingProcessRunner(),
             Workspaces = new WorkspaceManager(),

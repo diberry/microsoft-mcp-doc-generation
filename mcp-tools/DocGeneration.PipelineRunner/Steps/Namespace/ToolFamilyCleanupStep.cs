@@ -73,7 +73,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 warnings.Add($"CLI version file not found at '{cliVersionPath}'. Tool-family cleanup will use 'unknown'.");
             }
 
-            var brandMappingSource = Path.Combine(context.DocsGenerationRoot, "data", "brand-to-server-mapping.json");
+            var brandMappingSource = Path.Combine(context.McpToolsRoot, "data", "brand-to-server-mapping.json");
             if (File.Exists(brandMappingSource))
             {
                 File.Copy(brandMappingSource, Path.Combine(tempDocsDirectory, "brand-to-server-mapping.json"), overwrite: true);

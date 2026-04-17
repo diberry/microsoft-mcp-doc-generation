@@ -157,7 +157,7 @@ The pipeline migrated from PowerShell scripts to a typed C# orchestrator. This p
 - **Post-validation framework** (`IPostValidator`) attached to specific steps
 - **Isolated workspaces** via `WorkspaceManager` for parallel execution
 
-Legacy PowerShell scripts remain in `docs-generation/scripts/` as fallback.
+Legacy PowerShell scripts remain in `mcp-tools/scripts/` as fallback.
 
 ### Isolated Workspaces (Step 4)
 
@@ -236,7 +236,7 @@ Each namespace writes to its own `generated-{namespace}/` directory with no shar
 
 ## AI Configuration
 
-Steps 2, 3, 4, and 6 require Azure OpenAI. Configure in `docs-generation/.env`:
+Steps 2, 3, 4, and 6 require Azure OpenAI. Configure in `mcp-tools/.env`:
 
 | Variable | Purpose |
 |----------|---------|
@@ -253,8 +253,8 @@ Step 0 validates these variables before any AI steps run (unless `--skip-env-val
 microsoft-mcp-doc-generation/
 ├── start.sh                          # Entry point (bash wrapper)
 ├── merge-namespaces.sh               # Post-assembly merge (AD-011)
-├── docs-generation.sln               # .NET solution
-├── docs-generation/
+├── mcp-doc-generation.sln               # .NET solution
+├── mcp-tools/
 │   ├── DocGeneration.PipelineRunner/  # Typed orchestrator
 │   │   ├── Program.cs                # CLI entry (System.CommandLine)
 │   │   ├── PipelineRunner.cs         # Core runner loop

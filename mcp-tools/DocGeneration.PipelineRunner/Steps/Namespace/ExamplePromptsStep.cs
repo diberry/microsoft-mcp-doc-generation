@@ -61,7 +61,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             generatorProject,
             generatorArguments,
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
         processResults.Add(generatorResult);
         if (!generatorResult.Succeeded)
@@ -213,7 +213,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
                     generatorProject,
                     BuildRetryGeneratorArguments(generatorArguments, command, preservedArtifacts.ValidationPath),
                     context.Request.SkipBuild,
-                    context.DocsGenerationRoot,
+                    context.McpToolsRoot,
                     cancellationToken);
                 processResults.Add(retryGeneratorResult);
                 if (!retryGeneratorResult.Succeeded)
@@ -314,7 +314,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             validatorProject,
             BuildValidatorArguments(outputPath, toolCommand),
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
 
         var invalidCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

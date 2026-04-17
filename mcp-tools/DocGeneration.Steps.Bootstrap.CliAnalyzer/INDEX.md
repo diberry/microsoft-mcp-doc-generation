@@ -49,14 +49,14 @@ DocGeneration.Steps.Bootstrap.CliAnalyzer/
 
 ### 1. Build the Project
 ```bash
-cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 dotnet build
 ```
 
 ### 2. Run Full Analysis
 ```bash
 cd ../..  # Back to repo root
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 ### 3. View the Results
@@ -67,27 +67,27 @@ dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
 
 ### Display Overall Summary
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 ### Analyze Specific Namespace (e.g., SQL tools)
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql
 ```
 
 ### Get Details on a Specific Tool
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"
 ```
 
 ### Generate HTML Report Only
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 ```
 
 ### Use Custom Input/Output Paths
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
   --file custom-cli.json \
   --output reports/analysis.html
 ```
@@ -215,15 +215,15 @@ Edit `Analyzers/DocGeneration.Steps.Bootstrap.CliAnalyzer.cs`:
 
 ### Unit Tests (Future)
 ```bash
-dotnet test docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer.Tests
+dotnet test mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer.Tests
 ```
 
 ### Manual Testing
 ```bash
 # Test each command
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace acr
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace foundry --tool "chat-completions-create"
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace acr
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace foundry --tool "chat-completions-create"
 ```
 
 ## Troubleshooting
@@ -268,7 +268,7 @@ All via Central Package Management in `Directory.Packages.props`
 
 ### Building
 ```bash
-cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 dotnet build
 ```
 
@@ -299,16 +299,16 @@ Part of the Azure MCP Documentation Generator project.
 ### Most Important Commands
 ```bash
 # Full analysis
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 
 # Namespace details
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace <name>
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace <name>
 
 # Tool details
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace <ns> --tool <name>
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace <ns> --tool <name>
 
 # HTML only
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 ```
 
 ### Output Files

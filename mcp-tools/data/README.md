@@ -287,4 +287,4 @@ dotnet build DocGeneration.Steps.ToolFamilyCleanup/DocGeneration.Steps.ToolFamil
 
 **Date**: February 14, 2026
 
-All JSON configuration files were moved from `docs-generation/` root to `docs-generation/data/` to improve organization and clarity. All .NET projects and PowerShell scripts have been updated to reference the new location.
+All JSON configuration files were moved from `mcp-tools/` root to `mcp-tools/data/` to improve organization and clarity. All .NET projects and PowerShell scripts have been updated to reference the new location.

@@ -50,7 +50,7 @@ var transformedOptions = allOptions
 
 ## Configuration Files
 
-All in `docs-generation/data/`:
+All in `mcp-tools/data/`:
 
 | File | Purpose |
 |---|---|

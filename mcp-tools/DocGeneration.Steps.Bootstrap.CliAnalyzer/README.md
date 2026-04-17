@@ -21,7 +21,7 @@ A .NET 9.0 console application that provides comprehensive visual analysis of th
 
 1. Navigate to the DocGeneration.Steps.Bootstrap.CliAnalyzer directory:
    ```bash
-   cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+   cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
    ```
 
 2. Build the project:

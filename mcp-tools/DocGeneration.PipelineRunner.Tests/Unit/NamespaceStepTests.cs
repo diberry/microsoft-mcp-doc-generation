@@ -599,16 +599,16 @@ public class NamespaceStepTests
 
     private static PipelineContext CreateContext(string testRoot, IProcessRunner processRunner, bool skipValidation, IReadOnlyList<string> toolCommands)
     {
-        var docsGenerationRoot = Path.Combine(testRoot, "mcp-tools");
+        var McpToolsRoot = Path.Combine(testRoot, "mcp-tools");
         var outputPath = Path.Combine(testRoot, "generated-compute");
-        Directory.CreateDirectory(docsGenerationRoot);
+        Directory.CreateDirectory(McpToolsRoot);
         Directory.CreateDirectory(outputPath);
 
         return new PipelineContext
         {
             Request = new PipelineRequest("compute", [1], outputPath, SkipBuild: true, SkipValidation: skipValidation, DryRun: false),
             RepoRoot = testRoot,
-            DocsGenerationRoot = docsGenerationRoot,
+            McpToolsRoot = McpToolsRoot,
             OutputPath = outputPath,
             ProcessRunner = processRunner,
             Workspaces = new WorkspaceManager(),

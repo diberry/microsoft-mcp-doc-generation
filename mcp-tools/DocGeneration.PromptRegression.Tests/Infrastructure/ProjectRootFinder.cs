@@ -13,12 +13,6 @@ public static class ProjectRootFinder
         TestInfrastructure.ProjectRootFinder.FindMcpToolsRoot();
 
     /// <summary>
-    /// Backward-compatible alias for <see cref="FindMcpToolsRoot"/>.
-    /// </summary>
-    [System.Obsolete("Use FindMcpToolsRoot() instead. Will be removed in Phase 5.")]
-    public static string FindDocsGenerationRoot() => FindMcpToolsRoot();
-
-    /// <summary>
     /// Finds the PromptRegression.Tests project root.
     /// </summary>
     public static string FindTestProjectRoot()

@@ -14,7 +14,7 @@ The documentation generation system consists of:
 ## Architecture
 
 ```
-docs-generation/
+mcp-tools/
 ├── scripts/                           # All orchestration and generation scripts
 │   ├── Generate.ps1                   # Main orchestration script
 │   ├── Generate-ToolFamily.ps1        # Tool family documentation generator
@@ -155,12 +155,12 @@ pwsh ./scripts/GenerateDocGeneration.Steps.ToolFamilyCleanup-multifile.ps1
 
 ### Customizing Prompts for Azure MCP Style
 To add Azure MCP-specific style requirements, edit these files:
-- **System Prompt**: `docs-generation/prompts/tool-family-cleanup-system-prompt.txt`
+- **System Prompt**: `mcp-tools/prompts/tool-family-cleanup-system-prompt.txt`
   - Add Azure MCP conventions under section 4 "Azure MCP-Specific Standards"
-- **User Prompt**: `docs-generation/prompts/tool-family-cleanup-user-prompt.txt`
+- **User Prompt**: `mcp-tools/prompts/tool-family-cleanup-user-prompt.txt`
   - Modify the task instructions to emphasize specific requirements
 
-See `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/README.md` for detailed documentation.
+See `mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/README.md` for detailed documentation.
 
 ```
 
@@ -646,7 +646,7 @@ The project includes debugging support for VS Code to help you debug the documen
        "type": "coreclr",
        "request": "launch",
        "preLaunchTask": "build",
-       "program": "${workspaceFolder}/docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/bin/Debug/net9.0/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.dll",
+       "program": "${workspaceFolder}/mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/bin/Debug/net9.0/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.dll",
        "args": [
            "generate-docs",
            "../generated/cli/cli-output.json",
@@ -655,7 +655,7 @@ The project includes debugging support for VS Code to help you debug the documen
            "--common",
            "--commands"
        ],
-       "cwd": "${workspaceFolder}/docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations",
+       "cwd": "${workspaceFolder}/mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations",
        "console": "integratedTerminal",
        "stopAtEntry": false,
        "env": {

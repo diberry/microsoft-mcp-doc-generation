@@ -10,11 +10,11 @@ namespace DocGeneration.TestInfrastructure;
 public static class ProjectRootFinder
 {
     // .git covers both normal repos (directory) and worktrees (file).
-    // docs-generation.sln kept as secondary marker for backward compatibility.
-    private static readonly string[] SentinelMarkers = new[] { ".git", "docs-generation.sln" };
+    // mcp-doc-generation.sln kept as secondary marker for backward compatibility.
+    private static readonly string[] SentinelMarkers = new[] { ".git", "mcp-doc-generation.sln" };
 
     /// <summary>
-    /// Finds the repository root by looking for .git or docs-generation.sln.
+    /// Finds the repository root by looking for .git or mcp-doc-generation.sln.
     /// </summary>
     public static string FindSolutionRoot()
     {
@@ -38,9 +38,4 @@ public static class ProjectRootFinder
         return Path.Combine(FindSolutionRoot(), "mcp-tools");
     }
 
-    /// <summary>
-    /// Backward-compatible alias for <see cref="FindMcpToolsRoot"/>.
-    /// </summary>
-    [System.Obsolete("Use FindMcpToolsRoot() instead. Will be removed in Phase 5.")]
-    public static string FindDocsGenerationRoot() => FindMcpToolsRoot();
 }

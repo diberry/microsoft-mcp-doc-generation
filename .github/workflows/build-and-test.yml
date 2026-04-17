@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'mcp-tools/**'
-      - 'docs-generation.sln'
+      - 'mcp-doc-generation.sln'
       - 'skills-generation/**'
       - 'start-azure-skills.sh'
       - 'test-npm-azure-mcp/**'
@@ -14,7 +14,7 @@ on:
     branches: [main]
     paths:
       - 'mcp-tools/**'
-      - 'docs-generation.sln'
+      - 'mcp-doc-generation.sln'
       - 'skills-generation/**'
       - 'start-azure-skills.sh'
       - 'test-npm-azure-mcp/**'
@@ -34,13 +34,13 @@ jobs:
           dotnet-version: '9.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore docs-generation.sln
+        run: dotnet restore mcp-doc-generation.sln
 
       - name: Build solution
-        run: dotnet build docs-generation.sln --no-restore --configuration Release
+        run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test docs-generation.sln --no-build --configuration Release --verbosity normal
+        run: dotnet test mcp-doc-generation.sln --no-build --configuration Release --verbosity normal
 
   vale-lint:
     runs-on: ubuntu-latest

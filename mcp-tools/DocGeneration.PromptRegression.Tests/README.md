@@ -29,7 +29,7 @@ The runner tests 5 namespaces (small → large): `applens`, `cloudarchitect`, `d
 ### Run regression tests directly
 
 ```bash
-dotnet test docs-generation/DocGeneration.PromptRegression.Tests/
+dotnet test mcp-tools/DocGeneration.PromptRegression.Tests/
 ```
 
 ### What the tests check
@@ -69,7 +69,7 @@ Edit the prompt file in the relevant step's `prompts/` directory.
 
 # Copy new output as candidate
 # Then run regression tests to compare
-dotnet test docs-generation/DocGeneration.PromptRegression.Tests/ --filter "Category=Regression"
+dotnet test mcp-tools/DocGeneration.PromptRegression.Tests/ --filter "Category=Regression"
 ```
 
 ### 4. Review the diff report
@@ -139,9 +139,9 @@ The **Prompt Regression Tests** workflow (`.github/workflows/prompt-regression-c
 
 The CI job runs when a PR changes any of:
 
-- `docs-generation/**/prompts/**` — AI system/user prompt files
+- `mcp-tools/**/prompts/**` — AI system/user prompt files
 - `prompt-regression.sh` — Regression runner script
-- `docs-generation/DocGeneration.PromptRegression.Tests/**` — Test code or baselines
+- `mcp-tools/DocGeneration.PromptRegression.Tests/**` — Test code or baselines
 - `.github/workflows/prompt-regression-ci.yml` — The workflow itself
 
 PRs that don't touch these paths skip the job entirely.
@@ -197,7 +197,7 @@ Update baselines after **intentional** prompt improvements that result in better
 ./prompt-regression.sh seed
 
 # 6. Commit updated baselines alongside your prompt changes
-git add docs-generation/DocGeneration.PromptRegression.Tests/Baselines/
+git add mcp-tools/DocGeneration.PromptRegression.Tests/Baselines/
 git commit -m "chore: update regression baselines for prompt improvements"
 ```
 

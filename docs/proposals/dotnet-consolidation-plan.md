@@ -204,7 +204,7 @@ Cross-cutting reference:
 
 **Why:** This is dead code. CliAnalyzer is a markdown report generator for CLI structure analysis. It was likely a development/debugging tool that was never integrated into the pipeline. No other project references it. No script invokes it. Keeping it creates confusion and carries a Newtonsoft.Json dependency that nothing else uses.
 
-**Migration:** `git rm -r docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/` and remove from solution file. If the team wants to preserve it, move to a `tools/deprecated/` directory outside the solution.
+**Migration:** `git rm -r mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer/` and remove from solution file. If the team wants to preserve it, move to a `tools/deprecated/` directory outside the solution.
 
 **Quinn (CI):** Verify no CI workflow builds/tests this project specifically.
 **Parker (QA):** No test impact — project has no test project.
@@ -423,7 +423,7 @@ Phase 4 (Future evaluation):
 - [ ] Zero NUnit test projects remain (Action 4)
 - [ ] No StripFrontmatter implementations outside FrontmatterUtility (Action 5)
 - [ ] All 1,028+ existing tests continue to pass
-- [ ] `dotnet build docs-generation.sln` succeeds
+- [ ] `dotnet build mcp-doc-generation.sln` succeeds
 - [ ] Pipeline runs successfully for at least 3 namespaces end-to-end
 - [ ] No scripts reference deleted projects
 

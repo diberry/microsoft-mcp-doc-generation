@@ -6,13 +6,13 @@ Unit tests for the DocGeneration.Steps.AnnotationsParametersRaw.Annotations docu
 
 ```bash
 # Run just this project
-dotnet test docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.csproj
+dotnet test mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.csproj
 
 # Run all solution tests
-dotnet test docs-generation.sln
+dotnet test mcp-doc-generation.sln
 
 # Release mode (matches CI — treats warnings as errors)
-dotnet test docs-generation.sln --configuration Release
+dotnet test mcp-doc-generation.sln --configuration Release
 ```
 
 ## Test Data Files
@@ -25,7 +25,7 @@ Tests use two kinds of data files, served from `TestData/` in the build output:
 |---|---|
 | `cli-output-synthetic.json` | Hand-crafted fixture with 5 tools across 2 service areas. Contains intentional edge cases: tools with empty commands, missing areas, mixed required/optional parameters, and varied metadata annotations. Used by all unit tests via `TestHelpers.LoadCliOutput()`. |
 
-### Sourced from `docs-generation/data/` (not committed to TestData/)
+### Sourced from `mcp-tools/data/` (not committed to TestData/)
 
 These files are the **real production config** — automatically copied into `TestData/` at build time via `<Content Include>` in the `.csproj`. Tests always run against the latest versions.
 
@@ -44,7 +44,7 @@ These files are the **real production config** — automatically copied into `Te
 To generate the live file:
 
 ```bash
-bash docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/pretest.sh
+bash mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/pretest.sh
 ```
 
 The script tries `azmcp` directly, then falls back to `npm run --silent get:tools-json` via `test-npm-azure-mcp/`.

@@ -36,7 +36,7 @@ The Tool Family Cleanup is an **independent post-processing step** that applies 
 
 ### Azure OpenAI Setup
 
-Create a `.env` file in `docs-generation/` directory:
+Create a `.env` file in `mcp-tools/` directory:
 
 ```bash
 FOUNDRY_API_KEY=your-api-key-here
@@ -77,7 +77,7 @@ pwsh ./Generate-DocGeneration.Steps.ToolFamilyCleanup.ps1
 #### Option B: Direct .NET Execution
 
 ```bash
-cd docs-generation/DocGeneration.Steps.ToolFamilyCleanup
+cd mcp-tools/DocGeneration.Steps.ToolFamilyCleanup
 dotnet run --configuration Release
 ```
 
@@ -179,7 +179,7 @@ pwsh ./Generate-DocGeneration.Steps.ToolFamilyCleanup.ps1 -InputDir "/tmp/select
 **When**: Testing new prompt instructions
 
 **Steps**:
-1. Edit prompt files in `docs-generation/prompts/tool-family-cleanup-*.txt`
+1. Edit prompt files in `mcp-tools/prompts/tool-family-cleanup-*.txt`
 2. Run cleanup on a single test file
 3. Review output and prompts
 4. Adjust prompts
@@ -243,7 +243,7 @@ pwsh ./Generate-MultiPageDocs.ps1
 
 **Solution**:
 ```bash
-# Create .env file in docs-generation/
+# Create .env file in mcp-tools/
 cd docs-generation
 cat > .env << EOF
 FOUNDRY_API_KEY=your-key
@@ -340,10 +340,10 @@ The tool processes files sequentially. For faster processing:
 
 ## Troubleshooting Checklist
 
-- [ ] .env file exists in docs-generation/
+- [ ] .env file exists in mcp-tools/
 - [ ] .env file has all required variables
 - [ ] Input directory exists and has .md files
-- [ ] Prompt files exist in docs-generation/prompts/
+- [ ] Prompt files exist in mcp-tools/prompts/
 - [ ] .NET 9.0 SDK is installed
 - [ ] Azure OpenAI endpoint is accessible
 - [ ] Azure OpenAI deployment is active
@@ -386,8 +386,8 @@ cat /tmp/*.diff
 
 ## Getting Help
 
-- **README**: `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/README.md` - Full documentation
-- **Prompt Guide**: `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/PROMPT-CUSTOMIZATION.md` - Customize prompts
+- **README**: `mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/README.md` - Full documentation
+- **Prompt Guide**: `mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/PROMPT-CUSTOMIZATION.md` - Customize prompts
 - **This Guide**: Complete workflow examples
 
 ## Next Steps

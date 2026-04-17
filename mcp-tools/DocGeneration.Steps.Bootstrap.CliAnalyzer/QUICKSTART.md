@@ -2,14 +2,14 @@
 
 ## Installation
 
-The project is located at: `docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/`
+The project is located at: `mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer/`
 
 No external dependencies needed beyond .NET 9.0 SDK.
 
 ## Building
 
 ```bash
-cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 dotnet build
 ```
 
@@ -21,7 +21,7 @@ All commands below assume you're in the repository root directory.
 
 **Command:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 **Output:**
@@ -50,7 +50,7 @@ foundry             19      207     46        161       10.9
 
 **Command:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace foundry
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace foundry
 ```
 
 **Output:**
@@ -80,7 +80,7 @@ deploy                 foundry models deploy        5    14   19
 
 **Command:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"
 ```
 
 **Output:**
@@ -123,7 +123,7 @@ OPTIONAL PARAMETERS:
 
 **Command:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 **Shows:**
@@ -145,7 +145,7 @@ foundry      deploy   foundry models deploy         5    14    19
 
 **Command:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 ```
 
 **Output:**
@@ -159,7 +159,7 @@ dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -
 
 **Command:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
   --file path/to/custom-cli.json \
   --output reports/analysis.md
 ```
@@ -173,7 +173,7 @@ dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -
 Find all SQL tools and their required parameters:
 
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql
 ```
 
 Look for the "Required" column to see which tools require parameters.
@@ -185,7 +185,7 @@ Run the full analysis and check the "TOP TOOLS" section to find commands with ma
 ### Scenario 3: Compare Namespace Complexity
 
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 The namespace breakdown table shows:
@@ -196,7 +196,7 @@ The namespace breakdown table shows:
 ### Scenario 4: Generate Documentation Insights
 
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 ```
 
 Share the Markdown report with documentation teams to understand:
@@ -241,14 +241,14 @@ The generated Markdown report includes:
 
 Get just the namespace names:
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer | grep "^[a-z]" | head -20
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer | grep "^[a-z]" | head -20
 ```
 
 ### 2. Output to File
 
 Save console output:
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer > analysis.txt 2>&1
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer > analysis.txt 2>&1
 ```
 
 ### 3. Find Tools with Most Required Parameters
@@ -286,20 +286,20 @@ Add detailed path output by checking the "Loading CLI JSON from:" line to confir
 ### Export for Analysis
 ```bash
 # Generate both console output and Markdown for review
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 ### Automated Documentation
 ```bash
 # Use Markdown report in automated pipelines
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 # Result: cli-analysis-report.md
 ```
 
 ### Parameter Discovery
 ```bash
 # Find all parameters for a service
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace keyvault
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace keyvault
 ```
 
 ---
@@ -312,4 +312,4 @@ dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -
 4. **Identify Patterns**: Look for tools with similar parameter patterns
 5. **Documentation Planning**: Use complexity metrics to prioritize documentation efforts
 
-For detailed technical documentation, see: `docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/README.md`
+For detailed technical documentation, see: `mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer/README.md`

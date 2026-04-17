@@ -78,7 +78,7 @@ generated/
 
 **Purpose**: Creates raw tool documentation files with placeholders from CLI output.
 
-**Package**: `docs-generation/ToolGeneration_Raw/`
+**Package**: `mcp-tools/ToolGeneration_Raw/`
 
 **Input**: 
 - `./generated/cli/cli-output.json` (MCP CLI output)
@@ -95,13 +95,13 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [ToolGeneration_Raw/README.md](../docs-generation/ToolGeneration_Raw/README.md)
+**README**: [ToolGeneration_Raw/README.md](../mcp-tools/ToolGeneration_Raw/README.md)
 
 ### Stage 2: ToolGeneration_Composed
 
 **Purpose**: Composes complete tool documentation by replacing placeholders with actual content.
 
-**Package**: `docs-generation/ToolGeneration_Composed/`
+**Package**: `mcp-tools/ToolGeneration_Composed/`
 
 **Input**:
 - `./generated/tools-raw/*.md` (Raw files from Stage 1)
@@ -121,13 +121,13 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [ToolGeneration_Composed/README.md](../docs-generation/ToolGeneration_Composed/README.md)
+**README**: [ToolGeneration_Composed/README.md](../mcp-tools/ToolGeneration_Composed/README.md)
 
 ### Stage 3: ToolGeneration_Improved
 
 **Purpose**: Applies AI-based improvements using Azure OpenAI to enforce Microsoft style guidelines.
 
-**Package**: `docs-generation/ToolGeneration_Improved/`
+**Package**: `mcp-tools/ToolGeneration_Improved/`
 
 **Input**:
 - `./generated/tools-composed/*.md` (Composed files)
@@ -147,7 +147,7 @@ generated/
 
 **Build Status**: ✅ Successful
 
-**README**: [ToolGeneration_Improved/README.md](../docs-generation/ToolGeneration_Improved/README.md)
+**README**: [ToolGeneration_Improved/README.md](../mcp-tools/ToolGeneration_Improved/README.md)
 
 ---
 
@@ -193,7 +193,7 @@ All 5 phases of the implementation are complete:
 
 #### Phase 4: Orchestration Script ✅
 
-**Script**: `docs-generation/Generate-ToolGenerationAndAIImprovements.ps1`
+**Script**: `mcp-tools/Generate-ToolGenerationAndAIImprovements.ps1`
 
 PowerShell orchestration script that runs all 3 generators in sequence.
 
@@ -538,7 +538,7 @@ Add environment variables and parameters to the workflow:
     FOUNDRY_ENDPOINT: ${{ secrets.FOUNDRY_ENDPOINT }}
     FOUNDRY_MODEL_NAME: ${{ secrets.FOUNDRY_MODEL_NAME }}
   run: |
-    pwsh ./docs-generation/Generate-MultiPageDocs.ps1 \
+    pwsh ./mcp-tools/Generate-MultiPageDocs.ps1 \
       -UseToolGenerationAndAI $true \
       -ApplyAIImprovements $true
 ```

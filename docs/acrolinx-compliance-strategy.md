@@ -161,7 +161,7 @@ The JSON schema issue alone likely accounts for 15-20 points of score loss.
 
 ### Priority 1: Prompt Changes (Step 4 System Prompt)
 
-These changes go into `docs-generation/prompts/tool-family-cleanup-system-prompt.txt`. Add a new section:
+These changes go into `mcp-tools/prompts/tool-family-cleanup-system-prompt.txt`. Add a new section:
 
 ```
 ## Acrolinx Compliance (Score Target: 85+)

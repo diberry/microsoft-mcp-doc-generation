@@ -106,13 +106,13 @@ public class BootstrapStepTests
         ICliMetadataLoader? cliMetadataLoader = null)
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-bootstrap-tests-{Guid.NewGuid():N}");
-        var docsGenerationRoot = Path.Combine(repoRoot, "mcp-tools");
-        Directory.CreateDirectory(Path.Combine(docsGenerationRoot, "data"));
-        Directory.CreateDirectory(Path.Combine(docsGenerationRoot, "azure-mcp"));
+        var McpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
+        Directory.CreateDirectory(Path.Combine(McpToolsRoot, "data"));
+        Directory.CreateDirectory(Path.Combine(McpToolsRoot, "azure-mcp"));
         Directory.CreateDirectory(Path.Combine(repoRoot, "test-npm-azure-mcp"));
-        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
-        File.WriteAllText(Path.Combine(docsGenerationRoot, "data", "brand-to-server-mapping.json"), "[]");
-        File.WriteAllText(Path.Combine(docsGenerationRoot, "azure-mcp", "azmcp-commands.md"), "# Commands");
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(McpToolsRoot, "data", "brand-to-server-mapping.json"), "[]");
+        File.WriteAllText(Path.Combine(McpToolsRoot, "azure-mcp", "azmcp-commands.md"), "# Commands");
 
         var processRunner = new ScriptedProcessRunner();
         var buildCoordinator = new RecordingBuildCoordinator();
@@ -133,7 +133,7 @@ public class BootstrapStepTests
                 DryRun: false,
                 SkipEnvValidation: skipEnvValidation),
             RepoRoot = repoRoot,
-            DocsGenerationRoot = docsGenerationRoot,
+            McpToolsRoot = McpToolsRoot,
             OutputPath = Path.Combine(repoRoot, "generated-compute"),
             ProcessRunner = processRunner,
             Workspaces = new WorkspaceManager(),
@@ -197,7 +197,7 @@ public class BootstrapStepTests
     {
         public int ProbeCalls { get; private set; }
 
-        public ValueTask<AiCapabilityResult> ProbeAsync(string docsGenerationRoot, CancellationToken cancellationToken)
+        public ValueTask<AiCapabilityResult> ProbeAsync(string McpToolsRoot, CancellationToken cancellationToken)
         {
             ProbeCalls++;
             return ValueTask.FromResult(new AiCapabilityResult(isConfigured, isConfigured ? Array.Empty<string>() : ["FOUNDRY_API_KEY"]));

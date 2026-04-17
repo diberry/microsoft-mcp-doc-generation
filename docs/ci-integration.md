@@ -9,13 +9,13 @@ How continuous integration works in the Azure MCP Documentation Generator, inclu
 ### Build
 
 ```bash
-dotnet build docs-generation.sln --configuration Release
+dotnet build mcp-doc-generation.sln --configuration Release
 ```
 
 ### Test (full suite)
 
 ```bash
-dotnet test docs-generation.sln
+dotnet test mcp-doc-generation.sln
 ```
 
 The full suite runs ~1,935 tests across 20 test projects. All projects use **xUnit** on **.NET 9**.
@@ -23,7 +23,7 @@ The full suite runs ~1,935 tests across 20 test projects. All projects use **xUn
 ### Test a single project
 
 ```bash
-dotnet test docs-generation/DocGeneration.Tools.Fingerprint.Tests/
+dotnet test mcp-tools/DocGeneration.Tools.Fingerprint.Tests/
 ```
 
 ### Run the documentation pipeline
@@ -45,7 +45,7 @@ dotnet test docs-generation/DocGeneration.Tools.Fingerprint.Tests/
 ./start.sh advisor 4 --skip-deps
 ```
 
-> **Note**: Steps 2, 3, 4, and 6 require Azure OpenAI credentials in `docs-generation/.env`. Step 1 is fast and requires no AI.
+> **Note**: Steps 2, 3, 4, and 6 require Azure OpenAI credentials in `mcp-tools/.env`. Step 1 is fast and requires no AI.
 
 ---
 
@@ -57,7 +57,7 @@ The project uses GitHub Actions with workflows in `.github/workflows/`. There ar
 
 | Workflow | File | Trigger | What it does |
 |----------|------|---------|--------------|
-| **Build and Test** | `build-and-test.yml` | PR to `main`, push to `main` (when `docs-generation/**` changes) | Restores, builds, and runs all tests in `docs-generation.sln` using .NET 9 on `ubuntu-latest` |
+| **Build and Test** | `build-and-test.yml` | PR to `main`, push to `main` (when `mcp-tools/**` changes) | Restores, builds, and runs all tests in `mcp-doc-generation.sln` using .NET 9 on `ubuntu-latest` |
 | **Squad CI** | `squad-ci.yml` | PR to `dev`/`preview`/`main`/`insider`, push to `dev`/`insider` | Placeholder for additional build/test commands (currently echoes a TODO) |
 | **Generate MCP Documentation** | `generate-docs.yml` | Manual (`workflow_dispatch`) only | Three-job pipeline: (1) generate CLI output via Docker, (2) generate documentation, (3) optionally generate AI example prompts. Uploads artifacts with 10-day retention |
 | **Test @azure/mcp Update** | `test-azure-mcp-update.yml` | PR changing `test-npm-azure-mcp/package.json` or `package-lock.json` | Installs `@azure/mcp` npm package and runs `azmcp --version` and `azmcp --help` to validate the CLI still works |
@@ -89,27 +89,27 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs-generation/**'
-      - 'docs-generation.sln'
+      - 'mcp-tools/**'
+      - 'mcp-doc-generation.sln'
       - '.github/workflows/build-and-test.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'docs-generation/**'
-      - 'docs-generation.sln'
+      - 'mcp-tools/**'
+      - 'mcp-doc-generation.sln'
       - '.github/workflows/build-and-test.yml'
 ```
 
 The job performs three steps:
-1. `dotnet restore docs-generation.sln`
-2. `dotnet build docs-generation.sln --no-restore --configuration Release`
-3. `dotnet test docs-generation.sln --no-build --configuration Release --verbosity normal`
+1. `dotnet restore mcp-doc-generation.sln`
+2. `dotnet build mcp-doc-generation.sln --no-restore --configuration Release`
+3. `dotnet test mcp-doc-generation.sln --no-build --configuration Release --verbosity normal`
 
 ---
 
 ## 3. Test Projects Inventory
 
-All 20 test projects in `docs-generation.sln`, using xUnit on .NET 9:
+All 20 test projects in `mcp-doc-generation.sln`, using xUnit on .NET 9:
 
 | Test Project | What it tests | Approx. Tests |
 |-------------|---------------|:-------------:|
@@ -134,7 +134,7 @@ All 20 test projects in `docs-generation.sln`, using xUnit on .NET 9:
 | `DocGeneration.Core.NaturalLanguage.Tests` | Natural language parameter mappings | varies |
 | `DocGeneration.PromptRegression.Tests` | Prompt regression detection | varies |
 
-> **"varies"** means the count changes as features are added. Run `dotnet test docs-generation.sln --verbosity normal` to get current exact counts.
+> **"varies"** means the count changes as features are added. Run `dotnet test mcp-doc-generation.sln --verbosity normal` to get current exact counts.
 
 ---
 
@@ -162,18 +162,18 @@ dotnet add reference ../DocGeneration.Steps.MyFeature/DocGeneration.Steps.MyFeat
 
 ```bash
 cd ../..   # Back to repo root
-dotnet sln docs-generation.sln add docs-generation/DocGeneration.Steps.MyFeature.Tests/DocGeneration.Steps.MyFeature.Tests.csproj
+dotnet sln mcp-doc-generation.sln add mcp-tools/DocGeneration.Steps.MyFeature.Tests/DocGeneration.Steps.MyFeature.Tests.csproj
 ```
 
 ### Step 4: Verify locally
 
 ```bash
-dotnet test docs-generation.sln
+dotnet test mcp-doc-generation.sln
 ```
 
 ### That's it — CI picks it up automatically
 
-The `build-and-test.yml` workflow runs `dotnet test docs-generation.sln`, which discovers all test projects in the solution. No workflow file changes are needed.
+The `build-and-test.yml` workflow runs `dotnet test mcp-doc-generation.sln`, which discovers all test projects in the solution. No workflow file changes are needed.
 
 ### Naming conventions
 
@@ -199,9 +199,9 @@ The CI workflow runs on `ubuntu-latest` with .NET 9. To reproduce locally:
 
 ```bash
 # Exact commands the CI runs
-dotnet restore docs-generation.sln
-dotnet build docs-generation.sln --no-restore --configuration Release
-dotnet test docs-generation.sln --no-build --configuration Release --verbosity normal
+dotnet restore mcp-doc-generation.sln
+dotnet build mcp-doc-generation.sln --no-restore --configuration Release
+dotnet test mcp-doc-generation.sln --no-build --configuration Release --verbosity normal
 ```
 
 On Windows, this is the same — the test suite is cross-platform.
@@ -218,16 +218,16 @@ On Windows, this is the same — the test suite is cross-platform.
 
 **Symptom**: `error CS0246: The type or namespace name '...' could not be found`
 
-**Fix**: Run `dotnet restore docs-generation.sln` before building. The CI does `--no-restore` on build because it runs restore as a separate step.
+**Fix**: Run `dotnet restore mcp-doc-generation.sln` before building. The CI does `--no-restore` on build because it runs restore as a separate step.
 
 #### 3. Test project not discovered
 
 **Symptom**: New tests don't appear in CI output.
 
-**Fix**: Ensure the test project is added to `docs-generation.sln` with `dotnet sln add`. Verify with:
+**Fix**: Ensure the test project is added to `mcp-doc-generation.sln` with `dotnet sln add`. Verify with:
 
 ```bash
-dotnet sln docs-generation.sln list | Select-String "Tests"
+dotnet sln mcp-doc-generation.sln list | Select-String "Tests"
 ```
 
 #### 4. Build configuration mismatch
@@ -238,9 +238,9 @@ dotnet sln docs-generation.sln list | Select-String "Tests"
 
 #### 5. Path-filtered workflow not triggering
 
-**Symptom**: PR changes code in `docs-generation/` but CI doesn't run.
+**Symptom**: PR changes code in `mcp-tools/` but CI doesn't run.
 
-**Fix**: The `build-and-test.yml` workflow only triggers when files under `docs-generation/**`, `docs-generation.sln`, or the workflow file itself change. Documentation-only changes (e.g., `docs/*.md`) intentionally skip CI.
+**Fix**: The `build-and-test.yml` workflow only triggers when files under `mcp-tools/**`, `mcp-doc-generation.sln`, or the workflow file itself change. Documentation-only changes (e.g., `docs/*.md`) intentionally skip CI.
 
 ### Reading CI logs
 

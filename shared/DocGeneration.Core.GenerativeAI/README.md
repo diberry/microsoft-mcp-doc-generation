@@ -38,7 +38,7 @@ Console.WriteLine(response);
 Run the integration test (will skip if not configured):
 
 ```bash
-dotnet test docs-generation/AzureOpenAIClient.Tests
+dotnet test mcp-tools/AzureOpenAIClient.Tests
 ```
 
 To run with actual Azure OpenAI credentials, remove the `Skip` attribute from the test or set environment variables.

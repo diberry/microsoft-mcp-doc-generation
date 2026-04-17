@@ -14,10 +14,10 @@
 | Metric | Value |
 |--------|-------|
 | **Total tests** | ~1,100 |
-| **Active test projects** | 17 (in `docs-generation.sln`) |
+| **Active test projects** | 17 (in `mcp-doc-generation.sln`) |
 | **Deprecated test projects** | 17 (legacy naming, not in .sln) |
 | **Framework** | xUnit (.NET 9) |
-| **Quality gate** | `dotnet test docs-generation.sln` |
+| **Quality gate** | `dotnet test mcp-doc-generation.sln` |
 | **Last known green** | 1,061 tests passing (2026-03-24, PRs #200/#201) |
 
 ### 1.2 Active Test Projects
@@ -44,7 +44,7 @@
 
 ### 1.3 Deprecated Test Projects (NOT in .sln)
 
-These live under `docs-generation/` with old naming conventions and are no longer built or run:
+These live under `mcp-tools/` with old naming conventions and are no longer built or run:
 
 `AzmcpCommandParser.Tests`, `BrandMapperValidator.Tests`, `CSharpGenerator.Tests`, `E2eTestPromptParser.Tests`, `ExamplePromptGeneratorStandalone.Tests`, `ExamplePromptValidator.Tests`, `GenerativeAI.Tests`, `HorizontalArticleGenerator.Tests`, `PipelineRunner.Tests`, `RelatedSkillsGenerator.Tests`, `Shared.Tests`, `SkillList.Tests`, `SkillsRelevance.Tests`, `TemplateEngine.Tests`, `TextTransformation.Tests`, `ToolFamilyValidator.Tests`, `ToolGeneration_Improved.Tests`
 
@@ -90,7 +90,7 @@ This is exactly the gap that PRs #200/#201 exposed: method tests pass even when 
 ### 3.1 Method-Level Unit Tests
 
 **What:** Tests for individual helper methods with isolated inputs/outputs.  
-**Where:** All `*.Tests` projects under `docs-generation/`.  
+**Where:** All `*.Tests` projects under `mcp-tools/`.  
 **Current state:** Strong. ~1,100 tests covering core logic.
 
 **Key classes with test coverage:**
@@ -115,7 +115,7 @@ This is exactly the gap that PRs #200/#201 exposed: method tests pass even when 
 
 ### 3.2 Template Rendering Tests
 
-**What:** Tests that load actual `.hbs` files from `docs-generation/templates/` and render them with controlled data via `HandlebarsTemplateEngine.ProcessTemplateString()`.  
+**What:** Tests that load actual `.hbs` files from `mcp-tools/templates/` and render them with controlled data via `HandlebarsTemplateEngine.ProcessTemplateString()`.  
 **Where:** `DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/`  
 **Current state:** Nascent. Established in PRs #200/#201. Pattern exists but coverage is thin.
 
@@ -423,7 +423,7 @@ This prevents false failures on Windows (lesson from PR #201).
 ### 8.1 Quality Gate
 
 ```bash
-dotnet test docs-generation.sln
+dotnet test mcp-doc-generation.sln
 ```
 
 This is the **single command** that must pass before any PR merges (per AD-005). It runs all 17 active test projects.
@@ -432,14 +432,14 @@ This is the **single command** that must pass before any PR merges (per AD-005).
 
 ```bash
 # Full quality gate
-dotnet build docs-generation.sln --no-restore
-dotnet test docs-generation.sln --no-build
+dotnet build mcp-doc-generation.sln --no-restore
+dotnet test mcp-doc-generation.sln --no-build
 
 # Targeted test run (single project)
-dotnet test docs-generation/DocGeneration.Steps.ToolFamilyCleanup.Tests/
+dotnet test mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Tests/
 
 # With verbosity for debugging
-dotnet test docs-generation.sln --verbosity normal --logger "console;verbosity=detailed"
+dotnet test mcp-doc-generation.sln --verbosity normal --logger "console;verbosity=detailed"
 ```
 
 ### 8.3 Parallel Test Execution
@@ -451,9 +451,9 @@ xUnit runs tests in parallel by default within each assembly. Cross-assembly par
 ### 8.4 CI Integration
 
 **Expected CI pipeline:**
-1. `dotnet restore docs-generation.sln`
-2. `dotnet build docs-generation.sln --no-restore`
-3. `dotnet test docs-generation.sln --no-build --results-directory ./test-results --logger trx`
+1. `dotnet restore mcp-doc-generation.sln`
+2. `dotnet build mcp-doc-generation.sln --no-restore`
+3. `dotnet test mcp-doc-generation.sln --no-build --results-directory ./test-results --logger trx`
 4. (Optional) `node verify-quantity/index.js` — cross-namespace file existence check
 
 **PR merge blockers:**
@@ -594,16 +594,16 @@ Zero step contract tests exist. No test verifies that Step N's output is valid i
 
 ```bash
 # Full quality gate
-dotnet test docs-generation.sln
+dotnet test mcp-doc-generation.sln
 
 # Single project
-dotnet test docs-generation/DocGeneration.Steps.ToolFamilyCleanup.Tests/
+dotnet test mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Tests/
 
 # With filter
-dotnet test docs-generation.sln --filter "FullyQualifiedName~ParameterCoverage"
+dotnet test mcp-doc-generation.sln --filter "FullyQualifiedName~ParameterCoverage"
 
 # List all tests
-dotnet test docs-generation.sln --list-tests
+dotnet test mcp-doc-generation.sln --list-tests
 
 # Cross-namespace file check
 cd verify-quantity && node index.js

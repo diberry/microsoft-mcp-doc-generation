@@ -1,4 +1,4 @@
-# docs-generation/scripts
+# mcp-tools/scripts
 
 Scripts and entry points for the Azure MCP documentation generation pipeline.
 
@@ -17,7 +17,7 @@ The standard pipeline path is now:
 
 ```
 start.sh
-└── docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj
+└── mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj
     ├── BootstrapStep                                # Step 0 global bootstrap: env, build, CLI metadata, brand validation, parsers
     └── typed C# namespace steps (Steps 1-6)
         ├── AnnotationsParametersRawStep             # Step 1
@@ -28,8 +28,8 @@ start.sh
         └── HorizontalArticlesStep                   # Step 6
 ```
 
-`start.sh` is now a thin wrapper around `dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj`.
-`BootstrapStep` plus all six standard namespace steps are typed C# classes under `docs-generation/DocGeneration.PipelineRunner/Steps/`.
+`start.sh` is now a thin wrapper around `dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj`.
+`BootstrapStep` plus all six standard namespace steps are typed C# classes under `mcp-tools/DocGeneration.PipelineRunner/Steps/`.
 The numbered `*-One.ps1` scripts remain in the repo as reference, fallback, and ad-hoc/manual execution helpers, but they are no longer in the standard `start.sh` execution path.
 
 ### Typed standard steps
@@ -51,7 +51,7 @@ Step 5 remains warning-only by design: skills relevance is supplementary and mus
 Run the typed runner from the repo root:
 
 ```bash
-dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 1,2,3,4,5,6 --output ./generated-compute
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 1,2,3,4,5,6 --output ./generated-compute
 ```
 
 ### Supported options
@@ -70,13 +70,13 @@ dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.
 
 ```bash
 # Full typed plan for one namespace without running generators
-dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --dry-run
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --dry-run
 
 # Run only the core documentation pipeline
-dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 1,2,3,4
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 1,2,3,4
 
 # Run only supplementary outputs after core content already exists
-dotnet run --project docs-generation/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 5,6 --skip-build
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj -- --namespace compute --steps 5,6 --skip-build
 ```
 
 ## `start.sh` backward compatibility

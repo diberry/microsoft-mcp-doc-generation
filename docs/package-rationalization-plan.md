@@ -36,7 +36,7 @@ Key findings:
 
 ## .NET Project Inventory
 
-### Solution: `docs-generation.sln` (44 projects)
+### Solution: `mcp-doc-generation.sln` (44 projects)
 
 #### Core Libraries (5 projects)
 
@@ -388,7 +388,7 @@ Each independently implements JSON parsing and CLI argument handling. They don't
 
 ### R-2: Add `Directory.Build.props` for docs-generation (Priority: MEDIUM)
 
-**What**: Create `docs-generation/Directory.Build.props` mirroring skills-generation's pattern.
+**What**: Create `mcp-tools/Directory.Build.props` mirroring skills-generation's pattern.
 
 **Action**:
 ```xml

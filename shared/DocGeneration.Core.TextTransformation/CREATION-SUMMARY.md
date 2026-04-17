@@ -7,7 +7,7 @@ The DocGeneration.Core.TextTransformation library and test projects have been su
 ## Project Structure Created
 
 ```
-docs-generation/
+mcp-tools/
 ├── DocGeneration.Core.TextTransformation/                      # New library project
 │   ├── DocGeneration.Core.TextTransformation.csproj            # Project file (net9.0)
 │   ├── ConfigLoader.cs                      # Configuration loader with $ref resolution
@@ -53,7 +53,7 @@ docs-generation/
 
 ### Updated Files
 1. **Directory.Packages.props** - Enabled Central Package Management, added System.Text.Json 9.0.0
-2. **docs-generation.sln** - Added both new projects
+2. **mcp-doc-generation.sln** - Added both new projects
 3. **DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj** - Removed version from Handlebars.Net
 4. **DocGeneration.Core.GenerativeAI/DocGeneration.Core.GenerativeAI.csproj** - Removed version from Azure.AI.OpenAI
 5. **DocGeneration.Core.GenerativeAI.Tests/DocGeneration.Core.GenerativeAI.Tests.csproj** - Removed versions from test packages

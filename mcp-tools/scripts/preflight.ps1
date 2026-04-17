@@ -87,7 +87,7 @@ Write-Host ""
 
 # Step 3: Build .NET solution
 Write-Host "Building .NET solution..." -ForegroundColor Yellow
-$solutionFile = Join-Path $repoRoot "docs-generation.sln"
+$solutionFile = Join-Path $repoRoot "mcp-doc-generation.sln"
 if ($SkipBuild) {
     Write-Host "Skipping .NET build (handled by DocGeneration.PipelineRunner or caller)" -ForegroundColor Yellow
 } elseif (Test-Path $solutionFile) {

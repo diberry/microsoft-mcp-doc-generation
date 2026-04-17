@@ -193,7 +193,7 @@ DocGeneration.Steps.ExamplePrompts.Validation/
 ├── PromptValidator.cs              # LLM-based validation logic
 └── README.md                       # This file
 
-docs-generation/prompts/
+mcp-tools/prompts/
 ├── system-prompt-validation.txt    # System prompt for LLM validator
 └── user-prompt-validation.txt      # User prompt template
 ```

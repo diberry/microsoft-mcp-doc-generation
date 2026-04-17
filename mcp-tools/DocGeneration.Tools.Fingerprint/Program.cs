@@ -167,7 +167,7 @@ internal static class Program
         var dir = Directory.GetCurrentDirectory();
         while (dir is not null)
         {
-            if (File.Exists(Path.Combine(dir, "docs-generation.sln")))
+            if (File.Exists(Path.Combine(dir, "mcp-doc-generation.sln")))
                 return dir;
             dir = Path.GetDirectoryName(dir);
         }

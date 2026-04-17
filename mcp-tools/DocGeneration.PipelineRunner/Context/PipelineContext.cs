@@ -10,7 +10,7 @@ public sealed class PipelineContext
 
     public required string RepoRoot { get; init; }
 
-    public required string DocsGenerationRoot { get; init; }
+    public required string McpToolsRoot { get; init; }
 
     public required string OutputPath { get; init; }
 

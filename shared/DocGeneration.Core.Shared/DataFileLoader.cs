@@ -28,7 +28,7 @@ public static class DataFileLoader
     /// <summary>
     /// Gets the path to the data directory by walking up from the executing assembly.
     /// Uses brand-to-server-mapping.json as a fingerprint to confirm the correct data/ directory.
-    /// Works from both docs-generation/ and shared/ project layouts.
+    /// Works from both mcp-tools/ and shared/ project layouts.
     /// </summary>
     public static string GetDataDirectoryPath()
     {
@@ -39,7 +39,7 @@ public static class DataFileLoader
         {
             dir = Path.GetFullPath(Path.Combine(dir, ".."));
 
-            // Direct data/ child (works from docs-generation/ projects)
+            // Direct data/ child (works from mcp-tools/ projects)
             var dataDir = Path.Combine(dir, "data");
             if (Directory.Exists(dataDir) && File.Exists(Path.Combine(dataDir, fingerprint)))
                 return dataDir;

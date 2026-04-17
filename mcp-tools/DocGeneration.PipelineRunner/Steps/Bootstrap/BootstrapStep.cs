@@ -79,7 +79,7 @@ public sealed class BootstrapStep : StepDefinition
                 }
                 else
                 {
-                    var probeResult = await context.AiCapabilityProbe.ProbeAsync(context.DocsGenerationRoot, cancellationToken);
+                    var probeResult = await context.AiCapabilityProbe.ProbeAsync(context.McpToolsRoot, cancellationToken);
                     if (!probeResult.IsConfigured)
                     {
                         warnings.AddRange(probeResult.MissingKeys.Select(key => $"Missing required AI configuration: {key}"));
@@ -102,9 +102,9 @@ public sealed class BootstrapStep : StepDefinition
             CreateDirectories(context.OutputPath, ["cli"]);
 
             await context.BuildCoordinator.EnsureReadyAsync(
-                Path.Combine(context.RepoRoot, "docs-generation.sln"),
+                Path.Combine(context.RepoRoot, "mcp-doc-generation.sln"),
                 context.Request.SkipBuild,
-                GetRequiredArtifacts(context.DocsGenerationRoot, context.PlannedSteps),
+                GetRequiredArtifacts(context.McpToolsRoot, context.PlannedSteps),
                 cancellationToken);
 
             var cliDirectory = Path.Combine(context.OutputPath, "cli");
@@ -208,8 +208,8 @@ public sealed class BootstrapStep : StepDefinition
 
             if (!context.Request.SkipValidation)
             {
-                var brandMappingProject = Path.Combine(context.DocsGenerationRoot, "DocGeneration.Steps.Bootstrap.BrandMappings", "DocGeneration.Steps.Bootstrap.BrandMappings.csproj");
-                var brandMappingFile = Path.Combine(context.DocsGenerationRoot, "data", "brand-to-server-mapping.json");
+                var brandMappingProject = Path.Combine(context.McpToolsRoot, "DocGeneration.Steps.Bootstrap.BrandMappings", "DocGeneration.Steps.Bootstrap.BrandMappings.csproj");
+                var brandMappingFile = Path.Combine(context.McpToolsRoot, "data", "brand-to-server-mapping.json");
                 var suggestionsFile = Path.Combine(context.OutputPath, "reports", "brand-mapping-suggestions.json");
                 var brandValidationResult = await context.ProcessRunner.RunDotNetProjectAsync(
                     brandMappingProject,
@@ -219,7 +219,7 @@ public sealed class BootstrapStep : StepDefinition
                         "--output", suggestionsFile,
                     ],
                     noBuild: true,
-                    context.DocsGenerationRoot,
+                    context.McpToolsRoot,
                     cancellationToken);
                 processResults.Add(brandValidationResult);
                 if (!brandValidationResult.Succeeded)
@@ -239,11 +239,11 @@ public sealed class BootstrapStep : StepDefinition
             }
 
             var e2eOutputFile = Path.Combine(context.OutputPath, "e2e-test-prompts", "parsed.json");
-            var e2eProject = Path.Combine(context.DocsGenerationRoot, "DocGeneration.Steps.Bootstrap.E2eTestPromptParser", "DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj");
+            var e2eProject = Path.Combine(context.McpToolsRoot, "DocGeneration.Steps.Bootstrap.E2eTestPromptParser", "DocGeneration.Steps.Bootstrap.E2eTestPromptParser.csproj");
 
             // Centralized fetch: Bootstrap downloads e2eTestPrompts.md from the resolved branch,
             // then passes the local file to the parser (no branch/URL logic in the parser itself).
-            var e2eLocalFallback = Path.Combine(context.DocsGenerationRoot, "azure-mcp", "e2eTestPrompts.md");
+            var e2eLocalFallback = Path.Combine(context.McpToolsRoot, "azure-mcp", "e2eTestPrompts.md");
             var e2eRemoteUrl = BuildUpstreamUrl(context.McpBranch, "e2eTestPrompts.md");
             string? e2eFetchedFile = null;
             try
@@ -266,7 +266,7 @@ public sealed class BootstrapStep : StepDefinition
                 e2eProject,
                 e2eArgs.ToArray(),
                 noBuild: true,
-                context.DocsGenerationRoot,
+                context.McpToolsRoot,
                 cancellationToken);
             processResults.Add(e2eResult);
             if (!e2eResult.Succeeded)
@@ -274,17 +274,17 @@ public sealed class BootstrapStep : StepDefinition
                 AddProcessIssue(e2eResult, warnings, "E2E test prompt parsing failed (non-blocking)");
             }
 
-            var azmcpLocalFallback = Path.Combine(context.DocsGenerationRoot, "azure-mcp", "azmcp-commands.md");
+            var azmcpLocalFallback = Path.Combine(context.McpToolsRoot, "azure-mcp", "azmcp-commands.md");
             var azmcpRemoteUrl = BuildUpstreamUrl(context.McpBranch, "azmcp-commands.md");
             var azmcpSourceFile = await FetchUpstreamFileAsync(
                 azmcpRemoteUrl, azmcpLocalFallback, "azmcp-commands.md", context, warnings, cancellationToken);
             var azmcpOutputFile = Path.Combine(cliDirectory, "azmcp-commands.json");
-            var azmcpProject = Path.Combine(context.DocsGenerationRoot, "DocGeneration.Steps.Bootstrap.CommandParser", "DocGeneration.Steps.Bootstrap.CommandParser.csproj");
+            var azmcpProject = Path.Combine(context.McpToolsRoot, "DocGeneration.Steps.Bootstrap.CommandParser", "DocGeneration.Steps.Bootstrap.CommandParser.csproj");
             var azmcpResult = await context.ProcessRunner.RunDotNetProjectAsync(
                 azmcpProject,
                 ["--file", azmcpSourceFile, "--output", azmcpOutputFile],
                 noBuild: true,
-                context.DocsGenerationRoot,
+                context.McpToolsRoot,
                 cancellationToken);
             processResults.Add(azmcpResult);
             if (!azmcpResult.Succeeded)
@@ -294,7 +294,7 @@ public sealed class BootstrapStep : StepDefinition
 
             if (azmcpResult.Succeeded)
             {
-                var enricherProject = Path.Combine(context.DocsGenerationRoot, "DocGeneration.Steps.Bootstrap.ToolMetadataEnricher", "DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.csproj");
+                var enricherProject = Path.Combine(context.McpToolsRoot, "DocGeneration.Steps.Bootstrap.ToolMetadataEnricher", "DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.csproj");
                 var enrichedOutputFile = Path.Combine(cliDirectory, "cli-output-enriched.json");
                 var enricherResult = await context.ProcessRunner.RunDotNetProjectAsync(
                     enricherProject,
@@ -304,7 +304,7 @@ public sealed class BootstrapStep : StepDefinition
                         "--output", enrichedOutputFile,
                     ],
                     noBuild: true,
-                    context.DocsGenerationRoot,
+                    context.McpToolsRoot,
                     cancellationToken);
                 processResults.Add(enricherResult);
                 if (!enricherResult.Succeeded)
@@ -360,7 +360,7 @@ public sealed class BootstrapStep : StepDefinition
     private static string GetNpmExecutable()
         => OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
 
-    private static IReadOnlyList<string> GetRequiredArtifacts(string docsGenerationRoot, IReadOnlyList<IPipelineStep> plannedSteps)
+    private static IReadOnlyList<string> GetRequiredArtifacts(string McpToolsRoot, IReadOnlyList<IPipelineStep> plannedSteps)
     {
         var requiredProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -388,7 +388,7 @@ public sealed class BootstrapStep : StepDefinition
         }
 
         return requiredProjects
-            .Select(project => Path.Combine(docsGenerationRoot, project, "bin", "Release", "net9.0", $"{project}.dll"))
+            .Select(project => Path.Combine(McpToolsRoot, project, "bin", "Release", "net9.0", $"{project}.dll"))
             .ToArray();
     }
 

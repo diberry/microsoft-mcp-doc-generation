@@ -59,33 +59,33 @@ Query specific namespaces and drill down to individual tool details including:
 
 ### Basic Analysis
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 Displays full summary and generates `cli-analysis-report.html`
 
 ### Namespace Details
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace foundry
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace foundry
 ```
 Shows all tools in the Foundry namespace with their parameter counts
 
 ### Tool Details
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
   --namespace foundry --tool "chat-completions-create"
 ```
 Displays complete information about a specific tool, including all parameters
 
 ### Custom Paths
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- \
   --file ../generated/cli/cli-output.json \
   --output ./my-report.html
 ```
 
 ### HTML Report Only
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 ```
 
 ## Data Model
@@ -181,7 +181,7 @@ Uses `System.CommandLine` for modern, composable option handling:
 
 ### Build
 ```bash
-cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 dotnet build
 ```
 
@@ -273,7 +273,7 @@ Generated HTML includes:
 
 ```bash
 # From the repo root directory
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer [options]
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer [options]
 ```
 
 The project automatically resolves paths relative to the current working directory, supporting both repo root and docs-generation subdirectory execution.

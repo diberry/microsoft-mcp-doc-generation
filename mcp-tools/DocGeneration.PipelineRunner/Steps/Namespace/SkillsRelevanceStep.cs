@@ -40,7 +40,7 @@ public sealed class SkillsRelevanceStep : NamespaceStepBase
                 "--min-score", DefaultMinScore,
             ],
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
         processResults.Add(processResult);
 

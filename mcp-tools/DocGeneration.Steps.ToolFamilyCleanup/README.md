@@ -124,7 +124,7 @@ pwsh ./GenerateDocGeneration.Steps.ToolFamilyCleanup-multifile.ps1 `
 Run the tool directly for more control:
 
 ```bash
-cd docs-generation/DocGeneration.Steps.ToolFamilyCleanup
+cd mcp-tools/DocGeneration.Steps.ToolFamilyCleanup
 dotnet run --configuration Release [options]
 ```
 
@@ -200,7 +200,7 @@ TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME=gpt-4o
 TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION=2025-01-01-preview
 ```
 
-Create a `.env` file in `docs-generation/` directory with these values.
+Create a `.env` file in `mcp-tools/` directory with these values.
 
 ### Default Paths
 
@@ -397,7 +397,7 @@ Step 3: Review and Integrate
 ## Building
 
 ```bash
-cd docs-generation/DocGeneration.Steps.ToolFamilyCleanup
+cd mcp-tools/DocGeneration.Steps.ToolFamilyCleanup
 dotnet build
 ```
 
@@ -514,7 +514,7 @@ For explicit truncation errors:
 - Use `--input-dir` to specify custom path
 
 ### "Missing required environment variables"
-- Create `.env` file in `docs-generation/` directory
+- Create `.env` file in `mcp-tools/` directory
 - Set Azure OpenAI credentials
 - See Configuration section above
 

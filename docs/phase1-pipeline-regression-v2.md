@@ -19,11 +19,11 @@ However, the branch still emits post-generation warnings, and `foundryextensions
 **No — the Phase 1 branch is not yet producing better output than main.** It is better than the earlier Phase 1 run, but still not clean enough to claim superiority over main.
 
 ## Build and test verification
-Note: the current checkout uses the repo-root solution file `docs-generation.sln`. The nested path `docs-generation\docs-generation.sln` from the task is not present in this checkout.
+Note: the current checkout uses the repo-root solution file `mcp-doc-generation.sln`. The nested path `docs-generation\mcp-doc-generation.sln` from the task is not present in this checkout.
 
 Using the current solution path:
 - **Build:** PASS
-  - `docs-generation.sln`
+  - `mcp-doc-generation.sln`
   - **0 warnings / 0 errors**
 - **Tests:** PASS
   - **643 total / 643 passed / 0 failed / 0 skipped**

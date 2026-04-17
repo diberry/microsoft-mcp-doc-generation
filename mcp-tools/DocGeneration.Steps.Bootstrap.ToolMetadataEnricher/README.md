@@ -131,7 +131,7 @@ The enricher uses a **sidecar enrichment object** pattern:
 ### Build
 
 ```bash
-cd docs-generation/DocGeneration.Steps.Bootstrap.ToolMetadataEnricher
+cd mcp-tools/DocGeneration.Steps.Bootstrap.ToolMetadataEnricher
 dotnet build
 ```
 

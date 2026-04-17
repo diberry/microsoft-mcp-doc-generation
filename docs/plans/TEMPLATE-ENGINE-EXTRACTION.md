@@ -40,7 +40,7 @@ Extract a new `TemplateEngine` class library project. All projects that need Han
 ## New project structure
 
 ```
-docs-generation/TemplateEngine/
+mcp-tools/TemplateEngine/
 ├── TemplateEngine.csproj               # References Handlebars.Net only
 ├── HandlebarsTemplateEngine.cs         # Core: CreateEngine(), ProcessTemplateAsync(), ProcessTemplateString()
 └── Helpers/
@@ -85,12 +85,12 @@ docs-generation/TemplateEngine/
 
 ### Phase 1: Create TemplateEngine project
 
-- [x] **1.1** Create `docs-generation/TemplateEngine/TemplateEngine.csproj` (class library, net9.0, references `Handlebars.Net` via CPM)
+- [x] **1.1** Create `mcp-tools/TemplateEngine/TemplateEngine.csproj` (class library, net9.0, references `Handlebars.Net` via CPM)
 - [x] **1.2** Create `HandlebarsTemplateEngine.cs` — move `CreateEngine()`, `ProcessTemplateAsync()`, `ProcessTemplateString()` from CSharpGenerator
 - [x] **1.3** Create `Helpers/CoreHelpers.cs` — extract generic helpers listed above
 - [x] **1.4** Create `Helpers/McpHelpers.cs` — extract MCP-specific helpers listed above
 - [x] **1.5** Update `HandlebarsTemplateEngine.CreateEngine()` to register both helper sets
-- [x] **1.6** Add TemplateEngine project to `docs-generation.sln`
+- [x] **1.6** Add TemplateEngine project to `mcp-doc-generation.sln`
 
 ### Phase 2: Migrate CSharpGenerator
 
@@ -124,27 +124,27 @@ docs-generation/TemplateEngine/
 
 ### Phase 6: Validation
 
-- [x] **6.1** Build entire solution: `dotnet build docs-generation.sln` — 0 errors, 0 warnings
+- [x] **6.1** Build entire solution: `dotnet build mcp-doc-generation.sln` — 0 errors, 0 warnings
 - [ ] **6.2** Run `bash start.sh aks 1` — verify Step 1 (annotations/parameters) produces identical output
 - [x] **6.3** Grep solution for any remaining direct `HandlebarsDotNet` references outside TemplateEngine
 - [x] **6.4** Verify no project still has a direct `Handlebars.Net` PackageReference (only in TemplateEngine.csproj)
 
 ### Phase 7: Documentation
 
-- [x] **7.1** Create `docs-generation/TemplateEngine/README.md`
+- [x] **7.1** Create `mcp-tools/TemplateEngine/README.md`
 - [x] **7.2** Update `CSharpGenerator/README.md` — replace HandlebarsTemplateEngine reference with TemplateEngine dependency
 - [x] **7.3** Update `.github/copilot-instructions.md` if it references HandlebarsTemplateEngine location
 
 ### Phase 8: Markdown documentation updates
 
-- [x] **8.1** Update `docs-generation/README.md` — replace `HandlebarsTemplateEngine.cs` in tree with TemplateEngine project; update dependency section
-- [x] **8.2** Update `docs-generation/CSharpGenerator/docs/README.md` — remove `HandlebarsTemplateEngine.cs` from core files; replace `Handlebars.Net` with `TemplateEngine` in dependencies
-- [x] **8.3** Update `docs-generation/CSharpGenerator/test-plan.md` — section 9 target is now `TemplateEngine/HandlebarsTemplateEngine.cs`; update priority table
-- [x] **8.4** Update `docs-generation/CSharpGenerator/docs/COMPLETE-TOOLS-README.md` — helper functions now in `TemplateEngine` project
-- [x] **8.5** Update `docs-generation/HorizontalArticleGenerator/README.md` — replace `Handlebars.Net` with `TemplateEngine` in dependencies
-- [x] **8.6** Update `docs-generation/ToolGeneration_Raw/README.md` — remove `Handlebars.Net` from dependencies (removed from csproj)
-- [x] **8.7** Update `docs-generation/ExamplePromptGeneratorStandalone/README.md` — replace `TemplateEngine` utility with `TemplateEngine` shared library reference
-- [x] **8.8** Update `docs-generation/ToolFamily/TOOL-FAMILY-GENERATOR-PLAN.md` — reference TemplateEngine shared library instead of copying `HandlebarsTemplateEngine.cs`
+- [x] **8.1** Update `mcp-tools/README.md` — replace `HandlebarsTemplateEngine.cs` in tree with TemplateEngine project; update dependency section
+- [x] **8.2** Update `mcp-tools/CSharpGenerator/docs/README.md` — remove `HandlebarsTemplateEngine.cs` from core files; replace `Handlebars.Net` with `TemplateEngine` in dependencies
+- [x] **8.3** Update `mcp-tools/CSharpGenerator/test-plan.md` — section 9 target is now `TemplateEngine/HandlebarsTemplateEngine.cs`; update priority table
+- [x] **8.4** Update `mcp-tools/CSharpGenerator/docs/COMPLETE-TOOLS-README.md` — helper functions now in `TemplateEngine` project
+- [x] **8.5** Update `mcp-tools/HorizontalArticleGenerator/README.md` — replace `Handlebars.Net` with `TemplateEngine` in dependencies
+- [x] **8.6** Update `mcp-tools/ToolGeneration_Raw/README.md` — remove `Handlebars.Net` from dependencies (removed from csproj)
+- [x] **8.7** Update `mcp-tools/ExamplePromptGeneratorStandalone/README.md` — replace `TemplateEngine` utility with `TemplateEngine` shared library reference
+- [x] **8.8** Update `mcp-tools/ToolFamily/TOOL-FAMILY-GENERATOR-PLAN.md` — reference TemplateEngine shared library instead of copying `HandlebarsTemplateEngine.cs`
 
 ---
 
@@ -162,30 +162,30 @@ docs-generation/TemplateEngine/
 ## Files affected
 
 ### New files
-- `docs-generation/TemplateEngine/TemplateEngine.csproj`
-- `docs-generation/TemplateEngine/HandlebarsTemplateEngine.cs`
-- `docs-generation/TemplateEngine/Helpers/CoreHelpers.cs`
-- `docs-generation/TemplateEngine/Helpers/McpHelpers.cs`
-- `docs-generation/TemplateEngine/README.md`
+- `mcp-tools/TemplateEngine/TemplateEngine.csproj`
+- `mcp-tools/TemplateEngine/HandlebarsTemplateEngine.cs`
+- `mcp-tools/TemplateEngine/Helpers/CoreHelpers.cs`
+- `mcp-tools/TemplateEngine/Helpers/McpHelpers.cs`
+- `mcp-tools/TemplateEngine/README.md`
 
 ### Modified files
-- `docs-generation.sln` — add TemplateEngine project
-- `docs-generation/CSharpGenerator/CSharpGenerator.csproj` — add TemplateEngine ref, remove Handlebars.Net
-- `docs-generation/CSharpGenerator/DocumentationGenerator.cs` — update using
-- `docs-generation/CSharpGenerator/Generators/AnnotationGenerator.cs` — update using
-- `docs-generation/CSharpGenerator/Generators/CompleteToolGenerator.cs` — update using
-- `docs-generation/CSharpGenerator/Program.cs` — update using (template mode)
-- `docs-generation/HorizontalArticleGenerator/HorizontalArticleGenerator.csproj` — replace CSharpGenerator ref with TemplateEngine
-- `docs-generation/HorizontalArticleGenerator/HorizontalArticleProgram.cs` — update using
-- `docs-generation/HorizontalArticleGenerator/Generators/HorizontalArticleGenerator.cs` — update using + replace inline Handlebars
-- `docs-generation/ExamplePromptGeneratorStandalone/ExamplePromptGeneratorStandalone.csproj` — add TemplateEngine ref, remove Handlebars.Net
-- `docs-generation/ExamplePromptGeneratorStandalone/Generators/ExamplePromptGenerator.cs` — update call sites
-- `docs-generation/ToolGeneration_Raw/ToolGeneration_Raw.csproj` — remove Handlebars.Net
-- `docs-generation/CSharpGenerator/README.md` — update architecture section
+- `mcp-doc-generation.sln` — add TemplateEngine project
+- `mcp-tools/CSharpGenerator/CSharpGenerator.csproj` — add TemplateEngine ref, remove Handlebars.Net
+- `mcp-tools/CSharpGenerator/DocumentationGenerator.cs` — update using
+- `mcp-tools/CSharpGenerator/Generators/AnnotationGenerator.cs` — update using
+- `mcp-tools/CSharpGenerator/Generators/CompleteToolGenerator.cs` — update using
+- `mcp-tools/CSharpGenerator/Program.cs` — update using (template mode)
+- `mcp-tools/HorizontalArticleGenerator/HorizontalArticleGenerator.csproj` — replace CSharpGenerator ref with TemplateEngine
+- `mcp-tools/HorizontalArticleGenerator/HorizontalArticleProgram.cs` — update using
+- `mcp-tools/HorizontalArticleGenerator/Generators/HorizontalArticleGenerator.cs` — update using + replace inline Handlebars
+- `mcp-tools/ExamplePromptGeneratorStandalone/ExamplePromptGeneratorStandalone.csproj` — add TemplateEngine ref, remove Handlebars.Net
+- `mcp-tools/ExamplePromptGeneratorStandalone/Generators/ExamplePromptGenerator.cs` — update call sites
+- `mcp-tools/ToolGeneration_Raw/ToolGeneration_Raw.csproj` — remove Handlebars.Net
+- `mcp-tools/CSharpGenerator/README.md` — update architecture section
 
 ### Deleted files
-- `docs-generation/CSharpGenerator/HandlebarsTemplateEngine.cs`
-- `docs-generation/ExamplePromptGeneratorStandalone/Utilities/TemplateEngine.cs`
+- `mcp-tools/CSharpGenerator/HandlebarsTemplateEngine.cs`
+- `mcp-tools/ExamplePromptGeneratorStandalone/Utilities/TemplateEngine.cs`
 
 ---
 

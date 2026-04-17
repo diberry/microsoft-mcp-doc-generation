@@ -31,7 +31,7 @@ public sealed class AnnotationsParametersRawStep : NamespaceStepBase
             csharpGeneratorProject,
             ["generate-docs", filteredCli.FilePath, context.OutputPath, "--annotations", "--version", cliVersion],
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
         processResults.Add(annotationsResult);
         if (!annotationsResult.Succeeded)
@@ -44,7 +44,7 @@ public sealed class AnnotationsParametersRawStep : NamespaceStepBase
             csharpGeneratorProject,
             ["generate-docs", filteredCli.FilePath, context.OutputPath, "--parameters", "--version", cliVersion],
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
         processResults.Add(parametersResult);
         if (!parametersResult.Succeeded)
@@ -57,7 +57,7 @@ public sealed class AnnotationsParametersRawStep : NamespaceStepBase
             rawGeneratorProject,
             [filteredCli.FilePath, rawToolsDirectory, cliVersion],
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
         processResults.Add(rawToolsResult);
         if (!rawToolsResult.Succeeded)

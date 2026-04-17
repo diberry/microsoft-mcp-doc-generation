@@ -40,7 +40,7 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             GetProjectPath(context, "DocGeneration.Steps.HorizontalArticles"),
             ["--single-service", currentNamespace, "--output-path", context.OutputPath, "--transform"],
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
         processResults.Add(processResult);
         if (!processResult.Succeeded)

@@ -62,7 +62,7 @@ pwsh ./Generate-HorizontalArticles.ps1
 
 ### Environment Variables
 
-Set these in `./docs-generation/.env` or as environment variables:
+Set these in `./mcp-tools/.env` or as environment variables:
 
 ```env
 FOUNDRY_API_KEY=your-api-key

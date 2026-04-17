@@ -4,5 +4,5 @@ public sealed record AiCapabilityResult(bool IsConfigured, IReadOnlyList<string>
 
 public interface IAiCapabilityProbe
 {
-    ValueTask<AiCapabilityResult> ProbeAsync(string docsGenerationRoot, CancellationToken cancellationToken);
+    ValueTask<AiCapabilityResult> ProbeAsync(string McpToolsRoot, CancellationToken cancellationToken);
 }

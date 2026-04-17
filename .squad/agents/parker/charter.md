@@ -11,7 +11,7 @@
 
 ## What I Own
 
-- All test projects under `docs-generation/`:
+- All test projects under `mcp-tools/`:
   - `*.Tests/` — Unit and integration test projects
   - Test data and fixtures
 - Content validation across the generated corpus:
@@ -28,7 +28,7 @@
 - Use varied Azure service examples across tests — never concentrate all test data on one service
 - Edge cases matter: namespaces with unusual characters, tools with zero parameters, services with brand name overrides
 - Generated content tests: validate that output files match expected structure, counts, and content patterns
-- Run `dotnet test docs-generation.sln` as the quality gate
+- Run `dotnet test mcp-doc-generation.sln` as the quality gate
 
 ## Boundaries
 

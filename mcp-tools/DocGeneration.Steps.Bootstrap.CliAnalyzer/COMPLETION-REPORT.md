@@ -6,7 +6,7 @@ A fully functional .NET 9.0 console application for visual analysis of Azure MCP
 
 ## What Was Created
 
-### Core Application (`docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/`)
+### Core Application (`mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer/`)
 
 **Project Structure:**
 ```
@@ -109,31 +109,31 @@ DocGeneration.Steps.Bootstrap.CliAnalyzer/
 
 ### Test 1: Basic Analysis
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 ✅ **Result**: Full console report + HTML generation
 
 ### Test 2: Namespace Filtering
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace acr
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace acr
 ```
 ✅ **Result**: Shows 2 tools in ACR namespace with parameter breakdown
 
 ### Test 3: Tool Details
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace foundry --tool "chat-completions-create"
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace foundry --tool "chat-completions-create"
 ```
 ✅ **Result**: Shows complete tool details with all 21 parameters
 
 ### Test 4: HTML-Only Generation
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 ```
 ✅ **Result**: Generates HTML report without console output
 
 ### Test 5: Help Display
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --help
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --help
 ```
 ✅ **Result**: Shows all available options
 
@@ -183,24 +183,24 @@ dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -
 
 **Build:**
 ```bash
-cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 dotnet build
 ```
 
 **Run Full Analysis:**
 ```bash
 cd ../..  # Back to repo root
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 **Get Namespace Details:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql
 ```
 
 **Get Tool Details:**
 ```bash
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"
 ```
 
 ### Output Locations
@@ -212,20 +212,20 @@ dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -
 ### 1. Documentation Pipeline
 ```bash
 # Generate HTML report for doc teams
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --html-only
 # Open cli-analysis-report.html in browser
 ```
 
 ### 2. Parameter Discovery
 ```bash
 # Find all parameters for a service
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace keyvault
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace keyvault
 ```
 
 ### 3. Complexity Analysis
 ```bash
 # Run full analysis, check "TOP TOOLS" section
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 ```
 
 ## Future Enhancement Opportunities
@@ -266,7 +266,7 @@ dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
 
 ### Building
 ```bash
-cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer
+cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer
 dotnet build
 ```
 
@@ -297,14 +297,14 @@ dotnet clean
 
 | Task | Command |
 |------|---------|
-| Build | `cd docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer && dotnet build` |
-| Run Full Analysis | `dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer` |
-| Namespace Details | `dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql` |
-| Tool Details | `dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"` |
-| Help | `dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --help` |
+| Build | `cd mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer && dotnet build` |
+| Run Full Analysis | `dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer` |
+| Namespace Details | `dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql` |
+| Tool Details | `dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --namespace sql --tool "create"` |
+| Help | `dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer -- --help` |
 
 ---
 
 **Project Status**: ✅ Complete and Fully Tested
 **Date Created**: February 9, 2026
-**Location**: `docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/`
+**Location**: `mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer/`

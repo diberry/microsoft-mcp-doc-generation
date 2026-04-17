@@ -9,14 +9,14 @@ Verified Amos's Phase 1 IChatClient migration on branch `squad/phase1-ai-abstrac
 ✅ **PASS**
 
 - Verified repository HEAD is `81f932bd967f25804f35a1635aa17adbd6f194a7` on branch `squad/phase1-ai-abstraction`.
-- The requested path `docs-generation\docs-generation.sln` does **not** exist in this repo.
-- Per the baseline, the actual solution file is `docs-generation.sln` at repo root, and it builds cleanly.
+- The requested path `docs-generation\mcp-doc-generation.sln` does **not** exist in this repo.
+- Per the baseline, the actual solution file is `mcp-doc-generation.sln` at repo root, and it builds cleanly.
 - Build result: **0 warnings, 0 errors**.
 
 ### 2. Test verification
 ✅ **PASS**
 
-- Ran tests against the repo-root solution `docs-generation.sln`.
+- Ran tests against the repo-root solution `mcp-doc-generation.sln`.
 - Result matches baseline exactly:
   - **638 passed**
   - **0 failed**
@@ -92,4 +92,4 @@ The Phase 1 migration preserves the public `GenerativeAIClient` surface, adds th
 
 ## Issues found
 1. **Non-blocking:** Inconsistent API-key emptiness checks (`IsNullOrEmpty` vs `IsNullOrWhiteSpace`) in `GenerativeAIClient.CreateChatClient(...)`.
-2. **Verification note:** The task’s requested solution path `docs-generation\docs-generation.sln` is not present in the repo; the real solution remains `docs-generation.sln` at repo root, which matches the baseline and builds/tests cleanly.
+2. **Verification note:** The task’s requested solution path `docs-generation\mcp-doc-generation.sln` is not present in the repo; the real solution remains `mcp-doc-generation.sln` at repo root, which matches the baseline and builds/tests cleanly.

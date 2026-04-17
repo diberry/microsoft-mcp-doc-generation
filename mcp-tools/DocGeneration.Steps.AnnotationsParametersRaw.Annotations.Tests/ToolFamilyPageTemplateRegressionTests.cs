@@ -17,7 +17,7 @@ namespace DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests;
 ///   - tool-family-page.hbs: blank line between H2 and marker removed
 ///   - example-prompts-template.hbs: @mcpcli marker removed
 ///
-/// These tests read the actual template from the source tree (docs-generation/templates/)
+/// These tests read the actual template from the source tree (mcp-tools/templates/)
 /// and render it using HandlebarsTemplateEngine.ProcessTemplateString(). They FAIL if
 /// the template changes are reverted.
 /// </summary>

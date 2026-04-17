@@ -16,7 +16,7 @@ public class PipelineRunnerPostValidatorTests
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-validator-hook-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
-        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
 
         try
         {
@@ -60,7 +60,7 @@ public class PipelineRunnerPostValidatorTests
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-retry-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
-        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
 
         try
         {
@@ -105,7 +105,7 @@ public class PipelineRunnerPostValidatorTests
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-retry-success-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
-        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
 
         try
         {
@@ -151,7 +151,7 @@ public class PipelineRunnerPostValidatorTests
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-warn-hook-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
-        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
 
         try
         {
@@ -201,7 +201,7 @@ public class PipelineRunnerPostValidatorTests
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-artifact-failures-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
-        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
 
         try
         {

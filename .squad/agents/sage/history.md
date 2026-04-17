@@ -124,7 +124,7 @@
 - Each section is tailored to the prompt's context (e.g., Step 2 focuses on conversational prompt style, Step 6 targets genai- JSON fields).
 - Wrote 42 new tests (`AcrolinxComplianceSectionTests.cs`) that verify all prompt files contain required instructions. Tests are parameterized across all 4 step-specific prompts + 2 shared copies.
 
-**Key Insight:** The shared `docs-generation/prompts/system-prompt.txt` is only 1 line — it's NOT a copy of the Step 3 prompt. The step-specific prompts in each `DocGeneration.Steps.*/prompts/` directory are the actual runtime prompts.
+**Key Insight:** The shared `mcp-tools/prompts/system-prompt.txt` is only 1 line — it's NOT a copy of the Step 3 prompt. The step-specific prompts in each `DocGeneration.Steps.*/prompts/` directory are the actual runtime prompts.
 
 **PR:** #223
 ### 2026-03-25: Acrolinx Compliance P0+P1 Implementation — 4 Services + 9 Static Entries

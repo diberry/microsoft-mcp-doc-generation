@@ -32,7 +32,7 @@ Always read `.squad/decisions.md` before starting any work. Every agent should a
 
 ## Routing Summary
 
-- **C# code changes** (`docs-generation/**/*.cs`) → Morgan
+- **C# code changes** (`mcp-tools/**/*.cs`) → Morgan
 - **Scripts / CI / Docker** (`.ps1`, `.sh`, `.yml`, `Dockerfile`) → Quinn
 - **AI prompts / Azure OpenAI** (`prompts/`, `GenerativeAI/`) → Sage
 - **Pipeline architecture / cross-cutting concerns** → Riley
@@ -49,10 +49,10 @@ This project generates 800+ markdown documentation files for 52 Azure MCP namesp
 
 - **Never edit generated files** in `generated/` or `generated-*/` — fix the source generators instead
 - **Three-tier generation pipeline**: Orchestration (PowerShell) → Generation (C#/.NET 9) → Templates (Handlebars)
-- **AI generation steps** use Azure OpenAI via environment variables in `docs-generation/.env`
+- **AI generation steps** use Azure OpenAI via environment variables in `mcp-tools/.env`
 - **Run generation**: `./start.sh` (all namespaces) or `./start.sh <namespace>` (single)
-- **Build**: `dotnet build docs-generation.sln --configuration Release`
-- **Test**: `dotnet test docs-generation.sln`
+- **Build**: `dotnet build mcp-doc-generation.sln --configuration Release`
+- **Test**: `dotnet test mcp-doc-generation.sln`
 
 ## Init Mode
 

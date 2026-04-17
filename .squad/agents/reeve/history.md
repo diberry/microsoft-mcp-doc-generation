@@ -18,7 +18,7 @@
 - **Action items for Reeve:** 4 (1 before start, 3 during/after)
 
 **Pre-Implementation Task (PRIORITY 1):**
-- [ ] Write `docs-generation/DocGeneration.Steps.ToolFamilyCleanup.Validation.Tests/README.md` (30 min)
+- [ ] Write `mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Validation.Tests/README.md` (30 min)
   - Explain PowerShell integration test design (why zero C# project references)
   - Document requirements and running instructions
 
@@ -114,7 +114,7 @@ The tests themselves become the documentation of the fix's contract. No separate
 1. **Existing docs are architecture-agnostic** — No user-facing docs reference removed projects (CliAnalyzer, PostProcessVerifier, Core.NaturalLanguage are internal implementation details). README.md, ARCHITECTURE.md, PROJECT-GUIDE.md stay valid.
 
 2. **Documentation updates needed (MINOR):**
-   - CREATE: `docs-generation/DocGeneration.Steps.ToolFamilyCleanup.Validation.Tests/README.md` — explains PowerShell integration test design (Action 6, assigned to Reeve)
+   - CREATE: `mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Validation.Tests/README.md` — explains PowerShell integration test design (Action 6, assigned to Reeve)
    - UPDATE: `docs/ci-integration.md` Section 3 — remove NaturalLanguage.Tests row, update framework status for 3 projects (xUnit)
    - UPDATE: `docs/test-strategy.md` Section 1.2 + 1.3 — same changes (test count, framework, TextCleanup location)
 

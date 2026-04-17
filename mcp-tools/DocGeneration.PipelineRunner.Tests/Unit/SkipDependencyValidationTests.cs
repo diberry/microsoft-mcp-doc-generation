@@ -93,7 +93,7 @@ public class SkipDependencyValidationTests
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-skip-deps-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
-        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
 
         var reportWriter = new BufferedReportWriter();
         var contextFactory = new PipelineContextFactory(

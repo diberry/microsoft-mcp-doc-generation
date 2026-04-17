@@ -138,16 +138,16 @@ var byNamespace = doc.GetEntriesByNamespace();
 
 ```bash
 # JSON output to stdout (default)
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.E2eTestPromptParser
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.E2eTestPromptParser
 
 # JSON output to a file
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.E2eTestPromptParser -- parsed.json
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.E2eTestPromptParser -- parsed.json
 
 # Summary output to stdout
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.E2eTestPromptParser -- --format summary
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.E2eTestPromptParser -- --format summary
 
 # Summary output to a file
-dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.E2eTestPromptParser -- output.txt --format summary
+dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.E2eTestPromptParser -- output.txt --format summary
 ```
 
 ### As a library reference
@@ -172,7 +172,7 @@ foreach (var section in doc.Sections)
 ## Tests
 
 ```bash
-dotnet test docs-generation/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests
+dotnet test mcp-tools/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests
 ```
 
 ## Handling upstream format changes
@@ -231,6 +231,6 @@ The parser relies on these structural conventions:
 
 7. **Verify**:
    ```bash
-   dotnet test docs-generation/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests
-   dotnet run --project docs-generation/DocGeneration.Steps.Bootstrap.E2eTestPromptParser -- --format summary
+   dotnet test mcp-tools/DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests
+   dotnet run --project mcp-tools/DocGeneration.Steps.Bootstrap.E2eTestPromptParser -- --format summary
    ```

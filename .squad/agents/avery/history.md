@@ -77,10 +77,10 @@
 **Consolidation plan:** `docs/proposals/dotnet-consolidation-plan.md` — 7 actions, 42→34 projects (or 32 with future Bootstrap merge). Decision filed in inbox.
 
 **Key file paths:**
-- Solution: `docs-generation.sln`
-- Pipeline orchestrator: `docs-generation/DocGeneration.PipelineRunner/` (44 .cs files, largest project)
+- Solution: `mcp-doc-generation.sln`
+- Pipeline orchestrator: `mcp-tools/DocGeneration.PipelineRunner/` (44 .cs files, largest project)
 - Step registry: `DocGeneration.PipelineRunner/StepRegistry.cs`
-- Orphaned project: `docs-generation/DocGeneration.Steps.Bootstrap.CliAnalyzer/`
+- Orphaned project: `mcp-tools/DocGeneration.Steps.Bootstrap.CliAnalyzer/`
 - Consolidation plan: `docs/proposals/dotnet-consolidation-plan.md`
 - Decision: `.squad/decisions/inbox/avery-dotnet-consolidation.md`
 

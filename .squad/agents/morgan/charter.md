@@ -11,14 +11,14 @@
 
 ## What I Own
 
-- All C# generator projects under `docs-generation/`:
+- All C# generator projects under `mcp-tools/`:
   - `CSharpGenerator/` — Core documentation generator (Program.cs, DocumentationGenerator.cs, Config.cs, all Generators/)
   - `TemplateEngine/` — Shared Handlebars rendering library with custom helpers
   - `ToolGeneration_Raw/`, `ToolGeneration_Composed/`, `ToolGeneration_Improved/` — Tool generation variants
   - `ToolFamilyCleanup/` — Post-processing cleanup
   - `HorizontalArticleGenerator/` — AI-powered overview article generation
   - `ExamplePromptGeneratorStandalone/` — AI-powered example prompt generation
-- Handlebars templates in `docs-generation/templates/`
+- Handlebars templates in `mcp-tools/templates/`
 - Configuration files: `brand-to-server-mapping.json`, `compound-words.json`, `stop-words.json`, `nl-parameters.json`, `static-text-replacement.json`, `common-parameters.json`
 
 ## How I Work

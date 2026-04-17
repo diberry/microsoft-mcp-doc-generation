@@ -77,7 +77,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
                 examplePromptsDirectory,
             ],
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
         processResults.Add(composedResult);
 
@@ -133,7 +133,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             GetProjectPath(context, "DocGeneration.Steps.ToolGeneration.Improvements"),
             [composedToolsDirectory, improvedToolsDirectory, DefaultMaxTokens.ToString()],
             context.Request.SkipBuild,
-            context.DocsGenerationRoot,
+            context.McpToolsRoot,
             cancellationToken);
         processResults.Add(improvedResult);
 

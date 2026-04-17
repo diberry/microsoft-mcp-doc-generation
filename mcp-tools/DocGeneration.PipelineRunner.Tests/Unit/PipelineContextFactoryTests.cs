@@ -22,7 +22,7 @@ public class PipelineContextFactoryTests
             var context = await factory.CreateAsync(request, CancellationToken.None);
 
             Assert.Equal(repoRoot, context.RepoRoot);
-            Assert.Equal(Path.Combine(repoRoot, "mcp-tools"), context.DocsGenerationRoot);
+            Assert.Equal(Path.Combine(repoRoot, "mcp-tools"), context.McpToolsRoot);
             Assert.Equal(Path.GetFullPath(Path.Combine(repoRoot, relativePath)), context.OutputPath);
             Assert.Equal(new[] { "storage account" }, context.SelectedNamespaces);
         }
@@ -78,7 +78,7 @@ public class PipelineContextFactoryTests
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-tests-{Guid.NewGuid():N}");
         Directory.CreateDirectory(repoRoot);
         Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools"));
-        File.WriteAllText(Path.Combine(repoRoot, "docs-generation.sln"), string.Empty);
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
         return repoRoot;
     }
 }

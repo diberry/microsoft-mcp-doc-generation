@@ -265,8 +265,8 @@ End-to-end tests that verify the full pipeline with fixture data.
 - **Assertions**: xUnit built-in assertions
 - **Mocking**: Consider `NSubstitute` or direct fakes for file system operations
 - **Temp directories**: Use `Path.GetTempPath()` / `Directory.CreateTempSubdirectory()` for output; clean up in `Dispose`
-- **Project location**: `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.csproj`
-- **Test data**: `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/TestData/` directory with fixture JSON files and template files
+- **Project location**: `mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.csproj`
+- **Test data**: `mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/TestData/` directory with fixture JSON files and template files
 - **Internal access**: Add `[assembly: InternalsVisibleTo("DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests")]` to DocGeneration.Steps.AnnotationsParametersRaw.Annotations for testing private/internal methods
 
 ## Priority

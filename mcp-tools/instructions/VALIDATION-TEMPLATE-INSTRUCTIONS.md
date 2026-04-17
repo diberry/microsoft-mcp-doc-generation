@@ -15,7 +15,7 @@ The Example Prompt Validation demonstrates a pattern for using LLMs to validate 
 
 The validation pattern consists of:
 1. **Validation Package** - A standalone .NET library with LLM integration
-2. **Validation Prompts** - System and user prompts in `docs-generation/prompts/`
+2. **Validation Prompts** - System and user prompts in `mcp-tools/prompts/`
 3. **Integration Point** - Called after relevant content is generated
 4. **Validation Report** - Markdown report with structured results
 
@@ -106,10 +106,10 @@ Before creating a new validation, answer these questions to guide your implement
 
 1. **Create project directory**
    ```bash
-   mkdir docs-generation/{YourValidator}
+   mkdir mcp-tools/{YourValidator}
    ```
 
-2. **Create .csproj file** at `docs-generation/{YourValidator}/{YourValidator}.csproj`
+2. **Create .csproj file** at `mcp-tools/{YourValidator}/{YourValidator}.csproj`
    ```xml
    <Project Sdk="Microsoft.NET.Sdk">
      <PropertyGroup>
@@ -125,7 +125,7 @@ Before creating a new validation, answer these questions to guide your implement
    </Project>
    ```
 
-3. **Create validator class** at `docs-generation/{YourValidator}/{YourValidator}.cs`
+3. **Create validator class** at `mcp-tools/{YourValidator}/{YourValidator}.cs`
 
    Key components:
    ```csharp
@@ -191,7 +191,7 @@ Before creating a new validation, answer these questions to guide your implement
 
 ### Step 2: Create Validation Prompts
 
-1. **Create system prompt** at `docs-generation/prompts/system-prompt-{your-validation}.txt`
+1. **Create system prompt** at `mcp-tools/prompts/system-prompt-{your-validation}.txt`
 
    Structure:
    ```markdown
@@ -248,7 +248,7 @@ Before creating a new validation, answer these questions to guide your implement
    - Return valid JSON only - no markdown code blocks
    ```
 
-2. **Create user prompt template** at `docs-generation/prompts/user-prompt-{your-validation}.txt`
+2. **Create user prompt template** at `mcp-tools/prompts/user-prompt-{your-validation}.txt`
 
    Structure:
    ```markdown
@@ -269,7 +269,7 @@ Before creating a new validation, answer these questions to guide your implement
 
 ### Step 3: Integrate into DocGeneration.Steps.AnnotationsParametersRaw.Annotations
 
-1. **Add project reference** to `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj`
+1. **Add project reference** to `mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj`
    ```xml
    <ItemGroup>
      <ProjectReference Include="../{YourValidator}/{YourValidator}.csproj" />
@@ -407,9 +407,9 @@ dotnet run --project DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Do
 
 ### Step 5: Create Tests
 
-1. **Create test project** at `docs-generation/{YourValidator}.Tests/{YourValidator}.Tests.csproj`
+1. **Create test project** at `mcp-tools/{YourValidator}.Tests/{YourValidator}.Tests.csproj`
 
-2. **Write tests** at `docs-generation/{YourValidator}.Tests/{YourValidator}Tests.cs`
+2. **Write tests** at `mcp-tools/{YourValidator}.Tests/{YourValidator}Tests.cs`
    ```csharp
    using Xunit;
    
@@ -451,7 +451,7 @@ dotnet run --project DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Do
 
 ### Step 6: Documentation
 
-1. **Create README** at `docs-generation/{YourValidator}/README.md`
+1. **Create README** at `mcp-tools/{YourValidator}/README.md`
 
    Include:
    - Purpose and overview
@@ -469,7 +469,7 @@ dotnet run --project DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Do
 1. **Build solution**
    ```bash
    cd docs-generation
-   dotnet build docs-generation.sln --configuration Release
+   dotnet build mcp-doc-generation.sln --configuration Release
    ```
 
 2. **Run tests**
@@ -533,11 +533,11 @@ dotnet run --project DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Do
 ## Example Reference
 
 See the **DocGeneration.Steps.ExamplePrompts.Validation** implementation for a complete working example:
-- Package: `docs-generation/DocGeneration.Steps.ExamplePrompts.Validation/`
-- Prompts: `docs-generation/prompts/system-prompt-example-prompt-validation.txt` and `user-prompt-example-prompt-validation.txt`
-- Integration: `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocumentationGenerator.cs` (lines ~293-2100)
-- Tests: `docs-generation/DocGeneration.Steps.ExamplePrompts.Validation.Tests/`
-- Documentation: `docs-generation/DocGeneration.Steps.ExamplePrompts.Validation/README.md`
+- Package: `mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/`
+- Prompts: `mcp-tools/prompts/system-prompt-example-prompt-validation.txt` and `user-prompt-example-prompt-validation.txt`
+- Integration: `mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/DocumentationGenerator.cs` (lines ~293-2100)
+- Tests: `mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation.Tests/`
+- Documentation: `mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/README.md`
 
 ## Next Steps
 

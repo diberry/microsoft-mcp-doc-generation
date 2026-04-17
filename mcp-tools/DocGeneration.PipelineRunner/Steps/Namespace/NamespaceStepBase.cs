@@ -57,7 +57,7 @@ public abstract class NamespaceStepBase : StepDefinition
     }
 
     protected static string GetProjectPath(PipelineContext context, string projectName)
-        => Path.Combine(context.DocsGenerationRoot, projectName, $"{projectName}.csproj");
+        => Path.Combine(context.McpToolsRoot, projectName, $"{projectName}.csproj");
 
     protected ValueTask<FilteredCliFileHandle> CreateFilteredCliFileAsync(
         PipelineContext context,

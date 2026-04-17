@@ -27,7 +27,7 @@ public class ToolFamilyValidatorIntegrationTests
             {
                 Request = new PipelineRequest("compute", [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
                 RepoRoot = testRoot,
-                DocsGenerationRoot = Path.Combine(testRoot, "mcp-tools"),
+                McpToolsRoot = Path.Combine(testRoot, "mcp-tools"),
                 OutputPath = outputPath,
                 ProcessRunner = new RecordingProcessRunner(),
                 Workspaces = new WorkspaceManager(),

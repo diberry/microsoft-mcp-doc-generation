@@ -40,7 +40,7 @@ public sealed class PipelineContextFactory
     public async ValueTask<PipelineContext> CreateAsync(PipelineRequest request, CancellationToken cancellationToken)
     {
         var repoRoot = ResolveRepoRoot(_repoRootOverride);
-        var docsGenerationRoot = Path.Combine(repoRoot, "mcp-tools");
+        var McpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
         var outputPath = Path.GetFullPath(
             Path.IsPathRooted(request.OutputPath)
                 ? request.OutputPath
@@ -50,7 +50,7 @@ public sealed class PipelineContextFactory
         {
             Request = request,
             RepoRoot = repoRoot,
-            DocsGenerationRoot = docsGenerationRoot,
+            McpToolsRoot = McpToolsRoot,
             OutputPath = outputPath,
             ProcessRunner = _processRunner,
             Workspaces = _workspaceManager,
@@ -91,7 +91,7 @@ public sealed class PipelineContextFactory
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "docs-generation.sln")))
+            if (File.Exists(Path.Combine(directory.FullName, "mcp-doc-generation.sln")))
             {
                 return directory.FullName;
             }

@@ -87,7 +87,7 @@ DocumentationGenerator.TransformCliOutput()
 
 ## Configuration
 
-Loaded from `docs-generation/data/config.json` at startup. Points to:
+Loaded from `mcp-tools/data/config.json` at startup. Points to:
 
 - `nl-parameters.json` — natural language parameter name mappings
 - `static-text-replacement.json` — text replacement rules
@@ -121,5 +121,5 @@ dotnet run --project DocGeneration.Steps.AnnotationsParametersRaw.Annotations --
   template templates/my-template.hbs data.json output.md
 
 # Run all tests
-dotnet test docs-generation.sln
+dotnet test mcp-doc-generation.sln
 ```

@@ -266,7 +266,7 @@ Three separate `StripFrontmatter` implementations exist:
 **Extends:** AD-010
 
 **Decision:** Any PR that modifies a Handlebars template (`.hbs` file) must include at least one test that:
-1. Loads the actual template from `docs-generation/templates/`
+1. Loads the actual template from `mcp-tools/templates/`
 2. Renders it using `HandlebarsTemplateEngine.ProcessTemplateString()`
 3. Asserts on the specific output change
 4. Would FAIL if the template change were reverted
@@ -606,7 +606,7 @@ This is the P0 (highest-leverage) item from `docs/acrolinx-compliance-strategy.m
 **Three mandatory quality gates must pass before consolidation completes:**
 
 **Gate 1: Full Test Pass**
-- Command: `dotnet test docs-generation.sln`
+- Command: `dotnet test mcp-doc-generation.sln`
 - Criteria: 0 failures, 0 skipped (unless pre-existing), test count matches baseline
 - Timing: After each consolidation phase
 

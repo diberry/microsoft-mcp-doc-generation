@@ -33,16 +33,16 @@ The feature is **enabled by default** via the `-ExamplePrompts $true` parameter.
 
 To explicitly disable it:
 ```bash
-pwsh ./docs-generation/scripts/Generate.ps1 -ExamplePrompts $false
+pwsh ./mcp-tools/scripts/Generate.ps1 -ExamplePrompts $false
 ```
 
 ## Edit Prompt Templates
 
 If you need to adjust how example prompts are generated, edit these files:
 
-- System prompt: [docs-generation/prompts/system-prompt-example-prompt.txt](../docs-generation/prompts/system-prompt-example-prompt.txt)
-- User prompt template: [docs-generation/prompts/user-prompt-example-prompt.txt](../docs-generation/prompts/user-prompt-example-prompt.txt)
-- Output formatting template (Handlebars): [docs-generation/templates/example-prompts-template.hbs](../docs-generation/templates/example-prompts-template.hbs)
+- System prompt: [mcp-tools/prompts/system-prompt-example-prompt.txt](../mcp-tools/prompts/system-prompt-example-prompt.txt)
+- User prompt template: [mcp-tools/prompts/user-prompt-example-prompt.txt](../mcp-tools/prompts/user-prompt-example-prompt.txt)
+- Output formatting template (Handlebars): [mcp-tools/templates/example-prompts-template.hbs](../mcp-tools/templates/example-prompts-template.hbs)
 
 The generator (`ExamplePromptGenerator`) loads the system and user prompt templates from the paths above and renders results using the Handlebars template.
 
@@ -77,7 +77,7 @@ If the directory is created but empty:
 
 1. **Check logs**: Look for warnings in the console output or in `generated/logs/`
    - You should see: `⚠️  WARNING: ExamplePromptGenerator failed to initialize`
-2. **Check credentials**: If you want prompts generated, ensure `.env` file exists in `docs-generation/` with valid Azure OpenAI credentials
+2. **Check credentials**: If you want prompts generated, ensure `.env` file exists in `mcp-tools/` with valid Azure OpenAI credentials
 3. **Verify format**: Ensure `.env` entries match the required format (see Configuration section above)
 4. **Re-run generation**: After adding credentials, run the generator again
 

@@ -73,7 +73,7 @@ public class PromptContentTests
     [Fact]
     public void AllSystemPrompts_HaveNoLegacyDuplicates()
     {
-        // After #295 cleanup, no legacy prompts should exist in docs-generation/prompts/
+        // After #295 cleanup, no legacy prompts should exist in mcp-tools/prompts/
         var legacyDir = Path.Combine(DocsGenRoot, "prompts");
         if (!Directory.Exists(legacyDir)) return; // Directory might be gone entirely
 

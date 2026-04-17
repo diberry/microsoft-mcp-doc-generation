@@ -10,13 +10,13 @@ DocGeneration.Steps.Bootstrap.BrandMappings validates that all MCP CLI namespace
 
 ```bash
 # Run just this project
-dotnet test docs-generation/DocGeneration.Steps.Bootstrap.BrandMappings.Tests/DocGeneration.Steps.Bootstrap.BrandMappings.Tests.csproj
+dotnet test mcp-tools/DocGeneration.Steps.Bootstrap.BrandMappings.Tests/DocGeneration.Steps.Bootstrap.BrandMappings.Tests.csproj
 
 # Run all solution tests
-dotnet test docs-generation.sln
+dotnet test mcp-doc-generation.sln
 
 # Release mode (matches CI — treats warnings as errors)
-dotnet test docs-generation.sln --configuration Release
+dotnet test mcp-doc-generation.sln --configuration Release
 ```
 
 ## Test Structure

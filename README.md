@@ -75,23 +75,23 @@ wait
 | 5 | Generate GitHub Copilot skills relevance reports (supplementary, non-fatal) | `skills-relevance/{namespace}-skills-relevance.md` | No |
 | 6 | Generate horizontal articles | `horizontal-articles/horizontal-article-{namespace}.md` | Yes |
 
-**Note**: Steps 2, 3, 4, and 6 require Azure OpenAI credentials configured in `docs-generation/.env`. See [docs-generation/scripts/README.md](docs-generation/scripts/README.md) for details.
+**Note**: Steps 2, 3, 4, and 6 require Azure OpenAI credentials configured in `mcp-tools/.env`. See [mcp-tools/scripts/README.md](mcp-tools/scripts/README.md) for details.
 
 ## Key Paths
 
 - **Entry point:** `start.sh`
-- **Worker/orchestration scripts:** `docs-generation/scripts/`
-- **C#/.NET generators:** `docs-generation/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/`, `docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/`, `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/`, `docs-generation/DocGeneration.Steps.SkillsRelevance/`, `docs-generation/DocGeneration.Steps.HorizontalArticles/`, `docs-generation/DocGeneration.Core.GenerativeAI/`, `docs-generation/DocGeneration.Core.TemplateEngine/`, `docs-generation/DocGeneration.Utilities.ToolMetadataExtractor/`
-- **Prompt templates:** `docs-generation/prompts/`
-- **Handlebars templates:** `docs-generation/templates/`
-- **Configuration data:** `docs-generation/data/`
+- **Worker/orchestration scripts:** `mcp-tools/scripts/`
+- **C#/.NET generators:** `mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/`, `mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/`, `mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/`, `mcp-tools/DocGeneration.Steps.SkillsRelevance/`, `mcp-tools/DocGeneration.Steps.HorizontalArticles/`, `mcp-tools/DocGeneration.Core.GenerativeAI/`, `mcp-tools/DocGeneration.Core.TemplateEngine/`, `mcp-tools/DocGeneration.Utilities.ToolMetadataExtractor/`
+- **Prompt templates:** `mcp-tools/prompts/`
+- **Handlebars templates:** `mcp-tools/templates/`
+- **Configuration data:** `mcp-tools/data/`
 - **MCP CLI metadata extraction:** `test-npm-azure-mcp/`
 - **Generated output:** `generated/` or `generated-<namespace>/`
 
 ### Legacy naming notes
 
-- `RelatedSkillsGenerator` and `SkillList` were superseded by the typed Step 5 package `docs-generation/DocGeneration.Steps.SkillsRelevance/`, which now owns both the per-namespace skills relevance report and the skills index output.
-- The live Step 4 compiled project is `docs-generation/DocGeneration.Steps.ToolFamilyCleanup/`; `docs-generation/ToolFamily/` remains planning/reference documentation, not a build project.
+- `RelatedSkillsGenerator` and `SkillList` were superseded by the typed Step 5 package `mcp-tools/DocGeneration.Steps.SkillsRelevance/`, which now owns both the per-namespace skills relevance report and the skills index output.
+- The live Step 4 compiled project is `mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/`; `mcp-tools/ToolFamily/` remains planning/reference documentation, not a build project.
 - `ToolMetadataEnricher` is not present on `squad/dotnet-naming-standards`; if it is restored, its naming-standard home is `DocGeneration.Steps.Bootstrap.ToolMetadataEnricher`.
 
 **Example `.env` configuration**:
@@ -165,7 +165,7 @@ Cross-cutting "how-to" guides for service-level scenarios:
 ```
 microsoft-mcp-doc-generation/
 ├── start.sh                     # Entry point (bash wrapper → PipelineRunner)
-├── docs-generation.sln          # .NET 9 solution
+├── mcp-doc-generation.sln          # .NET 9 solution
 │
 ├── docs/                        # Documentation
 │   ├── QUICK-START.md           # 5-minute guide
@@ -174,7 +174,7 @@ microsoft-mcp-doc-generation/
 │   ├── GENERATION-SCRIPTS.md    # Script execution order
 │   └── PROJECT-GUIDE.md         # Full developer guide
 │
-├── docs-generation/             # Generation system
+├── mcp-tools/             # Generation system
 │   ├── DocGeneration.PipelineRunner/          # Typed orchestrator (Steps 0-6)
 │   │   ├── Program.cs                        # CLI entry (System.CommandLine)
 │   │   ├── PipelineRunner.cs                 # Core runner loop
@@ -214,7 +214,7 @@ microsoft-mcp-doc-generation/
 
 Prompts are distributed across generator projects based on their purpose:
 
-#### 1. Example Prompts (`docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/prompts/`)
+#### 1. Example Prompts (`mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/prompts/`)
 ```
 prompts/
 ├── system-prompt.txt                    # AI behavior for example generation
@@ -223,7 +223,7 @@ prompts/
 **Purpose**: Generates 5 natural language example prompts per tool  
 **Output**: `./generated/example-prompts/{tool}-example-prompts.md`
 
-#### 2. Tool Family Cleanup (`docs-generation/DocGeneration.Steps.ToolFamilyCleanup/prompts/`)
+#### 2. Tool Family Cleanup (`mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/`)
 ```
 prompts/
 ├── tool-family-cleanup-system-prompt.txt   # Style guide and formatting rules
@@ -236,7 +236,7 @@ prompts/
 **Purpose**: AI-based formatting, structure improvements, metadata generation  
 **Output**: Improved `./generated/tool-family/{namespace}.md` files
 
-#### 3. Horizontal Articles (`docs-generation/DocGeneration.Steps.HorizontalArticles/prompts/`)
+#### 3. Horizontal Articles (`mcp-tools/DocGeneration.Steps.HorizontalArticles/prompts/`)
 ```
 prompts/
 ├── horizontal-article-system-prompt.txt    # How-to article format
@@ -245,7 +245,7 @@ prompts/
 **Purpose**: Generates service-specific how-to guides  
 **Output**: `./generated/horizontal-articles/horizontal-article-{service}.md`
 
-#### 4. Tool Description Analysis (`docs-generation/prompts/`)
+#### 4. Tool Description Analysis (`mcp-tools/prompts/`)
 ```
 prompts/
 ├── tool-description-analyzer-prompt.md     # Description quality analysis
@@ -306,7 +306,7 @@ To modify AI-generated content quality or style:
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, data flow, pipeline step details |
 | [docs/configuration-registry.md](docs/configuration-registry.md) | Configuration files inventory, load order, schemas, duplication analysis |
 | [docs/PRD-PipelineRunner.md](docs/PRD-PipelineRunner.md) | Product requirements for the typed .NET pipeline |
-| [docs-generation/README.md](docs-generation/README.md) | Generator implementation details |
+| [mcp-tools/README.md](mcp-tools/README.md) | Generator implementation details |
 
 ### Pipeline & Scripts
 
@@ -324,7 +324,7 @@ To modify AI-generated content quality or style:
 | [docs/test-strategy.md](docs/test-strategy.md) | Test strategy for the documentation pipeline |
 | [docs/FINGERPRINTING.md](docs/FINGERPRINTING.md) | Baseline fingerprinting tool — snapshot and diff generated output |
 | [docs/acrolinx-compliance-strategy.md](docs/acrolinx-compliance-strategy.md) | Acrolinx compliance strategy for tool-family articles |
-| [docs-generation/DocGeneration.PromptRegression.Tests/README.md](docs-generation/DocGeneration.PromptRegression.Tests/README.md) | Prompt regression testing — baselines, metrics, comparison |
+| [mcp-tools/DocGeneration.PromptRegression.Tests/README.md](mcp-tools/DocGeneration.PromptRegression.Tests/README.md) | Prompt regression testing — baselines, metrics, comparison |
 | [docs/prompt-versioning.md](docs/prompt-versioning.md) | Prompt versioning — SHA256 hashing, `PromptSnapshot`, `StepResultFile` v2 schema |
 
 ### AI & Content Generation
@@ -332,8 +332,8 @@ To modify AI-generated content quality or style:
 | Document | Description |
 |----------|-------------|
 | [docs/tool-generation-and-ai-improvements.md](docs/tool-generation-and-ai-improvements.md) | Tool generation and AI enhancement strategies |
-| [docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/README.md](docs-generation/DocGeneration.Steps.ExamplePrompts.Generation/README.md) | Example prompt generation (Step 2) |
-| [docs-generation/DocGeneration.Steps.HorizontalArticles/README.md](docs-generation/DocGeneration.Steps.HorizontalArticles/README.md) | Horizontal article generation (Step 6) |
+| [mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/README.md](mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/README.md) | Example prompt generation (Step 2) |
+| [mcp-tools/DocGeneration.Steps.HorizontalArticles/README.md](mcp-tools/DocGeneration.Steps.HorizontalArticles/README.md) | Horizontal article generation (Step 6) |
 
 ### Planning & Decisions
 
@@ -376,7 +376,7 @@ For AI-enhanced generation (steps 2, 3, 4, and 6), configure Azure OpenAI creden
 
 ```bash
 # Copy sample environment file
-cp docs-generation/sample.env docs-generation/.env
+cp mcp-tools/sample.env mcp-tools/.env
 
 # Edit .env with your credentials
 FOUNDRY_API_KEY="your-api-key"
