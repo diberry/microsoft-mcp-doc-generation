@@ -265,7 +265,7 @@ public static class ToolFileNameBuilder
 
     /// <summary>
     /// Resolves the brand-mapped output filename for a tool family (namespace-level).
-    /// Used for tool-family article filenames (e.g., "compute" → "azure-virtual-machines").
+    /// Used for tool-family article filenames (e.g., "compute" → "azure-compute").
     /// Falls back to the raw family name if no brand mapping exists.
     /// </summary>
     public static string ResolveFamilyFileName(string familyName, Dictionary<string, BrandMapping> brandMappings)

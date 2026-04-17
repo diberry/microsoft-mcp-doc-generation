@@ -60,7 +60,7 @@
     "seoDescription": "Use Azure MCP Server tools to manage Azure Communication Services resources such as SMS messaging with natural language prompts from your IDE."
   },
   "compute": {
-    "title": "Azure Virtual Machines documentation",
+    "title": "Azure Compute documentation",
     "url": "/azure/virtual-machines/",
     "seoDescription": "Use Azure MCP Server tools to manage compute resources such as virtual machines, managed disks, and virtual machine scale sets with natural language prompts from your IDE."
   },

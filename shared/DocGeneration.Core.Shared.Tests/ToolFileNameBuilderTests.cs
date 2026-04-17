@@ -234,10 +234,10 @@ public class ToolFileNameBuilderTests
     {
         var mappings = new Dictionary<string, BrandMapping>
         {
-            ["compute"] = new BrandMapping { FileName = "azure-virtual-machines" },
+            ["compute"] = new BrandMapping { FileName = "azure-compute" },
         };
         var result = ToolFileNameBuilder.ResolveFamilyFileName("compute", mappings);
-        Assert.Equal("azure-virtual-machines", result);
+        Assert.Equal("azure-compute", result);
     }
 
     [Fact]
@@ -283,11 +283,11 @@ public class ToolFileNameBuilderTests
     {
         var mappings = new Dictionary<string, BrandMapping>
         {
-            ["compute"] = new BrandMapping { FileName = "azure-virtual-machines" },
+            ["compute"] = new BrandMapping { FileName = "azure-compute" },
             ["cosmos"] = new BrandMapping { FileName = "azure-cosmos-db" },
             ["keyvault"] = new BrandMapping { FileName = "azure-key-vault" },
         };
-        Assert.Equal("azure-virtual-machines", ToolFileNameBuilder.ResolveFamilyFileName("compute", mappings));
+        Assert.Equal("azure-compute", ToolFileNameBuilder.ResolveFamilyFileName("compute", mappings));
         Assert.Equal("azure-cosmos-db", ToolFileNameBuilder.ResolveFamilyFileName("cosmos", mappings));
         Assert.Equal("azure-key-vault", ToolFileNameBuilder.ResolveFamilyFileName("keyvault", mappings));
     }
