@@ -175,6 +175,22 @@ public class MergeGroupValidatorTests
         Assert.Single(monitorGroup, m => m.MergeRole == "secondary" && m.McpServerName == "workbooks");
     }
 
+    [Fact]
+    public void Validate_ProductionConfig_HasFunctionsMergeGroup()
+    {
+        var mappingPath = Path.Combine(
+            FindProjectRoot(), "mcp-tools", "data", "brand-to-server-mapping.json");
+        var json = File.ReadAllText(mappingPath);
+        var mappings = System.Text.Json.JsonSerializer.Deserialize<List<BrandMapping>>(json,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Assert.NotNull(mappings);
+        var functionsGroup = mappings.Where(m => m.MergeGroup == "azure-functions").ToList();
+        Assert.Equal(2, functionsGroup.Count);
+        Assert.Single(functionsGroup, m => m.MergeRole == "primary" && m.McpServerName == "functionapp");
+        Assert.Single(functionsGroup, m => m.MergeRole == "secondary" && m.McpServerName == "functions");
+    }
+
     private static string FindProjectRoot() =>
         DocGeneration.TestInfrastructure.ProjectRootFinder.FindSolutionRoot();
 }
