@@ -7,7 +7,7 @@ namespace DocGeneration.PromptRegression.Tests.Infrastructure;
 public static class ProjectRootFinder
 {
     /// <summary>
-    /// Finds the docs-generation/ directory by walking up to docs-generation.sln.
+    /// Finds the docs-generation/ directory by walking up to the repo root.
     /// </summary>
     public static string FindDocsGenerationRoot() =>
         TestInfrastructure.ProjectRootFinder.FindDocsGenerationRoot();

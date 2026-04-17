@@ -26,12 +26,31 @@ public static class DataFileLoader
         new Lazy<Task<List<CommonParameterDefinition>>>(LoadCommonParametersInternalAsync);
 
     /// <summary>
-    /// Gets the path to the data directory relative to the executing assembly.
-    /// This resolves to docs-generation/data/ regardless of which project calls it.
+    /// Gets the path to the data directory by walking up from the executing assembly.
+    /// Uses brand-to-server-mapping.json as a fingerprint to confirm the correct data/ directory.
+    /// Works from both docs-generation/ and shared/ project layouts.
     /// </summary>
     public static string GetDataDirectoryPath()
     {
-        // From bin/Debug/net9.0 we need to go up 4 levels to docs-generation, then into data
+        const string fingerprint = "brand-to-server-mapping.json";
+        var dir = AppContext.BaseDirectory;
+
+        for (int i = 0; i < 8; i++)
+        {
+            dir = Path.GetFullPath(Path.Combine(dir, ".."));
+
+            // Direct data/ child (works from docs-generation/ projects)
+            var dataDir = Path.Combine(dir, "data");
+            if (Directory.Exists(dataDir) && File.Exists(Path.Combine(dataDir, fingerprint)))
+                return dataDir;
+
+            // docs-generation/data child (works from shared/ and repo-root contexts)
+            var docsDataDir = Path.Combine(dir, "docs-generation", "data");
+            if (Directory.Exists(docsDataDir) && File.Exists(Path.Combine(docsDataDir, fingerprint)))
+                return docsDataDir;
+        }
+
+        // Fallback to the old relative path for backward compatibility
         return Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data");
     }
 
