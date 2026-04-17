@@ -133,7 +133,8 @@ public class ToolReader
             Content = contentWithoutFrontmatter.Trim(),
             Command = command,
             Description = ExtractDescription(content),
-            SourceFilePath = filePath
+            SourceFilePath = filePath,
+            ResourceType = GetResourceType(command)
         };
     }
 
@@ -269,6 +270,28 @@ public class ToolReader
     /// </summary>
     private static string StripFrontmatter(string content) =>
         Shared.FrontmatterUtility.StripFrontmatter(content)!;
+
+    /// <summary>
+    /// Extracts the resource sub-type from a command string.
+    /// Command format: "namespace resource1 [resource2...] verb"
+    /// Returns the resource portion (e.g., "disk" from "compute disk create",
+    /// "agent thread" from "foundry agent thread create").
+    /// Returns empty string for two-segment commands (namespace + verb only).
+    /// </summary>
+    internal static string GetResourceType(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+            return string.Empty;
+
+        var segments = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        // Two or fewer segments: no resource sub-type
+        if (segments.Length <= 2)
+            return string.Empty;
+
+        // Three+ segments: "namespace resource... verb" -> resource portion
+        return string.Join(" ", segments[1..^1]);
+    }
 
     /// <summary>
     /// Builds a sort key from a command that groups by resource type first, then by verb.

@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 using ToolFamilyCleanup.Models;
 
 namespace ToolFamilyCleanup.Services;
@@ -12,6 +14,15 @@ namespace ToolFamilyCleanup.Services;
 /// </summary>
 public class FamilyFileStitcher
 {
+    // Known acronyms that should remain uppercase in display names
+    private static readonly HashSet<string> KnownAcronyms = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "vm", "vmss", "db", "sql", "api", "aks", "acr", "dns", "ip", "nsg",
+        "vpn", "vnet", "hpc", "gpu", "cpu", "ssd", "hdd", "cdn", "waf", "rbac"
+    };
+
+    private static readonly Regex HeadingRegex = new(@"^(#{2,6})\s", RegexOptions.Multiline | RegexOptions.Compiled);
+
     /// <summary>
     /// Assembles a complete tool family markdown file from its parts.
     /// </summary>
@@ -21,24 +32,33 @@ public class FamilyFileStitcher
     {
         var sb = new StringBuilder();
 
-        // 1. Metadata section (frontmatter + H1 + intro — strip any H2s the AI may have generated)
+        // 1. Metadata section (frontmatter + H1 + intro - strip any H2s the AI may have generated)
         var metadataLines = familyContent.Metadata.Split('\n')
             .Where(line => !line.StartsWith("## "));
         sb.AppendLine(string.Join('\n', metadataLines));
         sb.AppendLine();
 
-        // 2. Tool sections (H2 + content for each tool)
-        foreach (var tool in familyContent.Tools)
+        // 2. Tool sections - group by resource type if multi-resource (#412)
+        var isMultiResource = IsMultiResourceFamily(familyContent.Tools);
+
+        if (isMultiResource)
         {
-            sb.AppendLine(tool.Content);
-            sb.AppendLine();
+            StitchMultiResource(sb, familyContent.Tools);
+        }
+        else
+        {
+            // Single-resource: keep current behavior (H2 per tool)
+            foreach (var tool in familyContent.Tools)
+            {
+                sb.AppendLine(tool.Content);
+                sb.AppendLine();
+            }
         }
 
         // 3. Related content section
         sb.AppendLine(familyContent.RelatedContent);
 
         // 4. Post-processing: expand all acronyms on first body mention (#142, #215)
-        //    Replaces the old single-MCP expander with generalized AcronymExpander
         var markdown = sb.ToString().TrimEnd();
         markdown = AcronymExpander.ExpandAll(markdown);
 
@@ -85,6 +105,110 @@ public class FamilyFileStitcher
         markdown = ScaffoldingCommentStripper.Strip(markdown);
 
         return markdown;
+    }
+
+    /// <summary>
+    /// Determines whether a set of tools spans multiple distinct resource types.
+    /// Returns true when there are 2+ distinct non-empty resource types.
+    /// </summary>
+    internal static bool IsMultiResourceFamily(List<ToolContent> tools)
+    {
+        var distinctResourceTypes = tools
+            .Select(t => t.ResourceType)
+            .Where(rt => !string.IsNullOrEmpty(rt))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return distinctResourceTypes.Count >= 2;
+    }
+
+    /// <summary>
+    /// Emits tool sections grouped by resource type. Each group gets an H2 header;
+    /// tool headings are demoted from H2 to H3 (and sub-headings shift accordingly).
+    /// </summary>
+    private static void StitchMultiResource(StringBuilder sb, List<ToolContent> tools)
+    {
+        // Group tools preserving existing sort order (already sorted by resource type then verb)
+        var groups = new List<(string ResourceType, List<ToolContent> Tools)>();
+        string currentResourceType = "";
+        List<ToolContent>? currentGroup = null;
+
+        foreach (var tool in tools)
+        {
+            var rt = string.IsNullOrEmpty(tool.ResourceType) ? "" : tool.ResourceType;
+            if (currentGroup == null || !string.Equals(rt, currentResourceType, StringComparison.OrdinalIgnoreCase))
+            {
+                currentGroup = new List<ToolContent>();
+                currentResourceType = rt;
+                groups.Add((rt, currentGroup));
+            }
+            currentGroup.Add(tool);
+        }
+
+        foreach (var (resourceType, groupTools) in groups)
+        {
+            // Emit H2 resource group header
+            var displayName = FormatResourceTypeDisplayName(resourceType);
+            sb.AppendLine($"## {displayName}");
+            sb.AppendLine();
+
+            foreach (var tool in groupTools)
+            {
+                // Demote all headings in tool content by one level (H2->H3, H3->H4, etc.)
+                var demotedContent = DemoteHeadings(tool.Content);
+                sb.AppendLine(demotedContent);
+                sb.AppendLine();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Demotes all markdown headings in content by one level (## -> ###, ### -> ####, etc.).
+    /// Caps at H6 (######) per markdown spec.
+    /// </summary>
+    internal static string DemoteHeadings(string content)
+    {
+        return HeadingRegex.Replace(content, match =>
+        {
+            var hashes = match.Groups[1].Value;
+            // Cap at 6 levels
+            if (hashes.Length >= 6)
+                return match.Value;
+            return hashes + "# ";
+        });
+    }
+
+    /// <summary>
+    /// Converts a resource type identifier to a human-readable display name.
+    /// Examples: "disk" -> "Disk", "vmss" -> "VMSS", "db container" -> "DB container"
+    /// </summary>
+    internal static string FormatResourceTypeDisplayName(string resourceType)
+    {
+        if (string.IsNullOrWhiteSpace(resourceType))
+            return "General";
+
+        var words = resourceType.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var result = new string[words.Length];
+
+        for (int i = 0; i < words.Length; i++)
+        {
+            if (KnownAcronyms.Contains(words[i]))
+            {
+                result[i] = words[i].ToUpperInvariant();
+            }
+            else if (i == 0)
+            {
+                // Title-case the first word
+                result[i] = char.ToUpper(words[i][0], CultureInfo.InvariantCulture) + words[i][1..];
+            }
+            else
+            {
+                // Lowercase subsequent non-acronym words
+                result[i] = words[i].ToLowerInvariant();
+            }
+        }
+
+        return string.Join(" ", result);
     }
 
     /// <summary>
