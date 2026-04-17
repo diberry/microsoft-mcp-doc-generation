@@ -44,8 +44,8 @@ public static class DataFileLoader
             if (Directory.Exists(dataDir) && File.Exists(Path.Combine(dataDir, fingerprint)))
                 return dataDir;
 
-            // docs-generation/data child (works from shared/ and repo-root contexts)
-            var docsDataDir = Path.Combine(dir, "docs-generation", "data");
+            // mcp-tools/data child (works from shared/ and repo-root contexts)
+            var docsDataDir = Path.Combine(dir, "mcp-tools", "data");
             if (Directory.Exists(docsDataDir) && File.Exists(Path.Combine(docsDataDir, fingerprint)))
                 return docsDataDir;
         }

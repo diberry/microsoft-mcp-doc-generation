@@ -31,10 +31,16 @@ public static class ProjectRootFinder
     }
 
     /// <summary>
-    /// Finds the docs-generation/ subdirectory (where generator projects live).
+    /// Finds the mcp-tools/ subdirectory (where generator projects live).
     /// </summary>
-    public static string FindDocsGenerationRoot()
+    public static string FindMcpToolsRoot()
     {
-        return Path.Combine(FindSolutionRoot(), "docs-generation");
+        return Path.Combine(FindSolutionRoot(), "mcp-tools");
     }
+
+    /// <summary>
+    /// Backward-compatible alias for <see cref="FindMcpToolsRoot"/>.
+    /// </summary>
+    [System.Obsolete("Use FindMcpToolsRoot() instead. Will be removed in Phase 5.")]
+    public static string FindDocsGenerationRoot() => FindMcpToolsRoot();
 }
