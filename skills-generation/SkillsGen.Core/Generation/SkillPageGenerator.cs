@@ -49,9 +49,25 @@ public class SkillPageGenerator : ISkillPageGenerator
         var doNotUseForList = NaturalizeItems(rawDoNotUseFor, skillData.DisplayName);
 
         // Cap example prompts and optionally post-process them
-        var examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts)
-            .Select(t => triggerProcessor != null ? triggerProcessor(t) : t)
-            .ToList();
+        // When trigger test files are missing, fall back to useFor/WHEN items as prompts
+        List<string> examplePrompts;
+        if (triggerData.ShouldTrigger.Count > 0)
+        {
+            examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts)
+                .Select(t => triggerProcessor != null ? triggerProcessor(t) : t)
+                .ToList();
+        }
+        else
+        {
+            // Fallback: generate natural-language prompts from UseFor items
+            var fallbackSources = skillData.UseFor.Count > 0
+                ? skillData.UseFor
+                : skillData.Activation?.DetectionMarkers?.Count > 0
+                    ? skillData.Activation.DetectionMarkers
+                    : new List<string>();
+
+            examplePrompts = GenerateFallbackPrompts(fallbackSources, skillData.DisplayName);
+        }
 
         // Build "What it provides" with concrete capabilities from services/tools
         var whatItProvides = BuildWhatItProvides(skillData);
@@ -227,8 +243,45 @@ public class SkillPageGenerator : ISkillPageGenerator
     }
 
     /// <summary>
-    /// Converts raw keyword fragments into natural-language bullet points.
-    /// Groups related short items and adds verb phrases to bare nouns.
+    /// Generates natural-language example prompts from UseFor items when triggers.test.ts is missing.
+    /// </summary>
+    internal static List<string> GenerateFallbackPrompts(List<string> useForItems, string displayName)
+    {
+        if (useForItems.Count == 0) return new List<string>();
+
+        return useForItems
+            .Take(MaxExamplePrompts)
+            .Select(item => ConvertToPrompt(item, displayName))
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Converts a single UseFor item into a natural-language prompt question.
+    /// </summary>
+    internal static string ConvertToPrompt(string item, string displayName)
+    {
+        var trimmed = item.Trim().TrimEnd('.');
+
+        // If it already looks like a question, keep it
+        if (trimmed.EndsWith('?')) return trimmed;
+
+        // If it starts with a verb phrase (e.g., "deploy copilot app"), frame as "How do I..."
+        var verbStarters = new[] { "deploy", "create", "configure", "set up", "manage", "build",
+            "monitor", "diagnose", "troubleshoot", "migrate", "optimize", "analyze", "query",
+            "list", "get", "add", "remove", "update", "delete", "run", "test", "check", "find",
+            "enable", "disable", "connect", "plan", "design", "review", "install", "generate" };
+
+        var lower = trimmed.ToLowerInvariant();
+        foreach (var verb in verbStarters)
+        {
+            if (lower.StartsWith(verb + " ") || lower.StartsWith(verb + ","))
+                return $"How do I {char.ToLower(trimmed[0])}{trimmed[1..]}?";
+        }
+
+        // Noun phrase — frame as "How do I work with..."
+        return $"How do I work with {char.ToLower(trimmed[0])}{trimmed[1..]}?";
+    }
     /// </summary>
     internal static List<string> NaturalizeItems(List<string> items, string skillDisplayName)
     {

@@ -147,6 +147,30 @@ public class SkillPageValidator : ISkillPageValidator
             }
         }
 
+        // PROMPT_COUNT: Validate example prompts in rendered content
+        var promptSectionMatch = Regex.Match(renderedContent,
+            @"(?:^|\n)###?\s*Example prompts.*?\n(.*?)(?=\n##[^#]|\z)",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        if (promptSectionMatch.Success)
+        {
+            var promptSection = promptSectionMatch.Groups[1].Value;
+            var promptBullets = Regex.Matches(promptSection, @"^[ \t]*-\s+", RegexOptions.Multiline);
+            if (promptBullets.Count == 0)
+            {
+                errors.Add("PROMPT_COUNT: No example prompts in rendered content");
+            }
+            else if (promptBullets.Count < 5)
+            {
+                warnings.Add($"PROMPT_COUNT: Only {promptBullets.Count} example prompts (recommended minimum: 5)");
+            }
+        }
+
+        // PROMPT_SOURCE: Warn when trigger test file is missing (fallback prompts used)
+        if (triggerData.ShouldTrigger.Count == 0 && skillData.UseFor.Count > 0)
+        {
+            warnings.Add("PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items");
+        }
+
         var sectionCount = Regex.Matches(renderedContent, @"^## ", RegexOptions.Multiline).Count;
 
         return new SkillValidationResult(errors.Count == 0, errors, warnings, wordCount, sectionCount);
