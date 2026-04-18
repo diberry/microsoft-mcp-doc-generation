@@ -320,6 +320,15 @@ public class AcrolinxPostProcessorTests
     }
 
     [Fact]
+    public void RewriteGoalBeforeAction_MidSentence_NotRewritten()
+    {
+        // Regression test: "Run" appearing mid-sentence should NOT be rewritten
+        var input = "You can Run the deploy command to publish your app.";
+        var result = AcrolinxPostProcessor.RewriteGoalBeforeAction(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
     public void RewriteGoalBeforeAction_NoMatch_Unchanged()
     {
         var input = "To list resources, run the command.";

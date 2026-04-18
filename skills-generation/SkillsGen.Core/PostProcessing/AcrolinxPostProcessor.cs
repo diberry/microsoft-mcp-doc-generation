@@ -128,14 +128,23 @@ public partial class AcrolinxPostProcessor
         // 6. Normalize URLs - strip learn.microsoft.com prefix
         result = NormalizeUrls(result);
 
-        // 7. Wrap technical API terms in backticks
+        // 7. Rewrite goal-before-action patterns ("Run X to Y" → "To Y, run X")
+        result = RewriteGoalBeforeAction(result);
+
+        // 8. Wrap technical API terms in backticks
         result = WrapTechnicalTerms(result);
 
         // Add commas after introductory phrases
         result = AddIntroductoryCommas(result);
 
+        // Remove bold label colons ("**Label:** text" → "**Label** text")
+        result = RemoveBoldLabelColons(result);
+
         // Split long sentences
         result = SplitLongSentences(result);
+
+        // Final cleanup: remove consecutive duplicate sentences
+        result = RemoveConsecutiveDuplicateSentences(result);
 
         return processedFrontmatter + result;
     }
@@ -657,7 +666,7 @@ public partial class AcrolinxPostProcessor
             .ToList();
     }
 
-    [GeneratedRegex(@"\b(Run|Execute|Use)\s+(.+?)\s+to\s+(.+?)(?:\.|$)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^(Run|Execute|Use)\s+(.+?)\s+to\s+(.+?)(?:\.|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex GoalBeforeActionRegex();
 
     [GeneratedRegex(@"\*\*(?<label>[^*:]+):\*\*\s?")]
