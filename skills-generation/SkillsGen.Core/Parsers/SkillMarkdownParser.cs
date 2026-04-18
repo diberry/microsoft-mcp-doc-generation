@@ -759,7 +759,15 @@ public partial class SkillMarkdownParser : ISkillParser
         {
             // Match multi-word names where each word starts uppercase, ending in known suffix
             var pattern = $@"(?:^|[\s,+&])((?:[A-Z][a-z]+ ){{1,6}}{Regex.Escape(suffix)})\b";
-            var matches = Regex.Matches(body, pattern);
+            MatchCollection matches;
+            try
+            {
+                matches = Regex.Matches(body, pattern, RegexOptions.None, TimeSpan.FromSeconds(2));
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return roles;
+            }
             foreach (Match m in matches)
             {
                 var roleName = m.Groups[1].Value.Trim();

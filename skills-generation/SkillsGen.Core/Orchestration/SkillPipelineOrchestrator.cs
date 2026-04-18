@@ -220,7 +220,8 @@ public class SkillPipelineOrchestrator
         // Detect resource requirements from SKILL.md content
         var resources = new List<ResourceRequirement>();
         var body = skillData.RawBody.ToLowerInvariant();
-        if (body.Contains("key vault") && !doNotUseForText.Contains("key vault"))
+        if ((body.Contains("key vault") || body.Contains("keyvault")) &&
+            !doNotUseForText.Contains("key vault") && !doNotUseForText.Contains("keyvault"))
             resources.Add(new("Azure Key Vault", "Key vault for secrets and certificate management"));
         if ((body.Contains("storage account") || body.Contains("blob storage")) &&
             !doNotUseForText.Contains("storage account") && !doNotUseForText.Contains("blob storage"))
@@ -236,11 +237,14 @@ public class SkillPipelineOrchestrator
         var rbacRoles = SkillMarkdownParser.ExtractRbacRoles(skillData.RawBody);
 
         // Merge sub-skill RBAC roles if present
+        var seenRoleNames = new HashSet<string>(
+            rbacRoles.Select(r => r.RoleName),
+            StringComparer.OrdinalIgnoreCase);
         foreach (var subSkill in skillData.SubSkills)
         {
             foreach (var role in subSkill.RbacRoles)
             {
-                if (!rbacRoles.Any(r => r.RoleName.Equals(role.RoleName, StringComparison.OrdinalIgnoreCase)))
+                if (seenRoleNames.Add(role.RoleName))
                     rbacRoles.Add(role);
             }
         }
