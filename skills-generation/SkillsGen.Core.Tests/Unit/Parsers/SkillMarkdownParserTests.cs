@@ -510,4 +510,17 @@ public class SkillMarkdownParserTests
         result.McpTools.Should().HaveCount(1);
         result.McpTools[0].Purpose.Should().Be("List items (filter by name)");
     }
+
+    [Fact]
+    public void ExtractRbacRoles_AdversarialInput_ReturnsGracefully()
+    {
+        // Build a string with many uppercase-then-lowercase words that could cause backtracking
+        var adversarial = string.Concat(Enumerable.Repeat("Aa ", 200)) + "Zzz";
+        var body = $"Some text {adversarial} more text";
+
+        // Should complete within the timeout (2s) and not hang — returns empty on timeout
+        var result = SkillMarkdownParser.ExtractRbacRoles(body);
+
+        result.Should().NotBeNull();
+    }
 }

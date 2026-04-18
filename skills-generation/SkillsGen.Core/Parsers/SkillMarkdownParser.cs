@@ -63,6 +63,7 @@ public partial class SkillMarkdownParser : ISkillParser
         var decisionGuidance = ExtractDecisionGuidance(body);
         var relatedSkills = ExtractRelatedSkills(body);
         var prerequisites = ExtractPrerequisites(body);
+        var activation = ExtractActivationTriggers(decodedDescription, body);
 
         return new SkillData
         {
@@ -77,7 +78,8 @@ public partial class SkillMarkdownParser : ISkillParser
             DecisionGuidance = decisionGuidance,
             RelatedSkills = relatedSkills,
             Prerequisites = prerequisites,
-            RawBody = body
+            RawBody = body,
+            Activation = activation
         };
     }
 
@@ -646,6 +648,209 @@ public partial class SkillMarkdownParser : ISkillParser
         return ExtractBulletItems(section);
     }
 
+    /// <summary>
+    /// Extracts RBAC role requirements from structured sections and inline mentions.
+    /// Looks for "## Required Roles", "### RBAC", role tables, and inline role names.
+    /// </summary>
+    internal static List<RbacRequirement> ExtractRbacRoles(string body)
+    {
+        var roles = new List<RbacRequirement>();
+        if (string.IsNullOrWhiteSpace(body)) return roles;
+
+        // 1. Parse from structured sections: "## Required Roles", "### RBAC", "### Required roles"
+        var sectionPatterns = new[]
+        {
+            @"#{2,3}\s*Required\s+Roles",
+            @"#{2,3}\s*RBAC(?:\s+Roles)?",
+            @"#{2,3}\s*Role[\s-]+Based\s+Access"
+        };
+
+        foreach (var pattern in sectionPatterns)
+        {
+            var section = ExtractRbacSectionContent(body, pattern);
+            if (string.IsNullOrEmpty(section)) continue;
+
+            // Parse table rows: | RoleName | Scope | Reason |
+            var tableRoles = ParseRbacTable(section);
+            if (tableRoles.Count > 0)
+            {
+                roles.AddRange(tableRoles);
+                break;
+            }
+
+            // Parse bullet format: - **Role Name** — scope description
+            var bulletRoles = ParseRbacBullets(section);
+            if (bulletRoles.Count > 0)
+            {
+                roles.AddRange(bulletRoles);
+                break;
+            }
+        }
+
+        // 2. Parse inline role mentions from body text (e.g., "Cost Management Reader + Monitoring Reader")
+        if (roles.Count == 0)
+        {
+            roles.AddRange(ExtractInlineRbacRoles(body));
+        }
+
+        // Deduplicate by role name (case-insensitive)
+        return roles
+            .GroupBy(r => r.RoleName, StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+    }
+
+    private static List<RbacRequirement> ParseRbacTable(string section)
+    {
+        var roles = new List<RbacRequirement>();
+        var rows = Regex.Matches(section, @"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|(?:\s*([^|]*?)\s*\|)?", RegexOptions.Multiline);
+        foreach (Match row in rows)
+        {
+            var roleName = row.Groups[1].Value.Trim();
+            if (string.IsNullOrWhiteSpace(roleName) || roleName.StartsWith("---") ||
+                roleName.Equals("Role", StringComparison.OrdinalIgnoreCase) ||
+                roleName.Equals("RoleName", StringComparison.OrdinalIgnoreCase)) continue;
+
+            var scope = row.Groups[2].Value.Trim();
+            if (scope.StartsWith("---")) scope = "Subscription";
+            var reason = row.Groups.Count > 3 ? NullIfEmpty(row.Groups[3].Value.Trim()) : null;
+            if (reason != null && reason.StartsWith("---")) reason = null;
+            roles.Add(new RbacRequirement(roleName, scope, reason));
+        }
+        return roles;
+    }
+
+    private static List<RbacRequirement> ParseRbacBullets(string section)
+    {
+        var roles = new List<RbacRequirement>();
+        var bullets = Regex.Matches(section, @"^[-*]\s+\*?\*?([^*\n]+?)\*?\*?\s*[—–-]\s*(.+)$", RegexOptions.Multiline);
+        foreach (Match b in bullets)
+        {
+            var roleName = b.Groups[1].Value.Trim();
+            var description = b.Groups[2].Value.Trim();
+            roles.Add(new RbacRequirement(roleName, "Subscription", description));
+        }
+
+        // Also try simple bullets: - Role Name
+        if (roles.Count == 0)
+        {
+            var simples = Regex.Matches(section, @"^[-*]\s+(.+)$", RegexOptions.Multiline);
+            foreach (Match s in simples)
+            {
+                var roleName = s.Groups[1].Value.Trim().Trim('*');
+                if (IsLikelyRoleName(roleName))
+                    roles.Add(new RbacRequirement(roleName, "Subscription"));
+            }
+        }
+        return roles;
+    }
+
+    /// <summary>
+    /// Extracts inline RBAC role mentions like "Cost Management Reader + Monitoring Reader"
+    /// or "requires Contributor role" from body text.
+    /// </summary>
+    private static List<RbacRequirement> ExtractInlineRbacRoles(string body)
+    {
+        var roles = new List<RbacRequirement>();
+        var knownSuffixes = new[] { "Reader", "Contributor", "Owner", "Administrator", "Operator" };
+
+        // Match patterns like "Role Name Reader", "Role Name Contributor", etc.
+        foreach (var suffix in knownSuffixes)
+        {
+            // Match multi-word names where each word starts uppercase, ending in known suffix
+            var pattern = $@"(?:^|[\s,+&])((?:[A-Z][a-z]+ ){{1,6}}{Regex.Escape(suffix)})\b";
+            MatchCollection matches;
+            try
+            {
+                matches = Regex.Matches(body, pattern, RegexOptions.None, TimeSpan.FromSeconds(2));
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return roles;
+            }
+            foreach (Match m in matches)
+            {
+                var roleName = m.Groups[1].Value.Trim();
+                // Filter out false positives: headers, markdown artifacts, table borders
+                if (roleName.Length > 60 || roleName.Contains('#') || roleName.Contains('|')) continue;
+                if (!IsLikelyRoleName(roleName)) continue;
+                if (!roles.Any(r => r.RoleName.Equals(roleName, StringComparison.OrdinalIgnoreCase)))
+                    roles.Add(new RbacRequirement(roleName, "Subscription"));
+            }
+        }
+
+        return roles;
+    }
+
+    /// <summary>
+    /// Checks if a string looks like an Azure RBAC role name (ends with Reader/Contributor/Owner/etc.).
+    /// </summary>
+    private static bool IsLikelyRoleName(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text.Length < 4) return false;
+        var roleSuffixes = new[] { "Reader", "Contributor", "Owner", "Administrator", "Operator" };
+        return roleSuffixes.Any(s => text.EndsWith(s, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Extracts MANDATORY/PREFER OVER directives and codebase detection markers from description.
+    /// </summary>
+    internal static ActivationTrigger? ExtractActivationTriggers(string description, string body)
+    {
+        if (string.IsNullOrWhiteSpace(description) && string.IsNullOrWhiteSpace(body))
+            return null;
+
+        var fullText = $"{description}\n{body}";
+        string? directive = null;
+        string? preferOver = null;
+        var markers = new List<string>();
+
+        // Parse MANDATORY directive
+        var mandatoryMatch = Regex.Match(fullText, @"\bMANDATORY\b\s*(?:when\s+)?(.+?)(?:\.|—|$)", RegexOptions.IgnoreCase);
+        if (mandatoryMatch.Success)
+            directive = $"MANDATORY {mandatoryMatch.Groups[1].Value.Trim()}";
+
+        // Parse PREFER OVER directive
+        var preferMatch = Regex.Match(fullText, @"\bPREFER\s+OVER\s+(\S+)", RegexOptions.IgnoreCase);
+        if (preferMatch.Success)
+            preferOver = preferMatch.Groups[1].Value.Trim().TrimEnd('.', ',', ';');
+
+        // Set directive from PREFER OVER if MANDATORY not found
+        if (directive == null && preferOver != null)
+            directive = $"PREFER OVER {preferOver}";
+
+        // Extract detection markers: patterns like @package/name, file patterns, class names in backticks
+        var markerPatterns = new[]
+        {
+            @"@[\w-]+/[\w-]+",                           // npm packages: @github/copilot-sdk
+            @"(?<=\bcodebase\s+contains\s+)`([^`]+)`",   // codebase contains `X`
+            @"(?<=\b[Dd]etects?\s+)`([^`]+)`",           // detects `X` or Detects `X`
+            @"(?<=\bmarkers?\s*:\s*)`([^`]+)`",           // markers: `X`
+            @"(?<=and\s+)`([^`]+)`"                       // and `X` (continuation of detection list)
+        };
+
+        foreach (var pattern in markerPatterns)
+        {
+            var markerMatches = Regex.Matches(fullText, pattern);
+            foreach (Match m in markerMatches)
+            {
+                var value = m.Groups.Count > 1 && m.Groups[1].Success
+                    ? m.Groups[1].Value
+                    : m.Value;
+                if (!markers.Contains(value))
+                    markers.Add(value);
+            }
+        }
+
+        if (directive == null && markers.Count == 0)
+            return null;
+
+        return new ActivationTrigger(
+            directive ?? "Auto-activates based on codebase detection",
+            preferOver,
+            markers.Count > 0 ? markers : null);
+    }
+
     private static string ExtractSectionContent(string body, string headingPattern)
     {
         var match = Regex.Match(body, $@"^{headingPattern}\s*$", RegexOptions.Multiline | RegexOptions.IgnoreCase);
@@ -653,6 +858,22 @@ public partial class SkillMarkdownParser : ISkillParser
 
         var afterHeading = body[(match.Index + match.Length)..];
         var nextHeading = Regex.Match(afterHeading, @"^##?\s", RegexOptions.Multiline);
+        return nextHeading.Success ? afterHeading[..nextHeading.Index].Trim() : afterHeading.Trim();
+    }
+
+    /// <summary>
+    /// Extracts section content for RBAC headings, supporting ## and ### level headings.
+    /// Uses string concatenation instead of interpolation to avoid issues with quantifier braces.
+    /// </summary>
+    private static string ExtractRbacSectionContent(string body, string headingPattern)
+    {
+        var fullPattern = "^" + headingPattern + @"\s*$";
+        var match = Regex.Match(body, fullPattern, RegexOptions.Multiline | RegexOptions.IgnoreCase);
+        if (!match.Success) return "";
+
+        var afterHeading = body[(match.Index + match.Length)..];
+        // Match next heading at any level (##, ###, etc.)
+        var nextHeading = Regex.Match(afterHeading, @"^#{2,}", RegexOptions.Multiline);
         return nextHeading.Success ? afterHeading[..nextHeading.Index].Trim() : afterHeading.Trim();
     }
 

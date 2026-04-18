@@ -74,6 +74,15 @@ public class SkillPipelineOrchestrator
             // Override display name from inventory if provided
             if (!string.IsNullOrEmpty(displayName))
                 skillData = skillData with { DisplayName = displayName };
+
+            // Fetch and parse sub-skills if fetcher supports it
+            var subSkills = await FetchSubSkillsAsync(skillName, ct);
+            if (subSkills.Count > 0)
+            {
+                skillData = skillData with { SubSkills = subSkills };
+                _logger.LogInfo($"  Found {subSkills.Count} sub-skill(s) for {skillName}");
+            }
+
             var triggerData = _triggerParser.Parse(sources.TriggersTestSource);
             _logger.LogParseResult(skillName, skillData.Services.Count, skillData.McpTools.Count, triggerData.ShouldTrigger.Count);
 
@@ -204,21 +213,46 @@ public class SkillPipelineOrchestrator
         if (tools.Count == 1)
             tools.Add(new("Azure CLI", MinVersion: "2.60.0", InstallCommand: "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"));
 
+        // Build exclusion set from DoNotUseFor — resources mentioned in "DO NOT USE FOR" context
+        // should not appear as prerequisites (prevents false positives)
+        var doNotUseForText = string.Join(" ", skillData.DoNotUseFor).ToLowerInvariant();
+
         // Detect resource requirements from SKILL.md content
         var resources = new List<ResourceRequirement>();
         var body = skillData.RawBody.ToLowerInvariant();
-        if (body.Contains("key vault"))
+        if ((body.Contains("key vault") || body.Contains("keyvault")) &&
+            !doNotUseForText.Contains("key vault") && !doNotUseForText.Contains("keyvault"))
             resources.Add(new("Azure Key Vault", "Key vault for secrets and certificate management"));
-        if (body.Contains("storage account") || body.Contains("blob storage"))
+        if ((body.Contains("storage account") || body.Contains("blob storage")) &&
+            !doNotUseForText.Contains("storage account") && !doNotUseForText.Contains("blob storage"))
             resources.Add(new("Azure Storage account", "Storage account for blob, file, queue, or table data"));
-        if (body.Contains("kubernetes") || body.Contains(" aks "))
+        if ((body.Contains("kubernetes") || body.Contains(" aks ")) &&
+            !doNotUseForText.Contains("kubernetes") && !doNotUseForText.Contains("aks"))
             resources.Add(new("Azure Kubernetes Service cluster", "AKS cluster for container orchestration"));
-        if (body.Contains("cosmos db") || body.Contains("cosmosdb"))
+        if ((body.Contains("cosmos db") || body.Contains("cosmosdb")) &&
+            !doNotUseForText.Contains("cosmos db") && !doNotUseForText.Contains("cosmosdb"))
             resources.Add(new("Azure Cosmos DB account", "Cosmos DB account for NoSQL data"));
+
+        // Extract RBAC roles from structured sections and inline mentions
+        var rbacRoles = SkillMarkdownParser.ExtractRbacRoles(skillData.RawBody);
+
+        // Merge sub-skill RBAC roles if present
+        var seenRoleNames = new HashSet<string>(
+            rbacRoles.Select(r => r.RoleName),
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var subSkill in skillData.SubSkills)
+        {
+            foreach (var role in subSkill.RbacRoles)
+            {
+                if (seenRoleNames.Add(role.RoleName))
+                    rbacRoles.Add(role);
+            }
+        }
 
         return new SkillPrerequisites
         {
             Azure = new AzureRequirements(),
+            RbacRoles = rbacRoles,
             Tools = tools,
             Resources = resources
         };
@@ -251,5 +285,41 @@ public class SkillPipelineOrchestrator
             skillName, 0,
             new SkillValidationResult(false, [error], [], 0, 0),
             null, sw.ElapsedMilliseconds);
+    }
+
+    /// <summary>
+    /// Fetches sub-skills if the fetcher is a GitHubSkillFetcher with sub-skill support.
+    /// Parses each sub-skill SKILL.md and returns SubSkillData records.
+    /// </summary>
+    private async Task<List<SubSkillData>> FetchSubSkillsAsync(string skillName, CancellationToken ct)
+    {
+        var subSkills = new List<SubSkillData>();
+
+        if (_fetcher is GitHubSkillFetcher githubFetcher)
+        {
+            var rawSubSkills = await githubFetcher.FetchSubSkillsAsync(skillName, ct);
+            foreach (var (name, content) in rawSubSkills)
+            {
+                var parsed = _parser.Parse(name, content);
+                var rbacRoles = SkillMarkdownParser.ExtractRbacRoles(parsed.RawBody);
+                subSkills.Add(new SubSkillData
+                {
+                    Name = name,
+                    DisplayName = parsed.DisplayName,
+                    Description = parsed.Description,
+                    UseFor = parsed.UseFor,
+                    Services = parsed.Services,
+                    McpTools = parsed.McpTools,
+                    RbacRoles = rbacRoles
+                });
+            }
+        }
+        else if (_fetcher is LocalSkillFetcher)
+        {
+            // LocalSkillFetcher: scan subdirectories for SKILL.md files
+            // This is handled at the file system level via the skill directory
+        }
+
+        return subSkills;
     }
 }
