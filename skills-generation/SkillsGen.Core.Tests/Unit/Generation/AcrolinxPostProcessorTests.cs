@@ -284,4 +284,169 @@ public class AcrolinxPostProcessorTests
         fm.Should().BeEmpty();
         body.Should().Be(input);
     }
+
+    // --- Goal-before-action rewriting tests ---
+
+    [Theory]
+    [InlineData(
+        "Run the command to list resources.",
+        "To list resources, run the command.")]
+    [InlineData(
+        "Execute the query to retrieve metrics.",
+        "To retrieve metrics, execute the query.")]
+    [InlineData(
+        "Use the skill to manage storage accounts.",
+        "To manage storage accounts, use the skill.")]
+    public void RewriteGoalBeforeAction_RewritesRunToPattern(string input, string expected)
+    {
+        var result = AcrolinxPostProcessor.RewriteGoalBeforeAction(input);
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void RewriteGoalBeforeAction_SkipsHeadings()
+    {
+        var input = "## Run the command to list resources";
+        var result = AcrolinxPostProcessor.RewriteGoalBeforeAction(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void RewriteGoalBeforeAction_SkipsListItems()
+    {
+        var input = "- Run the command to list resources.";
+        var result = AcrolinxPostProcessor.RewriteGoalBeforeAction(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void RewriteGoalBeforeAction_MidSentence_NotRewritten()
+    {
+        // Regression test: "Run" appearing mid-sentence should NOT be rewritten
+        var input = "You can Run the deploy command to publish your app.";
+        var result = AcrolinxPostProcessor.RewriteGoalBeforeAction(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void RewriteGoalBeforeAction_NoMatch_Unchanged()
+    {
+        var input = "To list resources, run the command.";
+        var result = AcrolinxPostProcessor.RewriteGoalBeforeAction(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void RewriteGoalBeforeAction_CaseInsensitive()
+    {
+        var input = "run the tool to check quotas.";
+        var result = AcrolinxPostProcessor.RewriteGoalBeforeAction(input);
+        result.Should().Be("To check quotas, run the tool.");
+    }
+
+    // --- Colon removal tests ---
+
+    [Theory]
+    [InlineData("**Azure CLI:** Install version 2.60+", "**Azure CLI** Install version 2.60+")]
+    [InlineData("**GitHub Copilot:** Required for all skills", "**GitHub Copilot** Required for all skills")]
+    [InlineData("**Node.js:** Version 18 or later", "**Node.js** Version 18 or later")]
+    public void RemoveBoldLabelColons_RemovesColon(string input, string expected)
+    {
+        var result = AcrolinxPostProcessor.RemoveBoldLabelColons(input);
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void RemoveBoldLabelColons_NoBoldLabel_Unchanged()
+    {
+        var input = "Install Azure CLI version 2.60+";
+        var result = AcrolinxPostProcessor.RemoveBoldLabelColons(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void RemoveBoldLabelColons_BoldWithoutColon_Unchanged()
+    {
+        var input = "**Azure CLI** Install version 2.60+";
+        var result = AcrolinxPostProcessor.RemoveBoldLabelColons(input);
+        result.Should().Be(input);
+    }
+
+    // --- Consecutive duplicate sentence detection tests ---
+
+    [Fact]
+    public void RemoveConsecutiveDuplicateSentences_RemovesDuplicates()
+    {
+        var input = "The skill manages storage accounts. This skill manages Azure storage accounts.";
+        var result = AcrolinxPostProcessor.RemoveConsecutiveDuplicateSentences(input);
+        result.Split(". ").Length.Should().BeLessThan(input.Split(". ").Length);
+    }
+
+    [Fact]
+    public void RemoveConsecutiveDuplicateSentences_KeepsDifferentSentences()
+    {
+        var input = "The skill manages storage accounts. It also provides diagnostic tools.";
+        var result = AcrolinxPostProcessor.RemoveConsecutiveDuplicateSentences(input);
+        result.Should().Contain("storage accounts");
+        result.Should().Contain("diagnostic tools");
+    }
+
+    [Fact]
+    public void RemoveConsecutiveDuplicateSentences_SkipsHeadings()
+    {
+        var input = "## Manage storage accounts";
+        var result = AcrolinxPostProcessor.RemoveConsecutiveDuplicateSentences(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void AreSentencesDuplicate_HighOverlap_ReturnsTrue()
+    {
+        var a = "The skill manages Azure storage accounts effectively.";
+        var b = "This skill manages Azure storage accounts.";
+        AcrolinxPostProcessor.AreSentencesDuplicate(a, b).Should().BeTrue();
+    }
+
+    [Fact]
+    public void AreSentencesDuplicate_LowOverlap_ReturnsFalse()
+    {
+        var a = "The skill manages Azure storage accounts.";
+        var b = "Configure RBAC roles for the subscription.";
+        AcrolinxPostProcessor.AreSentencesDuplicate(a, b).Should().BeFalse();
+    }
+
+    [Fact]
+    public void AreSentencesDuplicate_EmptySentence_ReturnsFalse()
+    {
+        AcrolinxPostProcessor.AreSentencesDuplicate("", "Some text.").Should().BeFalse();
+    }
+
+    // --- Acronym expansion verification ---
+
+    [Fact]
+    public void Process_ExpandsNewAcronyms_IDE()
+    {
+        var acronymsJson = """[{ "Acronym": "IDE", "Expansion": "integrated development environment" }]""";
+        var processor = new AcrolinxPostProcessor(null, acronymsJson, _logger);
+        var result = processor.Process("Open your IDE to start coding.");
+        result.Should().Contain("integrated development environment (IDE)");
+    }
+
+    [Fact]
+    public void Process_ExpandsNewAcronyms_CLI()
+    {
+        var acronymsJson = """[{ "Acronym": "CLI", "Expansion": "command-line interface" }]""";
+        var processor = new AcrolinxPostProcessor(null, acronymsJson, _logger);
+        var result = processor.Process("Install the CLI tool first.");
+        result.Should().Contain("command-line interface (CLI)");
+    }
+
+    [Fact]
+    public void Process_ExpandsNewAcronyms_ARM()
+    {
+        var acronymsJson = """[{ "Acronym": "ARM", "Expansion": "Azure Resource Manager" }]""";
+        var processor = new AcrolinxPostProcessor(null, acronymsJson, _logger);
+        var result = processor.Process("Deploy ARM templates to provision resources.");
+        result.Should().Contain("Azure Resource Manager (ARM)");
+    }
 }

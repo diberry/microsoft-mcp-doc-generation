@@ -270,4 +270,73 @@ public class SkillPageValidatorTests
 
         result.Warnings.Should().Contain(w => w.Contains("FRAGMENT"));
     }
+
+    [Fact]
+    public void Validate_LinkTypo_ReturnsWarning()
+    {
+        var content = """
+            ---
+            title: Azure skill for Test
+            description: Test skill
+            ---
+
+            # Azure skill for Test
+
+            Learn more in the [GitHub Copilot docs](https://github-cilot-azure.com/docs).
+
+            ## Prerequisites
+
+            - GitHub Copilot
+
+            ### When to use this skill
+
+            Use this skill to manage things.
+
+            ## What it provides
+
+            Knowledge about GitHub Copilot and Azure things.
+            """;
+        var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().Contain(w => w.Contains("LINK_TYPO"));
+    }
+
+    [Fact]
+    public void Validate_MicrosoftTypoInLink_ReturnsWarning()
+    {
+        var content = """
+            ---
+            title: Azure skill for Test
+            description: Test skill
+            ---
+
+            # Azure skill for Test
+
+            See [docs](https://learn.micosoft.com/azure/storage) for info.
+
+            ## Prerequisites
+
+            - GitHub Copilot
+
+            ### When to use this skill
+
+            Use this skill to check storage.
+
+            ## What it provides
+
+            Knowledge about GitHub Copilot and Azure storage.
+            """;
+        var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().Contain(w => w.Contains("LINK_TYPO"));
+    }
+
+    [Fact]
+    public void Validate_CleanLinks_NoTypoWarning()
+    {
+        var content = CreateValidTier1Content();
+        var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().NotContain(w => w.Contains("LINK_TYPO"));
+    }
 }

@@ -128,14 +128,23 @@ public partial class AcrolinxPostProcessor
         // 6. Normalize URLs - strip learn.microsoft.com prefix
         result = NormalizeUrls(result);
 
-        // 7. Wrap technical API terms in backticks
+        // 7. Rewrite goal-before-action patterns ("Run X to Y" → "To Y, run X")
+        result = RewriteGoalBeforeAction(result);
+
+        // 8. Wrap technical API terms in backticks
         result = WrapTechnicalTerms(result);
 
         // Add commas after introductory phrases
         result = AddIntroductoryCommas(result);
 
+        // Remove bold label colons ("**Label:** text" → "**Label** text")
+        result = RemoveBoldLabelColons(result);
+
         // Split long sentences
         result = SplitLongSentences(result);
+
+        // Final cleanup: remove consecutive duplicate sentences
+        result = RemoveConsecutiveDuplicateSentences(result);
 
         return processedFrontmatter + result;
     }
@@ -334,7 +343,7 @@ public partial class AcrolinxPostProcessor
         foreach (var sentence in sentences)
         {
             var words = sentence.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            if (words.Length <= 35)
+            if (words.Length <= 30)
             {
                 rebuilt.Add(sentence);
                 continue;
@@ -533,6 +542,135 @@ public partial class AcrolinxPostProcessor
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
+
+    /// <summary>
+    /// Rewrites "Run/Execute/Use X to Y" → "To Y, run/execute/use X" for goal-before-action style.
+    /// Only applies to prose lines (not headings, list items, code blocks, or table rows).
+    /// </summary>
+    internal static string RewriteGoalBeforeAction(string content)
+    {
+        var lines = content.Split('\n');
+        var result = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var trimmed = line.TrimStart();
+            if (trimmed.StartsWith('#') || trimmed.StartsWith('-') ||
+                trimmed.StartsWith('|') || trimmed.StartsWith("```") ||
+                trimmed.StartsWith('`'))
+            {
+                result.Add(line);
+                continue;
+            }
+
+            result.Add(GoalBeforeActionRegex().Replace(line, match =>
+            {
+                var verb = match.Groups[1].Value;
+                var action = match.Groups[2].Value.TrimEnd();
+                var goal = match.Groups[3].Value.TrimEnd();
+
+                // Remove trailing period from goal for clean rewrite
+                if (goal.EndsWith('.'))
+                    goal = goal[..^1].TrimEnd();
+
+                // Lowercase the original verb in the rewritten form
+                var lowerVerb = char.ToLower(verb[0]) + verb[1..];
+
+                return $"To {goal}, {lowerVerb} {action}.";
+            }));
+        }
+
+        return string.Join('\n', result);
+    }
+
+    /// <summary>
+    /// Removes colons after bold labels in prerequisite/list contexts.
+    /// Transforms "**Label:** text" → "**Label** text".
+    /// </summary>
+    internal static string RemoveBoldLabelColons(string content)
+    {
+        return BoldLabelColonRegex().Replace(content, "**${label}** ");
+    }
+
+    /// <summary>
+    /// Detects and removes consecutive sentences with the same normalized meaning.
+    /// Two sentences are considered duplicates if they share 80%+ of their meaningful words.
+    /// </summary>
+    internal static string RemoveConsecutiveDuplicateSentences(string content)
+    {
+        var lines = content.Split('\n');
+        var result = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var trimmed = line.TrimStart();
+            if (trimmed.StartsWith('#') || trimmed.StartsWith('-') ||
+                trimmed.StartsWith('|') || trimmed.StartsWith("```") ||
+                string.IsNullOrWhiteSpace(trimmed))
+            {
+                result.Add(line);
+                continue;
+            }
+
+            result.Add(RemoveDuplicatesInLine(line));
+        }
+
+        return string.Join('\n', result);
+    }
+
+    private static string RemoveDuplicatesInLine(string line)
+    {
+        var sentences = SplitIntoSentences(line);
+        if (sentences.Count < 2)
+            return line;
+
+        var kept = new List<string> { sentences[0] };
+
+        for (int i = 1; i < sentences.Count; i++)
+        {
+            if (!AreSentencesDuplicate(sentences[i - 1], sentences[i]))
+            {
+                kept.Add(sentences[i]);
+            }
+        }
+
+        return string.Join(" ", kept);
+    }
+
+    internal static bool AreSentencesDuplicate(string a, string b)
+    {
+        var wordsA = ExtractMeaningfulWords(a);
+        var wordsB = ExtractMeaningfulWords(b);
+
+        if (wordsA.Count == 0 || wordsB.Count == 0)
+            return false;
+
+        var intersection = wordsA.Intersect(wordsB, StringComparer.OrdinalIgnoreCase).Count();
+        var maxCount = Math.Max(wordsA.Count, wordsB.Count);
+
+        return (double)intersection / maxCount >= 0.8;
+    }
+
+    private static List<string> ExtractMeaningfulWords(string sentence)
+    {
+        var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "a", "an", "the", "is", "are", "was", "were", "be", "been",
+            "to", "of", "in", "for", "on", "with", "at", "by", "from",
+            "and", "or", "but", "not", "this", "that", "it", "its", "you", "your"
+        };
+
+        return Regex.Replace(sentence, @"[^\w\s]", "")
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => !stopWords.Contains(w) && w.Length > 1)
+            .ToList();
+    }
+
+    [GeneratedRegex(@"^(Run|Execute|Use)\s+(.+?)\s+to\s+(.+?)(?:\.|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
+    private static partial Regex GoalBeforeActionRegex();
+
+    [GeneratedRegex(@"\*\*(?<label>[^*:]+):\*\*\s?")]
+    private static partial Regex BoldLabelColonRegex();
 
     private record TextReplacement(string Parameter, string NaturalLanguage);
     private record AcronymEntry(string Acronym, string Expansion, string? ContextPattern = null, string? ExpandedForm = null);
