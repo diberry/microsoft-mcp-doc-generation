@@ -12,52 +12,7 @@ ms.service: azure-mcp-server
 
 {{{description}}}
 
-**Skill:** `{{{name}}}` | [Source code](https://github.com/microsoft/azure-skills/tree/main/skills/{{{name}}})
-
-## Prerequisites
-
-{{#if prerequisites.azure.requiresAzureLogin}}
-- **Azure authentication**—Sign in with `az login` or use a service principal.
-{{/if}}
-{{#if prerequisites.azure.requiresSubscription}}
-- **Azure subscription**—An active Azure subscription is required.
-{{/if}}
-
-{{#if hasUseFor}}
-### When to use this skill
-
-Use the **{{{displayName}}}** skill when you need to:
-
-{{#each useFor}}
-- {{{this}}}
-{{/each}}
-{{/if}}
-{{#if hasRbacRoles}}
-
-### Required roles
-
-| Role | Scope | Reason |
-|------|-------|--------|
-{{#each prerequisites.rbacRoles}}
-| {{{roleName}}} | {{{scope}}} | {{{reason}}} |
-{{/each}}
-{{/if}}
-{{#if hasToolPrereqs}}
-
-### Required tools
-
-{{#each prerequisites.tools}}
-- **{{{name}}}**{{#if minVersion}} (v{{{minVersion}}}+){{/if}}{{#if installCommand}}—Install: `{{{installCommand}}}`{{/if}}
-{{/each}}
-{{/if}}
-{{#if hasResources}}
-
-### Required resources
-
-{{#each prerequisites.resources}}
-- **{{{resourceType}}}**—{{{description}}}{{#if quickCreateCommand}} Quick create: `{{{quickCreateCommand}}}`{{/if}}
-{{/each}}
-{{/if}}
+**Skill:** `{{{name}}}` | [Source code](https://github.com/microsoft/azure-skills/blob/main/skills/{{{name}}}/skill.md)
 
 ## What it provides
 
@@ -72,11 +27,45 @@ Use the **{{{displayName}}}** skill when you need to:
 | {{{name}}} | {{{useWhen}}} |
 {{/each}}
 {{/if}}
+
+## Prerequisites
+
+{{#if prerequisites.azure.requiresAzureLogin}}
+- **Azure authentication**—Sign in with `az login` or use a service principal.
+{{/if}}
+{{#if prerequisites.azure.requiresSubscription}}
+- **Azure subscription**—An active Azure subscription is required.
+{{/if}}
+{{#if hasRbacRoles}}
+{{#each prerequisites.rbacRoles}}
+- **{{{roleName}}}** role at {{{scope}}} scope—{{{reason}}}
+{{/each}}
+{{/if}}
+{{#if hasToolPrereqs}}
+{{#each prerequisites.tools}}
+- **{{{name}}}**{{#if minVersion}} (v{{{minVersion}}}+){{/if}}{{#if installCommand}}—Install: `{{{installCommand}}}`{{/if}}
+{{/each}}
+{{/if}}
+{{#if hasResources}}
+{{#each prerequisites.resources}}
+- **{{{resourceType}}}**—{{{description}}}{{#if quickCreateCommand}} Quick create: `{{{quickCreateCommand}}}`{{/if}}
+{{/each}}
+{{/if}}
+
+{{#if hasUseFor}}
+## When to use this skill
+
+Use the **{{{displayName}}}** skill when you need to:
+
+{{#each useFor}}
+- {{{this}}}
+{{/each}}
+{{/if}}
 {{#if hasMcpTools}}
 
 ## MCP tools
 
-The following MCP tools are available with this skill:
+This skill uses the following Azure MCP tools:
 
 | Tool | Description |
 |------|-------------|
@@ -109,9 +98,9 @@ The following MCP tools are available with this skill:
 {{/if}}
 
 {{#if hasTriggers}}
-## Example triggers
+## Example prompts
 
-Try these prompts with GitHub Copilot to activate this skill:
+Try these prompts to activate this skill:
 
 {{#each shouldTrigger}}
 - "{{{this}}}"
@@ -129,4 +118,4 @@ Try these prompts with GitHub Copilot to activate this skill:
 ## Related content
 
 - [Azure MCP Server overview](/azure/developer/azure-mcp-server/overview)
-- [GitHub Copilot for Azure documentation](/azure/developer/github-copilot-azure/introduction)
+- [Skill source code](https://github.com/microsoft/azure-skills/blob/main/skills/{{{name}}}/skill.md)
