@@ -17,12 +17,12 @@ Three repos are involved:
 | Repo | Path | Purpose |
 |---|---|---|
 | **microsoft-mcp-doc-generation** (this repo) | `C:\Users\diberry\project-dina\repos\project-azure-mcp-server\microsoft-mcp-doc-generation` | Generator code + templates |
-| **GitHub-Copilot-for-Azure** (source) | `C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure` | Input: SKILL.md files + trigger tests |
+| **azure-skills** (source) | `C:\Users\diberry\project-dina\repos\azure-skills` | Input: SKILL.md files + trigger tests |
 | **azure-dev-docs-pr** (content target) | `C:\Users\diberry\project-dina\repos\project-azure-ai-tools\azure-dev-docs-pr` | Output destination for publishing to learn.microsoft.com |
 
 **Source files** (input SKILL.md files) live at:
-- Skills: `GitHub-Copilot-for-Azure/plugin/skills/{skill-name}/SKILL.md`
-- Tests: `GitHub-Copilot-for-Azure/tests/{skill-name}/triggers.test.ts`
+- Skills: `azure-skills/skills/{skill-name}/SKILL.md`
+- Tests: `azure-skills/tests/{skill-name}/triggers.test.ts`
 
 **Content files** (generated output) deploy to:
 - `azure-dev-docs-pr/articles/azure-skills/skills/{skill-name}.md`
@@ -34,14 +34,14 @@ Three repos are involved:
 | .NET SDK | 9.0+ (builds `skills-generation.slnx`) |
 | AI credentials (optional) | `FOUNDRY_API_KEY`, `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME` in environment or `docs-generation/.env` — omit for `--no-llm` mode |
 | Working directory | Repository root (`microsoft-mcp-doc-generation/`) |
-| Source repo clone | `GitHub-Copilot-for-Azure` cloned locally (see One-Time Setup) |
+| Source repo clone | `azure-skills` cloned locally (see One-Time Setup) |
 | Content repo clone | `azure-dev-docs-pr` cloned locally (see One-Time Setup) |
 
 ### One-time setup: Clone source repo
 
 ```bash
 cd C:\Users\diberry\project-dina\repos
-git clone --depth 1 https://github.com/microsoft/GitHub-Copilot-for-Azure.git
+git clone --depth 1 https://github.com/microsoft/azure-skills.git
 ```
 
 ### One-time setup: Content repo
@@ -54,8 +54,8 @@ The content PR lives on `azure-dev-docs-pr` — should already be cloned at:
 **Always sync before generating** to ensure you have the latest skill definitions and content:
 
 ```bash
-# Sync source repo (GitHub-Copilot-for-Azure)
-cd C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure
+# Sync source repo (azure-skills)
+cd C:\Users\diberry\project-dina\repos\azure-skills
 git checkout main && git pull origin main
 
 # Sync content repo (azure-dev-docs-pr)
@@ -71,16 +71,16 @@ All commands run from the **microsoft-mcp-doc-generation** repository root.
 
 ```bash
 ./start-azure-skills.sh --no-llm \
-  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" \
-  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
+  --source-path "C:\Users\diberry\project-dina\repos\azure-skills\skills" \
+  --tests-path "C:\Users\diberry\project-dina\repos\azure-skills\tests"
 ```
 
 ### Generate a single skill
 
 ```bash
 ./start-azure-skills.sh azure-storage --no-llm \
-  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" \
-  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
+  --source-path "C:\Users\diberry\project-dina\repos\azure-skills\skills" \
+  --tests-path "C:\Users\diberry\project-dina\repos\azure-skills\tests"
 ```
 
 ### Quick options
@@ -88,13 +88,13 @@ All commands run from the **microsoft-mcp-doc-generation** repository root.
 ```bash
 # Dry run — parse and validate only, write nothing
 ./start-azure-skills.sh --dry-run \
-  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" \
-  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
+  --source-path "C:\Users\diberry\project-dina\repos\azure-skills\skills" \
+  --tests-path "C:\Users\diberry\project-dina\repos\azure-skills\tests"
 
 # Force write even if validation fails
 ./start-azure-skills.sh --no-llm --force \
-  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" \
-  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
+  --source-path "C:\Users\diberry\project-dina\repos\azure-skills\skills" \
+  --tests-path "C:\Users\diberry\project-dina\repos\azure-skills\tests"
 ```
 
 ### PowerShell equivalent (Windows)
@@ -103,8 +103,8 @@ There is no separate `.ps1` wrapper. On Windows use Git Bash or WSL:
 
 ```powershell
 bash ./start-azure-skills.sh --no-llm `
-  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" `
-  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
+  --source-path "C:\Users\diberry\project-dina\repos\azure-skills\skills" `
+  --tests-path "C:\Users\diberry\project-dina\repos\azure-skills\tests"
 ```
 
 ## Step 2: Deploy to Content Repo
@@ -141,7 +141,7 @@ The underlying CLI (`SkillsGen.Cli`) accepts these flags after `--`:
 | `--force` | off | Write output even when validation fails |
 | `--out <dir>` | `../generated-skills/` | Override output directory |
 | `--source` | `local` | Source mode: `local` or `github` |
-| `--source-path` | `./skills-source/` | Path to SKILL.md source directory (use GitHub-Copilot-for-Azure path) |
+| `--source-path` | `./skills-source/` | Path to SKILL.md source directory (use azure-skills path) |
 | `--tests-path` | (none) | Path to tests directory for trigger files |
 | `--verbose` | off | Verbose console output |
 
@@ -188,7 +188,7 @@ After generation completes:
 |---|---|
 | Build fails | Run `dotnet build skills-generation/skills-generation.slnx --configuration Release` manually to see errors |
 | "No AI credentials found" warning | Set `FOUNDRY_API_KEY` and `FOUNDRY_ENDPOINT`, or pass `--no-llm` |
-| "SKILL.md not found" | Verify `--source-path` points to `GitHub-Copilot-for-Azure/plugin/skills` and the repo is cloned |
+| "SKILL.md not found" | Verify `--source-path` points to `azure-skills/skills` and the repo is cloned |
 | Validation failures | Review console WARN/ERROR lines; use `--force` to write anyway for inspection |
 | Missing skills-inventory.json | Ensure `skills-generation/data/skills-inventory.json` exists (24 entries) |
 | Stale content | Run Step 0 to sync both repos from remote main |

@@ -37,6 +37,6 @@ public class SkillSource
     {
         new() { Owner = "github", Repo = "awesome-copilot", Path = "skills", DisplayName = "GitHub Awesome Copilot" },
         new() { Owner = "microsoft", Repo = "skills", Path = "", DisplayName = "Microsoft Skills" },
-        new() { Owner = "microsoft", Repo = "GitHub-Copilot-for-Azure", Path = "plugin/skills", DisplayName = "GitHub Copilot for Azure" }
+        new() { Owner = "microsoft", Repo = "azure-skills", Path = "skills", DisplayName = "Azure Skills" }
     };
 }

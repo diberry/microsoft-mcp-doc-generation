@@ -745,7 +745,7 @@ Independent .NET pipeline in `skills-generation/` that generates 24 Azure Skills
 8-module pipeline: fetcher → skill-parser → trigger-parser → tier-assessor → template-filler + llm-rewriter → acrolinx-post-processor → validator → orchestrator
 
 ### Important Patterns
-- **Always use local source** — clone `microsoft/GitHub-Copilot-for-Azure` once and use `--source local` to avoid GitHub API rate limits
+- **Always use local source** — clone `microsoft/azure-skills` once and use `--source local` to avoid GitHub API rate limits
 - **Vale before push** — run Vale lint locally before pushing generated content to catch Microsoft style issues
 - **Triple-curly Handlebars** — template uses `{{{var}}}` (raw output) not `{{var}}` (HTML-escaped) since output is markdown
 - **Acrolinx post-processor** — applies static text replacements, acronym expansion, contractions, URL normalization, and technical term wrapping
