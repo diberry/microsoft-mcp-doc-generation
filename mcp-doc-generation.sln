@@ -1,18 +1,15 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Core.Shared", "shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj", "{CBF4E7C0-6135-440C-B7C4-6735A074E630}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Core.NaturalLanguage", "shared\DocGeneration.Core.NaturalLanguage\DocGeneration.Core.NaturalLanguage.csproj", "{8A48E572-7742-52FF-2D3F-BBC661C087E2}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Core.GenerativeAI", "shared\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj", "{D558B3A3-1C0E-414D-BC62-97478084F5B3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Steps.AnnotationsParametersRaw.Annotations", "mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj", "{A1B2C3D4-E5F6-7890-1234-56789ABCDEF0}"
 	ProjectSection(ProjectDependencies) = postProject
 		{D558B3A3-1C0E-414D-BC62-97478084F5B3} = {D558B3A3-1C0E-414D-BC62-97478084F5B3}
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2} = {8A48E572-7742-52FF-2D3F-BBC661C087E2}
 		{CBF4E7C0-6135-440C-B7C4-6735A074E630} = {CBF4E7C0-6135-440C-B7C4-6735A074E630}
 	EndProjectSection
 EndProject
@@ -98,8 +95,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Steps.ToolFam
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Tools.PostProcessVerifier", "mcp-tools\DocGeneration.Tools.PostProcessVerifier\DocGeneration.Tools.PostProcessVerifier.csproj", "{CC3A0762-D4B1-4388-982A-B4C20A99C95D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Core.NaturalLanguage.Tests", "shared\DocGeneration.Core.NaturalLanguage.Tests\DocGeneration.Core.NaturalLanguage.Tests.csproj", "{AC938CE4-2E7C-4DDB-843C-3E87274C6840}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.PromptRegression.Tests", "mcp-tools\DocGeneration.PromptRegression.Tests\DocGeneration.PromptRegression.Tests.csproj", "{489B3D95-5C43-429B-B26D-D6E06F68B1D1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Tools.Fingerprint", "mcp-tools\DocGeneration.Tools.Fingerprint\DocGeneration.Tools.Fingerprint.csproj", "{858DB81C-6634-4E95-9BF0-8DB411F61595}"
@@ -132,18 +127,6 @@ Global
 		{CBF4E7C0-6135-440C-B7C4-6735A074E630}.Release|x64.Build.0 = Release|Any CPU
 		{CBF4E7C0-6135-440C-B7C4-6735A074E630}.Release|x86.ActiveCfg = Release|Any CPU
 		{CBF4E7C0-6135-440C-B7C4-6735A074E630}.Release|x86.Build.0 = Release|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Debug|x64.Build.0 = Debug|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Debug|x86.Build.0 = Debug|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Release|x64.ActiveCfg = Release|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Release|x64.Build.0 = Release|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Release|x86.ActiveCfg = Release|Any CPU
-		{8A48E572-7742-52FF-2D3F-BBC661C087E2}.Release|x86.Build.0 = Release|Any CPU
 		{D558B3A3-1C0E-414D-BC62-97478084F5B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D558B3A3-1C0E-414D-BC62-97478084F5B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D558B3A3-1C0E-414D-BC62-97478084F5B3}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -588,18 +571,6 @@ Global
 		{CC3A0762-D4B1-4388-982A-B4C20A99C95D}.Release|x64.Build.0 = Release|Any CPU
 		{CC3A0762-D4B1-4388-982A-B4C20A99C95D}.Release|x86.ActiveCfg = Release|Any CPU
 		{CC3A0762-D4B1-4388-982A-B4C20A99C95D}.Release|x86.Build.0 = Release|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Debug|x64.Build.0 = Debug|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Debug|x86.Build.0 = Debug|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Release|x64.ActiveCfg = Release|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Release|x64.Build.0 = Release|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Release|x86.ActiveCfg = Release|Any CPU
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840}.Release|x86.Build.0 = Release|Any CPU
 		{489B3D95-5C43-429B-B26D-D6E06F68B1D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{489B3D95-5C43-429B-B26D-D6E06F68B1D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{489B3D95-5C43-429B-B26D-D6E06F68B1D1}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -687,7 +658,6 @@ Global
 		{84AEFEA0-651B-461B-987A-94052BE706E7} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{0111BDE0-BC9D-48E7-BF98-7317F7B4B3E4} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{CC3A0762-D4B1-4388-982A-B4C20A99C95D} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
-		{AC938CE4-2E7C-4DDB-843C-3E87274C6840} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{489B3D95-5C43-429B-B26D-D6E06F68B1D1} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{858DB81C-6634-4E95-9BF0-8DB411F61595} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{8F464DF9-1EF0-450D-92D1-2A6B9F90F422} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}

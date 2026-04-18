@@ -6,7 +6,7 @@ using Xunit;
 namespace CSharpGenerator.Tests;
 
 /// <summary>
-/// Tests for TextCleanup.ReplaceStaticText to verify branding and text normalization.
+/// Tests for TextNormalizer.ReplaceStaticText to verify branding and text normalization.
 /// Fixes: #141 — CosmosDB branding not normalized.
 /// </summary>
 public class StaticTextReplacementTests : IClassFixture<TransformationEngineFixture>

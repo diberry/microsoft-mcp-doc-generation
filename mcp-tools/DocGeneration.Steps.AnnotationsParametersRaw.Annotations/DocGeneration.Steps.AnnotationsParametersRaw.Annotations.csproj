@@ -15,7 +15,6 @@
     <ProjectReference Include="../DocGeneration.Steps.ToolFamilyCleanup/DocGeneration.Steps.ToolFamilyCleanup.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../shared/DocGeneration.Core.NaturalLanguage/DocGeneration.Core.NaturalLanguage.csproj" />
     <ProjectReference Include="../../shared/DocGeneration.Core.TextTransformation/DocGeneration.Core.TextTransformation.csproj" />
   </ItemGroup>
   <ItemGroup>

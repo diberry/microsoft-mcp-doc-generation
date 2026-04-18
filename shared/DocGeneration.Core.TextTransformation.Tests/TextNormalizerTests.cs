@@ -230,4 +230,115 @@ public class TextNormalizerTests
         var result = _normalizer.NormalizeParameter("resource-group-name");
         Assert.Equal("Resource group name", result);
     }
+
+    // --- EnsureEndsPeriod tests (ported from NaturalLanguage.Tests) ---
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void EnsureEndsPeriod_NullOrEmpty_ReturnsSame(string? input)
+    {
+        var result = _normalizer.EnsureEndsPeriod(input!);
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_TextWithoutPeriod_AddsPeriod()
+    {
+        var result = _normalizer.EnsureEndsPeriod("The Azure subscription ID to use");
+        Assert.Equal("The Azure subscription ID to use.", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_TextAlreadyEndingWithPeriod_NoChange()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Specifies the Azure resource group.");
+        Assert.Equal("Specifies the Azure resource group.", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_TextEndingWithQuestionMark_NoChange()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Is the resource currently available?");
+        Assert.Equal("Is the resource currently available?", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_TextEndingWithExclamation_NoChange()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Resource provisioning failed!");
+        Assert.Equal("Resource provisioning failed!", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_Idempotent_DoesNotAddDoublePeriod()
+    {
+        var input = "The Azure subscription ID to use";
+        var first = _normalizer.EnsureEndsPeriod(input);
+        var second = _normalizer.EnsureEndsPeriod(first);
+        Assert.Equal("The Azure subscription ID to use.", second);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_TrimsWhitespace_BeforeCheck()
+    {
+        var result = _normalizer.EnsureEndsPeriod("  The Cosmos DB account name  ");
+        Assert.Equal("The Cosmos DB account name.", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_QuestionMarkBeforeSingleQuote_NoChange()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Ask 'Why are requests timing out?'");
+        Assert.Equal("Ask 'Why are requests timing out?'", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_QuestionMarkBeforeDoubleQuote_NoChange()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Ask \"What is the status?\"");
+        Assert.Equal("Ask \"What is the status?\"", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_ExclamationBeforeDoubleQuote_NoChange()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Alert said \"Critical failure!\"");
+        Assert.Equal("Alert said \"Critical failure!\"", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_PeriodBeforeSingleQuote_NoChange()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Run command 'az show.'");
+        Assert.Equal("Run command 'az show.'", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_NoPunctuationBeforeSingleQuote_AddsPeriod()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Use resource 'my-resource'");
+        Assert.Equal("Use resource 'my-resource'.", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_NoPunctuationBeforeDoubleQuote_AddsPeriod()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Show vault \"my-vault\"");
+        Assert.Equal("Show vault \"my-vault\".", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_QuestionMarkBeforeBacktick_NoChange()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Ask `Why is latency high?`");
+        Assert.Equal("Ask `Why is latency high?`", result);
+    }
+
+    [Fact]
+    public void EnsureEndsPeriod_NoPunctuationBeforeBacktick_AddsPeriod()
+    {
+        var result = _normalizer.EnsureEndsPeriod("Run `az account show`");
+        Assert.Equal("Run `az account show`.", result);
+    }
 }

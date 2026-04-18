@@ -7,7 +7,6 @@ namespace CSharpGenerator.Tests;
 
 /// <summary>
 /// Shared fixture that initializes TransformationEngine once for all test classes that need it.
-/// Replaces TextCleanupFixture for Phase 2 migration.
 /// Also initializes Config.TextTransformationEngine so callers (e.g. ParameterSorting)
 /// that read Config.TextNormalizer work correctly in test context.
 /// </summary>

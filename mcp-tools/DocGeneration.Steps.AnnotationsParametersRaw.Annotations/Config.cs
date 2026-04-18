@@ -88,7 +88,7 @@ public class Config
         LogFileHelper.WriteDebug($"TextReplacerParametersPath: {TextReplacerParametersPath}");
         LogFileHelper.WriteDebug($"RequiredFiles: {JsonSerializer.Serialize(config.RequiredFiles, new JsonSerializerOptions { WriteIndented = true })}");
 
-        // Build TransformationEngine from legacy data files (replaces TextCleanup.LoadFiles)
+        // Build TransformationEngine from legacy data files
         try
         {
             var txConfig = TransformationConfigFactory.CreateFromLegacyFiles(config.RequiredFiles);

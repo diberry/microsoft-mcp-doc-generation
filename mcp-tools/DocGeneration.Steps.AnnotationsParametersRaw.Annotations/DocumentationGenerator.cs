@@ -36,7 +36,7 @@ public static class DocumentationGenerator
         bool generateAnnotations = false,
         string? cliVersion = null)
     {
-        // Config.Load has been called in Program.Main and TextCleanup is initialized statically
+        // Config.Load has been called in Program.Main and TransformationEngine is initialized
 
         // Validate input files exist
         if (!File.Exists(cliOutputFile))

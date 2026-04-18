@@ -16,7 +16,7 @@ public class TextNormalizer
     private readonly Dictionary<string, string> _combinedDict;
 
     // Precompiled single-pass alternation regex for ReplaceStaticText.
-    // Uses lookaround boundaries matching TextCleanup behaviour.
+    // Uses lookaround boundaries for word-boundary matching.
     private readonly Regex? _replacerRegex;
 
     // Known acronym canonical forms for fast membership checks.
@@ -42,13 +42,12 @@ public class TextNormalizer
         }
         foreach (var abbrev in _config.Lexicon.Abbreviations)
         {
-            // Abbreviations override mappings when keys overlap (consistent with
-            // TextCleanup where static-text-replacement entries override nl-parameters
-            // for the same key — but in practice they don't overlap).
+            // Abbreviations override mappings when keys overlap (static-text-replacement
+            // entries override nl-parameters for the same key — but in practice they don't overlap).
             _combinedDict[abbrev.Key] = abbrev.Value.Canonical;
         }
 
-        // Build precompiled regex with lookaround boundaries (matches TextCleanup exactly).
+        // Build precompiled regex with lookaround boundaries.
         var keys = _combinedDict.Keys
             .Where(k => !string.IsNullOrEmpty(k))
             .OrderByDescending(k => k.Length)
@@ -73,7 +72,6 @@ public class TextNormalizer
     /// Normalizes a programmatic parameter name to natural language format.
     /// Checks identifier mappings first (resource type names), then generic mappings,
     /// then falls back to hyphen-splitting with per-word transformation.
-    /// Matches legacy TextCleanup.NormalizeParameter behaviour exactly.
     /// </summary>
     public string NormalizeParameter(string parameterName)
     {
@@ -102,13 +100,12 @@ public class TextNormalizer
             return directMapping;
         }
 
-        // Fallback: split on hyphens and transform per-word (matches TextCleanup)
+        // Fallback: split on hyphens and transform per-word
         return NormalizeHyphenatedName(parameterName);
     }
 
     /// <summary>
     /// Splits a hyphenated parameter name and applies per-word transformations.
-    /// Matches TextCleanup.SplitAndTransformProgrammaticName + NormalizeParameter post-processing.
     /// </summary>
     private string NormalizeHyphenatedName(string name)
     {
@@ -149,7 +146,7 @@ public class TextNormalizer
             }
         }
 
-        // Lowercase non-first non-acronym words (matches TextCleanup.NormalizeParameter)
+        // Lowercase non-first non-acronym words
         for (int i = 1; i < words.Length; i++)
         {
             if (!_acronymCanonicalSet.Contains(words[i]))
@@ -257,7 +254,6 @@ public class TextNormalizer
     /// <summary>
     /// Replaces static text patterns in descriptions using precompiled regex.
     /// Uses lookaround word-boundary matching to avoid replacing inside longer tokens.
-    /// Matches legacy TextCleanup.ReplaceStaticText behaviour exactly.
     /// </summary>
     public string ReplaceStaticText(string text)
     {
@@ -424,8 +420,7 @@ public class TextNormalizer
 
     /// <summary>
     /// Ensures text ends with a period, adding one if missing.
-    /// Matches legacy TextCleanup.EnsureEndsPeriod behaviour exactly,
-    /// including trailing-quote awareness.
+    /// Includes trailing-quote awareness.
     /// </summary>
     public string EnsureEndsPeriod(string text)
     {
