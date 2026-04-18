@@ -46,4 +46,11 @@ public class ToolContent
     /// Original full path to the source file for debugging
     /// </summary>
     public string? SourceFilePath { get; init; }
+
+    /// <summary>
+    /// Resource sub-type extracted from the command (e.g., "disk" from "compute disk create").
+    /// Empty string for bare namespace+verb commands (e.g., "advisor list").
+    /// Used for grouping tools by resource type on multi-resource pages (#412).
+    /// </summary>
+    public string ResourceType { get; set; } = string.Empty;
 }
