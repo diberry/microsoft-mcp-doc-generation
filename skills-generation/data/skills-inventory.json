@@ -1,7 +1,7 @@
 {
   "skills": [
     { "name": "azure-ai", "displayName": "Azure AI Services", "category": "AI and Machine Learning" },
-    { "name": "azure-aigateway", "displayName": "Azure AI Gateway", "category": "AI and Machine Learning" },
+    { "name": "azure-aigateway", "slug": "azure-ai-gateway", "displayName": "Azure AI Gateway", "category": "AI and Machine Learning" },
     { "name": "azure-hosted-copilot-sdk", "displayName": "Azure Hosted Copilot SDK", "category": "AI and Machine Learning" },
     { "name": "microsoft-foundry", "displayName": "Microsoft Foundry", "category": "AI and Machine Learning" },
     { "name": "azure-kusto", "displayName": "Azure Kusto (Data Explorer)", "category": "Data and Storage" },
@@ -15,7 +15,7 @@
     { "name": "azure-enterprise-infra-planner", "displayName": "Azure Enterprise Infrastructure Planner", "category": "Infrastructure and Compute" },
     { "name": "azure-kubernetes", "displayName": "Azure Kubernetes", "category": "Infrastructure and Compute" },
     { "name": "azure-cloud-migrate", "displayName": "Azure Cloud Migration", "category": "Migration" },
-    { "name": "appinsights-instrumentation", "displayName": "App Insights Instrumentation", "category": "Monitoring and Diagnostics" },
+    { "name": "appinsights-instrumentation", "slug": "app-insights-instrumentation", "displayName": "App Insights Instrumentation", "category": "Monitoring and Diagnostics" },
     { "name": "azure-cost", "displayName": "Azure Cost Optimization", "category": "Monitoring and Diagnostics" },
     { "name": "azure-diagnostics", "displayName": "Azure Diagnostics", "category": "Monitoring and Diagnostics" },
     { "name": "azure-quotas", "displayName": "Azure Quotas", "category": "Monitoring and Diagnostics" },
