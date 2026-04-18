@@ -1,6 +1,6 @@
 # Generate Azure Skills Documentation
 
-> Regenerate the Azure Skills markdown documentation files using the skills-generation pipeline.
+> Regenerate the Azure Skills markdown documentation files using the skills-generation pipeline, then deploy to the content repo.
 
 ## When to Use
 
@@ -8,6 +8,24 @@ Invoke this skill when the user says any of:
 - "regenerate skills", "generate azure skills", "update skills files"
 - "run skills pipeline", "rebuild skill docs"
 - "generate skill for azure-storage" (single-skill variant)
+- "deploy skills", "update skills content"
+
+## Repository Layout
+
+Three repos are involved:
+
+| Repo | Path | Purpose |
+|---|---|---|
+| **microsoft-mcp-doc-generation** (this repo) | `C:\Users\diberry\project-dina\repos\project-azure-mcp-server\microsoft-mcp-doc-generation` | Generator code + templates |
+| **GitHub-Copilot-for-Azure** (source) | `C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure` | Input: SKILL.md files + trigger tests |
+| **azure-dev-docs-pr** (content target) | `C:\Users\diberry\project-dina\repos\project-azure-ai-tools\azure-dev-docs-pr` | Output destination for publishing to learn.microsoft.com |
+
+**Source files** (input SKILL.md files) live at:
+- Skills: `GitHub-Copilot-for-Azure/plugin/skills/{skill-name}/SKILL.md`
+- Tests: `GitHub-Copilot-for-Azure/tests/{skill-name}/triggers.test.ts`
+
+**Content files** (generated output) deploy to:
+- `azure-dev-docs-pr/articles/azure-skills/skills/{skill-name}.md`
 
 ## Prerequisites
 
@@ -16,46 +34,67 @@ Invoke this skill when the user says any of:
 | .NET SDK | 9.0+ (builds `skills-generation.slnx`) |
 | AI credentials (optional) | `FOUNDRY_API_KEY`, `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME` in environment or `docs-generation/.env` — omit for `--no-llm` mode |
 | Working directory | Repository root (`microsoft-mcp-doc-generation/`) |
+| Source repo clone | `GitHub-Copilot-for-Azure` cloned locally (see One-Time Setup) |
+| Content repo clone | `azure-dev-docs-pr` cloned locally (see One-Time Setup) |
 
-## Commands
-
-All commands run from the **repository root**.
-
-### Generate all 24 skills
+### One-time setup: Clone source repo
 
 ```bash
-./start-azure-skills.sh
+cd C:\Users\diberry\project-dina\repos
+git clone --depth 1 https://github.com/microsoft/GitHub-Copilot-for-Azure.git
 ```
 
-### Generate a single skill by name
+### One-time setup: Content repo
+
+The content PR lives on `azure-dev-docs-pr` — should already be cloned at:
+`C:\Users\diberry\project-dina\repos\project-azure-ai-tools\azure-dev-docs-pr`
+
+## Step 0: Sync Source and Content Repos
+
+**Always sync before generating** to ensure you have the latest skill definitions and content:
 
 ```bash
-./start-azure-skills.sh azure-storage
+# Sync source repo (GitHub-Copilot-for-Azure)
+cd C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure
+git checkout main && git pull origin main
+
+# Sync content repo (azure-dev-docs-pr)
+cd C:\Users\diberry\project-dina\repos\project-azure-ai-tools\azure-dev-docs-pr
+git checkout main && git pull origin main
 ```
 
-### Skip LLM rewriting (faster, no AI credentials needed)
+## Step 1: Generate Skills
+
+All commands run from the **microsoft-mcp-doc-generation** repository root.
+
+### Generate all 24 skills (recommended)
 
 ```bash
-./start-azure-skills.sh --no-llm
+./start-azure-skills.sh --no-llm \
+  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" \
+  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
 ```
 
-### Dry run — parse and validate only, write nothing
+### Generate a single skill
 
 ```bash
-./start-azure-skills.sh --dry-run
+./start-azure-skills.sh azure-storage --no-llm \
+  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" \
+  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
 ```
 
-### Combine options
+### Quick options
 
 ```bash
-# Single skill, no LLM
-./start-azure-skills.sh azure-storage --no-llm
+# Dry run — parse and validate only, write nothing
+./start-azure-skills.sh --dry-run \
+  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" \
+  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
 
-# Single skill, dry run
-./start-azure-skills.sh azure-storage --dry-run
-
-# All skills, no LLM, forced write even if validation fails
-./start-azure-skills.sh --no-llm --force
+# Force write even if validation fails
+./start-azure-skills.sh --no-llm --force \
+  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" \
+  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
 ```
 
 ### PowerShell equivalent (Windows)
@@ -63,7 +102,32 @@ All commands run from the **repository root**.
 There is no separate `.ps1` wrapper. On Windows use Git Bash or WSL:
 
 ```powershell
-bash ./start-azure-skills.sh azure-storage --no-llm
+bash ./start-azure-skills.sh --no-llm `
+  --source-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\plugin\skills" `
+  --tests-path "C:\Users\diberry\project-dina\repos\GitHub-Copilot-for-Azure\tests"
+```
+
+## Step 2: Deploy to Content Repo
+
+After generation, copy files to azure-dev-docs-pr:
+
+```powershell
+$contentDir = "C:\Users\diberry\project-dina\repos\project-azure-ai-tools\azure-dev-docs-pr\articles\azure-skills\skills"
+$genDir = "C:\Users\diberry\project-dina\repos\project-azure-mcp-server\microsoft-mcp-doc-generation\generated-skills"
+
+# Remove old and copy new
+Get-ChildItem "$contentDir\*.md" | Remove-Item
+Get-ChildItem "$genDir\*.md" | ForEach-Object {
+    Copy-Item $_.FullName "$contentDir\$($_.Name)"
+}
+
+# Commit
+cd C:\Users\diberry\project-dina\repos\project-azure-ai-tools\azure-dev-docs-pr
+git add articles/azure-skills/skills/
+git commit -m "Regenerate skill pages
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+git push
 ```
 
 ## CLI Options Reference
@@ -77,7 +141,8 @@ The underlying CLI (`SkillsGen.Cli`) accepts these flags after `--`:
 | `--force` | off | Write output even when validation fails |
 | `--out <dir>` | `../generated-skills/` | Override output directory |
 | `--source` | `local` | Source mode: `local` or `github` |
-| `--source-path` | `./skills-source/` | Path to local skills source directory |
+| `--source-path` | `./skills-source/` | Path to SKILL.md source directory (use GitHub-Copilot-for-Azure path) |
+| `--tests-path` | (none) | Path to tests directory for trigger files |
 | `--verbose` | off | Verbose console output |
 
 ## What Gets Generated
@@ -111,11 +176,19 @@ After generation completes:
    ```
 5. **Check manifest** — `generated-skills/generation-manifest.json` lists every skill with its tier and validation status.
 
+## Important Notes
+
+- **NEVER use `--source github`** for iterative work. Each skill needs 2 API calls. With 24 skills, this exhausts GitHub API quota quickly. Always clone once and use `--source local`.
+- **Always sync repos first** (Step 0) to avoid generating from stale data.
+- **Acrolinx re-scores automatically** on every push to the content PR (~2-3 min).
+
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
 | Build fails | Run `dotnet build skills-generation/skills-generation.slnx --configuration Release` manually to see errors |
 | "No AI credentials found" warning | Set `FOUNDRY_API_KEY` and `FOUNDRY_ENDPOINT`, or pass `--no-llm` |
+| "SKILL.md not found" | Verify `--source-path` points to `GitHub-Copilot-for-Azure/plugin/skills` and the repo is cloned |
 | Validation failures | Review console WARN/ERROR lines; use `--force` to write anyway for inspection |
 | Missing skills-inventory.json | Ensure `skills-generation/data/skills-inventory.json` exists (24 entries) |
+| Stale content | Run Step 0 to sync both repos from remote main |
