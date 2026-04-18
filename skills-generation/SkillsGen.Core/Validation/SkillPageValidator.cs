@@ -125,6 +125,28 @@ public class SkillPageValidator : ISkillPageValidator
             }
         }
 
+        // NEGATIVE_IN_POSITIVE: Detect redirect/negative items in "When to use" section
+        var whenSectionMatch = Regex.Match(renderedContent,
+            @"(?:^|\n)###?\s*When to use.*?\n(.*?)(?=\n##[^#]|\z)",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+        if (whenSectionMatch.Success)
+        {
+            var whenSection = whenSectionMatch.Groups[1].Value;
+            var bulletItems = Regex.Matches(whenSection, @"^[ \t]*-\s+(.+)$", RegexOptions.Multiline);
+            foreach (Match bullet in bulletItems)
+            {
+                var item = bullet.Groups[1].Value.Trim();
+                // Detect redirect patterns: "(use X)", "(use X instead)", "use X for this"
+                if (Regex.IsMatch(item, @"\(use\s+\S+", RegexOptions.IgnoreCase) ||
+                    Regex.IsMatch(item, @"\binstead\b", RegexOptions.IgnoreCase) ||
+                    Regex.IsMatch(item, @"^Not\s+for\b", RegexOptions.IgnoreCase) ||
+                    Regex.IsMatch(item, @"^Do\s+not\s+use\b", RegexOptions.IgnoreCase))
+                {
+                    warnings.Add($"NEGATIVE_IN_POSITIVE: Item in 'When to use' appears negative/redirect: \"{item}\"");
+                }
+            }
+        }
+
         var sectionCount = Regex.Matches(renderedContent, @"^## ", RegexOptions.Multiline).Count;
 
         return new SkillValidationResult(errors.Count == 0, errors, warnings, wordCount, sectionCount);
