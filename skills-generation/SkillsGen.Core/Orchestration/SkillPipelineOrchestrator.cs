@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SkillsGen.Core.Assessment;
 using SkillsGen.Core.Fetchers;
@@ -213,6 +214,39 @@ public class SkillPipelineOrchestrator
         if (tools.Count == 1)
             tools.Add(new("Azure CLI", MinVersion: "2.60.0", InstallCommand: "curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash"));
 
+        // Extract compatibility requirements from frontmatter (e.g., "Requires Azure CLI")
+        foreach (var compat in skillData.Compatibility)
+        {
+            // Check if this is a tool requirement
+            if (Regex.IsMatch(compat, @"(?:requires|needs)\s+", RegexOptions.IgnoreCase))
+            {
+                var toolName = Regex.Replace(compat, @"^(?:requires|needs)\s+", "", RegexOptions.IgnoreCase).Trim();
+                if (!tools.Any(t => t.Name.Contains(toolName, StringComparison.OrdinalIgnoreCase)))
+                    tools.Add(new ToolRequirement(toolName));
+            }
+            else if (!tools.Any(t => t.Name.Contains(compat, StringComparison.OrdinalIgnoreCase)))
+            {
+                tools.Add(new ToolRequirement(compat));
+            }
+        }
+
+        // Extract environment/runtime requirements from inline body mentions
+        var environmentReqs = new List<string>();
+        foreach (var prereq in skillData.Prerequisites)
+        {
+            // Classify as environment requirement if it mentions app hosting/runtime
+            if (Regex.IsMatch(prereq, @"(?:app(?:lication)?\s+hosted|runtime|environment)", RegexOptions.IgnoreCase))
+            {
+                environmentReqs.Add(prereq);
+            }
+            else if (Regex.IsMatch(prereq, @"(?:Docker|Node\.js|Python|\.NET|Java|ASP\.NET)", RegexOptions.IgnoreCase) &&
+                     !tools.Any(t => prereq.Contains(t.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                // Inline-mentioned tools not already covered
+                tools.Add(new ToolRequirement(prereq));
+            }
+        }
+
         // Build exclusion set from DoNotUseFor — resources mentioned in "DO NOT USE FOR" context
         // should not appear as prerequisites (prevents false positives)
         var doNotUseForText = string.Join(" ", skillData.DoNotUseFor).ToLowerInvariant();
@@ -254,7 +288,8 @@ public class SkillPipelineOrchestrator
             Azure = new AzureRequirements(),
             RbacRoles = rbacRoles,
             Tools = tools,
-            Resources = resources
+            Resources = resources,
+            EnvironmentRequirements = environmentReqs
         };
     }
 

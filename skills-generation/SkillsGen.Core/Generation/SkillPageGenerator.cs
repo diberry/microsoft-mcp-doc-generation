@@ -125,7 +125,8 @@ public class SkillPageGenerator : ISkillPageGenerator
                     ["resourceType"] = r.ResourceType,
                     ["description"] = r.Description,
                     ["quickCreateCommand"] = r.QuickCreateCommand
-                }).ToList()
+                }).ToList(),
+                ["environmentRequirements"] = prerequisites.EnvironmentRequirements
             },
             ["hasServices"] = skillData.Services.Count > 0,
             ["hasMcpTools"] = skillData.McpTools.Count > 0,
@@ -140,6 +141,7 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["hasRbacRoles"] = prerequisites.RbacRoles.Count > 0,
             ["hasToolPrereqs"] = prerequisites.Tools.Count > 0,
             ["hasResources"] = prerequisites.Resources.Count > 0,
+            ["hasEnvironmentReqs"] = prerequisites.EnvironmentRequirements.Count > 0,
             // Sub-skills
             ["subSkills"] = skillData.SubSkills.Select(s => new Dictionary<string, object?>
             {
