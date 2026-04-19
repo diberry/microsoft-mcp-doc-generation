@@ -14,10 +14,12 @@ ms.service: azure-mcp-server
 
 **Skill:** `{{{name}}}` | [Source code](https://github.com/microsoft/azure-skills/blob/main/skills/{{{name}}}/skill.md)
 
+{{!-- MUST HAVE: Always renders --}}
 ## What it provides
 
 {{{whatItProvides}}}
 
+{{!-- MAY HAVE: Only renders when source skill defines services --}}
 {{#if hasServices}}
 ### Azure services knowledge
 
@@ -28,6 +30,7 @@ ms.service: azure-mcp-server
 {{/each}}
 {{/if}}
 
+{{!-- MUST HAVE: Always renders (generator provides fallback prereqs) --}}
 ## Prerequisites
 
 {{#if prerequisites.azure.requiresAzureLogin}}
@@ -60,7 +63,7 @@ ms.service: azure-mcp-server
 {{/each}}
 {{/if}}
 
-{{#if hasUseFor}}
+{{!-- MUST HAVE: Always renders (generator provides fallback use-for items) --}}
 ## When to use this skill
 
 Use the **{{{displayName}}}** skill when you need to:
@@ -68,7 +71,18 @@ Use the **{{{displayName}}}** skill when you need to:
 {{#each useFor}}
 - {{{this}}}
 {{/each}}
+
+{{!-- MUST HAVE: When-not-to-use only renders when source defines DoNotUseFor --}}
+{{#if hasDoNotUseFor}}
+
+### When not to use this skill
+
+{{#each doNotUseFor}}
+- {{{this}}}
+{{/each}}
 {{/if}}
+
+{{!-- MAY HAVE: Only renders when source skill defines MCP tools --}}
 {{#if hasMcpTools}}
 
 ## MCP tools
@@ -82,6 +96,7 @@ This skill uses the following Azure MCP tools:
 {{/each}}
 {{/if}}
 
+{{!-- MAY HAVE: Only renders for Tier 1 skills with decision guidance data --}}
 {{#if showDecisionGuidance}}
 ## Decision guidance
 
@@ -97,6 +112,7 @@ This skill uses the following Azure MCP tools:
 {{/each}}
 {{/if}}
 
+{{!-- MAY HAVE: Only renders for Tier 1 skills with workflow steps --}}
 {{#if showWorkflow}}
 ## Suggested workflow
 
@@ -105,7 +121,7 @@ This skill uses the following Azure MCP tools:
 {{/each}}
 {{/if}}
 
-{{#if hasTriggers}}
+{{!-- MUST HAVE: Always renders (generator provides fallback prompts) --}}
 ## Example prompts
 
 Try these prompts to activate this skill:
@@ -113,8 +129,8 @@ Try these prompts to activate this skill:
 {{#each shouldTrigger}}
 - "{{{this}}}"
 {{/each}}
-{{/if}}
 
+{{!-- MAY HAVE: Only renders when source skill defines related skills --}}
 {{#if hasRelatedSkills}}
 ## Related skills
 
@@ -123,6 +139,7 @@ Try these prompts to activate this skill:
 {{/each}}
 {{/if}}
 
+{{!-- MAY HAVE: Only renders when source skill defines sub-skills --}}
 {{#if hasSubSkills}}
 ## Sub-skills
 
@@ -153,6 +170,7 @@ This skill includes the following specialized sub-skills:
 {{/each}}
 {{/if}}
 
+{{!-- MAY HAVE: Only renders when source skill defines activation markers --}}
 {{#if hasActivation}}
 ## Automatic activation
 
@@ -172,6 +190,7 @@ This skill automatically activates when your codebase contains any of the follow
 {{/if}}
 {{/if}}
 
+{{!-- MUST HAVE: Always renders --}}
 ## Related content
 
 - [Azure MCP Server overview](/azure/developer/azure-mcp-server/overview)
