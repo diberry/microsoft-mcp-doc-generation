@@ -51,6 +51,14 @@ ms.service: azure-mcp-server
 - **{{{resourceType}}}**—{{{description}}}{{#if quickCreateCommand}} Quick create: `{{{quickCreateCommand}}}`{{/if}}
 {{/each}}
 {{/if}}
+{{#if hasEnvironmentReqs}}
+
+### Environment requirements
+
+{{#each prerequisites.environmentRequirements}}
+- {{{this}}}
+{{/each}}
+{{/if}}
 
 {{#if hasUseFor}}
 ## When to use this skill

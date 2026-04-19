@@ -11,4 +11,5 @@ public record SkillPrerequisites
     public List<RbacRequirement> RbacRoles { get; init; } = [];
     public List<ToolRequirement> Tools { get; init; } = [];
     public List<ResourceRequirement> Resources { get; init; } = [];
+    public List<string> EnvironmentRequirements { get; init; } = [];
 }

@@ -38,6 +38,7 @@ public record SkillData
     public List<string> RelatedSkills { get; init; } = [];
     public List<string> SdkReferences { get; init; } = [];
     public List<string> Prerequisites { get; init; } = [];
+    public List<string> Compatibility { get; init; } = [];
     public string RawBody { get; init; } = "";
     public ActivationTrigger? Activation { get; init; }
     public List<SubSkillData> SubSkills { get; init; } = [];

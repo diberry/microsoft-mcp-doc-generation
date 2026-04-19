@@ -73,6 +73,14 @@ public partial class SkillMarkdownParser : ISkillParser
         var decisionGuidance = ExtractDecisionGuidance(body);
         var relatedSkills = ExtractRelatedSkills(body);
         var prerequisites = ExtractPrerequisites(body);
+        var compatibility = ExtractCompatibility(frontmatter);
+        var inlinePrereqs = ExtractInlinePrerequisites(body);
+        // Merge inline prerequisites into the main list, deduplicating
+        foreach (var item in inlinePrereqs)
+        {
+            if (!prerequisites.Any(p => p.Contains(item, StringComparison.OrdinalIgnoreCase)))
+                prerequisites.Add(item);
+        }
         var activation = ExtractActivationTriggers(decodedDescription, body);
 
         return new SkillData
@@ -88,6 +96,7 @@ public partial class SkillMarkdownParser : ISkillParser
             DecisionGuidance = decisionGuidance,
             RelatedSkills = relatedSkills,
             Prerequisites = prerequisites,
+            Compatibility = compatibility,
             RawBody = body,
             Activation = activation
         };
@@ -663,6 +672,76 @@ public partial class SkillMarkdownParser : ISkillParser
         var section = ExtractSectionContent(body, @"##?\s*Prerequisites");
         if (string.IsNullOrEmpty(section)) return [];
         return ExtractBulletItems(section);
+    }
+
+    /// <summary>
+    /// Extracts compatibility requirements from frontmatter (e.g., "compatibility: Requires Azure CLI").
+    /// Returns a list of compatibility strings parsed from comma-separated or multi-line YAML values.
+    /// </summary>
+    private static List<string> ExtractCompatibility(string frontmatter)
+    {
+        if (string.IsNullOrEmpty(frontmatter)) return [];
+
+        var value = ExtractFrontmatterField(frontmatter, "compatibility");
+        if (string.IsNullOrWhiteSpace(value)) return [];
+
+        // Handle comma-separated values
+        return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Scans body text for inline prerequisite mentions outside the formal ## Prerequisites section.
+    /// Looks for patterns like "requires X", "must have X", "Docker required", and app-hosting patterns.
+    /// </summary>
+    internal static List<string> ExtractInlinePrerequisites(string body)
+    {
+        if (string.IsNullOrWhiteSpace(body)) return [];
+
+        var results = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Skip the formal Prerequisites section to avoid double-counting
+        var bodyWithoutPrereqs = Regex.Replace(body,
+            @"#{2,3}\s*Prerequisites.*?(?=#{2,3}\s|\z)", "", RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        // Pattern 1: "requires X" / "must have X" / "X required"
+        var requiresPatterns = new[]
+        {
+            @"(?:requires|must\s+have)\s+([A-Z][A-Za-z\s.]+?)(?:\s+(?:to|for|when|version|or)\b|[,;.]|$)",
+            @"([A-Z][A-Za-z\s.]+?)\s+(?:is\s+)?required\b"
+        };
+
+        foreach (var pattern in requiresPatterns)
+        {
+            foreach (Match m in Regex.Matches(bodyWithoutPrereqs, pattern, RegexOptions.Multiline))
+            {
+                var item = m.Groups[1].Value.Trim().TrimEnd('.');
+                if (item.Length > 3 && item.Length < 80 && seen.Add(item))
+                    results.Add(item);
+            }
+        }
+
+        // Pattern 2: App hosting patterns (e.g., "ASP.NET Core app hosted in Azure")
+        var hostingPatterns = Regex.Matches(bodyWithoutPrereqs,
+            @"(?:an?\s+)?((?:ASP\.NET\s+Core|Node\.js|Python|Java|\.NET)\s+app(?:lication)?\s+hosted\s+in\s+Azure)",
+            RegexOptions.IgnoreCase);
+        foreach (Match m in hostingPatterns)
+        {
+            var item = m.Groups[1].Value.Trim();
+            if (seen.Add(item))
+                results.Add(item);
+        }
+
+        // Pattern 3: Docker/container requirements
+        if (Regex.IsMatch(bodyWithoutPrereqs, @"\bDocker\b.*\b(?:required|install|must)\b|\b(?:required|install|must)\b.*\bDocker\b", RegexOptions.IgnoreCase))
+        {
+            if (seen.Add("Docker"))
+                results.Add("Docker");
+        }
+
+        return results;
     }
 
     /// <summary>
