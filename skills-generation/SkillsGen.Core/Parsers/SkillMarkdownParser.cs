@@ -30,10 +30,13 @@ public partial class SkillMarkdownParser : ISkillParser
         // Clean the description for display (strip markers, take first 2 sentences)
         var cleanDescription = CleanDescription(decodedDescription);
 
-        var useFor = ExtractListFromDescription(decodedDescription, @"USE\s+FOR:");
-        var whenItems = ExtractListFromDescription(decodedDescription, @"WHEN\s*:");
+        // Extract negative delimiters FIRST to prevent "USE FOR:" inside
+        // "DO NOT USE FOR:" from matching the positive USE FOR pattern
         var doNotUseFor = ExtractListFromDescription(decodedDescription, @"DO\s+NOT\s+USE\s+FOR:");
+        var doNotUseWhen = ExtractListFromDescription(decodedDescription, @"DO\s+NOT\s+USE\s+WHEN\s*:");
         var dontUseWhen = ExtractListFromDescription(decodedDescription, @"DON'?T\s+USE\s+WHEN\s*:");
+        var useFor = ExtractListFromDescription(decodedDescription, @"(?<!NOT\s)USE\s+FOR:");
+        var whenItems = ExtractListFromDescription(decodedDescription, @"WHEN\s*:");
 
         // Merge WHEN items into UseFor — clean up quoted trigger phrases
         foreach (var item in whenItems)
@@ -43,12 +46,19 @@ public partial class SkillMarkdownParser : ISkillParser
                 useFor.Add(cleaned);
         }
 
-        // Merge DON'T USE WHEN into DoNotUseFor
-        foreach (var item in dontUseWhen)
+        // Merge all negative variants (DO NOT USE WHEN, DON'T USE WHEN) into DoNotUseFor
+        foreach (var item in doNotUseWhen.Concat(dontUseWhen))
         {
             var cleaned = item.Trim().Trim('"', '\'', ',', '.');
             if (!string.IsNullOrWhiteSpace(cleaned) && cleaned.Length > 3 && !doNotUseFor.Contains(cleaned))
                 doNotUseFor.Add(cleaned);
+        }
+
+        // Remove any DoNotUseFor items that leaked into UseFor (exact match only)
+        if (doNotUseFor.Count > 0)
+        {
+            useFor.RemoveAll(u => doNotUseFor.Any(d =>
+                string.Equals(u, d, StringComparison.OrdinalIgnoreCase)));
         }
 
         // Also extract from body sections
@@ -125,20 +135,27 @@ public partial class SkillMarkdownParser : ISkillParser
     {
         try
         {
-            var idx = description.IndexOf(marker.Replace(@"\s+", " ").Replace(@"\s*", ""), StringComparison.OrdinalIgnoreCase);
-            if (idx < 0)
+            // Always use regex match for markers that contain lookbehind or other non-literal patterns
+            var markerMatch = Regex.Match(description, marker, RegexOptions.IgnoreCase);
+            if (!markerMatch.Success)
             {
-                // Try regex match
-                var markerMatch = Regex.Match(description, marker, RegexOptions.IgnoreCase);
-                if (!markerMatch.Success) return [];
-                idx = markerMatch.Index;
-                var afterMarker = description[(idx + markerMatch.Length)..].Trim();
-                return ParseCommaSeparatedOrBullets(afterMarker);
+                // Fallback: try literal match with whitespace collapsed
+                var literalMarker = Regex.Replace(marker, @"\(\?\<\![^)]+\)", ""); // strip lookbehind
+                literalMarker = literalMarker.Replace(@"\s+", " ").Replace(@"\s*", "");
+                var idx = description.IndexOf(literalMarker, StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) return [];
+
+                // Verify the literal match isn't preceded by text the lookbehind was guarding against
+                if (marker.Contains("(?<!") && idx >= 4 &&
+                    description[(idx - 4)..idx].Contains("NOT", StringComparison.OrdinalIgnoreCase))
+                    return [];
+
+                var after = description[(idx + literalMarker.Length)..].Trim();
+                return ParseCommaSeparatedOrBullets(after);
             }
 
-            var markerLen = Regex.Match(description[idx..], marker, RegexOptions.IgnoreCase);
-            var after = description[(idx + markerLen.Length)..].Trim();
-            return ParseCommaSeparatedOrBullets(after);
+            var afterMarker = description[(markerMatch.Index + markerMatch.Length)..].Trim();
+            return ParseCommaSeparatedOrBullets(afterMarker);
         }
         catch (RegexParseException)
         {
