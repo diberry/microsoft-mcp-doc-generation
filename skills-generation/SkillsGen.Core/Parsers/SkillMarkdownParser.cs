@@ -704,11 +704,59 @@ public partial class SkillMarkdownParser : ISkillParser
         return skills;
     }
 
+    // Words that indicate a bullet point from ## Rules is prerequisite-like rather than behavioral
+    private static readonly string[] PrerequisiteKeywords =
+    [
+        "require", "must", "need", "install", "configure", "set up",
+        "enable", "authenticate", "subscription", "cli", "sdk"
+    ];
+
+    // Prefixes that mark a rule as a behavioral instruction regardless of keyword matches
+    private static readonly string[] BehavioralPrefixes =
+    [
+        "always ", "never ", "do not ", "don't ", "avoid ", "prefer ", "use only "
+    ];
+
     private static List<string> ExtractPrerequisites(string body)
     {
-        var section = ExtractSectionContent(body, @"##?\s*Prerequisites");
-        if (string.IsNullOrEmpty(section)) return [];
-        return ExtractBulletItems(section);
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var results = new List<string>();
+
+        void AddItems(IEnumerable<string> items)
+        {
+            foreach (var item in items)
+                if (seen.Add(item))
+                    results.Add(item);
+        }
+
+        // 1. Formal ## Prerequisites section
+        var prereqSection = ExtractSectionContent(body, @"##?\s*Prerequisites");
+        if (!string.IsNullOrEmpty(prereqSection))
+            AddItems(ExtractBulletItems(prereqSection));
+
+        // 2. ## Required Inputs section — treat same as Prerequisites
+        var requiredInputsSection = ExtractSectionContent(body, @"##?\s*Required\s+Inputs");
+        if (!string.IsNullOrEmpty(requiredInputsSection))
+            AddItems(ExtractBulletItems(requiredInputsSection));
+
+        // 3. ## Rules section — filter to keep only prerequisite-like rules
+        var rulesSection = ExtractSectionContent(body, @"##?\s*Rules");
+        if (!string.IsNullOrEmpty(rulesSection))
+        {
+            var ruleItems = ExtractBulletItems(rulesSection);
+            foreach (var rule in ruleItems)
+            {
+                var lower = rule.ToLowerInvariant().TrimStart();
+                // Skip behavioral instructions (always/never/do not/...)
+                if (BehavioralPrefixes.Any(p => lower.StartsWith(p, StringComparison.Ordinal)))
+                    continue;
+                if (PrerequisiteKeywords.Any(kw => lower.Contains(kw)))
+                    if (seen.Add(rule))
+                        results.Add(rule);
+            }
+        }
+
+        return results;
     }
 
     /// <summary>

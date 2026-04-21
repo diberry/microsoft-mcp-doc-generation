@@ -190,4 +190,96 @@ This skill requires Azure CLI for cluster management.");
         var cliCount = result.Prerequisites.Count(p => p.Contains("Azure CLI", StringComparison.OrdinalIgnoreCase));
         cliCount.Should().BeLessOrEqualTo(1);
     }
+
+    // ==========================================================================
+    // Issue #13 (R5): Deeper prerequisite parsing
+    // ==========================================================================
+
+    [Fact]
+    public void ExtractPrerequisites_RequiredInputsSection_Extracted()
+    {
+        var content = BuildSkill("azure-sql",
+            "description: \"Manage Azure SQL.\"\n",
+            @"## Required Inputs
+
+- Active Azure subscription
+- SQL Server name
+
+## Overview
+
+Some content.");
+
+        var result = _parser.Parse("azure-sql", content);
+
+        result.Prerequisites.Should().Contain(item => item.Contains("Azure subscription", StringComparison.OrdinalIgnoreCase));
+        result.Prerequisites.Should().Contain(item => item.Contains("SQL Server name", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ExtractPrerequisites_RulesSection_KeepsPrerequisiteLikeRules()
+    {
+        var content = BuildSkill("azure-keyvault",
+            "description: \"Key Vault management.\"\n",
+            @"## Rules
+
+- Must have an Azure subscription to use this skill
+- Always use the latest SDK version
+- Never store secrets in source code
+- Requires Azure CLI installed
+
+## Overview
+
+Some content.");
+
+        var result = _parser.Parse("azure-keyvault", content);
+
+        // Prerequisite-like rules should be included
+        result.Prerequisites.Should().Contain(item => item.Contains("subscription", StringComparison.OrdinalIgnoreCase));
+        result.Prerequisites.Should().Contain(item => item.Contains("Azure CLI", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ExtractPrerequisites_RulesSection_SkipsBehavioralRules()
+    {
+        var content = BuildSkill("azure-monitor",
+            "description: \"Monitor resources.\"\n",
+            @"## Rules
+
+- Always use the latest SDK version
+- Never modify production settings directly
+
+## Overview
+
+Some content.");
+
+        var result = _parser.Parse("azure-monitor", content);
+
+        // Purely behavioral rules (no prerequisite keywords) should not appear
+        result.Prerequisites.Should().NotContain(item => item.Contains("Always use the latest", StringComparison.OrdinalIgnoreCase));
+        result.Prerequisites.Should().NotContain(item => item.Contains("Never modify", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ExtractPrerequisites_DeduplicatesAcrossAllSections()
+    {
+        var content = BuildSkill("azure-cosmos",
+            "description: \"Cosmos DB management.\"\n",
+            @"## Prerequisites
+
+- Azure subscription
+
+## Required Inputs
+
+- Azure subscription
+
+## Overview
+
+Some content.");
+
+        var result = _parser.Parse("azure-cosmos", content);
+
+        var subscriptionCount = result.Prerequisites.Count(p =>
+            p.Contains("Azure subscription", StringComparison.OrdinalIgnoreCase));
+        subscriptionCount.Should().Be(1);
+    }
 }

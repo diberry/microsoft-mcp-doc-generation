@@ -2,6 +2,7 @@ using HandlebarsDotNet;
 using Microsoft.Extensions.Logging;
 using SkillsGen.Core.Data;
 using SkillsGen.Core.Models;
+using SkillsGen.Core.Validation;
 
 namespace SkillsGen.Core.Generation;
 
@@ -23,14 +24,14 @@ public class SkillPageGenerator : ISkillPageGenerator
 
     public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null)
     {
-        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData);
+        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData, _logger);
         var result = _compiledTemplate(context);
         return result;
     }
 
     private static readonly int MaxExamplePrompts = 10;
 
-    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData)
+    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData, ILogger? logger = null)
     {
         // Look up curated data for this skill (null if not found)
         CuratedSkillData? curated = null;
@@ -48,6 +49,12 @@ public class SkillPageGenerator : ISkillPageGenerator
         // Cap at 10 items max to keep the section focused
         if (useForList.Count > 10)
             useForList = useForList.Take(10).ToList();
+
+        // Quality gate: flag thin "When to use" sections
+        var whenToUseGate = QualityGateValidator.ValidateWhenToUse(useForList, skillData.Name, logger);
+        var qualityWarnings = whenToUseGate.Warning != null
+            ? new List<string> { whenToUseGate.Warning }
+            : new List<string>();
 
         // Build "When NOT to use" — only from explicit DoNotUseFor in SKILL.md
         // Do NOT fall back to shouldNotTrigger: those are test prompts, not customer guidance
@@ -214,7 +221,10 @@ public class SkillPageGenerator : ISkillPageGenerator
                 ["url"] = l.Url,
                 ["category"] = l.Category
             }).ToList(),
-            ["hasRelatedLinks"] = relatedLinks.Count > 0
+            ["hasRelatedLinks"] = relatedLinks.Count > 0,
+            // Quality gate warnings (populated when sections are below thresholds)
+            ["qualityWarnings"] = qualityWarnings,
+            ["hasQualityWarnings"] = qualityWarnings.Count > 0
         };
     }
 

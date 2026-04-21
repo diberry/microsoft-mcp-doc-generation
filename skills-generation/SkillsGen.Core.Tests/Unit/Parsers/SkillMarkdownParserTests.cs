@@ -771,4 +771,102 @@ public class SkillMarkdownParserTests
         result.WorkflowSteps.Should().NotBeEmpty();
         result.WorkflowSteps.Should().HaveCountGreaterOrEqualTo(3);
     }
+
+    // === Issue #13 — R5: Deeper Prerequisite Parsing ===
+
+    [Fact]
+    public void Parse_ExtractsPrerequisitesFromRulesSection()
+    {
+        var markdown = """
+            ---
+            name: test-skill
+            description: Test skill
+            ---
+            ## Rules
+            - Azure CLI must be installed
+            - Always use JSON output format
+            - Requires an active Azure subscription
+            """;
+        var result = _parser.Parse("test-skill", markdown);
+
+        result.Prerequisites.Should().Contain(p => p.Contains("Azure CLI", StringComparison.OrdinalIgnoreCase),
+            "prerequisite-like rule 'Azure CLI must be installed' should be extracted");
+        result.Prerequisites.Should().Contain(p => p.Contains("Azure subscription", StringComparison.OrdinalIgnoreCase),
+            "prerequisite-like rule 'Requires an active Azure subscription' should be extracted");
+        result.Prerequisites.Should().NotContain(p => p.Contains("Always use JSON", StringComparison.OrdinalIgnoreCase),
+            "behavioral rule 'Always use JSON output format' should not be extracted as a prerequisite");
+    }
+
+    [Fact]
+    public void Parse_ExtractsPrerequisitesFromRequiredInputsSection()
+    {
+        var markdown = """
+            ---
+            name: azure-keyvault
+            description: Manage Key Vault secrets.
+            ---
+            ## Required Inputs
+            - Azure subscription ID
+            - Resource group name
+            - Key Vault name
+            """;
+        var result = _parser.Parse("azure-keyvault", markdown);
+
+        result.Prerequisites.Should().HaveCountGreaterOrEqualTo(3,
+            "all bullet items under '## Required Inputs' should be extracted");
+        result.Prerequisites.Should().Contain(p => p.Contains("subscription", StringComparison.OrdinalIgnoreCase));
+        result.Prerequisites.Should().Contain(p => p.Contains("Resource group", StringComparison.OrdinalIgnoreCase));
+        result.Prerequisites.Should().Contain(p => p.Contains("Key Vault", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void Parse_MergesPrerequisitesFromMultipleSections()
+    {
+        var markdown = """
+            ---
+            name: azure-monitor
+            description: Query Azure Monitor logs.
+            ---
+            ## Prerequisites
+            - Azure subscription
+            - Log Analytics workspace
+
+            ## Rules
+            - Azure CLI must be installed
+            - Always output results as JSON
+            """;
+        var result = _parser.Parse("azure-monitor", markdown);
+
+        result.Prerequisites.Should().Contain(p => p.Contains("Azure subscription", StringComparison.OrdinalIgnoreCase),
+            "formal Prerequisites section items should be present");
+        result.Prerequisites.Should().Contain(p => p.Contains("Log Analytics", StringComparison.OrdinalIgnoreCase),
+            "formal Prerequisites section items should be present");
+        result.Prerequisites.Should().Contain(p => p.Contains("Azure CLI", StringComparison.OrdinalIgnoreCase),
+            "prerequisite-like rules from Rules section should be merged in");
+
+        var distinctCount = result.Prerequisites
+            .Select(p => p.Trim().ToLowerInvariant())
+            .Distinct()
+            .Count();
+        distinctCount.Should().Be(result.Prerequisites.Count, "merged prerequisites should be deduplicated");
+    }
+
+    [Fact]
+    public void Parse_IgnoresBehavioralRulesInRulesSection()
+    {
+        var markdown = """
+            ---
+            name: azure-storage
+            description: Manage Azure Storage.
+            ---
+            ## Rules
+            - Always use JSON format for output
+            - Never expose secrets in responses
+            - Prefer managed identity over connection strings
+            """;
+        var result = _parser.Parse("azure-storage", markdown);
+
+        result.Prerequisites.Should().BeEmpty(
+            "behavioral-only rules ('Always X', 'Never Y', 'Prefer X') should not be extracted as prerequisites");
+    }
 }
