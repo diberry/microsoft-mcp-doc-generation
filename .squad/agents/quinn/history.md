@@ -59,3 +59,11 @@
 - **New preflight check:** Recommend adding `validate-consolidation.ps1` to verify project refs, test counts, and solution file consistency post-merge
 - **Build verification:** `dotnet build mcp-doc-generation.sln --configuration Release` will continue to work after all consolidations. No matrix changes needed
 - **Docker/devcontainer:** No changes required — consolidation doesn't affect runtime dependencies or container image
+
+### Local Clone Optimization for Azure Skills Pipeline (2026-07-25)
+- **Problem:** `--source github` hits GitHub's 60 req/hr unauthenticated rate limit, causing 10/24 skills to fail with ~7s timeouts each
+- **Solution:** `start-azure-skills.sh` now clones `microsoft/azure-skills` to `skills-source/` on first run, then `git pull` on subsequent runs
+- **Path mapping:** GitHubSkillFetcher uses `skills/{name}/SKILL.md` and `tests/{name}/triggers.test.ts` (separate dirs). LocalSkillFetcher takes `--source-path` and `--tests-path` separately
+- **CLI flags:** `--source local --source-path {clone}/skills/ --tests-path {clone}/tests/`
+- **Fallback:** `--source github` still works if explicitly passed; script detects it and skips clone
+- **Gitignore:** Added root-level `skills-source/` (existing entry was `docs-generation/skills-source/`, different path)

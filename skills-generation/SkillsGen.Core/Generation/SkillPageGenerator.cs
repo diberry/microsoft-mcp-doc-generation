@@ -22,16 +22,16 @@ public class SkillPageGenerator : ISkillPageGenerator
         _compiledTemplate = handlebars.Compile(templateContent);
     }
 
-    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null)
+    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null)
     {
-        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData, _logger);
+        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData, _logger, translatedWorkflowSteps, whatItProvides);
         var result = _compiledTemplate(context);
         return result;
     }
 
     private static readonly int MaxExamplePrompts = 10;
 
-    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData, ILogger? logger = null)
+    internal static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData, ILogger? logger = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null)
     {
         // Look up curated data for this skill (null if not found)
         CuratedSkillData? curated = null;
@@ -93,8 +93,8 @@ public class SkillPageGenerator : ISkillPageGenerator
         // Related links from curated data
         var relatedLinks = curated?.RelatedLinks ?? [];
 
-        // Build "What it provides" with concrete capabilities from services/tools
-        var whatItProvides = BuildWhatItProvides(skillData);
+        // Build "What it provides" — use LLM synthesis if available, else fall back to mechanical
+        whatItProvides ??= BuildWhatItProvides(skillData);
 
         return new Dictionary<string, object?>
         {
@@ -120,7 +120,7 @@ public class SkillPageGenerator : ISkillPageGenerator
                 ["purpose"] = t.Purpose,
                 ["toolPage"] = t.ToolPage
             }).ToList(),
-            ["workflowSteps"] = skillData.WorkflowSteps,
+            ["workflowSteps"] = translatedWorkflowSteps ?? skillData.WorkflowSteps,
             ["decisionGuidance"] = skillData.DecisionGuidance.Select(d => new Dictionary<string, object?>
             {
                 ["topic"] = d.Topic,
@@ -232,7 +232,7 @@ public class SkillPageGenerator : ISkillPageGenerator
     /// Builds a concrete "What it provides" section from services and tools data
     /// instead of just echoing the skill description.
     /// </summary>
-    private static string BuildWhatItProvides(SkillData skillData)
+    internal static string BuildWhatItProvides(SkillData skillData)
     {
         var parts = new List<string>();
 

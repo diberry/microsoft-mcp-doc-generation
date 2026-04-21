@@ -1,0 +1,67 @@
+{
+  "version2": "2.0.0-beta.40",
+  "version3": "3.0.0-beta.3",
+  "summary": {
+    "identical": 230,
+    "descriptionChanges": 5,
+    "parameterAdditions": 3,
+    "parameterRemovals": 0,
+    "requiredStatusChanges": 0,
+    "newTools": 0,
+    "removedTools": 0
+  },
+  "changes": {
+    "parameterAdded": [
+      {
+        "command": "functions template get",
+        "added": [
+          "--output"
+        ]
+      },
+      {
+        "command": "storage blob container get",
+        "added": [
+          "--prefix"
+        ]
+      },
+      {
+        "command": "storage blob get",
+        "added": [
+          "--prefix"
+        ]
+      }
+    ],
+    "parameterRemoved": [],
+    "descriptionChanged": [
+      {
+        "command": "functions template get",
+        "desc40": "Generate Azure Functions code from templates including triggers, bindings, AI agents, Dura",
+        "desc3": "List available Azure Functions templates or generate function code. Shows triggers (HTTP, "
+      },
+      {
+        "command": "storage blob container create",
+        "desc40": "Create/provision a new Azure Storage blob container in a storage account. Required: --acco",
+        "desc3": "Create/provision a new Azure Storage blob container in a storage account.\r\n\r\nRequired: --a"
+      },
+      {
+        "command": "storage blob container get",
+        "desc40": "Show/list containers in a storage account. Use this tool to list all blob containers in th",
+        "desc3": "Show/list containers in a storage account. Use this tool to list all blob containers in th"
+      },
+      {
+        "command": "storage blob get",
+        "desc40": "List/get/show blobs in a blob container in Storage account. Use this tool to list the blob",
+        "desc3": "List/get/show blobs in a blob container in Storage account. Use this tool to list the blob"
+      },
+      {
+        "command": "virtualdesktop hostpool list",
+        "desc40": "List all hostpools in a subscription or resource group. This command retrieves all Azure V",
+        "desc3": "List all hostpools in a subscription or resource group. This command retrieves all Azure V"
+      }
+    ],
+    "newCommands": [],
+    "removedCommands": [],
+    "requiredChanged": [],
+    "identical": 230
+  }
+}

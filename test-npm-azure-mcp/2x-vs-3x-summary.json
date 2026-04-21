@@ -1,0 +1,17 @@
+{
+  "version2": "2.0.0-beta.40",
+  "version3": "3.0.0-beta.1",
+  "toolCount": {
+    "v2": 235,
+    "v3": 235
+  },
+  "namespaceCount": {
+    "v2": 55,
+    "v3": 55
+  },
+  "changes": {
+    "new": [],
+    "removed": [],
+    "toolCountChange": []
+  }
+}

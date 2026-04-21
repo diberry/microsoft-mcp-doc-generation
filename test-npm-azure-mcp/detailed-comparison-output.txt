@@ -1,0 +1,16 @@
+=== 2.0.0-beta.40 vs 3.0.0-beta.1 DETAILED COMPARISON ===
+
+Commands in 2.x: 235
+Commands in 3.x: 235
+Total unique: 235
+
+=== SUMMARY ===
+Identical tools: 235
+Tools with description changes: 0
+Tools with parameter additions: 0
+Tools with parameter removals: 0
+New tools in 3.x: 0
+Tools removed from 2.x: 0
+
+
+Full detailed report saved to: 2x-vs-3x-detailed.json

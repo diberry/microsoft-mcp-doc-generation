@@ -99,11 +99,28 @@ public class SkillPipelineOrchestrator
 
             var updatedSkillData = skillData with { Description = rewrittenDescription };
 
+            // LLM workflow translation (optional)
+            List<string>? translatedSteps = null;
+            if (updatedSkillData.WorkflowSteps.Count > 0)
+            {
+                var wfSw = Stopwatch.StartNew();
+                translatedSteps = await _llmRewriter.TranslateWorkflowStepsAsync(
+                    skillName, updatedSkillData.WorkflowSteps, updatedSkillData.McpTools, ct);
+                wfSw.Stop();
+                _logger.LogLlmCall(skillName, "TranslateWorkflowSteps", wfSw.ElapsedMilliseconds);
+            }
+
+            // LLM "What it provides" synthesis (optional)
+            var wipSw = Stopwatch.StartNew();
+            var whatItProvides = await _llmRewriter.SynthesizeWhatItProvidesAsync(skillName, updatedSkillData, ct);
+            wipSw.Stop();
+            _logger.LogLlmCall(skillName, "SynthesizeWhatItProvides", wipSw.ElapsedMilliseconds);
+
             // Build prerequisites from skill data + source file analysis
             var prerequisites = BuildPrerequisites(skillData, sources.FileExtensions);
 
             // Generate (with trigger post-processing)
-            var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText);
+            var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText, translatedSteps, whatItProvides);
 
             // Post-process
             rendered = _postProcessor.Process(rendered);

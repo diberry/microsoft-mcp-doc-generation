@@ -1087,3 +1087,58 @@ public class TemplateRestructureTests
         result.Should().NotContain("available with this skill");
     }
 }
+
+public class BuildContextWhatItProvidesTests
+{
+    [Fact]
+    public void BuildContext_UsesPassedInWhatItProvides_WhenNonNull()
+    {
+        var skillData = new SkillData
+        {
+            Name = "azure-storage",
+            DisplayName = "Azure Storage",
+            Description = "Test.",
+            Services = [new ServiceEntry("Blob Storage", "Store data")],
+            McpTools = [new McpToolEntry("storage_list", "storage list", "List accounts")]
+        };
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var llmSynthesized = "You can manage blob containers, queues, and file shares across your Azure subscriptions.";
+        var context = SkillPageGenerator.BuildContext(
+            skillData, triggers, tier, prereqs,
+            triggerProcessor: null, curatedData: null, logger: null,
+            translatedWorkflowSteps: null, whatItProvides: llmSynthesized)
+            as IDictionary<string, object?>;
+
+        context.Should().NotBeNull();
+        context!["whatItProvides"].Should().Be(llmSynthesized);
+    }
+
+    [Fact]
+    public void BuildContext_FallsBackToMechanical_WhenWhatItProvidesIsNull()
+    {
+        var skillData = new SkillData
+        {
+            Name = "azure-keyvault",
+            DisplayName = "Azure Key Vault",
+            Description = "Test.",
+            Services = [new ServiceEntry("Key Vault", "Manage secrets")],
+            McpTools = [new McpToolEntry("kv_get", "keyvault get", "retrieve secrets from a key vault")]
+        };
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var context = SkillPageGenerator.BuildContext(
+            skillData, triggers, tier, prereqs,
+            triggerProcessor: null, curatedData: null, logger: null,
+            translatedWorkflowSteps: null, whatItProvides: null)
+            as IDictionary<string, object?>;
+
+        context.Should().NotBeNull();
+        var mechanical = SkillPageGenerator.BuildWhatItProvides(skillData);
+        context!["whatItProvides"].Should().Be(mechanical);
+    }
+}

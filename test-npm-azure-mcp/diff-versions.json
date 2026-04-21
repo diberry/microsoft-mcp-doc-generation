@@ -1,0 +1,344 @@
+{
+  "version2": "2.0.0-beta.39",
+  "version3": "3.0.0-beta.1",
+  "summary": {
+    "newCount": 0,
+    "removedCount": 0,
+    "changedCount": 0,
+    "totalNamespaces": 55
+  },
+  "changes": {
+    "acr": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "advisor": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "aks": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "appconfig": {
+      "status": "same",
+      "count39": 5,
+      "count3": 5
+    },
+    "applens": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "applicationinsights": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "appservice": {
+      "status": "same",
+      "count39": 7,
+      "count3": 7
+    },
+    "azuremigrate": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "azureterraformbestpractices": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "bicepschema": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "cloudarchitect": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "communication": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "compute": {
+      "status": "same",
+      "count39": 12,
+      "count3": 12
+    },
+    "confidentialledger": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "containerapps": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "cosmos": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "datadog": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "deploy": {
+      "status": "same",
+      "count39": 5,
+      "count3": 5
+    },
+    "deviceregistry": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "eventgrid": {
+      "status": "same",
+      "count39": 3,
+      "count3": 3
+    },
+    "eventhubs": {
+      "status": "same",
+      "count39": 9,
+      "count3": 9
+    },
+    "extension": {
+      "status": "same",
+      "count39": 3,
+      "count3": 3
+    },
+    "fileshares": {
+      "status": "same",
+      "count39": 14,
+      "count3": 14
+    },
+    "foundryextensions": {
+      "status": "same",
+      "count39": 7,
+      "count3": 7
+    },
+    "functionapp": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "functions": {
+      "status": "same",
+      "count39": 3,
+      "count3": 3
+    },
+    "get": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "grafana": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "group": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "keyvault": {
+      "status": "same",
+      "count39": 8,
+      "count3": 8
+    },
+    "kusto": {
+      "status": "same",
+      "count39": 7,
+      "count3": 7
+    },
+    "loadtesting": {
+      "status": "same",
+      "count39": 6,
+      "count3": 6
+    },
+    "managedlustre": {
+      "status": "same",
+      "count39": 18,
+      "count3": 18
+    },
+    "marketplace": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "monitor": {
+      "status": "same",
+      "count39": 16,
+      "count3": 16
+    },
+    "mysql": {
+      "status": "same",
+      "count39": 6,
+      "count3": 6
+    },
+    "policy": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "postgres": {
+      "status": "same",
+      "count39": 6,
+      "count3": 6
+    },
+    "pricing": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "quota": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "redis": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "resourcehealth": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "role": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "search": {
+      "status": "same",
+      "count39": 6,
+      "count3": 6
+    },
+    "servicebus": {
+      "status": "same",
+      "count39": 3,
+      "count3": 3
+    },
+    "servicefabric": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "signalr": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "speech": {
+      "status": "same",
+      "count39": 2,
+      "count3": 2
+    },
+    "sql": {
+      "status": "same",
+      "count39": 13,
+      "count3": 13
+    },
+    "storage": {
+      "status": "same",
+      "count39": 7,
+      "count3": 7
+    },
+    "storagesync": {
+      "status": "same",
+      "count39": 18,
+      "count3": 18
+    },
+    "subscription": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "virtualdesktop": {
+      "status": "same",
+      "count39": 3,
+      "count3": 3
+    },
+    "wellarchitectedframework": {
+      "status": "same",
+      "count39": 1,
+      "count3": 1
+    },
+    "workbooks": {
+      "status": "same",
+      "count39": 5,
+      "count3": 5
+    }
+  },
+  "namespaces": [
+    "acr",
+    "advisor",
+    "aks",
+    "appconfig",
+    "applens",
+    "applicationinsights",
+    "appservice",
+    "azuremigrate",
+    "azureterraformbestpractices",
+    "bicepschema",
+    "cloudarchitect",
+    "communication",
+    "compute",
+    "confidentialledger",
+    "containerapps",
+    "cosmos",
+    "datadog",
+    "deploy",
+    "deviceregistry",
+    "eventgrid",
+    "eventhubs",
+    "extension",
+    "fileshares",
+    "foundryextensions",
+    "functionapp",
+    "functions",
+    "get",
+    "grafana",
+    "group",
+    "keyvault",
+    "kusto",
+    "loadtesting",
+    "managedlustre",
+    "marketplace",
+    "monitor",
+    "mysql",
+    "policy",
+    "postgres",
+    "pricing",
+    "quota",
+    "redis",
+    "resourcehealth",
+    "role",
+    "search",
+    "servicebus",
+    "servicefabric",
+    "signalr",
+    "speech",
+    "sql",
+    "storage",
+    "storagesync",
+    "subscription",
+    "virtualdesktop",
+    "wellarchitectedframework",
+    "workbooks"
+  ]
+}
