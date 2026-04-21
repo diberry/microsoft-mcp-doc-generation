@@ -154,7 +154,8 @@ static SkillPipelineOrchestrator BuildOrchestrator(
     // --- Build components ---
     // Fetcher
     ISkillSourceFetcher fetcher = source == "github"
-        ? new GitHubSkillFetcher(new HttpClient(), loggerFactory.CreateLogger<GitHubSkillFetcher>())
+        ? new GitHubSkillFetcher(new HttpClient(), loggerFactory.CreateLogger<GitHubSkillFetcher>(),
+            token: Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
         : new LocalSkillFetcher(sourcePath, loggerFactory.CreateLogger<LocalSkillFetcher>(), testsPath);
 
     // Parsers
