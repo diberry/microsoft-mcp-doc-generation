@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Microsoft.Extensions.Logging;
 using SkillsGen.Core.Assessment;
+using SkillsGen.Core.Data;
 using SkillsGen.Core.Fetchers;
 using SkillsGen.Core.Generation;
 using SkillsGen.Core.Logging;
@@ -198,7 +199,8 @@ static SkillPipelineOrchestrator BuildOrchestrator(
     var templateContent = File.Exists(templatePath)
         ? File.ReadAllText(templatePath)
         : throw new FileNotFoundException($"Template not found: {templatePath}");
-    var pageGenerator = new SkillPageGenerator(templateContent, loggerFactory.CreateLogger<SkillPageGenerator>());
+    var curatedData = CuratedDataLoader.Load(dataPath, startupLogger);
+    var pageGenerator = new SkillPageGenerator(templateContent, loggerFactory.CreateLogger<SkillPageGenerator>(), curatedData);
 
     // Post-processor
     var replacementsJson = File.Exists(replacementsPath) ? File.ReadAllText(replacementsPath) : null;

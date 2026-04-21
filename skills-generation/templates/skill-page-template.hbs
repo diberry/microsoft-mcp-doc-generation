@@ -193,5 +193,10 @@ This skill automatically activates when your codebase contains any of the follow
 {{!-- MUST HAVE: Always renders --}}
 ## Related content
 
+{{#if hasRelatedLinks}}
+{{#each relatedLinks}}
+- [{{{this.title}}}]({{{this.url}}})
+{{/each}}
+{{/if}}
 - [Azure MCP Server overview](/azure/developer/azure-mcp-server/overview)
 - [Skill source code](https://github.com/microsoft/azure-skills/blob/main/skills/{{{name}}}/skill.md)

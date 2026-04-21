@@ -1,5 +1,6 @@
 using HandlebarsDotNet;
 using Microsoft.Extensions.Logging;
+using SkillsGen.Core.Data;
 using SkillsGen.Core.Models;
 
 namespace SkillsGen.Core.Generation;
@@ -8,10 +9,13 @@ public class SkillPageGenerator : ISkillPageGenerator
 {
     private readonly ILogger<SkillPageGenerator> _logger;
     private readonly HandlebarsTemplate<object, object> _compiledTemplate;
+    private readonly Dictionary<string, CuratedSkillData> _curatedData;
 
-    public SkillPageGenerator(string templateContent, ILogger<SkillPageGenerator> logger)
+    public SkillPageGenerator(string templateContent, ILogger<SkillPageGenerator> logger,
+        Dictionary<string, CuratedSkillData>? curatedData = null)
     {
         _logger = logger;
+        _curatedData = curatedData ?? new Dictionary<string, CuratedSkillData>(StringComparer.OrdinalIgnoreCase);
         var handlebars = Handlebars.Create();
         RegisterHelpers(handlebars);
         _compiledTemplate = handlebars.Compile(templateContent);
@@ -19,15 +23,19 @@ public class SkillPageGenerator : ISkillPageGenerator
 
     public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null)
     {
-        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor);
+        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData);
         var result = _compiledTemplate(context);
         return result;
     }
 
     private static readonly int MaxExamplePrompts = 10;
 
-    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null)
+    private static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData)
     {
+        // Look up curated data for this skill (null if not found)
+        CuratedSkillData? curated = null;
+        curatedData?.TryGetValue(skillData.Name, out curated);
+
         // Build "When to use" from UseFor, falling back to trigger prompts if empty
         var rawUseFor = skillData.UseFor.Count > 0
             ? skillData.UseFor
@@ -48,10 +56,16 @@ public class SkillPageGenerator : ISkillPageGenerator
             : new List<string>();
         var doNotUseForList = NaturalizeItems(rawDoNotUseFor, skillData.DisplayName);
 
-        // Cap example prompts and optionally post-process them
-        // When trigger test files are missing, fall back to useFor/WHEN items as prompts
+        // Example prompts priority:
+        //   1. Curated prompts (from skill-example-prompts.json) — highest fidelity
+        //   2. Trigger test file (triggers.test.ts shouldTrigger entries)
+        //   3. Fallback from UseFor/DetectionMarkers — when no test file exists
         List<string> examplePrompts;
-        if (triggerData.ShouldTrigger.Count > 0)
+        if (curated?.ExamplePrompts.Count > 0)
+        {
+            examplePrompts = curated.ExamplePrompts.Take(MaxExamplePrompts).ToList();
+        }
+        else if (triggerData.ShouldTrigger.Count > 0)
         {
             examplePrompts = triggerData.ShouldTrigger.Take(MaxExamplePrompts)
                 .Select(t => triggerProcessor != null ? triggerProcessor(t) : t)
@@ -68,6 +82,9 @@ public class SkillPageGenerator : ISkillPageGenerator
 
             examplePrompts = GenerateFallbackPrompts(fallbackSources, skillData.DisplayName);
         }
+
+        // Related links from curated data
+        var relatedLinks = curated?.RelatedLinks ?? [];
 
         // Build "What it provides" with concrete capabilities from services/tools
         var whatItProvides = BuildWhatItProvides(skillData);
@@ -189,7 +206,15 @@ public class SkillPageGenerator : ISkillPageGenerator
                 ["detectionMarkers"] = skillData.Activation.DetectionMarkers,
                 ["hasDetectionMarkers"] = skillData.Activation.DetectionMarkers?.Count > 0
             } : null,
-            ["hasActivation"] = skillData.Activation != null
+            ["hasActivation"] = skillData.Activation != null,
+            // Curated related links
+            ["relatedLinks"] = relatedLinks.Select(l => new Dictionary<string, object?>
+            {
+                ["title"] = l.Title,
+                ["url"] = l.Url,
+                ["category"] = l.Category
+            }).ToList(),
+            ["hasRelatedLinks"] = relatedLinks.Count > 0
         };
     }
 
