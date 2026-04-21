@@ -201,7 +201,7 @@ Other configs:
 - `TransformDescription()` - Static replacements + `EnsureEndsPeriod()`. Used for full sentences (descriptions, overviews)
 
 **⚠️ CRITICAL - Universal Design Principle**:
-All validations, transformations, prompts, and tests in the HorizontalArticleGenerator MUST be **universal** — they must work correctly for ALL 52 namespaces and ALL Azure services, tools, and products. Never add service-specific logic, hardcoded service names, or service-specific test data. Instead:
+All validations, transformations, prompts, and tests in the HorizontalArticleGenerator MUST be **universal** — they must work correctly for ALL 58 namespaces and ALL Azure services, tools, and products. Never add service-specific logic, hardcoded service names, or service-specific test data. Instead:
 - Use **pattern-based detection** (e.g., regex, suffix checks) instead of hardcoded blocklists
 - Use **varied Azure service examples** across tests (Storage, Key Vault, Cosmos DB, Speech, Monitor, etc.) — never concentrate all test data on one service
 - Prompts should describe rules generically, not through service-specific examples
@@ -304,7 +304,7 @@ generated/
   - Builds .NET solution (all generator projects)
   - Generates CLI metadata for all namespaces
   - Runs brand mapping validation (Step 0)
-- Iterates over all 52 namespaces (or single specified namespace)
+- Iterates over all 58 namespaces (or single specified namespace)
 - Calls `mcp-tools/scripts/start-only.sh` for each namespace
 - Tracks success/failure and reports summary
 
@@ -316,7 +316,7 @@ generated/
 
 **Usage**:
 ```bash
-# Full catalog generation (all 52 namespaces)
+# Full catalog generation (all 58 namespaces)
 ./start.sh                      # All steps
 ./start.sh 1                    # Step 1 only (fast, no AI)
 ./start.sh 1,2,3                # Steps 1-3
@@ -339,7 +339,7 @@ generated/
 - ✅ Preflight setup (validation, build, CLI, validation) runs once
 - ✅ .NET solution built early, before any tool-specific work
 - ✅ CLI metadata generated once, shared by all namespaces
-- ✅ Validation runs once, not 52 times
+- ✅ Validation runs once, not 58 times
 - ✅ Non-destructive worker (can run on existing output)
 - ✅ Clear orchestration point for full catalog generation
 - ✅ Can process individual namespaces independently
@@ -718,7 +718,7 @@ For comprehensive architecture details, workflows, and troubleshooting:
 
 ## ⚠️ Universal Design Principle
 
-All generators, validators, transformations, prompts, templates, and tests MUST be **service-agnostic**. They must produce correct output for every one of the 52 Azure MCP namespaces without service-specific logic.
+All generators, validators, transformations, prompts, templates, and tests MUST be **service-agnostic**. They must produce correct output for every one of the 58 Azure MCP namespaces without service-specific logic.
 
 - **No hardcoded service names** in validation logic — use pattern-based detection
 - **No service-specific tests** — use varied Azure service examples across test cases
