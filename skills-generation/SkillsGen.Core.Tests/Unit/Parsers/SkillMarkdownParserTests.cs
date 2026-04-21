@@ -523,4 +523,252 @@ public class SkillMarkdownParserTests
 
         result.Should().NotBeNull();
     }
+
+    // === Issue #6 — R2: Workflow Extraction Heading Variants ===
+
+    [Fact]
+    public void Parse_WorkflowSection_CoreWorkflows_ExtractsSteps()
+    {
+        var content = """
+            ---
+            name: azure-storage
+            description: Manage Azure Storage accounts and blob containers.
+            ---
+            # Azure Storage
+
+            ## Core Workflows
+
+            1. Authenticate with Azure using managed identity
+            2. List storage accounts in the subscription
+            3. Select the target blob container
+            4. Upload or download blobs as needed
+            """;
+        var result = _parser.Parse("azure-storage", content);
+
+        result.WorkflowSteps.Should().NotBeEmpty();
+        result.WorkflowSteps.Should().HaveCountGreaterOrEqualTo(3);
+    }
+
+    [Fact]
+    public void Parse_WorkflowSection_Workflows_ExtractsSteps()
+    {
+        var content = """
+            ---
+            name: azure-keyvault
+            description: Manage Key Vault secrets and certificates.
+            ---
+            # Azure Key Vault
+
+            ## Workflows
+
+            - Retrieve secrets from the vault
+            - Rotate expiring certificates
+            - Set access policies for service principals
+            """;
+        var result = _parser.Parse("azure-keyvault", content);
+
+        result.WorkflowSteps.Should().NotBeEmpty();
+        result.WorkflowSteps.Should().HaveCountGreaterOrEqualTo(3);
+    }
+
+    [Fact]
+    public void Parse_WorkflowSection_Steps_ExtractsSteps()
+    {
+        var content = """
+            ---
+            name: azure-monitor
+            description: Query Azure Monitor logs and metrics.
+            ---
+            # Azure Monitor
+
+            ## Steps
+
+            1. Connect to the Log Analytics workspace
+            2. Write a KQL query for the target metric
+            3. Execute the query and review results
+            """;
+        var result = _parser.Parse("azure-monitor", content);
+
+        result.WorkflowSteps.Should().NotBeEmpty();
+        result.WorkflowSteps.Should().HaveCountGreaterOrEqualTo(3);
+    }
+
+    [Fact]
+    public void Parse_WorkflowSection_SuggestedWorkflow_ExtractsSteps()
+    {
+        var content = """
+            ---
+            name: azure-cosmos
+            description: Manage Cosmos DB databases and containers.
+            ---
+            # Azure Cosmos DB
+
+            ## Suggested Workflow
+
+            1. List Cosmos DB accounts in the resource group
+            2. Select a database and container
+            3. Run a SQL query against the container
+            """;
+        var result = _parser.Parse("azure-cosmos", content);
+
+        result.WorkflowSteps.Should().NotBeEmpty();
+        result.WorkflowSteps.Should().HaveCountGreaterOrEqualTo(3);
+    }
+
+    // === Issue #7 — R6: Description Marker / UseFor Fallback Variants ===
+
+    [Fact]
+    public void Parse_WhenToUseThisSkill_ExtractsUseFor()
+    {
+        var content = """
+            ---
+            name: azure-kubernetes
+            description: Plan and manage AKS clusters.
+            ---
+            # Azure Kubernetes
+
+            ## When to Use This Skill
+
+            - Planning a new AKS cluster deployment
+            - Choosing between Automatic and Standard SKU
+            - Configuring networking for private clusters
+            - Optimizing node pool autoscaling
+            """;
+        var result = _parser.Parse("azure-kubernetes", content);
+
+        result.UseFor.Should().NotBeEmpty("body has '## When to Use This Skill' with bullet items");
+        result.UseFor.Should().HaveCountGreaterOrEqualTo(3);
+    }
+
+    [Fact]
+    public void Parse_ProseDescription_NoUseForMarker_StillExtractsUseFor()
+    {
+        var content = """
+            ---
+            name: azure-sql
+            description: Manage Azure SQL databases and elastic pools for relational workloads.
+            ---
+            # Azure SQL
+
+            Azure SQL provides managed relational database services in the cloud.
+
+            ## When to use
+
+            - Creating or scaling Azure SQL databases
+            - Managing firewall rules and access policies
+            - Monitoring database performance metrics
+            """;
+        var result = _parser.Parse("azure-sql", content);
+
+        result.UseFor.Should().NotBeEmpty("body has '## When to use' heading with bullet items");
+        result.UseFor.Should().HaveCountGreaterOrEqualTo(2);
+    }
+
+    [Fact]
+    public void Parse_RbacStyleDescription_ExtractsDescription()
+    {
+        var content = """
+            ---
+            name: azure-rbac
+            description: Manage Azure role-based access control assignments and custom role definitions for secure resource governance.
+            ---
+            # Azure RBAC
+
+            ## Overview
+
+            Azure RBAC controls who has access to Azure resources, what they can do
+            with those resources, and what areas they have access to.
+            """;
+        var result = _parser.Parse("azure-rbac", content);
+
+        result.Description.Should().NotBeNullOrWhiteSpace("prose description should still be extracted");
+        result.Description.Should().Contain("role-based access control");
+    }
+
+    [Fact]
+    public void Parse_ProseUseCaseFallback_ExtractsFromOpeningParagraph()
+    {
+        var content = """
+            ---
+            name: azure-quotas
+            description: Check Azure subscription quotas.
+            ---
+            # Azure Quotas
+
+            This skill helps with checking quota usage. Use this when you need to verify
+            remaining capacity before provisioning resources.
+
+            ## Prerequisites
+
+            - Azure subscription
+            """;
+        var result = _parser.Parse("azure-quotas", content);
+
+        result.UseFor.Should().NotBeEmpty("prose fallback should extract 'Use this when' sentence");
+    }
+
+    [Fact]
+    public void Parse_ProseUseCaseFallback_NoUseCaseSentences_ReturnsEmpty()
+    {
+        var content = """
+            ---
+            name: azure-test
+            description: A test skill.
+            ---
+            # Azure Test
+
+            This is an overview of the test skill. It has no use-case indicators.
+
+            ## Prerequisites
+
+            - Azure subscription
+            """;
+        var result = _parser.Parse("azure-test", content);
+
+        result.UseFor.Should().BeEmpty("no use-case indicator sentences in prose");
+    }
+
+    [Fact]
+    public void Parse_UseForHeading_UseThisSkillWhen_ExtractsItems()
+    {
+        var content = """
+            ---
+            name: azure-speech
+            description: Azure Speech services for transcription and synthesis.
+            ---
+            # Azure Speech
+
+            ## Use this skill when
+
+            - Converting speech audio to text
+            - Generating spoken audio from text
+            - Detecting spoken languages in audio
+            """;
+        var result = _parser.Parse("azure-speech", content);
+
+        result.UseFor.Should().NotBeEmpty("body has '## Use this skill when' heading");
+        result.UseFor.Should().HaveCountGreaterOrEqualTo(2);
+    }
+
+    [Fact]
+    public void Parse_WorkflowSection_CoreWorkflow_Singular_ExtractsSteps()
+    {
+        var content = """
+            ---
+            name: azure-sql
+            description: Manage Azure SQL databases.
+            ---
+            # Azure SQL
+
+            ## Core Workflow
+
+            1. List SQL servers in the subscription
+            2. Select target database
+            3. Execute query
+            """;
+        var result = _parser.Parse("azure-sql", content);
+
+        result.WorkflowSteps.Should().NotBeEmpty();
+        result.WorkflowSteps.Should().HaveCountGreaterOrEqualTo(3);
+    }
 }

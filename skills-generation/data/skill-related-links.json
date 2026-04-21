@@ -1,0 +1,196 @@
+{
+  "skills": {
+    "azure-ai": {
+      "links": [
+        { "title": "Azure AI Services overview", "url": "/azure/ai-services/what-are-ai-services", "category": "Concepts" },
+        { "title": "Azure AI Services quickstart", "url": "/azure/ai-services/reference", "category": "Quickstart" },
+        { "title": "Azure AI Services pricing", "url": "https://azure.microsoft.com/pricing/details/cognitive-services/", "category": "Pricing" },
+        { "title": "Azure AI Services documentation", "url": "/azure/ai-services/", "category": "Best Practices" }
+      ]
+    },
+    "azure-aigateway": {
+      "links": [
+        { "title": "Azure API Management as an AI Gateway", "url": "/azure/api-management/api-management-gateway-overview", "category": "Concepts" },
+        { "title": "API Management pricing", "url": "https://azure.microsoft.com/pricing/details/api-management/", "category": "Pricing" },
+        { "title": "API Management policies", "url": "/azure/api-management/policies/", "category": "Tutorials" },
+        { "title": "API Management security", "url": "/azure/api-management/api-management-security-controls", "category": "Best Practices" }
+      ]
+    },
+    "azure-hosted-copilot-sdk": {
+      "links": [
+        { "title": "GitHub Copilot SDK documentation", "url": "https://docs.github.com/copilot/building-copilot-extensions", "category": "Concepts" },
+        { "title": "Copilot Extensions quickstart", "url": "https://docs.github.com/copilot/building-copilot-extensions/getting-started-with-building-extensions", "category": "Quickstart" },
+        { "title": "Azure Container Apps deployment", "url": "/azure/container-apps/", "category": "Tutorials" },
+        { "title": "App Service hosting", "url": "/azure/app-service/", "category": "Best Practices" }
+      ]
+    },
+    "microsoft-foundry": {
+      "links": [
+        { "title": "Azure AI Foundry", "url": "/azure/ai-studio/what-is-ai-studio", "category": "Concepts" },
+        { "title": "Azure AI Foundry pricing", "url": "https://azure.microsoft.com/pricing/details/ai-studio/", "category": "Pricing" },
+        { "title": "Azure OpenAI Service", "url": "/azure/ai-services/openai/", "category": "Tutorials" },
+        { "title": "Foundry model deployment", "url": "/azure/ai-studio/how-to/deploy-models-openai", "category": "Best Practices" }
+      ]
+    },
+    "azure-kusto": {
+      "links": [
+        { "title": "Azure Data Explorer (Kusto) overview", "url": "/azure/data-explorer/", "category": "Concepts" },
+        { "title": "Kusto Query Language (KQL)", "url": "/azure/data-explorer/kusto/query/", "category": "Tutorials" },
+        { "title": "Azure Data Explorer pricing", "url": "https://azure.microsoft.com/pricing/details/data-explorer/", "category": "Pricing" },
+        { "title": "Log Analytics Workspace queries", "url": "/azure/azure-monitor/logs/log-analytics-tutorial", "category": "Best Practices" }
+      ]
+    },
+    "azure-messaging": {
+      "links": [
+        { "title": "Azure Service Bus", "url": "/azure/service-bus-messaging/", "category": "Concepts" },
+        { "title": "Azure Event Hubs", "url": "/azure/event-hubs/", "category": "Concepts" },
+        { "title": "Messaging services pricing", "url": "https://azure.microsoft.com/pricing/details/service-bus/", "category": "Pricing" },
+        { "title": "Messaging best practices", "url": "/azure/architecture/reference-architectures/messaging/", "category": "Best Practices" }
+      ]
+    },
+    "azure-storage": {
+      "links": [
+        { "title": "Azure Storage overview", "url": "/azure/storage/", "category": "Concepts" },
+        { "title": "Azure Storage quickstart", "url": "/azure/storage/common/storage-quickstart-blobs-portal", "category": "Quickstart" },
+        { "title": "Azure Storage pricing", "url": "https://azure.microsoft.com/pricing/details/storage/", "category": "Pricing" },
+        { "title": "Storage best practices", "url": "/azure/storage/common/storage-best-practices", "category": "Best Practices" }
+      ]
+    },
+    "azure-deploy": {
+      "links": [
+        { "title": "Azure Resource Manager templates", "url": "/azure/azure-resource-manager/templates/", "category": "Concepts" },
+        { "title": "Bicep templates", "url": "/azure/azure-resource-manager/bicep/", "category": "Tutorials" },
+        { "title": "Terraform on Azure", "url": "/azure/developer/terraform/", "category": "Tutorials" },
+        { "title": "Azure CLI deployment", "url": "/azure/azure-resource-manager/management/", "category": "Best Practices" }
+      ]
+    },
+    "azure-prepare": {
+      "links": [
+        { "title": "Azure Developer CLI (azd)", "url": "/azure/developer/azure-developer-cli/", "category": "Concepts" },
+        { "title": "Azure Developer CLI quickstart", "url": "/azure/developer/azure-developer-cli/get-started", "category": "Quickstart" },
+        { "title": "Infrastructure as Code", "url": "/azure/developer/azure-developer-cli/make-azd-templates", "category": "Tutorials" },
+        { "title": "Azure development best practices", "url": "/azure/developer/intro/", "category": "Best Practices" }
+      ]
+    },
+    "azure-upgrade": {
+      "links": [
+        { "title": "Azure maintenance and updates", "url": "/azure/virtual-machines/maintenance-and-updates", "category": "Concepts" },
+        { "title": "VM image upgrades", "url": "/azure/virtual-machines/updates-maintenance-overview", "category": "Tutorials" },
+        { "title": "Azure service updates", "url": "https://azure.microsoft.com/updates/", "category": "Best Practices" },
+        { "title": "Upgrade strategies", "url": "/azure/architecture/best-practices/", "category": "Best Practices" }
+      ]
+    },
+    "azure-validate": {
+      "links": [
+        { "title": "Azure Resource Manager validation", "url": "/azure/azure-resource-manager/templates/template-validation", "category": "Concepts" },
+        { "title": "Template validation tutorial", "url": "/azure/azure-resource-manager/bicep/linter", "category": "Tutorials" },
+        { "title": "ARM template best practices", "url": "/azure/azure-resource-manager/templates/best-practices", "category": "Best Practices" },
+        { "title": "Azure compliance validation", "url": "/azure/governance/blueprints/overview", "category": "Best Practices" }
+      ]
+    },
+    "azure-compute": {
+      "links": [
+        { "title": "Virtual Machines overview", "url": "/azure/virtual-machines/", "category": "Concepts" },
+        { "title": "VM quickstart", "url": "/azure/virtual-machines/windows/quick-create-portal", "category": "Quickstart" },
+        { "title": "Virtual Machines pricing", "url": "https://azure.microsoft.com/pricing/details/virtual-machines/", "category": "Pricing" },
+        { "title": "VM sizing and performance", "url": "/azure/virtual-machines/sizing-guidance", "category": "Best Practices" }
+      ]
+    },
+    "azure-enterprise-infra-planner": {
+      "links": [
+        { "title": "Azure landing zones", "url": "/azure/cloud-adoption-framework/ready/landing-zone/", "category": "Concepts" },
+        { "title": "Cloud Adoption Framework", "url": "/azure/cloud-adoption-framework/", "category": "Tutorials" },
+        { "title": "Enterprise architecture", "url": "/azure/architecture/patterns/", "category": "Best Practices" },
+        { "title": "Network architecture", "url": "/azure/architecture/reference-architectures/dmz/", "category": "Best Practices" }
+      ]
+    },
+    "azure-kubernetes": {
+      "links": [
+        { "title": "Azure Kubernetes Service (AKS)", "url": "/azure/aks/", "category": "Concepts" },
+        { "title": "AKS quickstart", "url": "/azure/aks/learn/quick-kubernetes-deploy-cli", "category": "Quickstart" },
+        { "title": "AKS pricing", "url": "https://azure.microsoft.com/pricing/details/kubernetes-service/", "category": "Pricing" },
+        { "title": "AKS best practices", "url": "/azure/aks/best-practices", "category": "Best Practices" }
+      ]
+    },
+    "azure-cloud-migrate": {
+      "links": [
+        { "title": "Azure Migrate overview", "url": "/azure/migrate/migrate-services-overview", "category": "Concepts" },
+        { "title": "Migration strategies", "url": "/azure/cloud-adoption-framework/migrate/", "category": "Tutorials" },
+        { "title": "Database migration", "url": "/azure/dms/", "category": "Tutorials" },
+        { "title": "Migration best practices", "url": "/azure/migrate/best-practices-assessment", "category": "Best Practices" }
+      ]
+    },
+    "appinsights-instrumentation": {
+      "links": [
+        { "title": "Application Insights overview", "url": "/azure/azure-monitor/app/app-insights-overview", "category": "Concepts" },
+        { "title": "Application Insights quickstart", "url": "/azure/azure-monitor/app/app-insights-overview", "category": "Quickstart" },
+        { "title": "Instrumentation guides", "url": "/azure/azure-monitor/app/codeless-overview", "category": "Tutorials" },
+        { "title": "Application Insights best practices", "url": "/azure/azure-monitor/app/best-practices", "category": "Best Practices" }
+      ]
+    },
+    "azure-cost": {
+      "links": [
+        { "title": "Cost Management + Billing", "url": "/azure/cost-management-billing/", "category": "Concepts" },
+        { "title": "Analyze costs", "url": "/azure/cost-management-billing/costs/cost-analysis-common-uses", "category": "Tutorials" },
+        { "title": "Azure pricing calculator", "url": "https://azure.microsoft.com/pricing/calculator/", "category": "Pricing" },
+        { "title": "Cost optimization", "url": "/azure/cost-management-billing/costs/cost-mgt-best-practices", "category": "Best Practices" }
+      ]
+    },
+    "azure-diagnostics": {
+      "links": [
+        { "title": "Azure Monitor overview", "url": "/azure/azure-monitor/overview", "category": "Concepts" },
+        { "title": "Azure Monitor quickstart", "url": "/azure/azure-monitor/vm/monitor-vm-azure-monitor", "category": "Quickstart" },
+        { "title": "Diagnostic logging", "url": "/azure/azure-monitor/essentials/diagnostic-settings", "category": "Tutorials" },
+        { "title": "Troubleshooting guide", "url": "/azure/azure-monitor/troubleshooting", "category": "Troubleshooting" }
+      ]
+    },
+    "azure-quotas": {
+      "links": [
+        { "title": "Azure subscription limits", "url": "/azure/azure-resource-manager/management/azure-subscription-service-limits", "category": "Concepts" },
+        { "title": "Quota requests", "url": "/azure/quotas/", "category": "Tutorials" },
+        { "title": "Resource limits by service", "url": "/azure/azure-resource-manager/management/azure-subscription-service-limits", "category": "Best Practices" },
+        { "title": "Regional capacity limits", "url": "https://azure.microsoft.com/global-infrastructure/services/", "category": "Best Practices" }
+      ]
+    },
+    "azure-resource-lookup": {
+      "links": [
+        { "title": "Azure Resource Manager overview", "url": "/azure/azure-resource-manager/management/overview", "category": "Concepts" },
+        { "title": "Resource naming and tagging", "url": "/azure/cloud-adoption-framework/ready/azure-best-practices/naming-and-tagging", "category": "Best Practices" },
+        { "title": "Resource organization", "url": "/azure/azure-resource-manager/management/manage-resource-groups-portal", "category": "Tutorials" },
+        { "title": "Resource providers", "url": "/azure/azure-resource-manager/management/resource-providers-and-types", "category": "Concepts" }
+      ]
+    },
+    "azure-resource-visualizer": {
+      "links": [
+        { "title": "Azure Resource Graph", "url": "/azure/governance/resource-graph/overview", "category": "Concepts" },
+        { "title": "Visualize resources", "url": "/azure/azure-resource-manager/management/manage-resource-groups-portal", "category": "Tutorials" },
+        { "title": "Resource topology visualization", "url": "/azure/governance/resource-graph/first-query-portal", "category": "Quickstart" },
+        { "title": "Query resources", "url": "/azure/governance/resource-graph/first-query-kusto-query-language", "category": "Best Practices" }
+      ]
+    },
+    "azure-compliance": {
+      "links": [
+        { "title": "Azure compliance offerings", "url": "/azure/compliance/", "category": "Concepts" },
+        { "title": "Compliance assessment", "url": "/azure/governance/policy/overview", "category": "Tutorials" },
+        { "title": "Azure Policy", "url": "/azure/governance/policy/", "category": "Best Practices" },
+        { "title": "Security and compliance", "url": "/azure/security/fundamentals/overview", "category": "Best Practices" }
+      ]
+    },
+    "azure-rbac": {
+      "links": [
+        { "title": "Azure Role-Based Access Control (RBAC)", "url": "/azure/role-based-access-control/overview", "category": "Concepts" },
+        { "title": "RBAC quickstart", "url": "/azure/role-based-access-control/quickstart-assign-role-user-portal", "category": "Quickstart" },
+        { "title": "Create custom roles", "url": "/azure/role-based-access-control/custom-roles", "category": "Tutorials" },
+        { "title": "RBAC best practices", "url": "/azure/role-based-access-control/best-practices", "category": "Best Practices" }
+      ]
+    },
+    "entra-app-registration": {
+      "links": [
+        { "title": "Microsoft Entra ID", "url": "/entra/identity-platform/", "category": "Concepts" },
+        { "title": "App registration", "url": "/entra/identity-platform/quickstart-register-app", "category": "Quickstart" },
+        { "title": "Authentication and authorization", "url": "/entra/identity-platform/authentication-vs-authorization", "category": "Tutorials" },
+        { "title": "Security best practices", "url": "/entra/identity-platform/security-best-practices-for-app-registration", "category": "Best Practices" }
+      ]
+    }
+  }
+}

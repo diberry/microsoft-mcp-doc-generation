@@ -63,7 +63,12 @@ public partial class SkillMarkdownParser : ISkillParser
 
         // Also extract from body sections
         if (useFor.Count == 0)
-            useFor = ExtractBulletSection(body, @"##?\s*(?:When to )?[Uu]se\s*(?:for|this)?");
+            useFor = ExtractBulletSection(body, @"##?\s*(?:When\s+to\s+[Uu]se(?:\s+[Tt]his\s+[Ss]kill)?|[Uu]se\s+(?:for|[Tt]his\s+[Ss]kill(?:\s+[Ww]hen)?))");
+
+        // Prose fallback: if no heading matched and no USE FOR marker, extract use-case
+        // sentences from the first paragraph(s) after the skill's opening heading.
+        if (useFor.Count == 0)
+            useFor = ExtractProseUseCases(body);
         if (doNotUseFor.Count == 0)
             doNotUseFor = ExtractBulletSection(body, @"##?\s*(?:When )?(?:[Dd]o\s*[Nn]ot|[Dd]on'?t)\s*[Uu]se\s*(?:for|this)?");
 
@@ -278,6 +283,38 @@ public partial class SkillMarkdownParser : ISkillParser
                 items.Add(item);
         }
         return items;
+    }
+
+    /// <summary>
+    /// Fallback: extracts use-case sentences from opening prose when no heading or marker matched.
+    /// Looks for sentences containing "use when", "designed for", "helps with", etc.
+    /// </summary>
+    private static List<string> ExtractProseUseCases(string body)
+    {
+        // Get text between the first heading and the first ## section heading
+        var openingMatch = Regex.Match(body, @"^#\s+.+$", RegexOptions.Multiline);
+        if (!openingMatch.Success) return [];
+
+        var afterTitle = body[(openingMatch.Index + openingMatch.Length)..];
+        var nextSection = Regex.Match(afterTitle, @"^##\s", RegexOptions.Multiline);
+        var prose = nextSection.Success ? afterTitle[..nextSection.Index].Trim() : afterTitle.Trim();
+
+        if (string.IsNullOrWhiteSpace(prose)) return [];
+
+        // Split into sentences and find ones indicating use cases
+        var useCasePattern = new Regex(
+            @"\b(?:use\s+(?:when|for|this)|designed\s+for|helps?\s+with|intended\s+for|meant\s+for|best\s+for)\b",
+            RegexOptions.IgnoreCase);
+
+        var sentences = Regex.Split(prose, @"(?<=[.!?])\s+");
+        var results = new List<string>();
+        foreach (var sentence in sentences)
+        {
+            var trimmed = sentence.Trim();
+            if (!string.IsNullOrWhiteSpace(trimmed) && useCasePattern.IsMatch(trimmed))
+                results.Add(trimmed);
+        }
+        return results;
     }
 
     private static List<ServiceEntry> ExtractServices(string body)
@@ -543,7 +580,7 @@ public partial class SkillMarkdownParser : ISkillParser
 
     private static List<string> ExtractWorkflowSteps(string body)
     {
-        var section = ExtractSectionContent(body, @"##?\s*(?:Steps|Workflow|Suggested\s+Workflow)");
+        var section = ExtractSectionContent(body, @"##?\s*(?:Steps|(?:Core\s+|Suggested\s+)?Workflows?)");
         if (string.IsNullOrEmpty(section)) return [];
 
         var steps = new List<string>();
