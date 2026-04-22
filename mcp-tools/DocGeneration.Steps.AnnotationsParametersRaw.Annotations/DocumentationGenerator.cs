@@ -715,7 +715,7 @@ public static class DocumentationGenerator
         report.AppendLine("}");
         report.AppendLine("```");
         
-        await File.WriteAllTextAsync(reportPath, report.ToString(, Encoding.UTF8));
+        await File.WriteAllTextAsync(reportPath, report.ToString(), Encoding.UTF8);
         Console.WriteLine($"\n📋 Generated missing mappings report: {reportPath}");
         Console.WriteLine($"   Found {missingMappings.Count} area(s) without brand mapping or compound word definition");
     }
