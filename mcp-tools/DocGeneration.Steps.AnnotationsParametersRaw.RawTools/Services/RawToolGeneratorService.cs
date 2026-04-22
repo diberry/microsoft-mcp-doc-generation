@@ -79,7 +79,7 @@ public class RawToolGeneratorService
                 var content = GenerateRawToolContent(rawToolData);
 
                 var outputPath = Path.Combine(outputDir, fileName);
-                await File.WriteAllTextAsync(outputPath, content);
+                await File.WriteAllTextAsync(outputPath, content, Encoding.UTF8);
                 
                 generatedCount++;
                 

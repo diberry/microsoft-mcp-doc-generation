@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AzmcpCommandParser.Models;
+using System.Text;
 
 namespace AzmcpCommandParser.Serialization;
 
@@ -35,7 +36,7 @@ public static class CommandDocumentSerializer
             Directory.CreateDirectory(dir);
 
         var json = Serialize(document, options);
-        File.WriteAllText(filePath, json);
+        File.WriteAllText(filePath, json, Encoding.UTF8);
     }
 
     /// <summary>

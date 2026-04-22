@@ -9,6 +9,7 @@ using TemplateEngine;
 using Shared;
 using Azure.Mcp.TextTransformation.Models;
 using Azure.Mcp.TextTransformation.Services;
+using System.Text;
 
 namespace HorizontalArticleGenerator.Generators;
 
@@ -48,7 +49,7 @@ public class HorizontalArticleGenerator
             {
                 Console.WriteLine($"{progress} ✗ Failed to parse AI response for {staticData.ServiceBrandName}: {jsonEx.Message}");
                 var errorLog = Path.Combine(outputDir, $"error-{staticData.ServiceIdentifier}-airesponse.txt");
-                await File.WriteAllTextAsync(errorLog, $"Raw AI response:\n{aiResponse}\n\nError: {jsonEx.Message}\n{jsonEx.StackTrace}");
+                await File.WriteAllTextAsync(errorLog, $"Raw AI response:\n{aiResponse}\n\nError: {jsonEx.Message}\n{jsonEx.StackTrace}", Encoding.UTF8);
                 Console.WriteLine($"Raw AI response logged to: {errorLog}");
                 Console.WriteLine();
                 parseFailed = true;
@@ -102,7 +103,7 @@ public class HorizontalArticleGenerator
             Console.WriteLine($"{progress} ✗ Failed for {staticData.ServiceBrandName}: {ex.Message}");
             // Log detailed error
             var errorLog = Path.Combine(outputDir, $"error-{staticData.ServiceIdentifier}.txt");
-            await File.WriteAllTextAsync(errorLog, $"{ex.Message}\n\n{ex.StackTrace}");
+            await File.WriteAllTextAsync(errorLog, $"{ex.Message}\n\n{ex.StackTrace}", Encoding.UTF8);
             Console.WriteLine();
             return false;
         }
@@ -440,7 +441,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 
 {userPrompt}
 """;
-        await File.WriteAllTextAsync(promptFilePath, promptContent);
+        await File.WriteAllTextAsync(promptFilePath, promptContent, Encoding.UTF8);
 
         // Calculate token limit based on tool count
         var maxTokens = CalculateMaxTokens(staticData.Tools.Count);
@@ -640,7 +641,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         var filename = $"horizontal-article-{templateData.ServiceIdentifier}.md";
         var outputPath = Path.Combine(_outputDir, filename);
         
-        await File.WriteAllTextAsync(outputPath, renderedContent);
+        await File.WriteAllTextAsync(outputPath, renderedContent, Encoding.UTF8);
     }
 
 }

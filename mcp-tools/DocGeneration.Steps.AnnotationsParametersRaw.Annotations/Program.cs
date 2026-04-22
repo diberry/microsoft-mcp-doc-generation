@@ -7,6 +7,7 @@ using System.IO;
 using Shared;
 using CSharpGenerator.Models;
 using TemplateEngine;
+using System.Text;
 
 namespace CSharpGenerator;
 
@@ -113,7 +114,7 @@ internal class Program
          }
 
          // Write output
-         await File.WriteAllTextAsync(outputFile, result);
+         await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
 
          Console.WriteLine($"Generated: {outputFile}");
          return 0;

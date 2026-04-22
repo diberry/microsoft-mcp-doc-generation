@@ -222,6 +222,6 @@ public class FamilyFileStitcher
     public async Task StitchAndSaveAsync(FamilyContent familyContent, string outputPath)
     {
         var markdown = Stitch(familyContent);
-        await File.WriteAllTextAsync(outputPath, markdown);
+        await File.WriteAllTextAsync(outputPath, markdown, Encoding.UTF8);
     }
 }

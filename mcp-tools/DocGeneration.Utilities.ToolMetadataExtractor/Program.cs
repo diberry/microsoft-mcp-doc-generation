@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using ToolMetadataExtractor.Services;
+using System.Text;
 
 namespace ToolMetadataExtractor;
 
@@ -85,7 +86,7 @@ internal class Program
                     
                     if (outputFile != null)
                     {
-                        await File.WriteAllTextAsync(outputFile.FullName, json);
+                        await File.WriteAllTextAsync(outputFile.FullName, json, Encoding.UTF8);
                         logger.LogInformation("Metadata written to {OutputFile}", outputFile.FullName);
                     }
                     else

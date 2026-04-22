@@ -10,6 +10,7 @@ using CSharpGenerator.Models;
 using Shared;
 using TemplateEngine;
 using static CSharpGenerator.Generators.FrontmatterUtility;
+using System.Text;
 
 namespace CSharpGenerator.Generators;
 
@@ -151,7 +152,7 @@ public class AnnotationGenerator
                     data.Version,
                     fileName);
                 var result = frontmatter + templateResult;
-                await File.WriteAllTextAsync(outputFile, result);
+                await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
                 tool.HasAnnotation = true;
             }
             
@@ -224,7 +225,7 @@ public class AnnotationGenerator
 
             var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, pageData);
             var outputFile = Path.Combine(outputDir, "tool-annotations.md");
-            await File.WriteAllTextAsync(outputFile, result);
+            await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
             
             LogFileHelper.WriteDebug($"Generated tool annotations summary at {outputFile}");
         }

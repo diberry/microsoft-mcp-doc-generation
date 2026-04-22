@@ -255,7 +255,7 @@ internal static class Program
                         + $"\n"
                         + $"To fix: Add this tool to the upstream e2eTestPrompts.md in the microsoft/mcp repo,\n"
                         + $"then re-run E2eTestPromptParser to regenerate parsed.json.\n";
-                    await File.WriteAllTextAsync(errorFilePath, errorContent);
+                    await File.WriteAllTextAsync(errorFilePath, errorContent, Encoding.UTF8);
                 }
             }
 
@@ -292,14 +292,14 @@ internal static class Program
             var inputPromptPath = Path.Combine(outputDir, "example-prompts-prompts", inputPromptFileName);
             var inputContent = ExamplePromptGeneratorStandalone.Utilities.FrontmatterUtility.GenerateInputPromptFrontmatter(
                 tool.Command, version, inputPromptFileName, userPrompt);
-            await File.WriteAllTextAsync(inputPromptPath, inputContent);
+            await File.WriteAllTextAsync(inputPromptPath, inputContent, Encoding.UTF8);
 
             // Save raw AI response (extract just the JSON for clarity)
             var rawOutputFileName = ToolFileNameBuilder.BuildRawOutputFileName(
                 tool.Command, nameContext);
             var rawOutputPath = Path.Combine(outputDir, "example-prompts-raw-output", rawOutputFileName);
             var jsonOnlyContent = ExtractJsonFromResponse(rawResponse);
-            await File.WriteAllTextAsync(rawOutputPath, jsonOnlyContent);
+            await File.WriteAllTextAsync(rawOutputPath, jsonOnlyContent, Encoding.UTF8);
 
             if (promptsResponse == null || promptsResponse.Prompts.Count == 0)
             {
@@ -360,7 +360,7 @@ internal static class Program
                 exampleContent = sb.ToString();
             }
 
-            await File.WriteAllTextAsync(examplePromptPath, exampleContent);
+            await File.WriteAllTextAsync(examplePromptPath, exampleContent, Encoding.UTF8);
             var modeLabel = DeterministicExamplePromptGenerator.IsEligible(tool, hasE2ePrompts) ? "deterministic" : "AI";
             Console.WriteLine($"  ✅ {tool.Command,-50} → {examplePromptFileName} ({modeLabel})");
         }

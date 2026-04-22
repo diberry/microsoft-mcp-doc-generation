@@ -498,7 +498,7 @@ internal static class Program
     private static async Task WriteValidationFileAsync(string validationDir, string baseName, string content)
     {
         var validationPath = Path.Combine(validationDir, $"{baseName}-validation.md");
-        await File.WriteAllTextAsync(validationPath, content);
+        await File.WriteAllTextAsync(validationPath, content, Encoding.UTF8);
     }
 
     private static void WriteValidationSummary(int totalTools, int validated, int valid, int invalid, int skipped, List<string> invalidTools)

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 
 namespace DocGeneration.Tools.Fingerprint;
 
@@ -75,7 +76,7 @@ internal static class Program
 
         outputPath ??= Path.Combine(repoRoot, "fingerprint-baseline.json");
         var json = JsonSerializer.Serialize(snapshot, JsonOptions);
-        File.WriteAllText(outputPath, json);
+        File.WriteAllText(outputPath, json, Encoding.UTF8);
 
         Console.WriteLine($"✅ Snapshot saved to: {outputPath}");
         Console.WriteLine($"   Namespaces: {snapshot.Namespaces.Count}");
@@ -142,7 +143,7 @@ internal static class Program
 
         if (outputPath is not null)
         {
-            File.WriteAllText(outputPath, report);
+            File.WriteAllText(outputPath, report, Encoding.UTF8);
             Console.WriteLine($"✅ Diff report saved to: {outputPath}");
         }
         else

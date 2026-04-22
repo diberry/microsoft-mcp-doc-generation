@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text.Json;
 using DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Models;
 using DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Services;
+using System.Text;
 
 namespace DocGeneration.Steps.Bootstrap.ToolMetadataEnricher;
 
@@ -99,7 +100,7 @@ internal static class Program
             }
 
             var outputJson = JsonSerializer.Serialize(enrichedOutput, JsonOptions);
-            await File.WriteAllTextAsync(outputFullPath, outputJson);
+            await File.WriteAllTextAsync(outputFullPath, outputJson, Encoding.UTF8);
 
             var metadata = enrichedOutput.EnrichmentMetadata;
             Console.WriteLine($"Total tools: {metadata.TotalTools}");

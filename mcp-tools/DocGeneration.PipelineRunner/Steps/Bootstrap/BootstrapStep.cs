@@ -4,6 +4,7 @@ using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using Shared;
+using System.Text;
 
 namespace PipelineRunner.Steps;
 
@@ -410,7 +411,7 @@ public sealed class BootstrapStep : StepDefinition
         {
             var outputPath = Path.Combine(outputDirectory, outputFileName);
             Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-            await File.WriteAllTextAsync(outputPath, result.StandardOutput.Trim(), cancellationToken);
+            await File.WriteAllTextAsync(outputPath, result.StandardOutput.Trim(), Encoding.UTF8, cancellationToken);
         }
 
         return result;
@@ -448,7 +449,7 @@ public sealed class BootstrapStep : StepDefinition
             cancellationToken.ThrowIfCancellationRequested();
             context.Reports.Info($"Fetching {displayName} from {remoteUrl}");
             var content = await SharedHttpClient.GetStringAsync(remoteUrl, cancellationToken);
-            await File.WriteAllTextAsync(tempPath, content, cancellationToken);
+            await File.WriteAllTextAsync(tempPath, content, Encoding.UTF8, cancellationToken);
             context.Reports.Info($"Fetched {displayName} ({content.Length:N0} bytes)");
             return tempPath;
         }
@@ -525,7 +526,7 @@ public sealed class BootstrapStep : StepDefinition
 
             var h2Path = Path.Combine(h2Dir, $"{nsName}.json");
             var json = JsonSerializer.Serialize(headings, new JsonSerializerOptions { WriteIndented = true });
-            await File.WriteAllTextAsync(h2Path, json);
+            await File.WriteAllTextAsync(h2Path, json, Encoding.UTF8);
             totalHeadings += headings.Count;
         }
 

@@ -9,6 +9,7 @@ using CSharpGenerator.Models;
 using Shared;
 using TemplateEngine;
 using ToolFamilyCleanup.Services;
+using System.Text;
 
 namespace CSharpGenerator.Generators;
 
@@ -130,7 +131,7 @@ public class PageGenerator
 
             var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, areaPageData);
 
-            await File.WriteAllTextAsync(outputFile, result);
+            await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
             LogFileHelper.WriteDebug($"Generated area page: {fileName}");
         }
         catch (Exception ex)
@@ -167,7 +168,7 @@ public class PageGenerator
         var commonGeneralDir = Path.Combine(outputDir, "common-general");
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "common-tools.md");
-        await File.WriteAllTextAsync(outputFile, result);
+        await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
         LogFileHelper.WriteDebug("Generated common tools page: common-general/common-tools.md");
     }
 
@@ -194,7 +195,7 @@ public class PageGenerator
         var commonGeneralDir = Path.Combine(outputDir, "common-general");
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "index.md");
-        await File.WriteAllTextAsync(outputFile, result);
+        await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
         LogFileHelper.WriteDebug("Generated index page: common-general/index.md");
     }
 
@@ -226,7 +227,7 @@ public class PageGenerator
         var commonGeneralDir = Path.Combine(outputDir, "common-general");
         Directory.CreateDirectory(commonGeneralDir);
         var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
-        await File.WriteAllTextAsync(outputFile, result);
+        await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
         LogFileHelper.WriteDebug("Generated commands page: common-general/azmcp-commands.md");
     }
 

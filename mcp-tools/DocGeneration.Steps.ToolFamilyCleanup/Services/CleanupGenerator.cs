@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using ToolFamilyCleanup.Models;
 using System.Text.Json;
 using Shared;
+using System.Text;
 
 namespace ToolFamilyCleanup.Services;
 
@@ -121,7 +122,7 @@ public class CleanupGenerator
                 // Save the prompt
                 var promptFileName = Path.GetFileNameWithoutExtension(fileName) + "-prompt.txt";
                 var promptPath = Path.Combine(promptsDir, promptFileName);
-                await File.WriteAllTextAsync(promptPath, $"SYSTEM PROMPT:\n{_systemPrompt}\n\n---\n\nUSER PROMPT:\n{userPrompt}");
+                await File.WriteAllTextAsync(promptPath, $"SYSTEM PROMPT:\n{_systemPrompt}\n\n---\n\nUSER PROMPT:\n{userPrompt}", Encoding.UTF8);
                 
                 // Call LLM to get cleaned markdown (using dynamic max tokens)
                 string cleanedMarkdown;
@@ -146,7 +147,8 @@ public class CleanupGenerator
                         $"1. Check if tool count was detected (should show in console)\n" +
                         $"2. Increase MIN_MAX_TOKENS in CleanupGenerator.cs (currently {MIN_MAX_TOKENS})\n" +
                         $"3. Increase tokens per tool (currently 1000 per tool)\n" +
-                        $"4. Reduce prompt sizes if they exceed 2000 words\n");
+                        $"4. Reduce prompt sizes if they exceed 2000 words\n",
+                        Encoding.UTF8);
                     
                     failCount++;
                     continue;
@@ -158,7 +160,7 @@ public class CleanupGenerator
                     Console.WriteLine($"{progress} ⚠ Warning: LLM output may not be valid markdown for {fileName}");
                     // Log the invalid output
                     var errorPath = Path.Combine(cleanupDir, Path.GetFileNameWithoutExtension(fileName) + "-error.txt");
-                    await File.WriteAllTextAsync(errorPath, $"Invalid markdown output:\n\n{cleanedMarkdown}");
+                    await File.WriteAllTextAsync(errorPath, $"Invalid markdown output:\n\n{cleanedMarkdown}", Encoding.UTF8);
                     failCount++;
                     continue;
                 }
@@ -169,7 +171,7 @@ public class CleanupGenerator
                 
                 // Save cleaned markdown
                 var outputPath = Path.Combine(cleanupDir, fileName);
-                await File.WriteAllTextAsync(outputPath, extractedMarkdown);
+                await File.WriteAllTextAsync(outputPath, extractedMarkdown, Encoding.UTF8);
                 
                 Console.WriteLine($"{progress} ✓ Successfully cleaned {fileName}");
                 successCount++;
@@ -498,7 +500,7 @@ public class CleanupGenerator
                 
                 // Save metadata
                 var metadataPath = Path.Combine(metadataDir, $"{outputFileName}-metadata.md");
-                await File.WriteAllTextAsync(metadataPath, metadata);
+                await File.WriteAllTextAsync(metadataPath, metadata, Encoding.UTF8);
 
                 // Phase 3: Generate related content (deterministic — no AI call, #163)
                 Console.Write($"{progress}   Phase 3: Generating related content... ");
@@ -507,7 +509,7 @@ public class CleanupGenerator
                 
                 // Save related content
                 var relatedPath = Path.Combine(relatedDir, $"{outputFileName}-related.md");
-                await File.WriteAllTextAsync(relatedPath, relatedContent);
+                await File.WriteAllTextAsync(relatedPath, relatedContent, Encoding.UTF8);
                 Console.WriteLine($"✓ (deterministic)");
 
                 // Phase 3.5: Pre-stitch H2 count validation

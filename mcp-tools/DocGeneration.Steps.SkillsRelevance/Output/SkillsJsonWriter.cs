@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using SkillsRelevance.Models;
+using System.Text;
 
 namespace SkillsRelevance.Output;
 
@@ -57,7 +58,7 @@ public static class SkillsJsonWriter
         };
 
         var json = JsonSerializer.Serialize(output, JsonOptions);
-        await File.WriteAllTextAsync(filePath, json);
+        await File.WriteAllTextAsync(filePath, json, Encoding.UTF8);
         Console.WriteLine($"  ✅ {fileName} ({relevantSkills.Count} skills, JSON)");
     }
 }
