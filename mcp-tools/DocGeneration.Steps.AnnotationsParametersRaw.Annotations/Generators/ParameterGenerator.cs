@@ -11,6 +11,7 @@ using Shared;
 using TemplateEngine;
 using ToolFamilyCleanup.Services;
 using static CSharpGenerator.Generators.FrontmatterUtility;
+using System.Text;
 
 namespace CSharpGenerator.Generators;
 
@@ -98,14 +99,15 @@ public class ParameterGenerator
                     data.Version,
                     fileName);
                 var result = frontmatter + templateResult;
-                await File.WriteAllTextAsync(outputFile, result);
+                await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
                 await File.WriteAllTextAsync(
                     manifestOutputFile,
                     JsonSerializer.Serialize(parameterManifest, new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                         WriteIndented = true
-                    }));
+                    }),
+                    Encoding.UTF8);
                 tool.HasParameters = true;
             }
             

@@ -163,7 +163,7 @@ public class ComposedToolGeneratorService
 
                 // Write composed file
                 var outputPath = Path.Combine(outputDir, fileName);
-                await File.WriteAllTextAsync(outputPath, composedContent);
+                await File.WriteAllTextAsync(outputPath, composedContent, Encoding.UTF8);
                 
                 successCount++;
                 

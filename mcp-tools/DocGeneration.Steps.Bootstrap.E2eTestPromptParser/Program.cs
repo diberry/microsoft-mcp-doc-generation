@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -81,7 +82,7 @@ internal static class Program
             try
             {
                 var markdown = await httpClient.GetStringAsync(effectiveUrl);
-                await File.WriteAllTextAsync(localPath, markdown);
+                await File.WriteAllTextAsync(localPath, markdown, Encoding.UTF8);
                 Console.WriteLine($"Saved to:    {localPath}");
             }
             catch (HttpRequestException ex)
@@ -108,7 +109,7 @@ internal static class Program
             {
                 Directory.CreateDirectory(outputDir);
             }
-            await File.WriteAllTextAsync(fullOutputPath, output);
+            await File.WriteAllTextAsync(fullOutputPath, output, Encoding.UTF8);
             Console.WriteLine($"✅ Written to {fullOutputPath}");
         }
         else

@@ -3,6 +3,7 @@ using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Steps;
 using PipelineRunner.Validation;
+using System.Text;
 
 namespace PipelineRunner.Services;
 
@@ -63,7 +64,7 @@ public static class CriticalFailureRecorder
                     result.ProcessInvocations,
                     result.ValidatorResults);
 
-                File.WriteAllText(filePath, JsonSerializer.Serialize(payload, JsonOptions));
+                File.WriteAllText(filePath, JsonSerializer.Serialize(payload, JsonOptions), Encoding.UTF8);
                 persisted.Add(new CriticalFailureRecordReference(
                     failure.ArtifactType,
                     failure.ArtifactName,

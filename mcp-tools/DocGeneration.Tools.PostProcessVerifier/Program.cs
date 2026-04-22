@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using ToolFamilyCleanup.Services;
+using System.Text;
 
 namespace DocGeneration.Tools.PostProcessVerifier;
 
@@ -141,7 +142,7 @@ internal static class Program
 
             // Write .after file (never overwrite original)
             var afterPath = filePath + ".after";
-            File.WriteAllText(afterPath, current);
+            File.WriteAllText(afterPath, current, Encoding.UTF8);
             Console.WriteLine($"  Written:  {Path.GetFileName(afterPath)}");
         }
         else

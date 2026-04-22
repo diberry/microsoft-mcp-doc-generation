@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using GenerativeAI;
 using Shared;
+using System.Text;
 
 namespace BrandMapperValidator;
 
@@ -360,7 +361,7 @@ internal class Program
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
 
-        await File.WriteAllTextAsync(outputPath, json);
+        await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8);
         Console.WriteLine($"Suggestions saved to: {Path.GetFullPath(outputPath)}");
     }
 }

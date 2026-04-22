@@ -5,6 +5,7 @@ using GenerativeAI;
 using System.Linq;
 using System.Text.RegularExpressions;
 using ToolGeneration_Improved.Models;
+using System.Text;
 
 namespace ToolGeneration_Improved.Services;
 
@@ -178,7 +179,7 @@ public class ImprovedToolGeneratorService
 
                 // Save improved content
                 var outputPath = Path.Combine(outputDir, fileName);
-                await File.WriteAllTextAsync(outputPath, restoredContent);
+                await File.WriteAllTextAsync(outputPath, restoredContent, Encoding.UTF8);
 
                 successCount++;
                 Console.WriteLine(" ✓");
@@ -193,7 +194,7 @@ public class ImprovedToolGeneratorService
                 {
                     var originalContent = await File.ReadAllTextAsync(composedFilePath);
                     var outputPath = Path.Combine(outputDir, fileName);
-                    await File.WriteAllTextAsync(outputPath, originalContent);
+                    await File.WriteAllTextAsync(outputPath, originalContent, Encoding.UTF8);
                     skippedCount++;
                 }
                 catch (Exception saveEx)

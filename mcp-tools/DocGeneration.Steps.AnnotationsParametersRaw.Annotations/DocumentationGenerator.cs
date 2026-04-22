@@ -311,7 +311,7 @@ public static class DocumentationGenerator
         // Generate in common-general directory
         var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
         var outputFile = Path.Combine(commonGeneralDir, "common-tools.md");
-        await File.WriteAllTextAsync(outputFile, result);
+        await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
         Console.WriteLine($"Generated common tools page: common-general/common-tools.md");
     }
 
@@ -356,7 +356,7 @@ public static class DocumentationGenerator
         // Generate in common-general directory
         var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
         var outputFile = Path.Combine(commonGeneralDir, "index.md");
-        await File.WriteAllTextAsync(outputFile, result);
+        await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
         Console.WriteLine($"Generated index page: common-general/index.md");
     }
 
@@ -384,7 +384,7 @@ public static class DocumentationGenerator
         // Generate in common-general directory
         var commonGeneralDir = Path.Combine(Path.GetDirectoryName(outputDir) ?? outputDir, "common-general");
         var outputFile = Path.Combine(commonGeneralDir, "azmcp-commands.md");
-        await File.WriteAllTextAsync(outputFile, result);
+        await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
         Console.WriteLine($"Generated commands page: common-general/azmcp-commands.md");
     }
 
@@ -549,7 +549,7 @@ public static class DocumentationGenerator
             var result = await HandlebarsTemplateEngine.ProcessTemplateAsync(templateFile, pageData);
 
             var outputFile = Path.Combine(outputDir, "tool-annotations.md");
-            await File.WriteAllTextAsync(outputFile, result);
+            await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
             Console.WriteLine($"Generated tool annotations summary: tool-annotations.md (in {outputDir})");
         }
         catch (Exception ex)
@@ -715,7 +715,7 @@ public static class DocumentationGenerator
         report.AppendLine("}");
         report.AppendLine("```");
         
-        await File.WriteAllTextAsync(reportPath, report.ToString());
+        await File.WriteAllTextAsync(reportPath, report.ToString(, Encoding.UTF8));
         Console.WriteLine($"\n📋 Generated missing mappings report: {reportPath}");
         Console.WriteLine($"   Found {missingMappings.Count} area(s) without brand mapping or compound word definition");
     }
