@@ -222,9 +222,56 @@ public class SkillPageGenerator : ISkillPageGenerator
                 ["category"] = l.Category
             }).ToList(),
             ["hasRelatedLinks"] = relatedLinks.Count > 0,
+            // Deployment workflow — only for deployment pipeline skills
+            ["deploymentWorkflow"] = BuildDeploymentWorkflow(skillData.Name),
             // Quality gate warnings (populated when sections are below thresholds)
             ["qualityWarnings"] = qualityWarnings,
             ["hasQualityWarnings"] = qualityWarnings.Count > 0
+        };
+    }
+
+    /// <summary>
+    /// Builds deployment workflow context for skills that are part of the deployment pipeline
+    /// (azure-prepare, azure-validate, azure-deploy).
+    /// </summary>
+    private static object? BuildDeploymentWorkflow(string skillName)
+    {
+        var workflows = new Dictionary<string, (string description, List<string> steps)>
+        {
+            ["azure-prepare"] = (
+                "This skill is the first step in the deployment workflow:",
+                [
+                    "**azure-prepare** (this skill) — generates infrastructure files and .azure/deployment-plan.md",
+                    "**azure-validate** — validates the deployment plan and infrastructure before deploying",
+                    "**azure-deploy** — executes the deployment"
+                ]
+            ),
+            ["azure-validate"] = (
+                "This skill is the second step in the deployment workflow:",
+                [
+                    "**azure-prepare** — generates infrastructure files and .azure/deployment-plan.md",
+                    "**azure-validate** (this skill) — validates the deployment plan and infrastructure before deploying",
+                    "**azure-deploy** — executes the deployment"
+                ]
+            ),
+            ["azure-deploy"] = (
+                "This skill is the final step in the deployment workflow:",
+                [
+                    "**azure-prepare** — generates infrastructure files and .azure/deployment-plan.md",
+                    "**azure-validate** — validates the deployment plan and infrastructure before deploying",
+                    "**azure-deploy** (this skill) — executes the deployment"
+                ]
+            )
+        };
+
+        if (!workflows.ContainsKey(skillName))
+            return null;
+
+        var (description, steps) = workflows[skillName];
+        return new Dictionary<string, object?>
+        {
+            ["description"] = description,
+            ["steps"] = steps
         };
     }
 

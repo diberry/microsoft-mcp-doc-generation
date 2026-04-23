@@ -3,7 +3,8 @@ title: Azure skill for {{{displayName}}}
 description: {{{description}}}
 ms.topic: reference
 ms.date: {{{generatedDate}}}
-author: diberry
+{{#if skillVersion}}ms.custom: skill-version-{{{skillVersion}}}
+{{/if}}author: diberry
 ms.author: diberry
 ms.service: azure-mcp-server
 ---
@@ -12,7 +13,7 @@ ms.service: azure-mcp-server
 
 {{{description}}}
 
-**Skill:** `{{{name}}}` | [Source code](https://github.com/microsoft/azure-skills/blob/main/skills/{{{name}}}/skill.md)
+**Skill:** `{{{name}}}` | [Source code](https://github.com/microsoft/azure-skills/blob/main/skills/{{{name}}}/SKILL.md)
 
 {{!-- MUST HAVE: Always renders --}}
 ## What it provides
@@ -121,6 +122,19 @@ This skill uses the following Azure MCP tools:
 {{/each}}
 {{/if}}
 
+{{!-- MAY HAVE: Only renders for deployment pipeline skills (azure-deploy, azure-prepare, azure-validate) --}}
+{{#if deploymentWorkflow}}
+## Deployment workflow
+
+{{{deploymentWorkflow.description}}}
+
+{{#if deploymentWorkflow.steps}}
+{{#each deploymentWorkflow.steps}}
+- {{{this}}}
+{{/each}}
+{{/if}}
+{{/if}}
+
 {{!-- MUST HAVE: Always renders (generator provides fallback prompts) --}}
 ## Example prompts
 
@@ -199,4 +213,4 @@ This skill automatically activates when your codebase contains any of the follow
 {{/each}}
 {{/if}}
 - [Azure MCP Server overview](/azure/developer/azure-mcp-server/overview)
-- [Skill source code](https://github.com/microsoft/azure-skills/blob/main/skills/{{{name}}}/skill.md)
+- [Skill source code](https://github.com/microsoft/azure-skills/blob/main/skills/{{{name}}}/SKILL.md)
