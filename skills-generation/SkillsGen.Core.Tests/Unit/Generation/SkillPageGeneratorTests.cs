@@ -1034,7 +1034,7 @@ public class TemplateRestructureTests
 
         var result = gen.Generate(skill, triggers, tier, prereqs);
 
-        result.Should().Contain("https://github.com/microsoft/azure-skills/blob/main/skills/azure-storage/skill.md");
+        result.Should().Contain("https://github.com/microsoft/azure-skills/blob/main/skills/azure-storage/SKILL.md");
         result.Should().NotContain("/tree/main/skills/azure-storage)");
     }
 
@@ -1053,7 +1053,7 @@ public class TemplateRestructureTests
         result.Should().NotContain("GitHub Copilot for Azure documentation");
         result.Should().NotContain("/azure/developer/github-copilot-azure/introduction");
         result.Should().Contain("Skill source code");
-        result.Should().Contain("https://github.com/microsoft/azure-skills/blob/main/skills/azure-storage/skill.md");
+        result.Should().Contain("https://github.com/microsoft/azure-skills/blob/main/skills/azure-storage/SKILL.md");
     }
 
     [Fact]
