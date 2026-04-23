@@ -38,7 +38,7 @@ public class SkillInventoryLoader
             }
 
             return inventory.Skills
-                .Select(s => new SkillInventoryEntry(s.Name, s.DisplayName, s.Category))
+                .Select(s => new SkillInventoryEntry(s.Name, s.DisplayName, s.Category, s.Slug, s.SkillVersion))
                 .ToList();
         }
         catch (JsonException ex)
@@ -55,5 +55,5 @@ public class SkillInventoryLoader
     };
 
     private record SkillsInventoryFile(List<SkillEntry> Skills);
-    private record SkillEntry(string Name, string DisplayName, string Category);
+    private record SkillEntry(string Name, string DisplayName, string Category, string? Slug = null, string? SkillVersion = null);
 }

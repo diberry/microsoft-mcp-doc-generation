@@ -5,7 +5,7 @@ namespace SkillsGen.Core.Data;
 
 public record RelatedLink(string Title, string Url, string Category);
 
-public record CuratedSkillData(List<RelatedLink> RelatedLinks, List<string> ExamplePrompts);
+public record CuratedSkillData(List<RelatedLink> RelatedLinks, List<string> ExamplePrompts, string? WhatItProvides = null);
 
 public class CuratedDataLoader
 {
@@ -18,24 +18,28 @@ public class CuratedDataLoader
     {
         var allLinks = LoadRelatedLinks(dataPath, logger);
         var allPrompts = LoadExamplePrompts(dataPath, logger);
+        var allWhatItProvides = LoadWhatItProvides(dataPath, logger);
 
-        // Merge both sources into one dictionary keyed by skill name
+        // Merge all sources into one dictionary keyed by skill name
         var allKeys = new HashSet<string>(allLinks.Keys, StringComparer.OrdinalIgnoreCase);
         allKeys.UnionWith(allPrompts.Keys);
+        allKeys.UnionWith(allWhatItProvides.Keys);
 
         var result = new Dictionary<string, CuratedSkillData>(StringComparer.OrdinalIgnoreCase);
         foreach (var key in allKeys)
         {
             allLinks.TryGetValue(key, out var links);
             allPrompts.TryGetValue(key, out var prompts);
+            allWhatItProvides.TryGetValue(key, out var whatItProvides);
             result[key] = new CuratedSkillData(
                 links ?? [],
-                prompts ?? []);
+                prompts ?? [],
+                whatItProvides);
         }
 
         logger.LogInformation(
-            "[curated-data] Loaded {SkillCount} skill entries ({LinksCount} with links, {PromptsCount} with prompts)",
-            result.Count, allLinks.Count, allPrompts.Count);
+            "[curated-data] Loaded {SkillCount} skill entries ({LinksCount} with links, {PromptsCount} with prompts, {WhatItProvidesCount} with whatItProvides)",
+            result.Count, allLinks.Count, allPrompts.Count, allWhatItProvides.Count);
 
         return result;
     }
@@ -107,6 +111,35 @@ public class CuratedDataLoader
         catch (Exception ex)
         {
             logger.LogWarning("⚠️ Failed to load {Filename}: {Error}", "skill-example-prompts.json", ex.Message);
+        }
+
+        return result;
+    }
+
+    private static Dictionary<string, string> LoadWhatItProvides(string dataPath, ILogger logger)
+    {
+        var path = Path.Combine(dataPath, "skill-what-it-provides.json");
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (!File.Exists(path))
+        {
+            logger.LogInformation("[curated-data] No {Filename} found — using mechanical fallback for whatItProvides", "skill-what-it-provides.json");
+            return result;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            foreach (var skill in doc.RootElement.EnumerateObject())
+            {
+                var text = skill.Value.GetString();
+                if (!string.IsNullOrWhiteSpace(text))
+                    result[skill.Name] = text;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("Failed to load {Filename}: {Error}", "skill-what-it-provides.json", ex.Message);
         }
 
         return result;

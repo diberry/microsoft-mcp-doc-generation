@@ -22,16 +22,16 @@ public class SkillPageGenerator : ISkillPageGenerator
         _compiledTemplate = handlebars.Compile(templateContent);
     }
 
-    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null)
+    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null, string? skillVersion = null)
     {
-        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData, _logger, translatedWorkflowSteps, whatItProvides);
+        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData, _logger, translatedWorkflowSteps, whatItProvides, skillVersion);
         var result = _compiledTemplate(context);
         return result;
     }
 
     private static readonly int MaxExamplePrompts = 10;
 
-    internal static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData, ILogger? logger = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null)
+    internal static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData, ILogger? logger = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null, string? skillVersion = null)
     {
         // Look up curated data for this skill (null if not found)
         CuratedSkillData? curated = null;
@@ -93,8 +93,8 @@ public class SkillPageGenerator : ISkillPageGenerator
         // Related links from curated data
         var relatedLinks = curated?.RelatedLinks ?? [];
 
-        // Build "What it provides" — use LLM synthesis if available, else fall back to mechanical
-        whatItProvides ??= BuildWhatItProvides(skillData);
+        // Build "What it provides" — priority: LLM synthesis > curated > mechanical fallback
+        whatItProvides ??= curated?.WhatItProvides ?? BuildWhatItProvides(skillData);
 
         return new Dictionary<string, object?>
         {
@@ -104,6 +104,7 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["tier"] = tierAssessment.Tier,
             ["generatedDate"] = DateTime.UtcNow.ToString("M/d/yyyy"),
             ["generatorVersion"] = "1.0.0",
+            ["skillVersion"] = skillVersion,
             ["useFor"] = useForList,
             ["doNotUseFor"] = doNotUseForList,
             ["services"] = skillData.Services.Select(s => new Dictionary<string, object?>
