@@ -48,6 +48,12 @@
     "fileName": "azure-app-service"
   },
   {
+    "brandName": "Azure Backup",
+    "mcpServerName": "azurebackup",
+    "shortName": "Backup",
+    "fileName": "azure-backup"
+  },
+  {
     "brandName": "Azure Migrate",
     "mcpServerName": "azuremigrate",
     "shortName": "Migrate",
