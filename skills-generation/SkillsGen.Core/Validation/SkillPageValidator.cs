@@ -61,15 +61,12 @@ public class SkillPageValidator : ISkillPageValidator
 
         // WORD_COUNT
         var wordCount = CountWords(renderedContent);
-        var (minWords, maxWords) = tier == 1 ? (100, 500) : (50, 200);
+        var minWords = tier == 1 ? 100 : 50;
         if (wordCount < minWords)
         {
             warnings.Add($"WORD_COUNT: Content has {wordCount} words, minimum for Tier {tier} is {minWords}");
         }
-        if (wordCount > maxWords)
-        {
-            warnings.Add($"WORD_COUNT: Content has {wordCount} words, maximum for Tier {tier} is {maxWords}");
-        }
+        // maxWords check removed per issue #466 - content length driven by complexity, not arbitrary cap
 
         // FRONTMATTER: Required fields present
         if (!renderedContent.TrimStart().StartsWith("---"))
