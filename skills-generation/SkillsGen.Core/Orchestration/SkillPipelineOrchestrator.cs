@@ -139,7 +139,15 @@ public class SkillPipelineOrchestrator
             }
 
             sw.Stop();
-            return new SkillGenerationResult(skillName, tierAssessment.Tier, validation, outputPath, sw.ElapsedMilliseconds);
+            var result = new SkillGenerationResult(skillName, tierAssessment.Tier, validation, outputPath, sw.ElapsedMilliseconds);
+
+            // Update manifest with this skill's result
+            if (!_dryRun)
+            {
+                UpdateManifestWithResult(result);
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -328,6 +336,77 @@ public class SkillPipelineOrchestrator
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
         File.WriteAllText(path, json);
+    }
+
+    /// <summary>
+    /// Updates the manifest file with a single skill's result.
+    /// If manifest exists, merges the new result with existing results.
+    /// If manifest doesn't exist, creates a new one with this result.
+    /// </summary>
+    private void UpdateManifestWithResult(SkillGenerationResult newResult)
+    {
+        Directory.CreateDirectory(_outputDir);
+        var path = Path.Combine(_outputDir, "generation-manifest.json");
+
+        SkillGenerationReport report;
+
+        // Try to load existing manifest
+        if (File.Exists(path))
+        {
+            try
+            {
+                var existingJson = File.ReadAllText(path);
+                var existingReport = JsonSerializer.Deserialize<SkillGenerationReport>(existingJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
+                if (existingReport != null)
+                {
+                    // Update existing result or add new one
+                    var results = existingReport.Results.Where(r => r.SkillName != newResult.SkillName).ToList();
+                    results.Add(newResult);
+
+                    // Recalculate total duration (sum of all individual durations)
+                    var totalDuration = results.Sum(r => r.DurationMs);
+
+                    report = new SkillGenerationReport(
+                        results,
+                        totalDuration,
+                        existingReport.GeneratorVersion,
+                        existingReport.TemplateVersion,
+                        DateTime.UtcNow);
+                }
+                else
+                {
+                    // Failed to deserialize, create new report
+                    report = CreateNewReport(newResult);
+                }
+            }
+            catch
+            {
+                // Failed to read/parse existing manifest, create new one
+                report = CreateNewReport(newResult);
+            }
+        }
+        else
+        {
+            // No existing manifest, create new one
+            report = CreateNewReport(newResult);
+        }
+
+        WriteManifest(report);
+    }
+
+    private static SkillGenerationReport CreateNewReport(SkillGenerationResult result)
+    {
+        return new SkillGenerationReport(
+            new List<SkillGenerationResult> { result },
+            result.DurationMs,
+            "1.0.0",
+            "1.0.0",
+            DateTime.UtcNow);
     }
 
     private static SkillGenerationResult CreateFailResult(string skillName, Stopwatch sw, string error)
