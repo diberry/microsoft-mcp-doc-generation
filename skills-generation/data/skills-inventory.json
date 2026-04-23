@@ -3,7 +3,6 @@
     { "name": "azure-ai", "displayName": "Azure AI Services", "category": "AI and Machine Learning" },
     { "name": "azure-aigateway", "slug": "azure-ai-gateway", "displayName": "Azure AI Gateway", "category": "AI and Machine Learning" },
     { "name": "azure-hosted-copilot-sdk", "displayName": "Azure Hosted Copilot SDK", "category": "AI and Machine Learning" },
-    { "name": "customize-cloud-agent", "displayName": "Customize Cloud Agent", "category": "AI and Machine Learning" },
     { "name": "microsoft-foundry", "displayName": "Microsoft Foundry", "category": "AI and Machine Learning" },
     { "name": "azure-kusto", "displayName": "Azure Kusto (Data Explorer)", "category": "Data and Storage" },
     { "name": "azure-messaging", "displayName": "Azure Messaging", "category": "Data and Storage" },
