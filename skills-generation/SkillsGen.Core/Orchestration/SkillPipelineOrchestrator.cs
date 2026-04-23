@@ -56,7 +56,7 @@ public class SkillPipelineOrchestrator
         _force = force;
     }
 
-    public async Task<SkillGenerationResult> ProcessSkillAsync(string skillName, string? displayName = null, CancellationToken ct = default)
+    public async Task<SkillGenerationResult> ProcessSkillAsync(string skillName, string? displayName = null, string? skillVersion = null, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
 
@@ -120,7 +120,7 @@ public class SkillPipelineOrchestrator
             var prerequisites = BuildPrerequisites(skillData, sources.FileExtensions);
 
             // Generate (with trigger post-processing)
-            var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText, translatedSteps, whatItProvides);
+            var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText, translatedSteps, whatItProvides, skillVersion);
 
             // Post-process
             rendered = _postProcessor.Process(rendered);
@@ -162,7 +162,7 @@ public class SkillPipelineOrchestrator
 
             try
             {
-                var result = await ProcessSkillAsync(skill.Name, skill.DisplayName, ct);
+                var result = await ProcessSkillAsync(skill.Name, skill.DisplayName, skill.SkillVersion, ct);
                 results.Add(result);
 
                 var status = result.Validation.IsValid ? "✅ passed" : "❌ failed";
