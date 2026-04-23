@@ -206,10 +206,11 @@ public class ResourceGroupingTests
 
         Assert.Contains("## Disk", result);
         Assert.Contains("## VM", result);
-        Assert.Contains("### Create a disk", result);
-        Assert.Contains("### Delete a disk", result);
-        Assert.Contains("### Create a VM", result);
-        Assert.Contains("### Delete a VM", result);
+        // #416: Multi-resource H2 format is now "Resource type: action"
+        Assert.Contains("### Managed disk: create", result);
+        Assert.Contains("### Managed disk: delete", result);
+        Assert.Contains("### VM: create", result);
+        Assert.Contains("### VM: delete", result);
 
         var diskIndex = result.IndexOf("## Disk");
         var vmIndex = result.IndexOf("## VM");
@@ -238,9 +239,10 @@ public class ResourceGroupingTests
         Assert.Contains("## Disk", result);
         Assert.Contains("## VM", result);
         Assert.Contains("## VMSS", result);
-        Assert.Contains("### Create disk", result);
-        Assert.Contains("### Create VM", result);
-        Assert.Contains("### Create VMSS", result);
+        // #416: Multi-resource H2 format is now "Resource type: action"
+        Assert.Contains("### Managed disk: create", result);
+        Assert.Contains("### VM: create", result);
+        Assert.Contains("### VMSS: create", result);
     }
 
     [Fact]
@@ -261,7 +263,8 @@ public class ResourceGroupingTests
         var stitcher = new FamilyFileStitcher();
         var result = stitcher.Stitch(familyContent);
 
-        Assert.Contains("### Create account", result);
+        // #416: Multi-resource H2 format is now "Resource type: action"
+        Assert.Contains("### Account: create", result);
         Assert.Contains("#### Parameters", result);
     }
 
