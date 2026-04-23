@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace SkillsGen.Core.Fetchers;
 
-public class GitHubSkillFetcher : ISkillSourceFetcher
+public class GitHubSkillFetcher : ISkillSourceFetcher, ISkillDirectoryLister
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<GitHubSkillFetcher> _logger;
@@ -87,7 +87,7 @@ public class GitHubSkillFetcher : ISkillSourceFetcher
     /// <summary>
     /// Lists subdirectory names under a given path using GitHub Contents API.
     /// </summary>
-    internal async Task<List<string>> ListSubdirectoriesAsync(string path, CancellationToken ct)
+    public async Task<List<string>> ListSubdirectoriesAsync(string path, CancellationToken ct = default)
     {
         var subdirs = new List<string>();
         var url = $"https://api.github.com/repos/{_owner}/{_repo}/contents/{path}?ref={_branch}";

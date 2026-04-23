@@ -29,6 +29,50 @@ public record SkillData
     public required string Name { get; init; }
     public required string DisplayName { get; init; }
     public required string Description { get; init; }
+    
+    public string ShortDescription
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Description)) return "";
+            
+            var text = Description;
+            
+            // Truncate at WHEN: or DO NOT USE FOR: markers
+            var cutPatterns = new[] { @"\bWHEN\s*:", @"\bDO\s+NOT\s+USE\s+FOR\b" };
+            int earliestCut = text.Length;
+            foreach (var pattern in cutPatterns)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(text, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (match.Success && match.Index < earliestCut)
+                {
+                    earliestCut = match.Index;
+                }
+            }
+            if (earliestCut < text.Length)
+            {
+                text = text[..earliestCut].TrimEnd(' ', '.', ',', ';');
+            }
+            
+            // Extract first 1-2 sentences
+            var sentencePattern = @"(?<=[.!?])\s+(?=[A-Z])";
+            var sentences = System.Text.RegularExpressions.Regex.Split(text, sentencePattern);
+            
+            if (sentences.Length > 2)
+            {
+                text = string.Join(" ", sentences.Take(2));
+            }
+            
+            // Max 200 chars with ellipsis
+            if (text.Length > 200)
+            {
+                text = text[..197] + "...";
+            }
+            
+            return text.Trim();
+        }
+    }
+    
     public List<string> UseFor { get; init; } = [];
     public List<string> DoNotUseFor { get; init; } = [];
     public List<ServiceEntry> Services { get; init; } = [];

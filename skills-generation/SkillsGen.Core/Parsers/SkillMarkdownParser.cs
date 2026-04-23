@@ -27,8 +27,9 @@ public partial class SkillMarkdownParser : ISkillParser
         // Double-decode to handle double-encoded entities (e.g., &amp;quot; → &quot; → ")
         var decodedDescription = DecodeHtmlEntities(DecodeHtmlEntities(rawDescription));
 
-        // Clean the description for display (strip markers, take first 2 sentences)
-        var cleanDescription = CleanDescription(decodedDescription);
+        // Use the full decoded description as-is, without truncation or reformatting
+        // The description field in SKILL.md frontmatter is already written as complete documentation
+        var fullDescription = decodedDescription;
 
         // Extract negative delimiters FIRST to prevent "USE FOR:" inside
         // "DO NOT USE FOR:" from matching the positive USE FOR pattern
@@ -92,7 +93,7 @@ public partial class SkillMarkdownParser : ISkillParser
         {
             Name = name,
             DisplayName = displayName,
-            Description = cleanDescription,
+            Description = fullDescription,
             UseFor = useFor,
             DoNotUseFor = doNotUseFor,
             Services = services,

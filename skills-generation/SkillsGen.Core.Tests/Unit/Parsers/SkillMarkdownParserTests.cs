@@ -166,22 +166,24 @@ public class SkillMarkdownParserTests
     }
 
     [Fact]
-    public void Parse_CleanDescription_AllCapsDowncasedToLowercase()
+    public void Parse_Description_PreservesOriginalCasing()
     {
+        // Descriptions are now preserved as-is from frontmatter
         var content = "---\nname: test\ndescription: The ALREADY-prepared DEPLOYMENT was READY.\n---\n\nBody.\n";
         var result = _parser.Parse("test", content);
-        result.Description.Should().Contain("already");
-        result.Description.Should().NotContain("Already");
-        result.Description.Should().NotContain("ALREADY");
+        result.Description.Should().Contain("ALREADY-prepared");
+        result.Description.Should().Contain("DEPLOYMENT");
+        result.Description.Should().Contain("READY");
     }
 
     [Fact]
-    public void Parse_CleanDescription_DuplicateAcronymExpansionCollapsed()
+    public void Parse_Description_PreservesOriginalFormatting()
     {
+        // Descriptions are now preserved exactly as written in frontmatter
         var content = "---\nname: test\ndescription: Azure Kubernetes Service (Azure Kubernetes Service (AKS)) is great.\n---\n\nBody.\n";
         var result = _parser.Parse("test", content);
-        result.Description.Should().Contain("Azure Kubernetes Service (AKS)");
-        result.Description.Should().NotContain("Azure Kubernetes Service (Azure Kubernetes Service (AKS))");
+        // The description should be preserved exactly as written, even if it has formatting quirks
+        result.Description.Should().Contain("Azure Kubernetes Service (Azure Kubernetes Service (AKS))");
     }
 
     [Fact]
