@@ -105,13 +105,8 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 tempDocsDirectory,
                 cancellationToken);
             processResults.Add(cleanupResult);
-            if (!cleanupResult.Succeeded)
-            {
-                AddProcessIssue(cleanupResult, warnings, "Tool-family cleanup failed");
-                artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
-                return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
-            }
 
+            // FIX #478: Check output files BEFORE failing on exit code
             var tempMetadataDirectory = Path.Combine(tempGeneratedDirectory, "tool-family-metadata");
             var tempRelatedDirectory = Path.Combine(tempGeneratedDirectory, "tool-family-related");
             var tempFinalDirectory = Path.Combine(tempGeneratedDirectory, "tool-family");
@@ -135,6 +130,12 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 
             if (copyBackIssues.Count > 0)
             {
+                // Output files are missing - NOW check exit code and fail
+                if (!cleanupResult.Succeeded)
+                {
+                    AddProcessIssue(cleanupResult, warnings, "Tool-family cleanup failed");
+                }
+
                 // Surface subprocess stdout so the "✗ Failed to process" message is visible (#160)
                 if (!string.IsNullOrWhiteSpace(cleanupResult.StandardOutput))
                 {
@@ -153,12 +154,21 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 // Always add diagnostic hint when no subprocess error lines were surfaced
                 if (!warnings.Any(w => w.Contains("Subprocess output:")))
                 {
-                    warnings.Add("Subprocess exited 0 but produced no output files. Check AI credentials and rate limits.");
+                    var diagnosticMessage = cleanupResult.Succeeded
+                        ? "Subprocess exited 0 but produced no output files. Check AI credentials and rate limits."
+                        : $"Subprocess exited {cleanupResult.ExitCode} and produced no output files.";
+                    warnings.Add(diagnosticMessage);
                 }
 
                 warnings.AddRange(copyBackIssues);
                 artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
                 return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+            }
+
+            // FIX #478: Output files exist - treat non-zero exit code as warning, not failure
+            if (!cleanupResult.Succeeded)
+            {
+                warnings.Add($"Subprocess exited with code {cleanupResult.ExitCode} but all output files were generated successfully. Treating as warning.");
             }
 
             CopyMarkdownFiles(tempMetadataDirectory, Path.Combine(context.OutputPath, "tool-family-metadata"));
