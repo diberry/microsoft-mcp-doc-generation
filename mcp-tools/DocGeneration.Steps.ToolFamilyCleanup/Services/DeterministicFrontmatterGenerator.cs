@@ -13,11 +13,35 @@ namespace ToolFamilyCleanup.Services;
 ///
 /// AI is still used for the 2 intro paragraphs (capabilities + service description).
 /// This generator handles: frontmatter fields, H1 heading, and INCLUDE statement.
+/// 
+/// Phase 0: Converted to instance class with clock injection for testability.
 /// </summary>
-public static class DeterministicFrontmatterGenerator
+public class DeterministicFrontmatterGenerator
 {
-    private const string IncludeStatement =
-        "[!INCLUDE [tip-about-params](../includes/tools/parameter-consideration.md)]";
+    private readonly Func<DateTime> _clock;
+
+    /// <summary>
+    /// Creates a new instance of DeterministicFrontmatterGenerator.
+    /// </summary>
+    /// <param name="clock">Optional clock function for date generation. Defaults to DateTime.UtcNow.</param>
+    public DeterministicFrontmatterGenerator(Func<DateTime>? clock = null)
+    {
+        _clock = clock ?? (() => DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Static convenience method for backward compatibility.
+    /// Creates a new instance with default clock and generates frontmatter.
+    /// </summary>
+    public static string GenerateWithDefaults(
+        string brandName,
+        int toolCount,
+        string cliVersion,
+        string? seoDescription = null)
+    {
+        var generator = new DeterministicFrontmatterGenerator();
+        return generator.Generate(brandName, toolCount, cliVersion, seoDescription);
+    }
 
     /// <summary>
     /// Generates deterministic frontmatter YAML block and H1 heading.
@@ -27,23 +51,23 @@ public static class DeterministicFrontmatterGenerator
     /// <param name="cliVersion">MCP CLI version string</param>
     /// <param name="seoDescription">Human-curated SEO description, or null for generic fallback</param>
     /// <returns>Markdown string: frontmatter block + blank line + H1 heading</returns>
-    public static string Generate(
+    public string Generate(
         string brandName,
         int toolCount,
         string cliVersion,
         string? seoDescription = null)
     {
-        var title = $"Azure MCP Server tools for {brandName}";
+        var title = string.Format(MetadataConstants.TitleTemplate, MetadataConstants.ProductName, brandName);
         var description = seoDescription
-            ?? $"Use Azure MCP Server tools to manage {brandName} resources with natural language prompts from your IDE.";
+            ?? string.Format(MetadataConstants.DescriptionTemplate, MetadataConstants.ProductName, brandName);
 
         var sb = new StringBuilder();
         sb.AppendLine("---");
         sb.AppendLine($"title: {title}");
         sb.AppendLine($"description: {description}");
-        sb.AppendLine($"ms.date: {DateTime.UtcNow:MM/dd/yyyy}");
-        sb.AppendLine("ms.service: azure-mcp-server");
-        sb.AppendLine("ms.topic: concept-article");
+        sb.AppendLine($"ms.date: {_clock():MM/dd/yyyy}");
+        sb.AppendLine($"ms.service: {MetadataConstants.MsService}");
+        sb.AppendLine($"ms.topic: {MetadataConstants.MsTopic}");
         sb.AppendLine($"tool_count: {toolCount}");
         sb.AppendLine($"mcp-cli.version: {cliVersion}");
         sb.AppendLine("---");
@@ -57,7 +81,7 @@ public static class DeterministicFrontmatterGenerator
     /// Extracts the intro paragraphs from AI-generated metadata output.
     /// Returns content between the H1 heading and the INCLUDE statement.
     /// </summary>
-    public static string ExtractIntroParagraphs(string aiMetadata)
+    public string ExtractIntroParagraphs(string aiMetadata)
     {
         var lines = aiMetadata.Replace("\r\n", "\n").Split('\n');
         var introLines = new List<string>();
@@ -88,7 +112,7 @@ public static class DeterministicFrontmatterGenerator
     /// <summary>
     /// Assembles the complete metadata section from deterministic header + AI intros.
     /// </summary>
-    public static string Assemble(string frontmatterAndH1, string introParagraphs)
+    public string Assemble(string frontmatterAndH1, string introParagraphs)
     {
         var sb = new StringBuilder();
         sb.Append(frontmatterAndH1);
@@ -100,7 +124,7 @@ public static class DeterministicFrontmatterGenerator
             sb.AppendLine();
         }
 
-        sb.AppendLine(IncludeStatement);
+        sb.AppendLine(MetadataConstants.IncludeParameterConsideration);
 
         return sb.ToString();
     }

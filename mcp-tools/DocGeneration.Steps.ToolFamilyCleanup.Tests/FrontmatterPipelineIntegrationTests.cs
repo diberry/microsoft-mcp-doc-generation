@@ -16,9 +16,13 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 ///
 /// Fixes: #219 — ms.date missing in generated tool-family files.
 /// Decision: AD-007 (TDD — write failing tests before implementing fix).
+/// Phase 0: Updated to use instance-based API with clock injection.
 /// </summary>
 public class FrontmatterPipelineIntegrationTests
 {
+    private static readonly DateTime FixedDate = new DateTime(2025, 3, 15, 10, 30, 0, DateTimeKind.Utc);
+    private static Func<DateTime> FixedClock => () => FixedDate;
+
     private const string TestBrandName = "Azure Resource Health";
     private const string TestCliVersion = "2.0.0-beta.31+ed24dd9783f26645fd2b7218b4d52221b446354f";
     private const string TestSeoDescription = "Use Azure MCP Server tools to manage resource health and availability of Azure resources with natural language prompts from your IDE.";
@@ -29,10 +33,11 @@ public class FrontmatterPipelineIntegrationTests
     public void Stitch_DeterministicFrontmatter_ContainsMsDate()
     {
         // Arrange — build metadata via DeterministicFrontmatterGenerator (exactly as production does)
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
         var intros = "The Azure MCP Server lets you check resource health.\n\nAzure Resource Health helps you diagnose issues.";
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, intros);
+        var metadata = generator.Assemble(header, intros);
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -47,9 +52,10 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Stitch_DeterministicFrontmatter_MsDateHasCorrectFormat()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro paragraph.");
+        var metadata = generator.Assemble(header, "Intro paragraph.");
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -62,7 +68,8 @@ public class FrontmatterPipelineIntegrationTests
 
         var dateStr = match.Groups[1].Value;
         Assert.True(DateTime.TryParse(dateStr, out var parsedDate), $"ms.date value '{dateStr}' is not a valid date");
-        Assert.Equal(DateTime.UtcNow.Date, parsedDate.Date);
+        // With fixed clock, should match exactly
+        Assert.Equal(FixedDate.Date, parsedDate.Date);
     }
 
     // ── author fields present after full pipeline ───────────────────
@@ -70,9 +77,10 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Stitch_DeterministicFrontmatter_ContainsAuthor()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro.");
+        var metadata = generator.Assemble(header, "Intro.");
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -85,9 +93,10 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Stitch_DeterministicFrontmatter_ContainsMsAuthor()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro.");
+        var metadata = generator.Assemble(header, "Intro.");
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -102,9 +111,10 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Stitch_DeterministicFrontmatter_ContainsAiUsage()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro.");
+        var metadata = generator.Assemble(header, "Intro.");
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -117,9 +127,10 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Stitch_DeterministicFrontmatter_ContainsContentWellNotification()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro.");
+        var metadata = generator.Assemble(header, "Intro.");
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -135,9 +146,10 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Stitch_DeterministicFrontmatter_ContainsMsCustom()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro.");
+        var metadata = generator.Assemble(header, "Intro.");
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -152,9 +164,10 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Stitch_DeterministicFrontmatter_ContainsMsReviewer()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro.");
+        var metadata = generator.Assemble(header, "Intro.");
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -169,9 +182,10 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Stitch_DeterministicFrontmatter_AllEnrichedFieldsInsideFrontmatter()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro paragraph.");
+        var metadata = generator.Assemble(header, "Intro paragraph.");
 
         var familyContent = CreateFamilyContent("resourcehealth", metadata);
         var stitcher = new FamilyFileStitcher();
@@ -201,7 +215,8 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Generate_IncludesMsDate()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
 
         // Generator must produce ms.date directly — not rely solely on FrontmatterEnricher
@@ -212,10 +227,11 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Generate_MsDateMatchesToday()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
 
-        var expected = DateTime.UtcNow.ToString("MM/dd/yyyy");
+        var expected = FixedDate.ToString("MM/dd/yyyy");
         Assert.Contains($"ms.date: {expected}", header);
     }
 
@@ -224,12 +240,14 @@ public class FrontmatterPipelineIntegrationTests
     [Fact]
     public void Enrich_GeneratorOutput_InjectsMsDate()
     {
-        var header = DeterministicFrontmatterGenerator.Generate(
+        var generator = new DeterministicFrontmatterGenerator(FixedClock);
+        var header = generator.Generate(
             TestBrandName, 2, TestCliVersion, TestSeoDescription);
-        var metadata = DeterministicFrontmatterGenerator.Assemble(header, "Intro.");
+        var metadata = generator.Assemble(header, "Intro.");
 
         // Feed generator output directly to enricher
-        var enriched = FrontmatterEnricher.Enrich(metadata);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var enriched = enricher.Enrich(metadata);
 
         Assert.Contains("ms.date:", enriched);
         Assert.Matches(@"ms\.date: \d{2}/\d{2}/\d{4}", enriched);
