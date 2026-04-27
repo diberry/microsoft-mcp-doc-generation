@@ -14,20 +14,37 @@ namespace ToolFamilyCleanup.Services;
 /// - ai-usage (for AI-generated content)
 /// - content_well_notification (for AI-generated content)
 /// - ms.custom (for campaign tracking)
+/// 
+/// Phase 0: Converted to instance class with clock injection for testability.
 /// </summary>
-public static class FrontmatterEnricher
+public class FrontmatterEnricher
 {
-    private const string Author = "diberry";
-    private const string Reviewer = "mbaldwin";
-    private const string AiUsage = "ai-generated";
-    private const string ContentWellValue = "AI-contribution";
-    private const string MsCustom = "build-2025";
+    private readonly Func<DateTime> _clock;
+
+    /// <summary>
+    /// Creates a new instance of FrontmatterEnricher.
+    /// </summary>
+    /// <param name="clock">Optional clock function for date generation. Defaults to DateTime.UtcNow.</param>
+    public FrontmatterEnricher(Func<DateTime>? clock = null)
+    {
+        _clock = clock ?? (() => DateTime.UtcNow);
+    }
+
+    /// <summary>
+    /// Static convenience method for backward compatibility.
+    /// Creates a new instance with default clock and enriches the markdown.
+    /// </summary>
+    public static string EnrichWithDefaults(string markdown)
+    {
+        var enricher = new FrontmatterEnricher();
+        return enricher.Enrich(markdown);
+    }
 
     /// <summary>
     /// Injects missing required frontmatter fields. Preserves existing fields.
     /// Idempotent — safe to call multiple times.
     /// </summary>
-    public static string Enrich(string markdown)
+    public string Enrich(string markdown)
     {
         if (string.IsNullOrEmpty(markdown))
         {
@@ -54,19 +71,19 @@ public static class FrontmatterEnricher
         // Parse existing fields
         var lines = frontmatter.Split('\n').ToList();
 
-        // Inject missing fields
-        InjectIfMissing(lines, "author", $"author: {Author}");
-        InjectIfMissing(lines, "ms.author", $"ms.author: {Author}");
-        InjectIfMissing(lines, "ms.reviewer", $"ms.reviewer: {Reviewer}");
-        InjectIfMissing(lines, "ms.date", $"ms.date: {DateTime.UtcNow:MM/dd/yyyy}");
-        InjectIfMissing(lines, "ai-usage", $"ai-usage: {AiUsage}");
-        InjectIfMissing(lines, "ms.custom", $"ms.custom: {MsCustom}");
+        // Inject missing fields (using MetadataConstants)
+        InjectIfMissing(lines, "author", $"author: {MetadataConstants.Author}");
+        InjectIfMissing(lines, "ms.author", $"ms.author: {MetadataConstants.Author}");
+        InjectIfMissing(lines, "ms.reviewer", $"ms.reviewer: {MetadataConstants.Reviewer}");
+        InjectIfMissing(lines, "ms.date", $"ms.date: {_clock():MM/dd/yyyy}");
+        InjectIfMissing(lines, "ai-usage", $"ai-usage: {MetadataConstants.AiUsage}");
+        InjectIfMissing(lines, "ms.custom", $"ms.custom: {MetadataConstants.MsCustom}");
 
         // content_well_notification is special (multi-line YAML array)
         if (!lines.Any(l => l.TrimStart().StartsWith("content_well_notification")))
         {
             lines.Add("content_well_notification:");
-            lines.Add($"  - {ContentWellValue}");
+            lines.Add($"  - {MetadataConstants.ContentWellValue}");
         }
 
         // Reassemble

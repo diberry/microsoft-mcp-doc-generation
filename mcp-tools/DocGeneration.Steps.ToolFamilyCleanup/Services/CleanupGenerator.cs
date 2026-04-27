@@ -485,10 +485,11 @@ public class CleanupGenerator
                 if (serviceDocLinks.TryGetValue(familyName, out var docLink)
                     && !string.IsNullOrWhiteSpace(docLink.SeoDescription))
                 {
-                    var header = DeterministicFrontmatterGenerator.Generate(
+                    var generator = new DeterministicFrontmatterGenerator();
+                    var header = generator.Generate(
                         displayName, familyContent.ToolCount, _cliVersion ?? "unknown", docLink.SeoDescription);
-                    var intros = DeterministicFrontmatterGenerator.ExtractIntroParagraphs(aiMetadata);
-                    metadata = DeterministicFrontmatterGenerator.Assemble(header, intros);
+                    var intros = generator.ExtractIntroParagraphs(aiMetadata);
+                    metadata = generator.Assemble(header, intros);
                     Console.WriteLine($"✓ (deterministic frontmatter + AI intros)");
                 }
                 else
