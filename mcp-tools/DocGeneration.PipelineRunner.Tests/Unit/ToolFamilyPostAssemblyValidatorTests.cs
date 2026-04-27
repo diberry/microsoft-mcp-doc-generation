@@ -343,6 +343,129 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_GroupedArticleWithH2CategoriesAndH3Tools_CountsMarkers()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-delete.md"), "compute delete");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), GroupedArticleWithCategories());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            if (!result.Success)
+            {
+                var warnings = string.Join("\n", result.Warnings);
+                throw new Exception($"Validation failed with warnings:\n{warnings}");
+            }
+
+            Assert.True(result.Success);
+            Assert.Empty(result.Warnings);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_GroupedArticleWithCorrectMarkerCount_PassesValidation()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), GroupedArticleWithCorrectCount());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            if (!result.Success)
+            {
+                var warnings = string.Join("\n", result.Warnings);
+                throw new Exception($"Validation failed with warnings:\n{warnings}");
+            }
+
+            Assert.True(result.Success);
+            Assert.Empty(result.Warnings);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static string GroupedArticleWithCategories()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 3
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List all virtual machines
+        | Parameter | Required |
+        | --- | --- |
+        | subscription | No |
+
+        ## Show virtual machine
+        <!-- @mcpcli compute show -->
+        Example prompts include:
+        - Show the VM named 'vm-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+
+        ## Delete virtual machine
+        <!-- @mcpcli compute delete -->
+        Example prompts include:
+        - Delete the VM named 'vm-test'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string GroupedArticleWithCorrectCount()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List all virtual machines
+        | Parameter | Required |
+        | --- | --- |
+        | subscription | No |
+
+        ## Show virtual machine
+        <!-- @mcpcli compute show -->
+        Example prompts include:
+        - Show the VM named 'vm-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+
+        ## Related content
+        - Link
+        """;
+
+    [Fact]
     public async Task ValidateAsync_MissingToolFromArticle_ListsToolNameInError()
     {
         var testRoot = CreateTestRoot();
