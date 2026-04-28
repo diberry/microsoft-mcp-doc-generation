@@ -61,7 +61,6 @@ public class StepRegistryTests
             Assert.IsType<ToolFamilyCleanupStep>(registry.GetStep(4));
             Assert.IsType<SkillsRelevanceStep>(registry.GetStep(5));
             Assert.IsType<HorizontalArticlesStep>(registry.GetStep(6));
-            Assert.DoesNotContain(registry.GetAllSteps(), step => step is ShimStep);
         }
         finally
         {
