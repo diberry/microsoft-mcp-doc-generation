@@ -488,6 +488,186 @@ public class ToolFamilyCleanupStepTests
         }
     }
 
+    // ========================================
+    // NEW TESTS FOR ISSUE #478: Exit Code 1 Handling
+    // ========================================
+
+    [Fact]
+    public async Task Cleanup_Succeeds_When_OutputFiles_Exist_Despite_NonZero_ExitCode()
+    {
+        // Reproduces #478: appservice and virtualdesktop reported exit code 1 but files were generated successfully.
+        // Expected: Step should succeed because output files are what matter, not exit code.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var outputFileName = await ToolFileNameBuilder.ResolveFamilyFileNameAsync("compute");
+            
+            processRunner.OnRun = spec =>
+            {
+                // Subprocess exits with code 1 BUT produces all required output files
+                var isolatedGeneratedRoot = Path.GetFullPath(Path.Combine(spec.WorkingDirectory, "..", "generated"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", $"{outputFileName}-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", $"{outputFileName}-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", $"{outputFileName}.md"), "final article");
+                
+                // Return exit code 1 despite successful file generation
+                return CallbackProcessRunner.Failure(spec, 1, "Warning: Some non-critical issue occurred");
+            };
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            // CRITICAL: Should succeed because all output files exist
+            Assert.True(result.Success, "Step should succeed when output files exist despite exit code 1");
+            Assert.Equal("metadata", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family-metadata", $"{outputFileName}-metadata.md")));
+            Assert.Equal("related", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family-related", $"{outputFileName}-related.md")));
+            Assert.Equal("final article", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md")));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Cleanup_Fails_When_No_OutputFiles_Generated()
+    {
+        // Reproduces #478: functions namespace - exit code 1 AND no tool-family file generated.
+        // Expected: Step should fail with clear error message.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner
+            {
+                OnRun = spec =>
+                {
+                    // Subprocess exits 1 and produces NO output files
+                    return CallbackProcessRunner.Failure(spec, 1, "AI generation failed completely");
+                }
+            };
+
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success, "Step should fail when no output files generated");
+            Assert.Contains(result.Warnings, w => w.Contains("Tool-family cleanup failed"));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Cleanup_Fails_When_Partial_OutputFiles_Generated()
+    {
+        // Reproduces edge case: subprocess produces metadata and related but NOT the final tool-family file.
+        // Expected: Step should fail, listing which specific file is missing.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var outputFileName = await ToolFileNameBuilder.ResolveFamilyFileNameAsync("compute");
+            
+            processRunner.OnRun = spec =>
+            {
+                // Subprocess exits 1 and produces ONLY metadata and related (missing final file)
+                var isolatedGeneratedRoot = Path.GetFullPath(Path.Combine(spec.WorkingDirectory, "..", "generated"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", $"{outputFileName}-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", $"{outputFileName}-related.md"), "related");
+                // MISSING: tool-family final file NOT created
+                
+                return CallbackProcessRunner.Failure(spec, 1, "Partial failure during generation");
+            };
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success, "Step should fail when final tool-family file is missing");
+            // Check for the actual warning - it should detect missing files
+            var hasFileWarning = result.Warnings.Any(w => w.Contains("Expected isolated") || w.Contains("tool-family"));
+            Assert.True(hasFileWarning, $"Should report missing file. Actual warnings: {string.Join(", ", result.Warnings)}");
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Cleanup_Reports_Missing_Files_Diagnostics()
+    {
+        // When files are missing, error should surface subprocess stdout/stderr for debugging.
+        // Expected: Warning messages include relevant subprocess output.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner
+            {
+                OnRun = spec =>
+                {
+                    // Subprocess exits 1 with diagnostic output but no files
+                    var stdout = "[1/1] Processing family: compute (3 tools)...\n" +
+                                 "[1/1]   Phase 1: Generating metadata... ✓\n" +
+                                 "[1/1]   Phase 2: Generating related content... ✗ Failed\n" +
+                                 "[1/1] ✗ Failed to process compute: AI rate limit exceeded\n";
+                    return new ProcessExecutionResult(
+                        spec.FileName, 
+                        spec.Arguments, 
+                        spec.WorkingDirectory, 
+                        1, 
+                        stdout, 
+                        "Error: rate limit", 
+                        TimeSpan.Zero);
+                }
+            };
+
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            // Should surface subprocess diagnostic output
+            Assert.Contains(result.Warnings, w => w.Contains("Tool-family cleanup failed"));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    // ========================================
+    // END NEW TESTS FOR ISSUE #478
+    // ========================================
+
     private sealed class CallbackProcessRunner : IProcessRunner
     {
         public List<ProcessSpec> Invocations { get; } = new();

@@ -21,7 +21,13 @@ internal class Program
         try
         {
             // Parse command-line arguments
-            var (config, useMultiPhase) = ParseArguments(args);
+            var (config, useMultiPhase, verifyOnly) = ParseArguments(args);
+
+            // Verify-only mode: deterministic post-processing without AI
+            if (verifyOnly)
+            {
+                return RunVerifyOnlyMode();
+            }
 
             // Load Azure OpenAI configuration
             var aiOptions = GenerativeAIOptions.LoadFromEnvironmentOrDotEnv();
@@ -89,15 +95,21 @@ internal class Program
         }
     }
 
-    private static (CleanupConfiguration config, bool useMultiPhase) ParseArguments(string[] args)
+    private static (CleanupConfiguration config, bool useMultiPhase, bool verifyOnly) ParseArguments(string[] args)
     {
         var config = new CleanupConfiguration();
         bool useMultiPhase = false;
+        bool verifyOnly = false;
 
         for (int i = 0; i < args.Length; i++)
         {
             switch (args[i])
             {
+                case "--verify-only":
+                case "-v":
+                    verifyOnly = true;
+                    break;
+
                 case "--multi-phase":
                 case "-m":
                     useMultiPhase = true;
@@ -135,7 +147,51 @@ internal class Program
             }
         }
 
-        return (config, useMultiPhase);
+        return (config, useMultiPhase, verifyOnly);
+    }
+
+    private static int RunVerifyOnlyMode()
+    {
+        Console.WriteLine("Mode: Verify-only (deterministic post-processing)");
+        Console.WriteLine("Skipping all AI/generative steps — applying only deterministic processors");
+        Console.WriteLine();
+
+        var repoRoot = FindRepoRoot();
+        if (repoRoot is null)
+        {
+            Console.Error.WriteLine("ERROR: Could not find repository root (looked for generated-validated-* dirs).");
+            return 1;
+        }
+
+        var verifier = new VerifyOnlyProcessor(repoRoot);
+        return verifier.ProcessAllNamespaces();
+    }
+
+    private static string? FindRepoRoot()
+    {
+        // Walk up from the executable looking for generated-validated-* dirs
+        var dir = AppContext.BaseDirectory;
+        for (int i = 0; i < 10; i++)
+        {
+            if (Directory.GetDirectories(dir, "generated-validated-*").Length > 0)
+                return dir;
+            var parent = Directory.GetParent(dir);
+            if (parent is null) break;
+            dir = parent.FullName;
+        }
+
+        // Fallback: try CWD
+        var cwd = Directory.GetCurrentDirectory();
+        for (int i = 0; i < 10; i++)
+        {
+            if (Directory.GetDirectories(cwd, "generated-validated-*").Length > 0)
+                return cwd;
+            var parent = Directory.GetParent(cwd);
+            if (parent is null) break;
+            cwd = parent.FullName;
+        }
+
+        return null;
     }
 
     private static List<string> ValidateAIOptions(GenerativeAIOptions options)
@@ -143,7 +199,7 @@ internal class Program
         var missing = new List<string>();
         if (string.IsNullOrEmpty(options.ApiKey)) missing.Add("FOUNDRY_API_KEY");
         if (string.IsNullOrEmpty(options.Endpoint)) missing.Add("FOUNDRY_ENDPOINT");
-        if (string.IsNullOrEmpty(options.Deployment)) missing.Add("TOOL_FAMILY_CLEANUP_TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME");
+        if (string.IsNullOrEmpty(options.Deployment)) missing.Add("TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME");
         return missing;
     }
 
@@ -154,8 +210,13 @@ internal class Program
         Console.WriteLine("Modes:");
         Console.WriteLine("  Single-phase:  Process complete tool family files (default)");
         Console.WriteLine("  Multi-phase:   Assemble from individual tool files (--multi-phase)");
+        Console.WriteLine("  Verify-only:   Apply deterministic post-processors without AI (--verify-only)");
         Console.WriteLine();
         Console.WriteLine("Options:");
+        Console.WriteLine("  -v, --verify-only          Run deterministic post-processing only (no AI)");
+        Console.WriteLine("                             Applies the same 10 processors as PostProcessVerifier");
+        Console.WriteLine("                             Writes .after files for changed content");
+        Console.WriteLine();
         Console.WriteLine("  -m, --multi-phase          Enable multi-phase mode (tool-level assembly)");
         Console.WriteLine("                             Reads from ../generated/tools and assembles families");
         Console.WriteLine();
@@ -171,12 +232,13 @@ internal class Program
         Console.WriteLine("  -h, --help                 Display this help message");
         Console.WriteLine();
         Console.WriteLine("Environment variables (or .env file):");
-        Console.WriteLine("  FOUNDRY_API_KEY            Azure OpenAI API key");
-        Console.WriteLine("  FOUNDRY_ENDPOINT           Azure OpenAI endpoint URL");
-        Console.WriteLine("  TOOL_FAMILY_CLEANUP_TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME         Azure OpenAI deployment/model name");
+        Console.WriteLine("  FOUNDRY_API_KEY            Azure OpenAI API key (not needed for --verify-only)");
+        Console.WriteLine("  FOUNDRY_ENDPOINT           Azure OpenAI endpoint URL (not needed for --verify-only)");
+        Console.WriteLine("  TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME         Azure OpenAI deployment/model name (not needed for --verify-only)");
         Console.WriteLine();
         Console.WriteLine("Examples:");
         Console.WriteLine("  ToolFamilyCleanup                    # Single-phase with defaults");
         Console.WriteLine("  ToolFamilyCleanup --multi-phase      # Multi-phase mode (solves 16K token limit)");
+        Console.WriteLine("  ToolFamilyCleanup --verify-only      # Deterministic post-processing only");
     }
 }

@@ -13,7 +13,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private static readonly Regex FrontmatterRegex = new(@"^---\s*\n(.*?)\n---\s*\n?", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex HeadingRegex = new(@"(?m)^##\s+(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex McpCliRegex = new(@"(?m)^<!--\s*@mcpcli\s+(.+?)\s*-->$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex McpCliRegex = new(@"(?m)^\s*<!--\s*@mcpcli\s+(.+?)\s*-->$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly BrandingRule[] BrandingRules =
     [
@@ -78,12 +78,15 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 var toolFileLookup = GroupByToolKey(toolFiles);
                 var sectionLookup = GroupByToolKey(sections);
 
-                if (toolFileCount != articleSectionCount || frontmatterToolCount is null || frontmatterToolCount != toolFileCount)
+                var normalized = articleContent.Replace("\r\n", "\n", StringComparison.Ordinal);
+                var mcpMarkerCount = McpCliRegex.Matches(normalized).Count;
+
+                if (toolFileCount != mcpMarkerCount || frontmatterToolCount is null || frontmatterToolCount != toolFileCount)
                 {
                     var details = new List<string>();
-                    if (toolFileCount != articleSectionCount)
+                    if (toolFileCount != mcpMarkerCount)
                     {
-                        details.Add($"tool files: {toolFileCount}, article sections: {articleSectionCount}");
+                        details.Add($"tool files: {toolFileCount}, @mcpcli markers: {mcpMarkerCount}");
                     }
                     if (frontmatterToolCount is null)
                     {

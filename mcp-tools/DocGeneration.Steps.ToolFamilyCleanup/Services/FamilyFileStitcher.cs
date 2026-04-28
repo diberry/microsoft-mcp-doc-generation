@@ -63,7 +63,7 @@ public class FamilyFileStitcher
         markdown = AcronymExpander.ExpandAll(markdown);
 
         // 5. Post-processing: inject required frontmatter fields (#155)
-        markdown = FrontmatterEnricher.Enrich(markdown);
+        markdown = FrontmatterEnricher.EnrichWithDefaults(markdown);
 
         // 6. Post-processing: strip duplicate example blocks (#153)
         markdown = DuplicateExampleStripper.Strip(markdown);

@@ -10,9 +10,13 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// Tests for FrontmatterEnricher to ensure required Microsoft Learn frontmatter
 /// fields are injected into tool-family articles.
 /// Fixes: #155 — generated articles missing required frontmatter fields.
+/// Phase 0: Updated to test instance-based API with clock injection.
 /// </summary>
 public class FrontmatterEnricherTests
 {
+    private static readonly DateTime FixedDate = new DateTime(2025, 3, 15, 10, 30, 0, DateTimeKind.Utc);
+    private static Func<DateTime> FixedClock => () => FixedDate;
+
     // ── Core injection behavior ─────────────────────────────────────
 
     [Fact]
@@ -28,7 +32,8 @@ tool_count: 5
 
 # Azure MCP Server tools for Azure Storage";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         Assert.Contains("author: diberry", result);
         Assert.Contains("ms.author: diberry", result);
@@ -54,7 +59,8 @@ mcp-cli.version: 2.0.0-beta.31
 
 # Azure MCP Server tools for Key Vault";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         // All original fields should be preserved
         Assert.Contains("title: Azure MCP Server tools for Key Vault", result);
@@ -83,7 +89,8 @@ ms.custom: build-2025
 
 # Azure MCP Server tools for Monitor";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         // Count author fields — should be exactly 1
         var authorCount = CountOccurrences(result, "author: diberry");
@@ -104,10 +111,13 @@ ms.service: azure-mcp-server
 
 # Azure MCP Server tools for SQL";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         // ms.date should be in MM/DD/YYYY format
         Assert.Matches(@"ms\.date: \d{2}/\d{2}/\d{4}", result);
+        // With fixed clock, should be exactly the fixed date
+        Assert.Contains("ms.date: 03/15/2025", result);
     }
 
     [Fact]
@@ -126,7 +136,8 @@ The Azure MCP Server lets you manage Cosmos DB accounts.
 
 List all Cosmos DB accounts.";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         // Body content should be completely untouched
         Assert.Contains("The Azure MCP Server lets you manage Cosmos DB accounts.", result);
@@ -149,7 +160,8 @@ tool_count: 5
 
 # Azure MCP Server tools for Azure Storage";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         Assert.Contains("ms.reviewer: mbaldwin", result);
     }
@@ -165,7 +177,8 @@ ms.service: azure-mcp-server
 
 # Azure MCP Server tools for Key Vault";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         var count = CountOccurrences(result, "ms.reviewer: mbaldwin");
         Assert.Equal(1, count);
@@ -183,7 +196,8 @@ ms.service: azure-mcp-server
 
 Some body content.";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
         var normalized = result.Replace("\r\n", "\n");
 
         // Extract frontmatter block
@@ -201,7 +215,8 @@ Some body content.";
     {
         var markdown = "# Just a heading\n\nSome content.";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         Assert.Equal(markdown, result);
     }
@@ -209,8 +224,9 @@ Some body content.";
     [Fact]
     public void Enrich_NullOrEmpty_ReturnsInput()
     {
-        Assert.Equal("", FrontmatterEnricher.Enrich(""));
-        Assert.Null(FrontmatterEnricher.Enrich(null!));
+        var enricher = new FrontmatterEnricher(FixedClock);
+        Assert.Equal("", enricher.Enrich(""));
+        Assert.Null(enricher.Enrich(null!));
     }
 
     [Fact]
@@ -223,7 +239,8 @@ ms.service: azure-mcp-server
 
 # Azure MCP Server tools for Storage";
 
-        var result = FrontmatterEnricher.Enrich(markdown);
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
 
         // content_well_notification must be YAML array format
         Assert.Contains("content_well_notification:", result);
@@ -233,6 +250,83 @@ ms.service: azure-mcp-server
         int keyLine = Array.FindIndex(lines, l => l.StartsWith("content_well_notification:"));
         Assert.True(keyLine >= 0, "content_well_notification key not found");
         Assert.Equal("  - AI-contribution", lines[keyLine + 1]);
+    }
+
+    // ── Phase 0: Clock injection tests ──────────────────────────────
+
+    [Fact]
+    public void Enrich_CustomClock_ProducesExpectedDate()
+    {
+        var customDate = new DateTime(2026, 12, 25, 14, 30, 0, DateTimeKind.Utc);
+        var customClock = () => customDate;
+
+        var markdown = @"---
+title: Azure MCP Server tools for Storage
+ms.service: azure-mcp-server
+---
+
+# Azure MCP Server tools for Storage";
+
+        var enricher = new FrontmatterEnricher(customClock);
+        var result = enricher.Enrich(markdown);
+
+        Assert.Contains("ms.date: 12/25/2026", result);
+    }
+
+    [Fact]
+    public void Enrich_DefaultClock_UsesTodaysDate()
+    {
+        var markdown = @"---
+title: Azure MCP Server tools for Storage
+ms.service: azure-mcp-server
+---
+
+# Azure MCP Server tools for Storage";
+
+        var enricher = new FrontmatterEnricher(); // No clock provided, should use default
+        var result = enricher.Enrich(markdown);
+
+        var expectedDate = DateTime.UtcNow.ToString("MM/dd/yyyy");
+        Assert.Contains($"ms.date: {expectedDate}", result);
+    }
+
+    [Fact]
+    public void Enrich_UsesMetadataConstants()
+    {
+        var markdown = @"---
+title: Azure MCP Server tools for Storage
+ms.service: azure-mcp-server
+---
+
+# Azure MCP Server tools for Storage";
+
+        var enricher = new FrontmatterEnricher(FixedClock);
+        var result = enricher.Enrich(markdown);
+
+        // Verify all constants from MetadataConstants are used
+        Assert.Contains($"author: {MetadataConstants.Author}", result);
+        Assert.Contains($"ms.author: {MetadataConstants.Author}", result);
+        Assert.Contains($"ms.reviewer: {MetadataConstants.Reviewer}", result);
+        Assert.Contains($"ai-usage: {MetadataConstants.AiUsage}", result);
+        Assert.Contains(MetadataConstants.ContentWellValue, result);
+        Assert.Contains($"ms.custom: {MetadataConstants.MsCustom}", result);
+    }
+
+    [Fact]
+    public void EnrichWithDefaults_WorksWithoutInstantiation()
+    {
+        var markdown = @"---
+title: Azure MCP Server tools for Storage
+ms.service: azure-mcp-server
+---
+
+# Azure MCP Server tools for Storage";
+
+        var result = FrontmatterEnricher.EnrichWithDefaults(markdown);
+
+        Assert.Contains("author: diberry", result);
+        Assert.Contains("ms.date:", result);
+        Assert.Matches(@"ms\.date: \d{2}/\d{2}/\d{4}", result);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────
