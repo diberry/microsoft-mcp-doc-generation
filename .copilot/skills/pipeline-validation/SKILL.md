@@ -27,6 +27,19 @@ Invoke this skill when the user says any of:
 | Working directory | Repository root (`microsoft-mcp-doc-generation/`) |
 | Bash (for prompt-regression.sh) | Git Bash on Windows or native on Linux/macOS |
 
+## Limited Validation (No AI Credentials)
+
+When `FOUNDRY_API_KEY` is unavailable, you can still validate pipeline infrastructure — only Phase 3 (Regenerate) requires AI credentials. What still works:
+
+| Capability | Command | Why it works |
+|---|---|---|
+| Phase 1 (LKG preservation) | `mv generated-{namespace} generated-{namespace}-lkg` | File operations only |
+| Phase 2 (Dry-run) | `./start.sh {namespace} --dry-run` | Validates step wiring, no AI calls |
+| Unit/integration tests | `dotnet test` | All 2,397+ tests run without AI |
+| Regression status | `./prompt-regression.sh status` | Checks existing baselines only |
+
+Without AI credentials, you can validate pipeline infrastructure (build, wiring, tests) but cannot regenerate content for comparison.
+
 ## Representative Namespaces
 
 The following 5 namespaces provide broad coverage across pipeline complexity:
@@ -88,19 +101,20 @@ Pipeline steps in order:
 2. ExamplePrompts
 3. ToolGeneration
 4. ToolFamilyCleanup
-5. SkillsRelevance (FailurePolicy.Warn — non-fatal)
+5. SkillsRelevance (FailurePolicy.Warn — non-fatal; a Step 5 failure alone does NOT constitute a regression)
 6. HorizontalArticles
 
 ### Phase 4: Compare
 
-Compare regenerated output against the LKG baseline:
+Compare regenerated output against the LKG baseline. **Automated regression checks are mandatory — run these first:**
 
 ```bash
-# Automated comparison using prompt-regression.sh:
-./prompt-regression.sh test
-./prompt-regression.sh compare
+# REQUIRED — run automated comparison before any manual review:
+./prompt-regression.sh test && ./prompt-regression.sh compare
 ./prompt-regression.sh report
 ```
+
+If `prompt-regression.sh test` or `compare` fails, investigate the flagged items before proceeding. Only after automated checks pass, perform manual review of flagged or ambiguous items.
 
 **Manual comparison focus areas** (in priority order):
 
@@ -135,6 +149,20 @@ Check Step 0 (bootstrap) — source data from microsoft/mcp repo
 ```
 
 Each step's output is preserved in subdirectories of `generated-{namespace}/`, enabling precise isolation of where the regression was introduced.
+
+**Concrete diff commands:**
+
+```bash
+# Compare tool-family output against LKG:
+diff -r generated-{namespace}/tool-family/ lkg-{namespace}/tool-family/
+
+# Compare full output trees:
+diff -r generated-{namespace}/ lkg-{namespace}/ --brief
+```
+
+**What to look for:** tool count must match LKG; H2 section headers must be preserved; no orphaned parameters.
+
+**What to ignore:** minor AI wording variations; timestamp differences in frontmatter.
 
 ### Phase 6: Report
 
