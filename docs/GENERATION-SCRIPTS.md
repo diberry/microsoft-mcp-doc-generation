@@ -127,10 +127,10 @@ Runs automatically inside Step 4.
 
 ### Development Shortcut
 
-Use the root helper below when you only want the early pipeline stages during local iteration:
+Run only the early pipeline stages during local iteration:
 
 ```bash
-./start-steps-1-2-only.sh
+./start.sh 1,2 | tee start-log.txt
 ```
 
 ## Quick Reference
