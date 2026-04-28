@@ -127,7 +127,7 @@ These scripts are **no longer on the standard execution path** (previously calle
 | `validate-env.ps1` | Validates `.env` for Azure OpenAI-backed steps (used by legacy scripts) |
 | `Shared-Functions.ps1` | Shared functions library used by legacy PowerShell scripts |
 | `Validate-ToolFamily-PostAssembly.ps1` | Post-assembly tool-family validation (deprecated; validation now integrated into `DocGeneration.Steps.ToolFamilyCleanupStep`) |
-| `Invoke-CliAnalyzer.ps1` | Manual helper for CLI analyzer generation |
+| `Invoke-CliAnalyzer.ps1` | ⚠️ DEPRECATED — CliAnalyzer project deleted in architecture simplification (issue #488) |
 
 ## standalone/
 
