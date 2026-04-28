@@ -211,7 +211,8 @@ try {
     Write-Divider
     Write-Host ""
     
-    & "$PSScriptRoot\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true -SkipBuild $SkipBuild
+    # REMOVED: CliAnalyzer project deleted in architecture simplification (issue #488)
+    # & "$PSScriptRoot\Invoke-CliAnalyzer.ps1" -OutputPath $OutputPath -HtmlOnly $true -SkipBuild $SkipBuild
     Write-Host ""
 
     # ========================================================================

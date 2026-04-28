@@ -1,5 +1,11 @@
 #!/usr/bin/env pwsh
 <#
+⚠️  DEPRECATED - This tool has been removed from the codebase.
+    The DocGeneration.Steps.Bootstrap.CliAnalyzer project no longer exists.
+    This script is kept for historical reference only.
+    
+    If you need CLI analysis functionality, please contact the team.
+
 .SYNOPSIS
     Runs the CLI Analyzer to generate Markdown reports of the CLI JSON data
 

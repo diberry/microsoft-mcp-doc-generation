@@ -1,25 +1,23 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using ToolFamilyCleanup.Services;
 using System.Text;
 
-namespace DocGeneration.Tools.PostProcessVerifier;
+namespace ToolFamilyCleanup.Services;
 
 /// <summary>
-/// Applies the deterministic post-processing chain to existing tool-family files
-/// and reports what changed — without modifying originals.
-/// Usage:
-///   dotnet run                          # process all namespaces
-///   dotnet run -- --namespace deploy    # process one namespace
+/// Applies deterministic post-processing to existing tool-family files
+/// without AI/generative steps. Equivalent to the former PostProcessVerifier tool.
 /// </summary>
-internal static class Program
+public class VerifyOnlyProcessor
 {
+    private readonly string _repoRoot;
+
     // Post-processor descriptors: name + delegate, in pipeline order (stages 4-13).
     private static readonly (string Name, Func<string, string> Apply)[] Processors =
     [
         ("AcronymExpander",        AcronymExpander.ExpandAll),
-        ("FrontmatterEnricher",    FrontmatterEnricher.Enrich),
+        ("FrontmatterEnricher",    FrontmatterEnricher.EnrichWithDefaults),
         ("DuplicateExampleStripper", DuplicateExampleStripper.Strip),
         ("AnnotationSpaceFixer",   AnnotationSpaceFixer.Fix),
         ("PresentTenseFixer",      PresentTenseFixer.Fix),
@@ -30,27 +28,14 @@ internal static class Program
         ("JsonSchemaCollapser",    JsonSchemaCollapser.Collapse),
     ];
 
-    static int Main(string[] args)
+    public VerifyOnlyProcessor(string repoRoot)
     {
-        var repoRoot = FindRepoRoot();
-        if (repoRoot is null)
-        {
-            Console.Error.WriteLine("ERROR: Could not find repository root (looked for generated-validated-* dirs).");
-            return 1;
-        }
+        _repoRoot = repoRoot;
+    }
 
-        // Parse --namespace filter
-        string? nsFilter = null;
-        for (int i = 0; i < args.Length - 1; i++)
-        {
-            if (args[i] is "--namespace" or "-n")
-            {
-                nsFilter = args[i + 1];
-                break;
-            }
-        }
-
-        var namespaceDirs = Directory.GetDirectories(repoRoot, "generated-validated-*")
+    public int ProcessAllNamespaces()
+    {
+        var namespaceDirs = Directory.GetDirectories(_repoRoot, "generated-validated-*")
             .OrderBy(d => d)
             .ToList();
 
@@ -69,11 +54,8 @@ internal static class Program
         foreach (var nsDir in namespaceDirs)
         {
             var nsName = Path.GetFileName(nsDir).Replace("generated-validated-", "");
-
-            if (nsFilter is not null && !nsName.Equals(nsFilter, StringComparison.OrdinalIgnoreCase))
-                continue;
-
             var toolFamilyDir = Path.Combine(nsDir, "tool-family");
+            
             if (!Directory.Exists(toolFamilyDir))
                 continue;
 
@@ -215,31 +197,4 @@ internal static class Program
 
     private static int CountLines(string text) =>
         text.Length == 0 ? 0 : text.Split('\n').Length;
-
-    private static string? FindRepoRoot()
-    {
-        // Walk up from the executable looking for generated-validated-* dirs
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            if (Directory.GetDirectories(dir, "generated-validated-*").Length > 0)
-                return dir;
-            var parent = Directory.GetParent(dir);
-            if (parent is null) break;
-            dir = parent.FullName;
-        }
-
-        // Fallback: try CWD
-        var cwd = Directory.GetCurrentDirectory();
-        for (int i = 0; i < 10; i++)
-        {
-            if (Directory.GetDirectories(cwd, "generated-validated-*").Length > 0)
-                return cwd;
-            var parent = Directory.GetParent(cwd);
-            if (parent is null) break;
-            cwd = parent.FullName;
-        }
-
-        return null;
-    }
 }

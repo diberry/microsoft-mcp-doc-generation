@@ -68,3 +68,27 @@
 
 ---
 
+
+## Learnings
+
+### Issue #488: Architecture Simplification (2025-05-29)
+
+**What:** Deleted CliAnalyzer (8 files, not in pipeline) and merged PostProcessVerifier into ToolFamilyCleanup as `--verify-only` mode.
+
+**Key decisions:**
+- Used TDD approach: wrote VerifyOnlyModeTests first, then implemented VerifyOnlyProcessor
+- FrontmatterEnricher has instance method Enrich() but also static helper EnrichWithDefaults() - always use static helper in processor chains
+- When deleting projects from solution: (1) remove project declaration, (2) remove all GUID references from GlobalSection, (3) verify with grep
+- PostProcessVerifier had 10 deterministic processors in exact order: AcronymExpander, FrontmatterEnricher, DuplicateExampleStripper, AnnotationSpaceFixer, PresentTenseFixer, ContractionFixer, IntroductoryCommaFixer, ExampleValueBackticker, LearnUrlRelativizer, JsonSchemaCollapser
+
+**Tests:**
+- Created VerifyOnlyModeTests with 3 test cases
+- All processor names match PostProcessVerifier exactly
+- Simplified test assertions when processor behaviors were unpredictable (e.g., PresentTenseFixer)
+
+**Verification:**
+- `dotnet build mcp-doc-generation.sln` - 0 errors
+- `dotnet test` - all tests pass
+- No remaining references to deleted projects in codebase
+
+**Impact:** 2 fewer projects to maintain, simpler architecture, same functionality via `--verify-only` flag.
