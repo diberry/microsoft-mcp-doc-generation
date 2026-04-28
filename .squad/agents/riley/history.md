@@ -2,30 +2,6 @@
 
 ## Learnings
 
-### 2025-07-17: Metadata, Hard-coded Strings, and Branding Architecture Analysis
-
-**Context:** Dina requested a thorough rethink of how the generation pipeline handles metadata, hard-coded strings, and branding terms — focusing on maintainability, testability, and separation of concerns.
-
-**Key findings:**
-
-1. **6 production files contain hard-coded metadata** — `FrontmatterEnricher.cs` (author/reviewer/campaign), `DeterministicFrontmatterGenerator.cs` (title template, ms.service, ms.topic), `PostProcessor.cs` (product name), `AcronymExpander.cs` (product branding fallbacks), `DeterministicRelatedContentGenerator.cs` (related links with product name), plus 2 prompt files.
-
-2. **"Azure MCP Server" appears in 8+ production files and 10+ test files** — no single source of truth for the product name. A rebrand would require touching every one.
-
-3. **All 5 affected generators are `static` classes** — impossible to test with alternate config values or mock dates. `DateTime.UtcNow` is called directly in 2 generators.
-
-4. **Campaign values (`ms.custom: build-2025`) require code changes to update** — should be a JSON config edit. Same for author/reviewer rotation.
-
-5. **Existing `DataFileLoader` pattern is the right foundation** — already does cached lazy loading for brand mappings, compound words, stop words, and common parameters. A `LoadMetadataConfigAsync()` method fits naturally.
-
-6. **`FrontmatterUtility.cs` in shared is already parameterized** — accepts `msTopic` as a parameter. This is the model other generators should follow.
-
-**Decision filed:** `.squad/decisions/inbox/riley-metadata-rethink.md`
-
-**Proposed 7-phase migration:** Config infrastructure → FrontmatterEnricher → DeterministicFrontmatterGenerator → RelatedContentGenerator → PostProcessor/AcronymExpander → Prompt sync → Test cleanup. Each phase independently shippable.
-
----
-
 ### 2026-04-17: Skills Generation — Customer-Facing Page Design
 
 **Context:** Dina directed that generated skill doc pages must NOT duplicate SKILL.md (anthropic-spec agent instruction files). Pages must be customer-facing reference docs answering "what do I need to know to use this skill successfully?"
