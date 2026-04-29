@@ -1,0 +1,12 @@
+  Step 0: Bootstrap pipeline
+Upstream MCP branch: release/azure/2.x
+WARNING: Missing required AI configuration: FOUNDRY_API_KEY
+WARNING: Missing required AI configuration: FOUNDRY_ENDPOINT
+WARNING: Missing required AI configuration: FOUNDRY_MODEL_NAME
+ERROR: Step 0 failed.
+ERROR: Critical failures summary:
+ERROR:   - Artifact: Bootstrap pipeline (pipeline step)
+ERROR:     Step: Step 0 - Bootstrap pipeline
+ERROR:     Error: Missing required AI configuration: FOUNDRY_API_KEY
+ERROR:     Record: C:\Users\diberry\repos\diberry\microsoft-mcp-doc-generation\generated-marketplace\critical-failures\20260429T163102297Z-step-00-pipeline-step-bootstrap-pipeline-01.json
+ERROR: Pipeline stopped with 1 critical failure(s) recorded.
