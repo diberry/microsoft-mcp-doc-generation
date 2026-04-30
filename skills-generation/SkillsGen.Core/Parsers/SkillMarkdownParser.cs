@@ -975,25 +975,30 @@ public partial class SkillMarkdownParser : ISkillParser
     }
 
     /// <summary>
-    /// Extracts MANDATORY/PREFER OVER directives and codebase detection markers from description.
+    /// Extracts MANDATORY/PREFER OVER directives and codebase detection markers from description only.
+    /// Directives and markers are metadata about the skill's activation behavior and appear
+    /// exclusively in the frontmatter description field — never in body prose or code samples.
     /// </summary>
     internal static ActivationTrigger? ExtractActivationTriggers(string description, string body)
     {
-        if (string.IsNullOrWhiteSpace(description) && string.IsNullOrWhiteSpace(body))
+        if (string.IsNullOrWhiteSpace(description))
             return null;
 
-        var fullText = $"{description}\n{body}";
+        // Only search the description for directives and markers.
+        // Body text contains code samples, notes, and prose that should NOT be
+        // interpreted as activation metadata (fixes #497: random notes/variable names
+        // being extracted as codebase markers).
         string? directive = null;
         string? preferOver = null;
         var markers = new List<string>();
 
-        // Parse MANDATORY directive
-        var mandatoryMatch = Regex.Match(fullText, @"\bMANDATORY\b\s*(?:when\s+)?(.+?)(?:\.|—|$)", RegexOptions.IgnoreCase);
+        // Parse MANDATORY directive — require ALL CAPS to distinguish from prose usage
+        var mandatoryMatch = Regex.Match(description, @"\bMANDATORY\b\s*(?:when\s+)?(.+?)(?:\.|—|$)");
         if (mandatoryMatch.Success)
             directive = $"MANDATORY {mandatoryMatch.Groups[1].Value.Trim()}";
 
         // Parse PREFER OVER directive
-        var preferMatch = Regex.Match(fullText, @"\bPREFER\s+OVER\s+(\S+)", RegexOptions.IgnoreCase);
+        var preferMatch = Regex.Match(description, @"\bPREFER\s+OVER\s+(\S+)", RegexOptions.IgnoreCase);
         if (preferMatch.Success)
             preferOver = preferMatch.Groups[1].Value.Trim().TrimEnd('.', ',', ';');
 
@@ -1001,19 +1006,21 @@ public partial class SkillMarkdownParser : ISkillParser
         if (directive == null && preferOver != null)
             directive = $"PREFER OVER {preferOver}";
 
-        // Extract detection markers: patterns like @package/name, file patterns, class names in backticks
+        // Extract detection markers from description only.
+        // Valid markers: npm packages, items after "codebase contains", "detects", "markers:"
+        // Removed overly-broad "and `X`" pattern that caught arbitrary variable names.
         var markerPatterns = new[]
         {
             @"@[\w-]+/[\w-]+",                           // npm packages: @github/copilot-sdk
             @"(?<=\bcodebase\s+contains\s+)`([^`]+)`",   // codebase contains `X`
             @"(?<=\b[Dd]etects?\s+)`([^`]+)`",           // detects `X` or Detects `X`
             @"(?<=\bmarkers?\s*:\s*)`([^`]+)`",           // markers: `X`
-            @"(?<=and\s+)`([^`]+)`"                       // and `X` (continuation of detection list)
+            @"(?<=\bcodebase\s+contains\s+`[^`]+`\s+(?:or|and)\s+)`([^`]+)`"  // continuation after "codebase contains `X` or/and `Y`"
         };
 
         foreach (var pattern in markerPatterns)
         {
-            var markerMatches = Regex.Matches(fullText, pattern);
+            var markerMatches = Regex.Matches(description, pattern);
             foreach (Match m in markerMatches)
             {
                 var value = m.Groups.Count > 1 && m.Groups[1].Success
