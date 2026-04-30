@@ -405,6 +405,9 @@ function Get-ArticleSections {
         [string]$NamespaceName
     )
 
+    # H3 headings that are structural (not tools) and should be excluded
+    $excludedH3Names = @('Overview', 'Prerequisites', 'Parameters', 'Examples', 'Remarks', 'Related')
+
     $normalized = $ArticleContent -replace "`r`n", "`n"
     $frontmatterMatch = [regex]::Match($normalized, '(?s)^---\n(.*?)\n---\n?')
     if (-not $frontmatterMatch.Success) {
@@ -415,6 +418,7 @@ function Get-ArticleSections {
     $body = $normalized.Substring($frontmatterMatch.Length)
     $headingMatches = [regex]::Matches($body, '(?m)^##\s+(.*)$')
     $sections = New-Object System.Collections.Generic.List[object]
+    $detectionMode = 'single-resource'
 
     for ($index = 0; $index -lt $headingMatches.Count; $index++) {
         $heading = $headingMatches[$index].Groups[1].Value.Trim()
@@ -426,82 +430,189 @@ function Get-ArticleSections {
             continue
         }
 
-        $sectionLines = $sectionText -split "`n"
-        $commands = @(Get-McpCliCommands $sectionText)
-        $toolKey = if ($commands.Count -gt 0) {
-            Convert-CommandToToolKey -CommandText $commands[0] -NamespaceName $NamespaceName
-        } else {
-            Convert-ToSlug $heading
-        }
+        # Adaptive H3 detection: check for H3 sub-headings within this H2
+        $h3Matches = [regex]::Matches($sectionText, '(?m)^###\s+(.*)$')
+        $toolH3s = @($h3Matches | Where-Object {
+            $h3Name = $_.Groups[1].Value.Trim()
+            $h3Name -notin $excludedH3Names
+        })
 
-        $markerLineIndices = New-Object System.Collections.Generic.List[int]
-        $exampleHeaderIndex = -1
-        $tableStartIndex = -1
-        $alternateExampleHeader = $null
+        if ($toolH3s.Count -gt 0) {
+            # Multi-resource mode: H2 is a resource group, H3s are tools
+            $detectionMode = 'multi-resource'
+            Write-Verbose "H2 '$heading': multi-resource mode - $($toolH3s.Count) H3 tool(s) detected"
 
-        for ($lineIndex = 0; $lineIndex -lt $sectionLines.Count; $lineIndex++) {
-            $trimmed = $sectionLines[$lineIndex].Trim()
-            if ($trimmed -match '^<!--\s*@mcpcli\s+') {
-                $markerLineIndices.Add($lineIndex)
-            }
-            if ($trimmed -eq 'Example prompts include:') {
-                $exampleHeaderIndex = $lineIndex
-            }
-            if ($tableStartIndex -lt 0 -and $trimmed.StartsWith('|')) {
-                $tableStartIndex = $lineIndex
-            }
-            if (-not $alternateExampleHeader -and $trimmed -match '^(?i)(example prompts|example commands|usage examples|examples|try this|to .* use commands like):') {
-                $alternateExampleHeader = $trimmed
-            }
-        }
+            foreach ($h3Match in $toolH3s) {
+                $h3Heading = $h3Match.Groups[1].Value.Trim()
+                $h3StartIndex = $h3Match.Index
+                # Find end of this H3: next H3 or end of H2 section
+                $h3EndIndex = $sectionText.Length
+                $allH3InSection = [regex]::Matches($sectionText, '(?m)^###\s+(.*)$')
+                for ($h3i = 0; $h3i -lt $allH3InSection.Count; $h3i++) {
+                    if ($allH3InSection[$h3i].Index -eq $h3StartIndex -and $h3i -lt $allH3InSection.Count - 1) {
+                        $h3EndIndex = $allH3InSection[$h3i + 1].Index
+                        break
+                    }
+                }
+                $h3Text = $sectionText.Substring($h3StartIndex, $h3EndIndex - $h3StartIndex).TrimEnd()
 
-        $examplePrompts = New-Object System.Collections.Generic.List[string]
-        if ($exampleHeaderIndex -ge 0) {
-            $currentPrompt = $null
-            for ($lineIndex = $exampleHeaderIndex + 1; $lineIndex -lt $sectionLines.Count; $lineIndex++) {
-                $trimmed = $sectionLines[$lineIndex].Trim()
-                if ($trimmed.StartsWith('|') -or $trimmed -match '^\[Tool annotation hints\]' -or $trimmed -match '^Destructive:' -or $trimmed -match '^<!--\s*@mcpcli\s+') {
-                    break
+                $h3Lines = $h3Text -split "`n"
+                $commands = @(Get-McpCliCommands $h3Text)
+                $toolKey = if ($commands.Count -gt 0) {
+                    Convert-CommandToToolKey -CommandText $commands[0] -NamespaceName $NamespaceName
+                } else {
+                    Convert-ToSlug $h3Heading
                 }
 
-                if ($trimmed -match '^-\s+') {
+                $markerLineIndices = New-Object System.Collections.Generic.List[int]
+                $exampleHeaderIndex = -1
+                $tableStartIndex = -1
+                $alternateExampleHeader = $null
+
+                for ($lineIndex = 0; $lineIndex -lt $h3Lines.Count; $lineIndex++) {
+                    $trimmed = $h3Lines[$lineIndex].Trim()
+                    if ($trimmed -match '^<!--\s*@mcpcli\s+') {
+                        $markerLineIndices.Add($lineIndex)
+                    }
+                    if ($trimmed -eq 'Example prompts include:') {
+                        $exampleHeaderIndex = $lineIndex
+                    }
+                    if ($tableStartIndex -lt 0 -and $trimmed.StartsWith('|')) {
+                        $tableStartIndex = $lineIndex
+                    }
+                    if (-not $alternateExampleHeader -and $trimmed -match '^(?i)(example prompts|example commands|usage examples|examples|try this|to .* use commands like):') {
+                        $alternateExampleHeader = $trimmed
+                    }
+                }
+
+                $examplePrompts = New-Object System.Collections.Generic.List[string]
+                if ($exampleHeaderIndex -ge 0) {
+                    $currentPrompt = $null
+                    for ($lineIndex = $exampleHeaderIndex + 1; $lineIndex -lt $h3Lines.Count; $lineIndex++) {
+                        $trimmed = $h3Lines[$lineIndex].Trim()
+                        if ($trimmed.StartsWith('|') -or $trimmed -match '^\[Tool annotation hints\]' -or $trimmed -match '^Destructive:' -or $trimmed -match '^<!--\s*@mcpcli\s+') {
+                            break
+                        }
+
+                        if ($trimmed -match '^-\s+') {
+                            if ($currentPrompt) {
+                                $examplePrompts.Add($currentPrompt)
+                            }
+                            $currentPrompt = ($trimmed -replace '^-\s+', '').Trim()
+                            continue
+                        }
+
+                        if ($currentPrompt -and -not [string]::IsNullOrWhiteSpace($trimmed)) {
+                            $currentPrompt = "$currentPrompt $trimmed"
+                        }
+                    }
+
                     if ($currentPrompt) {
                         $examplePrompts.Add($currentPrompt)
                     }
-                    $currentPrompt = ($trimmed -replace '^-\s+', '').Trim()
-                    continue
                 }
 
-                if ($currentPrompt -and -not [string]::IsNullOrWhiteSpace($trimmed)) {
-                    $currentPrompt = "$currentPrompt $trimmed"
+                $parameterRows = Get-SectionParameterRows $h3Lines
+                $requiredParameters = @($parameterRows | Where-Object { $_.IsRequired } | Select-Object -ExpandProperty ParameterName)
+
+                $sections.Add([pscustomobject]@{
+                    Heading = $h3Heading
+                    ToolKey = $toolKey
+                    Commands = $commands
+                    MarkerCount = $markerLineIndices.Count
+                    MarkerLineIndices = @($markerLineIndices)
+                    ExampleHeaderIndex = $exampleHeaderIndex
+                    TableStartIndex = $tableStartIndex
+                    AlternateExampleHeader = $alternateExampleHeader
+                    ExamplePrompts = @($examplePrompts)
+                    RequiredParameters = @($requiredParameters)
+                    ParentGroup = $heading
+                })
+            }
+        } else {
+            # Single-resource mode: H2 is a tool itself
+            Write-Verbose "H2 '$heading': single-resource mode - treating H2 as tool"
+
+            $sectionLines = $sectionText -split "`n"
+            $commands = @(Get-McpCliCommands $sectionText)
+            $toolKey = if ($commands.Count -gt 0) {
+                Convert-CommandToToolKey -CommandText $commands[0] -NamespaceName $NamespaceName
+            } else {
+                Convert-ToSlug $heading
+            }
+
+            $markerLineIndices = New-Object System.Collections.Generic.List[int]
+            $exampleHeaderIndex = -1
+            $tableStartIndex = -1
+            $alternateExampleHeader = $null
+
+            for ($lineIndex = 0; $lineIndex -lt $sectionLines.Count; $lineIndex++) {
+                $trimmed = $sectionLines[$lineIndex].Trim()
+                if ($trimmed -match '^<!--\s*@mcpcli\s+') {
+                    $markerLineIndices.Add($lineIndex)
+                }
+                if ($trimmed -eq 'Example prompts include:') {
+                    $exampleHeaderIndex = $lineIndex
+                }
+                if ($tableStartIndex -lt 0 -and $trimmed.StartsWith('|')) {
+                    $tableStartIndex = $lineIndex
+                }
+                if (-not $alternateExampleHeader -and $trimmed -match '^(?i)(example prompts|example commands|usage examples|examples|try this|to .* use commands like):') {
+                    $alternateExampleHeader = $trimmed
                 }
             }
 
-            if ($currentPrompt) {
-                $examplePrompts.Add($currentPrompt)
+            $examplePrompts = New-Object System.Collections.Generic.List[string]
+            if ($exampleHeaderIndex -ge 0) {
+                $currentPrompt = $null
+                for ($lineIndex = $exampleHeaderIndex + 1; $lineIndex -lt $sectionLines.Count; $lineIndex++) {
+                    $trimmed = $sectionLines[$lineIndex].Trim()
+                    if ($trimmed.StartsWith('|') -or $trimmed -match '^\[Tool annotation hints\]' -or $trimmed -match '^Destructive:' -or $trimmed -match '^<!--\s*@mcpcli\s+') {
+                        break
+                    }
+
+                    if ($trimmed -match '^-\s+') {
+                        if ($currentPrompt) {
+                            $examplePrompts.Add($currentPrompt)
+                        }
+                        $currentPrompt = ($trimmed -replace '^-\s+', '').Trim()
+                        continue
+                    }
+
+                    if ($currentPrompt -and -not [string]::IsNullOrWhiteSpace($trimmed)) {
+                        $currentPrompt = "$currentPrompt $trimmed"
+                    }
+                }
+
+                if ($currentPrompt) {
+                    $examplePrompts.Add($currentPrompt)
+                }
             }
+
+            $parameterRows = Get-SectionParameterRows $sectionLines
+            $requiredParameters = @($parameterRows | Where-Object { $_.IsRequired } | Select-Object -ExpandProperty ParameterName)
+
+            $sections.Add([pscustomobject]@{
+                Heading = $heading
+                ToolKey = $toolKey
+                Commands = $commands
+                MarkerCount = $markerLineIndices.Count
+                MarkerLineIndices = @($markerLineIndices)
+                ExampleHeaderIndex = $exampleHeaderIndex
+                TableStartIndex = $tableStartIndex
+                AlternateExampleHeader = $alternateExampleHeader
+                ExamplePrompts = @($examplePrompts)
+                RequiredParameters = @($requiredParameters)
+            })
         }
-
-        $parameterRows = Get-SectionParameterRows $sectionLines
-        $requiredParameters = @($parameterRows | Where-Object { $_.IsRequired } | Select-Object -ExpandProperty ParameterName)
-
-        $sections.Add([pscustomobject]@{
-            Heading = $heading
-            ToolKey = $toolKey
-            Commands = $commands
-            MarkerCount = $markerLineIndices.Count
-            MarkerLineIndices = @($markerLineIndices)
-            ExampleHeaderIndex = $exampleHeaderIndex
-            TableStartIndex = $tableStartIndex
-            AlternateExampleHeader = $alternateExampleHeader
-            ExamplePrompts = @($examplePrompts)
-            RequiredParameters = @($requiredParameters)
-        })
     }
+
+    Write-Verbose "Detection mode: $detectionMode | Total tools found: $($sections.Count)"
 
     return [pscustomobject]@{
         Frontmatter = $frontmatter
         Sections = [object[]]$sections.ToArray()
+        DetectionMode = $detectionMode
     }
 }
 
@@ -695,7 +806,7 @@ try {
     $reportLines = New-Object System.Collections.Generic.List[string]
     $reportLines.Add("=== Tool Family Validation: $namespaceLower ===")
     $reportLines.Add("Tool files found: $toolFileCount")
-    $reportLines.Add("Article H2 sections: $articleSectionCount")
+    $reportLines.Add("Article tool sections: $articleSectionCount (detection: $($article.DetectionMode))")
     $reportLines.Add("Frontmatter tool_count: $(if ($null -ne $frontmatterToolCount) { $frontmatterToolCount } else { 'missing' })")
     if ($toolFileCount -eq $articleSectionCount -and $null -ne $frontmatterToolCount -and $frontmatterToolCount -eq $toolFileCount) {
         $reportLines.Add('✅ Tool count integrity: PASS')
