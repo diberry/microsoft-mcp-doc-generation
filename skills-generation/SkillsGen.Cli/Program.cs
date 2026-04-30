@@ -177,23 +177,20 @@ static SkillPipelineOrchestrator BuildOrchestrator(
         var endpoint = Environment.GetEnvironmentVariable("FOUNDRY_ENDPOINT");
         var modelName = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_NAME") ?? "gpt-4o";
 
-        if (!string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(endpoint))
+        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(endpoint))
         {
-            var acrolinxPath = Path.Combine(dataPath, "shared-acrolinx-rules.txt");
-
-            var systemPrompt = File.Exists(systemPromptPath) ? File.ReadAllText(systemPromptPath) : "You are a technical writer.";
-            var userPrompt = File.Exists(userPromptPath) ? File.ReadAllText(userPromptPath) : "Write about {{skillName}}: {{description}}";
-            var acrolinxRules = File.Exists(acrolinxPath) ? File.ReadAllText(acrolinxPath) : null;
-
-            rewriter = new AzureOpenAiRewriter(endpoint, apiKey, modelName,
-                systemPrompt, userPrompt, acrolinxRules,
-                loggerFactory.CreateLogger<AzureOpenAiRewriter>());
+            throw new InvalidOperationException("[skills-gen] ❌ ERROR: LLM credentials missing. Set FOUNDRY_API_KEY and FOUNDRY_ENDPOINT in .env or pass --no-llm to skip LLM enhancement.");
         }
-        else
-        {
-            Console.WriteLine("[skills-gen] No AI credentials found, using no-op rewriter.");
-            rewriter = new NoOpRewriter();
-        }
+
+        var acrolinxPath = Path.Combine(dataPath, "shared-acrolinx-rules.txt");
+
+        var systemPrompt = File.Exists(systemPromptPath) ? File.ReadAllText(systemPromptPath) : "You are a technical writer.";
+        var userPrompt = File.Exists(userPromptPath) ? File.ReadAllText(userPromptPath) : "Write about {{skillName}}: {{description}}";
+        var acrolinxRules = File.Exists(acrolinxPath) ? File.ReadAllText(acrolinxPath) : null;
+
+        rewriter = new AzureOpenAiRewriter(endpoint, apiKey, modelName,
+            systemPrompt, userPrompt, acrolinxRules,
+            loggerFactory.CreateLogger<AzureOpenAiRewriter>());
     }
 
     // Template

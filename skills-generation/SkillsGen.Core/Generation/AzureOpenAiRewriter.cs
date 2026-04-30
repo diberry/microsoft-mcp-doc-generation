@@ -192,11 +192,7 @@ public class AzureOpenAiRewriter : ILlmRewriter
             new UserChatMessage(userPrompt)
         };
 
-        var options = new ChatCompletionOptions
-        {
-            Temperature = 0.3f,
-            MaxOutputTokenCount = 500
-        };
+        var options = new ChatCompletionOptions();
 
         for (int attempt = 0; attempt <= MaxRetries; attempt++)
         {
