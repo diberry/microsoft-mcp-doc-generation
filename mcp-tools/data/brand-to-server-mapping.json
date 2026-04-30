@@ -60,6 +60,12 @@
     "fileName": "azure-migrate"
   },
   {
+    "brandName": "Azure Terraform",
+    "mcpServerName": "azureterraform",
+    "shortName": "Terraform",
+    "fileName": "azure-azureterraform"
+  },
+  {
     "brandName": "Azure Terraform Best Practices",
     "mcpServerName": "azureterraformbestpractices",
     "shortName": "Terraform",
