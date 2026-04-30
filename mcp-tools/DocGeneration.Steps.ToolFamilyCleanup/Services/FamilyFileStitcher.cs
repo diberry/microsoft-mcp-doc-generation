@@ -24,13 +24,28 @@ public class FamilyFileStitcher
     private static readonly Regex HeadingRegex = new(@"^(#{2,6})\s", RegexOptions.Multiline | RegexOptions.Compiled);
 
     /// <summary>
+    /// Estimated bytes per tool for StringBuilder pre-allocation.
+    /// Based on empirical measurement of generated tool sections (~3KB average).
+    /// </summary>
+    private const int EstimatedBytesPerTool = 3072;
+
+    /// <summary>
+    /// Minimum file write buffer size for large articles (64KB).
+    /// </summary>
+    private const int LargeFileBufferSize = 65536;
+
+    /// <summary>
     /// Assembles a complete tool family markdown file from its parts.
     /// </summary>
     /// <param name="familyContent">Family content with all parts</param>
     /// <returns>Complete markdown string</returns>
     public string Stitch(FamilyContent familyContent)
     {
-        var sb = new StringBuilder();
+        // Pre-allocate StringBuilder based on tool count (#494)
+        var estimatedSize = EstimatedBytesPerTool * familyContent.Tools.Count
+                          + (familyContent.Metadata?.Length ?? 0)
+                          + (familyContent.RelatedContent?.Length ?? 0);
+        var sb = new StringBuilder(estimatedSize);
 
         // 1. Metadata section (frontmatter + H1 + intro - strip any H2s the AI may have generated)
         var metadataLines = familyContent.Metadata.Split('\n')
@@ -131,8 +146,9 @@ public class FamilyFileStitcher
     /// </summary>
     private static void StitchMultiResource(StringBuilder sb, List<ToolContent> tools)
     {
-        // Group tools preserving existing sort order (already sorted by resource type then verb)
-        var groups = new List<(string ResourceType, List<ToolContent> Tools)>();
+        // Pre-allocate groups list for large namespaces (#494)
+        var groups = new List<(string ResourceType, List<ToolContent> Tools)>(
+            Math.Min(tools.Count, 20));
         string currentResourceType = "";
         List<ToolContent>? currentGroup = null;
 
@@ -250,12 +266,27 @@ public class FamilyFileStitcher
 
     /// <summary>
     /// Stitches and saves to file in one operation.
+    /// Uses a large file buffer for namespaces with many tools (#494).
     /// </summary>
     /// <param name="familyContent">Family content to stitch</param>
     /// <param name="outputPath">Output file path</param>
     public async Task StitchAndSaveAsync(FamilyContent familyContent, string outputPath)
     {
         var markdown = Stitch(familyContent);
-        await File.WriteAllTextAsync(outputPath, markdown, Encoding.UTF8);
+
+        // Post-stitch validation: ensure all tools are represented (#494)
+        var expectedToolNames = familyContent.Tools.Select(t => t.ToolName).ToList();
+        var missingTools = MissingToolDetector.DetectMissingTools(expectedToolNames, markdown);
+        if (missingTools.Count > 0)
+        {
+            var warning = MissingToolDetector.FormatMissingToolsWarning(missingTools, familyContent.FamilyName);
+            Console.WriteLine($"⚠ Post-stitch validation: {warning}");
+        }
+
+        // Use large buffer for articles with many tools
+        var bufferSize = familyContent.Tools.Count > 10 ? LargeFileBufferSize : 4096;
+        await using var stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize, useAsync: true);
+        await using var writer = new StreamWriter(stream, Encoding.UTF8, bufferSize);
+        await writer.WriteAsync(markdown);
     }
 }
