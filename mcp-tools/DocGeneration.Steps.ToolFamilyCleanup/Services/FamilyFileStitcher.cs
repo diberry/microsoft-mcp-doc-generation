@@ -47,8 +47,11 @@ public class FamilyFileStitcher
         }
         else
         {
-            // Single-resource: keep current behavior (H2 per tool)
-            foreach (var tool in familyContent.Tools)
+            // Single-resource: H2 per tool, sorted alphabetically (#501)
+            foreach (var tool in familyContent.Tools
+                .OrderBy(t => t.ToolName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(t => t.ToolName, StringComparer.Ordinal)
+                .ThenBy(t => t.FileName, StringComparer.Ordinal))
             {
                 sb.AppendLine(tool.Content);
                 sb.AppendLine();
@@ -155,7 +158,11 @@ public class FamilyFileStitcher
             sb.AppendLine($"## {displayName}");
             sb.AppendLine();
 
-            foreach (var tool in groupTools)
+            // Sort tools alphabetically within each resource group (#501)
+            foreach (var tool in groupTools
+                .OrderBy(t => t.ToolName, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(t => t.ToolName, StringComparer.Ordinal)
+                .ThenBy(t => t.FileName, StringComparer.Ordinal))
             {
                 // #416: Reformat H2 heading to "Resource type: action" format before demoting
                 var reformattedContent = ReformatToolHeadingForMultiResource(tool);
