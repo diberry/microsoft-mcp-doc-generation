@@ -47,7 +47,9 @@ public class FamilyFileStitcher
         }
         else
         {
-            // Single-resource: H2 per tool, sorted alphabetically (#501)
+            // Sort tools by ToolName (the generated display heading, e.g. "VM create")
+            // for consistent presentation order. ToolReader may pre-sort by resource/verb,
+            // but stitcher enforces final alphabetical order as the presentation authority. (#501)
             foreach (var tool in familyContent.Tools
                 .OrderBy(t => t.ToolName, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(t => t.ToolName, StringComparer.Ordinal)
@@ -158,7 +160,8 @@ public class FamilyFileStitcher
             sb.AppendLine($"## {displayName}");
             sb.AppendLine();
 
-            // Sort tools alphabetically within each resource group (#501)
+            // Sort tools by ToolName within each resource group for consistent
+            // presentation. Group order (first-seen) is preserved. (#501)
             foreach (var tool in groupTools
                 .OrderBy(t => t.ToolName, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(t => t.ToolName, StringComparer.Ordinal)
