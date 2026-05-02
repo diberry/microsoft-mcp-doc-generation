@@ -112,6 +112,12 @@ public class ToolOrderingPolicyRegressionTests
         },
     };
 
+    /// <summary>
+    /// Computes expected order using the same algorithm as production code.
+    /// NOTE: These helper-based tests provide broad coverage across all families,
+    /// but the hardcoded VerifyExactOrder tests are the primary regression safety net
+    /// since they use independently-derived expected values.
+    /// </summary>
     private static List<string> GetExpectedSingleResourceOrder(List<ToolContent> tools)
     {
         return tools
@@ -216,6 +222,71 @@ public class ToolOrderingPolicyRegressionTests
         Assert.Equal("list items", ordered[1].ToolName);
     }
 
+    [Fact]
+    public void SingleResource_KeyvaultFamily_VerifyExactOrder()
+    {
+        var tools = SingleResourceFamilies["keyvault"];
+        var ordered = ToolOrderingPolicy.OrderForSingleResource(tools)
+            .Select(t => t.ToolName).ToList();
+
+        // Manually derived alphabetical order (OrdinalIgnoreCase, then Ordinal, then FileName)
+        var expected = new List<string>
+        {
+            "keyvault certificate create",
+            "keyvault certificate delete",
+            "keyvault certificate list",
+            "keyvault key create",
+            "keyvault key list",
+            "keyvault secret list",
+            "keyvault secret set",
+        };
+
+        Assert.Equal(expected, ordered);
+    }
+
+    [Fact]
+    public void SingleResource_NetworkFamily_VerifyExactOrder()
+    {
+        var tools = SingleResourceFamilies["network"];
+        var ordered = ToolOrderingPolicy.OrderForSingleResource(tools)
+            .Select(t => t.ToolName).ToList();
+
+        // Manually derived alphabetical order (OrdinalIgnoreCase, then Ordinal, then FileName)
+        var expected = new List<string>
+        {
+            "network nsg create",
+            "network nsg delete",
+            "network nsg list",
+            "network vnet create",
+            "network vnet delete",
+            "network vnet list",
+            "network vnet show",
+        };
+
+        Assert.Equal(expected, ordered);
+    }
+
+    [Fact]
+    public void SingleResource_AksFamily_VerifyExactOrder()
+    {
+        var tools = SingleResourceFamilies["aks"];
+        var ordered = ToolOrderingPolicy.OrderForSingleResource(tools)
+            .Select(t => t.ToolName).ToList();
+
+        // Manually derived alphabetical order (OrdinalIgnoreCase, then Ordinal, then FileName)
+        var expected = new List<string>
+        {
+            "aks cluster create",
+            "aks cluster delete",
+            "aks cluster list",
+            "aks nodepool add",
+            "aks nodepool delete",
+            "aks nodepool list",
+        };
+
+        Assert.Equal(expected, ordered);
+    }
+
     #endregion
 
     #region Multi-Resource Corpus
@@ -254,6 +325,12 @@ public class ToolOrderingPolicyRegressionTests
         },
     };
 
+    /// <summary>
+    /// Computes expected order using the same algorithm as production code.
+    /// NOTE: These helper-based tests provide broad coverage across all families,
+    /// but the hardcoded VerifyExactOrder tests are the primary regression safety net
+    /// since they use independently-derived expected values.
+    /// </summary>
     private static List<string> GetExpectedMultiResourceOrder(List<ToolContent> tools)
     {
         return tools
@@ -316,6 +393,29 @@ public class ToolOrderingPolicyRegressionTests
             "compute vm list",       // list + vm-list.md
             "compute vm start",      // start
             "compute vmss update",   // update
+        };
+
+        Assert.Equal(expected, ordered);
+    }
+
+    [Fact]
+    public void MultiResource_NetworkFamily_VerifyExactOrder()
+    {
+        var tools = MultiResourceFamilies["network-multi"];
+        var ordered = ToolOrderingPolicy.OrderForMultiResource(tools)
+            .Select(t => t.Command!).ToList();
+
+        // Manually derived: verb-based sort (create, create, delete, delete, list, list, show)
+        // Within same verb, tie-break by FileName (Ordinal): nsg-*.md < vnet-*.md
+        var expected = new List<string>
+        {
+            "network nsg create",    // create + nsg-create.md
+            "network vnet create",   // create + vnet-create.md
+            "network nsg delete",    // delete + nsg-delete.md
+            "network vnet delete",   // delete + vnet-delete.md
+            "network nsg list",      // list + nsg-list.md
+            "network vnet list",     // list + vnet-list.md
+            "network nsg show",      // show
         };
 
         Assert.Equal(expected, ordered);
