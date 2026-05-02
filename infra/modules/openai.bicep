@@ -1,4 +1,4 @@
-@description('Name of the Azure OpenAI resource.')
+@description('Name of the Azure AI Services resource.')
 param name string
 
 @description('Location for the resource.')
@@ -10,12 +10,12 @@ param gpt5MiniDeploymentName string
 @description('Capacity for GPT-5-mini deployment (thousands of TPM).')
 param gpt5MiniCapacity int
 
-// ── Azure OpenAI Account ────────────────────────────────────────────────────────
+// ── Azure AI Services Account (supports Foundry) ────────────────────────────────
 
-resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
+resource openAi 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   name: name
   location: location
-  kind: 'OpenAI'
+  kind: 'AIServices'
   sku: {
     name: 'S0'
   }
@@ -27,7 +27,7 @@ resource openAi 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
 
 // ── GPT-5-mini Deployment ────────────────────────────────────────────────────────
 
-resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-06-01' = {
   parent: openAi
   name: gpt5MiniDeploymentName
   sku: {
