@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Per-tool AI timeout and fallback in Step 3** — The AI improvement phase now applies a configurable per-tool timeout (default: 5 minutes) via `CancellationToken`. When a tool's AI call hangs or fails, the pipeline saves the original composed content as fallback and continues processing remaining tools. Previously, a single hanging Azure OpenAI call would freeze the entire pipeline indefinitely, preventing Step 4 (cleanup/stitching) from ever running. External (caller) cancellation is properly distinguished from per-tool timeout and propagated immediately. (#507)
+
 ### Added
 
 - **Alphabetical tool ordering in stitcher** — Tools within tool family pages are now sorted alphabetically by display heading (case-insensitive, with FileName tie-breaker) during stitching. Multi-resource families sort tools within each resource group while preserving group arrival order. This normalizes output for varying input permutations. (#501)
