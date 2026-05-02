@@ -24,7 +24,7 @@ public class EditorialFeedbackPromptRuleTests
         _promptContent = File.ReadAllText(promptPath);
     }
 
-    // ── Abbreviation Scannability ───────────────────────────────────
+    // ΓöÇΓöÇ Abbreviation Scannability ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
     [Fact]
     public void Prompt_ContainsAbbreviationScannabilitySection()
@@ -54,7 +54,7 @@ public class EditorialFeedbackPromptRuleTests
         Assert.Contains("AKS", _promptContent);
     }
 
-    // ── Brand Capitalization ────────────────────────────────────────
+    // ΓöÇΓöÇ Brand Capitalization ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
     [Fact]
     public void Prompt_ContainsBrandCapitalizationSection()
