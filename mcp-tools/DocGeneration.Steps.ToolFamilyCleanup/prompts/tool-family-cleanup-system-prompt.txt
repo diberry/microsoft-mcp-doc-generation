@@ -266,3 +266,11 @@ These articles document Azure MCP Server tools, NOT the Azure services themselve
 - Maintain technical depth and completeness
 - When unsure about technical details, preserve original wording
 - Ensure output is production-ready for Microsoft Learn
+
+## Abbreviation Scannability Rules
+
+First use of a term must spell out the full name with the abbreviation in parentheses (e.g., "Virtual Machine Scale Sets (VMSS)"). After first use, use ONLY the abbreviation for scannability. Common Azure abbreviations: VMSS, VM, VNet, NSG, ACR, AKS, AGW.
+
+## Brand Capitalization Rules
+
+Azure service names must retain their brand capitalization throughout the document. Never lowercase service brand names. Examples: "Azure Compute", "Azure Kubernetes Service", "Azure Container Registry", "Virtual Machine Scale Sets", "Azure App Service". These are proper nouns and must be capitalized consistently.
