@@ -47,13 +47,9 @@ public class FamilyFileStitcher
         }
         else
         {
-            // Sort tools by ToolName (the generated display heading, e.g. "VM create")
-            // for consistent presentation order. ToolReader may pre-sort by resource/verb,
-            // but stitcher enforces final alphabetical order as the presentation authority. (#501)
-            foreach (var tool in familyContent.Tools
-                .OrderBy(t => t.ToolName, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(t => t.ToolName, StringComparer.Ordinal)
-                .ThenBy(t => t.FileName, StringComparer.Ordinal))
+            // Sort tools for consistent single-resource presentation order (#503).
+            // Ordering delegated to ToolOrderingPolicy (alphabetical by ToolName).
+            foreach (var tool in ToolOrderingPolicy.OrderForSingleResource(familyContent.Tools))
             {
                 sb.AppendLine(tool.Content);
                 sb.AppendLine();
@@ -160,12 +156,10 @@ public class FamilyFileStitcher
             sb.AppendLine($"## {displayName}");
             sb.AppendLine();
 
-            // Sort tools by ToolName within each resource group for consistent
-            // presentation. Group order (first-seen) is preserved. (#501)
-            foreach (var tool in groupTools
-                .OrderBy(t => t.ToolName, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(t => t.ToolName, StringComparer.Ordinal)
-                .ThenBy(t => t.FileName, StringComparer.Ordinal))
+            // Sort tools by action verb within each resource group for consistent
+            // presentation (#503, #504). Uses action verb (not ToolName) because the
+            // displayed heading is rewritten by ReformatToolHeadingForMultiResource.
+            foreach (var tool in ToolOrderingPolicy.OrderForMultiResource(groupTools))
             {
                 // #416: Reformat H2 heading to "Resource type: action" format before demoting
                 var reformattedContent = ReformatToolHeadingForMultiResource(tool);

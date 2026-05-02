@@ -1,0 +1,61 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+using ToolFamilyCleanup.Models;
+
+namespace ToolFamilyCleanup.Services;
+
+/// <summary>
+/// Centralizes tool ordering logic for both single-resource and multi-resource families.
+/// This is the single authority for tool presentation order at stitch time.
+/// ToolReader provides metadata for grouping; ordering is applied here.
+/// </summary>
+public static class ToolOrderingPolicy
+{
+    /// <summary>
+    /// Orders tools for a single-resource family page.
+    /// Sort contract: case-insensitive alphabetical by ToolName, then case-sensitive
+    /// ToolName tie-break, then FileName for absolute determinism.
+    /// </summary>
+    /// <param name="tools">Unordered tools from a single-resource family.</param>
+    /// <returns>Tools in deterministic presentation order.</returns>
+    public static IEnumerable<ToolContent> OrderForSingleResource(IEnumerable<ToolContent> tools)
+    {
+        return tools
+            .OrderBy(t => t.ToolName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(t => t.ToolName, StringComparer.Ordinal)
+            .ThenBy(t => t.FileName, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Orders tools within a multi-resource group by action verb (last segment of the command),
+    /// then by FileName for determinism.
+    /// Sort contract: alphabetical by action verb extracted from the command
+    /// (the part after the resource type), NOT by ToolName — because ToolName may diverge
+    /// from the displayed heading after ReformatToolHeadingForMultiResource rewrites it.
+    /// </summary>
+    /// <param name="tools">Unordered tools within a single resource group.</param>
+    /// <returns>Tools ordered by action verb then FileName.</returns>
+    public static IEnumerable<ToolContent> OrderForMultiResource(IEnumerable<ToolContent> tools)
+    {
+        return tools
+            .OrderBy(t => ExtractActionVerb(t.Command), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(t => ExtractActionVerb(t.Command), StringComparer.Ordinal)
+            .ThenBy(t => t.FileName, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Extracts the action verb (last segment) from a command string.
+    /// Command format: "namespace resource1 [resource2...] verb"
+    /// Returns the verb portion (e.g., "create" from "compute disk create").
+    /// Returns empty string for null/empty commands.
+    /// </summary>
+    internal static string ExtractActionVerb(string? command)
+    {
+        if (string.IsNullOrWhiteSpace(command))
+            return string.Empty;
+
+        var segments = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return segments.Length > 0 ? segments[^1] : string.Empty;
+    }
+}
