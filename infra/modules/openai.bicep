@@ -48,4 +48,3 @@ resource gpt5MiniDeployment 'Microsoft.CognitiveServices/accounts/deployments@20
 output endpoint string = openAi.properties.endpoint
 output name string = openAi.name
 output id string = openAi.id
-output apiKey string = openAi.listKeys().key1
