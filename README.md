@@ -67,7 +67,7 @@ wait
 
 | Phase | Description | Typical output | AI Required |
 |------|-------------|----------------|-------------|
-| 0 | Typed bootstrap: validate Azure OpenAI config when needed, clean/create output folders, build the solution, extract MCP CLI metadata, validate brand mappings, and run shared parsers | `cli/`, `e2e-test-prompts/`, build artifacts, brand validation output | No |
+| 0 | Typed bootstrap: validate Azure AI Services config when needed, clean/create output folders, build the solution, extract MCP CLI metadata, validate brand mappings, and run shared parsers | `cli/`, `e2e-test-prompts/`, build artifacts, brand validation output | No |
 | 1 | Generate annotations, parameter files, and raw tool markdown | `annotations/`, `parameters/`, `tools-raw/` | No |
 | 2 | Generate example prompts for each tool | `example-prompts/`, `example-prompts-prompts/` | Yes |
 | 3 | Generate composed and AI-improved tool files | `tools/` | Yes |
@@ -75,7 +75,7 @@ wait
 | 5 | Generate GitHub Copilot skills relevance reports (supplementary, non-fatal) | `skills-relevance/{namespace}-skills-relevance.md` | No |
 | 6 | Generate horizontal articles | `horizontal-articles/horizontal-article-{namespace}.md` | Yes |
 
-**Note**: Steps 2, 3, 4, and 6 require Azure OpenAI credentials configured in `mcp-tools/.env`. See [mcp-tools/scripts/README.md](mcp-tools/scripts/README.md) for details.
+**Note**: Steps 2, 3, 4, and 6 require Azure AI Services (Foundry-compatible) credentials configured in `mcp-tools/.env`. See [mcp-tools/scripts/README.md](mcp-tools/scripts/README.md) for details.
 
 ## Key Paths
 

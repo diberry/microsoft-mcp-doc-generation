@@ -15,10 +15,10 @@ param gpt5MiniDeploymentName string = 'gpt-5-mini'
 @description('Capacity (in thousands of tokens-per-minute) for GPT-5-mini deployment.')
 param gpt5MiniCapacity int = 50
 
-@description('Secondary location for OpenAI resources.')
+@description('Secondary location for AI Services resources.')
 param secondaryLocation string = 'swedencentral'
 
-@description('Azure OpenAI API version.')
+@description('Azure AI Services API version.')
 param openAiApiVersion string = '2025-03-01-preview'
 
 // ── Resource Group ──────────────────────────────────────────────────────────────
@@ -28,26 +28,27 @@ resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   location: location
 }
 
-// ── Azure OpenAI — Primary (location) ───────────────────────────────────────────
+// ── Azure AI Services — Primary (location) ──────────────────────────────────────
+// Uses AIServices kind which supports Microsoft Foundry and Azure OpenAI
 
 module openAiPrimary 'modules/openai.bicep' = {
-  name: 'openai-primary'
+  name: 'foundry-primary'
   scope: rg
   params: {
-    name: 'oai-${environmentName}'
+    name: 'ai-${environmentName}'
     location: location
     gpt5MiniDeploymentName: gpt5MiniDeploymentName
     gpt5MiniCapacity: gpt5MiniCapacity
   }
 }
 
-// ── Azure OpenAI — Secondary (swedencentral) ────────────────────────────────────
+// ── Azure AI Services — Secondary (swedencentral) ───────────────────────────────
 
 module openAiSecondary 'modules/openai.bicep' = {
-  name: 'openai-secondary'
+  name: 'foundry-secondary'
   scope: rg
   params: {
-    name: 'oai-${environmentName}-sec'
+    name: 'ai-${environmentName}-sec'
     location: secondaryLocation
     gpt5MiniDeploymentName: gpt5MiniDeploymentName
     gpt5MiniCapacity: gpt5MiniCapacity
