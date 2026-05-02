@@ -73,7 +73,7 @@ public static class ToolOrderingPolicy
     /// <remarks>
     /// This is a public API for callers to optionally validate inputs before ordering.
     /// Callers may choose to call this for early diagnostics, or skip it and let
-    /// <see cref="Order"/> handle invalid inputs gracefully.
+    /// <see cref="OrderForSingleResource"/> and <see cref="OrderForMultiResource"/> handle invalid inputs gracefully.
     /// </remarks>
     public static ToolOrderingValidationResult Validate(IEnumerable<ToolContent> tools)
     {
@@ -85,24 +85,26 @@ public static class ToolOrderingPolicy
 
         foreach (var tool in toolList)
         {
+            bool hasIssue = false;
             if (string.IsNullOrWhiteSpace(tool.ToolName))
             {
                 warnings.Add($"Tool '{tool.FileName}' has null or whitespace ToolName.");
-                invalidTools.Add(tool);
+                hasIssue = true;
             }
-
             if (string.IsNullOrWhiteSpace(tool.Command))
             {
                 warnings.Add($"Tool '{tool.FileName}' has null or whitespace Command.");
-                invalidTools.Add(tool);
+                hasIssue = true;
             }
+            if (hasIssue)
+                invalidTools.Add(tool);
         }
 
         return new ToolOrderingValidationResult
         {
             IsValid = invalidTools.Count == 0,
             Warnings = warnings,
-            InvalidTools = invalidTools.Distinct().ToList()
+            InvalidTools = invalidTools
         };
     }
 
