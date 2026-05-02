@@ -158,7 +158,7 @@ public class ToolOrderingPolicyTests
     }
 
     [Fact]
-    public void OrderForMultiResource_NullCommand_SortsToFront()
+    public void OrderForMultiResource_NullCommand_SortsToEnd()
     {
         var tools = new List<ToolContent>
         {
@@ -168,9 +168,9 @@ public class ToolOrderingPolicyTests
 
         var ordered = ToolOrderingPolicy.OrderForMultiResource(tools).ToList();
 
-        // Null command extracts empty verb which sorts before "list"
-        Assert.Equal("unknown.md", ordered[0].FileName);
-        Assert.Equal("vm-list.md", ordered[1].FileName);
+        // Null command tools are placed at end for visibility
+        Assert.Equal("vm-list.md", ordered[0].FileName);
+        Assert.Equal("unknown.md", ordered[1].FileName);
     }
 
     [Fact]

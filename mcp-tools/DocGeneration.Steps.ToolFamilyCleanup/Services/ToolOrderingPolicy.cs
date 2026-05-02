@@ -16,15 +16,26 @@ public static class ToolOrderingPolicy
     /// Orders tools for a single-resource family page.
     /// Sort contract: case-insensitive alphabetical by ToolName, then case-sensitive
     /// ToolName tie-break, then FileName for absolute determinism.
+    /// Tools with null or whitespace ToolName are placed at the end of the sorted list
+    /// to ensure they remain visible rather than being silently dropped.
     /// </summary>
     /// <param name="tools">Unordered tools from a single-resource family.</param>
     /// <returns>Tools in deterministic presentation order.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tools"/> is null.</exception>
     public static IEnumerable<ToolContent> OrderForSingleResource(IEnumerable<ToolContent> tools)
     {
-        return tools
+        ArgumentNullException.ThrowIfNull(tools);
+
+        var toolList = tools.ToList();
+        var valid = toolList.Where(t => !string.IsNullOrWhiteSpace(t.ToolName)).ToList();
+        var invalid = toolList.Where(t => string.IsNullOrWhiteSpace(t.ToolName)).ToList();
+
+        var sorted = valid
             .OrderBy(t => t.ToolName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(t => t.ToolName, StringComparer.Ordinal)
             .ThenBy(t => t.FileName, StringComparer.Ordinal);
+
+        return sorted.Concat(invalid);
     }
 
     /// <summary>
@@ -33,15 +44,61 @@ public static class ToolOrderingPolicy
     /// Sort contract: alphabetical by action verb extracted from the command
     /// (the part after the resource type), NOT by ToolName — because ToolName may diverge
     /// from the displayed heading after ReformatToolHeadingForMultiResource rewrites it.
+    /// Tools with null or whitespace Command are placed at the end of the sorted list
+    /// to ensure they remain visible rather than being silently dropped.
     /// </summary>
     /// <param name="tools">Unordered tools within a single resource group.</param>
     /// <returns>Tools ordered by action verb then FileName.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="tools"/> is null.</exception>
     public static IEnumerable<ToolContent> OrderForMultiResource(IEnumerable<ToolContent> tools)
     {
-        return tools
+        ArgumentNullException.ThrowIfNull(tools);
+
+        var toolList = tools.ToList();
+        var valid = toolList.Where(t => !string.IsNullOrWhiteSpace(t.Command)).ToList();
+        var invalid = toolList.Where(t => string.IsNullOrWhiteSpace(t.Command)).ToList();
+
+        var sorted = valid
             .OrderBy(t => ExtractActionVerb(t.Command), StringComparer.OrdinalIgnoreCase)
             .ThenBy(t => ExtractActionVerb(t.Command), StringComparer.Ordinal)
             .ThenBy(t => t.FileName, StringComparer.Ordinal);
+
+        return sorted.Concat(invalid);
+    }
+
+    /// <summary>
+    /// Validates a collection of ToolContent objects meet ordering prerequisites.
+    /// Returns a ValidationResult with any issues found.
+    /// </summary>
+    public static ToolOrderingValidationResult Validate(IEnumerable<ToolContent> tools)
+    {
+        ArgumentNullException.ThrowIfNull(tools);
+
+        var toolList = tools.ToList();
+        var warnings = new List<string>();
+        var invalidTools = new List<ToolContent>();
+
+        foreach (var tool in toolList)
+        {
+            if (string.IsNullOrWhiteSpace(tool.ToolName))
+            {
+                warnings.Add($"Tool '{tool.FileName}' has null or whitespace ToolName.");
+                invalidTools.Add(tool);
+            }
+
+            if (string.IsNullOrWhiteSpace(tool.Command))
+            {
+                warnings.Add($"Tool '{tool.FileName}' has null or whitespace Command.");
+                invalidTools.Add(tool);
+            }
+        }
+
+        return new ToolOrderingValidationResult
+        {
+            IsValid = invalidTools.Count == 0,
+            Warnings = warnings,
+            InvalidTools = invalidTools.Distinct().ToList()
+        };
     }
 
     /// <summary>
