@@ -30,12 +30,13 @@ resource rg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
 
 // ── Azure AI Services — Primary (location) ──────────────────────────────────────
 // Uses AIServices kind which supports Microsoft Foundry and Azure OpenAI
+// Resource name kept as 'oai-' prefix for deployment continuity (legacy naming)
 
 module openAiPrimary 'modules/openai.bicep' = {
   name: 'foundry-primary'
   scope: rg
   params: {
-    name: 'ai-${environmentName}'
+    name: 'oai-${environmentName}'
     location: location
     gpt5MiniDeploymentName: gpt5MiniDeploymentName
     gpt5MiniCapacity: gpt5MiniCapacity
@@ -48,7 +49,7 @@ module openAiSecondary 'modules/openai.bicep' = {
   name: 'foundry-secondary'
   scope: rg
   params: {
-    name: 'ai-${environmentName}-sec'
+    name: 'oai-${environmentName}-sec'
     location: secondaryLocation
     gpt5MiniDeploymentName: gpt5MiniDeploymentName
     gpt5MiniCapacity: gpt5MiniCapacity
