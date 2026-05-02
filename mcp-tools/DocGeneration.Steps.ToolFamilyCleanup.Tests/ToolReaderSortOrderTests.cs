@@ -8,8 +8,10 @@ using Xunit;
 namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 
 /// <summary>
-/// Tests for ToolReader.GetResourceSortKey and the resource-type-first ordering
-/// of tools within each family (Issue #279).
+/// Tests for ToolReader.GetResourceSortKey and GetResourceType utilities.
+/// Note: ToolReader no longer sorts tools at read time (#503, #504) — ordering
+/// is handled by ToolOrderingPolicy at stitch time. These tests validate the
+/// sort key and resource type extraction utilities that inform grouping.
 /// </summary>
 public class ToolReaderSortOrderTests
 {

@@ -77,16 +77,9 @@ public class ToolReader
             }
         }
 
-        // Sort tools within each family by resource type first, then by verb (#279).
-        // Command format: "namespace resource [resource2…] verb"
-        // Sort key groups all operations on the same resource together.
-        foreach (var family in toolsByFamily.Keys)
-        {
-            toolsByFamily[family] = toolsByFamily[family]
-                .OrderBy(t => GetResourceSortKey(t.Command), StringComparer.Ordinal)
-                .ThenBy(t => t.ToolName, StringComparer.Ordinal)
-                .ToList();
-        }
+        // Ordering is handled by ToolOrderingPolicy at stitch time (#503, #504).
+        // ToolReader groups tools by resource type for multi-resource detection
+        // but does NOT impose a presentation sort order.
 
         Console.WriteLine($"✓ Parsed {successCount} tools into {toolsByFamily.Count} families");
         if (failCount > 0)
