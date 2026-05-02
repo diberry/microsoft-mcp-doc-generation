@@ -261,6 +261,35 @@ public class ToolOrderingPolicyTests
 
     #endregion
 
+    [Theory]
+    [InlineData("compute vm create ", "create")]
+    [InlineData("  storage blob list  ", "list")]
+    public void ExtractActionVerb_TrailingOrLeadingWhitespace_ReturnsVerb(string command, string expected)
+    {
+        var result = ToolOrderingPolicy.ExtractActionVerb(command);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("az compute vm create --sku Standard", "create")]
+    [InlineData("compute disk list --output json", "list")]
+    [InlineData("storage blob upload --file test.txt --container my-container", "upload")]
+    public void ExtractActionVerb_CommandWithParameters_ReturnsVerbBeforeFlags(string command, string expected)
+    {
+        var result = ToolOrderingPolicy.ExtractActionVerb(command);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("storage-account-create", "storage-account-create")]
+    [InlineData("vm-deallocate", "vm-deallocate")]
+    public void ExtractActionVerb_HyphenatedSingleSegment_ReturnsFullSegment(string command, string expected)
+    {
+        // Hyphenated commands without spaces are treated as a single verb segment
+        var result = ToolOrderingPolicy.ExtractActionVerb(command);
+        Assert.Equal(expected, result);
+    }
+
     #region Helpers
 
     private static ToolContent MakeTool(string toolName, string? command, string fileName)

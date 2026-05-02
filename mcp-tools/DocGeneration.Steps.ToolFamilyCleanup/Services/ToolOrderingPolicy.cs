@@ -56,6 +56,10 @@ public static class ToolOrderingPolicy
             return string.Empty;
 
         var segments = command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return segments.Length > 0 ? segments[^1] : string.Empty;
+
+        // Stop before the first parameter flag (e.g., "--sku")
+        var verbSegments = segments.TakeWhile(s => !s.StartsWith('-')).ToArray();
+
+        return verbSegments.Length > 0 ? verbSegments[^1] : string.Empty;
     }
 }
