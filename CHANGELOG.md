@@ -8,7 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **Infrastructure migrated from Azure OpenAI to Azure AI Services** — Updated Bicep templates to use `kind: 'AIServices'` instead of `kind: 'OpenAI'` for Microsoft Foundry compatibility. Upgraded API version to `2025-06-01`. Changed resource naming from `oai-*` to `ai-*`. The SDK (Azure.AI.OpenAI) and environment variables (FOUNDRY_*) remain unchanged and are compatible with both Azure OpenAI and Foundry endpoints. (#506)
+- **Infrastructure migrated from Azure OpenAI to Azure AI Services** — Updated Bicep templates to use `kind: 'AIServices'` instead of `kind: 'OpenAI'` for Microsoft Foundry compatibility. Upgraded API version to `2025-06-01`. Resource names preserved as `oai-*` for deployment continuity (avoids destroy/recreate of existing Azure resources). The SDK (Azure.AI.OpenAI) and environment variables (FOUNDRY_*) remain unchanged and are compatible with both Azure OpenAI and Foundry endpoints. (#506)
 
 ### Fixed
 
