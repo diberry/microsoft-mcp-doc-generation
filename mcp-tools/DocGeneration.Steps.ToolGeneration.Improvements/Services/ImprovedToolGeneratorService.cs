@@ -76,7 +76,7 @@ public class ImprovedToolGeneratorService
         string outputDir,
         int maxTokens = 8000,
         TimeSpan? perToolTimeout = null,
-        CancellationToken externalCt = default)
+        CancellationToken pipelineCancellationToken = default)
     {
         Console.WriteLine("\n┌─────────────────────────────────────────────┐");
         Console.WriteLine("│  Generating AI-Improved Tool Files         │");
@@ -126,13 +126,13 @@ public class ImprovedToolGeneratorService
             var fileName = Path.GetFileName(composedFilePath);
             var progress = $"[{i + 1}/{composedFiles.Length}]";
 
-            // Check if external cancellation was requested before starting this tool
-            externalCt.ThrowIfCancellationRequested();
+            // Check if pipeline cancellation was requested before starting this tool
+            pipelineCancellationToken.ThrowIfCancellationRequested();
 
             Console.Write($"  {progress} Processing {fileName}...");
 
             // Load composed file content (outside try — file read failures are hard errors)
-            var originalContent = await File.ReadAllTextAsync(composedFilePath, externalCt);
+            var originalContent = await File.ReadAllTextAsync(composedFilePath, pipelineCancellationToken);
 
             // Pre-processing (deterministic, should not fail — errors here are real bugs)
             var requiredParameters = ExtractRequiredParameters(originalContent);
@@ -146,7 +146,7 @@ public class ImprovedToolGeneratorService
             string improvedContent;
             try
             {
-                using var toolCts = CancellationTokenSource.CreateLinkedTokenSource(externalCt);
+                using var toolCts = CancellationTokenSource.CreateLinkedTokenSource(pipelineCancellationToken);
                 toolCts.CancelAfter(timeout);
                 var toolCt = toolCts.Token;
 
@@ -156,7 +156,7 @@ public class ImprovedToolGeneratorService
                     maxTokens,
                     toolCt);
             }
-            catch (OperationCanceledException) when (externalCt.IsCancellationRequested)
+            catch (OperationCanceledException) when (pipelineCancellationToken.IsCancellationRequested)
             {
                 // External (caller) cancellation — propagate immediately
                 Console.WriteLine($" ✗ Cancelled by caller");

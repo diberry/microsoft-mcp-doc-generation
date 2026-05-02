@@ -76,7 +76,7 @@ internal class Program
                 composedToolsDir,
                 outputDir,
                 maxTokens,
-                externalCt: default);
+                pipelineCancellationToken: default);
 
             Console.WriteLine();
             Console.WriteLine(result == 0 

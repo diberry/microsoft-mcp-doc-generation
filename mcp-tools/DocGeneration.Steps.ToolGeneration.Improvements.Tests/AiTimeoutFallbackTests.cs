@@ -108,7 +108,7 @@ public class AiTimeoutFallbackTests : IDisposable
             await service.GenerateImprovedToolFilesAsync(
                 _inputDir, _outputDir, maxTokens: 1000,
                 perToolTimeout: TimeSpan.FromMinutes(5),
-                externalCt: cts.Token));
+                pipelineCancellationToken: cts.Token));
     }
 
     // ── AI exception falls back to original ──
