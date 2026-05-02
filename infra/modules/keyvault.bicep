@@ -23,12 +23,14 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: subscription().tenantId
     enableRbacAuthorization: true
     enableSoftDelete: true
-    softDeleteRetentionInDays: 7
+    softDeleteRetentionInDays: 90
     enablePurgeProtection: true
   }
 }
 
 // ── Reference the OpenAI resource to retrieve its key ────────────────────────────
+// Dependency: openAiResourceId comes from openAiPrimary.outputs.id in main.bicep,
+// creating an implicit ARM deployment dependency (this module deploys after OpenAI).
 
 resource openAi 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = {
   name: last(split(openAiResourceId, '/'))
