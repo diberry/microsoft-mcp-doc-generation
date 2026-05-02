@@ -429,8 +429,19 @@ public class ToolOrderingPolicyRegressionTests
             .Select(t => t.Command!)
             .ToList();
 
-        var computedExpected = GetExpectedMultiResourceOrder(tools);
-        Assert.Equal(computedExpected, ordered);
+        // Manually derived: verb-based sort (create, delete, delete, list, list, upload)
+        // Within same verb, tie-break by FileName (Ordinal): account-*.md < blob-*.md
+        var expected = new List<string>
+        {
+            "storage account create",   // create + account-create.md
+            "storage account delete",   // delete + account-delete.md
+            "storage blob delete",      // delete + blob-delete.md
+            "storage account list",     // list + account-list.md
+            "storage blob list",        // list + blob-list.md
+            "storage blob upload",      // upload + blob-upload.md
+        };
+
+        Assert.Equal(expected, ordered);
     }
 
     [Fact]
