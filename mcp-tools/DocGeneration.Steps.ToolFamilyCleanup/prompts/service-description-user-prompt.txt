@@ -1,0 +1,7 @@
+Write a 2-3 sentence introduction paragraph for {{FAMILY_DISPLAY_NAME}}.
+
+This will be added to Azure MCP Server documentation explaining what {{FAMILY_DISPLAY_NAME}} is to developers.
+
+The paragraph must end with: `For more information, see [{{FAMILY_DISPLAY_NAME}} documentation]({url}).`
+
+Use an appropriate Microsoft Learn documentation URL for {{FAMILY_DISPLAY_NAME}}.
