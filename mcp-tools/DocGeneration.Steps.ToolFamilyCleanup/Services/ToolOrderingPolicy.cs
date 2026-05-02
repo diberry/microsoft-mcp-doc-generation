@@ -70,6 +70,11 @@ public static class ToolOrderingPolicy
     /// Validates a collection of ToolContent objects meet ordering prerequisites.
     /// Returns a ValidationResult with any issues found.
     /// </summary>
+    /// <remarks>
+    /// This is a public API for callers to optionally validate inputs before ordering.
+    /// Callers may choose to call this for early diagnostics, or skip it and let
+    /// <see cref="Order"/> handle invalid inputs gracefully.
+    /// </remarks>
     public static ToolOrderingValidationResult Validate(IEnumerable<ToolContent> tools)
     {
         ArgumentNullException.ThrowIfNull(tools);
