@@ -56,19 +56,32 @@ module openAiSecondary 'modules/openai.bicep' = {
   }
 }
 
+// ── Key Vault — Secure secret storage for API keys ──────────────────────────────
+
+module keyVault 'modules/keyvault.bicep' = {
+  name: 'keyvault'
+  scope: rg
+  params: {
+    name: 'kv-${environmentName}'
+    location: location
+    openAiResourceId: openAiPrimary.outputs.id
+  }
+}
+
 // ── Outputs (map to .env variables) — default to primary ────────────────────────
 
-output FOUNDRY_API_KEY string = openAiPrimary.outputs.apiKey
 output FOUNDRY_ENDPOINT string = openAiPrimary.outputs.endpoint
 output FOUNDRY_INSTANCE string = openAiPrimary.outputs.name
 output FOUNDRY_MODEL_NAME string = gpt5MiniDeploymentName
 output FOUNDRY_MODEL_API_VERSION string = openAiApiVersion
+output FOUNDRY_USE_DEFAULT_CREDENTIAL string = 'true'
 output TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME string = gpt5MiniDeploymentName
 output TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION string = openAiApiVersion
 output ENDPOINT string = openAiPrimary.outputs.endpoint
+output KEYVAULT_URI string = keyVault.outputs.vaultUri
+output KEYVAULT_SECRET_NAME string = keyVault.outputs.secretName
 
 // ── Secondary outputs (for manual .env override or failover) ────────────────────
 
-output SECONDARY_FOUNDRY_API_KEY string = openAiSecondary.outputs.apiKey
 output SECONDARY_FOUNDRY_ENDPOINT string = openAiSecondary.outputs.endpoint
 output SECONDARY_FOUNDRY_INSTANCE string = openAiSecondary.outputs.name
