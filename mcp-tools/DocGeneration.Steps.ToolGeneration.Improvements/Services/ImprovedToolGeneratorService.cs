@@ -66,10 +66,17 @@ public class ImprovedToolGeneratorService
     /// <summary>
     /// Generates improved tool files using AI to apply Microsoft content guidelines
     /// </summary>
+    /// <summary>
+    /// Default per-tool AI call timeout. Each tool gets this much time before falling back to composed content.
+    /// </summary>
+    internal static readonly TimeSpan DefaultPerToolTimeout = TimeSpan.FromMinutes(5);
+
     public async Task<int> GenerateImprovedToolFilesAsync(
         string composedToolsDir,
         string outputDir,
-        int maxTokens = 8000)
+        int maxTokens = 8000,
+        TimeSpan? perToolTimeout = null,
+        CancellationToken externalCt = default)
     {
         Console.WriteLine("\n┌─────────────────────────────────────────────┐");
         Console.WriteLine("│  Generating AI-Improved Tool Files         │");
@@ -82,9 +89,12 @@ public class ImprovedToolGeneratorService
             return 1;
         }
 
+        var timeout = perToolTimeout ?? DefaultPerToolTimeout;
+
         Console.WriteLine($"  Composed Tools Directory: {composedToolsDir}");
         Console.WriteLine($"  Output Directory: {outputDir}");
         Console.WriteLine($"  Max Tokens: {maxTokens}");
+        Console.WriteLine($"  Per-Tool Timeout: {timeout.TotalMinutes:F0} minutes");
         Console.WriteLine();
 
         // Ensure output directory exists
@@ -108,6 +118,7 @@ public class ImprovedToolGeneratorService
         int successCount = 0;
         int skippedCount = 0;
         int errorCount = 0;
+        int timedOutCount = 0;
 
         for (int i = 0; i < composedFiles.Length; i++)
         {
@@ -117,10 +128,19 @@ public class ImprovedToolGeneratorService
 
             try
             {
+                // Check if external cancellation was requested before starting this tool
+                externalCt.ThrowIfCancellationRequested();
+
                 Console.Write($"  {progress} Processing {fileName}...");
 
                 // Load composed file content
-                var originalContent = await File.ReadAllTextAsync(composedFilePath);
+                var originalContent = await File.ReadAllTextAsync(composedFilePath, externalCt);
+
+                // Create a per-tool timeout linked to external cancellation
+                using var toolCts = CancellationTokenSource.CreateLinkedTokenSource(externalCt);
+                toolCts.CancelAfter(timeout);
+                var toolCt = toolCts.Token;
+
                 var requiredParameters = ExtractRequiredParameters(originalContent);
 
                 // Freeze example prompt sections before any other protection
@@ -136,11 +156,12 @@ public class ImprovedToolGeneratorService
                 var userPrompt = string.Format(_userPromptTemplate, protectedContent);
                 userPrompt = AppendRequiredParameterPreservationInstruction(userPrompt, requiredParameters);
 
-                // Call AI to improve the content
+                // Call AI to improve the content with per-tool timeout
                 var improvedContent = await _aiClient.GetChatCompletionAsync(
                     _systemPrompt,
                     userPrompt,
-                    maxTokens);
+                    maxTokens,
+                    toolCt);
 
                 // Restore protected labels and normalize formatting
                 var restoredContent = RestoreTemplateLabels(improvedContent, labelMap);
@@ -184,45 +205,54 @@ public class ImprovedToolGeneratorService
                 successCount++;
                 Console.WriteLine(" ✓");
             }
+            catch (OperationCanceledException) when (externalCt.IsCancellationRequested)
+            {
+                // External (caller) cancellation — propagate immediately, don't swallow
+                Console.WriteLine($" ✗ Cancelled by caller");
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                // Per-tool timeout — save original composed content as fallback
+                Console.WriteLine($" ⏱ Timed out after {timeout.TotalMinutes:F0}m — saving original");
+                timedOutCount++;
+                await SaveOriginalAsFallback(composedFilePath, outputDir, fileName);
+            }
             catch (InvalidOperationException ex) when (ex.Message.Contains("truncated"))
             {
                 // Handle truncation error - save original instead
                 Console.WriteLine($" ⚠ Truncated - saving original");
                 Console.WriteLine($"      {ex.Message}");
-                
-                try
-                {
-                    var originalContent = await File.ReadAllTextAsync(composedFilePath);
-                    var outputPath = Path.Combine(outputDir, fileName);
-                    await File.WriteAllTextAsync(outputPath, originalContent, Encoding.UTF8);
-                    skippedCount++;
-                }
-                catch (Exception saveEx)
-                {
-                    Console.WriteLine($"      Error saving original: {saveEx.Message}");
-                    errorCount++;
-                }
+                await SaveOriginalAsFallback(composedFilePath, outputDir, fileName);
+                skippedCount++;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($" ✗");
-                Console.WriteLine($"      Error: {ex.Message}");
-                errorCount++;
+                // Any other AI failure — save original composed content as fallback
+                Console.WriteLine($" ⚠ AI error — saving original");
+                Console.WriteLine($"      {ex.GetType().Name}: {ex.Message}");
+                await SaveOriginalAsFallback(composedFilePath, outputDir, fileName);
+                skippedCount++;
             }
 
             // Add a small delay between requests to avoid rate limiting
             if (i < composedFiles.Length - 1)
             {
-                await Task.Delay(100);
+                await Task.Delay(100, CancellationToken.None);
             }
         }
 
         Console.WriteLine();
         Console.WriteLine($"  ✓ Successfully improved {successCount} tool files");
         
+        if (timedOutCount > 0)
+        {
+            Console.WriteLine($"  ⏱ Timed out {timedOutCount} files (original saved)");
+        }
+
         if (skippedCount > 0)
         {
-            Console.WriteLine($"  ⚠ Skipped {skippedCount} files (truncation - original saved)");
+            Console.WriteLine($"  ⚠ Skipped {skippedCount} files (AI error/truncation — original saved)");
         }
         
         if (errorCount > 0)
@@ -231,6 +261,23 @@ public class ImprovedToolGeneratorService
         }
 
         return errorCount > 0 ? 1 : 0;
+    }
+
+    /// <summary>
+    /// Saves the original composed content as a fallback when AI improvement fails.
+    /// </summary>
+    private static async Task SaveOriginalAsFallback(string composedFilePath, string outputDir, string fileName)
+    {
+        try
+        {
+            var originalContent = await File.ReadAllTextAsync(composedFilePath);
+            var outputPath = Path.Combine(outputDir, fileName);
+            await File.WriteAllTextAsync(outputPath, originalContent, Encoding.UTF8);
+        }
+        catch (Exception saveEx)
+        {
+            Console.WriteLine($"      Error saving original: {saveEx.Message}");
+        }
     }
 
     /// <summary>
