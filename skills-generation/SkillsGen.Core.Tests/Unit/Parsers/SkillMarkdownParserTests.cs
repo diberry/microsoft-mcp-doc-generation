@@ -871,4 +871,37 @@ public class SkillMarkdownParserTests
         result.Prerequisites.Should().BeEmpty(
             "behavioral-only rules ('Always X', 'Never Y', 'Prefer X') should not be extracted as prerequisites");
     }
+
+    [Fact]
+    public void Parse_NameNormalizedToLowercase_WhenFrontmatterHasMixedCase()
+    {
+        var content = """
+            ---
+            name: Entra-Agent-ID
+            description: "Test skill"
+            ---
+            # Test Skill
+            Body content.
+            """;
+        var result = _parser.Parse("Entra-Agent-ID", content);
+
+        result.Name.Should().Be("entra-agent-id",
+            "skill names must be lowercase for path/link generation (#497)");
+    }
+
+    [Fact]
+    public void Parse_NameNormalizedToLowercase_WhenFallbackToSkillName()
+    {
+        var content = """
+            ---
+            description: "Test skill without name field"
+            ---
+            # Test Skill
+            Body content.
+            """;
+        var result = _parser.Parse("Entra-Agent-ID", content);
+
+        result.Name.Should().Be("entra-agent-id",
+            "skill names must be lowercase even when falling back to skillName parameter (#497)");
+    }
 }
