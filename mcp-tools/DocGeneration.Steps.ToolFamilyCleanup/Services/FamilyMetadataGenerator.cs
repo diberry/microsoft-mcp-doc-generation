@@ -13,7 +13,8 @@ public class FamilyMetadataGenerator
 {
     private const string SYSTEM_PROMPT_PATH = "./prompts/family-metadata-system-prompt.txt";
     private const string USER_PROMPT_PATH = "./prompts/family-metadata-user-prompt.txt";
-    private const int MAX_TOKENS = 2000; // Metadata is typically small
+    private const int BASE_MAX_TOKENS = 2000;
+    private const int TOKENS_PER_TOOL = 150; // Extra tokens per tool for metadata scaling
 
     private readonly GenerativeAIClient _aiClient;
     private string? _systemPrompt;
@@ -75,8 +76,11 @@ public class FamilyMetadataGenerator
             .Replace("{{TOOL_LIST}}", familyContent.ToolNamesList)
             .Replace("{{VERB_LIST}}", verbList);
 
+        // Scale token budget based on tool count
+        var maxTokens = Math.Min(8000, BASE_MAX_TOKENS + (familyContent.ToolCount * TOKENS_PER_TOOL));
+
         // Call LLM
-        var metadata = await _aiClient.GetChatCompletionAsync(_systemPrompt, userPrompt, maxTokens: MAX_TOKENS);
+        var metadata = await _aiClient.GetChatCompletionAsync(_systemPrompt, userPrompt, maxTokens: maxTokens);
 
         // Extract markdown if wrapped in code fences
         var extractedMetadata = ExtractMarkdown(metadata.Trim());
