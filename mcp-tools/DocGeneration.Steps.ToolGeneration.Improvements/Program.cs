@@ -75,7 +75,8 @@ internal class Program
             var result = await generator.GenerateImprovedToolFilesAsync(
                 composedToolsDir,
                 outputDir,
-                maxTokens);
+                maxTokens,
+                pipelineCancellationToken: default);
 
             Console.WriteLine();
             Console.WriteLine(result == 0 
