@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Pipeline smoke tests** — New `DocGeneration.PipelineRunner.SmokeTests` project provides end-to-end smoke tests that run the full pipeline on small test namespaces (quota, redis) and verify output matches committed baseline fixtures. Tests serve as a safety net for refactoring, ensuring code changes don't alter pipeline behavior or output structure. Includes `BaselineManager` for capturing/comparing golden files and comprehensive documentation on updating baselines. Closes #534. PR #[PR_NUMBER]
+
 ### Changed
 
 - **Infrastructure migrated from Azure OpenAI to Azure AI Services** — Updated Bicep templates to use `kind: 'AIServices'` instead of `kind: 'OpenAI'` for Microsoft Foundry compatibility. Upgraded API version to `2025-06-01`. Resource names preserved as `oai-*` for deployment continuity (avoids destroy/recreate of existing Azure resources). The SDK (Azure.AI.OpenAI) and environment variables (FOUNDRY_*) remain unchanged and are compatible with both Azure OpenAI and Foundry endpoints. (#506)
