@@ -4,9 +4,9 @@ namespace PipelineRunner.Services;
 
 public sealed class FilteredCliWriter : IFilteredCliWriter
 {
-    private readonly IWorkspaceManager _workspaceManager;
+    private readonly WorkspaceManager _workspaceManager;
 
-    public FilteredCliWriter(IWorkspaceManager workspaceManager)
+    public FilteredCliWriter(WorkspaceManager workspaceManager)
     {
         _workspaceManager = workspaceManager;
     }

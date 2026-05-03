@@ -6,9 +6,9 @@ namespace PipelineRunner.Context;
 public sealed class PipelineContextFactory
 {
     private readonly IProcessRunner _processRunner;
-    private readonly IWorkspaceManager _workspaceManager;
+    private readonly WorkspaceManager _workspaceManager;
     private readonly ICliMetadataLoader _cliMetadataLoader;
-    private readonly ITargetMatcher _targetMatcher;
+    private readonly TargetMatcher _targetMatcher;
     private readonly IFilteredCliWriter _filteredCliWriter;
     private readonly IBuildCoordinator _buildCoordinator;
     private readonly IAiCapabilityProbe _aiCapabilityProbe;
@@ -17,9 +17,9 @@ public sealed class PipelineContextFactory
 
     public PipelineContextFactory(
         IProcessRunner processRunner,
-        IWorkspaceManager workspaceManager,
+        WorkspaceManager workspaceManager,
         ICliMetadataLoader cliMetadataLoader,
-        ITargetMatcher targetMatcher,
+        TargetMatcher targetMatcher,
         IFilteredCliWriter filteredCliWriter,
         IBuildCoordinator buildCoordinator,
         IAiCapabilityProbe aiCapabilityProbe,

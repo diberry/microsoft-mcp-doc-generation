@@ -1,6 +1,6 @@
 namespace PipelineRunner.Services;
 
-public sealed class WorkspaceManager : IWorkspaceManager
+public sealed class WorkspaceManager
 {
     private readonly HashSet<string> _trackedDirectories = new(StringComparer.OrdinalIgnoreCase);
 
