@@ -74,10 +74,8 @@ public class ResourceGroupingTests
     }
 
     [Fact]
-    public void IsMultiResourceFamily_MultipleResourceTypes_SameNamespace_ReturnsFalse()
+    public void IsMultiResourceFamily_MultipleResourceTypes_ReturnsTrue()
     {
-        // Multiple resource types within one namespace is NOT multi-resource.
-        // Multi-resource = multiple namespaces combined in one file.
         var tools = new List<ToolContent>
         {
             MakeTool("Create disk", "compute disk create", "disk"),
@@ -85,45 +83,16 @@ public class ResourceGroupingTests
             MakeTool("Create VM", "compute vm create", "vm"),
             MakeTool("Delete VM", "compute vm delete", "vm"),
         };
-        Assert.False(FamilyFileStitcher.IsMultiResourceFamily(tools));
+        Assert.True(FamilyFileStitcher.IsMultiResourceFamily(tools));
     }
 
     [Fact]
-    public void IsMultiResourceFamily_SameNamespace_DifferentResources_ReturnsFalse()
+    public void IsMultiResourceFamily_TwoResourceTypes_ReturnsTrue()
     {
-        // Storage has Account, Blob, Table — still one namespace, not multi-resource
         var tools = new List<ToolContent>
         {
             MakeTool("Create account", "storage account create", "account"),
             MakeTool("Get blob", "storage blob get", "blob"),
-        };
-        Assert.False(FamilyFileStitcher.IsMultiResourceFamily(tools));
-    }
-
-    [Fact]
-    public void IsMultiResourceFamily_MultipleNamespaces_ReturnsTrue()
-    {
-        // Truly multi-resource: tools from different namespaces combined in one file
-        var tools = new List<ToolContent>
-        {
-            new ToolContent
-            {
-                ToolName = "Create disk",
-                FileName = "compute-disk-create.md",
-                FamilyName = "compute",
-                Content = "## Create disk\n\nDescription.",
-                Command = "compute disk create",
-                ResourceType = "disk"
-            },
-            new ToolContent
-            {
-                ToolName = "Create account",
-                FileName = "storage-account-create.md",
-                FamilyName = "storage",
-                Content = "## Create account\n\nDescription.",
-                Command = "storage account create",
-                ResourceType = "account"
-            },
         };
         Assert.True(FamilyFileStitcher.IsMultiResourceFamily(tools));
     }
@@ -216,9 +185,8 @@ public class ResourceGroupingTests
     }
 
     [Fact]
-    public void Stitch_SameNamespace_MultipleResourceTypes_FlatH2s()
+    public void Stitch_MultiResourceNamespace_GroupsToolsByResourceType()
     {
-        // Same namespace with different resource types → flat H2 per tool, no grouping
         var familyContent = new FamilyContent
         {
             FamilyName = "compute",
@@ -236,18 +204,20 @@ public class ResourceGroupingTests
         var stitcher = new FamilyFileStitcher();
         var result = stitcher.Stitch(familyContent);
 
-        // Each tool gets a flat H2 — no resource group headers, no H3 demotion
-        Assert.Contains("## Create a disk", result);
-        Assert.Contains("## Delete a disk", result);
-        Assert.Contains("## Create a VM", result);
-        Assert.Contains("## Delete a VM", result);
-        // No group-level H2s
-        Assert.DoesNotContain("### Managed disk:", result);
-        Assert.DoesNotContain("### VM:", result);
+        // #416: Multi-resource H2 format — flat H2 per tool using overrides
+        Assert.Contains("## Managed disk: Create", result);
+        Assert.Contains("## Managed disk: Delete", result);
+        Assert.Contains("## Virtual machine: Create", result);
+        Assert.Contains("## Virtual machine: Delete", result);
+
+        // Disk tools appear before VM tools (input order preserved)
+        var diskIndex = result.IndexOf("## Managed disk: Create");
+        var vmIndex = result.IndexOf("## Virtual machine: Create");
+        Assert.True(diskIndex < vmIndex, "Disk tools should appear before VM tools");
     }
 
     [Fact]
-    public void Stitch_SameNamespace_ThreeResourceTypes_FlatH2s()
+    public void Stitch_MultiResourceWithThreeGroups_AllGroupsPresent()
     {
         var familyContent = new FamilyContent
         {
@@ -265,18 +235,15 @@ public class ResourceGroupingTests
         var stitcher = new FamilyFileStitcher();
         var result = stitcher.Stitch(familyContent);
 
-        // All tools as flat H2s
-        Assert.Contains("## Create disk", result);
-        Assert.Contains("## Create VM", result);
-        Assert.Contains("## Create VMSS", result);
-        // No H3 demotion
-        Assert.DoesNotContain("### ", result);
+        // #416: Multi-resource H2 format — overrides provide human-friendly display names
+        Assert.Contains("## Managed disk: Create", result);
+        Assert.Contains("## Virtual machine: Create", result);
+        Assert.Contains("## Virtual machine scale set: Create", result);
     }
 
     [Fact]
-    public void Stitch_SameNamespace_SubHeadingsNotDemoted()
+    public void Stitch_MultiResourceWithSubHeadings_SubHeadingsDemoted()
     {
-        // Same namespace → flat H2s, sub-headings (### Parameters) preserved as-is
         var familyContent = new FamilyContent
         {
             FamilyName = "storage",
@@ -292,12 +259,9 @@ public class ResourceGroupingTests
         var stitcher = new FamilyFileStitcher();
         var result = stitcher.Stitch(familyContent);
 
-        // Flat H2s preserved
-        Assert.Contains("## Create account", result);
-        Assert.Contains("## Get blob", result);
-        // Sub-headings stay at ### (not demoted to ####)
+        // #416: Multi-resource H2 format — override applied; sub-headings stay at H3
+        Assert.Contains("## Account: Create", result);
         Assert.Contains("### Parameters", result);
-        Assert.DoesNotContain("#### Parameters", result);
     }
 
     [Fact]

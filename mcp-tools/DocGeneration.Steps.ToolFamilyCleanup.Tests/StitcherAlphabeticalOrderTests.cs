@@ -156,10 +156,10 @@ public class StitcherAlphabeticalOrderTests
     }
 
     [Fact]
-    public void Stitch_SameNamespace_FlatH2sAlphabetical()
+    public void Stitch_MultiResource_GroupOrderPreserved()
     {
-        // Arrange: same namespace with multiple resource types → treated as single-resource (flat H2s)
-        // Alphabetical order by ToolName applies
+        // Arrange: resource groups arrive in specific order (vm first, then disk)
+        // Group order should be preserved (not re-sorted)
         var content = new FamilyContent
         {
             FamilyName = "compute",
@@ -177,15 +177,12 @@ public class StitcherAlphabeticalOrderTests
         // Act
         var result = stitcher.Stitch(content);
 
-        // Assert: flat H2s for each tool, alphabetical (Disk before VM)
-        var diskPos = result.IndexOf("## Disk list");
-        var vmPos = result.IndexOf("## VM list");
-        Assert.True(diskPos >= 0, "Disk list should appear as flat H2");
-        Assert.True(vmPos >= 0, "VM list should appear as flat H2");
-        Assert.True(diskPos < vmPos, "Alphabetical order: Disk before VM");
-        // No resource group headers
-        Assert.DoesNotContain("\n## VM\n", result);
-        Assert.DoesNotContain("\n## Disk\n", result);
+        // Assert: VM tool appears before Disk tool (arrival order preserved)
+        // "compute vm list" has no override → fallback "Vm: List"
+        // "compute disk list" has no override → fallback "Managed disk: List"
+        var vmToolPos = result.IndexOf("## Vm: List");
+        var diskToolPos = result.IndexOf("## Managed disk: List");
+        Assert.True(vmToolPos < diskToolPos, "Resource group order should be preserved from input");
     }
 
     [Fact]

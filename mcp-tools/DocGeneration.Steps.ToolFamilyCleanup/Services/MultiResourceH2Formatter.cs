@@ -12,21 +12,38 @@ namespace ToolFamilyCleanup.Services;
 /// </summary>
 public static class MultiResourceH2Formatter
 {
-    // Known acronyms that should remain uppercase in display names
+    // Known acronyms that should remain uppercase in display names.
+    // "vm" and "vmss" are intentionally excluded — these are handled by heading overrides
+    // (HeadingOverrideProvider) which map them to "Virtual machine" / "Virtual machine scale set".
     private static readonly HashSet<string> KnownAcronyms = new(StringComparer.OrdinalIgnoreCase)
     {
-        "vm", "vmss", "db", "sql", "api", "aks", "acr", "dns", "ip", "nsg",
+        "db", "sql", "api", "aks", "acr", "dns", "ip", "nsg",
         "vpn", "vnet", "hpc", "gpu", "cpu", "ssd", "hdd", "cdn", "waf", "rbac"
     };
 
     /// <summary>
-    /// Formats a tool heading for a multi-resource page.
-    /// Format: "{ResourceDisplayName}: {action}"
+    /// Formats a tool heading for a multi-resource page (fallback when no override exists).
+    /// Format: "{ResourceDisplayName}: {FormattedAction}"
+    /// Action is title-cased with hyphens replaced by spaces.
     /// </summary>
     public static string FormatToolHeading(string resourceType, string action)
     {
         var displayName = FormatResourceTypeDisplayName(resourceType);
-        return $"{displayName}: {action}";
+        var formattedAction = FormatAction(action);
+        return $"{displayName}: {formattedAction}";
+    }
+
+    /// <summary>
+    /// Formats an action verb: replaces hyphens with spaces and title-cases the first word.
+    /// Examples: "create" → "Create", "enable-crr" → "Enable crr", "soft-delete" → "Soft delete"
+    /// </summary>
+    internal static string FormatAction(string action)
+    {
+        if (string.IsNullOrWhiteSpace(action))
+            return action;
+
+        var spaced = action.Replace('-', ' ');
+        return char.ToUpper(spaced[0], CultureInfo.InvariantCulture) + spaced[1..];
     }
 
     /// <summary>
