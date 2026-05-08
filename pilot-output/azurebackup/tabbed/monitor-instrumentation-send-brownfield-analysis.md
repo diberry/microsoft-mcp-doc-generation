@@ -25,10 +25,10 @@ With parameters:
 azmcp monitor instrumentation send-brownfield-analysis --session-id <session-id> --findings-json <findings-json>
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--session-id` | string | - | The workspace path returned as sessionId from orchestrator-start. |
-| `--findings-json` | string | - | JSON object with brownfield analysis findings. Required properties:
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--session-id` | string | The workspace path returned as sessionId from orchestrator-start. |
+| `--findings-json` | string | JSON object with brownfield analysis findings. Required properties:
 - serviceOptions: Service options findings from analyzing AddApplicationInsightsTelemetry() call. Null if not found.
 - initializers: Telemetry initializer findings from analyzing ITelemetryInitializer or IConfigureOptions<TelemetryConfiguration> implementations. Null if none found.
 - processors: Telemetry processor findings from analyzing ITelemetryProcessor implementations. Null if none found.

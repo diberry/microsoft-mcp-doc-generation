@@ -14,7 +14,7 @@ With parameters:
 azmcp monitor instrumentation get-learning-resource --path <path>
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--path` | string | - | Learning resource path. |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--path` | string | Learning resource path. |
 

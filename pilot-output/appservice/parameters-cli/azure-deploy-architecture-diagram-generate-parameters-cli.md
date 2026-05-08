@@ -3,9 +3,9 @@ ms.topic: include
 ms.date: 05/08/2026
 mcp-cli.version: 1.0.0-pilot
 ---
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--raw-mcp-tool-input` | string | - | {
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--raw-mcp-tool-input` | string | {
     "type": "object",
     "properties": {
         "workspaceFolder": {

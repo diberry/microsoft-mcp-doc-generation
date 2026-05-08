@@ -17,8 +17,8 @@ With parameters:
 azmcp monitor instrumentation send-enhancement-select --session-id <session-id> --enhancement-keys <enhancement-keys>
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--session-id` | string | - | The workspace path returned as sessionId from orchestrator-start. |
-| `--enhancement-keys` | string | - | One or more enhancement keys, comma-separated (e.g. 'redis', 'redis,processors', 'entityframework,otlp'). |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--session-id` | string | The workspace path returned as sessionId from orchestrator-start. |
+| `--enhancement-keys` | string | One or more enhancement keys, comma-separated (e.g. 'redis', 'redis,processors', 'entityframework,otlp'). |
 

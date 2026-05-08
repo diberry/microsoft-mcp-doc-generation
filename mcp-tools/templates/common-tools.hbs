@@ -14,7 +14,7 @@ This page documents the common parameters that are shared across many Azure MCP 
 ## Common Parameters by Source
 
 {{#each (groupBy commonParameters "Source")}}
-### {{@key}} Parameters
+## {{@key}} Parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
@@ -22,7 +22,7 @@ This page documents the common parameters that are shared across many Azure MCP 
 | **`{{Name}}`** | {{Type}} | {{#if IsRequired}}Yes{{else}}No{{/if}} | {{Description}} |
 {{/each}}
 
-#### Parameters with Natural Language Names
+**Parameters with Natural Language Names**
 
 {{#if option}}
 | Parameter |  Required or optional | Description |

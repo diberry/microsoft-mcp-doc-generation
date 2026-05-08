@@ -3,10 +3,10 @@ ms.topic: include
 ms.date: 05/08/2026
 mcp-cli.version: 1.0.0-pilot
 ---
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--session-id` | string | - | The workspace path returned as sessionId from orchestrator-start. |
-| `--findings-json` | string | - | JSON object with brownfield analysis findings. Required properties:
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--session-id` | string | The workspace path returned as sessionId from orchestrator-start. |
+| `--findings-json` | string | JSON object with brownfield analysis findings. Required properties:
 - serviceOptions: Service options findings from analyzing AddApplicationInsightsTelemetry() call. Null if not found.
 - initializers: Telemetry initializer findings from analyzing ITelemetryInitializer or IConfigureOptions<TelemetryConfiguration> implementations. Null if none found.
 - processors: Telemetry processor findings from analyzing ITelemetryProcessor implementations. Null if none found.

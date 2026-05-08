@@ -22,8 +22,8 @@ With parameters:
 azmcp wellarchitectedframework serviceguide get --service <service>
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--service` | string | - | A single Azure service name. Service name format: case-insensitive; hyphens, underscores, spaces, and name variations allowed; use double quotes (not single quotes) for names with spaces. e.g., cosmos-db, Cosmos_DB, "Cosmos DB", cosmosdb, cosmos-database, cosmosdatabase |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--service` | string | A single Azure service name. Service name format: case-insensitive; hyphens, underscores, spaces, and name variations allowed; use double quotes (not single quotes) for names with spaces. e.g., cosmos-db, Cosmos_DB, "Cosmos DB", cosmosdb, cosmos-database, cosmosdatabase |
 
 ---

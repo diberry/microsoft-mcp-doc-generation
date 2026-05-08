@@ -23,8 +23,8 @@ With parameters:
 azmcp monitor instrumentation orchestrator-next --session-id <session-id> --completion-note <completion-note>
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--session-id` | string | - | The workspace path returned as sessionId from orchestrator-start. |
-| `--completion-note` | string | - | One sentence describing what you executed, e.g., 'Ran dotnet add package command' or 'Added UseAzureMonitor() to Program.cs' |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--session-id` | string | The workspace path returned as sessionId from orchestrator-start. |
+| `--completion-note` | string | One sentence describing what you executed, e.g., 'Ran dotnet add package command' or 'Added UseAzureMonitor() to Program.cs' |
 

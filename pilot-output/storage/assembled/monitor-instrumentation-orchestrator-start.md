@@ -14,7 +14,7 @@ With parameters:
 azmcp monitor instrumentation orchestrator-start --workspace-path <workspace-path>
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--workspace-path` | string | - | Absolute path to the workspace folder. |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--workspace-path` | string | Absolute path to the workspace folder. |
 

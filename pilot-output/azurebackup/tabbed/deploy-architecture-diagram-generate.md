@@ -22,9 +22,9 @@ With parameters:
 azmcp deploy architecture diagram generate --raw-mcp-tool-input <raw-mcp-tool-input>
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--raw-mcp-tool-input` | string | - | {
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--raw-mcp-tool-input` | string | {
     "type": "object",
     "properties": {
         "workspaceFolder": {

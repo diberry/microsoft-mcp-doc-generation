@@ -14,7 +14,7 @@ With parameters:
 azmcp functions project get --language <language>
 ```
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `--language` | string | - | Programming language for the Azure Functions project. Valid values: python, typescript, javascript, java, csharp, powershell. |
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `--language` | string | Programming language for the Azure Functions project. Valid values: python, typescript, javascript, java, csharp, powershell. |
 

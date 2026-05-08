@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using ToolFamilyCleanup.Models;
+using DocGeneration.Steps.ToolFamilyCleanup.Services;
 
 namespace ToolFamilyCleanup.Services;
 
@@ -260,6 +261,18 @@ public class FamilyFileStitcher
     public async Task StitchAndSaveAsync(FamilyContent familyContent, string outputPath)
     {
         var markdown = Stitch(familyContent);
+        
+        // Validate: no H3 headings except tab markers
+        var h3Validation = H3HeadingValidator.Validate(markdown);
+        if (!h3Validation.IsValid)
+        {
+            Console.WriteLine($"⚠ H3 validation warnings for {familyContent.FamilyName}:");
+            foreach (var error in h3Validation.Errors)
+            {
+                Console.WriteLine($"  {error}");
+            }
+        }
+        
         await File.WriteAllTextAsync(outputPath, markdown, Encoding.UTF8);
     }
 }
