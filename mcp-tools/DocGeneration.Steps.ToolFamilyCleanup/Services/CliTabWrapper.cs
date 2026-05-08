@@ -13,6 +13,8 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Services;
 /// </summary>
 public static class CliTabWrapper
 {
+    private static readonly Regex McpCliMarkerPattern = new(
+        @"<!--\s*@mcpcli\s+(.+?)\s*-->", RegexOptions.Compiled);
     /// <summary>
     /// Wraps a tool section with MCP/CLI tabs.
     /// If no CLI content is available for the tool, returns the original content unchanged.
@@ -91,7 +93,7 @@ public static class CliTabWrapper
             // Check for @mcpcli marker to get command
             if (inToolSection && trimmedLine.Contains("<!-- @mcpcli "))
             {
-                var match = Regex.Match(trimmedLine, @"<!--\s*@mcpcli\s+(.+?)\s*-->");
+                var match = McpCliMarkerPattern.Match(trimmedLine);
                 if (match.Success)
                     currentCommand = match.Groups[1].Value;
             }

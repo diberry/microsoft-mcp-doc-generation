@@ -21,7 +21,7 @@ public class CliProseImprover
     public static readonly TimeSpan DefaultPerToolTimeout = TimeSpan.FromMinutes(2);
 
     private static readonly Regex MarkdownPattern = new(
-        @"[#|`\[\]*>]",
+        @"[#`\[\]*>]",
         RegexOptions.Compiled);
 
     public CliProseImprover(GenerativeAIClient aiClient, string systemPrompt)

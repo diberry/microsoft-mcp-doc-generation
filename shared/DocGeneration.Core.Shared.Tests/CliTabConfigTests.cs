@@ -92,4 +92,22 @@ public class CliTabConfigTests
         Assert.True(config.IsNamespaceAllowed("ns2"));
         Assert.True(config.IsNamespaceAllowed("ns3"));
     }
+
+    [Fact]
+    public void LoadFromFile_MalformedJson_ReturnsDisabledConfig()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"cli-tab-config-bad-{Guid.NewGuid()}.json");
+        try
+        {
+            File.WriteAllText(path, "not valid json {{{");
+
+            var config = CliTabConfig.LoadFromFile(path);
+            Assert.False(config.IsEnabled);
+            Assert.Empty(config.AllowedNamespaces);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

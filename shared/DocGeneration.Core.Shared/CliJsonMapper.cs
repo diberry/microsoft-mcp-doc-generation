@@ -35,13 +35,15 @@ public static class CliJsonMapper
     /// Normalizes a command string for use as dictionary key.
     /// Trims, collapses whitespace, lowercases.
     /// </summary>
+    private static readonly Regex WhitespacePattern = new(@"\s+", RegexOptions.Compiled);
+
     internal static string NormalizeCommand(string command)
     {
         if (string.IsNullOrWhiteSpace(command))
             return "";
 
         var trimmed = command.Trim();
-        var collapsed = Regex.Replace(trimmed, @"\s+", " ");
+        var collapsed = WhitespacePattern.Replace(trimmed, " ");
         return collapsed.ToLowerInvariant();
     }
 

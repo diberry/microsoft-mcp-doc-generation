@@ -35,9 +35,17 @@ public class CliTabConfig
         if (!File.Exists(path))
             return new CliTabConfig();
 
-        var json = File.ReadAllText(path);
-        return System.Text.Json.JsonSerializer.Deserialize<CliTabConfig>(json)
-            ?? new CliTabConfig();
+        try
+        {
+            var json = File.ReadAllText(path);
+            return System.Text.Json.JsonSerializer.Deserialize<CliTabConfig>(json)
+                ?? new CliTabConfig();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Could not load CLI tab config from {path}: {ex.Message}");
+            return new CliTabConfig();
+        }
     }
 
     /// <summary>

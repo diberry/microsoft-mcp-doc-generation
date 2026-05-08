@@ -59,13 +59,13 @@ public class CliExampleCommandGeneratorTests : IDisposable
     {
         var tool = MakeTool("storage account list",
             new CliSwitch("--resource-group", "RG name", "string"),
-            new CliSwitch("--subscription", "Sub ID", "string"));
+            new CliSwitch("--account-name", "Storage account name", "string"));
 
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
 
         Assert.Contains("With parameters:", content);
         Assert.Contains("--resource-group", content);
-        Assert.Contains("--subscription", content);
+        Assert.Contains("--account-name", content);
     }
 
     [Fact]
@@ -74,11 +74,13 @@ public class CliExampleCommandGeneratorTests : IDisposable
         var tool = MakeTool("storage account list",
             new CliSwitch("--tenant", "Tenant ID", "string"),
             new CliSwitch("--auth-method", "Auth method", "string"),
+            new CliSwitch("--subscription", "Subscription ID", "string"),
             new CliSwitch("--retry-mode", "Retry mode", "string"));
 
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
 
         Assert.DoesNotContain("With parameters:", content);
+        Assert.DoesNotContain("--subscription", content);
     }
 
     [Fact]

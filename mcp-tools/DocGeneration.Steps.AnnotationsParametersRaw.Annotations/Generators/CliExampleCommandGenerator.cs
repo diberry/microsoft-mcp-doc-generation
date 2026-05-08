@@ -88,7 +88,7 @@ public static class CliExampleCommandGenerator
     /// Returns true if the switch is a well-known global option.
     /// </summary>
     private static bool IsGlobalSwitch(string switchName) =>
-        switchName is "--tenant" or "--auth-method" or "--retry-delay"
-            or "--retry-max-delay" or "--retry-max-retries" or "--retry-mode"
-            or "--retry-network-timeout";
+        switchName is "--subscription" or "--tenant" or "--tenant-id"
+            or "--auth-method" or "--retry-delay" or "--retry-max-delay"
+            or "--retry-max-retries" or "--retry-mode" or "--retry-network-timeout";
 }
