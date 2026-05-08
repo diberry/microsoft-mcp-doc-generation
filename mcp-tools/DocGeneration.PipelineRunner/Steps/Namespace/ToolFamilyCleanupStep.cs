@@ -183,6 +183,43 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 RemoveStaleFile(Path.Combine(context.OutputPath, "tool-family-related", $"{familyName}-related.md"));
             }
 
+            // Apply CLI tab wrapping to the generated tool-family article
+            var familyArticlePath = Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md");
+            if (File.Exists(familyArticlePath))
+            {
+                try
+                {
+                    var cliOutputPath = Path.Combine(context.OutputPath, "cli", "cli-output.json");
+                    var parameterCliDir = Path.Combine(context.OutputPath, "parameter-cli");
+                    var exampleCommandsDir = Path.Combine(context.OutputPath, "example-commands");
+
+                    if (File.Exists(cliOutputPath) && Directory.Exists(parameterCliDir) && Directory.Exists(exampleCommandsDir))
+                    {
+                        var cliJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
+                        var cliTools = CliJsonMapper.MapFromCliOutput(cliJson);
+                        var nameContext = await FileNameContext.CreateAsync();
+
+                        var assembledContent = await CliContentAssembler.AssembleAllCliContentAsync(
+                            cliTools, parameterCliDir, exampleCommandsDir, nameContext);
+
+                        if (assembledContent.Count > 0)
+                        {
+                            var familyMarkdown = await File.ReadAllTextAsync(familyArticlePath, cancellationToken);
+                            var tabbedMarkdown = CliTabWrapper.ApplyTabsToFamilyArticle(familyMarkdown, assembledContent);
+                            await File.WriteAllTextAsync(familyArticlePath, tabbedMarkdown, cancellationToken);
+                        }
+                    }
+                    else
+                    {
+                        warnings.Add("CLI tab wrapping skipped: missing cli-output.json, parameter-cli, or example-commands directories.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    warnings.Add($"CLI tab wrapping failed (non-fatal): {ex.Message}");
+                }
+            }
+
             return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
         }
         finally

@@ -29,7 +29,7 @@ internal class Program
              Console.Error.WriteLine("Usage: CSharpGenerator <mode> [arguments...]");
              Console.Error.WriteLine("Modes:");
              Console.Error.WriteLine("  template <template-file> <data-file> <output-file> [additional-context-json]");
-             Console.Error.WriteLine("  generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations]");
+             Console.Error.WriteLine("  generate-docs <cli-output-json> <output-dir> [--tool-pages] [--index] [--common] [--commands] [--annotations] [--parameter-cli] [--example-commands]");
              return 1;
          }
 
@@ -124,7 +124,7 @@ internal class Program
      {
          if (args.Length < 2)
          {
-             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--version <version>]");
+             Console.Error.WriteLine("Usage: CSharpGenerator generate-docs <cli-output-json> <output-dir> [--index] [--common] [--commands] [--annotations] [--parameter-cli] [--example-commands] [--version <version>]");
              return 1;
          }
 
@@ -134,7 +134,13 @@ internal class Program
          // Determine specific operation for log filename
          var isAnnotations = args.Contains("--annotations");
          var isParameters = args.Contains("--parameters");
-         var operation = isAnnotations ? "annotations" : isParameters ? "parameters" : "docs";
+         var isParameterCli = args.Contains("--parameter-cli");
+         var isExampleCommands = args.Contains("--example-commands");
+         var operation = isAnnotations ? "annotations"
+             : isParameters ? "parameters"
+             : isParameterCli ? "parameter-cli"
+             : isExampleCommands ? "example-commands"
+             : "docs";
          LogFileHelper.Initialize($"{operation}-generator");
          
          // Log all arguments to file (not console)
@@ -148,6 +154,8 @@ internal class Program
          var generateCommon = args.Contains("--common");
          var generateCommands = args.Contains("--commands");
          var generateAnnotations = args.Contains("--annotations");
+         var generateParameterCli = args.Contains("--parameter-cli");
+         var generateExampleCommands = args.Contains("--example-commands");
          
          // Log flag values to file (not console)
          LogFileHelper.WriteDebug("Flag values:");
@@ -155,6 +163,8 @@ internal class Program
          LogFileHelper.WriteDebug($"  generateCommon: {generateCommon}");
          LogFileHelper.WriteDebug($"  generateCommands: {generateCommands}");
          LogFileHelper.WriteDebug($"  generateAnnotations: {generateAnnotations}");
+         LogFileHelper.WriteDebug($"  generateParameterCli: {generateParameterCli}");
+         LogFileHelper.WriteDebug($"  generateExampleCommands: {generateExampleCommands}");
          
          // Extract version if provided, otherwise read from cli-version.json
          string? cliVersion = null;
@@ -176,7 +186,9 @@ internal class Program
              generateCommon,
              generateCommands,
              generateAnnotations,
-             cliVersion);
+             cliVersion,
+             generateParameterCli,
+             generateExampleCommands);
      }
 }
 
