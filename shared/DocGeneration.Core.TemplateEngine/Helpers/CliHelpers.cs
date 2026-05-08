@@ -32,16 +32,6 @@ public static class CliHelpers
             return $"azmcp {command}";
         });
 
-        // cliSwitchDefault: renders default value or dash, with pipe escaping for table cells
-        handlebars.RegisterHelper("cliSwitchDefault", (context, arguments) =>
-        {
-            if (arguments.Length == 0) return "-";
-            var arg = arguments[0];
-            if (arg == null || arg is HandlebarsDotNet.UndefinedBindingResult) return "-";
-            var val = arg.ToString();
-            return string.IsNullOrWhiteSpace(val) ? "-" : EscapePipe(val);
-        });
-
         // escapeTableCell: escapes pipe characters for markdown table cells
         handlebars.RegisterHelper("escapeTableCell", (context, arguments) =>
         {

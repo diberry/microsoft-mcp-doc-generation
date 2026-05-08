@@ -43,13 +43,12 @@ public static class CliContentAssembler
         else if (tool.Switches.Count > 0)
         {
             // Inline parameter table as fallback
-            sb.AppendLine("| Parameter | Type | Default | Description |");
-            sb.AppendLine("|-----------|------|---------|-------------|");
+            sb.AppendLine("| Parameter | Type | Description |");
+            sb.AppendLine("|-----------|------|-------------|");
             foreach (var sw in tool.Switches)
             {
-                var defaultVal = string.IsNullOrWhiteSpace(sw.Default) ? "-" : EscapePipe(sw.Default);
                 var desc = EscapePipe(sw.Description);
-                sb.AppendLine($"| `{sw.Name}` | {sw.Type} | {defaultVal} | {desc} |");
+                sb.AppendLine($"| `{sw.Name}` | {sw.Type} | {desc} |");
             }
             sb.AppendLine();
         }

@@ -44,42 +44,6 @@ public class CliHelpersTests
     }
 
     [Fact]
-    public void CliSwitchDefault_HasValue_ReturnsValue()
-    {
-        var result = HandlebarsTemplateEngine.ProcessTemplateString(
-            "{{{cliSwitchDefault val}}}",
-            new Dictionary<string, object> { ["val"] = "true" });
-        Assert.Equal("true", result);
-    }
-
-    [Fact]
-    public void CliSwitchDefault_Null_ReturnsDash()
-    {
-        var result = HandlebarsTemplateEngine.ProcessTemplateString(
-            "{{{cliSwitchDefault missing}}}",
-            new Dictionary<string, object>());
-        Assert.Equal("-", result);
-    }
-
-    [Fact]
-    public void CliSwitchDefault_Empty_ReturnsDash()
-    {
-        var result = HandlebarsTemplateEngine.ProcessTemplateString(
-            "{{{cliSwitchDefault val}}}",
-            new Dictionary<string, object> { ["val"] = "" });
-        Assert.Equal("-", result);
-    }
-
-    [Fact]
-    public void CliSwitchDefault_WithPipe_EscapesPipe()
-    {
-        var result = HandlebarsTemplateEngine.ProcessTemplateString(
-            "{{{cliSwitchDefault val}}}",
-            new Dictionary<string, object> { ["val"] = "json|table" });
-        Assert.Equal(@"json\|table", result);
-    }
-
-    [Fact]
     public void EscapeTableCell_NoPipes_Unchanged()
     {
         var result = HandlebarsTemplateEngine.ProcessTemplateString(

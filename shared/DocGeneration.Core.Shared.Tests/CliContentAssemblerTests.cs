@@ -73,7 +73,7 @@ public class CliContentAssemblerTests : IDisposable
     public void AssembleCliContent_IncludesParameterContent()
     {
         var tool = MakeTool();
-        var paramContent = "| Parameter | Type | Default | Description |\n|---|---|---|---|\n| `--sub` | string | - | The sub |";
+        var paramContent = "| Parameter | Type | Description |\n|---|---|---|\n| `--sub` | string | The sub |";
 
         var result = CliContentAssembler.AssembleCliContent(tool, parameterCliContent: paramContent);
 
@@ -100,7 +100,7 @@ public class CliContentAssemblerTests : IDisposable
         // No parameterCliContent, no exampleCommandsContent → inline table
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        Assert.Contains("| Parameter | Type | Default | Description |", result);
+        Assert.Contains("| Parameter | Type | Description |", result);
         Assert.Contains("`--subscription`", result);
         Assert.Contains("`--resource-group`", result);
     }
@@ -134,7 +134,7 @@ public class CliContentAssemblerTests : IDisposable
     }
 
     [Fact]
-    public void AssembleCliContent_DefaultValueRendered()
+    public void AssembleCliContent_DefaultValueNotInTable()
     {
         var tool = new CliToolInfo("test", "Test.", new[]
         {
@@ -143,11 +143,13 @@ public class CliContentAssemblerTests : IDisposable
 
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        Assert.Contains("eastus", result);
+        // Default column removed — default values should NOT appear in the table
+        Assert.DoesNotContain("eastus", result);
+        Assert.Contains("`--region`", result);
     }
 
     [Fact]
-    public void AssembleCliContent_NullDefault_ShowsDash()
+    public void AssembleCliContent_NullDefault_NoDefaultColumn()
     {
         var tool = new CliToolInfo("test", "Test.", new[]
         {
@@ -156,8 +158,9 @@ public class CliContentAssemblerTests : IDisposable
 
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        // Should show dash for no default
-        Assert.Contains("| - |", result);
+        // No Default column at all
+        Assert.DoesNotContain("| Default", result);
+        Assert.Contains("| Parameter | Type | Description |", result);
     }
 
     // ── AssembleAllCliContentAsync ────────────────────────────────────
@@ -227,7 +230,7 @@ public class CliContentAssemblerTests : IDisposable
         Assert.Single(result);
         var content = result.Values.First();
         // Should have inline parameter table since no include files
-        Assert.Contains("| Parameter | Type | Default | Description |", content);
+        Assert.Contains("| Parameter | Type | Description |", content);
         Assert.Contains("`--subscription`", content);
     }
 
@@ -249,7 +252,7 @@ public class CliContentAssemblerTests : IDisposable
     }
 
     [Fact]
-    public void AssembleCliContent_PipeInDefault_Escaped()
+    public void AssembleCliContent_PipeInDefault_NotRendered()
     {
         var tool = new CliToolInfo("test", "Test.", new[]
         {
@@ -258,7 +261,9 @@ public class CliContentAssemblerTests : IDisposable
 
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        Assert.Contains(@"\|", result);
+        // Default column removed — pipe default value should NOT appear
+        Assert.DoesNotContain("| Default", result);
+        Assert.Contains("`--sep`", result);
     }
 
     [Fact]
