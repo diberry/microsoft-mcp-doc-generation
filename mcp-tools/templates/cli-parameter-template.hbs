@@ -1,0 +1,9 @@
+{{#if hasParameters}}
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+{{#each switches}}
+| `{{Name}}` | {{Type}} | {{{cliSwitchDefault Default}}} | {{Description}} |
+{{/each}}
+{{else}}
+This tool has no CLI parameters.
+{{/if}}

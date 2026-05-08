@@ -164,6 +164,14 @@ public static class ToolFileNameBuilder
     public static string BuildToolFileName(string command, FileNameContext ctx)
         => $"{BuildBaseFileName(command, ctx)}.md";
 
+    /// <summary>Builds filename for CLI parameter include files.</summary>
+    public static string BuildParameterCliFileName(string command, FileNameContext ctx)
+        => $"{BuildBaseFileName(command, ctx)}-parameters-cli.md";
+
+    /// <summary>Builds filename for CLI example commands include files.</summary>
+    public static string BuildExampleCommandsFileName(string command, FileNameContext ctx)
+        => $"{BuildBaseFileName(command, ctx)}-example-commands.md";
+
     // ── Typed filename builders (explicit params overloads) ─────────────
 
     /// <summary>Builds the full filename for an annotation file.</summary>
@@ -221,6 +229,22 @@ public static class ToolFileNameBuilder
         Dictionary<string, string> compoundWords,
         HashSet<string> stopWords)
         => $"{BuildBaseFileName(command, brandMappings, compoundWords, stopWords)}.md";
+
+    /// <summary>Builds filename for CLI parameter include files.</summary>
+    public static string BuildParameterCliFileName(
+        string command,
+        Dictionary<string, BrandMapping> brandMappings,
+        Dictionary<string, string> compoundWords,
+        HashSet<string> stopWords)
+        => BuildParameterCliFileName(command, new FileNameContext(brandMappings, compoundWords, stopWords));
+
+    /// <summary>Builds filename for CLI example commands include files.</summary>
+    public static string BuildExampleCommandsFileName(
+        string command,
+        Dictionary<string, BrandMapping> brandMappings,
+        Dictionary<string, string> compoundWords,
+        HashSet<string> stopWords)
+        => BuildExampleCommandsFileName(command, new FileNameContext(brandMappings, compoundWords, stopWords));
 
     // ── Internal helpers ────────────────────────────────────────────────
 

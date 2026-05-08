@@ -227,6 +227,20 @@ public class ToolFileNameBuilderTests
         // Empty FileName → falls through to compound words → raw area
         Assert.Equal("azure-svc-list", result);
     }
+    [Fact]
+    public void BuildParameterCliFileName_AppendsSuffix()
+    {
+        var result = ToolFileNameBuilder.BuildParameterCliFileName("aks nodepool get", Ctx);
+        Assert.Equal("azure-kubernetes-service-node-pool-get-parameters-cli.md", result);
+    }
+
+    [Fact]
+    public void BuildExampleCommandsFileName_AppendsSuffix()
+    {
+        var result = ToolFileNameBuilder.BuildExampleCommandsFileName("aks nodepool get", Ctx);
+        Assert.Equal("azure-kubernetes-service-node-pool-get-example-commands.md", result);
+    }
+
     // ── ResolveFamilyFileName tests (issue #267) ──────────────────────
 
     [Fact]
