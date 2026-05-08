@@ -2,7 +2,7 @@
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 {{#each switches}}
-| `{{Name}}` | {{Type}} | {{{cliSwitchDefault Default}}} | {{Description}} |
+| `{{Name}}` | {{Type}} | {{{cliSwitchDefault Default}}} | {{{escapeTableCell Description}}} |
 {{/each}}
 {{else}}
 This tool has no CLI parameters.

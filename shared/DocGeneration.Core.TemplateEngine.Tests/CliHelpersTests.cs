@@ -69,4 +69,49 @@ public class CliHelpersTests
             new Dictionary<string, object> { ["val"] = "" });
         Assert.Equal("-", result);
     }
+
+    [Fact]
+    public void CliSwitchDefault_WithPipe_EscapesPipe()
+    {
+        var result = HandlebarsTemplateEngine.ProcessTemplateString(
+            "{{{cliSwitchDefault val}}}",
+            new Dictionary<string, object> { ["val"] = "json|table" });
+        Assert.Equal(@"json\|table", result);
+    }
+
+    [Fact]
+    public void EscapeTableCell_NoPipes_Unchanged()
+    {
+        var result = HandlebarsTemplateEngine.ProcessTemplateString(
+            "{{{escapeTableCell val}}}",
+            new Dictionary<string, object> { ["val"] = "hello world" });
+        Assert.Equal("hello world", result);
+    }
+
+    [Fact]
+    public void EscapeTableCell_WithPipes_Escaped()
+    {
+        var result = HandlebarsTemplateEngine.ProcessTemplateString(
+            "{{{escapeTableCell val}}}",
+            new Dictionary<string, object> { ["val"] = "json | table | tsv" });
+        Assert.Equal(@"json \| table \| tsv", result);
+    }
+
+    [Fact]
+    public void EscapeTableCell_Empty_ReturnsEmpty()
+    {
+        var result = HandlebarsTemplateEngine.ProcessTemplateString(
+            "{{{escapeTableCell val}}}",
+            new Dictionary<string, object> { ["val"] = "" });
+        Assert.Equal("", result);
+    }
+
+    [Fact]
+    public void EscapeTableCell_Missing_ReturnsEmpty()
+    {
+        var result = HandlebarsTemplateEngine.ProcessTemplateString(
+            "{{{escapeTableCell missing}}}",
+            new Dictionary<string, object>());
+        Assert.Equal("", result);
+    }
 }
