@@ -64,4 +64,41 @@ public class CliSwitchTests
         Assert.Equal("new-default", modified.Default);
         Assert.NotSame(original, modified);
     }
+
+    // ── Boundary: empty/whitespace fields ────────────────────────────
+
+    [Fact]
+    public void Construction_EmptyName_Allowed()
+    {
+        var sw = new CliSwitch("", "desc");
+        Assert.Equal("", sw.Name);
+    }
+
+    [Fact]
+    public void Construction_WhitespaceName_Allowed()
+    {
+        var sw = new CliSwitch("  ", "desc");
+        Assert.Equal("  ", sw.Name);
+    }
+
+    [Fact]
+    public void Construction_EmptyDescription_Allowed()
+    {
+        var sw = new CliSwitch("--flag", "");
+        Assert.Equal("", sw.Description);
+    }
+
+    [Fact]
+    public void Construction_WhitespaceDescription_Allowed()
+    {
+        var sw = new CliSwitch("--flag", "   ");
+        Assert.Equal("   ", sw.Description);
+    }
+
+    [Fact]
+    public void Construction_EmptyType_Allowed()
+    {
+        var sw = new CliSwitch("--flag", "desc", "");
+        Assert.Equal("", sw.Type);
+    }
 }

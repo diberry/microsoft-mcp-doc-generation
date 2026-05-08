@@ -59,4 +59,34 @@ public class CliToolInfoTests
 
         Assert.Equal(a, b);
     }
+
+    // ── Boundary: empty/whitespace fields ────────────────────────────
+
+    [Fact]
+    public void Construction_EmptyCommand_Allowed()
+    {
+        var tool = new CliToolInfo("", "desc", Array.Empty<CliSwitch>());
+        Assert.Equal("", tool.Command);
+    }
+
+    [Fact]
+    public void Construction_WhitespaceCommand_Allowed()
+    {
+        var tool = new CliToolInfo("   ", "desc", Array.Empty<CliSwitch>());
+        Assert.Equal("   ", tool.Command);
+    }
+
+    [Fact]
+    public void Construction_EmptyDescription_Allowed()
+    {
+        var tool = new CliToolInfo("cmd", "", Array.Empty<CliSwitch>());
+        Assert.Equal("", tool.Description);
+    }
+
+    [Fact]
+    public void Construction_WhitespaceDescription_Allowed()
+    {
+        var tool = new CliToolInfo("cmd", "   ", Array.Empty<CliSwitch>());
+        Assert.Equal("   ", tool.Description);
+    }
 }

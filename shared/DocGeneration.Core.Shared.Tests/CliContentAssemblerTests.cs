@@ -230,4 +230,85 @@ public class CliContentAssemblerTests : IDisposable
         Assert.Contains("| Parameter | Type | Default | Description |", content);
         Assert.Contains("`--subscription`", content);
     }
+
+    // ── Pipe character escaping ───────────────────────────────────────
+
+    [Fact]
+    public void AssembleCliContent_PipeInDescription_Escaped()
+    {
+        var tool = new CliToolInfo("test", "Test.", new[]
+        {
+            new CliSwitch("--format", "Output format: json | table | tsv", "string"),
+        });
+
+        var result = CliContentAssembler.AssembleCliContent(tool);
+
+        // Pipes in description must be escaped to avoid breaking markdown table
+        Assert.Contains(@"json \| table \| tsv", result);
+        Assert.DoesNotContain("json | table | tsv", result);
+    }
+
+    [Fact]
+    public void AssembleCliContent_PipeInDefault_Escaped()
+    {
+        var tool = new CliToolInfo("test", "Test.", new[]
+        {
+            new CliSwitch("--sep", "Separator char.", "string", Default: "|"),
+        });
+
+        var result = CliContentAssembler.AssembleCliContent(tool);
+
+        Assert.Contains(@"\|", result);
+    }
+
+    [Fact]
+    public void EscapePipe_NoPipes_Unchanged()
+    {
+        Assert.Equal("hello world", CliContentAssembler.EscapePipe("hello world"));
+    }
+
+    [Fact]
+    public void EscapePipe_MultiplePipes_AllEscaped()
+    {
+        Assert.Equal(@"a \| b \| c", CliContentAssembler.EscapePipe("a | b | c"));
+    }
+
+    // ── Boundary tests: empty/whitespace fields ───────────────────────
+
+    [Fact]
+    public void AssembleCliContent_EmptyDescription_StillRenders()
+    {
+        var tool = new CliToolInfo("cmd", "", Array.Empty<CliSwitch>());
+
+        var result = CliContentAssembler.AssembleCliContent(tool);
+
+        // Should produce output (even if description is empty)
+        Assert.NotNull(result);
+        Assert.True(result.Length > 0);
+    }
+
+    [Fact]
+    public void AssembleCliContent_WhitespaceDescription_Renders()
+    {
+        var tool = new CliToolInfo("cmd", "   ", Array.Empty<CliSwitch>());
+
+        var result = CliContentAssembler.AssembleCliContent(tool);
+
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public void AssembleCliContent_SwitchWithEmptyDescription_DashInTable()
+    {
+        var tool = new CliToolInfo("test", "Tool desc.", new[]
+        {
+            new CliSwitch("--flag", "", "boolean"),
+        });
+
+        var result = CliContentAssembler.AssembleCliContent(tool);
+
+        // Empty description renders but doesn't break the table
+        Assert.Contains("`--flag`", result);
+        Assert.Contains("| boolean |", result);
+    }
 }

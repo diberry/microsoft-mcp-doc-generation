@@ -47,8 +47,9 @@ public static class CliContentAssembler
             sb.AppendLine("|-----------|------|---------|-------------|");
             foreach (var sw in tool.Switches)
             {
-                var defaultVal = string.IsNullOrWhiteSpace(sw.Default) ? "-" : sw.Default;
-                sb.AppendLine($"| `{sw.Name}` | {sw.Type} | {defaultVal} | {sw.Description} |");
+                var defaultVal = string.IsNullOrWhiteSpace(sw.Default) ? "-" : EscapePipe(sw.Default);
+                var desc = EscapePipe(sw.Description);
+                sb.AppendLine($"| `{sw.Name}` | {sw.Type} | {defaultVal} | {desc} |");
             }
             sb.AppendLine();
         }
@@ -88,4 +89,10 @@ public static class CliContentAssembler
 
         return result;
     }
+
+    /// <summary>
+    /// Escapes pipe characters in text destined for markdown table cells.
+    /// </summary>
+    internal static string EscapePipe(string text)
+        => text.Replace("|", "\\|");
 }
