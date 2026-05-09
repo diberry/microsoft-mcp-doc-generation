@@ -193,18 +193,18 @@ public class CliTabPilotTests : IAsyncLifetime
 
     private static void ValidateTabStructure(string wrapped, string command, List<string> errors)
     {
-        if (!wrapped.Contains("### [MCP Server](#tab/mcp-server)"))
+        if (!wrapped.Contains("#### [MCP Server](#tab/mcp-server)"))
             errors.Add($"[{command}] Missing MCP Server tab header");
 
-        if (!wrapped.Contains("### [CLI](#tab/cli)"))
+        if (!wrapped.Contains("#### [CLI](#tab/cli)"))
             errors.Add($"[{command}] Missing CLI tab header");
 
         if (!wrapped.Contains("---"))
             errors.Add($"[{command}] Missing tab group terminator (---)");
 
         // MCP tab must come before CLI tab
-        var mcpIdx = wrapped.IndexOf("### [MCP Server]", StringComparison.Ordinal);
-        var cliIdx = wrapped.IndexOf("### [CLI]", StringComparison.Ordinal);
+        var mcpIdx = wrapped.IndexOf("#### [MCP Server]", StringComparison.Ordinal);
+        var cliIdx = wrapped.IndexOf("#### [CLI]", StringComparison.Ordinal);
         if (mcpIdx >= 0 && cliIdx >= 0 && mcpIdx > cliIdx)
             errors.Add($"[{command}] MCP Server tab must appear before CLI tab");
     }

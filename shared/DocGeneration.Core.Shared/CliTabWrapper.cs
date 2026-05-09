@@ -29,13 +29,13 @@ public static class CliTabWrapper
         var sb = new StringBuilder();
 
         // MCP Server tab
-        sb.AppendLine("### [MCP Server](#tab/mcp-server)");
+        sb.AppendLine("#### [MCP Server](#tab/mcp-server)");
         sb.AppendLine();
         sb.AppendLine(mcpContent.TrimEnd());
         sb.AppendLine();
 
         // CLI tab
-        sb.AppendLine("### [CLI](#tab/cli)");
+        sb.AppendLine("#### [CLI](#tab/cli)");
         sb.AppendLine();
         sb.AppendLine(cliContent.TrimEnd());
         sb.AppendLine();

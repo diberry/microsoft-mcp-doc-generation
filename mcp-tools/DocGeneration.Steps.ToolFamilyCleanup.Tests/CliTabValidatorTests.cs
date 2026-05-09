@@ -14,11 +14,11 @@ public class CliTabValidatorTests
         var markdown = """
             ## Tool A
 
-            ### [MCP Server](#tab/mcp-server)
+            #### [MCP Server](#tab/mcp-server)
 
             MCP content here.
 
-            ### [CLI](#tab/cli)
+            #### [CLI](#tab/cli)
 
             CLI content here.
 
@@ -36,7 +36,7 @@ public class CliTabValidatorTests
     public void Validate_MismatchedTabCounts_ReturnsError()
     {
         var markdown = """
-            ### [MCP Server](#tab/mcp-server)
+            #### [MCP Server](#tab/mcp-server)
 
             MCP content.
 
@@ -53,11 +53,11 @@ public class CliTabValidatorTests
     public void Validate_UnterminatedTabGroup_ReturnsError()
     {
         var markdown = """
-            ### [MCP Server](#tab/mcp-server)
+            #### [MCP Server](#tab/mcp-server)
 
             MCP content.
 
-            ### [CLI](#tab/cli)
+            #### [CLI](#tab/cli)
 
             CLI content.
             """;
@@ -72,15 +72,15 @@ public class CliTabValidatorTests
     public void Validate_NestedTabGroup_ReturnsError()
     {
         var markdown = """
-            ### [MCP Server](#tab/mcp-server)
+            #### [MCP Server](#tab/mcp-server)
 
             MCP content.
 
-            ### [MCP Server](#tab/mcp-server)
+            #### [MCP Server](#tab/mcp-server)
 
             Nested MCP content.
 
-            ### [CLI](#tab/cli)
+            #### [CLI](#tab/cli)
 
             CLI content.
 
@@ -97,7 +97,7 @@ public class CliTabValidatorTests
     public void Validate_CliTabWithoutMcpTab_ReturnsError()
     {
         var markdown = """
-            ### [CLI](#tab/cli)
+            #### [CLI](#tab/cli)
 
             CLI content without MCP tab.
 
@@ -132,11 +132,11 @@ public class CliTabValidatorTests
         var markdown = """
             ## Tool A
 
-            ### [MCP Server](#tab/mcp-server)
+            #### [MCP Server](#tab/mcp-server)
 
             MCP A content.
 
-            ### [CLI](#tab/cli)
+            #### [CLI](#tab/cli)
 
             CLI A content.
 
@@ -144,11 +144,11 @@ public class CliTabValidatorTests
 
             ## Tool B
 
-            ### [MCP Server](#tab/mcp-server)
+            #### [MCP Server](#tab/mcp-server)
 
             MCP B content.
 
-            ### [CLI](#tab/cli)
+            #### [CLI](#tab/cli)
 
             CLI B content.
 

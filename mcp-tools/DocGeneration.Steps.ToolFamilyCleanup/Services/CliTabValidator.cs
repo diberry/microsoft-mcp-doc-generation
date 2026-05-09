@@ -33,14 +33,14 @@ public static class CliTabValidator
             lineNum++;
             var line = rawLine.TrimEnd('\r').Trim();
 
-            if (line == "### [MCP Server](#tab/mcp-server)")
+            if (line == "#### [MCP Server](#tab/mcp-server)")
             {
                 if (inTabGroup)
                     errors.Add($"Line {lineNum}: Nested tab group detected (MCP Server tab opened inside existing tab group).");
                 mcpTabCount++;
                 inTabGroup = true;
             }
-            else if (line == "### [CLI](#tab/cli)")
+            else if (line == "#### [CLI](#tab/cli)")
             {
                 if (!inTabGroup)
                     errors.Add($"Line {lineNum}: CLI tab opened without preceding MCP Server tab.");

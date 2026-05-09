@@ -61,11 +61,11 @@ title: Test Article
 
 ## Tool Name
 
-### [MCP Server](#tab/mcp-server)
+#### [MCP Server](#tab/mcp-server)
 
 MCP Server content here.
 
-### [CLI](#tab/cli)
+#### [CLI](#tab/cli)
 
 CLI content here.
 
@@ -156,11 +156,11 @@ title: Test Article
 
 ## Tool 1
 
-### [MCP Server](#tab/mcp-server)
+#### [MCP Server](#tab/mcp-server)
 
 MCP content.
 
-### [CLI](#tab/cli)
+#### [CLI](#tab/cli)
 
 CLI content.
 
@@ -217,7 +217,7 @@ title: Test Article
 
 ## Tool Name
 
-### [Custom Tab](#tab/custom-id)
+#### [Custom Tab](#tab/custom-id)
 
 Custom tab content.
 

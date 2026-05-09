@@ -13,7 +13,7 @@ public class CliHelpersTests
         var result = HandlebarsTemplateEngine.ProcessTemplateString(
             "{{{tabHeader label id}}}",
             new Dictionary<string, object> { ["label"] = "MCP Server", ["id"] = "mcp-server" });
-        Assert.Equal("### [MCP Server](#tab/mcp-server)", result);
+        Assert.Equal("#### [MCP Server](#tab/mcp-server)", result);
     }
 
     [Fact]

@@ -7,12 +7,12 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Services;
 
 /// <summary>
 /// Validates that articles do not contain H3 headings except for tab markers.
-/// Tab markers (### [Label](#tab/tab-id)) are exempt as they're Learn tabbed conceptual format.
+/// Tab markers (#### [Label](#tab/tab-id)) are exempt as they're Learn tabbed conceptual format.
 /// </summary>
 public static class H3HeadingValidator
 {
     // Matches any H3 heading (###) that is NOT a tab marker
-    // Tab markers have format: ### [Label](#tab/tab-id)
+    // Tab markers have format: #### [Label](#tab/tab-id)
     private static readonly Regex NonTabH3Regex = new(
         @"^###\s+(?!\[.*?\]\(#tab\/.*?\))",
         RegexOptions.Multiline | RegexOptions.Compiled);
@@ -46,7 +46,7 @@ public static class H3HeadingValidator
             {
                 var trimmedLine = line.Trim();
                 
-                // Allow tab markers: ### [Label](#tab/tab-id)
+                // Allow tab markers: #### [Label](#tab/tab-id)
                 if (IsTabMarker(trimmedLine))
                 {
                     continue;
@@ -62,14 +62,14 @@ public static class H3HeadingValidator
 
     /// <summary>
     /// Checks if a line is a valid tab marker.
-    /// Tab markers have format: ### [Label](#tab/tab-id)
+    /// Tab markers have format: #### [Label](#tab/tab-id)
     /// </summary>
     private static bool IsTabMarker(string line)
     {
         // Common tab markers in use:
-        // ### [MCP Server](#tab/mcp-server)
-        // ### [CLI](#tab/cli)
+        // #### [MCP Server](#tab/mcp-server)
+        // #### [CLI](#tab/cli)
         
-        return line.StartsWith("### [") && line.Contains("](#tab/");
+        return line.StartsWith("#### [") && line.Contains("](#tab/");
     }
 }

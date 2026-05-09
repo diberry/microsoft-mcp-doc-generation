@@ -15,13 +15,13 @@ public static class CliHelpers
     /// </summary>
     public static void Register(IHandlebars handlebars)
     {
-        // tabHeader: generates ### [Label](#tab/tab-id) for tabbed conceptual tags
+        // tabHeader: generates #### [Label](#tab/tab-id) for tabbed conceptual tags
         handlebars.RegisterHelper("tabHeader", (context, arguments) =>
         {
             if (arguments.Length < 2) return "";
             var label = arguments[0]?.ToString() ?? "";
             var tabId = arguments[1]?.ToString() ?? "";
-            return $"### [{label}](#tab/{tabId})";
+            return $"#### [{label}](#tab/{tabId})";
         });
 
         // cliCommand: renders full CLI command with azmcp prefix
