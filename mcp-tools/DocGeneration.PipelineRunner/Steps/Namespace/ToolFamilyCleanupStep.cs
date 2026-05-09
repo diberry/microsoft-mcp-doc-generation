@@ -197,8 +197,17 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     if (File.Exists(cliOutputPath) && Directory.Exists(parameterCliDir) && Directory.Exists(exampleCommandsDir))
                     {
                         var cliJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
-                        var cliTools = CliJsonMapper.MapFromCliOutput(cliJson);
+                        var allCliTools = CliJsonMapper.MapFromCliOutput(cliJson);
                         var nameContext = await FileNameContext.CreateAsync();
+
+                        // Filter CLI tools to only those in the current namespace
+                        var cliTools = new Dictionary<string, CliToolInfo>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var (key, tool) in allCliTools)
+                        {
+                            if (key.StartsWith(currentNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
+                                key.Equals(currentNamespace, StringComparison.OrdinalIgnoreCase))
+                                cliTools[key] = tool;
+                        }
 
                         // Extract NLP descriptions from tools-raw files (source of truth)
                         var toolsRawDir = Path.Combine(context.OutputPath, "tools-raw");
@@ -219,7 +228,8 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                                     var aiClient = new GenerativeAIClient();
                                     var improver = new CliProseImprover(aiClient, systemPrompt);
                                     
-                                    cliTools = await improver.ImproveProseAsync(cliTools, nlpDescriptions, cancellationToken: cancellationToken);
+                                    var improved = await improver.ImproveProseAsync(cliTools, nlpDescriptions, cancellationToken: cancellationToken);
+                                    cliTools = new Dictionary<string, CliToolInfo>(improved, StringComparer.OrdinalIgnoreCase);
                                     Console.WriteLine($"  ✓ Improved {cliTools.Count} CLI descriptions using NLP as source of truth");
                                 }
                             }
