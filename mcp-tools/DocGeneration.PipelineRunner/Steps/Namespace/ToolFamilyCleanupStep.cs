@@ -214,29 +214,13 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                         var nlpDescriptions = await NlpDescriptionExtractor.ExtractNlpDescriptionsAsync(
                             toolsRawDir, nameContext, cliTools.Keys);
 
-                        // Improve CLI prose using NLP descriptions as source of truth
+                        // Align CLI descriptions with NLP descriptions (deterministic, no AI)
                         if (nlpDescriptions.Count > 0)
                         {
-                            try
-                            {
-                                // Load CLI prose system prompt
-                                var promptPath = Path.Combine(context.McpToolsRoot, 
-                                    "DocGeneration.Steps.ToolGeneration.Improvements", "prompts", "cli-prose-system-prompt.txt");
-                                if (File.Exists(promptPath))
-                                {
-                                    var systemPrompt = await File.ReadAllTextAsync(promptPath, cancellationToken);
-                                    var aiClient = new GenerativeAIClient();
-                                    var improver = new CliProseImprover(aiClient, systemPrompt);
-                                    
-                                    var improved = await improver.ImproveProseAsync(cliTools, nlpDescriptions, cancellationToken: cancellationToken);
-                                    cliTools = new Dictionary<string, CliToolInfo>(improved, StringComparer.OrdinalIgnoreCase);
-                                    Console.WriteLine($"  ✓ Improved {cliTools.Count} CLI descriptions using NLP as source of truth");
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                warnings.Add($"CLI prose improvement failed (non-fatal): {ex.Message}. Using raw CLI descriptions.");
-                            }
+                            var improver = new CliProseImprover();
+                            var improved = await improver.ImproveProseAsync(cliTools, nlpDescriptions, cancellationToken: cancellationToken);
+                            cliTools = new Dictionary<string, CliToolInfo>(improved, StringComparer.OrdinalIgnoreCase);
+                            Console.WriteLine($"  ✓ Aligned {cliTools.Count} CLI descriptions with NLP (deterministic)");
                         }
 
                         var assembledContent = await CliContentAssembler.AssembleAllCliContentAsync(
