@@ -344,6 +344,10 @@ public class CleanupGenerator
         var baseOutputDir = Path.GetFullPath("../generated");
         _cliVersion = await CliVersionReader.ReadCliVersionAsync(baseOutputDir);
         Console.WriteLine($"CLI Version: {_cliVersion}");
+
+        // Load CLI enriched data for CLI subsection injection
+        var cliEnrichedPath = Path.Combine(baseOutputDir, "cli", "cli-output-enriched.json");
+        var cliCommands = await CliSectionInjector.LoadCliCommandsAsync(cliEnrichedPath);
         Console.WriteLine();
 
         // Create output directories (resolve relative paths)
@@ -515,6 +519,25 @@ public class CleanupGenerator
 
                 // Phase 3.5: Pre-stitch H2 count validation
                 ValidateAndFixPhantomH2Sections(familyContent, progress);
+
+                // Phase 3.7: Inject CLI subsections into tool content
+                if (cliCommands.Count > 0)
+                {
+                    int cliInjected = 0;
+                    foreach (var tool in familyContent.Tools)
+                    {
+                        var updated = CliSectionInjector.InjectCliSection(tool.Content, tool.Command, cliCommands);
+                        if (!ReferenceEquals(updated, tool.Content))
+                        {
+                            tool.Content = updated;
+                            cliInjected++;
+                        }
+                    }
+                    if (cliInjected > 0)
+                    {
+                        Console.WriteLine($"{progress}   Phase 3.7: Injected CLI sections for {cliInjected}/{familyContent.Tools.Count} tools");
+                    }
+                }
 
                 // Phase 4: Stitch together
                 Console.Write($"{progress}   Phase 4: Stitching file... ");

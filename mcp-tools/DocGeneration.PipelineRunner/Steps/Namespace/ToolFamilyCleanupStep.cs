@@ -73,6 +73,13 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 warnings.Add($"CLI version file not found at '{cliVersionPath}'. Tool-family cleanup will use 'unknown'.");
             }
 
+            // Copy CLI enriched JSON for CLI subsection injection
+            var cliEnrichedPath = Path.Combine(context.OutputPath, "cli", "cli-output-enriched.json");
+            if (File.Exists(cliEnrichedPath))
+            {
+                File.Copy(cliEnrichedPath, Path.Combine(tempCliDirectory, "cli-output-enriched.json"), overwrite: true);
+            }
+
             var brandMappingSource = Path.Combine(context.McpToolsRoot, "data", "brand-to-server-mapping.json");
             if (File.Exists(brandMappingSource))
             {
