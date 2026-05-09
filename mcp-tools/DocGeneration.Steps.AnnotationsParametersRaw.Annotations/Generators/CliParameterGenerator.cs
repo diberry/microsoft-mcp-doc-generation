@@ -32,8 +32,8 @@ public class CliParameterGenerator
 
             var templateData = new Dictionary<string, object>
             {
-                ["hasParameters"] = tool.Switches.Count > 0,
-                ["switches"] = tool.Switches,
+                ["hasParameters"] = GlobalSwitchFilter.FilterOutGlobal(tool.Switches).Count > 0,
+                ["switches"] = GlobalSwitchFilter.FilterOutGlobal(tool.Switches),
                 ["command"] = command,
                 ["generatedAt"] = generatedAt,
                 ["version"] = cliVersion

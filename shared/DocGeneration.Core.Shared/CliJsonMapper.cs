@@ -145,7 +145,8 @@ public static class CliJsonMapper
             switches.Add(new CliSwitch(
                 Name: name,
                 Description: GetOptionalString(opt, "description"),
-                Type: GetOptionalString(opt, "type", "string")));
+                Type: GetOptionalString(opt, "type", "string"),
+                IsRequired: GetOptionalBool(opt, "required")));
         }
 
         return switches;

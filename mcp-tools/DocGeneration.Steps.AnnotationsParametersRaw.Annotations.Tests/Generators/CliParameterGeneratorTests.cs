@@ -113,8 +113,42 @@ public class CliParameterGeneratorTests: IDisposable
         var file = Directory.GetFiles(_outputDir, "*.md").Single();
         var content = await File.ReadAllTextAsync(file);
         Assert.Contains("`--resource-group`", content);
-        Assert.Contains("`--subscription`", content);
+        // --subscription is a global switch and should be filtered out
+        Assert.DoesNotContain("`--subscription`", content);
         Assert.Contains("`--output`", content);
+    }
+
+    [Fact]
+    public async Task GenerateParameterCliFiles_OnlyGlobalSwitches_ShowsNoParams()
+    {
+        var tools = MakeSingleTool("storage account list",
+            new CliSwitch("--subscription", "The subscription ID", "string"),
+            new CliSwitch("--tenant", "Tenant ID", "string"),
+            new CliSwitch("--auth-method", "Auth method", "string"));
+
+        await CliParameterGenerator
+            .GenerateParameterCliFilesAsync(tools, _templateFile, _outputDir, _ctx, "1.0.0", DateTime.UtcNow);
+
+        var file = Directory.GetFiles(_outputDir, "*.md").Single();
+        var content = await File.ReadAllTextAsync(file);
+        Assert.Contains("This tool has no CLI parameters.", content);
+    }
+
+    [Fact]
+    public async Task GenerateParameterCliFiles_RequiredColumn_ShowsYesNo()
+    {
+        var tools = MakeSingleTool("storage account list",
+            new CliSwitch("--resource-group", "The resource group", "string", IsRequired: true),
+            new CliSwitch("--output", "Output format", "string"));
+
+        await CliParameterGenerator
+            .GenerateParameterCliFilesAsync(tools, _templateFile, _outputDir, _ctx, "1.0.0", DateTime.UtcNow);
+
+        var file = Directory.GetFiles(_outputDir, "*.md").Single();
+        var content = await File.ReadAllTextAsync(file);
+        Assert.Contains("| Required |", content);
+        Assert.Contains("| Yes |", content);
+        Assert.Contains("| No |", content);
     }
 
     [Fact]
