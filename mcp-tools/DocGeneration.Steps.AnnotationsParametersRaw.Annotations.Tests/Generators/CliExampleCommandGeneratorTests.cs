@@ -50,22 +50,23 @@ public class CliExampleCommandGeneratorTests : IDisposable
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
 
         Assert.Contains("azmcp storage account list", content);
-        Assert.Contains("### Example CLI commands", content);
+        Assert.Contains("**Example CLI command**", content);
         Assert.Contains("```azurecli", content);
     }
 
     [Fact]
-    public void BuildExampleCommandContent_WithToolSpecificSwitches_ShowsFullExample()
+    public void BuildExampleCommandContent_WithRequiredSwitches_ShowsOnlyRequired()
     {
         var tool = MakeTool("storage account list",
-            new CliSwitch("--resource-group", "RG name", "string"),
+            new CliSwitch("--resource-group", "RG name", "string", IsRequired: true),
             new CliSwitch("--account-name", "Storage account name", "string"));
 
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
 
-        Assert.Contains("With parameters:", content);
         Assert.Contains("--resource-group", content);
-        Assert.Contains("--account-name", content);
+        Assert.DoesNotContain("--account-name", content);
+        Assert.DoesNotContain("Basic usage:", content);
+        Assert.DoesNotContain("With parameters:", content);
     }
 
     [Fact]
@@ -81,13 +82,15 @@ public class CliExampleCommandGeneratorTests : IDisposable
 
         Assert.DoesNotContain("With parameters:", content);
         Assert.DoesNotContain("--subscription", content);
+        // Should show bare command as fallback
+        Assert.Contains("azmcp storage account list", content);
     }
 
     [Fact]
     public void BuildExampleCommandContent_SwitchWithValuePlaceholder_UsesPlaceholder()
     {
         var tool = MakeTool("storage account list",
-            new CliSwitch("--resource-group", "RG", "string", ValuePlaceholder: "<my-rg>"));
+            new CliSwitch("--resource-group", "RG", "string", IsRequired: true, ValuePlaceholder: "<my-rg>"));
 
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
 
@@ -98,11 +101,25 @@ public class CliExampleCommandGeneratorTests : IDisposable
     public void BuildExampleCommandContent_SwitchWithoutPlaceholder_GeneratesFromName()
     {
         var tool = MakeTool("storage account list",
-            new CliSwitch("--resource-group", "RG", "string"));
+            new CliSwitch("--resource-group", "RG", "string", IsRequired: true));
 
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
 
         Assert.Contains("--resource-group <resource-group>", content);
+    }
+
+    [Fact]
+    public void BuildExampleCommandContent_NoRequiredSwitches_ShowsBareCommand()
+    {
+        var tool = MakeTool("storage account list",
+            new CliSwitch("--resource-group", "RG name", "string"),
+            new CliSwitch("--account-name", "Storage account name", "string"));
+
+        var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
+
+        Assert.Contains("azmcp storage account list", content);
+        Assert.DoesNotContain("--resource-group", content);
+        Assert.DoesNotContain("--account-name", content);
     }
 
     // ── GenerateExampleCommandFilesAsync tests ─────────────────────

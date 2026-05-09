@@ -51,35 +51,32 @@ public static class CliExampleCommandGenerator
     {
         var sb = new StringBuilder();
 
-        // Basic command
-        sb.AppendLine("### Example CLI commands");
-        sb.AppendLine();
-        sb.AppendLine("Basic usage:");
+        sb.AppendLine("**Example CLI command**");
         sb.AppendLine();
         sb.AppendLine("```azurecli");
-        sb.AppendLine($"azmcp {command}");
-        sb.AppendLine("```");
 
-        // If tool has non-global switches, show a full example with placeholders
-        var toolSpecificSwitches = tool.Switches
-            .Where(s => !IsGlobalSwitch(s.Name))
+        // Get required non-global switches
+        var requiredSwitches = tool.Switches
+            .Where(s => !IsGlobalSwitch(s.Name) && s.IsRequired == true)
             .ToList();
 
-        if (toolSpecificSwitches.Count > 0)
+        if (requiredSwitches.Count > 0)
         {
-            sb.AppendLine();
-            sb.AppendLine("With parameters:");
-            sb.AppendLine();
-            sb.AppendLine("```azurecli");
             sb.Append($"azmcp {command}");
-            foreach (var sw in toolSpecificSwitches)
+            foreach (var sw in requiredSwitches)
             {
                 var placeholder = sw.ValuePlaceholder ?? $"<{sw.Name.TrimStart('-')}>";
                 sb.Append($" {sw.Name} {placeholder}");
             }
             sb.AppendLine();
-            sb.AppendLine("```");
         }
+        else
+        {
+            // No required params — just show the bare command
+            sb.AppendLine($"azmcp {command}");
+        }
+
+        sb.AppendLine("```");
 
         return sb.ToString();
     }
