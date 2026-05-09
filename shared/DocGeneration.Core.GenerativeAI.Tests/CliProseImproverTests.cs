@@ -137,11 +137,7 @@ public class CliProseImproverTests
     {
         var aiResponse = """
         {
-            "tool_description": "Lists all storage accounts in the specified subscription.",
-            "switch_descriptions": {
-                "--subscription": "The Azure subscription identifier.",
-                "--resource-group": "The name of the resource group."
-            }
+            "tool_description": "Lists all storage accounts in the specified subscription."
         }
         """;
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
@@ -155,25 +151,24 @@ public class CliProseImproverTests
     }
 
     [Fact]
-    public async Task ImproveProseAsync_ImprovesSwitchDescriptions()
+    public async Task ImproveProseAsync_SwitchDescriptionsPreservedAsIs()
     {
+        // AI response only has tool_description — switches not sent to LLM per contract
         var aiResponse = """
         {
-            "tool_description": "Lists all storage accounts.",
-            "switch_descriptions": {
-                "--subscription": "The Azure subscription identifier.",
-                "--resource-group": "The name of the Azure resource group."
-            }
+            "tool_description": "Lists all storage accounts."
         }
         """;
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
-        var tools = MakeToolDict(("storage account list", MakeTool()));
+        var rawTool = MakeTool();
+        var tools = MakeToolDict(("storage account list", rawTool));
 
         var result = await improver.ImproveProseAsync(tools);
 
         var tool = result.Values.First();
-        Assert.Equal("The Azure subscription identifier.", tool.Switches[0].Description);
-        Assert.Equal("The name of the Azure resource group.", tool.Switches[1].Description);
+        // Switches should be unchanged — not sent to LLM
+        Assert.Equal(rawTool.Switches[0].Description, tool.Switches[0].Description);
+        Assert.Equal(rawTool.Switches[1].Description, tool.Switches[1].Description);
     }
 
     [Fact]
@@ -181,11 +176,7 @@ public class CliProseImproverTests
     {
         var aiResponse = """
         {
-            "tool_description": "Lists storage accounts.",
-            "switch_descriptions": {
-                "--subscription": "Improved sub desc.",
-                "--resource-group": "Improved rg desc."
-            }
+            "tool_description": "Lists storage accounts."
         }
         """;
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
@@ -205,11 +196,7 @@ public class CliProseImproverTests
         // AI returns markdown formatting in description — should fallback
         var aiResponse = """
         {
-            "tool_description": "Lists **all** storage accounts with `az` command.",
-            "switch_descriptions": {
-                "--subscription": "The Azure subscription ID.",
-                "--resource-group": "The name of the resource group."
-            }
+            "tool_description": "Lists **all** storage accounts with `az` command."
         }
         """;
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
@@ -228,11 +215,7 @@ public class CliProseImproverTests
     {
         var aiResponse = """
         {
-            "tool_description": "",
-            "switch_descriptions": {
-                "--subscription": "The Azure subscription ID.",
-                "--resource-group": "The name of the resource group."
-            }
+            "tool_description": ""
         }
         """;
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
@@ -248,16 +231,12 @@ public class CliProseImproverTests
     [Fact]
     public async Task ImproveProseAsync_LengthViolation_FallsBackToRaw()
     {
-        // 3x length of original should trigger length violation (>200%)
+        // >300% length of original should trigger length violation
         var rawTool = MakeTool(description: "List accounts.");
-        var longDesc = new string('A', rawTool.Description.Length * 3);
+        var longDesc = new string('A', rawTool.Description.Length * 4);
         var aiResponse = $$"""
         {
-            "tool_description": "{{longDesc}}",
-            "switch_descriptions": {
-                "--subscription": "The Azure subscription ID.",
-                "--resource-group": "The name of the resource group."
-            }
+            "tool_description": "{{longDesc}}"
         }
         """;
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
@@ -326,14 +305,9 @@ public class CliProseImproverTests
     {
         var aiResponse1 = """
         {
-            "tool_description": "Lists storage accounts.",
-            "switch_descriptions": {
-                "--subscription": "The Azure subscription identifier."
-            }
+            "tool_description": "Lists storage accounts."
         }
         """;
-        // The FixedResponseChatClient returns the same response for every call,
-        // but we just need to verify both tools are present in the result.
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse1));
         var tool1 = new CliToolInfo("storage account list", "List accounts.", new[]
         {
@@ -361,31 +335,23 @@ public class CliProseImproverTests
         {
             new CliSwitch("--flag", "A flag.")
         });
-        // Deliberately NOT an empty dict, but one without switches in AI response is fine
-        // because token capture client returns valid JSON
         var tools = MakeToolDict(("test cmd", tool));
 
         using var cts = new CancellationTokenSource();
         await improver.ImproveProseAsync(tools, cancellationToken: cts.Token);
 
-        // The captured token should be linked (not directly equal) but must be cancellable
-        // We verify it can register — if propagation failed, this wouldn't work
         Assert.True(capturingClient.CapturedToken.CanBeCanceled);
     }
 
     [Fact]
-    public async Task ImproveProseAsync_WithNlpDescription_UsesNlpAsSource()
+    public async Task ImproveProseAsync_WithNlpDescription_AdaptsVoiceDeterministically()
     {
-        // NLP description includes return fields and behavioral details that should be preserved
-        var nlpDesc = "Retrieves detailed information about Azure Storage accounts, including account name, location, SKU, kind, hierarchical namespace status, HTTPS-only settings, and blob public access configuration. If a specific account name is not provided, the command will return details for all accounts in a subscription.";
-        // AI response adapted from NLP (imperative voice)
+        // NLP description starts with "This tool retrieves..." — should be converted to "Retrieves..."
+        var nlpDesc = "This tool retrieves detailed information about Azure Storage accounts, including account name and location.";
+        // AI will receive the voice-adapted description and return it cleaned up
         var aiResponse = """
         {
-            "tool_description": "Gets detailed information about Azure Storage accounts, including account name, location, SKU, kind, hierarchical namespace status, HTTPS-only settings, and blob public access configuration. If a specific account name is not provided, the command will return details for all accounts in a subscription.",
-            "switch_descriptions": {
-                "--subscription": "The Azure subscription identifier.",
-                "--resource-group": "The name of the resource group."
-            }
+            "tool_description": "Retrieves detailed information about Azure Storage accounts, including account name and location."
         }
         """;
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
@@ -399,8 +365,7 @@ public class CliProseImproverTests
 
         Assert.Single(result);
         var tool = result.Values.First();
-        // Verify the improved description matches AI response (FixedResponseChatClient returns what we give it)
-        Assert.Equal("Gets detailed information about Azure Storage accounts, including account name, location, SKU, kind, hierarchical namespace status, HTTPS-only settings, and blob public access configuration. If a specific account name is not provided, the command will return details for all accounts in a subscription.", tool.Description);
+        Assert.Equal("Retrieves detailed information about Azure Storage accounts, including account name and location.", tool.Description);
     }
 
     [Fact]
@@ -408,11 +373,7 @@ public class CliProseImproverTests
     {
         var aiResponse = """
         {
-            "tool_description": "Lists all storage accounts in the specified subscription.",
-            "switch_descriptions": {
-                "--subscription": "The Azure subscription identifier.",
-                "--resource-group": "The name of the resource group."
-            }
+            "tool_description": "Lists all storage accounts in the specified subscription."
         }
         """;
         var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
@@ -424,5 +385,36 @@ public class CliProseImproverTests
         Assert.Single(result);
         var tool = result.Values.First();
         Assert.Equal("Lists all storage accounts in the specified subscription.", tool.Description);
+    }
+
+    // ── AdaptNlpToCliVoice tests ─────────────────────────────────────
+
+    [Fact]
+    public void AdaptNlpToCliVoice_RemovesThisToolPrefix()
+    {
+        var result = CliProseImprover.AdaptNlpToCliVoice("This tool creates a storage account.");
+        Assert.Equal("Creates a storage account.", result);
+    }
+
+    [Fact]
+    public void AdaptNlpToCliVoice_RemovesMcpPreamble()
+    {
+        var result = CliProseImprover.AdaptNlpToCliVoice(
+            "Model Context Protocol (MCP) tools let you run tasks that manage Azure resources. Creates a storage account.");
+        Assert.Equal("Creates a storage account.", result);
+    }
+
+    [Fact]
+    public void AdaptNlpToCliVoice_ReplacesMcpServerReference()
+    {
+        var result = CliProseImprover.AdaptNlpToCliVoice("Gets details from the MCP Server about accounts.");
+        Assert.Equal("Gets details from the Azure MCP CLI about accounts.", result);
+    }
+
+    [Fact]
+    public void AdaptNlpToCliVoice_NoChangeNeeded_ReturnsAsIs()
+    {
+        var result = CliProseImprover.AdaptNlpToCliVoice("Creates a storage account in the specified region.");
+        Assert.Equal("Creates a storage account in the specified region.", result);
     }
 }

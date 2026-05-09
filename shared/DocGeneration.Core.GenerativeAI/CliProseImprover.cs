@@ -29,17 +29,19 @@ public class CliProseImprover
         _systemPrompt = systemPrompt ?? throw new ArgumentNullException(nameof(systemPrompt));
     }
 
+    // Deterministic voice patterns: convert "This tool..." to imperative voice
+    private static readonly Regex ThisToolPattern = new(
+        @"^This\s+tool\s+",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex McpToolPattern = new(
+        @"^Model\s+Context\s+Protocol\s+\(MCP\)\s+tools?\s+let[s]?\s+you\s+",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
     /// <summary>
-    /// Improves CLI prose fields (tool descriptions and switch descriptions) via AI.
-    /// Uses NLP descriptions as the source of truth and adapts voice/framing for CLI.
-    /// Returns a new dictionary with improved CliToolInfo records.
-    /// Falls back to raw description on validation failure.
+    /// Aligns CLI tool descriptions with NLP descriptions using deterministic voice transformation.
+    /// Takes the NLP description and converts to imperative voice without AI.
+    /// Only tool_description is sent to the LLM for minimal prose cleanup.
     /// </summary>
-    /// <param name="cliTools">CLI tools with raw descriptions from CLI JSON</param>
-    /// <param name="nlpDescriptions">NLP tool descriptions (source of truth) - nullable to support gradual rollout</param>
-    /// <param name="perToolTimeout">Timeout per tool</param>
-    /// <param name="maxTokens">Max AI response tokens</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     public async Task<IReadOnlyDictionary<string, CliToolInfo>> ImproveProseAsync(
         IReadOnlyDictionary<string, CliToolInfo> cliTools,
         IReadOnlyDictionary<string, string>? nlpDescriptions = null,
@@ -52,17 +54,62 @@ public class CliProseImprover
 
         foreach (var (key, tool) in cliTools)
         {
+            // If NLP description available, use it as CLI description with deterministic voice change
             string? nlpDescription = null;
             nlpDescriptions?.TryGetValue(key, out nlpDescription);
-            result[key] = await ImproveToolAsync(tool, nlpDescription, timeout, maxTokens, cancellationToken);
+
+            var toolToImprove = tool;
+            if (!string.IsNullOrWhiteSpace(nlpDescription))
+            {
+                var cliDescription = AdaptNlpToCliVoice(nlpDescription);
+                toolToImprove = tool with { Description = cliDescription };
+            }
+
+            // Send only tool_description to LLM for minimal prose cleanup (contract: tool desc only)
+            result[key] = await ImproveToolAsync(toolToImprove, timeout, maxTokens, cancellationToken);
         }
 
         return result;
     }
 
+    /// <summary>
+    /// Deterministic NLP→CLI voice adaptation. No AI needed.
+    /// Converts "This tool creates..." → "Creates..."
+    /// Strips MCP preamble sentences.
+    /// </summary>
+    public static string AdaptNlpToCliVoice(string nlpDescription)
+    {
+        var desc = nlpDescription.Trim();
+
+        // Remove MCP preamble sentence if present (e.g., "Model Context Protocol (MCP) tools let you run tasks...")
+        var mcpMatch = McpToolPattern.Match(desc);
+        if (mcpMatch.Success)
+        {
+            // Find the end of the MCP preamble sentence
+            var periodIdx = desc.IndexOf('.', mcpMatch.Index);
+            if (periodIdx >= 0 && periodIdx < desc.Length - 1)
+            {
+                desc = desc[(periodIdx + 1)..].TrimStart();
+            }
+        }
+
+        // Convert "This tool creates..." → "Creates..."
+        desc = ThisToolPattern.Replace(desc, "");
+        // Capitalize first letter after stripping
+        if (desc.Length > 0 && char.IsLower(desc[0]))
+        {
+            desc = char.ToUpper(desc[0]) + desc[1..];
+        }
+
+        // Replace "MCP" references with neutral phrasing
+        desc = desc.Replace("MCP Server", "Azure MCP CLI", StringComparison.OrdinalIgnoreCase);
+        desc = desc.Replace("MCP server", "Azure MCP CLI", StringComparison.OrdinalIgnoreCase);
+
+        return desc;
+    }
+
     private async Task<CliToolInfo> ImproveToolAsync(
         CliToolInfo tool,
-        string? nlpDescription,
         TimeSpan timeout,
         int maxTokens,
         CancellationToken cancellationToken)
@@ -73,11 +120,12 @@ public class CliProseImprover
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken, timeoutCts.Token);
 
-            var userPrompt = BuildUserPrompt(tool, nlpDescription);
+            // Contract: only send tool_description to LLM — minimal context
+            var userPrompt = BuildUserPrompt(tool);
             var aiResponse = await _aiClient.GetChatCompletionAsync(
                 _systemPrompt, userPrompt, maxTokens, linkedCts.Token);
 
-            return ParseAndValidate(tool, aiResponse, hasNlpDescription: !string.IsNullOrWhiteSpace(nlpDescription));
+            return ParseAndValidate(tool, aiResponse);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -95,28 +143,20 @@ public class CliProseImprover
         }
     }
 
-    private static string BuildUserPrompt(CliToolInfo tool, string? nlpDescription)
+    /// <summary>
+    /// Builds minimal user prompt with only tool_description (per contract).
+    /// </summary>
+    private static string BuildUserPrompt(CliToolInfo tool)
     {
-        var switchDescs = new Dictionary<string, string>();
-        foreach (var sw in tool.Switches)
-            switchDescs[sw.Name] = sw.Description;
-
         var payload = new Dictionary<string, object>
         {
-            ["tool_description"] = tool.Description,
-            ["switch_descriptions"] = switchDescs
+            ["tool_description"] = tool.Description
         };
-
-        // Include NLP description if available (source of truth)
-        if (!string.IsNullOrWhiteSpace(nlpDescription))
-        {
-            payload["nlp_description"] = nlpDescription;
-        }
 
         return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = false });
     }
 
-    private static CliToolInfo ParseAndValidate(CliToolInfo rawTool, string aiResponse, bool hasNlpDescription)
+    private static CliToolInfo ParseAndValidate(CliToolInfo rawTool, string aiResponse)
     {
         JsonDocument doc;
         try
@@ -138,51 +178,19 @@ public class CliProseImprover
             if (root.TryGetProperty("tool_description", out var descEl))
             {
                 var candidate = descEl.GetString() ?? "";
-                if (ValidateProseField(candidate, rawTool.Description, "tool_description", rawTool.Command, hasNlpDescription))
+                if (ValidateProseField(candidate, rawTool.Description, "tool_description", rawTool.Command))
                     improvedDescription = candidate;
             }
 
-            // Validate and extract switch descriptions
-            var improvedSwitches = new List<CliSwitch>(rawTool.Switches.Count);
-            if (root.TryGetProperty("switch_descriptions", out var switchEl) &&
-                switchEl.ValueKind == JsonValueKind.Object)
-            {
-                foreach (var sw in rawTool.Switches)
-                {
-                    if (switchEl.TryGetProperty(sw.Name, out var switchDescEl))
-                    {
-                        var candidate = switchDescEl.GetString() ?? "";
-                        if (ValidateProseField(candidate, sw.Description, sw.Name, rawTool.Command, hasNlpDescription))
-                            improvedSwitches.Add(sw with { Description = candidate });
-                        else
-                            improvedSwitches.Add(sw);
-                    }
-                    else
-                    {
-                        // Switch name missing from AI response — keep raw
-                        improvedSwitches.Add(sw);
-                    }
-                }
-            }
-            else
-            {
-                // No switch_descriptions in response — keep all raw
-                improvedSwitches.AddRange(rawTool.Switches);
-            }
-
-            return rawTool with
-            {
-                Description = improvedDescription,
-                Switches = improvedSwitches
-            };
+            // Keep switch descriptions as-is (not sent to LLM per contract)
+            return rawTool with { Description = improvedDescription };
         }
     }
 
     /// <summary>
     /// Validates an AI-improved prose field against invariants.
-    /// Returns true if valid, false if the raw value should be used instead.
     /// </summary>
-    private static bool ValidateProseField(string candidate, string original, string fieldName, string command, bool hasNlpDescription)
+    private static bool ValidateProseField(string candidate, string original, string fieldName, string command)
     {
         if (string.IsNullOrWhiteSpace(candidate))
         {
@@ -196,19 +204,14 @@ public class CliProseImprover
             return false;
         }
 
-        // Only apply length validation when NOT using NLP description as source
-        // (NLP descriptions are expected to be longer/more detailed than raw CLI descriptions)
-        if (!hasNlpDescription)
+        var originalLen = original.Length;
+        if (originalLen > 0)
         {
-            var originalLen = original.Length;
-            if (originalLen > 0)
+            var ratio = (double)candidate.Length / originalLen;
+            if (ratio < 0.3 || ratio > 3.0)
             {
-                var ratio = (double)candidate.Length / originalLen;
-                if (ratio < 0.5 || ratio > 2.0)
-                {
-                    Console.WriteLine($"  ⚠ Length violation ({ratio:P0}) for {fieldName} in '{command}', using raw.");
-                    return false;
-                }
+                Console.WriteLine($"  ⚠ Length violation ({ratio:P0}) for {fieldName} in '{command}', using raw.");
+                return false;
             }
         }
 
