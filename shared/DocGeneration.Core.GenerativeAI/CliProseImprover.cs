@@ -3,10 +3,9 @@
 
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using GenerativeAI;
 using Shared;
 
-namespace ToolGeneration_Improved.Services;
+namespace GenerativeAI;
 
 /// <summary>
 /// Improves CLI prose fields (tool descriptions and switch descriptions) via AI.
@@ -32,11 +31,18 @@ public class CliProseImprover
 
     /// <summary>
     /// Improves CLI prose fields (tool descriptions and switch descriptions) via AI.
+    /// Uses NLP descriptions as the source of truth and adapts voice/framing for CLI.
     /// Returns a new dictionary with improved CliToolInfo records.
     /// Falls back to raw description on validation failure.
     /// </summary>
+    /// <param name="cliTools">CLI tools with raw descriptions from CLI JSON</param>
+    /// <param name="nlpDescriptions">NLP tool descriptions (source of truth) - nullable to support gradual rollout</param>
+    /// <param name="perToolTimeout">Timeout per tool</param>
+    /// <param name="maxTokens">Max AI response tokens</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     public async Task<IReadOnlyDictionary<string, CliToolInfo>> ImproveProseAsync(
         IReadOnlyDictionary<string, CliToolInfo> cliTools,
+        IReadOnlyDictionary<string, string>? nlpDescriptions = null,
         TimeSpan? perToolTimeout = null,
         int maxTokens = 2000,
         CancellationToken cancellationToken = default)
@@ -46,7 +52,9 @@ public class CliProseImprover
 
         foreach (var (key, tool) in cliTools)
         {
-            result[key] = await ImproveToolAsync(tool, timeout, maxTokens, cancellationToken);
+            string? nlpDescription = null;
+            nlpDescriptions?.TryGetValue(key, out nlpDescription);
+            result[key] = await ImproveToolAsync(tool, nlpDescription, timeout, maxTokens, cancellationToken);
         }
 
         return result;
@@ -54,6 +62,7 @@ public class CliProseImprover
 
     private async Task<CliToolInfo> ImproveToolAsync(
         CliToolInfo tool,
+        string? nlpDescription,
         TimeSpan timeout,
         int maxTokens,
         CancellationToken cancellationToken)
@@ -64,11 +73,11 @@ public class CliProseImprover
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
                 cancellationToken, timeoutCts.Token);
 
-            var userPrompt = BuildUserPrompt(tool);
+            var userPrompt = BuildUserPrompt(tool, nlpDescription);
             var aiResponse = await _aiClient.GetChatCompletionAsync(
                 _systemPrompt, userPrompt, maxTokens, linkedCts.Token);
 
-            return ParseAndValidate(tool, aiResponse);
+            return ParseAndValidate(tool, aiResponse, hasNlpDescription: !string.IsNullOrWhiteSpace(nlpDescription));
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
@@ -86,7 +95,7 @@ public class CliProseImprover
         }
     }
 
-    private static string BuildUserPrompt(CliToolInfo tool)
+    private static string BuildUserPrompt(CliToolInfo tool, string? nlpDescription)
     {
         var switchDescs = new Dictionary<string, string>();
         foreach (var sw in tool.Switches)
@@ -98,10 +107,16 @@ public class CliProseImprover
             ["switch_descriptions"] = switchDescs
         };
 
+        // Include NLP description if available (source of truth)
+        if (!string.IsNullOrWhiteSpace(nlpDescription))
+        {
+            payload["nlp_description"] = nlpDescription;
+        }
+
         return JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = false });
     }
 
-    private static CliToolInfo ParseAndValidate(CliToolInfo rawTool, string aiResponse)
+    private static CliToolInfo ParseAndValidate(CliToolInfo rawTool, string aiResponse, bool hasNlpDescription)
     {
         JsonDocument doc;
         try
@@ -123,7 +138,7 @@ public class CliProseImprover
             if (root.TryGetProperty("tool_description", out var descEl))
             {
                 var candidate = descEl.GetString() ?? "";
-                if (ValidateProseField(candidate, rawTool.Description, "tool_description", rawTool.Command))
+                if (ValidateProseField(candidate, rawTool.Description, "tool_description", rawTool.Command, hasNlpDescription))
                     improvedDescription = candidate;
             }
 
@@ -137,7 +152,7 @@ public class CliProseImprover
                     if (switchEl.TryGetProperty(sw.Name, out var switchDescEl))
                     {
                         var candidate = switchDescEl.GetString() ?? "";
-                        if (ValidateProseField(candidate, sw.Description, sw.Name, rawTool.Command))
+                        if (ValidateProseField(candidate, sw.Description, sw.Name, rawTool.Command, hasNlpDescription))
                             improvedSwitches.Add(sw with { Description = candidate });
                         else
                             improvedSwitches.Add(sw);
@@ -167,7 +182,7 @@ public class CliProseImprover
     /// Validates an AI-improved prose field against invariants.
     /// Returns true if valid, false if the raw value should be used instead.
     /// </summary>
-    private static bool ValidateProseField(string candidate, string original, string fieldName, string command)
+    private static bool ValidateProseField(string candidate, string original, string fieldName, string command, bool hasNlpDescription)
     {
         if (string.IsNullOrWhiteSpace(candidate))
         {
@@ -181,14 +196,19 @@ public class CliProseImprover
             return false;
         }
 
-        var originalLen = original.Length;
-        if (originalLen > 0)
+        // Only apply length validation when NOT using NLP description as source
+        // (NLP descriptions are expected to be longer/more detailed than raw CLI descriptions)
+        if (!hasNlpDescription)
         {
-            var ratio = (double)candidate.Length / originalLen;
-            if (ratio < 0.5 || ratio > 2.0)
+            var originalLen = original.Length;
+            if (originalLen > 0)
             {
-                Console.WriteLine($"  ⚠ Length violation ({ratio:P0}) for {fieldName} in '{command}', using raw.");
-                return false;
+                var ratio = (double)candidate.Length / originalLen;
+                if (ratio < 0.5 || ratio > 2.0)
+                {
+                    Console.WriteLine($"  ⚠ Length violation ({ratio:P0}) for {fieldName} in '{command}', using raw.");
+                    return false;
+                }
             }
         }
 

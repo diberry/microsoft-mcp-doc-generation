@@ -1,12 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using GenerativeAI;
 using Microsoft.Extensions.AI;
 using Shared;
-using ToolGeneration_Improved.Services;
+using Xunit;
 
-namespace ToolGeneration_Improved.Tests;
+namespace GenerativeAI.Tests;
 
 /// <summary>
 /// Tests for CliProseImprover — AI improvement of CLI prose fields with validation and fallback.
@@ -372,5 +371,58 @@ public class CliProseImproverTests
         // The captured token should be linked (not directly equal) but must be cancellable
         // We verify it can register — if propagation failed, this wouldn't work
         Assert.True(capturingClient.CapturedToken.CanBeCanceled);
+    }
+
+    [Fact]
+    public async Task ImproveProseAsync_WithNlpDescription_UsesNlpAsSource()
+    {
+        // NLP description includes return fields and behavioral details that should be preserved
+        var nlpDesc = "Retrieves detailed information about Azure Storage accounts, including account name, location, SKU, kind, hierarchical namespace status, HTTPS-only settings, and blob public access configuration. If a specific account name is not provided, the command will return details for all accounts in a subscription.";
+        // AI response adapted from NLP (imperative voice)
+        var aiResponse = """
+        {
+            "tool_description": "Gets detailed information about Azure Storage accounts, including account name, location, SKU, kind, hierarchical namespace status, HTTPS-only settings, and blob public access configuration. If a specific account name is not provided, the command will return details for all accounts in a subscription.",
+            "switch_descriptions": {
+                "--subscription": "The Azure subscription identifier.",
+                "--resource-group": "The name of the resource group."
+            }
+        }
+        """;
+        var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
+        var nlpDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["storage account list"] = nlpDesc
+        };
+        var tools = MakeToolDict(("storage account list", MakeTool()));
+
+        var result = await improver.ImproveProseAsync(tools, nlpDescriptions);
+
+        Assert.Single(result);
+        var tool = result.Values.First();
+        // Verify the improved description matches AI response (FixedResponseChatClient returns what we give it)
+        Assert.Equal("Gets detailed information about Azure Storage accounts, including account name, location, SKU, kind, hierarchical namespace status, HTTPS-only settings, and blob public access configuration. If a specific account name is not provided, the command will return details for all accounts in a subscription.", tool.Description);
+    }
+
+    [Fact]
+    public async Task ImproveProseAsync_WithoutNlpDescription_UsesCliDescription()
+    {
+        var aiResponse = """
+        {
+            "tool_description": "Lists all storage accounts in the specified subscription.",
+            "switch_descriptions": {
+                "--subscription": "The Azure subscription identifier.",
+                "--resource-group": "The name of the resource group."
+            }
+        }
+        """;
+        var improver = CreateImprover(new FixedResponseChatClient(aiResponse));
+        var tools = MakeToolDict(("storage account list", MakeTool()));
+
+        // No NLP descriptions provided — should fall back to improving CLI description
+        var result = await improver.ImproveProseAsync(tools, nlpDescriptions: null);
+
+        Assert.Single(result);
+        var tool = result.Values.First();
+        Assert.Equal("Lists all storage accounts in the specified subscription.", tool.Description);
     }
 }

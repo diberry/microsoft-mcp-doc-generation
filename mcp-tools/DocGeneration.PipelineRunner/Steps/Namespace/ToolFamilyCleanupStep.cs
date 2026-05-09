@@ -1,3 +1,4 @@
+using GenerativeAI;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
@@ -198,6 +199,35 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                         var cliJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
                         var cliTools = CliJsonMapper.MapFromCliOutput(cliJson);
                         var nameContext = await FileNameContext.CreateAsync();
+
+                        // Extract NLP descriptions from tools-raw files (source of truth)
+                        var toolsRawDir = Path.Combine(context.OutputPath, "tools-raw");
+                        var nlpDescriptions = await NlpDescriptionExtractor.ExtractNlpDescriptionsAsync(
+                            toolsRawDir, nameContext, cliTools.Keys);
+
+                        // Improve CLI prose using NLP descriptions as source of truth
+                        if (nlpDescriptions.Count > 0)
+                        {
+                            try
+                            {
+                                // Load CLI prose system prompt
+                                var promptPath = Path.Combine(context.McpToolsRoot, 
+                                    "DocGeneration.Steps.ToolGeneration.Improvements", "prompts", "cli-prose-system-prompt.txt");
+                                if (File.Exists(promptPath))
+                                {
+                                    var systemPrompt = await File.ReadAllTextAsync(promptPath, cancellationToken);
+                                    var aiClient = new GenerativeAIClient();
+                                    var improver = new CliProseImprover(aiClient, systemPrompt);
+                                    
+                                    cliTools = await improver.ImproveProseAsync(cliTools, nlpDescriptions, cancellationToken: cancellationToken);
+                                    Console.WriteLine($"  ✓ Improved {cliTools.Count} CLI descriptions using NLP as source of truth");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                warnings.Add($"CLI prose improvement failed (non-fatal): {ex.Message}. Using raw CLI descriptions.");
+                            }
+                        }
 
                         var assembledContent = await CliContentAssembler.AssembleAllCliContentAsync(
                             cliTools, parameterCliDir, exampleCommandsDir, nameContext);
