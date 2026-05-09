@@ -55,24 +55,34 @@ public static class CliExampleCommandGenerator
         sb.AppendLine();
         sb.AppendLine("```azurecli");
 
-        // Get required non-global switches
-        var requiredSwitches = tool.Switches
-            .Where(s => !IsGlobalSwitch(s.Name) && s.IsRequired == true)
+        // Get non-global switches, required first then optional
+        var toolSwitches = tool.Switches
+            .Where(s => !IsGlobalSwitch(s.Name))
+            .OrderByDescending(s => s.IsRequired == true)
             .ToList();
 
-        if (requiredSwitches.Count > 0)
+        if (toolSwitches.Count > 0)
         {
-            sb.Append($"azmcp {command}");
-            foreach (var sw in requiredSwitches)
+            sb.AppendLine($"azmcp {command} \\");
+            for (int i = 0; i < toolSwitches.Count; i++)
             {
+                var sw = toolSwitches[i];
                 var placeholder = sw.ValuePlaceholder ?? $"<{sw.Name.TrimStart('-')}>";
-                sb.Append($" {sw.Name} {placeholder}");
+                var isLast = (i == toolSwitches.Count - 1);
+                var continuation = isLast ? "" : " \\";
+
+                if (sw.IsRequired == true)
+                {
+                    sb.AppendLine($"  {sw.Name} {placeholder}{continuation}");
+                }
+                else
+                {
+                    sb.AppendLine($"  [{sw.Name} {placeholder}]{continuation}");
+                }
             }
-            sb.AppendLine();
         }
         else
         {
-            // No required params — just show the bare command
             sb.AppendLine($"azmcp {command}");
         }
 

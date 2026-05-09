@@ -44,7 +44,7 @@ public class CliExampleCommandGeneratorTests : IDisposable
     // ── BuildExampleCommandContent tests ───────────────────────────
 
     [Fact]
-    public void BuildExampleCommandContent_BasicUsage_IncludesAzmcpPrefix()
+    public void BuildExampleCommandContent_NoSwitches_ShowsBareCommand()
     {
         var tool = MakeTool("storage account list");
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
@@ -52,25 +52,42 @@ public class CliExampleCommandGeneratorTests : IDisposable
         Assert.Contains("azmcp storage account list", content);
         Assert.Contains("**Example CLI command**", content);
         Assert.Contains("```azurecli", content);
+        Assert.DoesNotContain("\\", content);
     }
 
     [Fact]
-    public void BuildExampleCommandContent_WithRequiredSwitches_ShowsOnlyRequired()
+    public void BuildExampleCommandContent_RequiredAndOptional_BothShown()
     {
-        var tool = MakeTool("storage account list",
+        var tool = MakeTool("storage account create",
             new CliSwitch("--resource-group", "RG name", "string", IsRequired: true),
             new CliSwitch("--account-name", "Storage account name", "string"));
 
-        var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
+        var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account create", tool);
 
-        Assert.Contains("--resource-group", content);
-        Assert.DoesNotContain("--account-name", content);
-        Assert.DoesNotContain("Basic usage:", content);
-        Assert.DoesNotContain("With parameters:", content);
+        // Required shown without brackets
+        Assert.Contains("  --resource-group <resource-group>", content);
+        // Optional shown with brackets
+        Assert.Contains("  [--account-name <account-name>]", content);
+        // Line continuation on command line
+        Assert.Contains("azmcp storage account create \\", content);
     }
 
     [Fact]
-    public void BuildExampleCommandContent_OnlyGlobalSwitches_NoFullExample()
+    public void BuildExampleCommandContent_RequiredFirst_ThenOptional()
+    {
+        var tool = MakeTool("storage account create",
+            new CliSwitch("--optional-param", "Optional", "string"),
+            new CliSwitch("--required-param", "Required", "string", IsRequired: true));
+
+        var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account create", tool);
+
+        var reqIdx = content.IndexOf("--required-param");
+        var optIdx = content.IndexOf("[--optional-param");
+        Assert.True(reqIdx < optIdx, "Required params should appear before optional params");
+    }
+
+    [Fact]
+    public void BuildExampleCommandContent_OnlyGlobalSwitches_ShowsBareCommand()
     {
         var tool = MakeTool("storage account list",
             new CliSwitch("--tenant", "Tenant ID", "string"),
@@ -80,10 +97,10 @@ public class CliExampleCommandGeneratorTests : IDisposable
 
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
 
-        Assert.DoesNotContain("With parameters:", content);
         Assert.DoesNotContain("--subscription", content);
-        // Should show bare command as fallback
+        Assert.DoesNotContain("--tenant", content);
         Assert.Contains("azmcp storage account list", content);
+        Assert.DoesNotContain("\\", content);
     }
 
     [Fact]
@@ -109,7 +126,7 @@ public class CliExampleCommandGeneratorTests : IDisposable
     }
 
     [Fact]
-    public void BuildExampleCommandContent_NoRequiredSwitches_ShowsBareCommand()
+    public void BuildExampleCommandContent_OnlyOptionalSwitches_WrappedInBrackets()
     {
         var tool = MakeTool("storage account list",
             new CliSwitch("--resource-group", "RG name", "string"),
@@ -117,9 +134,26 @@ public class CliExampleCommandGeneratorTests : IDisposable
 
         var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account list", tool);
 
-        Assert.Contains("azmcp storage account list", content);
-        Assert.DoesNotContain("--resource-group", content);
-        Assert.DoesNotContain("--account-name", content);
+        Assert.Contains("azmcp storage account list \\", content);
+        Assert.Contains("[--resource-group <resource-group>]", content);
+        Assert.Contains("[--account-name <account-name>]", content);
+    }
+
+    [Fact]
+    public void BuildExampleCommandContent_LineContinuation_NotOnLastParam()
+    {
+        var tool = MakeTool("storage account create",
+            new CliSwitch("--resource-group", "RG", "string", IsRequired: true),
+            new CliSwitch("--account", "Name", "string", IsRequired: true));
+
+        var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account create", tool);
+
+        // First param has continuation
+        Assert.Contains("--resource-group <resource-group> \\", content);
+        // Last param does NOT have continuation
+        var lines = content.Split('\n');
+        var lastParamLine = lines.Last(l => l.TrimStart().StartsWith("--"));
+        Assert.DoesNotContain("\\", lastParamLine);
     }
 
     // ── GenerateExampleCommandFilesAsync tests ─────────────────────
