@@ -18,7 +18,7 @@ public class CliTabValidatorTests
 
             MCP content here.
 
-            #### [CLI](#tab/cli)
+            #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI content here.
 
@@ -57,7 +57,7 @@ public class CliTabValidatorTests
 
             MCP content.
 
-            #### [CLI](#tab/cli)
+            #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI content.
             """;
@@ -80,7 +80,7 @@ public class CliTabValidatorTests
 
             Nested MCP content.
 
-            #### [CLI](#tab/cli)
+            #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI content.
 
@@ -97,7 +97,7 @@ public class CliTabValidatorTests
     public void Validate_CliTabWithoutMcpTab_ReturnsError()
     {
         var markdown = """
-            #### [CLI](#tab/cli)
+            #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI content without MCP tab.
 
@@ -136,7 +136,7 @@ public class CliTabValidatorTests
 
             MCP A content.
 
-            #### [CLI](#tab/cli)
+            #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI A content.
 
@@ -148,7 +148,7 @@ public class CliTabValidatorTests
 
             MCP B content.
 
-            #### [CLI](#tab/cli)
+            #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI B content.
 

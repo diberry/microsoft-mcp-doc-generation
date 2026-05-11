@@ -40,7 +40,7 @@ public static class CliTabValidator
                 mcpTabCount++;
                 inTabGroup = true;
             }
-            else if (line == "#### [CLI](#tab/cli)")
+            else if (line == "#### [Azure MCP CLI](#tab/azure-mcp-cli)")
             {
                 if (!inTabGroup)
                     errors.Add($"Line {lineNum}: CLI tab opened without preceding MCP Server tab.");

@@ -35,7 +35,7 @@ public static class CliTabWrapper
         sb.AppendLine();
 
         // CLI tab
-        sb.AppendLine("#### [CLI](#tab/cli)");
+        sb.AppendLine("#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         sb.AppendLine();
         sb.AppendLine(cliContent.TrimEnd());
         sb.AppendLine();

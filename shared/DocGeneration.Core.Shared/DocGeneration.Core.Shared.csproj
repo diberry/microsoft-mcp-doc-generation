@@ -10,5 +10,6 @@
     <InternalsVisibleTo Include="DocGeneration.Core.Shared.Tests" />
     <InternalsVisibleTo Include="DocGeneration.Core.GenerativeAI.Tests" />
     <InternalsVisibleTo Include="DocGeneration.Steps.ToolFamilyCleanup" />
+    <InternalsVisibleTo Include="DocGeneration.Steps.ToolFamilyCleanup.Tests" />
   </ItemGroup>
 </Project>

@@ -216,4 +216,28 @@ public class CliProseImproverTests
         var result = CliProseImprover.AdaptNlpToCliVoice("this tool retrieves data.");
         Assert.Equal("Retrieves data.", result);
     }
+
+    [Fact]
+    public void AdaptNlpToCliVoice_StripsMcpToolSetPreamble()
+    {
+        var result = CliProseImprover.AdaptNlpToCliVoice(
+            "This tool is part of the Model Context Protocol (MCP) tool set. Creates a storage account in the specified region.");
+        Assert.Equal("Creates a storage account in the specified region.", result);
+    }
+
+    [Fact]
+    public void AdaptNlpToCliVoice_StripsMcpToolSetPreamble_WithThisToolFollowing()
+    {
+        var result = CliProseImprover.AdaptNlpToCliVoice(
+            "This tool is part of the Model Context Protocol (MCP) tool set. This tool retrieves account details including name and region.");
+        Assert.Equal("Retrieves account details including name and region.", result);
+    }
+
+    [Fact]
+    public void AdaptNlpToCliVoice_PreservesAllSubstantiveContent()
+    {
+        var input = "This tool retrieves detailed information about Azure Storage accounts, including account name, location, SKU, and replication status. Returns the full resource properties when the account exists.";
+        var result = CliProseImprover.AdaptNlpToCliVoice(input);
+        Assert.Equal("Retrieves detailed information about Azure Storage accounts, including account name, location, SKU, and replication status. Returns the full resource properties when the account exists.", result);
+    }
 }

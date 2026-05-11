@@ -19,6 +19,12 @@ public class CliProseImprover
     private static readonly Regex McpToolPattern = new(
         @"^Model\s+Context\s+Protocol\s+\(MCP\)\s+tools?\s+let[s]?\s+you\s+",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex McpToolSetPreamble = new(
+        @"This\s+tool\s+is\s+part\s+of\s+the\s+Model\s+Context\s+Protocol\s+\(MCP\)\s+tool\s+set\.\s*",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    private static readonly Regex McpServerReference = new(
+        @"MCP\s+Server",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>
     /// Aligns CLI tool descriptions with NLP descriptions using deterministic voice transformation.
@@ -53,13 +59,17 @@ public class CliProseImprover
 
     /// <summary>
     /// Deterministic NLP→CLI voice adaptation.
+    /// Strips MCP preamble sentences and "This tool is part of..." boilerplate.
     /// Converts "This tool creates..." → "Creates..."
-    /// Strips MCP preamble sentences.
     /// Replaces "MCP Server" with "Azure MCP CLI".
+    /// Preserves ALL substantive content (return fields, behaviors, conditions).
     /// </summary>
     public static string AdaptNlpToCliVoice(string nlpDescription)
     {
         var desc = nlpDescription.Trim();
+
+        // Remove "This tool is part of the Model Context Protocol (MCP) tool set." preamble
+        desc = McpToolSetPreamble.Replace(desc, "").TrimStart();
 
         // Remove MCP preamble sentence if present
         var mcpMatch = McpToolPattern.Match(desc);
@@ -79,7 +89,8 @@ public class CliProseImprover
             desc = char.ToUpper(desc[0]) + desc[1..];
         }
 
-        desc = desc.Replace("MCP Server", "Azure MCP CLI", StringComparison.OrdinalIgnoreCase);
+        // Replace "MCP Server" references with "Azure MCP CLI"
+        desc = McpServerReference.Replace(desc, "Azure MCP CLI");
 
         return desc;
     }

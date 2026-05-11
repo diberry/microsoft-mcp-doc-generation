@@ -196,7 +196,7 @@ public class CliTabPilotTests : IAsyncLifetime
         if (!wrapped.Contains("#### [MCP Server](#tab/mcp-server)"))
             errors.Add($"[{command}] Missing MCP Server tab header");
 
-        if (!wrapped.Contains("#### [CLI](#tab/cli)"))
+        if (!wrapped.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)"))
             errors.Add($"[{command}] Missing CLI tab header");
 
         if (!wrapped.Contains("---"))
@@ -204,7 +204,7 @@ public class CliTabPilotTests : IAsyncLifetime
 
         // MCP tab must come before CLI tab
         var mcpIdx = wrapped.IndexOf("#### [MCP Server]", StringComparison.Ordinal);
-        var cliIdx = wrapped.IndexOf("#### [CLI]", StringComparison.Ordinal);
+        var cliIdx = wrapped.IndexOf("#### [Azure MCP CLI]", StringComparison.Ordinal);
         if (mcpIdx >= 0 && cliIdx >= 0 && mcpIdx > cliIdx)
             errors.Add($"[{command}] MCP Server tab must appear before CLI tab");
     }

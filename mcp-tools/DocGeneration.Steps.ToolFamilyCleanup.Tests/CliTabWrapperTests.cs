@@ -19,7 +19,7 @@ public class CliTabWrapperTests
         var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
         Assert.Contains("#### [MCP Server](#tab/mcp-server)", result);
-        Assert.Contains("#### [CLI](#tab/cli)", result);
+        Assert.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
         Assert.Contains(mcpContent.TrimEnd(), result);
         Assert.Contains(cliContent.TrimEnd(), result);
         // Must end with tab group terminator
@@ -52,7 +52,7 @@ public class CliTabWrapperTests
         var result = CliTabWrapper.WrapWithTabs("mcp stuff", "cli stuff");
 
         Assert.Contains("#tab/mcp-server", result);
-        Assert.Contains("#tab/cli", result);
+        Assert.Contains("#tab/azure-mcp-cli", result);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class CliTabWrapperTests
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(FamilyArticle, cliContent);
 
         Assert.Contains("#### [MCP Server](#tab/mcp-server)", result);
-        Assert.Contains("#### [CLI](#tab/cli)", result);
+        Assert.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
         Assert.Contains("az storage account list", result);
     }
 
@@ -136,7 +136,7 @@ public class CliTabWrapperTests
         var mcpTabCount = CountOccurrences(result, "#### [MCP Server](#tab/mcp-server)");
         Assert.Equal(2, mcpTabCount);
 
-        var cliTabCount = CountOccurrences(result, "#### [CLI](#tab/cli)");
+        var cliTabCount = CountOccurrences(result, "#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         Assert.Equal(2, cliTabCount);
     }
 

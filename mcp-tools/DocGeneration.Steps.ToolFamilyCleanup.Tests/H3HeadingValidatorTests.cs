@@ -65,7 +65,7 @@ title: Test Article
 
 MCP Server content here.
 
-#### [CLI](#tab/cli)
+#### [Azure MCP CLI](#tab/azure-mcp-cli)
 
 CLI content here.
 
@@ -160,7 +160,7 @@ title: Test Article
 
 MCP content.
 
-#### [CLI](#tab/cli)
+#### [Azure MCP CLI](#tab/azure-mcp-cli)
 
 CLI content.
 

@@ -68,7 +68,7 @@ public static class H3HeadingValidator
     {
         // Common tab markers in use:
         // #### [MCP Server](#tab/mcp-server)
-        // #### [CLI](#tab/cli)
+        // #### [Azure MCP CLI](#tab/azure-mcp-cli)
         
         return line.StartsWith("#### [") && line.Contains("](#tab/");
     }

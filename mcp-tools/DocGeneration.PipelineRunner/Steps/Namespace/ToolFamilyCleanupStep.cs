@@ -226,6 +226,28 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                         var assembledContent = await CliContentAssembler.AssembleAllCliContentAsync(
                             cliTools, parameterCliDir, exampleCommandsDir, nameContext);
 
+                        // Reconciliation gate: validate MCP↔CLI description alignment
+                        if (nlpDescriptions.Count > 0)
+                        {
+                            var cliDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                            foreach (var (key, tool) in cliTools)
+                                cliDescriptions[key] = tool.Description;
+
+                            var alignmentResult = DescriptionAlignmentValidator
+                                .Validate(nlpDescriptions, cliDescriptions);
+
+                            foreach (var warning in alignmentResult.Warnings)
+                            {
+                                Console.WriteLine($"  ⚠ Alignment: {warning}");
+                                warnings.Add($"Description alignment warning: {warning}");
+                            }
+                            foreach (var error in alignmentResult.Errors)
+                            {
+                                Console.WriteLine($"  ✗ Alignment: {error}");
+                                warnings.Add($"Description alignment error: {error}");
+                            }
+                        }
+
                         if (assembledContent.Count > 0)
                         {
                             var familyMarkdown = await File.ReadAllTextAsync(familyArticlePath, cancellationToken);
