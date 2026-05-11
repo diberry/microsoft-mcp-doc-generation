@@ -1,9 +1,0 @@
-﻿{
-  "foundryextensions knowledge index list": "Get knowledge indexes",
-  "foundryextensions knowledge index schema": "Schema knowledge index",
-  "foundryextensions openai chat-completions-create": "Chat completions create openai",
-  "foundryextensions openai create-completion": "Create completion openai",
-  "foundryextensions openai embeddings-create": "Embeddings create openai",
-  "foundryextensions openai models-list": "Models list openai",
-  "foundryextensions resource get": "Get resource"
-}

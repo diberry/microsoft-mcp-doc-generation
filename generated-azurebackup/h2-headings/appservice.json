@@ -1,9 +1,0 @@
-﻿{
-  "appservice database add": "Create database",
-  "appservice webapp deployment get": "Get webapp deployment",
-  "appservice webapp diagnostic diagnose": "Diagnose webapp diagnostic",
-  "appservice webapp diagnostic list": "Get webapp diagnostics",
-  "appservice webapp get": "Get webapp",
-  "appservice webapp settings get-appsettings": "Get appsettings webapp settings",
-  "appservice webapp settings update-appsettings": "Update appsettings webapp settings"
-}

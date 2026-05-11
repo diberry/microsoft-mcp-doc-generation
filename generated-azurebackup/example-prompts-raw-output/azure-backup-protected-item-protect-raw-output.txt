@@ -1,9 +1,0 @@
-﻿{
-  "azurebackup protecteditem protect": [
-    "Protect datasource ID '/subscriptions/12345678-90ab-cdef-1234-567890abcdef/resourceGroups/prod-rg/providers/Microsoft.Compute/virtualMachines/webapp-prod' with policy 'DailyBackup' in resource group 'prod-rg' and vault 'rsv-prod'.",
-    "Protect datasource ID '/subscriptions/12345678-90ab-cdef-1234-567890abcdef/resourceGroups/rg-prod/providers/Microsoft.Compute/disks/dataDisk1' with policy 'HourlyBackup' in resource group 'rg-prod' and vault 'dpp-backup', datasource type 'AzureDisk'.",
-    "Protect datasource ID 'SAPHanaDatabase;instance01;SalesDB' with policy 'SAPHanaPolicy' in resource group 'sap-rg' and vault 'rsv-sap', container 'saphana-cont'.",
-    "Protect datasource ID '/subscriptions/12345678-90ab-cdef-1234-567890abcdef/resourceGroups/files-rg/providers/Microsoft.Storage/storageAccounts/mystorage/fileServices/default/shares/backups' with policy 'FileSharePolicy' in resource group 'files-rg' and vault 'rsv-files', container 'files-container'.",
-    "Can you protect datasource ID '/subscriptions/12345678-90ab-cdef-1234-567890abcdef/resourceGroups/test-rg/providers/Microsoft.Compute/virtualMachines/db-staging' using policy 'WeeklyFull' in resource group 'test-rg' and vault 'backup-vault'?"
-  ]
-}

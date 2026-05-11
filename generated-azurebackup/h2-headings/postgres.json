@@ -1,8 +1,0 @@
-﻿{
-  "postgres database query": "Query database",
-  "postgres list": "Get PostgreSQL servers databases",
-  "postgres server config get": "Get server config",
-  "postgres server param get": "Get server param",
-  "postgres server param set": "Update server param",
-  "postgres table schema get": "Get table schema"
-}

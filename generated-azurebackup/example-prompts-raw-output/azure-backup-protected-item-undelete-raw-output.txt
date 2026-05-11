@@ -1,9 +1,0 @@
-﻿{
-  "azurebackup protecteditem undelete": [
-    "Undelete protected item with datasource ID '/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-prod/providers/Microsoft.Compute/virtualMachines/myvm', resource group 'rg-prod', and vault name 'backup-vault'.",
-    "Can you undelete the protectable item with datasource ID 'SAPHanaDatabase;instance01;db01' from resource group 'rg-sql' in vault name 'rsv-vault'?",
-    "Undelete the protected item with datasource ID 'SAPHanaDatabase;instance02;db02', resource group 'rg-sap', vault name 'rsv-main', and container 'sap-container'.",
-    "Recover the soft-deleted protected item with datasource ID '/subscriptions/33333333-3333-3333-3333-333333333333/resourceGroups/rg-dev/providers/Microsoft.Compute/virtualMachines/test-vm' in resource group 'rg-dev' using vault name 'backup-vault-east'.",
-    "Please undelete the file-share protected item with datasource ID '/subscriptions/44444444-4444-4444-4444-444444444444/resourceGroups/rg-files/providers/Microsoft.Storage/storageAccounts/myfileshare/fileServices/default/shares/myshare', resource group 'rg-files', vault name 'dpp-vault', and vault type 'dpp'."
-  ]
-}

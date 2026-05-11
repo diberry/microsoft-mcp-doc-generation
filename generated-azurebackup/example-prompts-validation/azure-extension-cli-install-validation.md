@@ -1,4 +1,0 @@
-﻿# Example Prompt Validation: extension cli install
-
-**Status:** Skipped (example prompts file not found)
-**Expected File:** C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\generated-azurebackup\example-prompts\azure-extension-cli-install-example-prompts.md

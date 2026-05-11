@@ -1,9 +1,0 @@
-﻿{
-  "azurebackup governance soft-delete": [
-    "Enable soft delete 'AlwaysOn' for vault name 'backup-vault-prod' in resource group 'rg-prod'.",
-    "Set soft delete 'On' with soft delete retention days '30' for vault name 'rsv-prod' in resource group 'rg-backup'.",
-    "Turn soft delete 'Off' for vault name 'dpp-archive' in resource group 'rg-archives'?",
-    "Configure soft delete 'On' for vault name 'my-recovery-vault' in resource group 'prod-rg' with vault type 'rsv' and soft delete retention days '90'.",
-    "Can you set soft delete 'AlwaysOn' on vault name 'backup-vault-staging' in resource group 'rg-staging' with vault type 'dpp'?"
-  ]
-}

@@ -1,9 +1,0 @@
-﻿{
-  "azurebackup protecteditem get": [
-    "List all protected items in resource group 'rg-prod' from vault 'backup-vault'.",
-    "Get details for protected item 'vm-prod-01' in resource group 'rg-prod' from vault 'backup-vault'.",
-    "Show protected items in resource group 'rg-staging' for vault 'rsv-vault' with container 'rsv-container1'.",
-    "Retrieve protected item 'sql-db-02' from container 'rsv-sql' in resource group 'rg-database' and vault 'data-protect-vault' with vault type 'rsv'.",
-    "What protected items are in vault 'protection-vault' within resource group 'rg-backup' when vault type is 'dpp'?"
-  ]
-}

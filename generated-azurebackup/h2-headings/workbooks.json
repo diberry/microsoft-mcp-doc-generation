@@ -1,7 +1,0 @@
-﻿{
-  "workbooks create": "Create workbook specified resource",
-  "workbooks delete": "Delete one more workbooks",
-  "workbooks list": "Get Azure workbooks",
-  "workbooks show": "Get full workbook via",
-  "workbooks update": "Update updates properties Azure"
-}

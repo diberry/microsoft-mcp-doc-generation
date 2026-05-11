@@ -1,9 +1,0 @@
-﻿Tool command: azurebackup governance immutability
-Tool name:    immutability
-Timestamp:    2026-05-11 14:40:31 UTC
-
-This tool has no entry in the e2e test prompts (parsed.json).
-The example prompt generator fell back to default behavior (5 AI-generated prompts).
-
-To fix: Add this tool to the upstream e2eTestPrompts.md in the microsoft/mcp repo,
-then re-run E2eTestPromptParser to regenerate parsed.json.

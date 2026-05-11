@@ -1,9 +1,0 @@
-﻿{
-  "azurebackup disasterrecovery enable-crr": [
-    "Enable Cross-Region Restore (CRR) on vault 'rsv-backup-prod' in resource group 'rg-prod'.",
-    "Turn on CRR for vault 'contoso-rsv' in resource group 'rg-backups' with vault type 'rsv'.",
-    "Can you enable Cross-Region Restore for vault 'dpp-backup-eu' in resource group 'rg-europe' with vault type 'dpp'?",
-    "Enable CRR for vault 'archive-vault' in resource group 'rg-archive'.",
-    "Enable Cross-Region Restore on vault 'site-recovery' in resource group 'rg-staging'."
-  ]
-}
