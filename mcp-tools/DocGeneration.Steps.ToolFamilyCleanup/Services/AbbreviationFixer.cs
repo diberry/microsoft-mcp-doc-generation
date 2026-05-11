@@ -47,8 +47,9 @@ public static class AbbreviationFixer
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     // "etc." in middle of text → replace with "and more"
+    // Consumes trailing whitespace to avoid double-space artifacts
     private static readonly Regex EtcInMiddlePattern = new(
-        @"\s+etc\.(?=\s)",
+        @"\s+etc\.\s+",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>

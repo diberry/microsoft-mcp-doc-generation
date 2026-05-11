@@ -55,9 +55,9 @@ public static class SlashVerbFixer
     };
 
     // Matches slash-stacked words (2 or 3 words separated by slashes)
-    // Simpler pattern without lookbehind - filtering done by line-level checks
+    // Negative lookahead prevents partial matching of 4+ part paths
     private static readonly Regex SlashPattern = new(
-        @"\b([A-Za-z][A-Za-z0-9]*\/[A-Za-z][A-Za-z0-9]*(?:\/[A-Za-z][A-Za-z0-9]*)?)\b",
+        @"\b([A-Za-z][A-Za-z0-9]*\/[A-Za-z][A-Za-z0-9]*(?:\/[A-Za-z][A-Za-z0-9]*)?)\b(?!\/[A-Za-z])",
         RegexOptions.Compiled);
 
     /// <summary>
@@ -107,6 +107,10 @@ public static class SlashVerbFixer
 
                 // Check if this is a compound term (case-insensitive)
                 if (CompoundTerms.Contains(match))
+                    return match;
+
+                // Check if preceded by / (part of a longer path like /usr/local/bin)
+                if (m.Index > 0 && line[m.Index - 1] == '/')
                     return match;
 
                 // Split on slashes
