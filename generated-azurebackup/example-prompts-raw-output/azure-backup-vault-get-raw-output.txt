@@ -1,0 +1,9 @@
+﻿{
+  "azurebackup vault get": [
+    "List all backup vaults in the subscription.",
+    "Show all backup vaults with vault type 'rsv'.",
+    "Show all backup vaults in resource group 'prod-rg'.",
+    "Get details for vault 'contoso-backup' in resource group 'prod-rg'.",
+    "Show details for vault 'archive-vault' with vault type 'dpp'."
+  ]
+}

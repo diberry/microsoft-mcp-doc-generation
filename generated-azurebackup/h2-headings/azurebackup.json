@@ -1,0 +1,18 @@
+﻿{
+  "azurebackup backup status": "Status backup",
+  "azurebackup disasterrecovery enable-crr": "Enable crr disaster recovery",
+  "azurebackup governance find-unprotected": "Find unprotected governance",
+  "azurebackup governance immutability": "Immutability governance",
+  "azurebackup governance soft-delete": "Soft delete governance",
+  "azurebackup job get": "Get job",
+  "azurebackup policy create": "Create policy",
+  "azurebackup policy get": "Get policy",
+  "azurebackup protectableitem list": "Get protectable items",
+  "azurebackup protecteditem get": "Get protected item",
+  "azurebackup protecteditem protect": "Protect protected item",
+  "azurebackup protecteditem undelete": "Undelete protected item",
+  "azurebackup recoverypoint get": "Get recovery point",
+  "azurebackup vault create": "Create vault",
+  "azurebackup vault get": "Get vault",
+  "azurebackup vault update": "Update vault"
+}

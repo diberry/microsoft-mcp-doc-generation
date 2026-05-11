@@ -1,0 +1,20 @@
+﻿{
+  "managedlustre fs blob autoexport cancel": "Cancel file system blob autoexport",
+  "managedlustre fs blob autoexport create": "Create file system blob autoexport",
+  "managedlustre fs blob autoexport delete": "Delete file system blob autoexport",
+  "managedlustre fs blob autoexport get": "Get file system blob autoexport",
+  "managedlustre fs blob autoimport cancel": "Cancel file system blob autoimport",
+  "managedlustre fs blob autoimport create": "Create file system blob autoimport",
+  "managedlustre fs blob autoimport delete": "Delete file system blob autoimport",
+  "managedlustre fs blob autoimport get": "Get file system blob autoimport",
+  "managedlustre fs blob import cancel": "Cancel file system blob import",
+  "managedlustre fs blob import create": "Create file system blob import",
+  "managedlustre fs blob import delete": "Delete file system blob import",
+  "managedlustre fs blob import get": "Get file system blob import",
+  "managedlustre fs create": "Create file system",
+  "managedlustre fs list": "Get file systems",
+  "managedlustre fs sku get": "Get file system sku",
+  "managedlustre fs subnetsize ask": "Ask file system subnet size",
+  "managedlustre fs subnetsize validate": "Validate file system subnet size",
+  "managedlustre fs update": "Update file system"
+}

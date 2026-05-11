@@ -1,0 +1,7 @@
+﻿{
+  "appconfig account list": "Get accounts",
+  "appconfig kv delete": "Delete key vault",
+  "appconfig kv get": "Get key vault",
+  "appconfig kv lock set": "Update key vault lock",
+  "appconfig kv set": "Update key vault"
+}

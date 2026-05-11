@@ -1,0 +1,15 @@
+﻿{
+  "sql db create": "Create DB",
+  "sql db delete": "Delete DB",
+  "sql db get": "Get DB",
+  "sql db rename": "Rename DB",
+  "sql db update": "Update DB",
+  "sql elastic-pool list": "Get elastic-pools",
+  "sql server create": "Create server",
+  "sql server delete": "Delete server",
+  "sql server entra-admin list": "Get server entra-admins",
+  "sql server firewall-rule create": "Create server firewall-rule",
+  "sql server firewall-rule delete": "Delete server firewall-rule",
+  "sql server firewall-rule list": "Get server firewall-rules",
+  "sql server get": "Get server"
+}

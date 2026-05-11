@@ -1,0 +1,10 @@
+﻿{
+  "keyvault admin settings get": "Get admin settings",
+  "keyvault certificate create": "Create certificate",
+  "keyvault certificate get": "Get certificate",
+  "keyvault certificate import": "Import certificate",
+  "keyvault key create": "Create key",
+  "keyvault key get": "Get key",
+  "keyvault secret create": "Create secret",
+  "keyvault secret get": "Get secret"
+}

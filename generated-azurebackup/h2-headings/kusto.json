@@ -1,0 +1,9 @@
+﻿{
+  "kusto cluster get": "Get cluster",
+  "kusto cluster list": "Get clusters",
+  "kusto database list": "Get databases",
+  "kusto query": "Query executes query against",
+  "kusto sample": "Get sample",
+  "kusto table list": "Get tables",
+  "kusto table schema": "Schema table"
+}

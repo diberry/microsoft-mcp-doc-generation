@@ -1,0 +1,11 @@
+﻿{
+  "eventhubs eventhub consumergroup delete": "Delete event hub consumer group",
+  "eventhubs eventhub consumergroup get": "Get event hub consumer group",
+  "eventhubs eventhub consumergroup update": "Update event hub consumer group",
+  "eventhubs eventhub delete": "Delete event hub",
+  "eventhubs eventhub get": "Get event hub",
+  "eventhubs eventhub update": "Update event hub",
+  "eventhubs namespace delete": "Delete namespace",
+  "eventhubs namespace get": "Get namespace",
+  "eventhubs namespace update": "Update namespace"
+}

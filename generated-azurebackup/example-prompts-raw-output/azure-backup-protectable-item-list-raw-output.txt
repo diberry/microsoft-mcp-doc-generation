@@ -1,0 +1,9 @@
+﻿{
+  "azurebackup protectableitem list": [
+    "List protectable items in resource group 'rg-prod' and vault name 'rsv-prod-vault'.",
+    "Get protectable items in resource group 'rg-backup' for vault name 'backupvault-eastus' filtered by workload type 'SQL'.",
+    "What protectable items exist in resource group 'rg-devops' and vault name 'dpp-backup-01' for vault type 'dpp' and workload type 'AzureBlob'?",
+    "List protectable items in resource group 'rg-prod' and vault name 'rsv-prod-vault' for container 'vm-container-01'.",
+    "Show protectable items in resource group 'rg-backup' and vault name 'rsv-prod-vault' for container 'hana-container' filtered by workload type 'SAPHANA'."
+  ]
+}

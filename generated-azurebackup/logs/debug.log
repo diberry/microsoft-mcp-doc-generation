@@ -1,0 +1,46 @@
+﻿[2026-05-11 08:01:30.463] Loading config from: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Steps.HorizontalArticles\bin\Release\net10.0\../../../../data/config.json
+[2026-05-11 08:01:30.476] Config loaded from C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Steps.HorizontalArticles\bin\Release\net10.0\../../../../data/config.json
+[2026-05-11 08:01:30.477] Checking file: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\static-text-replacement.json
+[2026-05-11 08:01:30.478] Checking file: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\nl-parameters.json
+[2026-05-11 08:01:30.479] NLParametersPath: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\nl-parameters.json
+[2026-05-11 08:01:30.479] TextReplacerParametersPath: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\static-text-replacement.json
+[2026-05-11 08:01:30.483] RequiredFiles: [
+  "C:\\Users\\diberry\\project-dina-content-gen-cli\\repos\\microsoft-mcp-doc-generation\\mcp-tools\\data\\static-text-replacement.json",
+  "C:\\Users\\diberry\\project-dina-content-gen-cli\\repos\\microsoft-mcp-doc-generation\\mcp-tools\\data\\nl-parameters.json"
+]
+[2026-05-11 08:01:30.506] === C# Environment Variable Loading ===
+[2026-05-11 08:01:30.507] Current Directory: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools
+[2026-05-11 08:01:30.507] AppContext.BaseDirectory: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Steps.HorizontalArticles\bin\Release\net10.0\
+[2026-05-11 08:01:30.508] 
+[2026-05-11 08:01:30.509] Environment variables read from process:
+[2026-05-11 08:01:30.509]   FOUNDRY_API_KEY: NOT SET
+[2026-05-11 08:01:30.509]   FOUNDRY_ENDPOINT: NOT SET
+[2026-05-11 08:01:30.509]   FOUNDRY_MODEL_NAME: NOT SET
+[2026-05-11 08:01:30.509]   FOUNDRY_MODEL_API_VERSION: NOT SET
+[2026-05-11 08:01:30.509]   FOUNDRY_USE_DEFAULT_CREDENTIAL: False
+[2026-05-11 08:01:30.510] Attempting to load from .env file (fallback)...
+[2026-05-11 08:01:30.510]   Checking: C:\Users\diberry\.env
+[2026-05-11 08:01:30.511]   Checking: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\.env
+[2026-05-11 08:01:30.512]   Found .env file at: C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\.env
+[2026-05-11 08:01:30.513]   .env file size: 814 chars
+[2026-05-11 08:01:30.516]   Parsed 14 variables from .env:
+[2026-05-11 08:01:30.516]     AZURE_ENV_NAME = diberry-mcp-3
+[2026-05-11 08:01:30.516]     AZURE_LOCATION = eastus2
+[2026-05-11 08:01:30.516]     AZURE_SUBSCRIPTION_ID = aa94d689-ef39-45c8-9434-0d9efb62b456
+[2026-05-11 08:01:30.516]     ENDPOINT = https://oai-diberry-mcp-3.openai.azure.com/
+[2026-05-11 08:01:30.516]     FOUNDRY_API_KEY = 9dlTUlSQacwSPj3JZ9RY...
+[2026-05-11 08:01:30.516]     FOUNDRY_ENDPOINT = https://oai-diberry-mcp-3.openai.azure.com/
+[2026-05-11 08:01:30.516]     FOUNDRY_INSTANCE = oai-diberry-mcp-3
+[2026-05-11 08:01:30.516]     FOUNDRY_MODEL_API_VERSION = 2025-03-01-preview
+[2026-05-11 08:01:30.516]     FOUNDRY_MODEL_NAME = gpt-5-mini
+[2026-05-11 08:01:30.516]     SECONDARY_FOUNDRY_API_KEY = 3gXLON6ZbRKzhJOLOdfc...
+[2026-05-11 08:01:30.516]     SECONDARY_FOUNDRY_ENDPOINT = https://oai-diberry-mcp-3-sec.openai.azure.com/
+[2026-05-11 08:01:30.516]     SECONDARY_FOUNDRY_INSTANCE = oai-diberry-mcp-3-sec
+[2026-05-11 08:01:30.516]     TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION = 2025-03-01-preview
+[2026-05-11 08:01:30.516]     TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME = gpt-5-mini
+[2026-05-11 08:01:30.517]   Final values after .env fallback:
+[2026-05-11 08:01:30.517]     FOUNDRY_API_KEY: SET (84 chars)
+[2026-05-11 08:01:30.517]     FOUNDRY_ENDPOINT: https://oai-diberry-mcp-3.openai.azure.com/
+[2026-05-11 08:01:30.517]     FOUNDRY_MODEL_NAME: gpt-5-mini
+[2026-05-11 08:01:30.517]     FOUNDRY_MODEL_API_VERSION: 2025-03-01-preview
+[2026-05-11 08:01:30.517]     FOUNDRY_USE_DEFAULT_CREDENTIAL: False

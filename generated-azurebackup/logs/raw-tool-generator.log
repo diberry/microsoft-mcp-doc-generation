@@ -1,0 +1,3 @@
+﻿[2026-05-11 07:39:33.045] Loaded 59 brand mappings from C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\brand-to-server-mapping.json
+[2026-05-11 07:39:33.065] Loaded 31 compound word mappings from C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\compound-words.json
+[2026-05-11 07:39:33.070] Loaded 5 stop words from C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\stop-words.json

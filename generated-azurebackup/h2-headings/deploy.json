@@ -1,0 +1,7 @@
+﻿{
+  "deploy app logs get": "Get app logs",
+  "deploy architecture diagram generate": "Generate architecture diagram",
+  "deploy iac rules get": "Get infrastructure as code rules",
+  "deploy pipeline guidance get": "Get pipeline guidance",
+  "deploy plan get": "Get plan"
+}

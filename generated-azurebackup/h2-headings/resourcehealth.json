@@ -1,0 +1,4 @@
+﻿{
+  "resourcehealth availability-status get": "Get availability-status",
+  "resourcehealth health-events list": "Get health-events"
+}

@@ -1,0 +1,9 @@
+﻿Tool command: azurebackup recoverypoint get
+Tool name:    get
+Timestamp:    2026-05-11 14:43:11 UTC
+
+This tool has no entry in the e2e test prompts (parsed.json).
+The example prompt generator fell back to default behavior (5 AI-generated prompts).
+
+To fix: Add this tool to the upstream e2eTestPrompts.md in the microsoft/mcp repo,
+then re-run E2eTestPromptParser to regenerate parsed.json.

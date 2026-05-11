@@ -1,0 +1,4 @@
+﻿{
+  "aks cluster get": "Get cluster",
+  "aks nodepool get": "Get node pool"
+}

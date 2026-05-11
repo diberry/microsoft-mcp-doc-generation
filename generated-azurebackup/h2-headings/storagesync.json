@@ -1,0 +1,20 @@
+﻿{
+  "storagesync cloudendpoint changedetection": "Changedetection cloudendpoint",
+  "storagesync cloudendpoint create": "Create cloudendpoint",
+  "storagesync cloudendpoint delete": "Delete cloudendpoint",
+  "storagesync cloudendpoint get": "Get cloudendpoint",
+  "storagesync registeredserver get": "Get registeredserver",
+  "storagesync registeredserver unregister": "Unregister registeredserver",
+  "storagesync registeredserver update": "Update registeredserver",
+  "storagesync serverendpoint create": "Create serverendpoint",
+  "storagesync serverendpoint delete": "Delete serverendpoint",
+  "storagesync serverendpoint get": "Get serverendpoint",
+  "storagesync serverendpoint update": "Update serverendpoint",
+  "storagesync service create": "Create service",
+  "storagesync service delete": "Delete service",
+  "storagesync service get": "Get service",
+  "storagesync service update": "Update service",
+  "storagesync syncgroup create": "Create syncgroup",
+  "storagesync syncgroup delete": "Delete syncgroup",
+  "storagesync syncgroup get": "Get syncgroup"
+}

@@ -1,0 +1,18 @@
+=== Tool Family Validation: azurebackup ===
+Tool files found: 16
+Article H2 sections: 16
+Frontmatter tool_count: 16
+✅ Tool count integrity: PASS
+
+Cross-reference:
+  ✅ All 16 tool files have matching article sections
+  ✅ All 16 article sections have matching tool files
+
+Required params in prompts:
+  ✅ 16/16 tools have all required params in examples
+
+Annotation markers: 16 found (expected 16) ✅
+Example headers: 16/16 use standard format ✅
+Branding: 0 issues found ✅
+
+RESULT: PASS (clean)

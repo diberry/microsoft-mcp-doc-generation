@@ -1,0 +1,42 @@
+﻿[
+  {
+    "name": "--datasource-id",
+    "displayName": "Datasource ID",
+    "required": true,
+    "requiredText": "Required",
+    "isConditionalRequired": false,
+    "description": "The datasource identifier. For VM/FileShare/DPP workloads, use the ARM resource ID (for example, \u0060\u0027/subscriptions/.../virtualMachines/myvm\u0027\u0060). For RSV in-guest workloads (SQL/SAPHANA), use the protectable item name from \u0027protectableitem list\u0027 (for example, \u0060\u0027SAPHanaDatabase;instance;dbname\u0027\u0060)."
+  },
+  {
+    "name": "--resource-group",
+    "displayName": "Resource group",
+    "required": true,
+    "requiredText": "Required",
+    "isConditionalRequired": false,
+    "description": "The name of the Azure resource group. This resource group is a logical container for Azure resources."
+  },
+  {
+    "name": "--vault",
+    "displayName": "Vault name",
+    "required": true,
+    "requiredText": "Required",
+    "isConditionalRequired": false,
+    "description": "The name of the backup vault (Recovery Services vault or Backup vault)."
+  },
+  {
+    "name": "--container",
+    "displayName": "Container name",
+    "required": false,
+    "requiredText": "Optional",
+    "isConditionalRequired": false,
+    "description": "The RSV protection container name. Only applicable for Recovery Services vaults."
+  },
+  {
+    "name": "--vault-type",
+    "displayName": "Vault type",
+    "required": false,
+    "requiredText": "Optional",
+    "isConditionalRequired": false,
+    "description": "The type of backup vault: \u0027rsv\u0027 (Recovery Services vault) or \u0027dpp\u0027 (Backup vault / Data Protection). Required for vault create; optional elsewhere (auto-detected if omitted)."
+  }
+]

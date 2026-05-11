@@ -1,0 +1,8 @@
+﻿{
+  "loadtesting test create": "Create test",
+  "loadtesting test get": "Get test",
+  "loadtesting testresource create": "Create test resource",
+  "loadtesting testresource list": "Get test resources",
+  "loadtesting testrun createorupdate": "Createorupdate test run",
+  "loadtesting testrun get": "Get test run"
+}

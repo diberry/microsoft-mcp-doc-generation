@@ -1,0 +1,8 @@
+﻿{
+  "mysql database query": "Query database",
+  "mysql list": "Get MySQL servers databases",
+  "mysql server config get": "Get server config",
+  "mysql server param get": "Get server param",
+  "mysql server param set": "Update server param",
+  "mysql table schema get": "Get table schema"
+}

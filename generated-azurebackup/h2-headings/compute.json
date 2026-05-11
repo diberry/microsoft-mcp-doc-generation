@@ -1,0 +1,14 @@
+﻿{
+  "compute disk create": "Create disk",
+  "compute disk delete": "Delete disk",
+  "compute disk get": "Get disk",
+  "compute disk update": "Update disk",
+  "compute vm create": "Create virtual machine",
+  "compute vm delete": "Delete virtual machine",
+  "compute vm get": "Get virtual machine",
+  "compute vm update": "Update virtual machine",
+  "compute vmss create": "Create virtual machine scale set",
+  "compute vmss delete": "Delete virtual machine scale set",
+  "compute vmss get": "Get virtual machine scale set",
+  "compute vmss update": "Update virtual machine scale set"
+}

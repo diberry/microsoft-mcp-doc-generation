@@ -1,0 +1,9 @@
+﻿{
+  "azurebackup job get": [
+    "List all backup jobs in vault 'backup-vault-prod' within resource group 'rg-backup-prod'.",
+    "What backup jobs are in vault 'daily-backups' for resource group 'rg-data'?",
+    "Get details for job '7f3a2c1d-9b2e-4a6f-8c5d-1a2b3c4d5e6f' in vault 'backup-vault-prod' within resource group 'rg-backup-prod', vault type 'rsv'.",
+    "Show me the status of backup job 'job-20240512-001' in vault 'weekly-rsv' in resource group 'rg-backup-test'.",
+    "List all backup jobs for vault 'company-dpp' in resource group 'rg-enterprise', vault type 'dpp'."
+  ]
+}

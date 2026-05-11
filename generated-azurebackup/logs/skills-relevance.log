@@ -1,0 +1,6 @@
+﻿[2026-05-11 08:01:22.140] Fetching skills from: https://api.github.com/repos/github/awesome-copilot/contents/skills
+[2026-05-11 08:01:22.626] Found 0 skill files in GitHub Awesome Copilot
+[2026-05-11 08:01:22.628] Fetching skills from: https://api.github.com/repos/microsoft/skills/contents
+[2026-05-11 08:01:22.785] Found 4 skill files in Microsoft Skills
+[2026-05-11 08:01:23.359] Fetching skills from: https://api.github.com/repos/microsoft/azure-skills/contents/skills
+[2026-05-11 08:01:23.482] Found 0 skill files in Azure Skills

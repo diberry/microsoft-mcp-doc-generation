@@ -1,0 +1,9 @@
+﻿{
+  "azurebackup vault update": [
+    "Update vault 'backup-main' in resource group 'rg-prod' to set redundancy 'GeoRedundant'.",
+    "Enable immutability state 'Enabled' and set identity type 'SystemAssigned' for vault 'rsv-primary' in resource group 'rg-backup'.",
+    "Turn soft delete 'AlwaysOn' with soft delete retention days '30' for vault 'vault-archive' in resource group 'rg-archive'.",
+    "Add tags '{\"env\":\"prod\",\"owner\":\"backup-team\"}' and set identity type 'UserAssigned' for vault 'secure-vault' in resource group 'rg-security'.",
+    "Can you update vault 'dpp-recovery' in resource group 'rg-disaster' to set immutability state 'Locked', redundancy 'ReadAccessGeoZoneRedundant', and vault type 'rsv'?"
+  ]
+}

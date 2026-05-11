@@ -1,0 +1,4 @@
+﻿{
+  "redis create": "Create Azure managed Redis",
+  "redis list": "Get list/show Redis resources"
+}

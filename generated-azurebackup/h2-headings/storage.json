@@ -1,0 +1,9 @@
+﻿{
+  "storage account create": "Create account",
+  "storage account get": "Get account",
+  "storage blob container create": "Create blob container",
+  "storage blob container get": "Get blob container",
+  "storage blob get": "Get blob",
+  "storage blob upload": "Upload blob",
+  "storage table list": "Get tables"
+}

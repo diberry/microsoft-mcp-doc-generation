@@ -1,0 +1,4 @@
+﻿{
+  "servicefabric managedcluster node get": "Get managedcluster node",
+  "servicefabric managedcluster nodetype restart": "Restart managedcluster nodetype"
+}

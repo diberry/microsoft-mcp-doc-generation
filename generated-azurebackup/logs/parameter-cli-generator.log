@@ -1,0 +1,60 @@
+﻿[2026-05-11 07:39:36.657] GenerateDocumentation received 5 arguments:
+[2026-05-11 07:39:36.657]   args[0] = 'C:\Users\diberry\AppData\Local\Temp\pipeline-runner-step1-459c95a52d8045d2a270993ed0c45cdb\cli-output-single-tool.json'
+[2026-05-11 07:39:36.658]   args[1] = 'C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\generated-azurebackup'
+[2026-05-11 07:39:36.659]   args[2] = '--parameter-cli'
+[2026-05-11 07:39:36.659]   args[3] = '--version'
+[2026-05-11 07:39:36.660]   args[4] = '3.0.0-beta.5+4637b2434cd6e8dcf285de245a71074bb00664db'
+[2026-05-11 07:39:36.660] Flag values:
+[2026-05-11 07:39:36.661]   generateIndex: False
+[2026-05-11 07:39:36.662]   generateCommon: False
+[2026-05-11 07:39:36.662]   generateCommands: False
+[2026-05-11 07:39:36.663]   generateAnnotations: False
+[2026-05-11 07:39:36.663]   generateParameterCli: True
+[2026-05-11 07:39:36.664]   generateExampleCommands: False
+[2026-05-11 07:39:36.687] Processing command: azurebackup backup status, parts: 3
+[2026-05-11 07:39:36.707] Processing command: azurebackup disasterrecovery enable-crr, parts: 3
+[2026-05-11 07:39:36.708] Processing command: azurebackup governance find-unprotected, parts: 3
+[2026-05-11 07:39:36.708] Processing command: azurebackup governance immutability, parts: 3
+[2026-05-11 07:39:36.709] Processing command: azurebackup governance soft-delete, parts: 3
+[2026-05-11 07:39:36.710] Processing command: azurebackup job get, parts: 3
+[2026-05-11 07:39:36.710] Processing command: azurebackup policy create, parts: 3
+[2026-05-11 07:39:36.711] Processing command: azurebackup policy get, parts: 3
+[2026-05-11 07:39:36.711] Processing command: azurebackup protectableitem list, parts: 3
+[2026-05-11 07:39:36.712] Processing command: azurebackup protecteditem get, parts: 3
+[2026-05-11 07:39:36.712] Processing command: azurebackup protecteditem protect, parts: 3
+[2026-05-11 07:39:36.713] Processing command: azurebackup protecteditem undelete, parts: 3
+[2026-05-11 07:39:36.713] Processing command: azurebackup recoverypoint get, parts: 3
+[2026-05-11 07:39:36.714] Processing command: azurebackup vault create, parts: 3
+[2026-05-11 07:39:36.715] Processing command: azurebackup vault get, parts: 3
+[2026-05-11 07:39:36.715] Processing command: azurebackup vault update, parts: 3
+[2026-05-11 07:39:36.716] Using CLI version: 3.0.0-beta.5+4637b2434cd6e8dcf285de245a71074bb00664db
+[2026-05-11 07:39:36.723] Loaded 9 common parameters from C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\common-parameters.json
+[2026-05-11 07:39:36.778] Loaded 59 brand mappings from C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\brand-to-server-mapping.json
+[2026-05-11 07:39:36.783] Loaded 31 compound word mappings from C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\compound-words.json
+[2026-05-11 07:39:36.787] Loaded 5 stop words from C:\Users\diberry\project-dina-content-gen-cli\repos\microsoft-mcp-doc-generation\mcp-tools\data\stop-words.json
+[2026-05-11 07:39:37.592]   azurebackup: 16 tools (206 parameters)
+[2026-05-11 07:39:37.592] 
+[2026-05-11 07:39:37.593] Tool List by Service Area:
+[2026-05-11 07:39:37.594] ==============================
+[2026-05-11 07:39:37.594] 
+[2026-05-11 07:39:37.595] Legend: [A] = Annotation file, [P] = Parameter file, [E] = Example prompts file
+[2026-05-11 07:39:37.595] 
+[2026-05-11 07:39:37.596] 
+[2026-05-11 07:39:37.597] azurebackup (16 tools):
+[2026-05-11 07:39:37.597] -----------------------
+[2026-05-11 07:39:37.598]   • azurebackup backup status                          - status               [ 2 params] [A,P]
+[2026-05-11 07:39:37.599]   • azurebackup disasterrecovery enable-crr            - enable-crr           [ 3 params] [A,P]
+[2026-05-11 07:39:37.600]   • azurebackup governance find-unprotected            - find-unprotected     [ 2 params] [A,P]
+[2026-05-11 07:39:37.600]   • azurebackup governance immutability                - immutability         [ 4 params] [A,P]
+[2026-05-11 07:39:37.601]   • azurebackup governance soft-delete                 - soft-delete          [ 5 params] [A,P]
+[2026-05-11 07:39:37.601]   • azurebackup job get                                - get                  [ 4 params] [A,P]
+[2026-05-11 07:39:37.602]   • azurebackup policy create                          - create               [ 7 params] [A,P]
+[2026-05-11 07:39:37.602]   • azurebackup policy get                             - get                  [ 4 params] [A,P]
+[2026-05-11 07:39:37.603]   • azurebackup protectableitem list                   - list                 [ 5 params] [A,P]
+[2026-05-11 07:39:37.603]   • azurebackup protecteditem get                      - get                  [ 5 params] [A,P]
+[2026-05-11 07:39:37.604]   • azurebackup protecteditem protect                  - protect              [ 7 params] [A,P]
+[2026-05-11 07:39:37.604]   • azurebackup protecteditem undelete                 - undelete             [ 5 params] [A,P]
+[2026-05-11 07:39:37.605]   • azurebackup recoverypoint get                      - get                  [ 6 params] [A,P]
+[2026-05-11 07:39:37.605]   • azurebackup vault create                           - create               [ 6 params] [A,P]
+[2026-05-11 07:39:37.606]   • azurebackup vault get                              - get                  [ 2 params] [A,P]
+[2026-05-11 07:39:37.607]   • azurebackup vault update                           - update               [ 9 params] [A,P]
