@@ -166,4 +166,45 @@ public class StitcherAcrolinxIntegrationTests
         // Table structure preserved
         Assert.Contains("| **Raw mcp tool input** |", result);
     }
+
+    // ── AbbreviationFixer is applied (Acrolinx) ─────────────────────
+
+    [Fact]
+    public void Stitch_ReplacesLatinAbbreviations()
+    {
+        var content = CreateTestContent(
+            "---\ntitle: Test\n---\n\n# Test\n\nIntro paragraph.",
+            "## Test tool\n\nSupports multiple regions (e.g., eastus, westus2). The default region i.e., westus is recommended. Configure regions like eastus, westus, etc.");
+
+        var stitcher = new FamilyFileStitcher();
+        var result = stitcher.Stitch(content);
+
+        // AbbreviationFixer should replace abbreviations
+        Assert.Contains("for example, eastus", result);
+        Assert.Contains("that is, westus", result);
+        Assert.DoesNotContain("e.g.", result);
+        Assert.DoesNotContain("i.e.", result);
+        Assert.DoesNotContain("etc.", result);
+    }
+
+    // ── SlashVerbFixer is applied (Acrolinx) ────────────────────────
+
+    [Fact]
+    public void Stitch_ReplacesSlashStackedVerbs()
+    {
+        var content = CreateTestContent(
+            "---\ntitle: Test\n---\n\n# Test\n\nIntro paragraph.",
+            "## Test tool\n\nCreate/provision a new resource. Use this to update/modify settings or list/filter/sort results.");
+
+        var stitcher = new FamilyFileStitcher();
+        var result = stitcher.Stitch(content);
+
+        // SlashVerbFixer should replace slash-stacked verbs
+        Assert.Contains("Create or provision", result);
+        Assert.Contains("update or modify", result);
+        Assert.Contains("list, filter, or sort", result);
+        Assert.DoesNotContain("Create/provision", result);
+        Assert.DoesNotContain("update/modify", result);
+        Assert.DoesNotContain("list/filter/sort", result);
+    }
 }
