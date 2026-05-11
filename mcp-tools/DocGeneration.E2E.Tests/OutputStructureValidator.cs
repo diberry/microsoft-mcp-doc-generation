@@ -193,6 +193,54 @@ public static class OutputStructureValidator
     }
 
     /// <summary>
+    /// Validates that tool-family articles use flat H2 headings for tools.
+    /// H3 headings inside tool sections (between @mcpcli markers) indicate
+    /// incorrect multi-resource demotion and are forbidden.
+    /// H4 headings (tab headers like "#### [Conceptual]") are allowed.
+    /// </summary>
+    public static ValidationResult ValidateHeadingStructure(string outputPath)
+    {
+        var result = new ValidationResult();
+        var toolFamilyDir = Path.Combine(outputPath, "tool-family");
+
+        if (!Directory.Exists(toolFamilyDir))
+        {
+            result.AddIssue("tool-family directory not found — cannot validate heading structure");
+            return result;
+        }
+
+        var h3InToolSectionPattern = new Regex(@"^###\s+", RegexOptions.Compiled);
+        var mcpCliMarkerPattern = new Regex(@"<!--\s*@mcpcli\s+\S+", RegexOptions.Compiled);
+
+        foreach (var mdFile in Directory.GetFiles(toolFamilyDir, "*.md"))
+        {
+            var lines = File.ReadAllLines(mdFile);
+            var relativePath = Path.GetRelativePath(outputPath, mdFile);
+            var insideToolSection = false;
+
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+
+                if (mcpCliMarkerPattern.IsMatch(line))
+                {
+                    insideToolSection = true;
+                    continue;
+                }
+
+                if (insideToolSection && h3InToolSectionPattern.IsMatch(line))
+                {
+                    result.AddIssue(
+                        $"Forbidden H3 heading in tool section at line {i + 1} of {relativePath}: " +
+                        $"\"{line.Trim()}\" — tools must use H2, not H3 (multi-resource demotion bug)");
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Returns all .md files from publishable output directories.
     /// </summary>
     internal static IEnumerable<string> GetPublishableMarkdownFiles(string outputPath)
