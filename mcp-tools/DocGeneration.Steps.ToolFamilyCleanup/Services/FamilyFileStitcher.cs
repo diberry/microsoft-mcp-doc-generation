@@ -113,18 +113,24 @@ public class FamilyFileStitcher
     }
 
     /// <summary>
-    /// Determines whether a set of tools spans multiple distinct resource types.
-    /// Returns true when there are 2+ distinct non-empty resource types.
+    /// Determines whether a family file contains tools from multiple MCP namespaces.
+    /// A multi-resource family is defined as a file combining more than one namespace on purpose.
+    /// Multiple resource types within a single namespace (e.g., storage has Account, Blob, Table)
+    /// does NOT make it multi-resource — each tool still gets a flat H2.
+    /// Currently always returns false because the pipeline runs per-namespace.
     /// </summary>
     internal static bool IsMultiResourceFamily(List<ToolContent> tools)
     {
-        var distinctResourceTypes = tools
-            .Select(t => t.ResourceType)
-            .Where(rt => !string.IsNullOrEmpty(rt))
+        // Single-namespace pipeline runs are never multi-resource.
+        // Multi-resource only applies when explicitly combining multiple namespaces into one file.
+        // The FamilyName on all tools in a single run is identical (one namespace = one family).
+        var distinctFamilies = tools
+            .Select(t => t.FamilyName)
+            .Where(f => !string.IsNullOrEmpty(f))
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .Count();
 
-        return distinctResourceTypes.Count >= 2;
+        return distinctFamilies >= 2;
     }
 
     /// <summary>
