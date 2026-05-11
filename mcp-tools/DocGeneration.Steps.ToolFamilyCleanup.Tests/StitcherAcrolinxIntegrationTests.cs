@@ -180,7 +180,8 @@ public class StitcherAcrolinxIntegrationTests
         var result = stitcher.Stitch(content);
 
         // AbbreviationFixer should replace abbreviations
-        Assert.Contains("for example, eastus", result);
+        // ExampleValueBackticker wraps values in backticks after AbbreviationFixer runs
+        Assert.Contains("for example, `eastus`", result);
         Assert.Contains("that is, westus", result);
         Assert.DoesNotContain("e.g.", result);
         Assert.DoesNotContain("i.e.", result);
