@@ -43,6 +43,7 @@ public static class SlashVerbFixer
         "true/false",
         "yes/no",
         "on/off",
+        "and/or",
         "tcp/ip",
         "udp/tcp",
         "i/o",
@@ -58,6 +59,11 @@ public static class SlashVerbFixer
     // Negative lookahead prevents partial matching of 4+ part paths
     private static readonly Regex SlashPattern = new(
         @"\b([A-Za-z][A-Za-z0-9]*\/[A-Za-z][A-Za-z0-9]*(?:\/[A-Za-z][A-Za-z0-9]*)?)\b(?!\/[A-Za-z])",
+        RegexOptions.Compiled);
+
+    // Matches markdown link destinations [text](url) to protect from replacement
+    private static readonly Regex MarkdownLinkPattern = new(
+        @"\[([^\]]*)\]\(([^)]+)\)",
         RegexOptions.Compiled);
 
     /// <summary>
@@ -82,6 +88,14 @@ public static class SlashVerbFixer
         markdown = InlineCodePattern.Replace(markdown, m =>
         {
             var key = $"\x00IC{placeholderIndex++}\x00";
+            placeholders[key] = m.Value;
+            return key;
+        });
+
+        // Protect markdown link destinations from replacement
+        markdown = MarkdownLinkPattern.Replace(markdown, m =>
+        {
+            var key = $"\x00ML{placeholderIndex++}\x00";
             placeholders[key] = m.Value;
             return key;
         });
@@ -111,6 +125,11 @@ public static class SlashVerbFixer
 
                 // Check if preceded by / (part of a longer path like /usr/local/bin)
                 if (m.Index > 0 && line[m.Index - 1] == '/')
+                    return match;
+
+                // Check if followed by file extension or trailing slash (path-like context)
+                var afterEnd = m.Index + m.Length;
+                if (afterEnd < line.Length && (line[afterEnd] == '.' || line[afterEnd] == '/'))
                     return match;
 
                 // Split on slashes

@@ -29,27 +29,35 @@ public static class AbbreviationFixer
         @"`[^`]+`",
         RegexOptions.Compiled);
 
+    // Matches markdown link destinations [text](url) to protect URLs from replacement
+    private static readonly Regex MarkdownLinkPattern = new(
+        @"\[([^\]]*)\]\(([^)]+)\)",
+        RegexOptions.Compiled);
+
     // "e.g." → "for example"
     // Handles: "e.g., X", "(e.g., X)", "e.g. X"
+    // Uses [ \t] (horizontal whitespace) to avoid consuming newlines
     private static readonly Regex EgPattern = new(
-        @"\be\.g\.\s*,?\s*",
+        @"\be\.g\.[ \t]*,?[ \t]*",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     // "i.e." → "that is"
     // Handles: "i.e., X", "(i.e., X)", "i.e. X"
     private static readonly Regex IePattern = new(
-        @"\bi\.e\.\s*,?\s*",
+        @"\bi\.e\.[ \t]*,?[ \t]*",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-    // "etc." at end of string (list terminator) → replace with space to preserve formatting
+    // "etc." at end of line (list terminator) → replace with "."
+    // Consumes optional preceding comma. Multiline so $ matches end of each line.
+    // \r? handles both \n and \r\n line endings.
     private static readonly Regex EtcAtEndPattern = new(
-        @"\s+etc\.$",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        @",?[ \t]+etc\.\r?$",
+        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
     // "etc." in middle of text → replace with "and more"
-    // Consumes trailing whitespace to avoid double-space artifacts
+    // Uses [ \t] (horizontal whitespace) to avoid consuming newlines
     private static readonly Regex EtcInMiddlePattern = new(
-        @"\s+etc\.\s+",
+        @"[ \t]+etc\.[ \t]+",
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
     /// <summary>
@@ -78,13 +86,20 @@ public static class AbbreviationFixer
             return key;
         });
 
+        // Protect markdown link destinations from replacement
+        markdown = MarkdownLinkPattern.Replace(markdown, m =>
+        {
+            var key = $"\x00ML{placeholderIndex++}\x00";
+            placeholders[key] = m.Value;
+            return key;
+        });
+
         // Apply replacements
         markdown = EgPattern.Replace(markdown, "for example, ");
         markdown = IePattern.Replace(markdown, "that is, ");
         
-        // For etc., handle end-of-string first (list terminator), then mid-text
-        // Process in order: " etc." at end → " " (space), " etc. " in middle → " and more "
-        markdown = EtcAtEndPattern.Replace(markdown, " ");
+        // For etc., handle end-of-line first (list terminator), then mid-text
+        markdown = EtcAtEndPattern.Replace(markdown, ".");
         markdown = EtcInMiddlePattern.Replace(markdown, " and more ");
 
         // Restore placeholders

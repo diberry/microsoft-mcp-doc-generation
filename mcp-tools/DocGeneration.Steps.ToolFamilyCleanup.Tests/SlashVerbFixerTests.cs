@@ -217,4 +217,45 @@ More text with Update/Modify outside.";
         var result = SlashVerbFixer.Fix(input);
         Assert.Equal(input, result);
     }
+
+    // ── and/or compound term ─────────────────────────────────────────
+
+    [Fact]
+    public void Fix_AndOr_NotReplaced()
+    {
+        var input = "Choose and/or configure options.";
+        var result = SlashVerbFixer.Fix(input);
+        Assert.Contains("and/or", result);
+    }
+
+    // ── Relative path protection ─────────────────────────────────────
+
+    [Theory]
+    [InlineData("See src/config/settings.json for details")]
+    [InlineData("Edit docs/api/reference.md")]
+    [InlineData("Check folder/file.txt")]
+    public void Fix_RelativePathsWithExtensions_NotReplaced(string input)
+    {
+        var result = SlashVerbFixer.Fix(input);
+        Assert.Equal(input, result);
+    }
+
+    // ── Markdown link protection ─────────────────────────────────────
+
+    [Fact]
+    public void Fix_MarkdownLinkDestination_NotReplaced()
+    {
+        var input = "See [API reference](docs/api/reference) for details.";
+        var result = SlashVerbFixer.Fix(input);
+        Assert.Contains("[API reference](docs/api/reference)", result);
+    }
+
+    [Fact]
+    public void Fix_MarkdownLinkWithSlashVerb_LinkProtectedProseFixed()
+    {
+        var input = "See [API docs](docs/api/reference) and Create/Delete resources.";
+        var result = SlashVerbFixer.Fix(input);
+        Assert.Contains("[API docs](docs/api/reference)", result);
+        Assert.Contains("Create or Delete", result);
+    }
 }

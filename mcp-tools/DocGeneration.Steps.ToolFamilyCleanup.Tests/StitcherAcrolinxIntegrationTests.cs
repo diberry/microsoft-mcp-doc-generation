@@ -186,6 +186,8 @@ public class StitcherAcrolinxIntegrationTests
         Assert.DoesNotContain("e.g.", result);
         Assert.DoesNotContain("i.e.", result);
         Assert.DoesNotContain("etc.", result);
+        // etc. at end of line should become "." (not dangling comma)
+        Assert.DoesNotContain(", .", result);
     }
 
     // ── SlashVerbFixer is applied (Acrolinx) ────────────────────────

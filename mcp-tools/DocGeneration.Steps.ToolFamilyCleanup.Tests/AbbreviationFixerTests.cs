@@ -49,9 +49,9 @@ public class AbbreviationFixerTests
     // ── Core replacements: etc. ────────────────────────────────────
 
     [Theory]
-    [InlineData("Include regions like eastus, westus, etc.", "Include regions like eastus, westus, ")]
+    [InlineData("Include regions like eastus, westus, etc.", "Include regions like eastus, westus.")]
     [InlineData("Tools include list, create, delete, etc. for management", "Tools include list, create, delete, and more for management")]
-    [InlineData("Parameters: name, location, etc.", "Parameters: name, location, ")]
+    [InlineData("Parameters: name, location, etc.", "Parameters: name, location.")]
     public void Fix_EtcAbbreviation_RemovedOrReplacedWithAndMore(string input, string expected)
     {
         var result = AbbreviationFixer.Fix(input);
@@ -156,9 +156,9 @@ More text with e.g. outside.";
     {
         var input = "Supported services: Storage, Key Vault, Cosmos DB, etc.";
         var result = AbbreviationFixer.Fix(input);
-        // Should remove ", etc." leaving the list clean
+        // Should remove ", etc." and end with period
         Assert.DoesNotContain("etc.", result);
-        Assert.Contains("Cosmos DB, ", result);
+        Assert.Contains("Cosmos DB.", result);
     }
 
     [Fact]
@@ -168,5 +168,35 @@ More text with e.g. outside.";
         var result = AbbreviationFixer.Fix(input);
         Assert.Contains("and more", result);
         Assert.DoesNotContain("etc.", result);
+    }
+
+    // ── Newline preservation ─────────────────────────────────────────
+
+    [Fact]
+    public void Fix_EtcAtEndOfLine_PreservesNewline()
+    {
+        var input = "Details include A, B, etc.\n\n## Next";
+        var result = AbbreviationFixer.Fix(input);
+        Assert.Contains("A, B.\n\n## Next", result);
+        Assert.DoesNotContain("and more ## Next", result);
+    }
+
+    [Fact]
+    public void Fix_EgBeforeNewline_PreservesLineBreak()
+    {
+        var input = "First line e.g.\nSecond line";
+        var result = AbbreviationFixer.Fix(input);
+        Assert.Contains("for example,", result);
+        Assert.Contains("\nSecond line", result);
+    }
+
+    // ── Markdown link protection ─────────────────────────────────────
+
+    [Fact]
+    public void Fix_InsideMarkdownLink_NotReplaced()
+    {
+        var input = "See [e.g., this guide](https://example.com/docs) for details.";
+        var result = AbbreviationFixer.Fix(input);
+        Assert.Contains("[e.g., this guide](https://example.com/docs)", result);
     }
 }
