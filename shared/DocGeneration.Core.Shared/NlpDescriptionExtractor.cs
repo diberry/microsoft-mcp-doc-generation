@@ -13,7 +13,7 @@ namespace Shared;
 public static class NlpDescriptionExtractor
 {
     // Matches the description paragraph(s) after the command comment and before the first placeholder or section heading.
-    // Uses greedy match to capture multi-line descriptions (e.g., descriptions that span multiple lines).
+    // Uses lazy match (+?) to capture up to the first boundary ({{, ##, or [Tool annotation).
     private static readonly Regex NlpDescriptionRegex = new(
         @"<!--\s*@mcpcli\s+.+?\s*-->\s*\n\s*\n([\s\S]+?)(?=\n\s*\n\{\{|(?:\n|\A)##|\[Tool annotation)",
         RegexOptions.Compiled);

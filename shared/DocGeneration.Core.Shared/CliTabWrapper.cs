@@ -74,7 +74,7 @@ public static class CliTabWrapper
             var trimmedLine = line.TrimEnd('\r');
 
             // Check if this is a ## heading (new tool section or end of current)
-            if (trimmedLine.StartsWith("## ") && !trimmedLine.StartsWith("## Quick Navigation"))
+            if (trimmedLine.StartsWith("## ") && !trimmedLine.StartsWith("## Quick Navigation", StringComparison.OrdinalIgnoreCase))
             {
                 // Flush any previous tool section
                 if (inToolSection)

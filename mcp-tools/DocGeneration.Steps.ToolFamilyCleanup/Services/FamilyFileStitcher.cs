@@ -117,7 +117,7 @@ public class FamilyFileStitcher
     /// A multi-resource family is defined as a file combining more than one namespace on purpose.
     /// Multiple resource types within a single namespace (e.g., storage has Account, Blob, Table)
     /// does NOT make it multi-resource — each tool still gets a flat H2.
-    /// Currently always returns false because the pipeline runs per-namespace.
+    /// In practice, returns false for all current pipeline runs because the pipeline processes one namespace at a time.
     /// </summary>
     internal static bool IsMultiResourceFamily(List<ToolContent> tools)
     {

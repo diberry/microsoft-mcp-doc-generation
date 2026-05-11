@@ -42,13 +42,18 @@ public static class CliContentAssembler
         }
         else if (tool.Switches.Count > 0)
         {
-            // Inline parameter table as fallback
-            sb.AppendLine("| Parameter | Type | Description |");
-            sb.AppendLine("|-----------|------|-------------|");
-            foreach (var sw in tool.Switches)
+            // Inline parameter table as fallback — filter infrastructure params and include Required column
+            var filtered = GlobalSwitchFilter.FilterOutGlobal(tool.Switches);
+            if (filtered.Count > 0)
             {
-                var desc = EscapePipe(sw.Description);
-                sb.AppendLine($"| `{sw.Name}` | {sw.Type} | {desc} |");
+                sb.AppendLine("| Parameter | Type | Required | Description |");
+                sb.AppendLine("|-----------|------|----------|-------------|");
+                foreach (var sw in filtered)
+                {
+                    var desc = EscapePipe(sw.Description);
+                    var required = sw.IsRequired == true ? "Yes" : "No";
+                    sb.AppendLine($"| `{sw.Name}` | {sw.Type} | {required} | {desc} |");
+                }
             }
             sb.AppendLine();
         }
@@ -92,6 +97,6 @@ public static class CliContentAssembler
     /// <summary>
     /// Escapes pipe characters in text destined for markdown table cells.
     /// </summary>
-    internal static string EscapePipe(string text)
-        => text.Replace("|", "\\|");
+    internal static string EscapePipe(string? text)
+        => (text ?? "").Replace("|", "\\|");
 }

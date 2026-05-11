@@ -80,7 +80,6 @@ public class CliProseImprover
         }
 
         desc = desc.Replace("MCP Server", "Azure MCP CLI", StringComparison.OrdinalIgnoreCase);
-        desc = desc.Replace("MCP server", "Azure MCP CLI", StringComparison.OrdinalIgnoreCase);
 
         return desc;
     }

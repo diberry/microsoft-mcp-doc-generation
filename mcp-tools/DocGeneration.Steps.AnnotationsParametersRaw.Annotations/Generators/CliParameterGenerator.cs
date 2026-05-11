@@ -30,10 +30,11 @@ public class CliParameterGenerator
             var fileName = ToolFileNameBuilder.BuildParameterCliFileName(command, nameContext);
             var outputFile = Path.Combine(outputDir, fileName);
 
+            var filtered = GlobalSwitchFilter.FilterOutGlobal(tool.Switches);
             var templateData = new Dictionary<string, object>
             {
-                ["hasParameters"] = GlobalSwitchFilter.FilterOutGlobal(tool.Switches).Count > 0,
-                ["switches"] = GlobalSwitchFilter.FilterOutGlobal(tool.Switches),
+                ["hasParameters"] = filtered.Count > 0,
+                ["switches"] = filtered,
                 ["command"] = command,
                 ["generatedAt"] = generatedAt,
                 ["version"] = cliVersion

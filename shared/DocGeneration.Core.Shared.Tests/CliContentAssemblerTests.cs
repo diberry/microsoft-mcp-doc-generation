@@ -41,8 +41,8 @@ public class CliContentAssemblerTests : IDisposable
     {
         return new CliToolInfo(command, description, new[]
         {
-            new CliSwitch("--subscription", "The Azure subscription identifier.", "string"),
-            new CliSwitch("--resource-group", "The name of the resource group.", "string", Default: "mygroup"),
+            new CliSwitch("--resource-group", "The name of the resource group.", "string", IsRequired: true),
+            new CliSwitch("--location", "The Azure region.", "string", Default: "eastus"),
         });
     }
 
@@ -100,9 +100,9 @@ public class CliContentAssemblerTests : IDisposable
         // No parameterCliContent, no exampleCommandsContent → inline table
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        Assert.Contains("| Parameter | Type | Description |", result);
-        Assert.Contains("`--subscription`", result);
+        Assert.Contains("| Parameter | Type | Required | Description |", result);
         Assert.Contains("`--resource-group`", result);
+        Assert.Contains("`--location`", result);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class CliContentAssemblerTests : IDisposable
 
         // No Default column at all
         Assert.DoesNotContain("| Default", result);
-        Assert.Contains("| Parameter | Type | Description |", result);
+        Assert.Contains("| Parameter | Type | Required | Description |", result);
     }
 
     // ── AssembleAllCliContentAsync ────────────────────────────────────
@@ -230,8 +230,8 @@ public class CliContentAssemblerTests : IDisposable
         Assert.Single(result);
         var content = result.Values.First();
         // Should have inline parameter table since no include files
-        Assert.Contains("| Parameter | Type | Description |", content);
-        Assert.Contains("`--subscription`", content);
+        Assert.Contains("| Parameter | Type | Required | Description |", content);
+        Assert.Contains("`--resource-group`", content);
     }
 
     // ── Pipe character escaping ───────────────────────────────────────
