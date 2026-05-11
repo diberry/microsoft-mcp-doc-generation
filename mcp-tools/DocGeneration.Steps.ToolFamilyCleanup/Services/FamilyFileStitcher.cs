@@ -90,7 +90,13 @@ public class FamilyFileStitcher
         // 10. Post-processing: insert commas after introductory phrases (#146, #215)
         markdown = IntroductoryCommaFixer.Fix(markdown);
 
-        // 10a. Post-processing: insert colon after "including" in intro paragraphs (#282)
+        // 10a. Post-processing: replace Latin abbreviations with spelled-out forms (Acrolinx)
+        markdown = AbbreviationFixer.Fix(markdown);
+
+        // 10b. Post-processing: replace slash-stacked verbs with "or" phrasing (Acrolinx)
+        markdown = SlashVerbFixer.Fix(markdown);
+
+        // 10c. Post-processing: insert colon after "including" in intro paragraphs (#282)
         markdown = IncludingColonFixer.Fix(markdown);
 
         // 11. Post-processing: wrap bare example values in backticks (#152)
