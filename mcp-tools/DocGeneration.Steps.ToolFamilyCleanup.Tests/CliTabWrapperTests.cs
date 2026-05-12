@@ -203,6 +203,84 @@ public class CliTabWrapperTests
         Assert.Contains("cli content for list", result);
     }
 
+    [Fact]
+    public void ApplyTabsToFamilyArticle_NoMcpCliMarkers_NoTabsInjected()
+    {
+        // Article with NO @mcpcli markers — MCP-only content
+        const string mcpOnlyArticle = """
+            ---
+            ms.topic: include
+            ---
+
+            # Azure Key Vault tools
+
+            ## Overview
+            Tools for managing Azure Key Vault secrets and keys.
+
+            ## List secrets
+
+            List all secrets in a key vault.
+
+            | Parameter | Required or optional | Description |
+            |-----------|---------------------|-------------|
+            | **Vault name** | Required | Key vault name |
+
+            ---
+
+            ## Get secret
+
+            Retrieve a specific secret value.
+
+            ---
+            """;
+
+        var cliContent = new Dictionary<string, string>
+        {
+            ["keyvault secret list"] = "cli content"
+        };
+
+        var result = CliTabWrapper.ApplyTabsToFamilyArticle(mcpOnlyArticle, cliContent);
+
+        // Verify no tab markers added (content may have normalized line endings)
+        Assert.DoesNotContain("#### [MCP Server](#tab/mcp-server)", result);
+        Assert.DoesNotContain("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
+        // Verify original content is preserved (key sections present)
+        Assert.Contains("# Azure Key Vault tools", result);
+        Assert.Contains("## Overview", result);
+        Assert.Contains("## List secrets", result);
+        Assert.Contains("## Get secret", result);
+        Assert.Contains("| **Vault name** | Required | Key vault name |", result);
+    }
+
+    [Fact]
+    public void ApplyTabsToFamilyArticle_NoMcpCliMarkers_NoExceptions()
+    {
+        const string mcpOnlyArticle = """
+            ---
+            ms.topic: include
+            ---
+
+            # Simple MCP article
+
+            ## Tool section
+
+            Description without markers.
+
+            ---
+            """;
+
+        var cliContent = new Dictionary<string, string>
+        {
+            ["some tool"] = "cli content"
+        };
+
+        // Should not throw
+        var exception = Record.Exception(() => 
+            CliTabWrapper.ApplyTabsToFamilyArticle(mcpOnlyArticle, cliContent));
+
+        Assert.Null(exception);
+    }
+
     private static int CountOccurrences(string text, string pattern)
     {
         int count = 0;
