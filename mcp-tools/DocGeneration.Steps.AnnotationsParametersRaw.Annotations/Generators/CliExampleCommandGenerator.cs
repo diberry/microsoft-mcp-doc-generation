@@ -53,7 +53,7 @@ public static class CliExampleCommandGenerator
 
         sb.AppendLine("**Example CLI command**");
         sb.AppendLine();
-        sb.AppendLine("```terminal");
+        sb.AppendLine("```console");
 
         // Get non-global switches, required first then optional
         var toolSwitches = tool.Switches

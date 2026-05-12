@@ -51,7 +51,7 @@ public class CliExampleCommandGeneratorTests : IDisposable
 
         Assert.Contains("azmcp storage account list", content);
         Assert.Contains("**Example CLI command**", content);
-        Assert.Contains("```terminal", content);
+        Assert.Contains("```console", content);
         Assert.DoesNotContain("\\", content);
     }
 
