@@ -75,10 +75,16 @@ public class CliProseImprover
         var mcpMatch = McpToolPattern.Match(desc);
         if (mcpMatch.Success)
         {
-            var periodIdx = desc.IndexOf('.', mcpMatch.Index);
-            if (periodIdx >= 0 && periodIdx < desc.Length - 1)
+            // Use ". " (period + space) to find sentence boundaries, avoiding version numbers like "v2.0"
+            var periodIdx = desc.IndexOf(". ", mcpMatch.Index, StringComparison.Ordinal);
+            if (periodIdx >= 0 && periodIdx < desc.Length - 2)
             {
-                desc = desc[(periodIdx + 1)..].TrimStart();
+                desc = desc[(periodIdx + 2)..].TrimStart();
+            }
+            else if (desc.Length > mcpMatch.Index && !desc[mcpMatch.Index..].Contains(". "))
+            {
+                // If no ". " found, the MCP preamble is the entire description
+                desc = "";
             }
         }
 

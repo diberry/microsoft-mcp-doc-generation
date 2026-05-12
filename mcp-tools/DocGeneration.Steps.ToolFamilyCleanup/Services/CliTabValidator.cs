@@ -62,7 +62,7 @@ public static class CliTabValidator
         if (inTabGroup)
             errors.Add("Unterminated tab group at end of document.");
 
-        if (mcpTabCount == 0)
+        if (cliTabCount == 0)
             warnings.Add("No CLI tabs found in article.");
 
         return new ValidationResult(errors.Count == 0, errors, warnings);

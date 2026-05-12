@@ -188,6 +188,14 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             var familyArticlePath = Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md");
             if (File.Exists(familyArticlePath))
             {
+                // Check if CLI tab generation is allowed for this namespace
+                var cliTabConfig = CliTabConfig.LoadFromFile(Path.Combine(context.OutputPath, "cli-tab-config.json"));
+                if (!cliTabConfig.IsNamespaceAllowed(currentNamespace))
+                {
+                    Console.WriteLine($"  ⊘ CLI tab generation disabled for namespace '{currentNamespace}'");
+                    return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
+                }
+
                 try
                 {
                     var cliOutputPath = Path.Combine(context.OutputPath, "cli", "cli-output.json");
