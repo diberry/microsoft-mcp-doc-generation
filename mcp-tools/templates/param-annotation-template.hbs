@@ -3,7 +3,7 @@
 | Parameter |  Required or optional | Description |
 |-----------------------|----------------------|-------------|
 {{#each option}}
-| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
+| **`{{name}}`** |  {{RequiredText}} | {{description}} |
 {{/each}}
 {{else}}
 <!-- No parameters for this tool -->
