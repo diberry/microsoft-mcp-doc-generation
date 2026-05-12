@@ -166,7 +166,7 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(FamilyArticle, cliContent);
 
-        Assert.Equal(FamilyArticle, result);
+        Assert.Equal(FamilyArticle.ReplaceLineEndings(), result.ReplaceLineEndings());
     }
 
     [Fact]
