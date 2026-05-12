@@ -95,6 +95,10 @@ public class PageGenerator
                 
                 if (tool.Option != null)
                 {
+                    var conditionalParameters = new HashSet<string>(
+                        tool.ConditionalRequiredParameters ?? new List<string>(),
+                        StringComparer.OrdinalIgnoreCase);
+
                     var filteredOptions = tool.Option
                         .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames));
 
@@ -106,7 +110,7 @@ public class PageGenerator
                             NL_Name = Config.TextNormalizer.NormalizeParameter(opt.Name ?? ""),
                             Type = opt.Type,
                             Required = opt.Required,
-                            RequiredText = opt.Required == true ? "Required" : "Optional",
+                            RequiredText = ParameterGenerator.BuildRequiredText(opt.Required == true, opt.Name ?? "", conditionalParameters),
                             Description = ParameterDescriptionBackticker.Apply(
                                 Config.TextNormalizer.WrapExampleValues(
                                     Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(opt.Description ?? "")))),
