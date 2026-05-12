@@ -194,9 +194,9 @@ public class ToolReaderToStitcherIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task FullPipeline_MultiResource_StitcherProducesResourceGroupHeaders()
+    public async Task FullPipeline_SameNamespace_StitcherProducesFlatH2s()
     {
-        // Arrange: multi-resource family
+        // Arrange: same namespace with different resource types → flat H2s
         CreateToolFile("compute-vm-create.md", "compute", "vm create",
             "Create virtual machine", "## Create virtual machine\n\nCreates a VM.");
         CreateToolFile("compute-disk-list.md", "compute", "disk list",
@@ -205,9 +205,12 @@ public class ToolReaderToStitcherIntegrationTests : IDisposable
         // Act
         var result = await RunFullPipeline("compute");
 
-        // Assert: stitcher emits H2 resource group headers
-        Assert.Contains("## VM", result);
-        Assert.Contains("## Disk", result);
+        // Assert: flat H2 per tool, no resource group headers
+        Assert.Contains("## Create virtual machine", result);
+        Assert.Contains("## List disks", result);
+        // No group-level headers like "## VM" or "## Disk"
+        Assert.DoesNotContain("\n## VM\n", result);
+        Assert.DoesNotContain("\n## Disk\n", result);
     }
 
     #endregion

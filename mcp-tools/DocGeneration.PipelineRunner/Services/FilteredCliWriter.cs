@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PipelineRunner.Services;
 
@@ -31,5 +32,7 @@ public sealed class FilteredCliWriter : IFilteredCliWriter
         return new FilteredCliFileHandle(temporaryDirectory, filePath);
     }
 
-    private sealed record FilteredCliPayload(JsonElement Version, IReadOnlyList<JsonElement> Results);
+    private sealed record FilteredCliPayload(
+        [property: JsonPropertyName("version")] JsonElement Version,
+        [property: JsonPropertyName("results")] IReadOnlyList<JsonElement> Results);
 }

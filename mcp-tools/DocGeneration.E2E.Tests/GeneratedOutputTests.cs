@@ -156,8 +156,28 @@ public class GeneratedOutputTests
         }
     }
 
+    [Fact]
+    [Trait("Category", "E2E")]
+    public void Namespace_ToolFamilyArticleHasFlatH2Structure()
+    {
+        var namespaces = GetGeneratedNamespaces().ToList();
+        if (namespaces.Count == 0)
+            return;
+
+        foreach (var ns in namespaces)
+        {
+            var namespaceDirName = (string)ns[0];
+            var outputPath = GetOutputPath(namespaceDirName);
+            var result = OutputStructureValidator.ValidateHeadingStructure(outputPath);
+
+            Assert.True(result.Success,
+                $"Heading structure issues in {namespaceDirName}:\n" +
+                string.Join("\n", result.Issues));
+        }
+    }
+
     /// <summary>
-    /// Sentinel test that always runs. Reports whether generated output was found,
+    /// Sentinel test that always runs.Reports whether generated output was found,
     /// making it explicit in CI when E2E validation was skipped due to missing output.
     /// When no generated output exists, this test passes with an informational message
     /// rather than failing — CI may not have prior pipeline output.

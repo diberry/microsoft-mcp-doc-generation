@@ -34,7 +34,9 @@ public static class DocumentationGenerator
         bool generateCommon = false,
         bool generateCommands = false,
         bool generateAnnotations = false,
-        string? cliVersion = null)
+        string? cliVersion = null,
+        bool generateParameterCli = false,
+        bool generateExampleCommands = false)
     {
         // Config.Load has been called in Program.Main and TransformationEngine is initialized
 
@@ -152,6 +154,39 @@ public static class DocumentationGenerator
         }
 
         // Note: Annotations are always generated at the start, before area pages
+
+        // Generate CLI parameter files if requested
+        if (generateParameterCli)
+        {
+            var cliJson = await File.ReadAllTextAsync(cliOutputFile);
+            var cliTools = CliJsonMapper.MapFromCliOutput(cliJson);
+            var nameContext = await FileNameContext.CreateAsync();
+            var resolvedCliVersion = cliVersion ?? "unknown";
+            var parameterCliDir = Path.Combine(parentDir, "parameter-cli");
+
+            var cliParameterTemplate = Path.Combine(templatesDir, "cli-parameter-template.hbs");
+            await Generators.CliParameterGenerator.GenerateParameterCliFilesAsync(
+                cliTools, cliParameterTemplate, parameterCliDir, nameContext,
+                resolvedCliVersion, DateTime.UtcNow);
+
+            Console.WriteLine($"  CLI parameter files: {Directory.GetFiles(parameterCliDir, "*.md").Length} generated");
+        }
+
+        // Generate CLI example command files if requested
+        if (generateExampleCommands)
+        {
+            var cliJson = await File.ReadAllTextAsync(cliOutputFile);
+            var cliTools = CliJsonMapper.MapFromCliOutput(cliJson);
+            var nameContext = await FileNameContext.CreateAsync();
+            var resolvedCliVersion = cliVersion ?? "unknown";
+            var exampleCommandsDir = Path.Combine(parentDir, "example-commands");
+
+            await Generators.CliExampleCommandGenerator.GenerateExampleCommandFilesAsync(
+                cliTools, exampleCommandsDir, nameContext,
+                resolvedCliVersion, DateTime.UtcNow);
+
+            Console.WriteLine($"  CLI example command files: {Directory.GetFiles(exampleCommandsDir, "*.md").Length} generated");
+        }
 
         // Output summary statistics
         var totalTools = transformedData.Tools.Count;

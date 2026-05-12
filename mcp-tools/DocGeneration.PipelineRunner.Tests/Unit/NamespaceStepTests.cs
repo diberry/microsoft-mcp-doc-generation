@@ -25,12 +25,14 @@ public class NamespaceStepTests
             SeedFile(Path.Combine(context.OutputPath, "annotations", "compute-list-annotations.md"));
             SeedFile(Path.Combine(context.OutputPath, "parameters", "compute-list-parameters.md"));
             SeedFile(Path.Combine(context.OutputPath, "tools-raw", "compute-list.md"));
+            SeedFile(Path.Combine(context.OutputPath, "parameter-cli", "compute-list-parameter-cli.md"));
+            SeedFile(Path.Combine(context.OutputPath, "example-commands", "compute-list-example-commands.md"));
 
             var step = new AnnotationsParametersRawStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Equal(3, runner.Invocations.Count);
+            Assert.Equal(5, runner.Invocations.Count);
             Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "generate-docs");
             Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--annotations");
             Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--no-build");
@@ -38,6 +40,8 @@ public class NamespaceStepTests
             Assert.Contains(runner.Invocations[1].Arguments, argument => argument == "--parameters");
             Assert.Contains(runner.Invocations[2].Arguments, argument => argument.EndsWith("DocGeneration.Steps.AnnotationsParametersRaw.RawTools.csproj", StringComparison.Ordinal));
             Assert.Contains(runner.Invocations[2].Arguments, argument => argument == Path.Combine(context.OutputPath, "tools-raw"));
+            Assert.Contains(runner.Invocations[3].Arguments, argument => argument == "--parameter-cli");
+            Assert.Contains(runner.Invocations[4].Arguments, argument => argument == "--example-commands");
         }
         finally
         {

@@ -93,8 +93,9 @@ public class H2MultiResourceFormatTests
     // ── Detection of multi-resource namespaces from tool metadata ──
 
     [Fact]
-    public void DetectMultiResource_FromToolMetadata_ComputeIsMultiResource()
+    public void DetectMultiResource_SameNamespace_DifferentResources_ReturnsFalse()
     {
+        // Compute has disk, vm, vmss — but it's ONE namespace, NOT multi-resource
         var tools = new List<ToolContent>
         {
             MakeTool("disk", "compute disk create"),
@@ -102,7 +103,7 @@ public class H2MultiResourceFormatTests
             MakeTool("vmss", "compute vmss scale"),
         };
 
-        Assert.True(FamilyFileStitcher.IsMultiResourceFamily(tools));
+        Assert.False(FamilyFileStitcher.IsMultiResourceFamily(tools));
     }
 
     [Fact]
@@ -117,22 +118,71 @@ public class H2MultiResourceFormatTests
         Assert.False(FamilyFileStitcher.IsMultiResourceFamily(tools));
     }
 
+    [Fact]
+    public void DetectMultiResource_DifferentNamespaces_ReturnsTrue()
+    {
+        // Multi-resource = multiple namespaces combined in one file
+        var tools = new List<ToolContent>
+        {
+            new ToolContent
+            {
+                ToolName = "disk create",
+                FileName = "azure-compute-disk-create.complete.md",
+                FamilyName = "compute",
+                Content = "## Create disk\n\nDescription.",
+                Command = "compute disk create",
+                Description = "Create a disk.",
+                ResourceType = "disk",
+            },
+            new ToolContent
+            {
+                ToolName = "account create",
+                FileName = "azure-storage-account-create.complete.md",
+                FamilyName = "storage",
+                Content = "## Create account\n\nDescription.",
+                Command = "storage account create",
+                Description = "Create an account.",
+                ResourceType = "account",
+            },
+        };
+
+        Assert.True(FamilyFileStitcher.IsMultiResourceFamily(tools));
+    }
+
     // ── Integration: Stitch uses correct format per family type ────
 
     [Fact]
     public void Stitch_MultiResource_ToolH3sUseResourceTypeColonActionFormat()
     {
         // This test validates the END-TO-END integration:
-        // When stitching a multi-resource family, the generated H3 tool headings
-        // should use "Resource type: action" format, not "Action resource" format.
+        // Multi-resource = tools from different namespaces in one file.
+        // When stitching, the generated H3 tool headings use "Resource type: action" format.
         var familyContent = new FamilyContent
         {
-            FamilyName = "compute",
-            Metadata = "---\ntitle: Compute\n---\n# Compute\n\nIntro paragraph.",
+            FamilyName = "mixed",
+            Metadata = "---\ntitle: Mixed\n---\n# Mixed\n\nIntro paragraph.",
             Tools = new List<ToolContent>
             {
-                MakeTool("disk", "compute disk create"),
-                MakeTool("vm", "compute vm list"),
+                new ToolContent
+                {
+                    ToolName = "disk create",
+                    FileName = "azure-compute-disk-create.complete.md",
+                    FamilyName = "compute",
+                    Content = "## Create disk\n\nDescription of create disk.",
+                    Command = "compute disk create",
+                    Description = "Create a disk.",
+                    ResourceType = "disk",
+                },
+                new ToolContent
+                {
+                    ToolName = "vm list",
+                    FileName = "azure-compute-vm-list.complete.md",
+                    FamilyName = "network",
+                    Content = "## List VM\n\nDescription of list vm.",
+                    Command = "network vm list",
+                    Description = "List VMs.",
+                    ResourceType = "vm",
+                },
             },
             RelatedContent = "## Related content\n\n- [Link](/path)"
         };
@@ -140,7 +190,7 @@ public class H2MultiResourceFormatTests
         var stitcher = new FamilyFileStitcher();
         var result = stitcher.Stitch(familyContent);
 
-        // Multi-resource: tool headings should be "Managed disk: create" at H3 level
+        // Multi-resource: tool headings should be demoted and use resource type format
         Assert.Contains("### Managed disk: create", result);
         Assert.Contains("### VM: list", result);
     }

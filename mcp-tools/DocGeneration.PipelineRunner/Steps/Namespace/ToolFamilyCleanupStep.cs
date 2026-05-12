@@ -1,3 +1,4 @@
+using GenerativeAI;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
@@ -181,6 +182,96 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 RemoveStaleFile(Path.Combine(context.OutputPath, "tool-family", $"{familyName}.md"));
                 RemoveStaleFile(Path.Combine(context.OutputPath, "tool-family-metadata", $"{familyName}-metadata.md"));
                 RemoveStaleFile(Path.Combine(context.OutputPath, "tool-family-related", $"{familyName}-related.md"));
+            }
+
+            // Apply CLI tab wrapping to the generated tool-family article
+            var familyArticlePath = Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md");
+            if (File.Exists(familyArticlePath))
+            {
+                // Check if CLI tab generation is allowed for this namespace
+                var cliTabConfig = CliTabConfig.LoadFromFile(Path.Combine(context.OutputPath, "cli-tab-config.json"));
+                if (!cliTabConfig.IsNamespaceAllowed(currentNamespace))
+                {
+                    Console.WriteLine($"  ⊘ CLI tab generation disabled for namespace '{currentNamespace}'");
+                    return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
+                }
+
+                try
+                {
+                    var cliOutputPath = Path.Combine(context.OutputPath, "cli", "cli-output.json");
+                    var parameterCliDir = Path.Combine(context.OutputPath, "parameter-cli");
+                    var exampleCommandsDir = Path.Combine(context.OutputPath, "example-commands");
+
+                    if (File.Exists(cliOutputPath) && Directory.Exists(parameterCliDir) && Directory.Exists(exampleCommandsDir))
+                    {
+                        var cliJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
+                        var allCliTools = CliJsonMapper.MapFromCliOutput(cliJson);
+                        var nameContext = await FileNameContext.CreateAsync();
+
+                        // Filter CLI tools to only those in the current namespace
+                        var cliTools = new Dictionary<string, CliToolInfo>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var (key, tool) in allCliTools)
+                        {
+                            if (key.StartsWith(currentNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
+                                key.Equals(currentNamespace, StringComparison.OrdinalIgnoreCase))
+                                cliTools[key] = tool;
+                        }
+
+                        // Extract NLP descriptions from tools-raw files (source of truth)
+                        var toolsRawDir = Path.Combine(context.OutputPath, "tools-raw");
+                        var nlpDescriptions = await NlpDescriptionExtractor.ExtractNlpDescriptionsAsync(
+                            toolsRawDir, nameContext, cliTools.Keys);
+
+                        // Align CLI descriptions with NLP descriptions (deterministic, no AI)
+                        if (nlpDescriptions.Count > 0)
+                        {
+                            var improver = new CliProseImprover();
+                            var improved = await improver.ImproveProseAsync(cliTools, nlpDescriptions, cancellationToken: cancellationToken);
+                            cliTools = new Dictionary<string, CliToolInfo>(improved, StringComparer.OrdinalIgnoreCase);
+                            Console.WriteLine($"  ✓ Aligned {cliTools.Count} CLI descriptions with NLP (deterministic)");
+                        }
+
+                        var assembledContent = await CliContentAssembler.AssembleAllCliContentAsync(
+                            cliTools, parameterCliDir, exampleCommandsDir, nameContext);
+
+                        // Reconciliation gate: validate MCP↔CLI description alignment
+                        if (nlpDescriptions.Count > 0)
+                        {
+                            var cliDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                            foreach (var (key, tool) in cliTools)
+                                cliDescriptions[key] = tool.Description;
+
+                            var alignmentResult = DescriptionAlignmentValidator
+                                .Validate(nlpDescriptions, cliDescriptions);
+
+                            foreach (var warning in alignmentResult.Warnings)
+                            {
+                                Console.WriteLine($"  ⚠ Alignment: {warning}");
+                                warnings.Add($"Description alignment warning: {warning}");
+                            }
+                            foreach (var error in alignmentResult.Errors)
+                            {
+                                Console.WriteLine($"  ✗ Alignment: {error}");
+                                warnings.Add($"Description alignment error: {error}");
+                            }
+                        }
+
+                        if (assembledContent.Count > 0)
+                        {
+                            var familyMarkdown = await File.ReadAllTextAsync(familyArticlePath, cancellationToken);
+                            var tabbedMarkdown = CliTabWrapper.ApplyTabsToFamilyArticle(familyMarkdown, assembledContent);
+                            await File.WriteAllTextAsync(familyArticlePath, tabbedMarkdown, cancellationToken);
+                        }
+                    }
+                    else
+                    {
+                        warnings.Add("CLI tab wrapping skipped: missing cli-output.json, parameter-cli, or example-commands directories.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    warnings.Add($"CLI tab wrapping failed (non-fatal): {ex.Message}");
+                }
             }
 
             return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
