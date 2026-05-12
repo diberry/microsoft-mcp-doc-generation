@@ -50,10 +50,10 @@ public class ImprovedToolGeneratorService
     /// <summary>
     /// Regex that detects leaked placeholder tokens in output content.
     /// Matches the current format (<<<TPL_LABEL_N>>>) and the old format (__TPL_LABEL_N__ or **TPL_LABEL_N**).
-    /// Also detects leaked frozen section tokens (<<<FROZEN_SECTION_N>>>).
+    /// Also detects leaked frozen section tokens (<<<FROZEN_SECTION_N>>>) and frozen param table tokens (<<<FROZEN_PARAM_TABLE_N>>>).
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex LeakedTokenRegex = new(
-        @"(<<<TPL_LABEL_\d+>>>|__TPL_LABEL_\d+__|\*\*TPL_LABEL_\d+\*\*|<<<FROZEN_SECTION_\d+>>>)",
+        @"(<<<TPL_LABEL_\d+>>>|__TPL_LABEL_\d+__|\*\*TPL_LABEL_\d+\*\*|<<<FROZEN_SECTION_\d+>>>|<<<FROZEN_PARAM_TABLE_\d+>>>)",
         System.Text.RegularExpressions.RegexOptions.Compiled);
 
     public ImprovedToolGeneratorService(GenerativeAIClient aiClient, string systemPrompt, string userPromptTemplate)
@@ -137,6 +137,7 @@ public class ImprovedToolGeneratorService
             // Pre-processing (deterministic, should not fail — errors here are real bugs)
             var requiredParameters = ExtractRequiredParameters(originalContent);
             var frozenContent = ProtectExamplePromptSections(originalContent, out var sectionMap);
+            frozenContent = ProtectParameterTable(frozenContent, out var paramTableMap);
             var mcpCliComment = ExtractMcpCliComment(originalContent);
             var protectedContent = ProtectTemplateLabels(frozenContent, out var labelMap);
             var userPrompt = string.Format(_userPromptTemplate, protectedContent);
@@ -192,6 +193,7 @@ public class ImprovedToolGeneratorService
             var restoredContent = RestoreTemplateLabels(improvedContent, labelMap);
             restoredContent = NormalizeTemplateLabels(restoredContent);
             restoredContent = RestoreExamplePromptSections(restoredContent, sectionMap);
+            restoredContent = RestoreParameterTable(restoredContent, paramTableMap);
             restoredContent = RestoreMcpCliComment(restoredContent, mcpCliComment);
 
             // Validate no leaked placeholder tokens remain
@@ -457,6 +459,98 @@ public class ImprovedToolGeneratorService
 
         var restored = content;
         foreach (var pair in sectionMap)
+        {
+            restored = restored.Replace(pair.Key, pair.Value);
+        }
+
+        return restored;
+    }
+
+    /// <summary>
+    /// Replaces every parameter table block in <paramref name="content"/> with a
+    /// <c>&lt;&lt;&lt;FROZEN_PARAM_TABLE_N&gt;&gt;&gt;</c> token before the AI call so the AI
+    /// cannot alter Required/Optional values or rename parameter display names (#554, #558).
+    /// The original table text (header + divider + data rows + optional footnote) is stored in
+    /// <paramref name="tableMap"/> for restoration after the AI returns.
+    /// Supports multiple parameter tables in a single composed file.
+    /// </summary>
+    internal static string ProtectParameterTable(string content, out Dictionary<string, string> tableMap)
+    {
+        var map = new Dictionary<string, string>();
+        if (string.IsNullOrEmpty(content))
+        {
+            tableMap = map;
+            return content;
+        }
+
+        var newline = DetectNewLine(content);
+        var lines = SplitLines(content).ToList();
+        var resultLines = new List<string>();
+        var index = 0;
+        var i = 0;
+
+        while (i < lines.Count)
+        {
+            if (IsParameterTableHeader(lines[i]))
+            {
+                var capturedLines = new List<string> { lines[i] };
+                var j = i + 1;
+
+                // Capture divider row + all contiguous pipe-delimited data rows
+                while (j < lines.Count && lines[j].TrimStart().StartsWith("|", StringComparison.Ordinal))
+                {
+                    capturedLines.Add(lines[j]);
+                    j++;
+                }
+
+                // Capture optional conditional-required footnote (* footnote).
+                // Allow an optional blank line immediately before the footnote line.
+                if (j < lines.Count)
+                {
+                    var nextLine = lines[j];
+                    if (string.IsNullOrWhiteSpace(nextLine) &&
+                        j + 1 < lines.Count &&
+                        lines[j + 1].TrimStart().StartsWith("*", StringComparison.Ordinal))
+                    {
+                        capturedLines.Add(lines[j]);       // blank separator
+                        capturedLines.Add(lines[j + 1]);   // footnote
+                        j += 2;
+                    }
+                    else if (nextLine.TrimStart().StartsWith("*", StringComparison.Ordinal))
+                    {
+                        capturedLines.Add(nextLine);
+                        j++;
+                    }
+                }
+
+                var token = $"<<<FROZEN_PARAM_TABLE_{index++}>>>";
+                map[token] = string.Join(newline, capturedLines);
+                resultLines.Add(token);
+                i = j;
+            }
+            else
+            {
+                resultLines.Add(lines[i]);
+                i++;
+            }
+        }
+
+        tableMap = map;
+        return string.Join(newline, resultLines);
+    }
+
+    /// <summary>
+    /// Restores parameter table blocks that were frozen by <see cref="ProtectParameterTable"/>.
+    /// </summary>
+    internal static string RestoreParameterTable(string content, Dictionary<string, string> tableMap)
+    {
+        if (string.IsNullOrEmpty(content) || tableMap.Count == 0)
+        {
+            return content;
+        }
+
+        var restored = content;
+        foreach (var pair in tableMap)
         {
             restored = restored.Replace(pair.Key, pair.Value);
         }
