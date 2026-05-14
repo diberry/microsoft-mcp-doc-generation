@@ -278,7 +278,7 @@ jobs:
             - `test-npm-azure-mcp/package.json`
             - `test-npm-azure-mcp/package-lock.json`
             ${{ steps.cli-snapshot.outputs.is_new == 'true' && format('- `test-npm-azure-mcp/{0}/tools-list.json` (new CLI snapshot)', steps.cli-snapshot.outputs.cli_version) || '' }}
-            ${{ steps.cli-snapshot.outputs.is_new == 'true' && '- `test-npm-azure-mcp/cli-examples.md` (regenerated CLI examples)' || '' }}
+            ${{ steps.cli-snapshot.outputs.is_new == 'true' && format('- `test-npm-azure-mcp/{0}/cli-examples.md` (regenerated CLI examples)', steps.cli-snapshot.outputs.cli_version) || '' }}
             
             ### CLI Diff
             ${{ steps.diff-check.outputs.previous_version && format('Compared against previous version `{0}`: **{1} lines changed** (+{2} / -{3})', steps.diff-check.outputs.previous_version, steps.diff-check.outputs.lines_changed, steps.diff-check.outputs.lines_added, steps.diff-check.outputs.lines_removed) || 'No previous version to diff against.' }}
