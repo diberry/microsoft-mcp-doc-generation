@@ -26,15 +26,17 @@
     Path to write the .env file. Defaults to mcp-tools/.env relative to repo root.
 
 .EXAMPLE
+    pwsh -File infra/populate-env.ps1 -ResourceGroup rg-mcpdocs
+
+.EXAMPLE
     pwsh -File infra/populate-env.ps1 -EnvironmentName mcpdocs
 
 .EXAMPLE
-    pwsh -File infra/populate-env.ps1 -ResourceGroup rg-mcpdocs -EnvironmentName mcpdocs -UseDefaultCredential
+    pwsh -File infra/populate-env.ps1 -ResourceGroup rg-mcpdocs -UseDefaultCredential
 #>
 
 param(
     [string]$ResourceGroup,
-    [Parameter(Mandatory = $true)]
     [string]$EnvironmentName,
     [switch]$UseDefaultCredential,
     [string]$OutputPath
@@ -51,8 +53,23 @@ if (-not $OutputPath) {
     $OutputPath = Join-Path $repoRoot 'mcp-tools' '.env'
 }
 
-# ── Derive resource group if not provided ────────────────────────────────────────
-if (-not $ResourceGroup) {
+# ── Derive missing parameters ────────────────────────────────────────────────────
+if ($ResourceGroup -and -not $EnvironmentName) {
+    # Strip 'rg-' prefix to derive environment name
+    if ($ResourceGroup -match '^rg-(.+)$') {
+        $EnvironmentName = $Matches[1]
+        Write-Host "  Derived EnvironmentName '$EnvironmentName' from ResourceGroup '$ResourceGroup'" -ForegroundColor DarkGray
+    }
+    else {
+        Write-Error "Cannot derive EnvironmentName from ResourceGroup '$ResourceGroup' (expected 'rg-{name}' pattern). Please provide -EnvironmentName explicitly."
+        exit 1
+    }
+}
+elseif (-not $ResourceGroup -and -not $EnvironmentName) {
+    Write-Error "Provide at least -ResourceGroup or -EnvironmentName."
+    exit 1
+}
+elseif (-not $ResourceGroup) {
     $ResourceGroup = "rg-$EnvironmentName"
 }
 
@@ -100,11 +117,41 @@ $endpoint = az cognitiveservices account show `
     --output tsv 2>&1
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Failed to query AI Services resource '$aiServicesName' in '$ResourceGroup'. Error: $endpoint"
-    exit 1
+    # Fallback: discover AI Services resources in the resource group
+    Write-Host "  '$aiServicesName' not found. Discovering AI Services resources in '$ResourceGroup'..." -ForegroundColor Yellow
+    $discovered = az cognitiveservices account list `
+        --resource-group $ResourceGroup `
+        --query "[].{name:name, endpoint:properties.endpoint, kind:kind}" `
+        --output json 2>&1
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to list AI Services in '$ResourceGroup'. Error: $discovered"
+        exit 1
+    }
+
+    $resources = $discovered | ConvertFrom-Json
+    if ($resources.Count -eq 0) {
+        Write-Error "No AI Services resources found in '$ResourceGroup'."
+        exit 1
+    }
+
+    # Pick the primary (non-secondary) resource
+    $primary = $resources | Where-Object { $_.name -notmatch '-sec$' } | Select-Object -First 1
+    if (-not $primary) {
+        $primary = $resources | Select-Object -First 1
+    }
+
+    $aiServicesName = $primary.name
+    $endpoint = $primary.endpoint
+    # Derive key vault name from discovered AI Services name
+    $keyVaultName = $aiServicesName -replace '^oai-', 'kv-'
+    Write-Host "  Discovered: $aiServicesName (endpoint: $endpoint)" -ForegroundColor Green
+    Write-Host "  Derived Key Vault: $keyVaultName" -ForegroundColor Green
 }
-$endpoint = $endpoint.Trim()
-Write-Host "  Endpoint: $endpoint" -ForegroundColor Green
+else {
+    $endpoint = $endpoint.Trim()
+    Write-Host "  Endpoint: $endpoint" -ForegroundColor Green
+}
 
 # ── Query API key from Key Vault (unless using default credential) ───────────────
 $apiKey = ""
@@ -117,9 +164,18 @@ if (-not $UseDefaultCredential) {
         --output tsv 2>&1
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Failed to fetch secret '$secretName' from Key Vault '$keyVaultName'. Error: $apiKey"
-        Write-Host "  Hint: Ensure you have 'Key Vault Secrets User' role on the vault." -ForegroundColor Yellow
-        exit 1
+        Write-Host "  Key Vault not available. Falling back to AI Services keys..." -ForegroundColor Yellow
+        $apiKey = az cognitiveservices account keys list `
+            --name $aiServicesName `
+            --resource-group $ResourceGroup `
+            --query "key1" `
+            --output tsv 2>&1
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to fetch API key from both Key Vault and AI Services. Error: $apiKey"
+            Write-Host "  Hint: Ensure you have 'Key Vault Secrets User' or 'Cognitive Services Contributor' role." -ForegroundColor Yellow
+            exit 1
+        }
     }
     $apiKey = $apiKey.Trim()
     Write-Host "  API Key: ****$(if ($apiKey.Length -gt 4) { $apiKey.Substring($apiKey.Length - 4) } else { '????' })" -ForegroundColor Green
