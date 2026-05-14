@@ -20,6 +20,7 @@ public static class HandlebarsTemplateEngine
         var handlebars = Handlebars.Create();
         CoreHelpers.Register(handlebars);
         McpHelpers.Register(handlebars);
+        CliHelpers.Register(handlebars);
         return handlebars;
     }
 

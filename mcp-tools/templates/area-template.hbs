@@ -32,7 +32,7 @@ mcp-cli.version: {{version}}
 | Parameter |  Required or optional | Description |
 |-----------------------|----------------------|-------------|
 {{#each option}}
-| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
+| **`{{name}}`** |  {{RequiredText}} | {{description}} |
 {{/each}}
 {{ else}}
 <!-- No parameters for this tool -->
@@ -91,7 +91,7 @@ See the [Common Parameters](common-tools.md) documentation for details on shared
 ## All Areas
 
 {{#each areas}}
-### [{{@key}}]({{@key}}.md)
+## [{{@key}}]({{@key}}.md)
 
 {{description}}
 

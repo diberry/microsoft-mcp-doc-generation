@@ -21,10 +21,12 @@ node_modules/
 **/.env**
 
 generated*/
+generated*
+pilot-output/
+prototype/
+
 /docs/commandline
 git
-
-generated*
 
 # LKG baseline directories (created during pipeline validation, not committed)
 lkg-*/
