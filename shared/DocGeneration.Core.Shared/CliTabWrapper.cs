@@ -14,9 +14,17 @@ public static class CliTabWrapper
 {
     private static readonly Regex McpCliMarkerPattern = new(
         @"<!--\s*@mcpcli\s+(.+?)\s*-->", RegexOptions.Compiled);
+
+    // Matches the annotation block: "[Tool annotation hints](...):"\n\n"Destructive: ..."
+    // The block starts with the link line and includes the values line that follows.
+    private static readonly Regex AnnotationBlockPattern = new(
+        @"(\[Tool annotation hints\]\([^\)]+\):\s*\n\s*\n[^\n]*(?:Destructive|Idempotent|Read Only)[^\n]*)",
+        RegexOptions.Compiled);
+
     /// <summary>
     /// Wraps a tool section with MCP/CLI tabs.
     /// If no CLI content is available for the tool, returns the original content unchanged.
+    /// Annotation blocks found in mcpContent are duplicated into the CLI tab.
     /// </summary>
     /// <param name="mcpContent">The existing MCP tool section content (without the H2 heading)</param>
     /// <param name="cliContent">The CLI content block for this tool, or null if unavailable</param>
@@ -26,6 +34,9 @@ public static class CliTabWrapper
         if (string.IsNullOrWhiteSpace(cliContent))
             return mcpContent;
 
+        // Extract annotation block from MCP content to duplicate into CLI tab
+        var annotationBlock = ExtractAnnotationBlock(mcpContent);
+
         var sb = new StringBuilder();
 
         // MCP Server tab
@@ -34,16 +45,36 @@ public static class CliTabWrapper
         sb.AppendLine(mcpContent.TrimEnd());
         sb.AppendLine();
 
-        // CLI tab
+        // CLI tab — append annotation block if present
         sb.AppendLine("#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         sb.AppendLine();
-        sb.AppendLine(cliContent.TrimEnd());
+        if (annotationBlock != null)
+        {
+            sb.AppendLine(cliContent.TrimEnd());
+            sb.AppendLine();
+            sb.AppendLine(annotationBlock);
+        }
+        else
+        {
+            sb.AppendLine(cliContent.TrimEnd());
+        }
         sb.AppendLine();
 
         // Tab group terminator
         sb.AppendLine("---");
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Extracts the annotation block from tool content.
+    /// Returns the full block ("[Tool annotation hints](...):"\n\nDestructive: ...)
+    /// or null if not found.
+    /// </summary>
+    internal static string? ExtractAnnotationBlock(string content)
+    {
+        var match = AnnotationBlockPattern.Match(content);
+        return match.Success ? match.Groups[1].Value.TrimEnd() : null;
     }
 
     /// <summary>

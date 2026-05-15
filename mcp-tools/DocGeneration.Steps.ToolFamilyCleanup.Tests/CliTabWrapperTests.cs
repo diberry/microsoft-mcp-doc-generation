@@ -281,6 +281,95 @@ public class CliTabWrapperTests
         Assert.Null(exception);
     }
 
+    // ── Annotation duplication to CLI tab ────────────────────────
+
+    [Fact]
+    public void WrapWithTabs_AnnotationInMcpContent_DuplicatedToCliTab()
+    {
+        var mcpContent = "List storage accounts.\n\n" +
+            "| Parameter | Required |\n|---|---|\n| Sub | Yes |\n\n" +
+            "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\n\n" +
+            "Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌";
+        var cliContent = "```bash\naz storage account list\n```\n\n| Parameter | Required |\n|---|---|\n| --sub | Yes |";
+
+        var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
+
+        // Annotation block should appear twice — once in MCP tab, once in CLI tab
+        var annotationCount = CountOccurrences(result, "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):");
+        Assert.Equal(2, annotationCount);
+
+        // The CLI tab should contain the annotation block
+        var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
+        var afterCliTab = result.Substring(cliTabStart);
+        Assert.Contains("Destructive: ❌ | Idempotent: ✅", afterCliTab);
+    }
+
+    [Fact]
+    public void WrapWithTabs_NoAnnotationInMcpContent_CliTabUnchanged()
+    {
+        var mcpContent = "List storage accounts.\n\n| Parameter | Required |\n|---|---|\n| Sub | Yes |";
+        var cliContent = "```bash\naz storage account list\n```";
+
+        var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
+
+        // No annotation duplication — CLI tab just has its original content
+        Assert.DoesNotContain("[Tool annotation hints]", result);
+        Assert.Contains("az storage account list", result);
+    }
+
+    [Fact]
+    public void WrapWithTabs_AnnotationBlock_AppearsAtEndOfCliTab()
+    {
+        var mcpContent = "Description.\n\n" +
+            "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\n\n" +
+            "Destructive: ✅ | Idempotent: ❌ | Open World: ✅ | Read Only: ❌ | Secret: ❌ | Local Required: ❌";
+        var cliContent = "```bash\naz tool run\n```";
+
+        var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
+
+        // The annotation should come AFTER the CLI content, before the --- terminator
+        var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
+        var terminatorPos = result.IndexOf("\n---", cliTabStart, StringComparison.Ordinal);
+        var annotationInCliTab = result.IndexOf("Destructive: ✅", cliTabStart, StringComparison.Ordinal);
+
+        Assert.True(annotationInCliTab > cliTabStart, "Annotation should be after CLI tab header");
+        Assert.True(annotationInCliTab < terminatorPos, "Annotation should be before --- terminator");
+    }
+
+    [Fact]
+    public void ApplyTabsToFamilyArticle_AnnotationsInTool_DuplicatedToBothTabs()
+    {
+        const string familyWithAnnotations = """
+            ---
+            ms.topic: include
+            ---
+
+            # Azure Storage tools
+
+            ## List accounts
+            <!-- @mcpcli storage account list -->
+
+            List storage accounts in a subscription.
+
+            [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+
+            Destructive: ❌ | Idempotent: ✅ | Read Only: ✅
+
+            ---
+            """;
+
+        var cliContent = new Dictionary<string, string>
+        {
+            ["storage account list"] = "```bash\naz storage account list\n```"
+        };
+
+        var result = CliTabWrapper.ApplyTabsToFamilyArticle(familyWithAnnotations, cliContent);
+
+        // Annotation should appear twice — once in each tab
+        var annotationCount = CountOccurrences(result, "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):");
+        Assert.Equal(2, annotationCount);
+    }
+
     private static int CountOccurrences(string text, string pattern)
     {
         int count = 0;
