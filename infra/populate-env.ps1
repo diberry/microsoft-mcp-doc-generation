@@ -1,3 +1,4 @@
+#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Populates mcp-tools/.env from deployed Azure resources.
@@ -25,6 +26,12 @@
 .PARAMETER OutputPath
     Path to write the .env file. Defaults to mcp-tools/.env relative to repo root.
 
+.PARAMETER ModelDeploymentName
+    Model deployment name. Should match your bicep/AI Services deployment. Defaults to "gpt-5-mini".
+
+.PARAMETER ApiVersion
+    Azure OpenAI API version. Should match your bicep/AI Services deployment. Defaults to "2025-03-01-preview".
+
 .EXAMPLE
     pwsh -File infra/populate-env.ps1 -ResourceGroup rg-mcpdocs
 
@@ -39,7 +46,11 @@ param(
     [string]$ResourceGroup,
     [string]$EnvironmentName,
     [switch]$UseDefaultCredential,
-    [string]$OutputPath
+    [string]$OutputPath,
+    # Model deployment name — should match your bicep/AI Services deployment
+    [string]$ModelDeploymentName = "gpt-5-mini",
+    # Azure OpenAI API version — should match your bicep/AI Services deployment
+    [string]$ApiVersion = "2025-03-01-preview"
 )
 
 Set-StrictMode -Version Latest
@@ -104,9 +115,9 @@ $aiServicesName = "oai-$EnvironmentName"
 $keyVaultName = "kv-$EnvironmentName"
 $secretName = "foundry-api-key"
 
-# Bicep param defaults
-$modelDeploymentName = "gpt-5-mini"
-$apiVersion = "2025-03-01-preview"
+# Use parameter values (externalized as script params with defaults)
+$modelDeploymentName = $ModelDeploymentName
+$apiVersion = $ApiVersion
 
 # ── Query Azure AI Services endpoint ────────────────────────────────────────────
 Write-Host "Querying AI Services endpoint ($aiServicesName)..." -ForegroundColor Yellow
@@ -135,18 +146,36 @@ if ($LASTEXITCODE -ne 0) {
         exit 1
     }
 
+    if ($resources.Count -gt 1) {
+        Write-Host "  ⚠️ Multiple AI Services found in resource group:" -ForegroundColor Yellow
+        $resources | ForEach-Object { Write-Host "    - $($_.name) ($($_.kind))" -ForegroundColor Yellow }
+    }
+
     # Pick the primary (non-secondary) resource
     $primary = $resources | Where-Object { $_.name -notmatch '-sec$' } | Select-Object -First 1
     if (-not $primary) {
         $primary = $resources | Select-Object -First 1
     }
 
+    if ($resources.Count -gt 1) {
+        Write-Host "  ⚠️ Using '$($primary.name)'. Pass -EnvironmentName to target a specific resource." -ForegroundColor Yellow
+    }
+
     $aiServicesName = $primary.name
     $endpoint = $primary.endpoint
     # Derive key vault name from discovered AI Services name
-    $keyVaultName = $aiServicesName -replace '^oai-', 'kv-'
+    $derivedKvName = $aiServicesName -replace '^oai-', 'kv-'
+    if ($derivedKvName -eq $aiServicesName) {
+        Write-Host "  ⚠️ Could not derive Key Vault name from '$aiServicesName' (no 'oai-' prefix). KV lookup will be skipped." -ForegroundColor Yellow
+        $keyVaultName = $null
+    }
+    else {
+        $keyVaultName = $derivedKvName
+    }
     Write-Host "  Discovered: $aiServicesName (endpoint: $endpoint)" -ForegroundColor Green
-    Write-Host "  Derived Key Vault: $keyVaultName" -ForegroundColor Green
+    if ($keyVaultName) {
+        Write-Host "  Derived Key Vault: $keyVaultName" -ForegroundColor Green
+    }
 }
 else {
     $endpoint = $endpoint.Trim()
@@ -156,15 +185,8 @@ else {
 # ── Query API key from Key Vault (unless using default credential) ───────────────
 $apiKey = ""
 if (-not $UseDefaultCredential) {
-    Write-Host "Fetching API key from Key Vault ($keyVaultName/$secretName)..." -ForegroundColor Yellow
-    $apiKey = az keyvault secret show `
-        --vault-name $keyVaultName `
-        --name $secretName `
-        --query "value" `
-        --output tsv 2>&1
-
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "  Key Vault not available. Falling back to AI Services keys..." -ForegroundColor Yellow
+    if (-not $keyVaultName) {
+        Write-Host "  Key Vault name not available. Falling back to AI Services keys..." -ForegroundColor Yellow
         $apiKey = az cognitiveservices account keys list `
             --name $aiServicesName `
             --resource-group $ResourceGroup `
@@ -172,13 +194,38 @@ if (-not $UseDefaultCredential) {
             --output tsv 2>&1
 
         if ($LASTEXITCODE -ne 0) {
-            Write-Error "Failed to fetch API key from both Key Vault and AI Services. Error: $apiKey"
-            Write-Host "  Hint: Ensure you have 'Key Vault Secrets User' or 'Cognitive Services Contributor' role." -ForegroundColor Yellow
+            Write-Error "Failed to fetch API key from AI Services. Error: $apiKey"
             exit 1
+        }
+    }
+    else {
+        Write-Host "Fetching API key from Key Vault ($keyVaultName/$secretName)..." -ForegroundColor Yellow
+        $apiKey = az keyvault secret show `
+            --vault-name $keyVaultName `
+            --name $secretName `
+            --query "value" `
+            --output tsv 2>&1
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  Key Vault not available. Falling back to AI Services keys..." -ForegroundColor Yellow
+            $apiKey = az cognitiveservices account keys list `
+                --name $aiServicesName `
+                --resource-group $ResourceGroup `
+                --query "key1" `
+                --output tsv 2>&1
+
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Failed to fetch API key from both Key Vault and AI Services. Error: $apiKey"
+                Write-Host "  Hint: Ensure you have 'Key Vault Secrets User' or 'Cognitive Services Contributor' role." -ForegroundColor Yellow
+                exit 1
+            }
         }
     }
     $apiKey = $apiKey.Trim()
     Write-Host "  API Key: ****$(if ($apiKey.Length -gt 4) { $apiKey.Substring($apiKey.Length - 4) } else { '????' })" -ForegroundColor Green
+}
+else {
+    Write-Host "  ⚠️ Note: The pipeline currently requires FOUNDRY_API_KEY. DefaultAzureCredential support is planned but not yet implemented in all pipeline steps. You may need to manually add FOUNDRY_API_KEY to .env." -ForegroundColor Yellow
 }
 
 # ── Build .env content ───────────────────────────────────────────────────────────
