@@ -5,6 +5,7 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Steps;
 using PipelineRunner.Tests.Fixtures;
+using Shared;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -97,13 +98,159 @@ public class BootstrapStepTests
         Assert.Equal(0, harness.AiCapabilityProbe.ProbeCalls);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WritesCliTabConfigJson_WithSelectedNamespaces()
+    {
+        // Brand mapping lists azurebackup; SelectedNamespaces echoes it
+        using var harness = CreateHarness(
+            selectedNamespaces: ["azurebackup"],
+            brandMappingJson: """[{"mcpServerName":"azurebackup","fileName":"azure-backup"}]""");
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        var configPath = Path.Combine(harness.Context.OutputPath, "cli-tab-config.json");
+        Assert.True(File.Exists(configPath), "cli-tab-config.json was not created in the output directory.");
+        var config = CliTabConfig.LoadFromFile(configPath);
+        Assert.True(config.IsEnabled);
+        Assert.Contains("azurebackup", config.AllowedNamespaces);
+        Assert.Single(config.AllowedNamespaces);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WritesCliTabConfigJson_ExpandsMergeGroupPeers()
+    {
+        // Running only "monitor" should also include "workbooks" (same mergeGroup)
+        using var harness = CreateHarness(
+            selectedNamespaces: ["monitor"],
+            brandMappingJson: """
+                [
+                  {"mcpServerName":"monitor","fileName":"azure-monitor","mergeGroup":"azure-monitor","mergeRole":"primary"},
+                  {"mcpServerName":"workbooks","fileName":"azure-workbooks","mergeGroup":"azure-monitor","mergeRole":"secondary"}
+                ]
+                """);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        var configPath = Path.Combine(harness.Context.OutputPath, "cli-tab-config.json");
+        var config = CliTabConfig.LoadFromFile(configPath);
+        Assert.True(config.IsEnabled);
+        Assert.Contains("monitor", config.AllowedNamespaces);
+        Assert.Contains("workbooks", config.AllowedNamespaces);
+        Assert.Equal(2, config.AllowedNamespaces.Count);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WritesCliTabConfigJson_AllNamespacesFromBrandMapping()
+    {
+        // No selected namespaces (all-namespace run) — should pull all from brand mapping
+        using var harness = CreateHarness(
+            brandMappingJson: """
+                [
+                  {"mcpServerName":"compute","fileName":"azure-compute"},
+                  {"mcpServerName":"storage","fileName":"azure-storage"}
+                ]
+                """);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        var configPath = Path.Combine(harness.Context.OutputPath, "cli-tab-config.json");
+        Assert.True(File.Exists(configPath), "cli-tab-config.json was not created in the output directory.");
+        var config = CliTabConfig.LoadFromFile(configPath);
+        Assert.True(config.IsEnabled);
+        Assert.Contains("compute", config.AllowedNamespaces);
+        Assert.Contains("storage", config.AllowedNamespaces);
+        Assert.Equal(2, config.AllowedNamespaces.Count);
+    }
+
+    [Fact]
+    public async Task ResolveCliTabNamespacesAsync_MissingFile_FallsBackToSelectedNamespaces()
+    {
+        var result = await BootstrapStep.ResolveCliTabNamespacesAsync(
+            "nonexistent-brand-mapping.json",
+            ["azurebackup"],
+            CancellationToken.None);
+
+        Assert.Contains("azurebackup", result);
+    }
+
+    [Fact]
+    public async Task ResolveCliTabNamespacesAsync_AllNamespaceRun_ReturnsAllFromMapping()
+    {
+        var path = WriteTempBrandMapping("""
+            [
+              {"mcpServerName":"compute","fileName":"azure-compute"},
+              {"mcpServerName":"storage","fileName":"azure-storage"}
+            ]
+            """);
+        try
+        {
+            var result = await BootstrapStep.ResolveCliTabNamespacesAsync(path, [], CancellationToken.None);
+            Assert.Contains("compute", result);
+            Assert.Contains("storage", result);
+            Assert.Equal(2, result.Count);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public async Task ResolveCliTabNamespacesAsync_SingleNamespace_NoMergeGroup_ReturnsSelf()
+    {
+        var path = WriteTempBrandMapping("""
+            [
+              {"mcpServerName":"azurebackup","fileName":"azure-backup"},
+              {"mcpServerName":"storage","fileName":"azure-storage"}
+            ]
+            """);
+        try
+        {
+            var result = await BootstrapStep.ResolveCliTabNamespacesAsync(path, ["azurebackup"], CancellationToken.None);
+            Assert.Contains("azurebackup", result);
+            Assert.DoesNotContain("storage", result);
+            Assert.Single(result);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public async Task ResolveCliTabNamespacesAsync_SingleNamespace_WithMergeGroup_IncludesPeers()
+    {
+        var path = WriteTempBrandMapping("""
+            [
+              {"mcpServerName":"monitor","fileName":"azure-monitor","mergeGroup":"azure-monitor","mergeRole":"primary"},
+              {"mcpServerName":"workbooks","fileName":"azure-workbooks","mergeGroup":"azure-monitor","mergeRole":"secondary"},
+              {"mcpServerName":"storage","fileName":"azure-storage"}
+            ]
+            """);
+        try
+        {
+            var result = await BootstrapStep.ResolveCliTabNamespacesAsync(path, ["monitor"], CancellationToken.None);
+            Assert.Contains("monitor", result);
+            Assert.Contains("workbooks", result);
+            Assert.DoesNotContain("storage", result);
+            Assert.Equal(2, result.Count);
+        }
+        finally { File.Delete(path); }
+    }
+
+    private static string WriteTempBrandMapping(string json)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"brand-mapping-test-{Guid.NewGuid():N}.json");
+        File.WriteAllText(path, json);
+        return path;
+    }
+
     private static TestHarness CreateHarness(
         bool skipBuild = false,
         bool skipValidation = false,
         bool skipEnvValidation = false,
         bool requiresAiConfiguration = false,
         bool aiConfigured = true,
-        ICliMetadataLoader? cliMetadataLoader = null)
+        ICliMetadataLoader? cliMetadataLoader = null,
+        IReadOnlyList<string>? selectedNamespaces = null,
+        string? brandMappingJson = null)
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-bootstrap-tests-{Guid.NewGuid():N}");
         var mcpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
@@ -111,7 +258,7 @@ public class BootstrapStepTests
         Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "azure-mcp"));
         Directory.CreateDirectory(Path.Combine(repoRoot, "test-npm-azure-mcp"));
         File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
-        File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), "[]");
+        File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappingJson ?? "[]");
         File.WriteAllText(Path.Combine(mcpToolsRoot, "azure-mcp", "azmcp-commands.md"), "# Commands");
 
         var processRunner = new ScriptedProcessRunner();
@@ -144,6 +291,7 @@ public class BootstrapStepTests
             AiCapabilityProbe = aiCapabilityProbe,
             Reports = new BufferedReportWriter(),
             PlannedSteps = plannedSteps,
+            SelectedNamespaces = selectedNamespaces ?? Array.Empty<string>(),
         };
 
         return new TestHarness(repoRoot, step, context, processRunner, buildCoordinator, aiCapabilityProbe);
