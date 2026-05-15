@@ -446,10 +446,18 @@ public sealed class BootstrapStep : StepDefinition
         if (File.Exists(brandMappingPath))
         {
             var json = await File.ReadAllTextAsync(brandMappingPath, cancellationToken);
-            brandMappings = JsonSerializer.Deserialize<List<BrandMapping>>(json, new JsonSerializerOptions
+            try
             {
-                PropertyNameCaseInsensitive = true,
-            }) ?? [];
+                brandMappings = JsonSerializer.Deserialize<List<BrandMapping>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                }) ?? [];
+            }
+            catch (JsonException)
+            {
+                // Corrupt brand-mapping file -- fall back to selectedNamespaces
+                return selectedNamespaces;
+            }
         }
 
         var validMappings = brandMappings

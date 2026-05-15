@@ -235,6 +235,19 @@ public class BootstrapStepTests
         finally { File.Delete(path); }
     }
 
+    [Fact]
+    public async Task ResolveCliTabNamespacesAsync_MalformedJson_FallsBackToSelectedNamespaces()
+    {
+        var path = WriteTempBrandMapping("{ this is not valid json }}}");
+        try
+        {
+            var result = await BootstrapStep.ResolveCliTabNamespacesAsync(path, ["azurebackup"], CancellationToken.None);
+            Assert.Contains("azurebackup", result);
+            Assert.Single(result);
+        }
+        finally { File.Delete(path); }
+    }
+
     private static string WriteTempBrandMapping(string json)
     {
         var path = Path.Combine(Path.GetTempPath(), $"brand-mapping-test-{Guid.NewGuid():N}.json");
