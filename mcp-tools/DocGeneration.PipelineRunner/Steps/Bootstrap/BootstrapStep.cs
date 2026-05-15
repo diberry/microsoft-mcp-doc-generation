@@ -314,6 +314,20 @@ public sealed class BootstrapStep : StepDefinition
                 }
             }
 
+            // Generate cli-tab-config.json so ToolFamilyCleanupStep can enable CLI tab generation.
+            // AllowedNamespaces is sourced from brand-to-server-mapping.json (the source of truth for
+            // which namespaces produce tool-family files), expanding merge group peers when needed.
+            var brandMappingPath = Path.Combine(context.McpToolsRoot, "data", "brand-to-server-mapping.json");
+            var namespacesForConfig = await ResolveCliTabNamespacesAsync(brandMappingPath, context.SelectedNamespaces, cancellationToken);
+            var cliTabConfig = CliTabConfig.ForNamespaces([.. namespacesForConfig]);
+            var cliTabConfigPath = Path.Combine(context.OutputPath, "cli-tab-config.json");
+            await File.WriteAllTextAsync(
+                cliTabConfigPath,
+                JsonSerializer.Serialize(cliTabConfig),
+                Encoding.UTF8,
+                cancellationToken);
+            context.Reports.Info($"Generated cli-tab-config.json with {cliTabConfig.AllowedNamespaces.Count} namespace(s).");
+
             CreateDirectories(context.OutputPath, BaseOutputDirectories);
             return BuildResult(context, processResults, success: true, warnings);
         }
@@ -415,6 +429,65 @@ public sealed class BootstrapStep : StepDefinition
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Resolves the set of namespaces to include in cli-tab-config.json.
+    /// Uses brand-to-server-mapping.json as the source of truth, expanding
+    /// merge group peers when a single namespace is specified.
+    /// Falls back to selectedNamespaces if the brand mapping is empty or unavailable.
+    /// </summary>
+    internal static async Task<IReadOnlyList<string>> ResolveCliTabNamespacesAsync(
+        string brandMappingPath,
+        IReadOnlyList<string> selectedNamespaces,
+        CancellationToken cancellationToken)
+    {
+        List<BrandMapping> brandMappings = [];
+        if (File.Exists(brandMappingPath))
+        {
+            var json = await File.ReadAllTextAsync(brandMappingPath, cancellationToken);
+            try
+            {
+                brandMappings = JsonSerializer.Deserialize<List<BrandMapping>>(json, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                }) ?? [];
+            }
+            catch (JsonException)
+            {
+                // Corrupt brand-mapping file -- fall back to selectedNamespaces
+                return selectedNamespaces;
+            }
+        }
+
+        var validMappings = brandMappings
+            .Where(m => !string.IsNullOrWhiteSpace(m.McpServerName))
+            .ToList();
+
+        // All-namespace run: include every namespace in the brand mapping
+        if (selectedNamespaces.Count == 0)
+        {
+            var all = validMappings.Select(m => m.McpServerName!).ToArray();
+            return all.Length > 0 ? all : selectedNamespaces;
+        }
+
+        // Single-namespace run: include the namespace + any merge-group peers
+        var result = new HashSet<string>(selectedNamespaces, StringComparer.OrdinalIgnoreCase);
+        foreach (var ns in selectedNamespaces)
+        {
+            var entry = validMappings.FirstOrDefault(m =>
+                string.Equals(m.McpServerName, ns, StringComparison.OrdinalIgnoreCase));
+            if (entry?.MergeGroup is { Length: > 0 } mergeGroup)
+            {
+                foreach (var peer in validMappings.Where(m =>
+                    string.Equals(m.MergeGroup, mergeGroup, StringComparison.OrdinalIgnoreCase)))
+                {
+                    result.Add(peer.McpServerName!);
+                }
+            }
+        }
+
+        return [.. result];
     }
 
     private static void AddProcessIssue(ProcessExecutionResult processResult, ICollection<string> warnings, string summary)
