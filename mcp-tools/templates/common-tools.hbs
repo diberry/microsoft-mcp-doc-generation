@@ -28,7 +28,7 @@ This page documents the common parameters that are shared across many Azure MCP 
 | Parameter |  Required or optional | Description |
 |-----------------------|----------------------|-------------|
 {{#each option}}
-| **{{NL_Name}}** |  {{RequiredText}} | {{description}} |
+| **{{#if (eq NL_Name "Unknown")}}{{formatNaturalLanguage Name}}{{else}}{{replace NL_Name "." " "}}{{/if}}** |  {{RequiredText}} | {{description}} |
 {{/each}}
 {{else}}
 No parameters
