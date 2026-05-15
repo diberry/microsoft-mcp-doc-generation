@@ -24,7 +24,7 @@ public static class CliTabWrapper
     /// <summary>
     /// Wraps a tool section with MCP/CLI tabs.
     /// If no CLI content is available for the tool, returns the original content unchanged.
-    /// Annotation blocks found in mcpContent are duplicated into the CLI tab.
+    /// Annotation blocks are stripped from tab content and placed once after the --- separator.
     /// </summary>
     /// <param name="mcpContent">The existing MCP tool section content (without the H2 heading)</param>
     /// <param name="cliContent">The CLI content block for this tool, or null if unavailable</param>
@@ -34,34 +34,35 @@ public static class CliTabWrapper
         if (string.IsNullOrWhiteSpace(cliContent))
             return mcpContent;
 
-        // Extract annotation block from MCP content to duplicate into CLI tab
+        // Extract and strip annotation block from MCP content
         var annotationBlock = ExtractAnnotationBlock(mcpContent);
+        var mcpWithoutAnnotation = annotationBlock != null
+            ? StripAnnotationBlock(mcpContent)
+            : mcpContent;
 
         var sb = new StringBuilder();
 
         // MCP Server tab
         sb.AppendLine("#### [MCP Server](#tab/mcp-server)");
         sb.AppendLine();
-        sb.AppendLine(mcpContent.TrimEnd());
+        sb.AppendLine(mcpWithoutAnnotation.TrimEnd());
         sb.AppendLine();
 
-        // CLI tab — append annotation block if present
+        // CLI tab (no annotations inside)
         sb.AppendLine("#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         sb.AppendLine();
-        if (annotationBlock != null)
-        {
-            sb.AppendLine(cliContent.TrimEnd());
-            sb.AppendLine();
-            sb.AppendLine(annotationBlock);
-        }
-        else
-        {
-            sb.AppendLine(cliContent.TrimEnd());
-        }
+        sb.AppendLine(cliContent.TrimEnd());
         sb.AppendLine();
 
         // Tab group terminator
         sb.AppendLine("---");
+
+        // Annotations appear once, after the separator, outside all tabs
+        if (annotationBlock != null)
+        {
+            sb.AppendLine();
+            sb.AppendLine(annotationBlock);
+        }
 
         return sb.ToString();
     }
@@ -75,6 +76,14 @@ public static class CliTabWrapper
     {
         var match = AnnotationBlockPattern.Match(content);
         return match.Success ? match.Groups[1].Value.TrimEnd() : null;
+    }
+
+    /// <summary>
+    /// Removes the annotation block from tool content, returning the content without it.
+    /// </summary>
+    internal static string StripAnnotationBlock(string content)
+    {
+        return AnnotationBlockPattern.Replace(content, "").TrimEnd();
     }
 
     /// <summary>
