@@ -281,10 +281,10 @@ public class CliTabWrapperTests
         Assert.Null(exception);
     }
 
-    // ── Annotation duplication to CLI tab ────────────────────────
+    // ── Annotation placement — after --- separator ─────────────
 
     [Fact]
-    public void WrapWithTabs_AnnotationInMcpContent_DuplicatedToCliTab()
+    public void WrapWithTabs_AnnotationInMcpContent_PlacedOnceAfterSeparator()
     {
         var mcpContent = "List storage accounts.\n\n" +
             "| Parameter | Required |\n|---|---|\n| Sub | Yes |\n\n" +
@@ -294,14 +294,19 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
-        // Annotation block should appear twice — once in MCP tab, once in CLI tab
+        // Annotation block should appear exactly once — after the --- separator
         var annotationCount = CountOccurrences(result, "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):");
-        Assert.Equal(2, annotationCount);
+        Assert.Equal(1, annotationCount);
 
-        // The CLI tab should contain the annotation block
+        // Annotation must be AFTER the --- separator
+        var separatorPos = result.IndexOf("\n---", StringComparison.Ordinal);
+        var annotationPos = result.IndexOf("[Tool annotation hints]", StringComparison.Ordinal);
+        Assert.True(annotationPos > separatorPos, "Annotation should be after --- separator");
+
+        // Annotation must NOT be inside either tab
+        var mcpTabStart = result.IndexOf("#### [MCP Server](#tab/mcp-server)", StringComparison.Ordinal);
         var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
-        var afterCliTab = result.Substring(cliTabStart);
-        Assert.Contains("Destructive: ❌ | Idempotent: ✅", afterCliTab);
+        Assert.True(annotationPos > separatorPos, "Annotation must be outside tabs");
     }
 
     [Fact]
@@ -312,13 +317,13 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
-        // No annotation duplication — CLI tab just has its original content
+        // No annotation anywhere
         Assert.DoesNotContain("[Tool annotation hints]", result);
         Assert.Contains("az storage account list", result);
     }
 
     [Fact]
-    public void WrapWithTabs_AnnotationBlock_AppearsAtEndOfCliTab()
+    public void WrapWithTabs_AnnotationBlock_NotInsideMcpOrCliTab()
     {
         var mcpContent = "Description.\n\n" +
             "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\n\n" +
@@ -327,17 +332,21 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
-        // The annotation should come AFTER the CLI content, before the --- terminator
-        var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
-        var terminatorPos = result.IndexOf("\n---", cliTabStart, StringComparison.Ordinal);
-        var annotationInCliTab = result.IndexOf("Destructive: ✅", cliTabStart, StringComparison.Ordinal);
+        // Annotation should be AFTER the --- terminator
+        var terminatorPos = result.IndexOf("\n---", StringComparison.Ordinal);
+        var annotationPos = result.IndexOf("Destructive: ✅", StringComparison.Ordinal);
 
-        Assert.True(annotationInCliTab > cliTabStart, "Annotation should be after CLI tab header");
-        Assert.True(annotationInCliTab < terminatorPos, "Annotation should be before --- terminator");
+        Assert.True(annotationPos > terminatorPos, "Annotation should be after --- terminator");
+
+        // The MCP tab content should NOT contain annotation
+        var mcpTabStart = result.IndexOf("#### [MCP Server](#tab/mcp-server)", StringComparison.Ordinal);
+        var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
+        var mcpTabContent = result.Substring(mcpTabStart, cliTabStart - mcpTabStart);
+        Assert.DoesNotContain("[Tool annotation hints]", mcpTabContent);
     }
 
     [Fact]
-    public void ApplyTabsToFamilyArticle_AnnotationsInTool_DuplicatedToBothTabs()
+    public void ApplyTabsToFamilyArticle_AnnotationsInTool_PlacedOnceAfterSeparator()
     {
         const string familyWithAnnotations = """
             ---
@@ -365,9 +374,14 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(familyWithAnnotations, cliContent);
 
-        // Annotation should appear twice — once in each tab
+        // Annotation should appear exactly once — after the --- separator, outside tabs
         var annotationCount = CountOccurrences(result, "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):");
-        Assert.Equal(2, annotationCount);
+        Assert.Equal(1, annotationCount);
+
+        // Verify annotation is after --- separator
+        var separatorPos = result.IndexOf("\n---", StringComparison.Ordinal);
+        var annotationPos = result.IndexOf("[Tool annotation hints]", StringComparison.Ordinal);
+        Assert.True(annotationPos > separatorPos, "Annotation should be after --- separator");
     }
 
     private static int CountOccurrences(string text, string pattern)
