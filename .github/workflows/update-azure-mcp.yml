@@ -211,6 +211,58 @@ jobs:
           path: test-npm-azure-mcp/${{ steps.diff-check.outputs.diff_file }}
           retention-days: 90
 
+      - name: Clone articles repo for gap detection
+        if: steps.cli-snapshot.outputs.is_new == 'true'
+        id: clone-articles
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --depth 1 --sparse \
+            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/MicrosoftDocs/azure-dev-docs-pr.git \
+            articles-repo
+          cd articles-repo
+          git sparse-checkout set articles/azure-mcp-server/tools
+          echo "cloned=true" >> $GITHUB_OUTPUT
+
+      - name: Run MCP tool coverage audit
+        if: steps.cli-snapshot.outputs.is_new == 'true'
+        id: gap-audit
+        continue-on-error: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $toolsListPath = "./test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json"
+          $articlesPath  = "./articles-repo/articles/azure-mcp-server/tools"
+          $reportDir     = "./gap-report"
+          $jsonOut       = "$reportDir/gap-report.json"
+
+          ./.copilot/skills/azure-ai-tools-mcp-coverage-audit/scripts/Scan-McpToolCoverage.ps1 `
+            -ToolsJsonPath $toolsListPath `
+            -ArticlesDir   $articlesPath `
+            -OutputJson    $jsonOut `
+            -ReportDir     $reportDir
+
+          if (Test-Path $jsonOut) {
+            $data = Get-Content $jsonOut -Raw | ConvertFrom-Json
+            Add-Content $env:GITHUB_OUTPUT "total_tools=$($data.total_tools_in_json)"
+            Add-Content $env:GITHUB_OUTPUT "documented_tools=$($data.summary.tools_documented)"
+            Add-Content $env:GITHUB_OUTPUT "missing_tools=$($data.summary.tools_missing)"
+            Add-Content $env:GITHUB_OUTPUT "params_missing=$($data.summary.params_missing)"
+            Add-Content $env:GITHUB_OUTPUT "anno_mismatches=$($data.summary.annotation_mismatches)"
+          }
+
+      - name: Upload gap report artifact
+        if: steps.cli-snapshot.outputs.is_new == 'true'
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: mcp-gap-report-${{ steps.cli-snapshot.outputs.cli_version }}
+          path: ./gap-report/
+          if-no-files-found: ignore
+          retention-days: 90
+
       - name: Check for breaking changes
         if: steps.version-check.outputs.needs_update == 'true'
         id: breaking-check
@@ -294,6 +346,14 @@ jobs:
             
             ### Release Notes
             Check the release notes for breaking changes: https://www.npmjs.com/package/@azure/mcp?activeTab=versions
+            
+            ${{ steps.gap-audit.outputs.total_tools && '### 📊 Coverage Audit' || '' }}
+            ${{ steps.gap-audit.outputs.total_tools && format('- **Total tools:** {0}', steps.gap-audit.outputs.total_tools) || '' }}
+            ${{ steps.gap-audit.outputs.total_tools && format('- **Documented:** {0}', steps.gap-audit.outputs.documented_tools) || '' }}
+            ${{ steps.gap-audit.outputs.total_tools && format('- **Missing:** {0}', steps.gap-audit.outputs.missing_tools) || '' }}
+            ${{ steps.gap-audit.outputs.total_tools && format('- **Params missing:** {0}', steps.gap-audit.outputs.params_missing) || '' }}
+            ${{ steps.gap-audit.outputs.total_tools && format('- **Annotation mismatches:** {0}', steps.gap-audit.outputs.anno_mismatches) || '' }}
+            ${{ steps.gap-audit.outputs.total_tools && format('> Full gap report available as artifact `mcp-gap-report-{0}`.', steps.cli-snapshot.outputs.cli_version) || '' }}
             
             ---
             
