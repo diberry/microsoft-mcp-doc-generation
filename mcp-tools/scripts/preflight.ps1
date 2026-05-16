@@ -32,7 +32,7 @@ param(
     [string]$OutputPath = "",
     [switch]$SkipBuild,
     [switch]$SkipEnvValidation,
-    [string]$McpBranch = "release/azure/2.x"
+    [string]$McpBranch = "main"
 )
 
 $ErrorActionPreference = "Stop"
