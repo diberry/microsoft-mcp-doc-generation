@@ -2,9 +2,9 @@
 // Licensed under the MIT License.
 
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using System.Text.Json;
 using ToolMetadataExtractor.Services;
 using System.Text;
 
@@ -82,7 +82,8 @@ internal class Program
                     
                     var results = await service.ExtractToolMetadataAsync(tools);
                     
-                    var json = JsonConvert.SerializeObject(results, Formatting.Indented);
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    var json = JsonSerializer.Serialize(results, options);
                     
                     if (outputFile != null)
                     {
