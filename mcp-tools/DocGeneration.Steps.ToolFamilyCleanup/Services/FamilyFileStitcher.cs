@@ -134,8 +134,9 @@ public class FamilyFileStitcher
     }
 
     /// <summary>
-    /// Emits tool sections grouped by resource type. Each group gets an H2 header;
-    /// tool headings are demoted from H2 to H3 (and sub-headings shift accordingly).
+    /// Emits tool sections for multi-resource families. Each tool gets a flat H2 heading
+    /// in "Resource type: action" format. No resource group headers or heading demotion —
+    /// the published articles use H2 per tool only.
     /// </summary>
     private static void StitchMultiResource(StringBuilder sb, List<ToolContent> tools)
     {
@@ -158,22 +159,14 @@ public class FamilyFileStitcher
 
         foreach (var (resourceType, groupTools) in groups)
         {
-            // Emit H2 resource group header
-            var displayName = FormatResourceTypeDisplayName(resourceType);
-            sb.AppendLine($"## {displayName}");
-            sb.AppendLine();
-
             // Sort tools by action verb within each resource group for consistent
             // presentation (#503, #504). Uses action verb (not ToolName) because the
             // displayed heading is rewritten by ReformatToolHeadingForMultiResource.
             foreach (var tool in ToolOrderingPolicy.OrderForMultiResource(groupTools))
             {
-                // #416: Reformat H2 heading to "Resource type: action" format before demoting
+                // #416: Reformat H2 heading to "Resource type: action" format (flat H2, no demotion)
                 var reformattedContent = ReformatToolHeadingForMultiResource(tool);
-                
-                // Demote all headings in tool content by one level (H2->H3, H3->H4, etc.)
-                var demotedContent = DemoteHeadings(reformattedContent);
-                sb.AppendLine(demotedContent);
+                sb.AppendLine(reformattedContent);
                 sb.AppendLine();
             }
         }
@@ -181,29 +174,34 @@ public class FamilyFileStitcher
 
     /// <summary>
     /// Reformats the H2 tool heading in multi-resource format: "Resource type: action"
-    /// (e.g., "Create disk" -> "Managed disk: create")
+    /// (e.g., "Create disk" -> "Managed disk: Create")
+    /// Checks HeadingOverrideProvider first; falls back to MultiResourceH2Formatter.
     /// </summary>
     private static string ReformatToolHeadingForMultiResource(ToolContent tool)
     {
         if (string.IsNullOrEmpty(tool.ResourceType) || string.IsNullOrEmpty(tool.Command))
             return tool.Content;
 
-        // Extract action from command (last segment)
-        var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (commandParts.Length == 0)
-            return tool.Content;
+        // 1. Check for an explicit heading override keyed by the full command
+        var newHeading = HeadingOverrideProvider.GetOverride(tool.Command);
 
-        var action = commandParts[^1];
-        
-        // Format the new heading using multi-resource formatter
-        var newHeading = MultiResourceH2Formatter.FormatToolHeading(tool.ResourceType, action);
+        if (newHeading == null)
+        {
+            // 2. Fall back to algorithmic formatting (title-cased action, hyphens → spaces)
+            var commandParts = tool.Command.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (commandParts.Length == 0)
+                return tool.Content;
+
+            var action = commandParts[^1];
+            newHeading = MultiResourceH2Formatter.FormatToolHeading(tool.ResourceType, action);
+        }
 
         // Replace the first H2 heading in the content with the new format
         var match = Regex.Match(tool.Content, @"^##\s+(.+)$", RegexOptions.Multiline);
         if (match.Success)
         {
-            return tool.Content.Substring(0, match.Index) + 
-                   $"## {newHeading}" + 
+            return tool.Content.Substring(0, match.Index) +
+                   $"## {newHeading}" +
                    tool.Content.Substring(match.Index + match.Length);
         }
 
