@@ -203,6 +203,40 @@ Some Azure services span multiple MCP namespaces but publish as a single article
 
 **C# implementation**: `NamespaceMerger.cs` provides typed merge logic with `ParseArticle()` / `Merge()` / `UpdateToolCount()` methods, mirrored by the Node.js-based `merge-namespaces.sh` for shell-level execution.
 
+### CHANGELOG Gate (AD-571)
+
+Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` applies an optional pre-processing gate that evaluates whether the namespace has changes in the upstream `servers/Azure.Mcp.Server/CHANGELOG.md`.
+
+**Gate logic (evaluated per namespace):**
+
+1. **New namespaces** (no existing article in `tool-family/`) — always processed regardless of CHANGELOG.
+2. **Fetch CHANGELOG** from `https://raw.githubusercontent.com/microsoft/mcp/{branch}/servers/Azure.Mcp.Server/CHANGELOG.md`.
+3. **Find relevant sections** — version sections where the version is >= `cliVersion` (includes `[Unreleased]`).
+4. If **no relevant sections found** → process (conservative fallback).
+5. If the **namespace name appears** (case-insensitive) in any relevant section's content → process.
+6. Otherwise → **skip** with an informational message (avoids generating an empty-diff PR).
+7. **Fetch failures** (network, timeout) → process (conservative fallback).
+
+**CLI flags:**
+
+| Flag | Effect |
+|------|--------|
+| `--skip-changelog-gate` | Bypass the gate entirely; process all namespaces. |
+
+**Key components:**
+
+- `IChangelogGate` / `ChangelogGate` — service interface and production implementation with injected `HttpClient`.
+- `ChangelogParser` — internal static class that parses `## [Version]` sections and implements `HasMentionOf()` / `IsVersionRelevantFor()`.
+- `ChangelogGateResult` — record carrying `ShouldSkip` + `Reason` for logging.
+
+### Branch-Aware Upstream Fetching (`--mcp-branch`)
+
+`BootstrapStep` and `ChangelogGate` both fetch files from `microsoft/mcp` using a configurable branch. Resolution order:
+
+1. `--mcp-branch` CLI flag
+2. `MCP_BRANCH` environment variable
+3. Default: `main`
+
 ### Parallel Execution
 
 After Step 0 (bootstrap) runs once, namespace-scoped steps can execute in parallel:

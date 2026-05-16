@@ -15,11 +15,13 @@ public sealed class PipelineRunner
 
     private readonly StepRegistry _stepRegistry;
     private readonly PipelineContextFactory _contextFactory;
+    private readonly IChangelogGate? _changelogGate;
 
-    public PipelineRunner(StepRegistry stepRegistry, PipelineContextFactory contextFactory)
+    public PipelineRunner(StepRegistry stepRegistry, PipelineContextFactory contextFactory, IChangelogGate? changelogGate = null)
     {
         _stepRegistry = stepRegistry;
         _contextFactory = contextFactory;
+        _changelogGate = changelogGate;
     }
 
     public static PipelineRunner CreateDefault(string? repoRoot = null, TextWriter? output = null, TextWriter? error = null)
@@ -45,7 +47,7 @@ public sealed class PipelineRunner
 
         var resolvedRepoRoot = PipelineContextFactory.ResolveRepoRoot(repoRoot);
         var stepRegistry = StepRegistry.CreateDefault(Path.Combine(resolvedRepoRoot, "mcp-tools", "scripts"));
-        return new PipelineRunner(stepRegistry, contextFactory);
+        return new PipelineRunner(stepRegistry, contextFactory, new ChangelogGate());
     }
 
     public async Task<int> RunAsync(PipelineRequest request, CancellationToken cancellationToken = default)
@@ -122,6 +124,23 @@ public sealed class PipelineRunner
         {
             context.Reports.Info($"Namespace: {namespaceName}");
             context.Items["Namespace"] = namespaceName;
+
+            if (!request.SkipChangelogGate && _changelogGate is not null)
+            {
+                var hasExistingArticle = HasExistingArticle(context, namespaceName);
+                var gateResult = await _changelogGate.EvaluateAsync(
+                    namespaceName,
+                    context.CliVersion ?? string.Empty,
+                    context.McpBranch,
+                    hasExistingArticle,
+                    cancellationToken);
+
+                if (gateResult.ShouldSkip)
+                {
+                    context.Reports.Info($"  Skipped (changelog gate): {gateResult.Reason}");
+                    continue;
+                }
+            }
 
             foreach (var step in namespaceSteps)
             {
@@ -409,6 +428,23 @@ public sealed class PipelineRunner
                 context.Reports.Warning($"  {error}");
             }
         }
+    }
+
+    private static bool HasExistingArticle(PipelineContext context, string namespaceName)
+    {
+        var toolFamilyDir = Path.Combine(context.OutputPath, "tool-family");
+        if (!Directory.Exists(toolFamilyDir))
+        {
+            return false;
+        }
+
+        // Article filenames may differ due to brand mapping, but typically contain the namespace name
+        var normalized = context.TargetMatcher.Normalize(namespaceName)
+            .Replace(" ", "-", StringComparison.Ordinal)
+            .ToLowerInvariant();
+
+        return Directory.EnumerateFiles(toolFamilyDir, "*.md", SearchOption.TopDirectoryOnly)
+            .Any(f => Path.GetFileNameWithoutExtension(f).Contains(normalized, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed record StepExecutionOutcome(

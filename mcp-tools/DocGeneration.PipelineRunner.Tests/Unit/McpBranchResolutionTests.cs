@@ -7,7 +7,7 @@ namespace PipelineRunner.Tests.Unit;
 public class McpBranchResolutionTests
 {
     [Fact]
-    public void ResolvedMcpBranch_DefaultsTo2x_WhenNothingSet()
+    public void ResolvedMcpBranch_DefaultsToMain_WhenNothingSet()
     {
         // Ensure env var is not set for this test
         var originalValue = Environment.GetEnvironmentVariable("MCP_BRANCH");
@@ -16,7 +16,7 @@ public class McpBranchResolutionTests
             Environment.SetEnvironmentVariable("MCP_BRANCH", null);
             var request = new PipelineRequest(null, [1], ".\\generated", false, false, false, McpBranch: null);
             Assert.Equal(PipelineRequest.DefaultMcpBranch, request.ResolvedMcpBranch);
-            Assert.Equal("release/azure/2.x", request.ResolvedMcpBranch);
+            Assert.Equal("main", request.ResolvedMcpBranch);
         }
         finally
         {
@@ -72,6 +72,7 @@ public class McpBranchResolutionTests
             Environment.SetEnvironmentVariable("MCP_BRANCH", null);
             var request = new PipelineRequest(null, [1], ".\\generated", false, false, false, McpBranch: "  ");
             Assert.Equal(PipelineRequest.DefaultMcpBranch, request.ResolvedMcpBranch);
+            Assert.Equal("main", request.ResolvedMcpBranch);
         }
         finally
         {
@@ -88,6 +89,7 @@ public class McpBranchResolutionTests
             Environment.SetEnvironmentVariable("MCP_BRANCH", "  ");
             var request = new PipelineRequest(null, [1], ".\\generated", false, false, false, McpBranch: null);
             Assert.Equal(PipelineRequest.DefaultMcpBranch, request.ResolvedMcpBranch);
+            Assert.Equal("main", request.ResolvedMcpBranch);
         }
         finally
         {

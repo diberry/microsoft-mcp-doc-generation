@@ -8,6 +8,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **CHANGELOG decision gate** — `PipelineRunner.RunAsync()` now checks the upstream `servers/Azure.Mcp.Server/CHANGELOG.md` before processing each namespace. Namespaces with no entries in CHANGELOG versions >= the current CLI version are skipped with an informational message, preventing wasted PRs on azure-dev-docs-pr. New namespaces (no existing article) always process. Gate can be disabled via `--skip-changelog-gate`. Implements `IChangelogGate` / `ChangelogGate` / `ChangelogParser`. Closes #571.
+
+### Changed
+
+- **`DefaultMcpBranch` updated to `main`** — `PipelineRequest.DefaultMcpBranch` changed from `release/azure/2.x` to `main` to track the current default upstream branch. Override via `--mcp-branch` or `MCP_BRANCH` env var. (#571)
+
+### Added
+
 - **Pipeline smoke tests** — New `DocGeneration.PipelineRunner.SmokeTests` project provides end-to-end smoke tests that run the full pipeline on small test namespaces (quota, redis) and verify output matches committed baseline fixtures. Tests serve as a safety net for refactoring, ensuring code changes don't alter pipeline behavior or output structure. Includes `BaselineManager` for capturing/comparing golden files and comprehensive documentation on updating baselines. Closes #534. PR #[PR_NUMBER]
 
 ### Changed

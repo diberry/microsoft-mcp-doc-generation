@@ -20,6 +20,7 @@ public static class PipelineCli
         rootCommand.AddOption(options.SkipDeps);
         rootCommand.AddOption(options.DryRun);
         rootCommand.AddOption(options.McpBranch);
+        rootCommand.AddOption(options.SkipChangelogGate);
         return rootCommand;
     }
 
@@ -57,7 +58,8 @@ public static class PipelineCli
             parseResult.GetValueForOption(options.DryRun),
             parseResult.GetValueForOption(options.SkipEnvValidation),
             parseResult.GetValueForOption(options.SkipDeps),
-            parseResult.GetValueForOption(options.McpBranch));
+            parseResult.GetValueForOption(options.McpBranch),
+            parseResult.GetValueForOption(options.SkipChangelogGate));
 
         var validationErrors = request.Validate();
         return validationErrors.Count > 0
@@ -111,6 +113,7 @@ public static class PipelineCli
         rootCommand.AddOption(options.SkipDeps);
         rootCommand.AddOption(options.DryRun);
         rootCommand.AddOption(options.McpBranch);
+        rootCommand.AddOption(options.SkipChangelogGate);
         return rootCommand;
     }
 
@@ -124,7 +127,8 @@ public static class PipelineCli
             new Option<bool>("--skip-env-validation", "Skip Azure OpenAI environment validation during bootstrap."),
             new Option<bool>("--skip-deps", "Skip step dependency validation. Allows running a step without its prerequisites."),
             new Option<bool>("--dry-run", "Print the resolved execution plan without running bootstrap or steps."),
-            new Option<string?>("--mcp-branch", "Branch of microsoft/mcp to fetch upstream files from. Overrides MCP_BRANCH env var. Default: release/azure/2.x."));
+            new Option<string?>("--mcp-branch", "Branch of microsoft/mcp to fetch upstream files from. Overrides MCP_BRANCH env var. Default: main."),
+            new Option<bool>("--skip-changelog-gate", "Skip the CHANGELOG gate check and process all namespaces regardless of CHANGELOG entries."));
 
     private sealed record CliOptions(
         Option<string?> Namespace,
@@ -135,5 +139,6 @@ public static class PipelineCli
         Option<bool> SkipEnvValidation,
         Option<bool> SkipDeps,
         Option<bool> DryRun,
-        Option<string?> McpBranch);
+        Option<string?> McpBranch,
+        Option<bool> SkipChangelogGate);
 }
