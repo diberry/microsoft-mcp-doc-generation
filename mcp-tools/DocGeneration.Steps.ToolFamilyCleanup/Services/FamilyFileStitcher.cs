@@ -121,16 +121,15 @@ public class FamilyFileStitcher
     /// </summary>
     internal static bool IsMultiResourceFamily(List<ToolContent> tools)
     {
-        // Single-namespace pipeline runs are never multi-resource.
-        // Multi-resource only applies when explicitly combining multiple namespaces into one file.
-        // The FamilyName on all tools in a single run is identical (one namespace = one family).
-        var distinctFamilies = tools
-            .Select(t => t.FamilyName)
-            .Where(f => !string.IsNullOrEmpty(f))
+        // A family is multi-resource when its tools span 2+ distinct resource types
+        // (e.g., "disk" and "vm" within the "compute" family).
+        var distinctResourceTypes = tools
+            .Select(t => t.ResourceType)
+            .Where(r => !string.IsNullOrEmpty(r))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Count();
 
-        return distinctFamilies >= 2;
+        return distinctResourceTypes >= 2;
     }
 
     /// <summary>
