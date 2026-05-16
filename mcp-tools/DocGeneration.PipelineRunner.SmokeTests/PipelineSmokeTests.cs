@@ -56,6 +56,14 @@ public class PipelineSmokeTests
             return;
         }
 
+        // Skip if external dependencies are unavailable
+        if (!PipelineDependenciesAvailable())
+        {
+            _output.WriteLine($"Skipping smoke test for '{namespaceName}' — external dependencies not available.");
+            _output.WriteLine("Set PIPELINE_SMOKE_TEST_ENABLED=true in environments with MCP CLI and full .NET build chain.");
+            return;
+        }
+
         // Skip if baselines don't exist
         if (!BaselineManager.BaselinesExist(_testProjectRoot, namespaceName))
         {
@@ -93,6 +101,14 @@ public class PipelineSmokeTests
     [Trait("Category", "Smoke")]
     public async Task PipelineProducesValidStructure_WithoutBaseline(string namespaceName)
     {
+        // Guard: skip when external dependencies (MCP CLI, .NET build infra) are unavailable
+        if (!PipelineDependenciesAvailable())
+        {
+            _output.WriteLine($"Skipping smoke test for '{namespaceName}' — external dependencies not available.");
+            _output.WriteLine("Set PIPELINE_SMOKE_TEST_ENABLED=true in environments with MCP CLI and full .NET build chain.");
+            return;
+        }
+
         _output.WriteLine($"Running pipeline for namespace: {namespaceName}");
         var exitCode = await RunPipeline(namespaceName);
         
@@ -155,6 +171,31 @@ public class PipelineSmokeTests
 
         // Always passes — the message tells CI/developers what happened
         Assert.True(true);
+    }
+
+    /// <summary>
+    /// Checks whether external dependencies required for smoke tests are available.
+    /// Returns false in CI or environments missing MCP CLI / Azure OpenAI config.
+    /// </summary>
+    private bool PipelineDependenciesAvailable()
+    {
+        // Explicit opt-in via environment variable
+        var enabled = Environment.GetEnvironmentVariable("PIPELINE_SMOKE_TEST_ENABLED");
+        if (enabled?.Equals("true", StringComparison.OrdinalIgnoreCase) == true)
+            return true;
+
+        // Auto-detect: check if MCP server source exists (needed for CLI build)
+        var mcpServerPath = Environment.GetEnvironmentVariable("MCP_SERVER_PATH")
+            ?? Path.Combine(_repoRoot, "..", "azure-mcp", "servers", "Azure.Mcp.Server", "src");
+        if (Directory.Exists(mcpServerPath))
+            return true;
+
+        // Check if CLI metadata already exists (pre-generated)
+        var cliOutput = Path.Combine(_repoRoot, "generated", "cli", "cli-output.json");
+        if (File.Exists(cliOutput))
+            return true;
+
+        return false;
     }
 
     private async Task<int> RunPipeline(string namespaceName)
