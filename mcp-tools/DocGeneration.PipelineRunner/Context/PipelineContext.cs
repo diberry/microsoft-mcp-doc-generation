@@ -16,11 +16,11 @@ public sealed class PipelineContext
 
     public required IProcessRunner ProcessRunner { get; init; }
 
-    public required IWorkspaceManager Workspaces { get; init; }
+    public required WorkspaceManager Workspaces { get; init; }
 
     public required ICliMetadataLoader CliMetadataLoader { get; init; }
 
-    public required ITargetMatcher TargetMatcher { get; init; }
+    public required TargetMatcher TargetMatcher { get; init; }
 
     public required IFilteredCliWriter FilteredCliWriter { get; init; }
 

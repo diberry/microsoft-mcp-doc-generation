@@ -1,6 +1,6 @@
 namespace PipelineRunner.Services;
 
-public sealed class TargetMatcher : ITargetMatcher
+public sealed class TargetMatcher
 {
     public string Normalize(string target)
     {
