@@ -90,5 +90,18 @@
 - `dotnet build mcp-doc-generation.sln` - 0 errors
 - `dotnet test` - all tests pass
 - No remaining references to deleted projects in codebase
-
+
 **Impact:** 2 fewer projects to maintain, simpler architecture, same functionality via `--verify-only` flag.
+
+### 2026-05-12: Issue #566 — Template Rendering Regression Tests (PR #567)
+
+**What:** Created `ParameterTemplateRegressionTests.cs` with 5 tests covering 4 templates to guard raw CLI parameter name rendering.
+
+**Key patterns:**
+- Templates use `{{name}}` for param display — the raw CLI name (e.g., `--account-name`) is what lands in the markdown
+- `common-tools.hbs` uses `{{Name}}` (PascalCase) from the CommonParameter model, not CLI dashes
+- `area-template.hbs` uses custom helpers (`getSimpleToolName`, `kebabCase`, `formatDate`, `groupBy`) — empty string works for optional fields like `annotationContent`
+- `param-annotation-template.hbs` renders metadata flags inline with ternary emoji (✅/❌)
+
+**Test strategy:** Each test renders the actual .hbs file with controlled data, asserts backtick-wrapped raw names appear, and asserts NL-converted forms do NOT appear. If templates revert to NL names, tests fail immediately.
+
