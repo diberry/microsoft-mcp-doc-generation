@@ -7,12 +7,14 @@ using Xunit;
 namespace DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests;
 
 /// <summary>
-/// Regression tests for raw CLI parameter name rendering in templates.
-/// These tests verify that templates render parameter names in their raw CLI form
-/// (backtick-wrapped, e.g., **`--account-name`**) and do NOT render NL-converted
-/// names (e.g., "Account name").
+/// Regression tests for parameter name rendering in templates.
+/// These tests verify that templates render parameter names using the NL_Name logic:
+/// - When NL_Name == "Unknown", the formatNaturalLanguage helper converts CLI names
+///   (e.g., "--account-name" → "Account name")
+/// - When NL_Name is set, it renders the NL_Name with dots replaced by spaces
 ///
-/// If someone reverts the templates to NL name rendering, these tests FAIL.
+/// The common-tools.hbs template is the exception — it renders PascalCase names
+/// in backticks (e.g., **`SubscriptionId`**).
 /// </summary>
 public class ParameterTemplateRegressionTests
 {
@@ -32,12 +34,14 @@ public class ParameterTemplateRegressionTests
                 new Dictionary<string, object>
                 {
                     ["name"] = "--account-name",
+                    ["NL_Name"] = "Unknown",
                     ["RequiredText"] = "Required",
                     ["description"] = "The name of the storage account."
                 },
                 new Dictionary<string, object>
                 {
                     ["name"] = "--resource-group",
+                    ["NL_Name"] = "Unknown",
                     ["RequiredText"] = "Optional",
                     ["description"] = "The resource group containing the account."
                 }
@@ -47,13 +51,9 @@ public class ParameterTemplateRegressionTests
 
         var result = Normalize(HandlebarsTemplateEngine.ProcessTemplateString(templateContent, data));
 
-        // Raw CLI names must appear backtick-wrapped
-        Assert.Contains("**`--account-name`**", result);
-        Assert.Contains("**`--resource-group`**", result);
-
-        // NL-converted names must NOT appear
-        Assert.DoesNotContain("Account name", result);
-        Assert.DoesNotContain("Resource group", result);
+        // formatNaturalLanguage converts CLI names to NL form
+        Assert.Contains("**Account name**", result);
+        Assert.Contains("**Resource group**", result);
     }
 
     [Fact]
@@ -68,6 +68,7 @@ public class ParameterTemplateRegressionTests
                 new Dictionary<string, object>
                 {
                     ["name"] = "--subscription-id",
+                    ["NL_Name"] = "Unknown",
                     ["RequiredText"] = "Required*",
                     ["description"] = "The Azure subscription ID."
                 }
@@ -77,7 +78,7 @@ public class ParameterTemplateRegressionTests
 
         var result = Normalize(HandlebarsTemplateEngine.ProcessTemplateString(templateContent, data));
 
-        Assert.Contains("**`--subscription-id`**", result);
+        Assert.Contains("**Subscription ID**", result);
         Assert.Contains("Required*", result);
         Assert.Contains("At least one of the parameters marked with * is required.", result);
     }
@@ -108,12 +109,14 @@ public class ParameterTemplateRegressionTests
                         new Dictionary<string, object>
                         {
                             ["name"] = "--account-name",
+                            ["NL_Name"] = "Unknown",
                             ["RequiredText"] = "Required",
                             ["description"] = "The Cosmos DB account name."
                         },
                         new Dictionary<string, object>
                         {
                             ["name"] = "--default-consistency-level",
+                            ["NL_Name"] = "Unknown",
                             ["RequiredText"] = "Optional*",
                             ["description"] = "The default consistency level."
                         }
@@ -128,13 +131,9 @@ public class ParameterTemplateRegressionTests
 
         var result = Normalize(HandlebarsTemplateEngine.ProcessTemplateString(templateContent, data));
 
-        // Raw CLI parameter names in backticks
-        Assert.Contains("**`--account-name`**", result);
-        Assert.Contains("**`--default-consistency-level`**", result);
-
-        // NL-converted forms must not appear
-        Assert.DoesNotContain("Account name", result);
-        Assert.DoesNotContain("Default consistency level", result);
+        // formatNaturalLanguage converts CLI names to NL form
+        Assert.Contains("**Account name**", result);
+        Assert.Contains("**Default consistency level**", result);
 
         // Required/Optional markers present
         Assert.Contains("Required", result);
@@ -155,12 +154,14 @@ public class ParameterTemplateRegressionTests
                 new Dictionary<string, object>
                 {
                     ["name"] = "--location",
+                    ["NL_Name"] = "Unknown",
                     ["RequiredText"] = "Required",
                     ["description"] = "The Azure region for the resource."
                 },
                 new Dictionary<string, object>
                 {
                     ["name"] = "--sku",
+                    ["NL_Name"] = "Unknown",
                     ["RequiredText"] = "Optional",
                     ["description"] = "The SKU tier for the service."
                 }
@@ -184,14 +185,10 @@ public class ParameterTemplateRegressionTests
 
         var result = Normalize(HandlebarsTemplateEngine.ProcessTemplateString(templateContent, data));
 
-        // Raw CLI names in backticks
-        Assert.Contains("**`--location`**", result);
-        Assert.Contains("**`--sku`**", result);
+        // formatNaturalLanguage converts CLI names to NL form (sku → SKU acronym)
+        Assert.Contains("**Location**", result);
+        Assert.Contains("**SKU**", result);
 
-        // NL-converted names must not appear as standalone parameter names
-        // (check that the table cells don't have bare "Location" or "Sku" as the param name)
-        Assert.DoesNotContain("| **`Location`**", result);
-        Assert.DoesNotContain("| **`Sku`**", result);
         // Metadata renders correctly
         Assert.Contains("Destructive: ❌", result);
         Assert.Contains("ReadOnly: ✅", result);
