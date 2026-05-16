@@ -13,8 +13,8 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// </summary>
 public class AnnotationPlacementRegressionTests
 {
-    private static readonly string FixturesDir = GetFixturesDir();
-    private static readonly string RepoRoot = FindRepoRoot();
+    private static string FixturesDir => RegressionTestHelpers.FixturesDir;
+    private static string RepoRoot => RegressionTestHelpers.RepoRoot;
 
     // ── R-AP1: Annotation appears once per tool H2 ───────────────────────
 
@@ -36,6 +36,7 @@ public class AnnotationPlacementRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_AP1_AnnotationAppearsOncePerTool_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -45,8 +46,7 @@ public class AnnotationPlacementRegressionTests
         {
             var annotationCount = Regex.Matches(section,
                 @"\[Tool annotation hints\]\(index\.md#tool-annotations-for-azure-mcp-server\):").Count;
-            Assert.True(annotationCount <= 1,
-                $"Tool section has {annotationCount} annotation blocks (expected 0 or 1)");
+            Assert.Equal(1, annotationCount);
         }
     }
 
@@ -116,6 +116,7 @@ public class AnnotationPlacementRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_AP4_AnnotationLinkFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -163,6 +164,7 @@ public class AnnotationPlacementRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_AP6_AnnotationContentUsesEmojiPairFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -187,76 +189,14 @@ public class AnnotationPlacementRegressionTests
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private static int FindTabSeparatorIndex(string section)
-    {
-        var lines = section.Split('\n');
-        bool inCodeBlock = false;
-        int charIndex = 0;
-        bool passedCliTab = false;
-
-        foreach (var line in lines)
-        {
-            var trimmed = line.TrimEnd('\r');
-            if (trimmed.StartsWith("```")) inCodeBlock = !inCodeBlock;
-            if (trimmed.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)")) passedCliTab = true;
-            if (!inCodeBlock && trimmed == "---" && passedCliTab)
-                return charIndex;
-            charIndex += line.Length + 1; // +1 for \n
-        }
-        return -1;
-    }
+        => RegressionTestHelpers.FindTabSeparatorIndex(section);
 
     private static List<string> GetToolSections(string content)
-    {
-        var sections = new List<string>();
-        var h2Matches = Regex.Matches(content, @"^## .+$", RegexOptions.Multiline);
-
-        for (int i = 0; i < h2Matches.Count; i++)
-        {
-            var heading = h2Matches[i].Groups[0].Value;
-            if (heading.Contains("Related content")) continue;
-
-            var start = h2Matches[i].Index;
-            var end = (i + 1 < h2Matches.Count) ? h2Matches[i + 1].Index : content.Length;
-            sections.Add(content[start..end]);
-        }
-        return sections;
-    }
+        => RegressionTestHelpers.GetToolSections(content);
 
     private static string LoadFixture(string filename)
-    {
-        var path = Path.Combine(FixturesDir, filename);
-        Assert.True(File.Exists(path), $"Fixture not found: {path}");
-        return File.ReadAllText(path);
-    }
+        => RegressionTestHelpers.LoadFixture(filename);
 
     private static string LoadRealGeneratedFile(params string[] pathParts)
-    {
-        var path = Path.Combine(new[] { RepoRoot }.Concat(pathParts).ToArray());
-        Assert.True(File.Exists(path), $"Generated file not found: {path}. Run generation first.");
-        return File.ReadAllText(path);
-    }
-
-    private static string GetFixturesDir()
-    {
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            var candidate = Path.Combine(dir, "Fixtures");
-            if (Directory.Exists(candidate)) return candidate;
-            dir = Path.GetFullPath(Path.Combine(dir, ".."));
-        }
-        return Path.Combine(FindRepoRoot(), "mcp-tools", "DocGeneration.Steps.ToolFamilyCleanup.Tests", "Fixtures");
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            dir = Path.GetFullPath(Path.Combine(dir, ".."));
-            if (File.Exists(Path.Combine(dir, "mcp-doc-generation.sln")))
-                return dir;
-        }
-        throw new InvalidOperationException("Could not find repo root (mcp-doc-generation.sln)");
-    }
+        => RegressionTestHelpers.LoadRealGeneratedFile(pathParts);
 }

@@ -12,8 +12,8 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// </summary>
 public class TabStructureRegressionTests
 {
-    private static readonly string FixturesDir = GetFixturesDir();
-    private static readonly string RepoRoot = FindRepoRoot();
+    private static string FixturesDir => RegressionTestHelpers.FixturesDir;
+    private static string RepoRoot => RegressionTestHelpers.RepoRoot;
 
     // ── R-TS1: MCP tab appears first ─────────────────────────────────────
 
@@ -72,7 +72,7 @@ public class TabStructureRegressionTests
 
             var afterCli = section[cliTabIndex..];
             // Count standalone --- lines (not inside code fences)
-            var separatorCount = CountSeparatorsOutsideCodeBlocks(afterCli);
+            var separatorCount = RegressionTestHelpers.CountSeparatorsOutsideCodeBlocks(afterCli);
             Assert.Equal(1, separatorCount);
         }
     }
@@ -84,7 +84,7 @@ public class TabStructureRegressionTests
     public void R_TS4_NoSeparatorsInsideTabs()
     {
         var content = LoadFixture("ValidToolFamily.md");
-        var toolSections = GetToolSections(content);
+        var toolSections = RegressionTestHelpers.GetToolSections(content);
 
         foreach (var section in toolSections)
         {
@@ -93,31 +93,37 @@ public class TabStructureRegressionTests
             if (mcpStart < 0 || cliStart < 0) continue;
 
             // Content between MCP header and CLI header (MCP tab content)
-            var mcpContent = section[(mcpStart + 40)..cliStart];
-            Assert.Equal(0, CountSeparatorsOutsideCodeBlocks(mcpContent));
+            var mcpHeaderEnd = section.IndexOf('\n', mcpStart) + 1;
+            var mcpContent = section[mcpHeaderEnd..cliStart];
+            Assert.Equal(0, RegressionTestHelpers.CountSeparatorsOutsideCodeBlocks(mcpContent));
 
-            // CLI tab content ends at the single --- separator
-            var afterCli = section[cliStart..];
-            var cliHeaderEnd = afterCli.IndexOf('\n') + 1;
-            var cliContent = afterCli[cliHeaderEnd..];
+            // CLI tab content: from after CLI header to end of section
+            var cliHeaderEnd = section.IndexOf('\n', cliStart) + 1;
+            var cliContent = section[cliHeaderEnd..];
 
-            // Find the first standalone --- which is the tab terminator
+            // Count separators in CLI tab — should be exactly 1 (the tab terminator)
             var lines = cliContent.Split('\n');
             bool inCodeBlock = false;
-            int separatorsSeen = 0;
+            int separatorsBeforeTerminator = 0;
+            bool foundTerminator = false;
             foreach (var line in lines)
             {
                 var trimmed = line.TrimEnd('\r');
                 if (trimmed.StartsWith("```")) inCodeBlock = !inCodeBlock;
                 if (!inCodeBlock && trimmed == "---")
                 {
-                    separatorsSeen++;
-                    break; // First one is the tab terminator, stop here
+                    if (!foundTerminator)
+                    {
+                        foundTerminator = true; // First --- is the tab terminator
+                    }
+                    else
+                    {
+                        separatorsBeforeTerminator++;
+                    }
                 }
-                // No separators before the terminator
-                if (!inCodeBlock && trimmed == "---" && separatorsSeen == 0)
-                    Assert.Fail("Found --- separator inside CLI tab content before tab terminator");
             }
+            Assert.True(foundTerminator, "Tab terminator --- not found in CLI tab content");
+            Assert.Equal(0, separatorsBeforeTerminator);
         }
     }
 
@@ -144,6 +150,7 @@ public class TabStructureRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_TS5_ExactTabHeaderFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -251,38 +258,40 @@ public class TabStructureRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_CC1_Through_CC4_RealFile()
     {
-        var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
+        var content = RegressionTestHelpers.LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
         var consoleBlocks = ExtractConsoleBlocks(content);
 
         Assert.NotEmpty(consoleBlocks);
         foreach (var block in consoleBlocks)
         {
+            // R-CC1: fenced with ```console (verified by ExtractConsoleBlocks matching)
             // R-CC2: starts with azmcp
             var firstLine = block.Split('\n')[0].Trim();
             Assert.StartsWith("azmcp", firstLine);
+
+            // R-CC3: required params use --param <param> (no brackets)
+            var requiredParams = Regex.Matches(block, @"^\s+--(\S+)\s+<[^>]+>", RegexOptions.Multiline);
+            foreach (Match param in requiredParams)
+            {
+                Assert.DoesNotContain("[--", param.Value);
+            }
+
+            // R-CC4: optional params use [--param <param>] format
+            var optionalParams = Regex.Matches(block, @"\[--[\w-]+\s+<[\w-]+>\]");
+            foreach (Match param in optionalParams)
+            {
+                Assert.Matches(@"\[--[\w-]+\s+<[\w-]+>\]", param.Value);
+            }
         }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private static List<string> GetToolSections(string content)
-    {
-        var sections = new List<string>();
-        var h2Matches = Regex.Matches(content, @"^## .+$", RegexOptions.Multiline);
-
-        for (int i = 0; i < h2Matches.Count; i++)
-        {
-            var heading = h2Matches[i].Groups[0].Value;
-            if (heading.Contains("Related content")) continue;
-
-            var start = h2Matches[i].Index;
-            var end = (i + 1 < h2Matches.Count) ? h2Matches[i + 1].Index : content.Length;
-            sections.Add(content[start..end]);
-        }
-        return sections;
-    }
+        => RegressionTestHelpers.GetToolSections(content);
 
     private static List<string> ExtractConsoleBlocks(string content)
     {
@@ -295,55 +304,9 @@ public class TabStructureRegressionTests
         return blocks;
     }
 
-    private static int CountSeparatorsOutsideCodeBlocks(string text)
-    {
-        var lines = text.Split('\n');
-        bool inCodeBlock = false;
-        int count = 0;
-        foreach (var line in lines)
-        {
-            var trimmed = line.TrimEnd('\r');
-            if (trimmed.StartsWith("```")) inCodeBlock = !inCodeBlock;
-            if (!inCodeBlock && trimmed == "---") count++;
-        }
-        return count;
-    }
-
     private static string LoadFixture(string filename)
-    {
-        var path = Path.Combine(FixturesDir, filename);
-        Assert.True(File.Exists(path), $"Fixture not found: {path}");
-        return File.ReadAllText(path);
-    }
+        => RegressionTestHelpers.LoadFixture(filename);
 
     private static string LoadRealGeneratedFile(params string[] pathParts)
-    {
-        var path = Path.Combine(new[] { RepoRoot }.Concat(pathParts).ToArray());
-        Assert.True(File.Exists(path), $"Generated file not found: {path}. Run generation first.");
-        return File.ReadAllText(path);
-    }
-
-    private static string GetFixturesDir()
-    {
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            var candidate = Path.Combine(dir, "Fixtures");
-            if (Directory.Exists(candidate)) return candidate;
-            dir = Path.GetFullPath(Path.Combine(dir, ".."));
-        }
-        return Path.Combine(FindRepoRoot(), "mcp-tools", "DocGeneration.Steps.ToolFamilyCleanup.Tests", "Fixtures");
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            dir = Path.GetFullPath(Path.Combine(dir, ".."));
-            if (File.Exists(Path.Combine(dir, "mcp-doc-generation.sln")))
-                return dir;
-        }
-        throw new InvalidOperationException("Could not find repo root (mcp-doc-generation.sln)");
-    }
+        => RegressionTestHelpers.LoadRealGeneratedFile(pathParts);
 }

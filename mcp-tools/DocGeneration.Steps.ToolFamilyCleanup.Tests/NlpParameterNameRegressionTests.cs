@@ -13,8 +13,8 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// </summary>
 public class NlpParameterNameRegressionTests
 {
-    private static readonly string FixturesDir = GetFixturesDir();
-    private static readonly string RepoRoot = FindRepoRoot();
+    private static string FixturesDir => RegressionTestHelpers.FixturesDir;
+    private static string RepoRoot => RegressionTestHelpers.RepoRoot;
 
     // ── R-MP1: MCP table headers ─────────────────────────────────────────
 
@@ -37,6 +37,7 @@ public class NlpParameterNameRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_MP1_McpTableHeaders_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -96,6 +97,7 @@ public class NlpParameterNameRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_MP3_McpParamNamesNoCliSwitchFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -176,6 +178,7 @@ public class NlpParameterNameRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_CP2_CliParamNamesAreSwitchFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -238,6 +241,7 @@ public class NlpParameterNameRegressionTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_CP4_CliTypeColumnValid_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");

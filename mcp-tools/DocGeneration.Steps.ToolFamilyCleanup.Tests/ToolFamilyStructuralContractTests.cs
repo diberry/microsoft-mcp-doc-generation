@@ -12,8 +12,8 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// </summary>
 public class ToolFamilyStructuralContractTests
 {
-    private static readonly string FixturesDir = GetFixturesDir();
-    private static readonly string RepoRoot = FindRepoRoot();
+    private static string FixturesDir => RegressionTestHelpers.FixturesDir;
+    private static string RepoRoot => RegressionTestHelpers.RepoRoot;
 
     // ── R-DS1: File begins with YAML frontmatter delimited by --- ──────
 
@@ -41,6 +41,7 @@ public class ToolFamilyStructuralContractTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_DS1_ValidFrontmatterDelimiters_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -78,6 +79,7 @@ public class ToolFamilyStructuralContractTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_DS2_RequiredFrontmatterFields_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -105,6 +107,7 @@ public class ToolFamilyStructuralContractTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_DS3_H1MatchesBrandPattern_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -136,6 +139,7 @@ public class ToolFamilyStructuralContractTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_DS4_OneH2PerTool_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -149,6 +153,15 @@ public class ToolFamilyStructuralContractTests
         // Each tool H2 must be unique
         Assert.Equal(toolH2s.Count, toolH2s.Distinct().Count());
         Assert.True(toolH2s.Count >= 2, "Expected at least 2 tool H2s in azure-backup.md");
+
+        // Validate H2 count matches frontmatter tool_count
+        var frontmatter = RegressionTestHelpers.ExtractFrontmatter(content);
+        var toolCountMatch = Regex.Match(frontmatter, @"tool_count:\s*(\d+)");
+        if (toolCountMatch.Success)
+        {
+            var expectedCount = int.Parse(toolCountMatch.Groups[1].Value);
+            Assert.Equal(expectedCount, toolH2s.Count);
+        }
     }
 
     // ── R-DS5: Tools in deterministic order ──────────────────────────────
@@ -171,6 +184,7 @@ public class ToolFamilyStructuralContractTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_DS5_ToolsInDeterministicOrder_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
@@ -187,54 +201,11 @@ public class ToolFamilyStructuralContractTests
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private static string ExtractFrontmatter(string content)
-    {
-        var lines = content.Split('\n');
-        if (lines[0].TrimEnd('\r') != "---") return "";
-
-        for (int i = 1; i < lines.Length; i++)
-        {
-            if (lines[i].TrimEnd('\r') == "---")
-                return string.Join('\n', lines[1..i]);
-        }
-        return "";
-    }
+        => RegressionTestHelpers.ExtractFrontmatter(content);
 
     private static string LoadFixture(string filename)
-    {
-        var path = Path.Combine(FixturesDir, filename);
-        Assert.True(File.Exists(path), $"Fixture not found: {path}");
-        return File.ReadAllText(path);
-    }
+        => RegressionTestHelpers.LoadFixture(filename);
 
     private static string LoadRealGeneratedFile(params string[] pathParts)
-    {
-        var path = Path.Combine(new[] { RepoRoot }.Concat(pathParts).ToArray());
-        Assert.True(File.Exists(path), $"Generated file not found: {path}. Run generation first.");
-        return File.ReadAllText(path);
-    }
-
-    private static string GetFixturesDir()
-    {
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            var candidate = Path.Combine(dir, "Fixtures");
-            if (Directory.Exists(candidate)) return candidate;
-            dir = Path.GetFullPath(Path.Combine(dir, ".."));
-        }
-        // Fallback to source-relative path
-        return Path.Combine(FindRepoRoot(), "mcp-tools", "DocGeneration.Steps.ToolFamilyCleanup.Tests", "Fixtures");
-    }
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            dir = Path.GetFullPath(Path.Combine(dir, ".."));
-            if (File.Exists(Path.Combine(dir, "mcp-doc-generation.sln")))
-                return dir;
-        }
-        throw new InvalidOperationException("Could not find repo root (mcp-doc-generation.sln)");
-    }
+        => RegressionTestHelpers.LoadRealGeneratedFile(pathParts);
 }

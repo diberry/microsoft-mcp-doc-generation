@@ -14,7 +14,7 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// </summary>
 public class CliTabConfigGenerationTests
 {
-    private static readonly string RepoRoot = FindRepoRoot();
+    private static string RepoRoot => RegressionTestHelpers.RepoRoot;
 
     // ── R-CG1: Config is deterministically generated from mapping ────────
 
@@ -49,6 +49,7 @@ public class CliTabConfigGenerationTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_CG2_AllNamespacesHaveGeneratedOutput()
     {
         var mappingPath = Path.Combine(RepoRoot, "mcp-tools", "data", "brand-to-server-mapping.json");
@@ -83,6 +84,7 @@ public class CliTabConfigGenerationTests
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
     public void R_CG3_ConfigMatchesGeneratedOutput()
     {
         var mappingPath = Path.Combine(RepoRoot, "mcp-tools", "data", "brand-to-server-mapping.json");
@@ -116,19 +118,5 @@ public class CliTabConfigGenerationTests
                 Assert.Equal(brandName, h1Match.Groups[1].Value.Trim());
             }
         }
-    }
-
-    // ── Helpers ──────────────────────────────────────────────────────────
-
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        for (int i = 0; i < 10; i++)
-        {
-            dir = Path.GetFullPath(Path.Combine(dir, ".."));
-            if (File.Exists(Path.Combine(dir, "mcp-doc-generation.sln")))
-                return dir;
-        }
-        throw new InvalidOperationException("Could not find repo root (mcp-doc-generation.sln)");
     }
 }
