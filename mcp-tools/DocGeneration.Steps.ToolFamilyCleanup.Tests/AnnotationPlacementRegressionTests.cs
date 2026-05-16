@@ -40,6 +40,7 @@ public class AnnotationPlacementRegressionTests
     public void R_AP1_AnnotationAppearsOncePerTool_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
+        if (content == null) return;
         var toolSections = GetToolSections(content);
 
         foreach (var section in toolSections)
@@ -120,6 +121,7 @@ public class AnnotationPlacementRegressionTests
     public void R_AP4_AnnotationLinkFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
+        if (content == null) return;
         var annotationLinks = Regex.Matches(content,
             @"\[Tool annotation hints\]\([^\)]+\):");
 
@@ -168,6 +170,7 @@ public class AnnotationPlacementRegressionTests
     public void R_AP6_AnnotationContentUsesEmojiPairFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
+        if (content == null) return;
 
         var annotationMatches = Regex.Matches(content,
             @"\[Tool annotation hints\]\(index\.md#tool-annotations-for-azure-mcp-server\):\r?\n\r?\n(.+)",
@@ -197,6 +200,6 @@ public class AnnotationPlacementRegressionTests
     private static string LoadFixture(string filename)
         => RegressionTestHelpers.LoadFixture(filename);
 
-    private static string LoadRealGeneratedFile(params string[] pathParts)
-        => RegressionTestHelpers.LoadRealGeneratedFile(pathParts);
+    private static string? LoadRealGeneratedFile(params string[] pathParts)
+        => RegressionTestHelpers.TryLoadRealGeneratedFile(pathParts);
 }

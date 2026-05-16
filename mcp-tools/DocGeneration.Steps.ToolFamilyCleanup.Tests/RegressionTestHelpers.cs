@@ -33,6 +33,16 @@ internal static class RegressionTestHelpers
     }
 
     /// <summary>
+    /// Attempts to load a generated file. Returns null if the file doesn't exist,
+    /// allowing tests to gracefully skip in CI where generated output isn't available.
+    /// </summary>
+    public static string? TryLoadRealGeneratedFile(params string[] pathParts)
+    {
+        var path = Path.Combine(new[] { RepoRoot }.Concat(pathParts).ToArray());
+        return File.Exists(path) ? File.ReadAllText(path) : null;
+    }
+
+    /// <summary>
     /// Splits content into tool sections (one per H2), excluding "Related content".
     /// </summary>
     public static List<string> GetToolSections(string content)

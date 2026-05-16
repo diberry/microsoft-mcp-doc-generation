@@ -154,6 +154,7 @@ public class TabStructureRegressionTests
     public void R_TS5_ExactTabHeaderFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
+        if (content == null) return;
 
         var tabHeaders = Regex.Matches(content, @"^#### \[.+?\]\(#tab/.+?\)\r?$", RegexOptions.Multiline);
         Assert.True(tabHeaders.Count > 0, "No tab headers found in real file");
@@ -261,7 +262,8 @@ public class TabStructureRegressionTests
     [Trait("Category", "RequiresGeneration")]
     public void R_CC1_Through_CC4_RealFile()
     {
-        var content = RegressionTestHelpers.LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
+        var content = RegressionTestHelpers.TryLoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
+        if (content == null) return;
         var consoleBlocks = ExtractConsoleBlocks(content);
 
         Assert.NotEmpty(consoleBlocks);
@@ -307,6 +309,6 @@ public class TabStructureRegressionTests
     private static string LoadFixture(string filename)
         => RegressionTestHelpers.LoadFixture(filename);
 
-    private static string LoadRealGeneratedFile(params string[] pathParts)
-        => RegressionTestHelpers.LoadRealGeneratedFile(pathParts);
+    private static string? LoadRealGeneratedFile(params string[] pathParts)
+        => RegressionTestHelpers.TryLoadRealGeneratedFile(pathParts);
 }
