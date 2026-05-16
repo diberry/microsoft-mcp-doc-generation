@@ -17,4 +17,7 @@
     <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
     <ProjectReference Include="..\..\shared\DocGeneration.TestInfrastructure\DocGeneration.TestInfrastructure.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
