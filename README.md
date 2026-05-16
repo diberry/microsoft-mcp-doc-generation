@@ -348,8 +348,6 @@ To modify AI-generated content quality or style:
 
 | Document | Description |
 |----------|-------------|
-| [verify-quantity/README.md](verify-quantity/README.md) | Generated file verification tool |
-| [summary-generator/README.md](summary-generator/README.md) | Documentation summary generator |
 | [test-npm-azure-mcp/README.md](test-npm-azure-mcp/README.md) | MCP CLI metadata extractor |
 
 ### Repository Configuration
