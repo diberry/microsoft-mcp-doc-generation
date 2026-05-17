@@ -16,12 +16,21 @@ public sealed class PipelineRunner
     private readonly StepRegistry _stepRegistry;
     private readonly PipelineContextFactory _contextFactory;
     private readonly IChangelogGate? _changelogGate;
+    private readonly IFingerprintGate? _fingerprintGate;
+    private readonly IPromptRegressionGate? _promptRegressionGate;
 
-    public PipelineRunner(StepRegistry stepRegistry, PipelineContextFactory contextFactory, IChangelogGate? changelogGate = null)
+    public PipelineRunner(
+        StepRegistry stepRegistry,
+        PipelineContextFactory contextFactory,
+        IChangelogGate? changelogGate = null,
+        IFingerprintGate? fingerprintGate = null,
+        IPromptRegressionGate? promptRegressionGate = null)
     {
         _stepRegistry = stepRegistry;
         _contextFactory = contextFactory;
         _changelogGate = changelogGate;
+        _fingerprintGate = fingerprintGate;
+        _promptRegressionGate = promptRegressionGate;
     }
 
     public static PipelineRunner CreateDefault(string? repoRoot = null, TextWriter? output = null, TextWriter? error = null)
@@ -47,7 +56,9 @@ public sealed class PipelineRunner
 
         var resolvedRepoRoot = PipelineContextFactory.ResolveRepoRoot(repoRoot);
         var stepRegistry = StepRegistry.CreateDefault(Path.Combine(resolvedRepoRoot, "mcp-tools", "scripts"));
-        return new PipelineRunner(stepRegistry, contextFactory, new ChangelogGate());
+        var fingerprintGate = new FingerprintGate(processRunner, reportWriter);
+        var promptRegressionGate = new PromptRegressionGate(processRunner, reportWriter);
+        return new PipelineRunner(stepRegistry, contextFactory, new ChangelogGate(), fingerprintGate, promptRegressionGate);
     }
 
     public async Task<int> RunAsync(PipelineRequest request, CancellationToken cancellationToken = default)
@@ -153,7 +164,59 @@ public sealed class PipelineRunner
             }
         }
 
+        var gatesExitCode = await RunValidationGatesAsync(context, warnings, criticalFailures, cancellationToken);
+        if (gatesExitCode != SuccessExitCode)
+        {
+            return CompleteRun(context, warnings, criticalFailures, gatesExitCode);
+        }
+
         return CompleteRun(context, warnings, criticalFailures, SuccessExitCode);
+    }
+
+    private async Task<int> RunValidationGatesAsync(
+        PipelineContext context,
+        ICollection<string> warnings,
+        ICollection<CriticalFailureRecordReference> criticalFailures,
+        CancellationToken cancellationToken)
+    {
+        if (context.Request.RunFingerprintGate && _fingerprintGate is not null)
+        {
+            context.Reports.Info("Running fingerprint baseline gate...");
+            var result = await _fingerprintGate.EvaluateAsync(
+                context.RepoRoot,
+                context.McpToolsRoot,
+                cancellationToken);
+
+            if (result.Success)
+            {
+                context.Reports.Info($"  ✅ Fingerprint gate passed: {result.Reason}");
+            }
+            else
+            {
+                context.Reports.Error($"  ❌ Fingerprint gate failed: {result.Reason}");
+                return FatalExitCode;
+            }
+        }
+
+        if (context.Request.RunPromptRegressionGate && _promptRegressionGate is not null)
+        {
+            context.Reports.Info("Running prompt regression gate...");
+            var result = await _promptRegressionGate.EvaluateAsync(
+                context.McpToolsRoot,
+                cancellationToken);
+
+            if (result.Success)
+            {
+                context.Reports.Info($"  ✅ Prompt regression gate passed: {result.Reason}");
+            }
+            else
+            {
+                context.Reports.Error($"  ❌ Prompt regression gate failed: {result.Reason}");
+                return FatalExitCode;
+            }
+        }
+
+        return SuccessExitCode;
     }
 
     public static int MapBootstrapExitCode(int exitCode)

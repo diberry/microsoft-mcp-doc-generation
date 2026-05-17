@@ -21,6 +21,8 @@ public static class PipelineCli
         rootCommand.AddOption(options.DryRun);
         rootCommand.AddOption(options.McpBranch);
         rootCommand.AddOption(options.SkipChangelogGate);
+        rootCommand.AddOption(options.RunFingerprintGate);
+        rootCommand.AddOption(options.RunPromptRegressionGate);
         return rootCommand;
     }
 
@@ -59,7 +61,9 @@ public static class PipelineCli
             parseResult.GetValueForOption(options.SkipEnvValidation),
             parseResult.GetValueForOption(options.SkipDeps),
             parseResult.GetValueForOption(options.McpBranch),
-            parseResult.GetValueForOption(options.SkipChangelogGate));
+            parseResult.GetValueForOption(options.SkipChangelogGate),
+            parseResult.GetValueForOption(options.RunFingerprintGate),
+            parseResult.GetValueForOption(options.RunPromptRegressionGate));
 
         var validationErrors = request.Validate();
         return validationErrors.Count > 0
@@ -114,6 +118,8 @@ public static class PipelineCli
         rootCommand.AddOption(options.DryRun);
         rootCommand.AddOption(options.McpBranch);
         rootCommand.AddOption(options.SkipChangelogGate);
+        rootCommand.AddOption(options.RunFingerprintGate);
+        rootCommand.AddOption(options.RunPromptRegressionGate);
         return rootCommand;
     }
 
@@ -128,7 +134,9 @@ public static class PipelineCli
             new Option<bool>("--skip-deps", "Skip step dependency validation. Allows running a step without its prerequisites."),
             new Option<bool>("--dry-run", "Print the resolved execution plan without running bootstrap or steps."),
             new Option<string?>("--mcp-branch", "Branch of microsoft/mcp to fetch upstream files from. Overrides MCP_BRANCH env var. Default: main."),
-            new Option<bool>("--skip-changelog-gate", "Skip the CHANGELOG gate check and process all namespaces regardless of CHANGELOG entries."));
+            new Option<bool>("--skip-changelog-gate", "Skip the CHANGELOG gate check and process all namespaces regardless of CHANGELOG entries."),
+            new Option<bool>("--run-fingerprint-gate", "After pipeline steps, compare output fingerprints against fingerprint-baseline.json. Fails on quality regressions."),
+            new Option<bool>("--run-prompt-regression-gate", "After pipeline steps, run the DocGeneration.PromptRegression.Tests suite to verify prompt templates are unaffected."));
 
     private sealed record CliOptions(
         Option<string?> Namespace,
@@ -140,5 +148,7 @@ public static class PipelineCli
         Option<bool> SkipDeps,
         Option<bool> DryRun,
         Option<string?> McpBranch,
-        Option<bool> SkipChangelogGate);
+        Option<bool> SkipChangelogGate,
+        Option<bool> RunFingerprintGate,
+        Option<bool> RunPromptRegressionGate);
 }

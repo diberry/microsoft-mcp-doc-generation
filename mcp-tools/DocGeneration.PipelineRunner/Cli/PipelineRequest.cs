@@ -10,7 +10,9 @@ public sealed record PipelineRequest(
     bool SkipEnvValidation = false,
     bool SkipDependencyValidation = false,
     string? McpBranch = null,
-    bool SkipChangelogGate = false)
+    bool SkipChangelogGate = false,
+    bool RunFingerprintGate = false,
+    bool RunPromptRegressionGate = false)
 {
     /// <summary>
     /// Default upstream branch for fetching files from the microsoft/mcp repository.

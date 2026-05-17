@@ -203,6 +203,54 @@ Some Azure services span multiple MCP namespaces but publish as a single article
 
 **C# implementation**: `NamespaceMerger.cs` provides typed merge logic with `ParseArticle()` / `Merge()` / `UpdateToolCount()` methods, mirrored by the Node.js-based `merge-namespaces.sh` for shell-level execution.
 
+### Fingerprint Baseline Gate (`--run-fingerprint-gate`)
+
+After all namespace-scoped steps complete, `PipelineRunner.RunAsync()` can run an optional post-pipeline fingerprint comparison gate.
+
+**Gate logic:**
+
+1. Runs `DocGeneration.Tools.Fingerprint snapshot` to capture a candidate snapshot of all `generated-*` directories.
+2. Runs `DocGeneration.Tools.Fingerprint diff` comparing the candidate against `fingerprint-baseline.json` at repo root.
+3. If `diff` exits with code 1 (quality regressions detected) → pipeline exits with `FatalExitCode`.
+4. If no `fingerprint-baseline.json` exists → gate is **skipped** (safe first-run behaviour).
+5. Candidate file (`fingerprint-candidate.json`) is cleaned up in a `finally` block regardless of outcome.
+
+**CLI flags:**
+
+| Flag | Effect |
+|------|--------|
+| `--run-fingerprint-gate` | Enable fingerprint baseline comparison after all namespaces are processed. |
+
+**Key components:**
+
+- `IFingerprintGate` / `FingerprintGate` — service interface and concrete implementation; invokes fingerprint tool as subprocess via `IProcessRunner`.
+- `FingerprintGateResult` — result record with `Pass` / `Fail` factory methods and a `Reason` string.
+
+---
+
+### Prompt Regression Gate (`--run-prompt-regression-gate`)
+
+After all namespace-scoped steps complete, `PipelineRunner.RunAsync()` can run an optional post-pipeline prompt regression gate.
+
+**Gate logic:**
+
+1. Runs `dotnet test DocGeneration.PromptRegression.Tests --no-build --configuration Release --verbosity quiet` via `IProcessRunner`.
+2. If the test runner exits non-zero → pipeline exits with `FatalExitCode`.
+3. Stdout is scanned for the xUnit summary line (e.g., `Passed! – Failed: 0, Passed: 54`) and included in the gate result reason.
+
+**CLI flags:**
+
+| Flag | Effect |
+|------|--------|
+| `--run-prompt-regression-gate` | Run the full prompt regression test suite after all namespaces are processed. |
+
+**Key components:**
+
+- `IPromptRegressionGate` / `PromptRegressionGate` — service interface and concrete implementation; invokes `dotnet test` as subprocess via `IProcessRunner`.
+- `PromptRegressionGateResult` — result record with `Pass` / `Fail` factory methods and a `Reason` string.
+
+---
+
 ### CHANGELOG Gate (AD-571)
 
 Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` applies an optional pre-processing gate that evaluates whether the namespace has changes in the upstream `servers/Azure.Mcp.Server/CHANGELOG.md`.
