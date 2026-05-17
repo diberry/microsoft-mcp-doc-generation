@@ -16,6 +16,8 @@
 5. [Post-Processing](#5-post-processing)
 6. [Validation Gates](#6-validation-gates)
 7. [Known Conflicts & TODOs](#7-known-conflicts--todos)
+8. [Appendix A: Data Model Reference](#appendix-a-data-model-reference)
+9. [Appendix B: Pipeline Module Map](#appendix-b-pipeline-module-map)
 
 ---
 
@@ -45,7 +47,7 @@ A SKILL.md file has two parts:
 | Section Heading Pattern | Maps To |
 |------------------------|---------|
 | `## Services` or `## Azure Services` | Services table |
-| `## MCP Tools` or `## Tools` or `## MCP Server` | MCP tools table |
+| `## MCP Tools` or `## Tools` or `## Server` | MCP tools table |
 | `## Steps` or `## Workflow` or `## Suggested Workflow` | Workflow steps |
 | `## Decision Guidance` or `## Decision` | Decision guidance tables |
 | `## Related Skills` | Related skill cross-references |
@@ -78,7 +80,7 @@ A skill may contain sub-skill directories:
 microsoft/azure-skills/skills/{skill-name}/{sub-skill-name}/SKILL.md
 ```
 
-Sub-skills are parsed with the same rules and rendered as `### {displayName}` sections under `## Sub-skills` in the output.
+Sub-skills are parsed with the same rules as parent skills. Per §4.2 content policy, sub-skills are NOT rendered as separate sections in the output — the published article covers the skill as a unit. Parsed sub-skill data may contribute to the parent skill's content (e.g., enriching "What it provides").
 
 > **Reference:** `SkillsGen.Core/Models/SkillData.cs:16-25` (SubSkillData record)
 
@@ -93,7 +95,8 @@ Sub-skills are parsed with the same rules and rendered as `### {displayName}` se
 | Use cases | `## Use for`, `## When to use` | Common (all skills) | `SkillMarkdownParser.cs:66-73` |
 | Negative use cases | `## Do not use for`, `## Don't use for` | Common | `SkillMarkdownParser.cs:74-75` |
 | Azure services | `## Services` | Common | `SkillMarkdownParser.cs:322-352` |
-| MCP tools | `## MCP Tools`, `## Server`, `## Quick Reference` | Common | `SkillMarkdownParser.cs:355-381` |
+| MCP tools | `## MCP Tools`, `## Tools`, `## Server` | Common | `SkillMarkdownParser.cs:355-381` |
+| Quick reference | `## Quick Reference` | Varies | `SkillMarkdownParser.cs:355-381` |
 | Prerequisites | `## Prerequisites`, `## Required Inputs`, `## Rules` | Common | `SkillMarkdownParser.cs:722-761` |
 | RBAC roles | `## Required Roles`, `### RBAC`, `### Role Based Access` | Varies | `SkillMarkdownParser.cs:834-976` |
 | Inline prereqs | Text patterns: `requires X`, `must have X`, `Docker required` | Varies | `SkillMarkdownParser.cs:785-831` |
@@ -101,6 +104,8 @@ Sub-skills are parsed with the same rules and rendered as `### {displayName}` se
 | Workflow steps | `## Steps`, `## Workflows`, `## Workflow` | Optional | `SkillMarkdownParser.cs:583-600` |
 | Decision guidance | `## Decision Guidance`, `## Decision`, `## Guidance` + `###` topics | Optional | `SkillMarkdownParser.cs:602-675` |
 | Compatibility | `compatibility:` frontmatter field | Varies | `SkillMarkdownParser.cs:768-779` |
+
+> **Note:** The §2.4 regex is the authoritative match pattern for heading variants.
 
 ### 1.5 Source-to-Content Mapping
 
@@ -117,7 +122,7 @@ This section maps every source section to its destination in the output article 
 | Inline prereqs | `## Prerequisites` | ✅ Customer-facing | **LLM synthesis** (scattered across source) |
 | Related skills | `## Related skills` (conditional) | ✅ Customer-facing | Deterministic lift |
 | Workflow steps | **EXCLUDED** (per §4.2) | ❌ Implementation detail | Not rendered |
-| Decision guidance | `## Decision guidance` (conditional, Tier 1) | ⚠️ Conditional | Deterministic lift (when included) |
+| Decision guidance | `## Decision guidance` (conditional, Tier 1) | ✅ Customer-facing (Tier 1) | Deterministic lift (when included) |
 | Compatibility | Frontmatter metadata | ✅ Customer-facing | Deterministic lift |
 | Description (H1 body) | Intro paragraph + `## What it provides` | ✅ Customer-facing | **LLM polish** (rewrite for customer voice) |
 
@@ -148,7 +153,7 @@ Inline text mentions ───── LLM ──────┤──→ ## Prere
                                      │
                         Curated JSON ─┘
                      (skill-prereqs.json
-                      overrides, if any)
+                      overrides, if any — planned)
 ```
 
 The deterministic extraction produces a typed `SkillPrerequisites` model (Azure auth, subscription, RBAC roles, tools, resources, environment). The LLM synthesizes scattered inline mentions into this same model. Curated JSON overrides take priority when present.
@@ -255,7 +260,7 @@ Activation directives are parsed from:
 
 | Field | Primary Source | Fallback 1 | Fallback 2 |
 |-------|---------------|------------|------------|
-| `DisplayName` | `display_name` frontmatter | `skills-inventory.json` | Derived from slug (`DeriveDisplayName`) |
+| `DisplayName` | `skills-inventory.json` displayName | `display_name` frontmatter | Derived from slug (`DeriveDisplayName`) |
 | `UseFor` | `USE FOR:` in description | `## When to use` body section | Prose use-case extraction from opening paragraphs |
 | `DoNotUseFor` | `DO NOT USE FOR:` in description | `## Do not use` body section | Empty list |
 | `ExamplePrompts` | Curated (`skill-example-prompts.json`) | `triggers.test.ts` shouldTrigger | Generated from UseFor/DetectionMarkers |
@@ -318,9 +323,9 @@ Skills are scored on 5 questions to determine Tier 1 (comprehensive) vs Tier 2 (
 | Feature | Tier 1 | Tier 2 |
 |---------|--------|--------|
 | Decision Guidance section | ✅ (if data exists) | ❌ |
-| Suggested Workflow section | ✅ (if data exists) | ❌ |
+| Suggested Workflow section | ❌ (excluded — §4.2) | ❌ (excluded — §4.2) |
 | Detailed prompt display | ✅ | ❌ |
-| MCP Tools section | ✅ (if data exists) | ✅ (if data exists) |
+| MCP Tools section | ❌ (excluded — §4.2) | ❌ (excluded — §4.2) |
 | Minimum word count (validation) | 100 | 50 |
 
 > **Reference:** `SkillsGen.Core/Assessment/TierAssessor.cs:35-103`
@@ -333,27 +338,27 @@ Skills are scored on 5 questions to determine Tier 1 (comprehensive) vs Tier 2 (
 
 The Handlebars template defines the maximum possible section order — the ceiling of what CAN be rendered. Not all sections are output in practice (see §4.2 for current content policy).
 
-| Order | Section | Type | Condition |
-|-------|---------|------|-----------|
-| — | YAML frontmatter | MUST HAVE | Always |
-| — | `# Azure skill for {DisplayName}` | MUST HAVE | Always |
-| — | Description paragraph | MUST HAVE | Always |
-| — | Skill metadata line | MUST HAVE | Always: `` **Skill:** `{name}` | [Source code](...) `` |
-| 1 | `## What it provides` | MUST HAVE | Always |
-| 1a | `### Azure services knowledge` | MAY HAVE | `hasServices` |
-| 2 | `## Prerequisites` | MUST HAVE | Always (generator provides fallback) |
-| 2a | `### Environment requirements` | MAY HAVE | `hasEnvironmentReqs` |
-| 3 | `## When to use this skill` | MUST HAVE | Always (generator provides fallback) |
-| 3a | `### When not to use this skill` | MAY HAVE | `hasDoNotUseFor` |
-| 4 | `## MCP tools` | MAY HAVE | `hasMcpTools` |
-| 5 | `## Decision guidance` | MAY HAVE | Tier 1 AND `hasDecisionGuidance` |
-| 6 | `## Suggested workflow` | MAY HAVE | Tier 1 AND `hasWorkflow` |
-| 7 | `## Deployment workflow` | MAY HAVE | Skill is `azure-prepare`, `azure-validate`, or `azure-deploy` |
-| 8 | `## Example prompts` | MUST HAVE | Always (generator provides fallback) |
-| 9 | `## Related skills` | MAY HAVE | `hasRelatedSkills` |
-| 10 | `## Sub-skills` | MAY HAVE | `hasSubSkills` |
-| 11 | `## Automatic activation` | MAY HAVE | `hasActivation` |
-| 12 | `## Related content` | MUST HAVE | Always (includes default links) |
+| Order | Section | Type | Condition | Status |
+|-------|---------|------|-----------|--------|
+| — | YAML frontmatter | MUST HAVE | Always | Active |
+| — | `# Azure skill for {DisplayName}` | MUST HAVE | Always | Active |
+| — | Description paragraph | MUST HAVE | Always | Active |
+| — | Skill metadata line | MUST HAVE | Always: `` **Skill:** `{name}` | [Source code](...) `` | Active |
+| 1 | `## What it provides` | MUST HAVE | Always | Active |
+| 1a | `### Azure services knowledge` | MAY HAVE | `hasServices` | Active |
+| 2 | `## Prerequisites` | MUST HAVE | Always (generator provides fallback) | Active |
+| 2a | `### Environment requirements` | MAY HAVE | `hasEnvironmentReqs` | Active |
+| 3 | `## When to use this skill` | MUST HAVE | Always (generator provides fallback) | Active |
+| 3a | `### When not to use this skill` | MAY HAVE | `hasDoNotUseFor` | Active |
+| 4 | `## MCP tools` | MAY HAVE | `hasMcpTools` | Excluded (§4.2) |
+| 5 | `## Decision guidance` | MAY HAVE | Tier 1 AND `hasDecisionGuidance` | Tier 1 conditional |
+| 6 | `## Suggested workflow` | MAY HAVE | Tier 1 AND `hasWorkflow` | Excluded (§4.2) |
+| 7 | `## Deployment workflow` | MAY HAVE | Skill is `azure-prepare`, `azure-validate`, or `azure-deploy` | Excluded (§4.2) — 3 skills only |
+| 8 | `## Example prompts` | MUST HAVE | Always (generator provides fallback) | Active |
+| 9 | `## Related skills` | MAY HAVE | `hasRelatedSkills` | Active |
+| 10 | `## Sub-skills` | MAY HAVE | `hasSubSkills` | Excluded (§4.2) |
+| 11 | `## Automatic activation` | MAY HAVE | `hasActivation` | Active |
+| 12 | `## Related content` | MUST HAVE | Always (includes default links) | Active |
 
 > **Reference:** `templates/skill-page-template.hbs:1-217`
 
@@ -376,7 +381,6 @@ The following sections exist in the template (§4.1) but are **excluded from gen
 | `## MCP tools` | Implementation detail. Skills describe capabilities, not underlying MCP tool names. |
 | `## Sub-skills` | Implementation detail. The published article covers the skill as a unit. |
 | `## Suggested workflow` | Implementation detail. Workflows are internal to how the skill operates. |
-| `## Decision guidance` | Conditional (Tier 1 only). Currently still rendered but may be reconsidered. |
 | `## Deployment workflow` | Hardcoded for 3 skills (`azure-prepare`, `azure-validate`, `azure-deploy`); implementation detail. |
 
 > **Generator enforcement:** The `hasMcpTools`, `hasSubSkills`, and `hasWorkflow` conditionals should be suppressed in the generator or the template blocks removed. See §7.1 (RESOLVED).
@@ -387,6 +391,7 @@ These MAY-HAVE sections ARE rendered when data exists — they are user-facing, 
 
 - `## Automatic activation` — tells the customer when the skill activates without prompting
 - `## Related skills` — helps the customer discover adjacent capabilities
+- `## Decision guidance` — Tier 1 only; helps customers make architecture decisions (status under review)
 
 > ⚠️ The validator currently only checks for 3 of the 5 required sections — see §7.2.
 
@@ -424,7 +429,7 @@ All generated prose must follow these rules:
 
 > **Reference:** `prompts/skill-page-system-prompt.txt:1-24`, `data/shared-acrolinx-rules.txt`
 
-### 4.5 LLM Rewriting Rules
+### 4.5 LLM Pipeline Rules (Polish & Synthesis)
 
 > **Pipeline philosophy:** Lift-and-shift first, LLM polish second. The upstream SKILL.md is
 > the source of truth for all factual content. The parser extracts it deterministically. The
@@ -442,18 +447,19 @@ See §1.5 for the complete source-to-content mapping and classification of which
 
 #### 4.5.2 Current LLM Usage
 
-| Method | Purpose | Default State | Notes |
-|--------|---------|---------------|-------|
-| `RewriteIntroAsync` | Polish intro paragraph (2-3 sentences, max 60 words) | ON | Rewrites extracted description for customer voice |
-| `GenerateKnowledgeOverviewAsync` | Polish knowledge overview | ON | Summarizes extracted body content |
-| `SynthesizeWhatItProvidesAsync` | Polish "What it provides" summary | ON (with fallback chain) | Priority: LLM synthesis → curated JSON → mechanical build |
-| `TranslateWorkflowStepsAsync` | Rewrite workflow steps | **OFF by default** | Implementation detail per §4.2 content policy; enable only if workflow section is re-included |
+| Method | Purpose | Default State | Classification | Notes |
+|--------|---------|---------------|----------------|-------|
+| `RewriteIntroAsync` | Polish intro paragraph (2-3 sentences, max 60 words) | ON | LLM polish | Rewrites extracted description for customer voice |
+| `GenerateKnowledgeOverviewAsync` | Polish knowledge overview | ON | LLM polish | Summarizes extracted body content |
+| `SynthesizeWhatItProvidesAsync` | Polish "What it provides" summary | ON (with fallback chain) | LLM synthesis | Priority: LLM synthesis → curated JSON → mechanical build |
+| `TranslateWorkflowStepsAsync` | Rewrite workflow steps | **OFF by default** | LLM polish | Implementation detail per §4.2 content policy; enable only if workflow section is re-included |
 
 > **Reference:** `SkillsGen.Core/Generation/ILlmRewriter.cs`, `AzureOpenAiRewriter.cs`
 
 #### 4.5.3 LLM Guardrails
 
-- LLM does NOT generate: section headings, example prompts, prerequisites, service tables, or any structural content
+- LLM does NOT generate: section headings, example prompts, service tables, or any structural content
+- Exception: inline prerequisites scattered across source text ARE synthesized by LLM (see §1.5-1.6 for the hybrid prerequisites pipeline)
 - LLM receives extracted data as input, returns polished prose
 - Temperature: 0.3, MaxTokens: 500 (`AzureOpenAiRewriter.cs:196-199`)
 - Retry: 5 attempts with exponential backoff (1s, 2s, 4s, 8s, 16s)
@@ -466,7 +472,7 @@ This method currently feeds MCP tool purposes and workflow steps into the LLM pr
 
 | Constraint | Value | Rationale |
 |-----------|-------|-----------|
-| Max example prompts | 8 per skill (system prompt) / 10 (code cap) | Skills are high-level; 8 diverse prompts cover the range |
+| Max example prompts | 8 per skill (system prompt); 10 in code — see §7.3 GAP | Align to 8 (editorial standard per PR #8978) |
 | "What it provides" | Must add NEW info beyond description | System prompt rule: no paraphrasing |
 | UseFor items cap | 10 | `SkillPageGenerator.cs:50-51` |
 | DoNotUseFor source | Only `SKILL.md` `DO NOT USE FOR:` | Never from `shouldNotTrigger` test data |
@@ -503,6 +509,25 @@ Prerequisites are rendered as a structured object with typed sub-sections:
 | Environment | `List<string>` | `### Environment requirements` + bullets |
 
 > **Reference:** `SkillsGen.Core/Models/SkillPrerequisites.cs`, `templates/skill-page-template.hbs:36-65`
+
+---
+
+### 4.10 End-to-End Pipeline Order
+
+The complete pipeline executes in this order:
+
+1. **Fetch** — Download SKILL.md + triggers.test.ts from microsoft/azure-skills (or local path)
+2. **Parse** — `SkillMarkdownParser` extracts frontmatter, body sections, inline prereqs, RBAC roles (§2)
+3. **Parse triggers** — `TriggerParser` extracts shouldTrigger/shouldNotTrigger arrays (§1.2)
+4. **Resolve inventory** — Match skill to `skills-inventory.json` for display name, category, version (§3.2-3.3)
+5. **Load curated overrides** — Apply `skill-what-it-provides.json`, `skill-example-prompts.json`, `skill-related-links.json` (§3.1)
+6. **Assess tier** — Score Q1-Q5, determine Tier 1 vs Tier 2, set conditional flags (§3.4)
+7. **LLM rewrite** — Polish intro, knowledge overview, "What it provides" synthesis; workflow translation OFF by default (§4.5)
+8. **Build context** — Assemble `SkillPageContext` with all resolved data, apply priority chains (§4.7-4.8)
+9. **Render template** — Handlebars template produces markdown article (§4.1)
+10. **Post-process** — Acrolinx fixes: contractions, acronyms, URL normalization, sentence splitting (§5)
+11. **Validate** — Required sections, frontmatter, word count, prompt grounding, link quality (§6)
+12. **Output** — Write article to output directory; generate validation report
 
 ---
 
@@ -649,6 +674,8 @@ The validator checks for the presence of these sections:
 
 > **Reference:** `SkillPageValidator.cs:8-13`
 
+> ⚠️ **GAP:** `## Example prompts` and `## Related content` are required by §4.2 content policy but not yet validated here — see §7.2.
+
 ### 6.2 Frontmatter Validation (Errors)
 
 - Content must start with `---`
@@ -714,13 +741,13 @@ Bad link patterns detected:
 
 ## 7. Known Conflicts & TODOs
 
-### 7.1 ✅ RESOLVED: MCP Tools Section vs "No MCP Tool Names" Directive
+### 7.1 ⚠️ POLICY DECIDED, IMPLEMENTATION PENDING: MCP Tools Section
 
 **Template:** `skill-page-template.hbs:87-98` renders a `## MCP tools` section with a table of tool names and descriptions when `hasMcpTools` is true.
 
 **Team convention:** Published articles must NOT list MCP tool names — no tools tables, no inline MCP tool references.
 
-**Resolution (§4.2 content policy):** The content policy excludes MCP tools, sub-skills, and workflows from generated output as implementation details. Skills articles describe capabilities for customers, not internal mechanics.
+**Status:** Content policy decided (§4.2). Code changes pending — suppress `hasMcpTools` conditional or remove template block.
 
 **Action required:** Either suppress the `hasMcpTools` conditional in the generator (set to `false` regardless of data), OR remove the `## MCP tools` block from the template entirely. The template code may remain as dead code temporarily, but the content policy (§4.2) is authoritative.
 
@@ -784,7 +811,7 @@ SkillsGen.Core/Models/SkillData.cs
 | Property | Type | Source |
 |----------|------|--------|
 | `Name` | `string` | Frontmatter `name` (lowercased) |
-| `DisplayName` | `string` | Frontmatter `display_name` or derived |
+| `DisplayName` | `string` | skills-inventory.json → frontmatter display_name → derived from slug (see §3.2) |
 | `Description` | `string` | Frontmatter `description` (full, decoded) |
 | `ShortDescription` | `string` (computed) | First 1-2 sentences, max 200 chars |
 | `UseFor` | `List<string>` | `USE FOR:` marker or body section |
@@ -861,7 +888,7 @@ skills-generation/
 │   ├── skill-related-links.json      # Curated links (§3.1)
 │   ├── static-text-replacement.json  # Acrolinx replacements (§5.4)
 │   ├── acronym-definitions.json      # Acronym expansion (§5.5)
-│   └── shared-acrolinx-rules.txt     # Injected into system prompt (§5.8)
+│   └── shared-acrolinx-rules.txt     # Injected into system prompt (§7.8)
 ├── prompts/
 │   ├── skill-page-system-prompt.txt  # Writing style rules (§4.4)
 │   └── skill-page-user-prompt-intro.txt  # LLM intro prompt (§4.5)
