@@ -9,7 +9,17 @@ public class SkillPageValidator : ISkillPageValidator
     [
         "## Prerequisites",
         "## When to use",
-        "## What it provides"
+        "## What it provides",
+        "## Example prompts",   // §7.2: Required by content policy §4.2
+        "## Related content"    // §7.2: Required by content policy §4.2
+    ];
+
+    // §7.1: Implementation detail sections that must NOT appear in customer-facing articles
+    private static readonly string[] ProhibitedSections =
+    [
+        "## MCP tools",
+        "## Sub-skills",
+        "## Suggested workflow"
     ];
 
     // Known typo patterns in generated links
@@ -39,6 +49,15 @@ public class SkillPageValidator : ISkillPageValidator
             if (!renderedContent.Contains(section, StringComparison.OrdinalIgnoreCase))
             {
                 errors.Add($"COMPLETENESS: Missing required section '{section}'");
+            }
+        }
+
+        // POLICY: Prohibited implementation-detail sections must NOT appear (§7.1, §4.2)
+        foreach (var section in ProhibitedSections)
+        {
+            if (renderedContent.Contains(section, StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($"POLICY: Prohibited section '{section}' found — implementation details must not appear in customer-facing articles (§4.2)");
             }
         }
 

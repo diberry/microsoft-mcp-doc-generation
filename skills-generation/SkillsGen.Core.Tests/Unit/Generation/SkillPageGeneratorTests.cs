@@ -335,8 +335,9 @@ The skill provides knowledge about {{displayName}}.
     }
 
     [Fact]
-    public void Generate_WithToolsSection_RendersToolsTable()
+    public void Generate_WithToolsSection_DoesNotRenderToolsTable()
     {
+        // §7.1: Even with showToolsSection=true, hasMcpTools is always false
         var generator = CreateGenerator();
         var skill = CreateTestSkillData();
         var triggers = new TriggerData([], [], null);
@@ -345,8 +346,8 @@ The skill provides knowledge about {{displayName}}.
 
         var result = generator.Generate(skill, triggers, tier, prereqs);
 
-        result.Should().Contain("storage_list");
-        result.Should().Contain("`storage list`");
+        result.Should().NotContain("storage_list");
+        result.Should().NotContain("### Related tools");
     }
 
     [Fact]
@@ -380,13 +381,14 @@ The skill provides knowledge about {{displayName}}.
 }
 
 // === MCP Tools Template Rendering (Issue #369) ===
+// §7.1: MCP tools are implementation details and must NOT render in customer-facing articles
 
 public class McpToolsTemplateRenderingTests
 {
     private readonly ILogger<SkillPageGenerator> _logger = Substitute.For<ILogger<SkillPageGenerator>>();
 
     [Fact]
-    public void Generate_WithMcpTools_RendersMcpToolsSection()
+    public void Generate_WithMcpToolsData_DoesNotRenderMcpToolsSection()
     {
         var templatePath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "templates", "skill-page-template.hbs");
         var template = File.ReadAllText(templatePath);
@@ -409,11 +411,10 @@ public class McpToolsTemplateRenderingTests
 
         var result = generator.Generate(skill, triggers, tier, prereqs);
 
-        result.Should().Contain("## MCP tools");
-        result.Should().Contain("mcp_azure_mcp_subscription_list");
-        result.Should().Contain("List available subscriptions");
-        result.Should().Contain("mcp_azure_mcp_azd");
-        result.Should().Contain("Execute AZD commands");
+        // §7.1: MCP tools section must NOT appear even when tool data exists
+        result.Should().NotContain("## MCP tools");
+        result.Should().NotContain("mcp_azure_mcp_subscription_list");
+        result.Should().NotContain("mcp_azure_mcp_azd");
     }
 
     [Fact]
@@ -1072,8 +1073,9 @@ public class TemplateRestructureTests
     }
 
     [Fact]
-    public void Template_McpToolsSection_UsesCallsLanguage()
+    public void Template_McpToolsSection_SuppressedByPolicy()
     {
+        // §7.1: MCP tools section must not render even when tool data exists
         var template = LoadRealTemplate();
         var gen = new SkillPageGenerator(template, _logger);
         var skill = CreateFullSkillData();
@@ -1083,8 +1085,8 @@ public class TemplateRestructureTests
 
         var result = gen.Generate(skill, triggers, tier, prereqs);
 
-        result.Should().Contain("uses the following Azure MCP tools");
-        result.Should().NotContain("available with this skill");
+        result.Should().NotContain("## MCP tools");
+        result.Should().NotContain("uses the following Azure MCP tools");
     }
 }
 

@@ -51,8 +51,8 @@ public class ExamplePromptsFallbackTests
 
         var result = SkillPageGenerator.GenerateFallbackPrompts(items, "Test");
 
-        // MaxExamplePrompts is 10
-        result.Count.Should().BeLessOrEqualTo(10);
+        // MaxExamplePrompts is 8 (§7.3)
+        result.Count.Should().BeLessOrEqualTo(8);
     }
 
     [Fact]

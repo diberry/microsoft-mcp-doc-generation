@@ -99,16 +99,8 @@ public class SkillPipelineOrchestrator
 
             var updatedSkillData = skillData with { Description = rewrittenDescription };
 
-            // LLM workflow translation (optional)
+            // LLM workflow translation — SKIPPED (§7.1: workflow steps are excluded by §4.2 content policy)
             List<string>? translatedSteps = null;
-            if (updatedSkillData.WorkflowSteps.Count > 0)
-            {
-                var wfSw = Stopwatch.StartNew();
-                translatedSteps = await _llmRewriter.TranslateWorkflowStepsAsync(
-                    skillName, updatedSkillData.WorkflowSteps, updatedSkillData.McpTools, ct);
-                wfSw.Stop();
-                _logger.LogLlmCall(skillName, "TranslateWorkflowSteps", wfSw.ElapsedMilliseconds);
-            }
 
             // LLM "What it provides" synthesis (optional)
             var wipSw = Stopwatch.StartNew();
