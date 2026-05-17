@@ -22,6 +22,7 @@ FOUNDRY_MODEL_NAME=gpt-4o
 ```
 SkillPipelineOrchestrator
   ├── Fetch      → GitHubSkillFetcher / LocalSkillFetcher
+  ├── Catalog    → SourceOutlineCataloger (headings → HeadingMappingRules → source-outlines.json)
   ├── Parse      → SkillMarkdownParser + TriggerTestParser
   ├── Assess     → TierAssessor (Tier 1 / Tier 2 scoring)
   ├── Rewrite    → AzureOpenAiRewriter (LLM intro polish)
