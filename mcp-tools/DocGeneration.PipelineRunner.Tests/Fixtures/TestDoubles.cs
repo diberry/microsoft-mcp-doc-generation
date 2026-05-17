@@ -1,5 +1,6 @@
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
+using System.Threading.Tasks;
 
 namespace PipelineRunner.Tests.Fixtures;
 
@@ -91,4 +92,24 @@ internal sealed class StubCliMetadataLoader : ICliMetadataLoader
 
     public ValueTask<IReadOnlyList<string>> LoadNamespacesAsync(string outputPath, CancellationToken cancellationToken)
         => throw new NotSupportedException();
+}
+
+/// <summary>
+/// A changelog gate stub that skips a specific named namespace and processes all others.
+/// Use this in smoke tests and pipeline-level tests to avoid real network calls.
+/// </summary>
+internal sealed class SkipSpecificNamespaceGate(string namespaceToSkip) : IChangelogGate
+{
+    public Task<ChangelogGateResult> EvaluateAsync(
+        string namespaceName,
+        string baselineVersion,
+        string mcpBranch,
+        bool hasExistingArticle,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult(
+            string.Equals(namespaceName, namespaceToSkip, StringComparison.OrdinalIgnoreCase)
+                ? ChangelogGateResult.Skip($"namespace '{namespaceName}' not in CHANGELOG (test stub)")
+                : ChangelogGateResult.Process($"namespace '{namespaceName}' found in CHANGELOG (test stub)"));
+    }
 }

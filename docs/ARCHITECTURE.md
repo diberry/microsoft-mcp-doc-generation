@@ -203,6 +203,88 @@ Some Azure services span multiple MCP namespaces but publish as a single article
 
 **C# implementation**: `NamespaceMerger.cs` provides typed merge logic with `ParseArticle()` / `Merge()` / `UpdateToolCount()` methods, mirrored by the Node.js-based `merge-namespaces.sh` for shell-level execution.
 
+### Fingerprint Baseline Gate (`--run-fingerprint-gate`)
+
+After all namespace-scoped steps complete, `PipelineRunner.RunAsync()` can run an optional post-pipeline fingerprint comparison gate.
+
+**Gate logic:**
+
+1. Runs `DocGeneration.Tools.Fingerprint snapshot` to capture a candidate snapshot of all `generated-*` directories.
+2. Runs `DocGeneration.Tools.Fingerprint diff` comparing the candidate against `fingerprint-baseline.json` at repo root.
+3. If `diff` exits with code 1 (quality regressions detected) → pipeline exits with `FatalExitCode`.
+4. If no `fingerprint-baseline.json` exists → gate is **skipped** (safe first-run behaviour).
+5. Candidate file (`fingerprint-candidate.json`) is cleaned up in a `finally` block regardless of outcome.
+
+**CLI flags:**
+
+| Flag | Effect |
+|------|--------|
+| `--run-fingerprint-gate` | Enable fingerprint baseline comparison after all namespaces are processed. |
+
+**Key components:**
+
+- `IFingerprintGate` / `FingerprintGate` — service interface and concrete implementation; invokes fingerprint tool as subprocess via `IProcessRunner`.
+- `FingerprintGateResult` — result record with `Pass` / `Fail` factory methods and a `Reason` string.
+
+---
+
+### Prompt Regression Gate (`--run-prompt-regression-gate`)
+
+After all namespace-scoped steps complete, `PipelineRunner.RunAsync()` can run an optional post-pipeline prompt regression gate.
+
+**Gate logic:**
+
+1. Runs `dotnet test DocGeneration.PromptRegression.Tests --no-build --configuration Release --verbosity quiet` via `IProcessRunner`.
+2. If the test runner exits non-zero → pipeline exits with `FatalExitCode`.
+3. Stdout is scanned for the xUnit summary line (e.g., `Passed! – Failed: 0, Passed: 54`) and included in the gate result reason.
+
+**CLI flags:**
+
+| Flag | Effect |
+|------|--------|
+| `--run-prompt-regression-gate` | Run the full prompt regression test suite after all namespaces are processed. |
+
+**Key components:**
+
+- `IPromptRegressionGate` / `PromptRegressionGate` — service interface and concrete implementation; invokes `dotnet test` as subprocess via `IProcessRunner`.
+- `PromptRegressionGateResult` — result record with `Pass` / `Fail` factory methods and a `Reason` string.
+
+---
+
+### CHANGELOG Gate (AD-571)
+
+Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` applies an optional pre-processing gate that evaluates whether the namespace has changes in the upstream `servers/Azure.Mcp.Server/CHANGELOG.md`.
+
+**Gate logic (evaluated per namespace):**
+
+1. **New namespaces** (no existing article in `tool-family/`) — always processed regardless of CHANGELOG.
+2. **Fetch CHANGELOG** from `https://raw.githubusercontent.com/microsoft/mcp/{branch}/servers/Azure.Mcp.Server/CHANGELOG.md`.
+3. **Find relevant sections** — version sections where the version is >= `cliVersion` (includes `[Unreleased]`).
+4. If **no relevant sections found** → process (conservative fallback).
+5. If the **namespace name appears** (case-insensitive) in any relevant section's content → process.
+6. Otherwise → **skip** with an informational message (avoids generating an empty-diff PR).
+7. **Fetch failures** (network, timeout) → process (conservative fallback).
+
+**CLI flags:**
+
+| Flag | Effect |
+|------|--------|
+| `--skip-changelog-gate` | Bypass the gate entirely; process all namespaces. |
+
+**Key components:**
+
+- `IChangelogGate` / `ChangelogGate` — service interface and production implementation with injected `HttpClient`.
+- `ChangelogParser` — internal static class that parses `## [Version]` sections and implements `HasMentionOf()` / `IsVersionRelevantFor()`.
+- `ChangelogGateResult` — record carrying `ShouldSkip` + `Reason` for logging.
+
+### Branch-Aware Upstream Fetching (`--mcp-branch`)
+
+`BootstrapStep` and `ChangelogGate` both fetch files from `microsoft/mcp` using a configurable branch. Resolution order:
+
+1. `--mcp-branch` CLI flag
+2. `MCP_BRANCH` environment variable
+3. Default: `main`
+
 ### Parallel Execution
 
 After Step 0 (bootstrap) runs once, namespace-scoped steps can execute in parallel:

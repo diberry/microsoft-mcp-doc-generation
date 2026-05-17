@@ -9,12 +9,15 @@ public sealed record PipelineRequest(
     bool DryRun,
     bool SkipEnvValidation = false,
     bool SkipDependencyValidation = false,
-    string? McpBranch = null)
+    string? McpBranch = null,
+    bool SkipChangelogGate = false,
+    bool RunFingerprintGate = false,
+    bool RunPromptRegressionGate = false)
 {
     /// <summary>
     /// Default upstream branch for fetching files from the microsoft/mcp repository.
     /// </summary>
-    public const string DefaultMcpBranch = "release/azure/2.x";
+    public const string DefaultMcpBranch = "main";
 
     /// <summary>
     /// Resolves the effective MCP branch: CLI flag > MCP_BRANCH env var > default constant.

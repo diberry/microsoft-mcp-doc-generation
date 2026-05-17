@@ -35,7 +35,7 @@ public class DryRunIntegrationTests
                 StepRegistry.CreateDefault(Path.Combine(repoRoot, "mcp-tools", "scripts")),
                 contextFactory);
 
-            var request = new PipelineRequest("compute", new[] { 1, 2, 3, 4, 5, 6 }, ".\\generated-compute", false, false, true);
+            var request = new PipelineRequest("compute", new[] { 1, 2, 3, 4, 5, 6 }, ".\\generated-compute", false, false, true, SkipChangelogGate: true);
             var exitCode = await runner.RunAsync(request, CancellationToken.None);
 
             Assert.Equal(0, exitCode);

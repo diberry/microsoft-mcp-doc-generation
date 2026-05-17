@@ -37,7 +37,7 @@ public class PipelineRunnerGlobalScopeTests
             var namespaceStep = new RecordingStep(1, "Generate annotations", StepScope.Namespace, executionOrder);
             var runner = new global::PipelineRunner.PipelineRunner(new StepRegistry([bootstrapStep, namespaceStep]), contextFactory);
 
-            var request = new PipelineRequest(null, [1], ".\\generated", SkipBuild: true, SkipValidation: false, DryRun: false);
+            var request = new PipelineRequest(null, [1], ".\\generated", SkipBuild: true, SkipValidation: false, DryRun: false, SkipChangelogGate: true);
             var exitCode = await runner.RunAsync(request, CancellationToken.None);
 
             Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
@@ -51,6 +51,68 @@ public class PipelineRunnerGlobalScopeTests
         }
     }
 
+    [Fact]
+    public async Task RunAsync_ChangelogGateSkipsNamespace_PipelineCompletesGracefully()
+    {
+        // Regression guard for Bootstrap/cli-tab-config.json interaction (RISK 2):
+        // Bootstrap (commit c0a6ec9) writes cli-tab-config.json listing ALL resolved namespaces BEFORE the
+        // namespace loop runs. The CHANGELOG gate can then skip some of those namespaces inside the loop.
+        // This test documents and verifies that skipping a namespace via the gate is graceful:
+        // the pipeline succeeds and the skipped namespace's steps are not executed, even though
+        // cli-tab-config.json still has an entry for it (orphan entries do not cause a pipeline error).
+
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-changelog-gate-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
+
+        try
+        {
+            var executionOrder = new List<string>();
+            var reportWriter = new BufferedReportWriter();
+            var contextFactory = new PipelineContextFactory(
+                new RecordingProcessRunner(),
+                new WorkspaceManager(),
+                new StaticCliMetadataLoader(),   // returns ["compute", "storage"]
+                new TargetMatcher(),
+                new StubFilteredCliWriter(),
+                new StubBuildCoordinator(),
+                new StubAiCapabilityProbe(),
+                reportWriter,
+                repoRoot);
+
+            // Gate skips "storage" — simulating that no CHANGELOG entries exist for it.
+            // In a real run Bootstrap has already written cli-tab-config.json with both namespaces,
+            // but the skipped namespace never reaches Step 1+.
+            var changelogGate = new SkipSpecificNamespaceGate("storage");
+            var bootstrapStep = new RecordingStep(0, "Bootstrap pipeline", StepScope.Global, executionOrder);
+            var namespaceStep = new RecordingStep(1, "Generate annotations", StepScope.Namespace, executionOrder);
+            var runner = new global::PipelineRunner.PipelineRunner(
+                new StepRegistry([bootstrapStep, namespaceStep]),
+                contextFactory,
+                changelogGate);
+
+            // SkipChangelogGate = false — the gate IS active for this test
+            var request = new PipelineRequest(null, [1], ".\\generated", SkipBuild: true, SkipValidation: false, DryRun: false, SkipChangelogGate: false);
+            var exitCode = await runner.RunAsync(request, CancellationToken.None);
+
+            // Pipeline must complete successfully — skipping a namespace via the gate is not an error
+            Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
+
+            // Bootstrap (global step) runs once; namespace step runs only for "compute" (not "storage")
+            Assert.Equal(1, bootstrapStep.Executions);
+            Assert.Equal(1, namespaceStep.Executions);
+            Assert.Equal(new[] { "global", "namespace:compute" }, executionOrder);
+
+            // The skip reason for "storage" must appear in the pipeline report
+            Assert.Contains(reportWriter.Messages,
+                m => m.Contains("storage", StringComparison.OrdinalIgnoreCase)
+                  && m.Contains("Skipped", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
     private sealed class RecordingStep : StepDefinition
     {
         private readonly List<string> _executionOrder;
