@@ -107,6 +107,9 @@ Sub-skills are parsed with the same rules as parent skills. Per §4.2 content po
 
 > **Note:** The §2.4 regex is the authoritative match pattern for heading variants.
 
+> **Planned:** A runtime cataloging step (§7.10) will auto-generate this inventory from
+> source files, replacing this manually maintained table with a living catalog.
+
 ### 1.5 Source-to-Content Mapping
 
 This section maps every source section to its destination in the output article and classifies it as customer-facing or implementation detail.
@@ -517,17 +520,18 @@ Prerequisites are rendered as a structured object with typed sub-sections:
 The complete pipeline executes in this order:
 
 1. **Fetch** — Download SKILL.md + triggers.test.ts from microsoft/azure-skills (or local path)
-2. **Parse** — `SkillMarkdownParser` extracts frontmatter, body sections, inline prereqs, RBAC roles (§2)
-3. **Parse triggers** — `TriggerParser` extracts shouldTrigger/shouldNotTrigger arrays (§1.2)
-4. **Resolve inventory** — Match skill to `skills-inventory.json` for display name, category, version (§3.2-3.3)
-5. **Load curated overrides** — Apply `skill-what-it-provides.json`, `skill-example-prompts.json`, `skill-related-links.json` (§3.1)
-6. **Assess tier** — Score Q1-Q5, determine Tier 1 vs Tier 2, set conditional flags (§3.4)
-7. **LLM rewrite** — Polish intro, knowledge overview, "What it provides" synthesis; workflow translation OFF by default (§4.5)
-8. **Build context** — Assemble `SkillPageContext` with all resolved data, apply priority chains (§4.7-4.8)
-9. **Render template** — Handlebars template produces markdown article (§4.1)
-10. **Post-process** — Acrolinx fixes: contractions, acronyms, URL normalization, sentence splitting (§5)
-11. **Validate** — Required sections, frontmatter, word count, prompt grounding, link quality (§6)
-12. **Output** — Write article to output directory; generate validation report
+2. **Catalog source outlines** — Scan each SKILL.md for headings, persist to `data/source-outlines.json`, warn on unmapped headings (§7.10 — planned)
+3. **Parse** — `SkillMarkdownParser` extracts frontmatter, body sections, inline prereqs, RBAC roles (§2)
+4. **Parse triggers** — `TriggerParser` extracts shouldTrigger/shouldNotTrigger arrays (§1.2)
+5. **Resolve inventory** — Match skill to `skills-inventory.json` for display name, category, version (§3.2-3.3)
+6. **Load curated overrides** — Apply `skill-what-it-provides.json`, `skill-example-prompts.json`, `skill-related-links.json` (§3.1)
+7. **Assess tier** — Score Q1-Q5, determine Tier 1 vs Tier 2, set conditional flags (§3.4)
+8. **LLM rewrite** — Polish intro, knowledge overview, "What it provides" synthesis; workflow translation OFF by default (§4.5)
+9. **Build context** — Assemble `SkillPageContext` with all resolved data, apply priority chains (§4.7-4.8)
+10. **Render template** — Handlebars template produces markdown article (§4.1)
+11. **Post-process** — Acrolinx fixes: contractions, acronyms, URL normalization, sentence splitting (§5)
+12. **Validate** — Required sections, frontmatter, word count, prompt grounding, link quality (§6)
+13. **Output** — Write article to output directory; generate validation report
 
 ---
 
@@ -797,6 +801,37 @@ The system prompt contains a `{{ACROLINX_RULES}}` placeholder (`skill-page-syste
 ### 7.9 TODO: `SynthesizeWhatItProvidesAsync` Prompt Alignment
 
 Per §4.5.4, `SynthesizeWhatItProvidesAsync` currently feeds MCP tool purposes and workflow steps into the LLM prompt (`AzureOpenAiRewriter.cs:61-87`). These are implementation details excluded by §4.2 content policy. The prompt input should be simplified to remove MCP tool names and workflow steps, feeding only customer-facing extracted content. `TranslateWorkflowStepsAsync` is OFF by default per pipeline philosophy (§4.5.2).
+
+---
+
+### 7.10 TODO: Source Outline Cataloging Step
+
+The heading inventory in §1.4 was built manually from parser code and test fixtures — it is not generated at runtime. The pipeline should add a **source cataloging step** (between fetch and parse) that:
+
+1. **Scans** each SKILL.md and extracts all headings (`##`, `###`) with their depth and text
+2. **Persists** the catalog as `data/source-outlines.json` — one entry per skill with its heading tree
+3. **Compares** the extracted headings against the known mapping rules in §1.5
+4. **Reports** unmapped headings as warnings — "SKILL.md `{skill-name}` has heading `## {heading}` with no mapping rule"
+
+This makes the heading inventory (§1.4) auto-generated rather than manually maintained, and enables drift detection when upstream skills add new section types.
+
+**Output format (proposed):**
+
+```json
+{
+  "azure-compute": {
+    "headings": [
+      { "level": 2, "text": "Services", "mappedTo": "Azure services knowledge" },
+      { "level": 2, "text": "Prerequisites", "mappedTo": "Prerequisites" },
+      { "level": 2, "text": "New Section", "mappedTo": null }
+    ],
+    "unmappedCount": 1,
+    "catalogedAt": "2026-05-17T15:55:00Z"
+  }
+}
+```
+
+**Pipeline placement:** Step 2 in §4.10 (after fetch, before parse). The catalog informs but does not block parsing — unmapped headings produce warnings, not errors.
 
 ---
 
