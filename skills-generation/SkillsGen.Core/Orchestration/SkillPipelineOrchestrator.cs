@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using SkillsGen.Core.Assessment;
+using SkillsGen.Core.Cataloging;
 using SkillsGen.Core.Fetchers;
 using SkillsGen.Core.Generation;
 using SkillsGen.Core.Logging;
@@ -27,6 +28,9 @@ public class SkillPipelineOrchestrator
     private readonly string _outputDir;
     private readonly bool _dryRun;
     private readonly bool _force;
+    private readonly SourceOutlineCataloger _cataloger;
+    private readonly SourceOutlineWriter _catalogWriter;
+    private readonly Dictionary<string, SkillOutline> _outlineCatalog = [];
 
     public SkillPipelineOrchestrator(
         ISkillSourceFetcher fetcher,
@@ -54,6 +58,8 @@ public class SkillPipelineOrchestrator
         _outputDir = outputDir;
         _dryRun = dryRun;
         _force = force;
+        _cataloger = new SourceOutlineCataloger();
+        _catalogWriter = new SourceOutlineWriter(Path.Combine(outputDir, "data"));
     }
 
     public async Task<SkillGenerationResult> ProcessSkillAsync(string skillName, string? displayName = null, string? skillVersion = null, CancellationToken ct = default)
@@ -69,6 +75,11 @@ public class SkillPipelineOrchestrator
                 _logger.LogError(skillName, "Source files not found");
                 return CreateFailResult(skillName, sw, "Source files not found");
             }
+
+            // Catalog source outline (between fetch and parse)
+            var outline = _cataloger.Catalog(skillName, sources.SkillMarkdown);
+            _outlineCatalog[skillName] = outline;
+            EmitOutlineWarnings(skillName, outline);
 
             // Parse
             var skillData = _parser.Parse(skillName, sources.SkillMarkdown);
@@ -200,6 +211,8 @@ public class SkillPipelineOrchestrator
         if (!_dryRun)
         {
             WriteManifest(report);
+            PersistOutlineCatalog();
+            EmitBatchOutlineSummary();
         }
 
         return report;
@@ -416,6 +429,47 @@ public class SkillPipelineOrchestrator
             skillName, 0,
             new SkillValidationResult(false, [error], [], 0, 0),
             null, sw.ElapsedMilliseconds);
+    }
+
+    /// <summary>
+    /// Emits per-skill warnings for unmapped headings.
+    /// </summary>
+    private void EmitOutlineWarnings(string skillName, SkillOutline outline)
+    {
+        foreach (var heading in outline.Headings.Where(h => !HeadingMappingRules.IsKnown(h.Text)))
+        {
+            _logger.LogInfo($"  ⚠️  UNMAPPED_HEADING: SKILL.md '{skillName}' has heading '{heading.Text}' with no mapping rule");
+        }
+    }
+
+    /// <summary>
+    /// Persists the accumulated outline catalog to data/source-outlines.json.
+    /// </summary>
+    private void PersistOutlineCatalog()
+    {
+        if (_outlineCatalog.Count == 0)
+            return;
+
+        _catalogWriter.Write(_outlineCatalog);
+        _logger.LogInfo($"  📋 Catalog written: {_outlineCatalog.Count} skill(s) → {Path.Combine(_outputDir, "data", "source-outlines.json")}");
+    }
+
+    /// <summary>
+    /// Emits a batch-level summary of all unmapped headings across all skills.
+    /// </summary>
+    private void EmitBatchOutlineSummary()
+    {
+        var totalUnmapped = _outlineCatalog.Values.Sum(o => o.UnmappedCount);
+        var skillsWithUnmapped = _outlineCatalog.Count(kvp => kvp.Value.UnmappedCount > 0);
+
+        if (totalUnmapped > 0)
+        {
+            _logger.LogInfo($"  ⚠️  OUTLINE_SUMMARY: {totalUnmapped} unmapped heading(s) across {skillsWithUnmapped} skill(s)");
+        }
+        else
+        {
+            _logger.LogInfo("  ✅ OUTLINE_SUMMARY: All headings are mapped");
+        }
     }
 
     /// <summary>
