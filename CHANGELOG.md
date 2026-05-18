@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Strip "Defaults to..." from Required parameter descriptions** — `RequiredParameterDescriptionSanitizer` now removes contradictory default-value language (`Defaults to X.`, `Default is X.`, `Default: X.`, `If not specified, defaults to X.`, etc.) from parameter descriptions when the parameter is marked Required. Required parameters have no default — users must always provide a value — so including default language is confusing. Closes #593.
+
 ### Added
 
 - **Install latest @azure/mcp before tools-list generation** — Bootstrap step now runs `npm install @azure/mcp@latest --save` before the pinned `npm install`, ensuring the tools-list is always generated from the latest published package. Failure is fatal (the whole point is to use the latest). New `--skip-npm-update` CLI flag opts out for offline or reproducible builds. (#)
