@@ -58,7 +58,10 @@ public static class RequiredParameterDescriptionSanitizer
 
         var result = description;
 
-        // Order matters: most-specific patterns first to avoid partial matches.
+        // IfNotSpecifiedDefaultsTo MUST run before DefaultsTo.
+        // "If not specified, defaults to X." contains "defaults to" as a substring;
+        // running DefaultsTo first would match and consume only the inner part,
+        // leaving "If not specified," as an orphaned sentence fragment.
         result = IfNotSpecifiedDefaultsTo.Replace(result, string.Empty);
         result = DefaultsTo.Replace(result, string.Empty);
         result = DefaultIs.Replace(result, string.Empty);

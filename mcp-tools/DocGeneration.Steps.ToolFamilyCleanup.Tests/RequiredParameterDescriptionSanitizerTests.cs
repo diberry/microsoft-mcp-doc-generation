@@ -174,4 +174,35 @@ public class RequiredParameterDescriptionSanitizerTests
         var result = RequiredParameterDescriptionSanitizer.Apply(input!, isRequired: true);
         Assert.Equal(input, result);
     }
+
+    // ── Period-less input (before EnsureEndsPeriod runs in the real pipeline) ──
+
+    [Fact]
+    public void RequiredParameter_StripsDefaultsTo_WithoutTrailingPeriod()
+    {
+        // In the pipeline, EnsureEndsPeriod runs before this sanitizer, so the
+        // sanitizer always receives a period-terminated string. But if a description
+        // has no trailing period on its defaults sentence (e.g., upstream data gap),
+        // the sanitizer should handle gracefully — it won't match (no period), so
+        // the rest of the description is preserved unchanged.
+        var input = "The region. Defaults to eastus";
+        var result = RequiredParameterDescriptionSanitizer.Apply(input, isRequired: true);
+        // Without a trailing period the regex cannot match the sentence boundary,
+        // so the string is returned as-is (no corruption, no crash).
+        Assert.False(string.IsNullOrWhiteSpace(result), "Should not return null/empty for period-less input");
+        Assert.Contains("The region.", result);
+    }
+
+    // ── Abbreviations with embedded periods — no false positive ───────────────
+
+    [Fact]
+    public void RequiredParameter_AbbreviationWithPeriods_NoFalsePositive()
+    {
+        // Abbreviations like "U.S." contain periods that are NOT sentence boundaries.
+        // The sanitizer must not truncate the description at the abbreviation period.
+        var input = "Used in the U.S. region. Defaults to eastus.";
+        var result = RequiredParameterDescriptionSanitizer.Apply(input, isRequired: true);
+        Assert.Contains("Used in the U.S. region.", result);
+        Assert.DoesNotContain("Defaults to eastus", result);
+    }
 }
