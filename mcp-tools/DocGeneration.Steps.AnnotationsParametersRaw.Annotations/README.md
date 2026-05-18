@@ -58,7 +58,7 @@ DocumentationGenerator.TransformCliOutput()
 
 ### Key behaviors
 
-- **Common parameter filtering**: Parameters listed in `common-parameters.json` (e.g., `--tenant`, `--subscription`, `--resource-group`) are excluded from parameter tables unless they are marked `Required` for a specific tool.
+- **Common parameter filtering**: Parameters listed in `common-parameters.json` (e.g., `--tenant`, `--subscription`, `--resource-group`) are excluded from parameter tables unless they are marked `Required` for a specific tool. See `ParameterFilterHelper.cs` for the authoritative logic. ⚠️ `resource-group` is the most commonly misunderstood case — if source `required` field is blank, it must NOT appear in the published table.
 - **Three-tier filename resolution**: Include filenames are resolved through `brand-to-server-mapping.json` → `compound-words.json` → original area name (see `DocGeneration.Core.Shared/ToolFileNameBuilder`).
 - **Text cleanup**: Parameter names and descriptions pass through `DocGeneration.Core.NaturalLanguage.TextCleanup` for normalization (e.g., `--resource-group` → "Resource group"), static text replacement, and period normalization.
 - **Frontmatter**: Every generated file is prepended with YAML frontmatter containing `ms.topic`, `ms.date`, and version metadata.
