@@ -178,6 +178,49 @@ public class ParameterGeneratorTests
     private static string FindProjectRoot() =>
         DocGeneration.TestInfrastructure.ProjectRootFinder.FindSolutionRoot();
 
+    // ── Canonical Description Override (#592) ──────────────────────────
+
+    [Fact]
+    public void BuildParameterManifest_UsesCanonicalDescription_WhenAvailable()
+    {
+        var options = new List<Option>
+        {
+            new() { Name = "--subscription", Required = true, Description = "Subscription" },
+            new() { Name = "--custom-param", Required = false, Description = "A custom description" }
+        };
+        var conditionals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var canonicalDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["--subscription"] = "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name."
+        };
+
+        var manifest = ParameterGenerator.BuildParameterManifest(options, conditionals, canonicalDescriptions);
+
+        Assert.Equal(2, manifest.Count);
+        // subscription should use canonical description (not the CLI source "Subscription")
+        Assert.Equal(
+            "Specifies the Azure subscription to use. Accepts either a subscription ID (GUID) or display name.",
+            manifest[0].Description);
+        // custom-param should keep its original description (with period added)
+        Assert.Equal("A custom description.", manifest[1].Description);
+    }
+
+    [Fact]
+    public void BuildParameterManifest_FallsBackToSourceDescription_WhenNoCanonical()
+    {
+        var options = new List<Option>
+        {
+            new() { Name = "--resource-group", Required = true, Description = "Resource group" }
+        };
+        var conditionals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // No canonical descriptions provided (null)
+        var manifest = ParameterGenerator.BuildParameterManifest(options, conditionals, null);
+
+        Assert.Single(manifest);
+        Assert.Equal("Resource group.", manifest[0].Description);
+    }
+
     private sealed class CommonParam
     {
         public string? Name { get; set; }

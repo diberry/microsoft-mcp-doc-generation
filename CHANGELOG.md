@@ -8,6 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Consistent parameter descriptions for global variables** — `BuildParameterManifest` now accepts an optional `canonicalDescriptions` dictionary from `common-parameters.json`. When a tool-specific parameter matches a common/global parameter name (e.g., `--subscription`, `--resource-group`, `--tenant`), the canonical description is used instead of the inconsistent per-tool CLI source description. This ensures identical language across all generated tool articles for shared parameters. Closes #592.
+
 - **Strip "Defaults to..." from Required parameter descriptions** — `RequiredParameterDescriptionSanitizer` now removes contradictory default-value language (`Defaults to X.`, `Default is X.`, `Default: X.`, `If not specified, defaults to X.`, etc.) from parameter descriptions when the parameter is marked Required. Required parameters have no default — users must always provide a value — so including default language is confusing. Closes #593.
 
 ### Added
