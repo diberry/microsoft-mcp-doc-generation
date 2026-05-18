@@ -138,7 +138,10 @@ public class ParameterGenerator
                     IsConditionalRequired = conditionalParameters.Contains(parameterName),
                     Description = ParameterDescriptionBackticker.Apply(
                         Config.TextNormalizer.WrapExampleValues(
-                            Config.TextNormalizer.EnsureEndsPeriod(Config.TextNormalizer.ReplaceStaticText(opt.Description ?? string.Empty))))
+                            Config.TextNormalizer.EnsureEndsPeriod(
+                                RequiredParameterDescriptionSanitizer.Apply(
+                                    Config.TextNormalizer.ReplaceStaticText(opt.Description ?? string.Empty),
+                                    opt.Required))))
                 };
             })
             .ToList();
