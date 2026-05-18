@@ -12,6 +12,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Source Outline Cataloging step** (`skills-generation`) — New pipeline step inserted between fetch and parse in `SkillPipelineOrchestrator`. Extracts all `##` and `###` headings from each source `SKILL.md`, compares them against known mapping rules (`HeadingMappingRules`), and emits warnings for unmapped headings. Results are persisted to `data/source-outlines.json` after batch processing. New types: `SkillOutline`, `HeadingEntry`, `HeadingMappingRules`, `SourceOutlineCataloger`, `SourceOutlineWriter`. Implements PRD-587. (#587)
 - **Install latest @azure/mcp before tools-list generation** — Bootstrap step now runs `npm install @azure/mcp@latest --save` before the pinned `npm install`, ensuring the tools-list is always generated from the latest published package. Failure is fatal (the whole point is to use the latest). New `--skip-npm-update` CLI flag opts out for offline or reproducible builds. (#)
 
 - **Fingerprint baseline comparison gate** — `PipelineRunner.RunAsync()` now supports an optional post-pipeline fingerprint gate (`--run-fingerprint-gate`) that snapshots `generated-*` output directories and diffs them against `fingerprint-baseline.json`. Detects unintended output drift (file count/size changes) across namespaces. Skips safely when no baseline exists. Implemented via `IFingerprintGate` / `FingerprintGate`, which invokes `DocGeneration.Tools.Fingerprint` as a subprocess.
