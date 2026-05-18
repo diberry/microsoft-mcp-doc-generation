@@ -117,6 +117,27 @@ public sealed class BootstrapStep : StepDefinition
             }
 
             var npmExecutable = GetNpmExecutable();
+
+            if (!context.Request.SkipNpmUpdate)
+            {
+                context.Reports.Info("Updating @azure/mcp to latest version...");
+                var latestInstallResult = await context.ProcessRunner.RunAsync(
+                    new ProcessSpec(npmExecutable, ["install", "@azure/mcp@latest", "--save"], testNpmDirectory),
+                    cancellationToken);
+                processResults.Add(latestInstallResult);
+                if (!latestInstallResult.Succeeded)
+                {
+                    AddProcessIssue(latestInstallResult, warnings, "Failed to install latest @azure/mcp — use --skip-npm-update for offline or reproducible builds");
+                    return BuildResult(context, processResults, success: false, warnings);
+                }
+
+                context.Reports.Info("@azure/mcp updated to latest.");
+            }
+            else
+            {
+                context.Reports.Info("Skipping @azure/mcp latest update (--skip-npm-update).");
+            }
+
             var npmInstallResult = await context.ProcessRunner.RunAsync(
                 new ProcessSpec(npmExecutable, ["install", "--silent"], testNpmDirectory),
                 cancellationToken);
