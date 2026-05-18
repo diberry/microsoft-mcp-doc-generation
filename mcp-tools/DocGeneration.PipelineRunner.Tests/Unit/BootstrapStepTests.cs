@@ -255,10 +255,55 @@ public class BootstrapStepTests
         return path;
     }
 
+    [Fact]
+    public async Task ExecuteAsync_RunsNpmInstallLatestBeforePinnedInstall()
+    {
+        using var harness = CreateHarness();
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        var latestIdx = harness.ProcessRunner.Invocations.FindIndex(
+            s => s.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]));
+        var pinnedIdx = harness.ProcessRunner.Invocations.FindIndex(
+            s => s.Arguments.SequenceEqual(["install", "--silent"]));
+        Assert.True(latestIdx >= 0, "Expected npm install @azure/mcp@latest --save to be invoked.");
+        Assert.True(pinnedIdx >= 0, "Expected npm install --silent to be invoked.");
+        Assert.True(latestIdx < pinnedIdx, "Latest install must run before pinned install.");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SkipNpmUpdate_SkipsLatestInstallAndSucceeds()
+    {
+        using var harness = CreateHarness(skipNpmUpdate: true);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.DoesNotContain(
+            harness.ProcessRunner.Invocations,
+            s => s.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]));
+        var messages = ((BufferedReportWriter)harness.Context.Reports).Messages;
+        Assert.Contains(messages, m => m.Contains("--skip-npm-update", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NpmLatestInstallFails_ReturnsFatal()
+    {
+        using var harness = CreateHarness(failNpmLatestInstall: true);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, w => w.Contains("latest @azure/mcp", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static TestHarness CreateHarness(
         bool skipBuild = false,
         bool skipValidation = false,
         bool skipEnvValidation = false,
+        bool skipNpmUpdate = false,
+        bool failNpmLatestInstall = false,
         bool requiresAiConfiguration = false,
         bool aiConfigured = true,
         ICliMetadataLoader? cliMetadataLoader = null,
@@ -274,7 +319,7 @@ public class BootstrapStepTests
         File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappingJson ?? "[]");
         File.WriteAllText(Path.Combine(mcpToolsRoot, "azure-mcp", "azmcp-commands.md"), "# Commands");
 
-        var processRunner = new ScriptedProcessRunner();
+        var processRunner = new ScriptedProcessRunner { FailNpmLatestInstall = failNpmLatestInstall };
         var buildCoordinator = new RecordingBuildCoordinator();
         var aiCapabilityProbe = new RecordingAiCapabilityProbe(aiConfigured);
         var step = new BootstrapStep();
@@ -291,7 +336,8 @@ public class BootstrapStepTests
                 SkipBuild: skipBuild,
                 SkipValidation: skipValidation,
                 DryRun: false,
-                SkipEnvValidation: skipEnvValidation),
+                SkipEnvValidation: skipEnvValidation,
+                SkipNpmUpdate: skipNpmUpdate),
             RepoRoot = repoRoot,
             McpToolsRoot = mcpToolsRoot,
             OutputPath = Path.Combine(repoRoot, "generated-compute"),
@@ -424,11 +470,20 @@ public class BootstrapStepTests
             },
         });
 
+        public bool FailNpmLatestInstall { get; init; }
+
         public List<ProcessSpec> Invocations { get; } = new();
 
         public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
         {
             Invocations.Add(spec);
+
+            if (spec.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]))
+            {
+                return FailNpmLatestInstall
+                    ? ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, string.Empty, "npm ERR! 404", TimeSpan.Zero))
+                    : ValueTask.FromResult(Success(spec));
+            }
 
             if (spec.Arguments.SequenceEqual(["install", "--silent"]))
             {
