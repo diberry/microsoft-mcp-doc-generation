@@ -40,9 +40,11 @@ public class ParameterGenerator
             var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
             
             // Build canonical description lookup for consistent parameter descriptions
+            // GroupBy ensures no duplicate key exceptions if source has case-variant duplicates
             var canonicalDescriptions = commonParameters
                 .Where(p => !string.IsNullOrEmpty(p.Name) && !string.IsNullOrEmpty(p.Description))
-                .ToDictionary(p => p.Name!, p => p.Description, StringComparer.OrdinalIgnoreCase);
+                .GroupBy(p => p.Name!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Description, StringComparer.OrdinalIgnoreCase);
             
             foreach (var tool in data.Tools)
             {

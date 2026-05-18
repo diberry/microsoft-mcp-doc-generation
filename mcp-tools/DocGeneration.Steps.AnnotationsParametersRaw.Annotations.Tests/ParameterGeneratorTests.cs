@@ -221,6 +221,62 @@ public class ParameterGeneratorTests
         Assert.Equal("Resource group.", manifest[0].Description);
     }
 
+    [Fact]
+    public void BuildParameterManifest_EmptyCanonicalDescriptions_FallsBackToSource()
+    {
+        var options = new List<Option>
+        {
+            new() { Name = "--subscription", Required = true, Description = "Subscription" }
+        };
+        var conditionals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var emptyCanonical = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        var manifest = ParameterGenerator.BuildParameterManifest(options, conditionals, emptyCanonical);
+
+        Assert.Single(manifest);
+        Assert.Equal("Subscription.", manifest[0].Description);
+    }
+
+    [Fact]
+    public void BuildParameterManifest_CaseInsensitiveLookup_MatchesCanonical()
+    {
+        var options = new List<Option>
+        {
+            new() { Name = "--Subscription", Required = true, Description = "Sub" }
+        };
+        var conditionals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var canonicalDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["--subscription"] = "The Azure subscription."
+        };
+
+        var manifest = ParameterGenerator.BuildParameterManifest(options, conditionals, canonicalDescriptions);
+
+        Assert.Single(manifest);
+        Assert.Equal("The Azure subscription.", manifest[0].Description);
+    }
+
+    [Fact]
+    public void BuildParameterManifest_CanonicalWithTrailingPeriod_NoDuplicate()
+    {
+        var options = new List<Option>
+        {
+            new() { Name = "--tenant", Required = false, Description = "Tenant" }
+        };
+        var conditionals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var canonicalDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["--tenant"] = "The Microsoft Entra ID tenant ID or name."
+        };
+
+        var manifest = ParameterGenerator.BuildParameterManifest(options, conditionals, canonicalDescriptions);
+
+        Assert.Single(manifest);
+        // Should NOT double-period
+        Assert.Equal("The Microsoft Entra ID tenant ID or name.", manifest[0].Description);
+        Assert.DoesNotContain("..", manifest[0].Description);
+    }
+
     private sealed class CommonParam
     {
         public string? Name { get; set; }
