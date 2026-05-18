@@ -58,18 +58,9 @@ public class AzureOpenAiRewriter : ILlmRewriter
             ? string.Join(", ", skillData.Services.Select(s => s.Name))
             : "N/A";
 
-        var toolPurposes = skillData.McpTools.Count > 0
-            ? string.Join("\n", skillData.McpTools
-                .Where(t => !string.IsNullOrWhiteSpace(t.Purpose))
-                .Select(t => $"  - {t.ToolName}: {t.Purpose}"))
-            : "N/A";
-
+        // §7.9: Only customer-facing data — no MCP tool names or workflow steps (§4.2)
         var useCases = skillData.UseFor.Count > 0
             ? string.Join("\n", skillData.UseFor.Select(u => $"  - {u}"))
-            : "N/A";
-
-        var workflowSteps = skillData.WorkflowSteps.Count > 0
-            ? string.Join("\n", skillData.WorkflowSteps.Select((s, i) => $"  {i + 1}. {s}"))
             : "N/A";
 
         var systemPrompt = "You are a technical writer for Microsoft Azure documentation. Write clear, customer-facing content.";
@@ -79,12 +70,8 @@ public class AzureOpenAiRewriter : ILlmRewriter
             Context:
             - Description: {skillData.Description}
             - Services: {serviceNames}
-            - Tools:
-            {toolPurposes}
             - Use cases:
             {useCases}
-            - Workflow steps:
-            {workflowSteps}
 
             Rules:
             - Write from the customer's perspective (what THEY get, not what the system does)
