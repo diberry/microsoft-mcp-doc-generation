@@ -39,6 +39,13 @@ public class ParameterGenerator
             var commonParameters = data.SourceDiscoveredCommonParams;
             var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
             
+            // Build canonical description lookup for consistent parameter descriptions
+            // GroupBy ensures no duplicate key exceptions if source has case-variant duplicates
+            var canonicalDescriptions = commonParameters
+                .Where(p => !string.IsNullOrEmpty(p.Name) && !string.IsNullOrEmpty(p.Description))
+                .GroupBy(p => p.Name!, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Description, StringComparer.OrdinalIgnoreCase);
+            
             foreach (var tool in data.Tools)
             {
                 if (string.IsNullOrEmpty(tool.Command))
@@ -64,7 +71,7 @@ public class ParameterGenerator
                     .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames))
                     .ToList();
 
-                var parameterManifest = BuildParameterManifest(filteredOptions, conditionalParameters);
+                var parameterManifest = BuildParameterManifest(filteredOptions, conditionalParameters, canonicalDescriptions);
 
                 var transformedOptions = filteredOptions
                     .Zip(parameterManifest, (opt, manifest) => new
@@ -123,12 +130,20 @@ public class ParameterGenerator
 
     internal static List<ParameterManifestEntry> BuildParameterManifest(
         IEnumerable<Option> options,
-        HashSet<string> conditionalParameters)
+        HashSet<string> conditionalParameters,
+        Dictionary<string, string>? canonicalDescriptions = null)
     {
         return options
             .Select(opt =>
             {
                 var parameterName = opt.Name ?? string.Empty;
+                
+                // Use canonical description for common/global parameters when available
+                var rawDescription = canonicalDescriptions != null 
+                    && canonicalDescriptions.TryGetValue(parameterName, out var canonical)
+                    ? canonical
+                    : opt.Description ?? string.Empty;
+                
                 return new ParameterManifestEntry
                 {
                     Name = parameterName,
@@ -140,7 +155,7 @@ public class ParameterGenerator
                         Config.TextNormalizer.WrapExampleValues(
                             RequiredParameterDescriptionSanitizer.Apply(
                                 Config.TextNormalizer.EnsureEndsPeriod(
-                                    Config.TextNormalizer.ReplaceStaticText(opt.Description ?? string.Empty)),
+                                    Config.TextNormalizer.ReplaceStaticText(rawDescription)),
                                 opt.Required)))
                 };
             })
