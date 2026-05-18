@@ -16,8 +16,11 @@ public class ParserConfigTests
     }
 
     [Fact]
-    public void Config_RemoteUrl_PointsTo2xBranch()
+    public void Config_RemoteUrl_PointsToMainBranch()
     {
+        // PR #584 deliberately moved the default branch from release/azure/2.x to main.
+        // The remoteUrl in config.json is the standalone-mode fallback; the pipeline
+        // overrides it via --branch / MCP_BRANCH.  The fallback must now point to main.
         var configPath = GetConfigPath();
         Assert.True(File.Exists(configPath), $"config.json not found at {configPath}");
 
@@ -25,8 +28,8 @@ public class ParserConfigTests
         var config = JsonSerializer.Deserialize<ParserConfig>(json);
 
         Assert.NotNull(config);
-        Assert.Contains("release/azure/2.x", config!.RemoteUrl, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("/main/", config.RemoteUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("/main/", config!.RemoteUrl, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("release/azure/2.x", config.RemoteUrl, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
