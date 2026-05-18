@@ -48,4 +48,22 @@ public class CliArgumentParsingTests
         Assert.Equal(global::PipelineRunner.PipelineRunner.InvalidArgumentsExitCode, exitCode);
         Assert.Contains("Unsupported step identifiers", errorWriter.ToString(), StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Parse_SkipNpmUpdate_SetsFlag()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute", "--skip-npm-update"]);
+
+        Assert.NotNull(result.Request);
+        Assert.True(result.Request!.SkipNpmUpdate);
+    }
+
+    [Fact]
+    public void Parse_SkipNpmUpdateOmitted_DefaultsFalse()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute"]);
+
+        Assert.NotNull(result.Request);
+        Assert.False(result.Request!.SkipNpmUpdate);
+    }
 }
