@@ -251,6 +251,20 @@ After all namespace-scoped steps complete, `PipelineRunner.RunAsync()` can run a
 
 ---
 
+### Pipeline Output Regression Workflow
+
+GitHub Actions enforces the regression gates through `.github/workflows/pipeline-output-regression.yml` on pull requests targeting `main`.
+
+**Workflow jobs:**
+
+1. `classify-change` — maps changed files to deterministic and AI-involved gate requirements, expands merge-group peers from `brand-to-server-mapping.json`, and publishes job outputs for downstream jobs.
+2. `deterministic-regression` — restores/builds/tests the solution, runs representative dry-runs for `applens`, `cloudarchitect`, `deploy`, `compute`, and `fileshares`, then runs the fingerprint gate and uploads a fingerprint diff artifact bundle.
+3. `ai-regression` — runs only when the classifier marks the PR as AI-involved; fork PRs fail with a trusted-run-required message, while trusted PRs run fingerprint + prompt regression gates and upload prompt regression artifacts.
+
+This workflow complements `build-and-test.yml`: the standard CI workflow proves the code builds and tests, while the regression workflow proves pipeline output changes are understood before merge.
+
+---
+
 ### CHANGELOG Gate (AD-571)
 
 Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` applies an optional pre-processing gate that evaluates whether the namespace has changes in the upstream `servers/Azure.Mcp.Server/CHANGELOG.md`.

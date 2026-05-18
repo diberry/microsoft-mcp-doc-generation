@@ -1,0 +1,526 @@
+name: Pipeline Output Regression
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/**'
+      - 'mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.RawTools/**'
+      - 'mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/**'
+      - 'mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/**'
+      - 'mcp-tools/DocGeneration.Steps.ToolGeneration.Composition/**'
+      - 'mcp-tools/DocGeneration.Steps.ToolGeneration.Improvements/**'
+      - 'mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/**'
+      - 'mcp-tools/DocGeneration.Steps.HorizontalArticles/**'
+      - 'mcp-tools/DocGeneration.Steps.SkillsRelevance/**'
+      - 'mcp-tools/DocGeneration.PipelineRunner/**'
+      - 'mcp-tools/DocGeneration.Tools.Fingerprint/**'
+      - 'mcp-tools/templates/**'
+      - 'mcp-tools/scripts/**'
+      - 'shared/**'
+      - 'mcp-tools/data/common-parameters.json'
+      - 'mcp-tools/data/compound-words.json'
+      - 'mcp-tools/data/stop-words.json'
+      - 'mcp-tools/data/nl-parameters.json'
+      - 'mcp-tools/data/nl-parameter-identifiers.json'
+      - 'mcp-tools/data/config.json'
+      - 'mcp-tools/data/static-text-replacement.json'
+      - 'mcp-tools/data/brand-to-server-mapping.json'
+      - 'mcp-tools/data/service-doc-links.json'
+      - 'mcp-tools/data/transformation-config.json'
+      - 'mcp-tools/acronym-definitions.json'
+      - 'mcp-tools/**/prompts/**'
+      - 'start.sh'
+      - 'prompt-regression.sh'
+      - 'merge-namespaces.sh'
+      - '.github/workflows/pipeline-output-regression.yml'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  classify-change:
+    name: classify-change
+    runs-on: ubuntu-latest
+    outputs:
+      requires_deterministic: ${{ steps.classify.outputs.requires_deterministic }}
+      requires_ai: ${{ steps.classify.outputs.requires_ai }}
+      affected_steps: ${{ steps.classify.outputs.affected_steps }}
+      namespaces_to_run: ${{ steps.classify.outputs.namespaces_to_run }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Classify changed files
+        id: classify
+        uses: actions/github-script@v7
+        env:
+          REPRESENTATIVE_NAMESPACES: '["applens","cloudarchitect","deploy","compute","fileshares"]'
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const changedFiles = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            const files = changedFiles.map(file => file.filename);
+            const representativeNamespaces = JSON.parse(process.env.REPRESENTATIVE_NAMESPACES);
+            const brandMappingPath = path.join(process.env.GITHUB_WORKSPACE, 'mcp-tools', 'data', 'brand-to-server-mapping.json');
+            const brandMapping = JSON.parse(fs.readFileSync(brandMappingPath, 'utf8'));
+
+            const deterministicFiles = new Set([
+              'mcp-tools/data/common-parameters.json',
+              'mcp-tools/data/compound-words.json',
+              'mcp-tools/data/stop-words.json',
+              'mcp-tools/data/nl-parameters.json',
+              'mcp-tools/data/nl-parameter-identifiers.json',
+              'mcp-tools/data/config.json',
+            ]);
+
+            const mixedFiles = new Map([
+              ['mcp-tools/data/static-text-replacement.json', [1, 4, 6]],
+              ['mcp-tools/data/brand-to-server-mapping.json', [0, 1, 3, 4, 6]],
+              ['mcp-tools/data/service-doc-links.json', [4]],
+              ['mcp-tools/acronym-definitions.json', [4]],
+              ['mcp-tools/data/transformation-config.json', [6]],
+              ['start.sh', [0, 1, 2, 3, 4, 5, 6]],
+              ['prompt-regression.sh', [2, 3, 4, 6]],
+              ['merge-namespaces.sh', [4, 6]],
+            ]);
+
+            const deterministicPrefixes = [
+              { prefix: 'mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/', steps: [1] },
+              { prefix: 'mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.RawTools/', steps: [1] },
+              { prefix: 'mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/', steps: [2] },
+              { prefix: 'mcp-tools/DocGeneration.Steps.SkillsRelevance/', steps: [5] },
+            ];
+
+            const aiPrefixes = [
+              { prefix: 'mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/', steps: [2] },
+              { prefix: 'mcp-tools/DocGeneration.Steps.ToolGeneration.Composition/', steps: [3] },
+              { prefix: 'mcp-tools/DocGeneration.Steps.ToolGeneration.Improvements/', steps: [3] },
+              { prefix: 'mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/', steps: [4] },
+              { prefix: 'mcp-tools/DocGeneration.Steps.HorizontalArticles/', steps: [6] },
+            ];
+
+            const mixedPrefixes = [
+              { prefix: 'mcp-tools/DocGeneration.PipelineRunner/', steps: [0, 1, 2, 3, 4, 5, 6] },
+              { prefix: 'mcp-tools/scripts/', steps: [0, 1, 2, 3, 4, 5, 6] },
+              { prefix: 'shared/', steps: [0, 1, 2, 3, 4, 5, 6] },
+              { prefix: 'mcp-tools/templates/', steps: [1, 2, 3, 4, 6] },
+            ];
+
+            const knownNamespaces = brandMapping
+              .map(entry => ({
+                namespace: String(entry.mcpServerName).toLowerCase(),
+                matchers: [entry.mcpServerName, entry.fileName, entry.mergeGroup]
+                  .filter(Boolean)
+                  .map(value => String(value).toLowerCase()),
+              }))
+              .sort((a, b) => b.namespace.length - a.namespace.length);
+
+            const mergeGroups = new Map();
+            for (const entry of brandMapping) {
+              if (!entry.mergeGroup) continue;
+              const group = String(entry.mergeGroup).toLowerCase();
+              const ns = String(entry.mcpServerName).toLowerCase();
+              const existing = mergeGroups.get(group) ?? new Set();
+              existing.add(ns);
+              mergeGroups.set(group, existing);
+            }
+
+            let requiresDeterministic = false;
+            let requiresAi = false;
+            let qualifies = false;
+            const affectedSteps = new Set();
+            const namespaces = new Set();
+
+            const addSteps = (steps) => steps.forEach(step => affectedSteps.add(step));
+            const pathMatchesNamespace = (file, value) => {
+              const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const pattern = new RegExp(`(^|[\\/._-])${escaped}($|[\\/._-])`, 'i');
+              return pattern.test(file);
+            };
+
+            for (const file of files) {
+              let matched = false;
+
+              if (file.includes('/templates/')) {
+                qualifies = true;
+                requiresDeterministic = true;
+                requiresAi = true;
+                addSteps([1, 2, 3, 4, 6]);
+                matched = true;
+              }
+
+              if (file.includes('/prompts/')) {
+                qualifies = true;
+                requiresAi = true;
+                addSteps([2, 3, 4, 6]);
+                matched = true;
+              }
+
+              if (deterministicFiles.has(file)) {
+                qualifies = true;
+                requiresDeterministic = true;
+                addSteps(file === 'mcp-tools/data/config.json' ? [1] : [0, 1]);
+                matched = true;
+              }
+
+              if (mixedFiles.has(file)) {
+                qualifies = true;
+                requiresDeterministic = true;
+                requiresAi = true;
+                addSteps(mixedFiles.get(file));
+                matched = true;
+              }
+
+              for (const rule of deterministicPrefixes) {
+                if (file.startsWith(rule.prefix)) {
+                  qualifies = true;
+                  requiresDeterministic = true;
+                  addSteps(rule.steps);
+                  matched = true;
+                }
+              }
+
+              for (const rule of aiPrefixes) {
+                if (file.startsWith(rule.prefix)) {
+                  qualifies = true;
+                  requiresAi = true;
+                  addSteps(rule.steps);
+                  matched = true;
+                }
+              }
+
+              for (const rule of mixedPrefixes) {
+                if (file.startsWith(rule.prefix)) {
+                  qualifies = true;
+                  requiresDeterministic = true;
+                  requiresAi = true;
+                  addSteps(rule.steps);
+                  matched = true;
+                }
+              }
+
+              if (!matched) {
+                continue;
+              }
+
+              const loweredFile = file.toLowerCase();
+              for (const entry of knownNamespaces) {
+                if (entry.matchers.some(value => pathMatchesNamespace(loweredFile, value))) {
+                  namespaces.add(entry.namespace);
+                }
+              }
+            }
+
+            const expandedNamespaces = new Set(namespaces);
+            for (const entry of brandMapping) {
+              if (!entry.mergeGroup) continue;
+              const group = String(entry.mergeGroup).toLowerCase();
+              const ns = String(entry.mcpServerName).toLowerCase();
+              if (expandedNamespaces.has(ns)) {
+                for (const peer of mergeGroups.get(group) ?? []) {
+                  expandedNamespaces.add(peer);
+                }
+              }
+            }
+
+            if (expandedNamespaces.size === 0 && qualifies) {
+              representativeNamespaces.forEach(namespaceName => expandedNamespaces.add(namespaceName));
+            }
+
+            const sortedSteps = [...affectedSteps].sort((a, b) => a - b);
+            const sortedNamespaces = [...expandedNamespaces].sort((a, b) => a.localeCompare(b));
+
+            core.setOutput('requires_deterministic', qualifies && requiresDeterministic ? 'true' : 'false');
+            core.setOutput('requires_ai', qualifies && requiresAi ? 'true' : 'false');
+            core.setOutput('affected_steps', JSON.stringify(sortedSteps));
+            core.setOutput('namespaces_to_run', JSON.stringify(sortedNamespaces));
+
+            const summary = core.summary
+              .addHeading('Pipeline regression classification')
+              .addRaw(`Changed files: ${files.length}<br>`, true)
+              .addRaw(`Requires deterministic: ${qualifies && requiresDeterministic}<br>`, true)
+              .addRaw(`Requires AI: ${qualifies && requiresAi}<br>`, true)
+              .addRaw(`Affected steps: ${sortedSteps.length > 0 ? sortedSteps.join(', ') : '(none)'}<br>`, true)
+              .addRaw(`Namespaces to run: ${sortedNamespaces.length > 0 ? sortedNamespaces.join(', ') : '(skip downstream jobs)'}<br>`, true)
+              .addHeading('Touched paths', 2);
+
+            files.forEach(file => summary.addRaw(`- ${file}<br>`, true));
+            await summary.write();
+
+  deterministic-regression:
+    name: deterministic-regression
+    runs-on: ubuntu-latest
+    needs: classify-change
+    if: ${{ needs.classify-change.outputs.requires_deterministic == 'true' }}
+    timeout-minutes: 45
+    env:
+      REPRESENTATIVE_NAMESPACES: 'applens cloudarchitect deploy compute fileshares'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+          include-prerelease: true
+
+      - name: Restore dependencies
+        run: dotnet restore mcp-doc-generation.sln
+
+      - name: Build solution
+        run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
+
+      - name: Filter fingerprint baseline to representative namespaces
+        shell: bash
+        run: |
+          python <<'PY'
+          import json
+          import os
+          import shutil
+
+          keep = set(os.environ['REPRESENTATIVE_NAMESPACES'].split())
+          with open('fingerprint-baseline.json', 'r', encoding='utf-8-sig') as handle:
+              data = json.load(handle)
+
+          shutil.copyfile('fingerprint-baseline.json', 'fingerprint-baseline.full.json')
+          data['namespaces'] = {
+              key: value
+              for key, value in data.get('namespaces', {}).items()
+              if key in keep
+          }
+
+          with open('fingerprint-baseline.json', 'w', encoding='utf-8') as handle:
+              json.dump(data, handle, indent=2)
+              handle.write('\n')
+          PY
+
+      - name: Run solution tests
+        run: dotnet test mcp-doc-generation.sln --configuration Release --verbosity normal
+
+      - name: Representative deterministic dry-runs
+        shell: bash
+        run: |
+          set -euo pipefail
+          for namespace in $REPRESENTATIVE_NAMESPACES; do
+            echo "Dry-run: $namespace"
+            dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
+              --namespace "$namespace" \
+              --steps 1 \
+              --output "./generated-$namespace" \
+              --skip-build \
+              --skip-changelog-gate \
+              --skip-env-validation \
+              --dry-run
+          done
+
+      - name: Generate deterministic regression outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf generated-*
+          mkdir -p artifacts
+          for namespace in $REPRESENTATIVE_NAMESPACES; do
+            echo "Generate Step 1: $namespace"
+            dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
+              --namespace "$namespace" \
+              --steps 1 \
+              --output "./generated-$namespace" \
+              --skip-build \
+              --skip-changelog-gate \
+              --skip-env-validation
+          done
+
+      - name: Run fingerprint gate on representative deterministic corpus
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
+            --namespace compute \
+            --steps 1 \
+            --output "./generated-compute" \
+            --skip-build \
+            --skip-changelog-gate \
+            --skip-env-validation \
+            --run-fingerprint-gate | tee artifacts/deterministic-regression.log
+
+      - name: Generate fingerprint diff summary
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/DocGeneration.Tools.Fingerprint.csproj --configuration Release --no-build -- \
+            snapshot --output artifacts/fingerprint-candidate.json --repo-root "$GITHUB_WORKSPACE"
+          dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/DocGeneration.Tools.Fingerprint.csproj --configuration Release --no-build -- \
+            diff --baseline fingerprint-baseline.json --candidate artifacts/fingerprint-candidate.json --output artifacts/fingerprint-diff-summary.md
+
+      - name: Upload fingerprint artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deterministic-fingerprint-diff
+          path: |
+            artifacts/fingerprint-diff-summary.md
+            artifacts/fingerprint-candidate.json
+            artifacts/deterministic-regression.log
+          retention-days: 10
+
+  ai-regression:
+    name: ai-regression
+    runs-on: ubuntu-latest
+    needs: classify-change
+    if: ${{ needs.classify-change.outputs.requires_ai == 'true' }}
+    timeout-minutes: 120
+    env:
+      REPRESENTATIVE_NAMESPACES: 'applens cloudarchitect deploy compute fileshares'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Fail for fork PRs
+        if: ${{ github.event.pull_request.head.repo.fork }}
+        shell: bash
+        run: |
+          echo 'AI regression required but fork PRs cannot access AI credentials'
+          exit 1
+
+      - name: Setup .NET SDKs
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+          include-prerelease: true
+
+      - name: Restore dependencies
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        run: dotnet restore mcp-doc-generation.sln
+
+      - name: Build solution
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
+
+      - name: Filter fingerprint baseline to representative namespaces
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        shell: bash
+        run: |
+          python <<'PY'
+          import json
+          import os
+          import shutil
+
+          keep = set(os.environ['REPRESENTATIVE_NAMESPACES'].split())
+          with open('fingerprint-baseline.json', 'r', encoding='utf-8-sig') as handle:
+              data = json.load(handle)
+
+          shutil.copyfile('fingerprint-baseline.json', 'fingerprint-baseline.full.json')
+          data['namespaces'] = {
+              key: value
+              for key, value in data.get('namespaces', {}).items()
+              if key in keep
+          }
+
+          with open('fingerprint-baseline.json', 'w', encoding='utf-8') as handle:
+              json.dump(data, handle, indent=2)
+              handle.write('\n')
+          PY
+
+      - name: Run solution tests
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        run: dotnet test mcp-doc-generation.sln --configuration Release --verbosity normal
+
+      - name: Representative AI dry-runs
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for namespace in $REPRESENTATIVE_NAMESPACES; do
+            echo "Dry-run: $namespace"
+            dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
+              --namespace "$namespace" \
+              --steps 1,2,3,4,6 \
+              --output "./generated-$namespace" \
+              --skip-build \
+              --skip-changelog-gate \
+              --dry-run
+          done
+
+      - name: Generate AI regression corpus
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        shell: bash
+        env:
+          FOUNDRY_API_KEY: ${{ secrets.FOUNDRY_API_KEY }}
+          FOUNDRY_ENDPOINT: ${{ secrets.FOUNDRY_ENDPOINT }}
+          FOUNDRY_MODEL_NAME: ${{ secrets.FOUNDRY_MODEL_NAME }}
+          FOUNDRY_MODEL_API_VERSION: ${{ secrets.FOUNDRY_MODEL_API_VERSION }}
+        run: |
+          set -euo pipefail
+          rm -rf generated-*
+          rm -rf mcp-tools/DocGeneration.PromptRegression.Tests/Candidates/*
+          rm -rf mcp-tools/DocGeneration.PromptRegression.Tests/Reports/*
+          mkdir -p artifacts
+          for namespace in $REPRESENTATIVE_NAMESPACES; do
+            echo "Generate Steps 1,2,3,4,6: $namespace"
+            dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
+              --namespace "$namespace" \
+              --steps 1,2,3,4,6 \
+              --output "./generated-$namespace" \
+              --skip-build \
+              --skip-changelog-gate
+          done
+
+      - name: Run AI validation gates
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        shell: bash
+        env:
+          FOUNDRY_API_KEY: ${{ secrets.FOUNDRY_API_KEY }}
+          FOUNDRY_ENDPOINT: ${{ secrets.FOUNDRY_ENDPOINT }}
+          FOUNDRY_MODEL_NAME: ${{ secrets.FOUNDRY_MODEL_NAME }}
+          FOUNDRY_MODEL_API_VERSION: ${{ secrets.FOUNDRY_MODEL_API_VERSION }}
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
+            --namespace applens \
+            --steps 1,2,3,4,6 \
+            --output "./generated-applens" \
+            --skip-build \
+            --skip-changelog-gate \
+            --run-fingerprint-gate \
+            --run-prompt-regression-gate | tee artifacts/ai-regression.log
+
+      - name: Generate prompt regression report
+        if: ${{ !github.event.pull_request.head.repo.fork && always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./prompt-regression.sh compare
+          ./prompt-regression.sh report > artifacts/prompt-regression-report.md
+
+      - name: Upload AI regression artifacts
+        if: ${{ !github.event.pull_request.head.repo.fork && always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-regression-report
+          path: |
+            artifacts/ai-regression.log
+            artifacts/prompt-regression-report.md
+            mcp-tools/DocGeneration.PromptRegression.Tests/Reports/fingerprint-diff.md
+          retention-days: 10

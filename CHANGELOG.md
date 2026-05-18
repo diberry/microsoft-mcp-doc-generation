@@ -14,6 +14,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Pipeline Output Regression workflow** — Added `.github/workflows/pipeline-output-regression.yml` to classify PR changes, run deterministic regression checks for representative namespaces, and run AI regression gates on trusted PRs when prompts or AI-involved generation steps change. The workflow publishes fingerprint and prompt-regression artifacts and fails safely for fork PRs that require AI credentials. Closes #599.
 - **Source Outline Cataloging step** (`skills-generation`) — New pipeline step inserted between fetch and parse in `SkillPipelineOrchestrator`. Extracts all `##` and `###` headings from each source `SKILL.md`, compares them against known mapping rules (`HeadingMappingRules`), and emits warnings for unmapped headings. Results are persisted to `data/source-outlines.json` after batch processing. New types: `SkillOutline`, `HeadingEntry`, `HeadingMappingRules`, `SourceOutlineCataloger`, `SourceOutlineWriter`. Implements PRD-587. (#587)
 - **Install latest @azure/mcp before tools-list generation** — Bootstrap step now runs `npm install @azure/mcp@latest --save` before the pinned `npm install`, ensuring the tools-list is always generated from the latest published package. Failure is fatal (the whole point is to use the latest). New `--skip-npm-update` CLI flag opts out for offline or reproducible builds. (#)
 
