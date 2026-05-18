@@ -21,8 +21,8 @@
 
 <!-- 
 Required for any PR touching generation logic or configuration.
-The pipeline-output-regression workflow generates this automatically.
-Copy the relevant section from workflow artifacts, or fill manually.
+Fill from the pipeline-output-regression workflow artifact results.
+For infrastructure-only changes, set all gates to "skip".
 -->
 
 ```yaml

@@ -265,11 +265,23 @@ jobs:
     if: ${{ needs.classify-change.outputs.requires_deterministic == 'true' }}
     timeout-minutes: 45
     env:
-      REPRESENTATIVE_NAMESPACES: 'applens cloudarchitect deploy compute fileshares'
+      NAMESPACES_JSON: ${{ needs.classify-change.outputs.namespaces_to_run }}
+      AFFECTED_STEPS_JSON: ${{ needs.classify-change.outputs.affected_steps }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Resolve namespaces and steps
+        id: resolve
+        shell: bash
+        run: |
+          NAMESPACES=$(echo "$NAMESPACES_JSON" | python -c "import sys,json; print(' '.join(json.load(sys.stdin)))")
+          STEPS=$(echo "$AFFECTED_STEPS_JSON" | python -c "import sys,json; items=json.load(sys.stdin); det=[s for s in items if s in [0,1,2,5]]; print(','.join(map(str,det)) if det else '1')")
+          echo "namespaces=$NAMESPACES" >> "$GITHUB_OUTPUT"
+          echo "steps=$STEPS" >> "$GITHUB_OUTPUT"
+          echo "Resolved namespaces: $NAMESPACES"
+          echo "Resolved deterministic steps: $STEPS"
 
       - name: Setup .NET SDKs
         uses: actions/setup-dotnet@v4
@@ -285,15 +297,17 @@ jobs:
       - name: Build solution
         run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
 
-      - name: Filter fingerprint baseline to representative namespaces
+      - name: Filter fingerprint baseline to target namespaces
         shell: bash
+        env:
+          TARGET_NAMESPACES: ${{ steps.resolve.outputs.namespaces }}
         run: |
           python <<'PY'
           import json
           import os
           import shutil
 
-          keep = set(os.environ['REPRESENTATIVE_NAMESPACES'].split())
+          keep = set(os.environ['TARGET_NAMESPACES'].split())
           with open('fingerprint-baseline.json', 'r', encoding='utf-8-sig') as handle:
               data = json.load(handle)
 
@@ -312,48 +326,38 @@ jobs:
       - name: Run solution tests
         run: dotnet test mcp-doc-generation.sln --configuration Release --verbosity normal
 
-      - name: Representative deterministic dry-runs
-        shell: bash
-        run: |
-          set -euo pipefail
-          for namespace in $REPRESENTATIVE_NAMESPACES; do
-            echo "Dry-run: $namespace"
-            dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
-              --namespace "$namespace" \
-              --steps 1 \
-              --output "./generated-$namespace" \
-              --skip-build \
-              --skip-changelog-gate \
-              --skip-env-validation \
-              --dry-run
-          done
-
       - name: Generate deterministic regression outputs
         shell: bash
+        env:
+          TARGET_NAMESPACES: ${{ steps.resolve.outputs.namespaces }}
+          TARGET_STEPS: ${{ steps.resolve.outputs.steps }}
         run: |
           set -euo pipefail
           rm -rf generated-*
           mkdir -p artifacts
-          for namespace in $REPRESENTATIVE_NAMESPACES; do
-            echo "Generate Step 1: $namespace"
+          for namespace in $TARGET_NAMESPACES; do
+            echo "Generate steps $TARGET_STEPS: $namespace"
             dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
               --namespace "$namespace" \
-              --steps 1 \
+              --steps "$TARGET_STEPS" \
               --output "./generated-$namespace" \
               --skip-build \
               --skip-changelog-gate \
               --skip-env-validation
           done
 
-      - name: Run fingerprint gate on representative deterministic corpus
+      - name: Run fingerprint gate
         shell: bash
+        env:
+          TARGET_NAMESPACES: ${{ steps.resolve.outputs.namespaces }}
+          TARGET_STEPS: ${{ steps.resolve.outputs.steps }}
         run: |
           set -euo pipefail
-          set -o pipefail
+          FIRST_NS=$(echo $TARGET_NAMESPACES | awk '{print $1}')
           dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
-            --namespace compute \
-            --steps 1 \
-            --output "./generated-compute" \
+            --namespace "$FIRST_NS" \
+            --steps "$TARGET_STEPS" \
+            --output "./generated-$FIRST_NS" \
             --skip-build \
             --skip-changelog-gate \
             --skip-env-validation \
@@ -387,7 +391,8 @@ jobs:
     if: ${{ needs.classify-change.outputs.requires_ai == 'true' }}
     timeout-minutes: 120
     env:
-      REPRESENTATIVE_NAMESPACES: 'applens cloudarchitect deploy compute fileshares'
+      NAMESPACES_JSON: ${{ needs.classify-change.outputs.namespaces_to_run }}
+      AFFECTED_STEPS_JSON: ${{ needs.classify-change.outputs.affected_steps }}
 
     steps:
       - name: Checkout repository
@@ -399,6 +404,18 @@ jobs:
         run: |
           echo 'AI regression required but fork PRs cannot access AI credentials'
           exit 1
+
+      - name: Resolve namespaces and steps
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        id: resolve
+        shell: bash
+        run: |
+          NAMESPACES=$(echo "$NAMESPACES_JSON" | python -c "import sys,json; print(' '.join(json.load(sys.stdin)))")
+          STEPS=$(echo "$AFFECTED_STEPS_JSON" | python -c "import sys,json; items=json.load(sys.stdin); ai=[s for s in items if s in [2,3,4,6]]; all_steps=sorted(set([1]+ai)); print(','.join(map(str,all_steps)))")
+          echo "namespaces=$NAMESPACES" >> "$GITHUB_OUTPUT"
+          echo "steps=$STEPS" >> "$GITHUB_OUTPUT"
+          echo "Resolved namespaces: $NAMESPACES"
+          echo "Resolved AI steps (with step 1 prereq): $STEPS"
 
       - name: Setup .NET SDKs
         if: ${{ !github.event.pull_request.head.repo.fork }}
@@ -417,16 +434,18 @@ jobs:
         if: ${{ !github.event.pull_request.head.repo.fork }}
         run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
 
-      - name: Filter fingerprint baseline to representative namespaces
+      - name: Filter fingerprint baseline to target namespaces
         if: ${{ !github.event.pull_request.head.repo.fork }}
         shell: bash
+        env:
+          TARGET_NAMESPACES: ${{ steps.resolve.outputs.namespaces }}
         run: |
           python <<'PY'
           import json
           import os
           import shutil
 
-          keep = set(os.environ['REPRESENTATIVE_NAMESPACES'].split())
+          keep = set(os.environ['TARGET_NAMESPACES'].split())
           with open('fingerprint-baseline.json', 'r', encoding='utf-8-sig') as handle:
               data = json.load(handle)
 
@@ -446,22 +465,6 @@ jobs:
         if: ${{ !github.event.pull_request.head.repo.fork }}
         run: dotnet test mcp-doc-generation.sln --configuration Release --verbosity normal
 
-      - name: Representative AI dry-runs
-        if: ${{ !github.event.pull_request.head.repo.fork }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          for namespace in $REPRESENTATIVE_NAMESPACES; do
-            echo "Dry-run: $namespace"
-            dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
-              --namespace "$namespace" \
-              --steps 1,2,3,4,6 \
-              --output "./generated-$namespace" \
-              --skip-build \
-              --skip-changelog-gate \
-              --dry-run
-          done
-
       - name: Generate AI regression corpus
         if: ${{ !github.event.pull_request.head.repo.fork }}
         shell: bash
@@ -470,21 +473,31 @@ jobs:
           FOUNDRY_ENDPOINT: ${{ secrets.FOUNDRY_ENDPOINT }}
           FOUNDRY_MODEL_NAME: ${{ secrets.FOUNDRY_MODEL_NAME }}
           FOUNDRY_MODEL_API_VERSION: ${{ secrets.FOUNDRY_MODEL_API_VERSION }}
+          TARGET_NAMESPACES: ${{ steps.resolve.outputs.namespaces }}
+          TARGET_STEPS: ${{ steps.resolve.outputs.steps }}
         run: |
           set -euo pipefail
           rm -rf generated-*
           rm -rf mcp-tools/DocGeneration.PromptRegression.Tests/Candidates/*
           rm -rf mcp-tools/DocGeneration.PromptRegression.Tests/Reports/*
           mkdir -p artifacts
-          for namespace in $REPRESENTATIVE_NAMESPACES; do
-            echo "Generate Steps 1,2,3,4,6: $namespace"
+          for namespace in $TARGET_NAMESPACES; do
+            echo "Generate steps $TARGET_STEPS: $namespace"
             dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
               --namespace "$namespace" \
-              --steps 1,2,3,4,6 \
+              --steps "$TARGET_STEPS" \
               --output "./generated-$namespace" \
               --skip-build \
               --skip-changelog-gate
           done
+
+      - name: Run prompt regression comparison
+        if: ${{ !github.event.pull_request.head.repo.fork }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./prompt-regression.sh compare
+          ./prompt-regression.sh report > artifacts/prompt-regression-report.md
 
       - name: Run AI validation gates
         if: ${{ !github.event.pull_request.head.repo.fork }}
@@ -494,25 +507,19 @@ jobs:
           FOUNDRY_ENDPOINT: ${{ secrets.FOUNDRY_ENDPOINT }}
           FOUNDRY_MODEL_NAME: ${{ secrets.FOUNDRY_MODEL_NAME }}
           FOUNDRY_MODEL_API_VERSION: ${{ secrets.FOUNDRY_MODEL_API_VERSION }}
+          TARGET_NAMESPACES: ${{ steps.resolve.outputs.namespaces }}
+          TARGET_STEPS: ${{ steps.resolve.outputs.steps }}
         run: |
           set -euo pipefail
-          set -o pipefail
+          FIRST_NS=$(echo $TARGET_NAMESPACES | awk '{print $1}')
           dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
-            --namespace applens \
-            --steps 1,2,3,4,6 \
-            --output "./generated-applens" \
+            --namespace "$FIRST_NS" \
+            --steps "$TARGET_STEPS" \
+            --output "./generated-$FIRST_NS" \
             --skip-build \
             --skip-changelog-gate \
             --run-fingerprint-gate \
             --run-prompt-regression-gate | tee artifacts/ai-regression.log
-
-      - name: Generate prompt regression report
-        if: ${{ !github.event.pull_request.head.repo.fork && always() }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          ./prompt-regression.sh compare
-          ./prompt-regression.sh report > artifacts/prompt-regression-report.md
 
       - name: Upload AI regression artifacts
         if: ${{ !github.event.pull_request.head.repo.fork && always() }}
@@ -522,5 +529,5 @@ jobs:
           path: |
             artifacts/ai-regression.log
             artifacts/prompt-regression-report.md
-            mcp-tools/DocGeneration.PromptRegression.Tests/Reports/fingerprint-diff.md
+            mcp-tools/DocGeneration.PromptRegression.Tests/Reports/
           retention-days: 10

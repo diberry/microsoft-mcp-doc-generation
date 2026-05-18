@@ -33,17 +33,20 @@ Determines which gates to run based on changed files:
 - **requires_deterministic** — file touches deterministic pipeline steps (annotations, parameters, raw tools)
 - **requires_ai** — file touches AI-dependent steps (prompts, composition, improvements, cleanup, horizontal articles)
 - **affected_steps** — list of pipeline steps (0–6) affected by the change
-- **namespaces_to_run** — targeted namespaces if path contains a namespace name; otherwise falls back to 5 representative namespaces
+- **namespaces_to_run** — targeted namespaces if path contains a namespace name; otherwise falls back to 5 representative namespaces (applens, cloudarchitect, deploy, compute, fileshares)
+
+Downstream jobs consume these outputs to run only relevant gates on relevant namespaces.
 
 ### 2. deterministic-regression
 
 Runs when `requires_deterministic == true`:
 
-1. Builds the full .NET solution
-2. Runs all solution tests
-3. Executes Step 1 (annotations/parameters/raw) for representative namespaces
-4. Runs the fingerprint gate comparing output against `fingerprint-baseline.json`
-5. Generates a fingerprint diff summary
+1. Resolves target namespaces and deterministic steps from classify output
+2. Builds the full .NET solution
+3. Runs all solution tests
+4. Executes affected deterministic steps (subset of 0, 1, 2, 5) for target namespaces
+5. Runs the fingerprint gate comparing output against `fingerprint-baseline.json`
+6. Generates a fingerprint diff summary
 
 **Timeout**: 45 minutes
 
@@ -52,11 +55,13 @@ Runs when `requires_deterministic == true`:
 Runs when `requires_ai == true`:
 
 1. Fails immediately for fork PRs (no AI credential access)
-2. Builds the full .NET solution
-3. Runs all solution tests
-4. Executes Steps 1, 2, 3, 4, 6 for representative namespaces
-5. Runs fingerprint gate + prompt regression gate
-6. Generates prompt regression report
+2. Resolves target namespaces and AI steps from classify output
+3. Builds the full .NET solution
+4. Runs all solution tests
+5. Executes affected AI steps (always includes step 1 as prerequisite) for target namespaces
+6. Runs prompt regression comparison (populates candidates and generates report)
+7. Runs fingerprint gate + prompt regression gate
+8. Uploads regression artifacts
 
 **Timeout**: 120 minutes
 
