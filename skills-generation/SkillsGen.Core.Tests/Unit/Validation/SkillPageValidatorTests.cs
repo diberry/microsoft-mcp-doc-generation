@@ -39,6 +39,11 @@ public class SkillPageValidatorTests
 
         The Azure Storage skill gives knowledge about storage services, blob operations, file shares, queues, and table storage access patterns in Azure.
 
+        ## Example prompts
+
+        - "How do I create a storage account?"
+        - "List my blob containers"
+
         ## Related content
 
         - [Azure Storage documentation](/azure/storage)
@@ -65,6 +70,10 @@ public class SkillPageValidatorTests
         ## What it provides
 
         Knowledge about Azure quotas and usage limits for your subscriptions and resources.
+
+        ## Example prompts
+
+        - "What are my current quotas?"
 
         ## Related content
 
@@ -338,5 +347,118 @@ public class SkillPageValidatorTests
         var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
 
         result.Warnings.Should().NotContain(w => w.Contains("LINK_TYPO"));
+    }
+
+    [Fact]
+    public void Validate_MissingExamplePrompts_ReturnsError()
+    {
+        var content = """
+            ---
+            title: Azure skill for Test
+            description: Test
+            ---
+            # Azure skill for Test
+
+            Some content about this skill with GitHub Copilot.
+
+            ## Prerequisites
+
+            - GitHub Copilot
+
+            ### When to use this skill
+
+            Use it.
+
+            ## What it provides
+
+            Things about stuff.
+
+            ## Related content
+
+            - [Docs](/azure/docs)
+            """;
+        var result = _validator.Validate(content, 2, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Errors.Should().Contain(e => e.Contains("Example prompts"));
+    }
+
+    [Fact]
+    public void Validate_MissingRelatedContent_ReturnsError()
+    {
+        var content = """
+            ---
+            title: Azure skill for Test
+            description: Test
+            ---
+            # Azure skill for Test
+
+            Some content about this skill with GitHub Copilot.
+
+            ## Prerequisites
+
+            - GitHub Copilot
+
+            ### When to use this skill
+
+            Use it.
+
+            ## What it provides
+
+            Things about stuff.
+
+            ## Example prompts
+
+            - "How do I do things?"
+            """;
+        var result = _validator.Validate(content, 2, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Errors.Should().Contain(e => e.Contains("Related content"));
+    }
+
+    // §7.1: Prohibited implementation-detail sections
+
+    [Theory]
+    [InlineData("## MCP tools")]
+    [InlineData("## Sub-skills")]
+    [InlineData("## Suggested workflow")]
+    public void Validate_ProhibitedSection_ReturnsError(string prohibitedSection)
+    {
+        var content = $"""
+            ---
+            title: Azure skill for Test
+            description: Test
+            ---
+            # Azure skill for Test
+
+            Content about this skill with GitHub Copilot.
+
+            ## Prerequisites
+
+            - GitHub Copilot
+
+            ### When to use this skill
+
+            Use it.
+
+            ## What it provides
+
+            Things.
+
+            {prohibitedSection}
+
+            Some prohibited content here.
+
+            ## Example prompts
+
+            - "How do I test?"
+
+            ## Related content
+
+            - [Docs](/azure/docs)
+            """;
+        var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.Contains("POLICY") && e.Contains("Prohibited"));
     }
 }

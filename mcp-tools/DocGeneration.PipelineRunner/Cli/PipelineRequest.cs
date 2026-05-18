@@ -12,7 +12,8 @@ public sealed record PipelineRequest(
     string? McpBranch = null,
     bool SkipChangelogGate = false,
     bool RunFingerprintGate = false,
-    bool RunPromptRegressionGate = false)
+    bool RunPromptRegressionGate = false,
+    bool SkipNpmUpdate = false)
 {
     /// <summary>
     /// Default upstream branch for fetching files from the microsoft/mcp repository.

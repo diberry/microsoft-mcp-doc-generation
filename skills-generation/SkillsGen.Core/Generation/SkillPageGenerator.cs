@@ -29,7 +29,7 @@ public class SkillPageGenerator : ISkillPageGenerator
         return result;
     }
 
-    private static readonly int MaxExamplePrompts = 10;
+    private static readonly int MaxExamplePrompts = 8; // §7.3: Aligned to editorial standard per PR #8978
 
     internal static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData, ILogger? logger = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null, string? skillVersion = null)
     {
@@ -139,7 +139,7 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["showToolsSection"] = tierAssessment.ShowToolsSection,
             ["showTriggersSection"] = tierAssessment.ShowTriggersSection,
             ["showDecisionGuidance"] = tierAssessment.ShowDecisionGuidance,
-            ["showWorkflow"] = tierAssessment.ShowWorkflow,
+            ["showWorkflow"] = false, // §7.1: Workflow steps are implementation details excluded by §4.2
             ["showDetailedPrompts"] = tierAssessment.ShowDetailedPrompts,
             ["prerequisites"] = new Dictionary<string, object?>
             {
@@ -170,7 +170,7 @@ public class SkillPageGenerator : ISkillPageGenerator
                 ["environmentRequirements"] = prerequisites.EnvironmentRequirements
             },
             ["hasServices"] = skillData.Services.Count > 0,
-            ["hasMcpTools"] = skillData.McpTools.Count > 0,
+            ["hasMcpTools"] = false, // §7.1: MCP tools are implementation details excluded by §4.2
             ["hasWorkflow"] = skillData.WorkflowSteps.Count > 0,
             ["hasDecisionGuidance"] = skillData.DecisionGuidance.Count > 0,
             ["hasRelatedSkills"] = skillData.RelatedSkills.Count > 0,
@@ -203,9 +203,9 @@ public class SkillPageGenerator : ISkillPageGenerator
                     ["command"] = t.Command,
                     ["purpose"] = t.Purpose
                 }).ToList(),
-                ["hasMcpTools"] = s.McpTools.Count > 0
+                ["hasMcpTools"] = false // §7.1: Sub-skill MCP tools excluded by §4.2
             }).ToList(),
-            ["hasSubSkills"] = skillData.SubSkills.Count > 0,
+            ["hasSubSkills"] = false, // §7.1: Sub-skills are implementation details excluded by §4.2
             // Activation triggers
             ["activation"] = skillData.Activation != null ? new Dictionary<string, object?>
             {

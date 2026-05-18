@@ -38,15 +38,46 @@ Companion to the [root README](../README.md). This file documents the internal s
 
 Parameters in `data/common-parameters.json` (`--tenant`, `--subscription`, `--auth-method`, `--resource-group`, retry params) are excluded from parameter tables **unless** they are `Required` for a specific tool.
 
-Filtering is implemented in `ParameterGenerator.cs`:
+> **⚠️ IMPORTANT — Resource-group convention:** This filtering rule is frequently misunderstood during manual reviews. Reviewers and AI agents sometimes incorrectly add `resource-group` rows to parameter tables when the source marks them optional. The rule is: if `required` is empty/blank in `tools-list.json`, the parameter MUST NOT appear in the published table. This applies to ALL common parameters, but `resource-group` is the one most commonly added incorrectly because it "feels" required.
+
+Filtering is implemented in `ParameterFilterHelper.cs`:
 
 ```csharp
-var transformedOptions = allOptions
-    .Where(opt => !string.IsNullOrEmpty(opt.Name) && 
-                  (!commonParameterNames.Contains(opt.Name) || opt.Required == true))
-    .Select(opt => new { /* transform */ })
-    .ToList();
+// ParameterFilterHelper.cs — the authoritative inclusion logic
+public static bool ShouldInclude(Option opt, HashSet<string> commonParameterNames)
+{
+    return !string.IsNullOrEmpty(opt.Name)
+        && (!commonParameterNames.Contains(opt.Name) || opt.Required);
+}
 ```
+
+### Source JSON Structure (tools-list.json)
+
+The `tools-list.json` file is the source of truth for parameter verification:
+
+```json
+{
+  "status": "success",
+  "message": "...",
+  "results": [
+    {
+      "command": "compute vm get",       // namespace = first word ("compute")
+      "option": [
+        {
+          "name": "--resource-group",
+          "required": "True",            // "True" = Required; "" (blank) = Optional
+          "description": "..."
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Key fields for verification:**
+- `results[].command` — Full tool command. Namespace = first word.
+- `results[].option[].name` — CLI parameter name (e.g., `--resource-group`)
+- `results[].option[].required` — String `"True"` if required, empty string `""` if optional
 
 ## Configuration Files
 
