@@ -172,7 +172,8 @@ microsoft-mcp-doc-generation/
 │   ├── START-SCRIPTS.md         # Detailed start.sh options
 │   ├── ARCHITECTURE.md          # System architecture + data flow
 │   ├── GENERATION-SCRIPTS.md    # Script execution order
-│   └── PROJECT-GUIDE.md         # Full developer guide
+│   ├── PROJECT-GUIDE.md         # Full developer guide
+│   └── pipeline-regression-runbook.md  # CI regression gate contributor guide
 │
 ├── mcp-tools/             # Generation system
 │   ├── DocGeneration.PipelineRunner/          # Typed orchestrator (Steps 0-6)
