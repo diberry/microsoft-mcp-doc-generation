@@ -335,12 +335,19 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
     private static string ResolveFamilyName(string currentNamespace, IReadOnlyList<CliTool> matchingTools,
         IReadOnlyDictionary<string, BrandMapping> brandMappings)
     {
-        // Try the raw namespace name (with underscores) for brand mapping lookup first (#603).
-        // This handles decomposed namespaces like extension_azqr where the CLI command
-        // prefix is "extension" instead of the full underscore-separated namespace key.
+        // Direct lookup (works when namespace has no underscores, e.g. "monitor", "functionapp").
         if (brandMappings.ContainsKey(currentNamespace))
         {
             return currentNamespace.ToLowerInvariant();
+        }
+
+        // GetCurrentNamespace normalizes underscores to spaces ("extension_azqr" → "extension azqr").
+        // Re-introduce underscores for the brand mapping key lookup so that decomposed namespaces
+        // like "extension_azqr", "extension_cli_generate" resolve to their configured fileName (#603).
+        var underscoredNamespace = currentNamespace.Replace(' ', '_');
+        if (underscoredNamespace != currentNamespace && brandMappings.ContainsKey(underscoredNamespace))
+        {
+            return underscoredNamespace.ToLowerInvariant();
         }
 
         var firstCommand = matchingTools.Count > 0 ? matchingTools[0].Command : currentNamespace;
@@ -359,13 +366,18 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        // Step 1: Try content matching (annotation-based) on ALL files
+        // Step 1: Try content matching (annotation-based) on ALL files.
+        // Normalize familyName for comparison: underscores become spaces (e.g., "extension_azqr" → "extension azqr")
+        // so it matches the multi-token CLI commands recorded in @mcpcli annotations.
+        var normalizedFamilyName = familyName.Replace('_', ' ');
         var contentMatches = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var filePath in toolFiles)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var namespaceFromFile = await GetToolNamespaceFromFileAsync(filePath, cancellationToken);
-            if (string.Equals(namespaceFromFile, familyName, StringComparison.OrdinalIgnoreCase))
+            var commandFromFile = await GetToolCommandFromFileAsync(filePath, cancellationToken);
+            if (commandFromFile != null &&
+                (commandFromFile.Equals(normalizedFamilyName, StringComparison.OrdinalIgnoreCase) ||
+                 commandFromFile.StartsWith(normalizedFamilyName + " ", StringComparison.OrdinalIgnoreCase)))
             {
                 contentMatches.Add(filePath);
             }
@@ -390,7 +402,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             .ToArray();
     }
 
-    private static async Task<string?> GetToolNamespaceFromFileAsync(string filePath, CancellationToken cancellationToken)
+    private static async Task<string?> GetToolCommandFromFileAsync(string filePath, CancellationToken cancellationToken)
     {
         var content = await File.ReadAllTextAsync(filePath, cancellationToken);
         var markerIndex = content.IndexOf("@mcpcli", StringComparison.OrdinalIgnoreCase);
@@ -405,13 +417,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             .Replace("<!--", string.Empty, StringComparison.Ordinal)
             .Replace("-->", string.Empty, StringComparison.Ordinal)
             .Trim();
-        if (string.IsNullOrWhiteSpace(commandText))
-        {
-            return null;
-        }
-
-        var tokens = commandText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return tokens.Length == 0 ? null : tokens[0].ToLowerInvariant();
+        return string.IsNullOrWhiteSpace(commandText) ? null : commandText.ToLowerInvariant();
     }
 
     private static async Task<IReadOnlyList<string>> GetPrefixesAsync(string familyName, CancellationToken cancellationToken)

@@ -427,7 +427,10 @@ public sealed class PipelineRunner
         if (!string.IsNullOrWhiteSpace(context.Request.Namespace))
         {
             var normalizedRequest = context.TargetMatcher.Normalize(context.Request.Namespace!);
-            var match = availableNamespaces.FirstOrDefault(candidate => string.Equals(candidate, normalizedRequest, StringComparison.OrdinalIgnoreCase));
+            // Normalize candidates too so underscored names (e.g. "extension_azqr") match their
+            // normalized form ("extension azqr") — the original candidate value is kept for downstream use.
+            var match = availableNamespaces.FirstOrDefault(candidate =>
+                string.Equals(context.TargetMatcher.Normalize(candidate), normalizedRequest, StringComparison.OrdinalIgnoreCase));
             if (match is not null)
             {
                 resolvedNamespaces = [match];
