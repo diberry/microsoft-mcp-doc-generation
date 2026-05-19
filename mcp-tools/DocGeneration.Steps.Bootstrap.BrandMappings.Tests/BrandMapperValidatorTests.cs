@@ -160,6 +160,89 @@ public class BrandMapperValidatorTests
         Assert.Equal(2, result.GetProperty("totalNamespaces").GetInt32()); // namespace1, namespace2
     }
 
+    [Fact]
+    public async Task Validator_ConsidersNamespaceCovered_WhenDecomposedEntriesExist_Bug604()
+    {
+        // Reproduces #604: CLI reports "extension" but brand mapping has decomposed entries
+        // "extension_azqr" and "extension_ghissues". Validator should treat "extension" as covered.
+        using var tempDir = TestHelpers.CreateTempDir();
+        var outputPath = Path.Combine(tempDir.Path, "results.json");
+
+        // CLI output: namespace "extension" (space-separated CLI prefix)
+        var cliOutput = new
+        {
+            status = 0,
+            results = new[]
+            {
+                new { name = "extension-azqr-scan", command = "extension azqr scan", description = "Scan with azqr" },
+                new { name = "extension-ghissues-list", command = "extension ghissues list", description = "List GitHub issues" },
+                new { name = "advisor-list", command = "advisor list", description = "List advisors" }
+            }
+        };
+        var cliPath = Path.Combine(tempDir.Path, "cli-extension.json");
+        await File.WriteAllTextAsync(cliPath, JsonSerializer.Serialize(cliOutput));
+
+        // Brand mapping: has decomposed "extension_azqr" and "extension_ghissues" but NOT "extension"
+        var brandMapping = new Dictionary<string, object>
+        {
+            ["extension_azqr"] = new { mcpServerName = "extension_azqr", brandName = "Azure Extension AZQR", shortName = "AZQR", fileName = "azure-extension-azqr" },
+            ["extension_ghissues"] = new { mcpServerName = "extension_ghissues", brandName = "Azure Extension GitHub Issues", shortName = "GitHub Issues", fileName = "azure-extension-ghissues" },
+            ["advisor"] = new { mcpServerName = "advisor", brandName = "Azure Advisor", shortName = "Advisor", fileName = "azure-advisor" },
+        };
+        var brandMappingPath = Path.Combine(tempDir.Path, "brand-mapping-decomposed.json");
+        await File.WriteAllTextAsync(brandMappingPath, JsonSerializer.Serialize(brandMapping));
+
+        // Act
+        var exitCode = await RunValidator(cliPath, brandMappingPath, outputPath);
+
+        // Assert: exit code 0 — all namespaces are covered (extension by prefix match)
+        Assert.Equal(0, exitCode);
+
+        var output = await File.ReadAllTextAsync(outputPath);
+        var result = JsonSerializer.Deserialize<JsonElement>(output);
+        Assert.Equal(0, result.GetProperty("newMappingsNeeded").GetInt32());
+    }
+
+    [Fact]
+    public async Task Validator_ReportsUnmapped_WhenNamespaceHasNoExactOrPrefixMatch_Bug604()
+    {
+        // When a namespace has neither an exact match nor a prefix-covered decomposed entry,
+        // it should still be reported as unmapped.
+        using var tempDir = TestHelpers.CreateTempDir();
+        var outputPath = Path.Combine(tempDir.Path, "results.json");
+
+        var cliOutput = new
+        {
+            status = 0,
+            results = new[]
+            {
+                new { name = "genuinely-new-list", command = "genuinelynew list", description = "New unmapped service" },
+                new { name = "advisor-list", command = "advisor list", description = "List advisors" }
+            }
+        };
+        var cliPath = Path.Combine(tempDir.Path, "cli-genuinelynew.json");
+        await File.WriteAllTextAsync(cliPath, JsonSerializer.Serialize(cliOutput));
+
+        // Brand mapping with advisor and some decomposed entries — but nothing for "genuinelynew"
+        var brandMapping = new Dictionary<string, object>
+        {
+            ["advisor"] = new { mcpServerName = "advisor", brandName = "Azure Advisor", shortName = "Advisor", fileName = "azure-advisor" },
+            ["extension_azqr"] = new { mcpServerName = "extension_azqr", brandName = "Azure Extension AZQR", shortName = "AZQR", fileName = "azure-extension-azqr" },
+        };
+        var brandMappingPath = Path.Combine(tempDir.Path, "brand-mapping-partial.json");
+        await File.WriteAllTextAsync(brandMappingPath, JsonSerializer.Serialize(brandMapping));
+
+        // Act
+        var exitCode = await RunValidator(cliPath, brandMappingPath, outputPath);
+
+        // Assert: exit code 2 — "genuinelynew" is truly unmapped
+        Assert.Equal(2, exitCode);
+
+        var output = await File.ReadAllTextAsync(outputPath);
+        var result = JsonSerializer.Deserialize<JsonElement>(output);
+        Assert.Equal(1, result.GetProperty("newMappingsNeeded").GetInt32());
+    }
+
     /// <summary>
     /// Runs the BrandMapperValidator with specified arguments.
     /// </summary>

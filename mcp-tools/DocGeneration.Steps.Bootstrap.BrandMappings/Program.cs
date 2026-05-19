@@ -73,6 +73,14 @@ internal class Program
             // Step 3: Find unmapped namespaces
             var unmappedNamespaces = namespaces
                 .Where(ns => !mappedNamespaces.Contains(ns))
+                .Where(ns =>
+                {
+                    // After exact match fails, check if this CLI namespace is a prefix of one or more
+                    // decomposed mcpServerName entries (e.g., "extension" is covered by "extension_azqr") (#604).
+                    var prefixCovered = existingMappings
+                        .Any(m => m.McpServerName.StartsWith(ns + "_", StringComparison.OrdinalIgnoreCase));
+                    return !prefixCovered;
+                })
                 .ToList();
 
             if (unmappedNamespaces.Count == 0)

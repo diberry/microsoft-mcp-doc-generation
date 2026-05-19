@@ -26,6 +26,12 @@
         "description": "Base filename for generated markdown (e.g. 'azure-cosmos-db'). No extension.",
         "pattern": "^[a-z][a-z0-9-]*$"
       },
+      "composition": {
+        "type": "string",
+        "description": "Declares the relationship between this MCP namespace and the final output file(s). 'standalone': one namespace, one file. 'merge': this namespace is combined with others into a single article (requires mergeGroup/mergeOrder/mergeRole). 'split': this namespace is one fragment of a decomposed logical namespace; produces its own file (optionally also merged with split siblings via mergeGroup).",
+        "enum": ["standalone", "merge", "split"],
+        "default": "standalone"
+      },
       "mergeGroup": {
         "type": "string",
         "description": "Group identifier for multi-namespace merge (e.g. 'azure-monitor'). All entries sharing a mergeGroup are merged into a single article.",
@@ -47,7 +53,29 @@
       "mergeGroup": ["mergeOrder", "mergeRole"],
       "mergeOrder": ["mergeGroup", "mergeRole"],
       "mergeRole": ["mergeGroup", "mergeOrder"]
-    }
+    },
+    "allOf": [
+      {
+        "if": {
+          "properties": { "composition": { "const": "standalone" } },
+          "required": ["composition"]
+        },
+        "then": {
+          "not": { "required": ["mergeGroup"] },
+          "description": "standalone entries must not have mergeGroup"
+        }
+      },
+      {
+        "if": {
+          "properties": { "composition": { "const": "merge" } },
+          "required": ["composition"]
+        },
+        "then": {
+          "required": ["mergeGroup", "mergeOrder", "mergeRole"],
+          "description": "merge entries must have all three merge fields"
+        }
+      }
+    ]
   },
   "minItems": 1,
   "uniqueItems": true

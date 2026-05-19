@@ -29,17 +29,31 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
-        var familyName = ResolveFamilyName(currentNamespace, matchingTools);
+        var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
+        var familyName = ResolveFamilyName(currentNamespace, matchingTools, brandMappings);
         var outputFileName = await ResolveFamilyOutputFileNameFromContextAsync(familyName, context);
         context.Items[ToolFamilyPostAssemblyValidator.FamilyNameContextKey] = familyName;
         context.Items[ToolFamilyPostAssemblyValidator.OutputFileNameContextKey] = outputFileName;
 
         var toolsInputDirectory = Path.Combine(context.OutputPath, "tools");
-        if (!Directory.Exists(toolsInputDirectory))
+        var toolsRawDirectory = Path.Combine(context.OutputPath, "tools-raw");
+
+        // Fallback: if tools/ is empty or doesn't exist, try tools-raw/ (#602)
+        if (!Directory.Exists(toolsInputDirectory)
+            || !Directory.EnumerateFiles(toolsInputDirectory, "*.md", SearchOption.TopDirectoryOnly).Any())
         {
-            warnings.Add($"Tools directory not found: '{toolsInputDirectory}'. Run Step 3 first.");
-            artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
-            return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+            if (Directory.Exists(toolsRawDirectory)
+                && Directory.EnumerateFiles(toolsRawDirectory, "*.md", SearchOption.TopDirectoryOnly).Any())
+            {
+                Console.WriteLine("INFO: Using tools-raw/ as fallback (tools/ not available).");
+                toolsInputDirectory = toolsRawDirectory;
+            }
+            else if (!Directory.Exists(toolsInputDirectory))
+            {
+                warnings.Add($"Tools directory not found: '{toolsInputDirectory}'. Run Step 3 first.");
+                artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
+                return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+            }
         }
 
         var matchingToolFiles = await ResolveFamilyToolFilesAsync(toolsInputDirectory, familyName, cancellationToken);
@@ -318,8 +332,17 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         return await ToolFileNameBuilder.ResolveFamilyFileNameAsync(familyName);
     }
 
-    private static string ResolveFamilyName(string currentNamespace, IReadOnlyList<CliTool> matchingTools)
+    private static string ResolveFamilyName(string currentNamespace, IReadOnlyList<CliTool> matchingTools,
+        IReadOnlyDictionary<string, BrandMapping> brandMappings)
     {
+        // Try the raw namespace name (with underscores) for brand mapping lookup first (#603).
+        // This handles decomposed namespaces like extension_azqr where the CLI command
+        // prefix is "extension" instead of the full underscore-separated namespace key.
+        if (brandMappings.ContainsKey(currentNamespace))
+        {
+            return currentNamespace.ToLowerInvariant();
+        }
+
         var firstCommand = matchingTools.Count > 0 ? matchingTools[0].Command : currentNamespace;
         var tokens = firstCommand.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (tokens.Length == 0)

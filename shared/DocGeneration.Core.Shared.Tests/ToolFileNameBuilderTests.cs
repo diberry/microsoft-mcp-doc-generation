@@ -306,4 +306,29 @@ public class ToolFileNameBuilderTests
         Assert.Equal("azure-key-vault", ToolFileNameBuilder.ResolveFamilyFileName("keyvault", mappings));
     }
 
+    [Fact]
+    public void ResolveFamilyFileName_SpaceInFamilyName_TriesUnderscoreKey_Bug603()
+    {
+        // When the family name contains spaces (e.g., "extension azqr"), try the
+        // underscore-keyed variant ("extension_azqr") as a secondary brand mapping lookup.
+        var mappings = new Dictionary<string, BrandMapping>
+        {
+            ["extension_azqr"] = new BrandMapping { FileName = "azure-extension-azqr" },
+        };
+        var result = ToolFileNameBuilder.ResolveFamilyFileName("extension azqr", mappings);
+        Assert.Equal("azure-extension-azqr", result);
+    }
+
+    [Fact]
+    public void ResolveFamilyFileName_SpaceKey_NoUnderscoreMapping_FallsBackToFamilyName_Bug603()
+    {
+        // If neither direct nor underscore key resolves, fall back to the raw family name.
+        var mappings = new Dictionary<string, BrandMapping>
+        {
+            ["storage"] = new BrandMapping { FileName = "azure-storage" },
+        };
+        var result = ToolFileNameBuilder.ResolveFamilyFileName("unknown service", mappings);
+        Assert.Equal("unknown service", result);
+    }
+
 }
