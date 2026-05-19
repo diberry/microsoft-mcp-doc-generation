@@ -428,16 +428,16 @@ public sealed class PipelineRunner
         {
             var normalizedRequest = context.TargetMatcher.Normalize(context.Request.Namespace!);
             var match = availableNamespaces.FirstOrDefault(candidate => string.Equals(candidate, normalizedRequest, StringComparison.OrdinalIgnoreCase));
-            if (match is null)
+            if (match is not null)
             {
-                resolvedNamespaces = Array.Empty<string>();
-                error = $"Unknown namespace '{context.Request.Namespace}'.";
-                return false;
+                resolvedNamespaces = [match];
+                error = null;
+                return true;
             }
 
-            resolvedNamespaces = [match];
-            error = null;
-            return true;
+            resolvedNamespaces = Array.Empty<string>();
+            error = $"Unknown namespace '{context.Request.Namespace}'.";
+            return false;
         }
 
         resolvedNamespaces = availableNamespaces;

@@ -668,6 +668,199 @@ public class ToolFamilyCleanupStepTests
     // END NEW TESTS FOR ISSUE #478
     // ========================================
 
+    // ========================================
+    // NEW TESTS FOR ISSUES #602 AND #603
+    // ========================================
+
+    [Fact]
+    public async Task Step4_FallsBackToToolsRaw_WhenToolsDirectoryAbsent_Bug602()
+    {
+        // Reproduces #602: When Step 3 is skipped, tools/ doesn't exist.
+        // Step 4 should fall back to tools-raw/ to enable structural validation without AI steps.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+
+            // Only seed tools-raw/, NOT tools/
+            SeedToolFile(Path.Combine(context.OutputPath, "tools-raw", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools-raw", "compute-show.md"), "compute show");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var outputFileName = await ToolFileNameBuilder.ResolveFamilyFileNameAsync("compute");
+
+            processRunner.OnRun = spec =>
+            {
+                // Verify tools were staged from tools-raw/
+                var tempToolsDir = Path.Combine(Path.GetDirectoryName(spec.WorkingDirectory!)!, "generated", "tools");
+                Assert.True(Directory.Exists(tempToolsDir), "Tools dir should be created in isolated workspace");
+                Assert.True(Directory.GetFiles(tempToolsDir, "*.md").Length > 0, "Tool files should be staged from tools-raw/");
+
+                var isolatedGeneratedRoot = Path.GetFullPath(Path.Combine(spec.WorkingDirectory, "..", "generated"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", $"{outputFileName}-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", $"{outputFileName}-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", $"{outputFileName}.md"), "final article");
+
+                return CallbackProcessRunner.Success(spec);
+            };
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success, $"Step should succeed using tools-raw/ fallback. Warnings: {string.Join(", ", result.Warnings)}");
+            Assert.Single(processRunner.Invocations);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step4_FallsBackToToolsRaw_WhenToolsDirectoryEmpty_Bug602()
+    {
+        // When tools/ exists but is empty (Step 3 produced no output), fall back to tools-raw/.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+
+            // Create empty tools/ directory
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "tools"));
+            // Seed tools-raw/ with actual files
+            SeedToolFile(Path.Combine(context.OutputPath, "tools-raw", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var outputFileName = await ToolFileNameBuilder.ResolveFamilyFileNameAsync("compute");
+
+            processRunner.OnRun = spec =>
+            {
+                var isolatedGeneratedRoot = Path.GetFullPath(Path.Combine(spec.WorkingDirectory, "..", "generated"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", $"{outputFileName}-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", $"{outputFileName}-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", $"{outputFileName}.md"), "final article");
+
+                return CallbackProcessRunner.Success(spec);
+            };
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success, $"Step should succeed using tools-raw/ fallback when tools/ is empty. Warnings: {string.Join(", ", result.Warnings)}");
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step4_Fails_WhenBothToolsAndToolsRawAbsent_Bug602()
+    {
+        // When neither tools/ nor tools-raw/ exist, fail with a clear error message.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+
+            // Neither tools/ nor tools-raw/ exist
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("Tools directory not found"));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step4_UsesDecomposedNamespace_AsFamilyName_Bug603()
+    {
+        // Reproduces #603: for namespace "extension_azqr", ResolveFamilyName should return
+        // "extension_azqr" (the raw namespace) rather than "extension" (tokens[0] of CLI command).
+        // This test verifies the step finds files correctly when namespace contains an underscore.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            // Use a context with namespace "extension_azqr" but CLI command prefix "extension"
+            var mcpToolsRoot = Path.Combine(testRoot, "mcp-tools");
+            var outputPath = Path.Combine(testRoot, "generated-extension_azqr");
+            Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
+            Directory.CreateDirectory(outputPath);
+
+            // Brand mapping: key is "extension_azqr"
+            File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"),
+                """[{"mcpServerName":"extension_azqr","brandName":"Azure Extension AZQR","shortName":"AZQR","fileName":"azure-extension-azqr"}]""");
+
+            var context = new PipelineContext
+            {
+                Request = new PipelineRequest("extension_azqr", [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
+                RepoRoot = testRoot,
+                McpToolsRoot = mcpToolsRoot,
+                OutputPath = outputPath,
+                ProcessRunner = processRunner,
+                Workspaces = new WorkspaceManager(),
+                CliMetadataLoader = new StubCliMetadataLoader(),
+                TargetMatcher = new TargetMatcher(),
+                FilteredCliWriter = new StubFilteredCliWriter(),
+                BuildCoordinator = new StubBuildCoordinator(),
+                AiCapabilityProbe = new StubAiCapabilityProbe(),
+                Reports = new BufferedReportWriter(),
+                CliVersion = "1.2.3",
+                CliOutput = CreateSnapshot(["extension azqr scan", "extension azqr list"]),
+                SelectedNamespaces = ["extension_azqr"],
+            };
+            context.Items["Namespace"] = "extension_azqr";
+
+            // Seed tool files annotated with the CLI command prefix "extension" (what the CLI emits)
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-extension-azqr-scan.md"), "extension azqr scan");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-extension-azqr-list.md"), "extension azqr list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            processRunner.OnRun = spec =>
+            {
+                var isolatedGeneratedRoot = Path.GetFullPath(Path.Combine(spec.WorkingDirectory, "..", "generated"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
+                Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "azure-extension-azqr-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "azure-extension-azqr-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "azure-extension-azqr.md"), "final article");
+
+                return CallbackProcessRunner.Success(spec);
+            };
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success, $"Step should succeed for decomposed namespace 'extension_azqr'. Warnings: {string.Join(", ", result.Warnings)}");
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    // ========================================
+    // END NEW TESTS FOR ISSUES #602 AND #603
+    // ========================================
+
     private sealed class CallbackProcessRunner : IProcessRunner
     {
         public List<ProcessSpec> Invocations { get; } = new();

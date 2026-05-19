@@ -291,14 +291,28 @@ public static class ToolFileNameBuilder
     /// Resolves the brand-mapped output filename for a tool family (namespace-level).
     /// Used for tool-family article filenames (e.g., "compute" → "azure-compute").
     /// Falls back to the raw family name if no brand mapping exists.
+    /// Secondary key: tries familyName.Replace(' ', '_') for decomposed namespace lookups.
     /// </summary>
     public static string ResolveFamilyFileName(string familyName, Dictionary<string, BrandMapping> brandMappings)
     {
-        if (!string.IsNullOrWhiteSpace(familyName)
-            && brandMappings.TryGetValue(familyName, out var mapping)
-            && !string.IsNullOrWhiteSpace(mapping.FileName))
+        if (!string.IsNullOrWhiteSpace(familyName))
         {
-            return mapping.FileName.ToLowerInvariant();
+            // Direct lookup
+            if (brandMappings.TryGetValue(familyName, out var mapping)
+                && !string.IsNullOrWhiteSpace(mapping.FileName))
+            {
+                return mapping.FileName.ToLowerInvariant();
+            }
+
+            // Secondary key: replace spaces with underscores (#603 — handles decomposed namespace names
+            // where the family name uses spaces but the brand mapping key uses underscores)
+            var underscoreKey = familyName.Replace(' ', '_');
+            if (underscoreKey != familyName
+                && brandMappings.TryGetValue(underscoreKey, out var underscoreMapping)
+                && !string.IsNullOrWhiteSpace(underscoreMapping.FileName))
+            {
+                return underscoreMapping.FileName.ToLowerInvariant();
+            }
         }
 
         return familyName;

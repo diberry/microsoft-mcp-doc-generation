@@ -3,169 +3,217 @@
     "brandName": "Azure Container Apps",
     "mcpServerName": "containerapps",
     "shortName": "Container Apps",
-    "fileName": "azure-container-apps"
+    "fileName": "azure-container-apps",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Container Registry",
     "mcpServerName": "acr",
     "shortName": "ACR",
-    "fileName": "azure-container-registry"
+    "fileName": "azure-container-registry",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Advisor",
     "mcpServerName": "advisor",
     "shortName": "Advisor",
-    "fileName": "azure-advisor"
+    "fileName": "azure-advisor",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Kubernetes Service",
     "mcpServerName": "aks",
     "shortName": "AKS",
-    "fileName": "azure-kubernetes-service"
+    "fileName": "azure-kubernetes-service",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure App Configuration",
     "mcpServerName": "appconfig",
     "shortName": "App Config",
-    "fileName": "azure-app-configuration"
+    "fileName": "azure-app-configuration",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure AppLens",
     "mcpServerName": "applens",
     "shortName": "AppLens",
-    "fileName": "azure-applens"
+    "fileName": "azure-applens",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Application Insights",
     "mcpServerName": "applicationinsights",
     "shortName": "Application Insights",
-    "fileName": "azure-application-insights"
+    "fileName": "azure-application-insights",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure App Service",
     "mcpServerName": "appservice",
     "shortName": "App Service",
-    "fileName": "azure-app-service"
+    "fileName": "azure-app-service",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Backup",
     "mcpServerName": "azurebackup",
     "shortName": "Backup",
-    "fileName": "azure-backup"
+    "fileName": "azure-backup",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Migrate",
     "mcpServerName": "azuremigrate",
     "shortName": "Migrate",
-    "fileName": "azure-migrate"
+    "fileName": "azure-migrate",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Terraform",
     "mcpServerName": "azureterraform",
     "shortName": "Terraform",
-    "fileName": "azure-azureterraform"
+    "fileName": "azure-azureterraform",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Terraform Best Practices",
     "mcpServerName": "azureterraformbestpractices",
     "shortName": "Terraform",
-    "fileName": "azure-terraform-best-practices"
+    "fileName": "azure-terraform-best-practices",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Bicep Schema",
     "mcpServerName": "bicepschema",
     "shortName": "Bicep",
-    "fileName": "azure-bicep-schema"
+    "fileName": "azure-bicep-schema",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Cloud Architect",
     "mcpServerName": "cloudarchitect",
     "shortName": "Cloud Architect",
-    "fileName": "azure-cloud-architect"
+    "fileName": "azure-cloud-architect",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Communication Services",
     "mcpServerName": "communication",
     "shortName": "Communication Services",
-    "fileName": "azure-communication-services"
+    "fileName": "azure-communication-services",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Compute",
     "mcpServerName": "compute",
     "shortName": "Compute",
-    "fileName": "azure-compute"
+    "fileName": "azure-compute",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Confidential Ledger",
     "mcpServerName": "confidentialledger",
     "shortName": "Confidential Ledger",
-    "fileName": "azure-confidential-ledger"
+    "fileName": "azure-confidential-ledger",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Cosmos DB",
     "mcpServerName": "cosmos",
     "shortName": "Cosmos DB",
-    "fileName": "azure-cosmos-db"
+    "fileName": "azure-cosmos-db",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Datadog",
     "mcpServerName": "datadog",
     "shortName": "Datadog",
-    "fileName": "azure-datadog"
+    "fileName": "azure-datadog",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Deploy",
     "mcpServerName": "deploy",
     "shortName": "Deploy",
-    "fileName": "azure-deploy"
+    "fileName": "azure-deploy",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Device Registry",
     "mcpServerName": "deviceregistry",
     "shortName": "Device Registry",
-    "fileName": "azure-device-registry"
+    "fileName": "azure-device-registry",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Event Grid",
     "mcpServerName": "eventgrid",
     "shortName": "Event Grid",
-    "fileName": "azure-event-grid"
+    "fileName": "azure-event-grid",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Event Hubs",
     "mcpServerName": "eventhubs",
     "shortName": "Event Hubs",
-    "fileName": "azure-event-hubs"
+    "fileName": "azure-event-hubs",
+    "composition": "standalone"
   },
   {
-    "brandName": "Azure Extension",
-    "mcpServerName": "extension",
-    "shortName": "Extension",
-    "fileName": "azure-extension"
+    "brandName": "Azure Compliance Quick Review",
+    "mcpServerName": "extension_azqr",
+    "shortName": "Compliance Quick Review",
+    "fileName": "azure-compliance-quick-review",
+    "composition": "split"
+  },
+  {
+    "brandName": "Azure CLI Extension",
+    "mcpServerName": "extension_cli_generate",
+    "shortName": "CLI Extension",
+    "fileName": "azure-cli-extension-generate",
+    "composition": "split",
+    "mergeGroup": "azure-cli-extension",
+    "mergeOrder": 1,
+    "mergeRole": "primary"
+  },
+  {
+    "brandName": "Azure CLI Extension",
+    "mcpServerName": "extension_cli_install",
+    "shortName": "CLI Extension",
+    "fileName": "azure-cli-extension-install",
+    "composition": "split",
+    "mergeGroup": "azure-cli-extension",
+    "mergeOrder": 2,
+    "mergeRole": "secondary"
   },
   {
     "brandName": "Azure File Shares",
     "mcpServerName": "fileshares",
     "shortName": "File Shares",
-    "fileName": "azure-fileshares"
+    "fileName": "azure-fileshares",
+    "composition": "standalone"
   },
   {
     "brandName": "Microsoft Foundry",
     "mcpServerName": "foundry",
     "shortName": "Foundry",
-    "fileName": "microsoft-foundry"
+    "fileName": "microsoft-foundry",
+    "composition": "standalone"
   },
   {
     "brandName": "Microsoft Foundry Extensions",
     "mcpServerName": "foundryextensions",
     "shortName": "Foundry Extensions",
-    "fileName": "microsoft-foundry-extensions"
+    "fileName": "microsoft-foundry-extensions",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Functions",
     "mcpServerName": "functionapp",
     "shortName": "Functions",
     "fileName": "azure-functions",
+    "composition": "merge",
     "mergeGroup": "azure-functions",
     "mergeOrder": 1,
     "mergeRole": "primary"
@@ -175,6 +223,7 @@
     "mcpServerName": "functions",
     "shortName": "Functions",
     "fileName": "azure-functions-development",
+    "composition": "merge",
     "mergeGroup": "azure-functions",
     "mergeOrder": 2,
     "mergeRole": "secondary"
@@ -183,61 +232,71 @@
     "brandName": "Azure Get",
     "mcpServerName": "get",
     "shortName": "Get",
-    "fileName": "azure-get"
+    "fileName": "azure-get",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Best Practices",
     "mcpServerName": "get_azure_bestpractices",
     "shortName": "Best Practices",
-    "fileName": "azure-best-practices"
+    "fileName": "azure-best-practices",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Managed Grafana",
     "mcpServerName": "grafana",
     "shortName": "Grafana",
-    "fileName": "azure-managed-grafana"
+    "fileName": "azure-managed-grafana",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Resource Group",
     "mcpServerName": "group",
     "shortName": "Resource Group",
-    "fileName": "azure-resource-group"
+    "fileName": "azure-resource-group",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Key Vault",
     "mcpServerName": "keyvault",
     "shortName": "Key Vault",
-    "fileName": "azure-key-vault"
+    "fileName": "azure-key-vault",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Data Explorer",
     "mcpServerName": "kusto",
     "shortName": "Data Explorer (Kusto)",
-    "fileName": "azure-data-explorer"
+    "fileName": "azure-data-explorer",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Load Testing",
     "mcpServerName": "loadtesting",
     "shortName": "Load Testing",
-    "fileName": "azure-load-testing"
+    "fileName": "azure-load-testing",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Managed Lustre",
     "mcpServerName": "managedlustre",
     "shortName": "Managed Lustre",
-    "fileName": "azure-managed-lustre"
+    "fileName": "azure-managed-lustre",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Marketplace",
     "mcpServerName": "marketplace",
     "shortName": "Marketplace",
-    "fileName": "azure-marketplace"
+    "fileName": "azure-marketplace",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Monitor",
     "mcpServerName": "monitor",
     "shortName": "Monitor",
     "fileName": "azure-monitor",
+    "composition": "merge",
     "mergeGroup": "azure-monitor",
     "mergeOrder": 1,
     "mergeRole": "primary"
@@ -246,121 +305,141 @@
     "brandName": "Azure Database for MySQL",
     "mcpServerName": "mysql",
     "shortName": "MySQL",
-    "fileName": "azure-database-for-mysql"
+    "fileName": "azure-database-for-mysql",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Policy",
     "mcpServerName": "policy",
     "shortName": "Policy",
-    "fileName": "azure-policy"
+    "fileName": "azure-policy",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Database for PostgreSQL",
     "mcpServerName": "postgres",
     "shortName": "PostgreSQL",
-    "fileName": "azure-database-for-postgresql"
+    "fileName": "azure-database-for-postgresql",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Pricing",
     "mcpServerName": "pricing",
     "shortName": "Pricing",
-    "fileName": "azure-pricing"
+    "fileName": "azure-pricing",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Quota",
     "mcpServerName": "quota",
     "shortName": "Quota",
-    "fileName": "azure-quota"
+    "fileName": "azure-quota",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Managed Redis",
     "mcpServerName": "redis",
     "shortName": "Redis",
-    "fileName": "azure-managed-redis"
+    "fileName": "azure-managed-redis",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Resource Health",
     "mcpServerName": "resourcehealth",
     "shortName": "Resource Health",
-    "fileName": "azure-resource-health"
+    "fileName": "azure-resource-health",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Role-Based Access Control",
     "mcpServerName": "role",
     "shortName": "RBAC",
-    "fileName": "azure-role-based-access-control"
+    "fileName": "azure-role-based-access-control",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure AI Search",
     "mcpServerName": "search",
     "shortName": "AI Search",
-    "fileName": "azure-ai-search"
+    "fileName": "azure-ai-search",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Service Bus",
     "mcpServerName": "servicebus",
     "shortName": "Service Bus",
-    "fileName": "azure-service-bus"
+    "fileName": "azure-service-bus",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Service Fabric",
     "mcpServerName": "servicefabric",
     "shortName": "Service Fabric",
-    "fileName": "azure-service-fabric"
+    "fileName": "azure-service-fabric",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure SignalR Service",
     "mcpServerName": "signalr",
     "shortName": "SignalR",
-    "fileName": "azure-signalr-service"
+    "fileName": "azure-signalr-service",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Speech in Foundry",
     "mcpServerName": "speech",
     "shortName": "Speech",
-    "fileName": "azure-ai-services-speech"
+    "fileName": "azure-ai-services-speech",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure SQL Database",
     "mcpServerName": "sql",
     "shortName": "SQL",
-    "fileName": "azure-sql-database"
+    "fileName": "azure-sql-database",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Storage",
     "mcpServerName": "storage",
     "shortName": "Storage",
-    "fileName": "azure-storage"
+    "fileName": "azure-storage",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Storage Sync",
     "mcpServerName": "storagesync",
     "shortName": "Storage Sync",
-    "fileName": "azure-storage-sync"
+    "fileName": "azure-storage-sync",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Subscription",
     "mcpServerName": "subscription",
     "shortName": "Subscription",
-    "fileName": "azure-subscription"
+    "fileName": "azure-subscription",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Virtual Desktop",
     "mcpServerName": "virtualdesktop",
     "shortName": "Virtual Desktop",
-    "fileName": "azure-virtual-desktop"
+    "fileName": "azure-virtual-desktop",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Well-Architected Framework",
     "mcpServerName": "wellarchitectedframework",
     "shortName": "Well-Architected Framework",
-    "fileName": "azure-well-architected-framework"
+    "fileName": "azure-well-architected-framework",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Workbooks",
     "mcpServerName": "workbooks",
     "shortName": "Workbooks",
     "fileName": "azure-workbooks",
+    "composition": "merge",
     "mergeGroup": "azure-monitor",
     "mergeOrder": 2,
     "mergeRole": "secondary"
