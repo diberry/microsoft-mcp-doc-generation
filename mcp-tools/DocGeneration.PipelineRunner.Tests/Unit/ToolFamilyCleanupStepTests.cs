@@ -833,15 +833,18 @@ public class ToolFamilyCleanupStepTests
             SeedToolFile(Path.Combine(context.OutputPath, "tools", "azure-extension-azqr-list.md"), "extension azqr list");
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
 
+            // Note: DataFileLoader is a static singleton using the real brand mapping, so
+            // extension_azqr resolves to "azure-compliance-quick-review" (from mcp-tools/data/brand-to-server-mapping.json).
+            // The mock creates output files matching the real resolved outputFileName.
             processRunner.OnRun = spec =>
             {
                 var isolatedGeneratedRoot = Path.GetFullPath(Path.Combine(spec.WorkingDirectory, "..", "generated"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family-related"));
                 Directory.CreateDirectory(Path.Combine(isolatedGeneratedRoot, "tool-family"));
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "azure-extension-azqr-metadata.md"), "metadata");
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "azure-extension-azqr-related.md"), "related");
-                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "azure-extension-azqr.md"), "final article");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-metadata", "azure-compliance-quick-review-metadata.md"), "metadata");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family-related", "azure-compliance-quick-review-related.md"), "related");
+                File.WriteAllText(Path.Combine(isolatedGeneratedRoot, "tool-family", "azure-compliance-quick-review.md"), "final article");
 
                 return CallbackProcessRunner.Success(spec);
             };
