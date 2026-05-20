@@ -42,6 +42,7 @@ public static class NamespaceExpander
         // Prefix match: namespace is a parent prefix — find all "namespace_*" sub-entries
         var prefix = normalized + "_";
         var subEntries = brandEntries
+            .Where(e => e.McpServerName is not null)
             .Where(e => e.McpServerName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             .OrderBy(e => e.McpServerName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -51,6 +52,7 @@ public static class NamespaceExpander
             // Keep only sub-entries that are actually available in the CLI namespace list
             var availableSet = new HashSet<string>(availableCliNamespaces, StringComparer.OrdinalIgnoreCase);
             var resolved = subEntries
+                .Where(e => e.McpServerName is not null)
                 .Where(e => availableSet.Contains(e.McpServerName))
                 .Select(e => e.McpServerName)
                 .ToArray();

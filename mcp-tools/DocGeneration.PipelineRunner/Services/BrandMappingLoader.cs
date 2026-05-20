@@ -20,7 +20,16 @@ public sealed class BrandMappingLoader : IBrandMappingLoader
         }
 
         await using var stream = File.OpenRead(filePath);
-        var entries = await JsonSerializer.DeserializeAsync<BrandMappingEntry[]>(stream, JsonOptions, cancellationToken);
-        return entries ?? [];
+
+        try
+        {
+            var entries = await JsonSerializer.DeserializeAsync<BrandMappingEntry[]>(stream, JsonOptions, cancellationToken);
+            return entries ?? [];
+        }
+        catch (JsonException exception)
+        {
+            Console.Error.WriteLine($"Warning: Failed to parse brand mapping file '{filePath}': {exception.Message}");
+            return [];
+        }
     }
 }
