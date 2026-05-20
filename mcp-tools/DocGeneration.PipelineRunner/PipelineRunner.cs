@@ -15,6 +15,7 @@ public sealed class PipelineRunner
 
     private readonly StepRegistry _stepRegistry;
     private readonly PipelineContextFactory _contextFactory;
+    private readonly IBrandMappingLoader _brandMappingLoader;
     private readonly IChangelogGate? _changelogGate;
     private readonly IFingerprintGate? _fingerprintGate;
     private readonly IPromptRegressionGate? _promptRegressionGate;
@@ -24,13 +25,15 @@ public sealed class PipelineRunner
         PipelineContextFactory contextFactory,
         IChangelogGate? changelogGate = null,
         IFingerprintGate? fingerprintGate = null,
-        IPromptRegressionGate? promptRegressionGate = null)
+        IPromptRegressionGate? promptRegressionGate = null,
+        IBrandMappingLoader? brandMappingLoader = null)
     {
         _stepRegistry = stepRegistry;
         _contextFactory = contextFactory;
         _changelogGate = changelogGate;
         _fingerprintGate = fingerprintGate;
         _promptRegressionGate = promptRegressionGate;
+        _brandMappingLoader = brandMappingLoader ?? new BrandMappingLoader();
     }
 
     public static PipelineRunner CreateDefault(string? repoRoot = null, TextWriter? output = null, TextWriter? error = null)
@@ -116,7 +119,9 @@ public sealed class PipelineRunner
         context.CliVersion ??= await context.CliMetadataLoader.LoadCliVersionAsync(context.OutputPath, cancellationToken);
 
         var availableNamespaces = await context.CliMetadataLoader.LoadNamespacesAsync(context.OutputPath, cancellationToken);
-        if (!ResolveNamespaces(context, availableNamespaces, out var resolvedNamespaces, out var namespaceError))
+        var brandEntries = await _brandMappingLoader.LoadAsync(context.McpToolsRoot, cancellationToken);
+
+        if (!ResolveNamespaces(context, availableNamespaces, brandEntries, out var resolvedNamespaces, out var namespaceError))
         {
             context.Reports.Error(namespaceError!);
             context.Workspaces.DeleteAll();
@@ -421,31 +426,63 @@ public sealed class PipelineRunner
     private static bool ResolveNamespaces(
         PipelineContext context,
         IReadOnlyList<string> availableNamespaces,
+        IReadOnlyList<BrandMappingEntry> brandEntries,
         out IReadOnlyList<string> resolvedNamespaces,
         out string? error)
     {
-        if (!string.IsNullOrWhiteSpace(context.Request.Namespace))
+        if (string.IsNullOrWhiteSpace(context.Request.Namespace))
         {
-            var normalizedRequest = context.TargetMatcher.Normalize(context.Request.Namespace!);
-            // Normalize candidates too so underscored names (e.g. "extension_azqr") match their
-            // normalized form ("extension azqr") — the original candidate value is kept for downstream use.
-            var match = availableNamespaces.FirstOrDefault(candidate =>
-                string.Equals(context.TargetMatcher.Normalize(candidate), normalizedRequest, StringComparison.OrdinalIgnoreCase));
-            if (match is not null)
+            resolvedNamespaces = availableNamespaces;
+            error = null;
+            return true;
+        }
+
+        var expansion = NamespaceExpander.Expand(context.Request.Namespace, brandEntries, availableNamespaces);
+
+        if (expansion.IsAll)
+        {
+            resolvedNamespaces = expansion.Namespaces;
+            error = null;
+            return true;
+        }
+
+        if (expansion.IsResolved)
+        {
+            if (expansion.IsExpanded)
             {
-                resolvedNamespaces = [match];
-                error = null;
-                return true;
+                context.Reports.Info(
+                    $"Namespace '{context.Request.Namespace}' expanded to {expansion.Namespaces.Count} sub-namespace(s): " +
+                    string.Join(", ", expansion.Namespaces));
             }
 
+            resolvedNamespaces = expansion.Namespaces;
+            error = null;
+            return true;
+        }
+
+        if (expansion.IsSubEntriesNotInCli)
+        {
             resolvedNamespaces = Array.Empty<string>();
-            error = $"Unknown namespace '{context.Request.Namespace}'.";
+            error = $"Namespace prefix '{context.Request.Namespace}' matched brand mapping entries " +
+                    $"({string.Join(", ", expansion.SubEntriesFound)}) but none are available in the CLI namespace list.";
             return false;
         }
 
-        resolvedNamespaces = availableNamespaces;
-        error = null;
-        return true;
+        // Not found in brand mapping — fall back to normalized CLI exact match for backward compatibility
+        var normalizedRequest = context.TargetMatcher.Normalize(context.Request.Namespace!);
+        var cliMatch = availableNamespaces.FirstOrDefault(candidate =>
+            string.Equals(context.TargetMatcher.Normalize(candidate), normalizedRequest, StringComparison.OrdinalIgnoreCase));
+
+        if (cliMatch is not null)
+        {
+            resolvedNamespaces = [cliMatch];
+            error = null;
+            return true;
+        }
+
+        resolvedNamespaces = Array.Empty<string>();
+        error = $"Unknown namespace '{context.Request.Namespace}'.";
+        return false;
     }
 
 

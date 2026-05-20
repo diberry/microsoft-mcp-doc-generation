@@ -113,3 +113,14 @@ internal sealed class SkipSpecificNamespaceGate(string namespaceToSkip) : IChang
                 : ChangelogGateResult.Process($"namespace '{namespaceName}' found in CHANGELOG (test stub)"));
     }
 }
+
+/// <summary>
+/// A brand mapping loader stub that returns a configurable set of entries.
+/// </summary>
+internal sealed class StubBrandMappingLoader(IReadOnlyList<BrandMappingEntry>? entries = null) : IBrandMappingLoader
+{
+    private readonly IReadOnlyList<BrandMappingEntry> _entries = entries ?? [];
+
+    public Task<IReadOnlyList<BrandMappingEntry>> LoadAsync(string mcpToolsRoot, CancellationToken cancellationToken)
+        => Task.FromResult(_entries);
+}

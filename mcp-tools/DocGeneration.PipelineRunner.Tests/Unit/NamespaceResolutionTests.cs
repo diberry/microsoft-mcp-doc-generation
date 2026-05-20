@@ -111,6 +111,112 @@ public class NamespaceResolutionTests
         }
     }
 
+    /// <summary>
+    /// Issue #608: --namespace extension (parent prefix) should auto-expand to all three
+    /// extension sub-namespaces and run the pipeline for each of them.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_ParentNamespacePrefix_ExpandsToAllSubNamespaces()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"ns-resolution-expand-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
+
+        try
+        {
+            var reportWriter = new BufferedReportWriter();
+            var contextFactory = new PipelineContextFactory(
+                new RecordingProcessRunner(),
+                new WorkspaceManager(),
+                new UnderscoredNamespaceCliMetadataLoader(),
+                new TargetMatcher(),
+                new StubFilteredCliWriter(),
+                new StubBuildCoordinator(),
+                new StubAiCapabilityProbe(),
+                reportWriter,
+                repoRoot);
+
+            var brandEntries = new[]
+            {
+                new BrandMappingEntry("extension_azqr", "Azure Compliance Quick Review", "AZQR", "azure-compliance-quick-review", "split"),
+                new BrandMappingEntry("extension_cli_generate", "Azure CLI Extension", "CLI Extension", "azure-cli-extension-generate", "split"),
+                new BrandMappingEntry("extension_cli_install", "Azure CLI Extension", "CLI Extension", "azure-cli-extension-install", "split"),
+            };
+
+            var executedNamespaces = new List<string>();
+            var namespaceStep = new NamespaceCaptureStep(executedNamespaces);
+            var runner = new global::PipelineRunner.PipelineRunner(
+                new StepRegistry([namespaceStep]),
+                contextFactory,
+                brandMappingLoader: new StubBrandMappingLoader(brandEntries));
+
+            var request = new PipelineRequest(
+                "extension", [1], ".\\generated-extension",
+                SkipBuild: true, SkipValidation: false, DryRun: false, SkipChangelogGate: true);
+
+            var exitCode = await runner.RunAsync(request, CancellationToken.None);
+
+            Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
+            Assert.Equal(3, executedNamespaces.Count);
+            Assert.Contains("extension_azqr", executedNamespaces);
+            Assert.Contains("extension_cli_generate", executedNamespaces);
+            Assert.Contains("extension_cli_install", executedNamespaces);
+            Assert.Contains(reportWriter.Messages,
+                m => m.Contains("expanded", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// Issue #608: --namespace all should run all available CLI namespaces.
+    /// </summary>
+    [Fact]
+    public async Task RunAsync_AllKeyword_RunsAllCliNamespaces()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"ns-resolution-all-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
+
+        try
+        {
+            var reportWriter = new BufferedReportWriter();
+            var contextFactory = new PipelineContextFactory(
+                new RecordingProcessRunner(),
+                new WorkspaceManager(),
+                new UnderscoredNamespaceCliMetadataLoader(),
+                new TargetMatcher(),
+                new StubFilteredCliWriter(),
+                new StubBuildCoordinator(),
+                new StubAiCapabilityProbe(),
+                reportWriter,
+                repoRoot);
+
+            var executedNamespaces = new List<string>();
+            var namespaceStep = new NamespaceCaptureStep(executedNamespaces);
+            var runner = new global::PipelineRunner.PipelineRunner(
+                new StepRegistry([namespaceStep]),
+                contextFactory,
+                brandMappingLoader: new StubBrandMappingLoader());
+
+            var request = new PipelineRequest(
+                "all", [1], ".\\generated-all",
+                SkipBuild: true, SkipValidation: false, DryRun: false, SkipChangelogGate: true);
+
+            var exitCode = await runner.RunAsync(request, CancellationToken.None);
+
+            // UnderscoredNamespaceCliMetadataLoader returns 3 extension namespaces
+            Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
+            Assert.Equal(3, executedNamespaces.Count);
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private sealed class NamespaceCaptureStep(List<string> captured)
