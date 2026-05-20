@@ -15,7 +15,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             "Generate tool-family article",
             FailurePolicy.Fatal,
             dependsOn: [3],
-            postValidators: [new ToolFamilyPostAssemblyValidator()],
+            postValidators: [new ToolFamilyPostAssemblyValidator(), new CompositionOutputValidator()],
             requiresAiConfiguration: true,
             usesIsolatedWorkspace: true,
             expectedOutputs: ["tool-family-metadata", "tool-family-related", "tool-family", "reports"],
