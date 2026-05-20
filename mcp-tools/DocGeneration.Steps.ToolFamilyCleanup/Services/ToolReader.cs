@@ -214,8 +214,33 @@ public class ToolReader
             return null;
         }
 
-        var namespaceToken = commandText.Split(' ')[0].Trim();
-        return string.IsNullOrWhiteSpace(namespaceToken) ? null : namespaceToken.ToLowerInvariant();
+        var tokens = commandText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (tokens.Length == 0)
+        {
+            return null;
+        }
+
+        // For multi-token commands, try a greedy longest-prefix lookup against brand mappings.
+        // Multi-word namespaces (e.g. "extension azqr", "extension cli generate") are stored
+        // with underscores in brand-to-server-mapping.json ("extension_azqr", etc.).
+        // Try from the longest prefix down to 2 tokens before falling back to the first token.
+        if (tokens.Length > 1)
+        {
+            var brandMappings = Shared.DataFileLoader.LoadBrandMappingsAsync().GetAwaiter().GetResult();
+            for (int length = Math.Min(tokens.Length, 4); length >= 2; length--)
+            {
+                var spacedPrefix = string.Join(" ", tokens.Take(length)).ToLowerInvariant();
+                var underscored = spacedPrefix.Replace(' ', '_');
+                if (brandMappings.ContainsKey(underscored))
+                    return underscored;
+                if (brandMappings.ContainsKey(spacedPrefix))
+                    return spacedPrefix;
+            }
+        }
+
+        // Single-token namespace (e.g. "advisor", "storage") or no brand-mapping match:
+        // return the first token as the family name.
+        return tokens[0].ToLowerInvariant();
     }
 
     /// <summary>
