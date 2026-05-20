@@ -209,6 +209,35 @@ public sealed class CompositionOutputValidatorTests : IDisposable
     }
 
     [Fact]
+    public void Validate_OutputDirectoryMissing_ReturnsDirectoryIssue()
+    {
+        Directory.Delete(_outputRoot, recursive: true);
+
+        var result = CompositionOutputValidator.Validate(_outputRoot, []);
+
+        Assert.False(result.Success);
+        Assert.Single(result.Issues);
+        Assert.Equal("directory", result.Issues[0].Identifier);
+        Assert.Equal("N/A", result.Issues[0].IssueType);
+        Assert.Contains(_outputRoot, result.Issues[0].Message);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public void Validate_InvalidOutputPath_ThrowsArgumentException(string? outputPath)
+    {
+        Assert.ThrowsAny<ArgumentException>(() => CompositionOutputValidator.Validate(outputPath!, []));
+    }
+
+    [Fact]
+    public void Validate_NullEntries_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => CompositionOutputValidator.Validate(_outputRoot, null!));
+    }
+
+    [Fact]
     public void Validate_NullComposition_TreatedAsStandalone()
     {
         // An entry with no Composition field defaults to standalone behaviour.

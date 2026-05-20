@@ -84,6 +84,16 @@ public sealed class CompositionOutputValidator : IPostValidator
         string outputPath,
         IReadOnlyList<BrandMappingEntry> entries)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        ArgumentNullException.ThrowIfNull(entries);
+
+        if (!Directory.Exists(outputPath))
+        {
+            return new CompositionValidationResult(
+                false,
+                [new CompositionIssue("directory", "N/A", $"Output directory does not exist: {outputPath}")]);
+        }
+
         var toolFamilyDir = Path.Combine(outputPath, "tool-family");
         var issues = new List<CompositionIssue>();
 
