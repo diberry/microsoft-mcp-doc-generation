@@ -7,6 +7,29 @@
 
 ## Learnings
 
+### 2026-05-21: Documentation Requirements for Issue Triage — #611, #574
+
+**Session:** 8-agent PRD review cycle including documentation impact assessment.
+
+**#611 Documentation Needs (3 files, 1-2 hours):**
+- `docs/START-SCRIPTS.md` — explain timestamped output directory naming
+- `README.md` — document `--output` flag behavior (explicit path = no timestamp)
+- `docs/ARCHITECTURE.md` — CI workspace isolation diagram
+
+**#574 Documentation Needs (2 new + 3 updates, 3-4 hours):**
+- **New:** `docs/validation-gate-strategy.md` (explain architecture, phases, gate promotion flow)
+- Updates: ARCHITECTURE.md, CI-INTEGRATION.md, README.md
+
+**Dependency:** #574 docs wait for Phase 1 namespace-mapping.json schema finalized
+
+**Sequencing:**
+1. #611 docs: implement after code + tests complete
+2. #574 docs: write Phase 1 strategy doc; update as Phases 2-5 complete
+
+**Status:** Documentation requirements mapped; strategy docs outline ready
+
+---
+
 ### 2026-03-30: .NET Consolidation Plan Documentation Impact Review — APPROVED
 
 **Final Verdict:** APPROVED (Minimal documentation impact; 3 tech docs need targeted updates)

@@ -9,6 +9,24 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-21: Test Design for Issue Triage — #611, #604, #602, #574
+
+**Session:** 8-agent PRD review cycle including QA test design assessment.
+
+**#611 Test Design (6 scenarios):**
+1. Timestamp format validation (ISO 8601, UTC)
+2. Explicit `--output` flag bypass (no timestamp suffix)
+3. Glob pattern matching (legacy `generated-*` still works)
+4. Timestamp uniqueness (no collisions on parallel runs)
+5. CI directory cleanup (updated patterns work)
+6. Regression guard (existing tests still pass)
+
+**#604/#602 Finding:** Existing tests use production data (vacuous tests). PR #605 added properly-mocked tests that catch exact failure scenarios. Recommendation: audit test framework for mock usage patterns.
+
+**Status:** 6 test designs ready for #611 implementation; framework review recommended
+
+---
+
 ### 2026-03-30: .NET Consolidation QA Review — FINAL (APPROVED WITH CONTINGENCIES)
 
 **Final Verdict:** APPROVED WITH CONTINGENCIES (9 acceptance criteria required before each phase)

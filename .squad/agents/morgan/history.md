@@ -9,6 +9,23 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-21: Bug Fix Verification — PR #605 Merges #603, #604, #602
+
+**Session:** 8-agent PRD review cycle including bug verification.
+
+**Verified Fixes:**
+1. **#603:** ResolveFamilyName now uses decomposed namespace keys (e.g., `extension_azqr`) instead of CLI prefix
+2. **#604:** BrandMappingValidator now checks prefix-covered decomposed namespaces
+3. **#602:** ToolFamilyCleanupStep now falls back to tools-raw/ when tools/ empty or absent (enables --steps 1,4 --skip-deps)
+
+**Test Results:** 35/35 new tests passing across all three fixes (ToolFamilyCleanup, ResolveFamilyFileName, BrandMappingValidator)
+
+**Recommendation:** Close GitHub issues #604 and #602 immediately (PR #605 merged 2026-05-19). Issue #603 was internal fix, no public issue created.
+
+**Status:** All fixes verified, ready for issue closure
+
+---
+
 ### 2026-04-17: Morgan History Summarization (Archive Phase 1)
 
 **Scope:** Consolidated early-stage PR review work (2026-03-23 to 2026-03-25) and Acrolinx implementation into core principles. This is a HARD GATE summarization (file was 19.7 KB, now being reduced).

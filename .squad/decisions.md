@@ -1546,3 +1546,166 @@ Workflow: Fetch resources → Parse config → Compare against policies.json →
 **Document Owner:** Sage  
 **Last Updated:** 2026-03-31
 
+---
+
+# Recent Decisions — 2026-05-21 PRD Review Cycle
+
+## AD-035: Issue Triage & Sequencing — #611, #604, #602, #574
+**Date:** 2026-05-21  
+**Author:** Avery (Team Lead), 8-agent review  
+**Status:** APPROVED  
+**Related:** PRD review cycle, spawn manifest
+
+**Context:** Four issues triaged with dependency analysis and @copilot suitability assessment.
+
+**Key Finding:** #604 (BrandMappingValidator) and #602 (Step 4 tools-raw fallback) are **already fixed in PR #605** (merged 2026-05-19). Both should be closed on GitHub immediately.
+
+**Priority & Sequencing:**
+1. **#604 & #602** → Close immediately (admin, PR #605 shipped the fix)
+2. **#611** → P1, independent, @copilot-suitable (1-2 days, timestamps generated-* directories)
+3. **#574** → P2, multi-phase, depends on #611 (5 weeks, integrated validation pipeline)
+
+**Dependencies:**
+- #611 must complete before #574 Phase 1 (timestamp dirs enable cleaner CI glob patterns)
+- #604/#602 fixes verified: 25 new tests passing, ready for issue closure
+
+**@Copilot Suitability:**
+- #611: ✅ YES (well-scoped, TDD path clear, no cross-repo changes)
+- #574 Phase 1: ✅ YES (namespace-mapping.json extraction, mechanical)
+- #574 Phases 2-3: ⚠️ PARTIAL (C# wrappers, requires IProcessRunner guidance)
+- #574 Phases 4-5: ❌ NO (cross-repo cleanup, gate promotion requires human judgment)
+
+**Rationale:** Prioritization prevents harm (fix blockers first) before adding value (new validation). #611 cleans CI infrastructure; #574 adds enforcement gates afterward.
+
+**Risk Assessment:**
+- #611 blast radius: medium (affects directory naming, CI globs, CLI defaults)
+- #574 blast radius: large (new pipeline steps, validation gate with promotion decision)
+- Critical risk for #574: gate must not block PRs before clean baseline on all 58 namespaces
+
+**Next Actions:**
+1. Close GitHub issues #604, #602
+2. Assign #611 to @copilot with full TDD acceptance criteria
+3. Design namespace-mapping.json schema for Phase 1
+
+---
+
+## AD-036: Architecture Review Notes — Process Execution & Dependencies
+**Date:** 2026-05-21  
+**Author:** Riley (Pipeline Architect)  
+**Status:** Documented  
+
+**Key Findings:**
+- Process.Start("pwsh") call in #574 Phase 1-2 should use IProcessRunner abstraction (subprocess isolation contract)
+- Steps 5 & 6 have implicit Bootstrap dependencies — recommend explicit `DependsOn` declarations
+- Bootstrap ResetOutputDirectory destructive — recommend incremental mode for `--skip-deps` runs
+
+**Recommendations for #574:**
+1. Subprocess error detection via JSON contracts (not regex parsing)
+2. IProcessRunner abstraction for all Process execution
+3. Explicit dependency declarations for improved visibility
+
+**Impact:** Low priority (tech debt), does not block #611 or Phase 1 of #574.
+
+---
+
+## AD-037: Test Coverage Plan — 129 Tests Across Issues
+**Date:** 2026-05-21  
+**Author:** Cameron (Test Lead), Parker (QA)  
+**Status:** Planned  
+
+**#611 Test Coverage:** ~45 C# tests
+- Timestamp generation (format, ISO 8601 UTC, uniqueness)
+- Explicit `--output` bypass (no timestamp when user-provided)
+- CI glob matching compatibility
+
+**#574 Test Coverage:** ~84 Pester tests
+- Phase 1: namespace-mapping.json completeness (55+ entries)
+- Phase 2-3: ArticleHealthValidator + CoverageAuditStep integration
+- Phase 4-5: Gate promotion baseline measurement
+
+**Key Finding (Parker):** Existing #604 tests use production data (not mocks) — vacuous tests. PR #605 added properly-mocked tests that catch exact failure scenarios. Recommend framework audit for mock usage patterns.
+
+**Total Coverage:** 129 tests across TDD workflow (write failing → implement → verify passing)
+
+---
+
+## AD-038: Documentation Requirements — 7 Files
+**Date:** 2026-05-21  
+**Author:** Reeve (Documentation Engineer)  
+**Status:** Mapped  
+
+**#611 Documentation (3 files, 1-2 hours):**
+- `docs/START-SCRIPTS.md` — explain timestamped directory naming
+- `README.md` — document `--output` flag (explicit path = no timestamp)
+- `docs/ARCHITECTURE.md` — CI workspace isolation diagram
+
+**#574 Documentation (2 new + 3 updates, 3-4 hours):**
+- **New:** `docs/validation-gate-strategy.md` (explain architecture, phases, promotion flow)
+- Updates: ARCHITECTURE.md, CI-INTEGRATION.md, README.md
+
+**Dependency:** #574 docs wait for Phase 1 namespace-mapping.json schema finalized.
+
+---
+
+## AD-039: AI Risk Assessment — Placeholder Token Detector
+**Date:** 2026-05-21  
+**Author:** Sage (AI/Prompt Engineer)  
+**Status:** Proposed  
+
+**Finding:** #574 tools-raw/ fallback has unresolved placeholders (e.g., `<<<TPL_LABEL_N>>>` tokens), risk level: medium.
+
+**Proposed Mitigation:**
+1. Implement placeholder token detector in #574 Phase 2 validation step
+2. Phase 1: warn-only on placeholder detection
+3. Phase 2: promote to fail-gate after clean baseline established
+
+**Pattern Detection:** Regex for `<<<\w+_\d+>>>` markers; warn on match; fail on promotion.
+
+**Impact:** Enables safer AI output validation in validation gate infrastructure.
+
+---
+
+## AD-040: DevOps Impact — CI Safe, Scripts Audit Required
+**Date:** 2026-05-21  
+**Author:** Quinn (DevOps/CI)  
+**Status:** Approved  
+
+**#611 CI Changes:**
+- Glob patterns: update `generated-*` to match timestamped (YYYY-MM-DDTHH-MM-SSZ) format
+- Artifact upload: CI workflows must use updated globs
+- Risk: low (pattern updates straightforward, no schema changes)
+
+**#574 CI Integration:**
+- 4 scripts need updates: generate-docs.yml, build-and-test.yml, orchestrator scripts, new validation-gate.yml
+- Gate can deploy warn-only, promoted to fail after 2-week clean baseline
+- Risk: low (no backward compatibility breaks)
+
+**Next:** Script audit after implementation; gate promotion measured after baseline.
+
+---
+
+## AD-041: Bug Fix Verification — PR #605 Merges #603, #604, #602
+**Date:** 2026-05-21  
+**Author:** Morgan (C# Generator Developer), verified by all agents  
+**Status:** VERIFIED & MERGED  
+
+**Fixed Bugs:**
+- **#603:** ResolveFamilyName uses CLI prefix instead of decomposed namespace key
+- **#604:** BrandMappingValidator rejects prefix-covered decomposed namespaces  
+- **#602:** Step 4 fails when Step 3 skipped (tools/ empty) — now falls back to tools-raw/
+
+**Test Results:**
+- ToolFamilyCleanup: 12/12 passing ✅
+- ResolveFamilyFileName: 6/6 passing ✅
+- BrandMappingValidator: 17/17 passing ✅
+- Pipeline end-to-end: 880/881 passing ✅ (1 pre-existing unrelated failure)
+
+**Recommendation:** Close GitHub issues #604 and #602 immediately (reference PR #605). Issue #603 was internal (no public issue filed, fixed as part of PR #605).
+
+---
+
+**All decisions recorded and merged to decisions.md on 2026-05-21**  
+**Inbox files processed: 29 files merged from .squad/decisions/inbox/  
+**Session logs recorded: .squad/orchestration-log/ and .squad/log/  
+**Next review: Post-implementation verification for #611 (1-2 days)
+

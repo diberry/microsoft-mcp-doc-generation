@@ -7,6 +7,25 @@
 
 ## Learnings
 
+### 2026-05-21: AI Risk Assessment — #574 Placeholder Token Detector
+
+**Session:** 8-agent PRD review cycle including AI validation findings.
+
+**Finding:** #574 tools-raw/ fallback has unresolved placeholders (e.g., `<<<TPL_LABEL_N>>>` tokens), risk level: medium.
+
+**Proposed Mitigation:**
+1. Implement placeholder token detector in #574 Phase 2 validation step
+2. Phase 1: warn-only on placeholder detection
+3. Phase 2: promote to fail-gate after clean baseline established
+
+**Pattern Detection:** Regex for `<<<\w+_\d+>>>` markers; warn on match; fail on promotion
+
+**Impact:** Enables safer AI output validation; improves content quality gates
+
+**Status:** Spec documented; ready for Phase 2 implementation
+
+---
+
 ### 2026-03-31: Skills Generation LLM Prompt Redesign — Agent-to-Customer Translation
 
 **Task:** Redesign the LLM rewrite step to transform SKILL.md (agent-internal anthropic-spec) into customer-facing documentation.

@@ -9,6 +9,25 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-21: Issue Triage & PRD Review Cycle — All 8 Agents (AD-035 through AD-041)
+
+**Session:** Comprehensive issue triage for #611, #604, #602, #574 with full 8-agent review & consensus.
+
+**Key Outcome:** #604 and #602 already fixed in PR #605 (merged 2026-05-19) — recommendation to close immediately.
+
+**Prioritization:**
+1. #611 (P1, independent, 1-2 days, @copilot-suitable)
+2. #574 Phase 1 (P2, 1-2 days, namespace-mapping.json extraction)
+3. #574 Phases 2-5 (P2, multi-week, requires #611 completion)
+
+**All 8 agents approved:** Avery, Riley, Morgan, Quinn, Sage, Cameron, Parker, Reeve
+
+**Risk assessment:** #611 blast radius medium (directory naming); #574 blast radius large (validation gates)
+
+**Next:** Close #604/#602 on GitHub; assign #611 to @copilot with TDD acceptance criteria; design namespace-mapping.json schema
+
+---
+
 ### 2026-03-30: .NET Project Consolidation Plan — Team Review Complete (AD-027 through AD-034)
 
 **Session:** Orchestrated asynchronous review of consolidation plan across 8-member team.
@@ -17,7 +36,7 @@
 
 **Verdicts:**
 - ✅ Riley (Architect): APPROVE WITH CHANGES
-- ✅ Morgan (C# Dev): APPROVE WITH CHANGES  
+- ✅ Morgan (C# Dev): APPROVE WITH CHANGES
 - ✅ Cameron (Test Lead): APPROVE WITH CHANGES
 - ✅ Quinn (DevOps): APPROVED
 - ✅ Parker (QA): APPROVE WITH CONTINGENCIES
