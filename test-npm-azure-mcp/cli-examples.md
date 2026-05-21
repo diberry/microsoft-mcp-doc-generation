@@ -76,7 +76,6 @@ azmcp appconfig kv get \
 azmcp appconfig kv lock set \
   --account <account> \
   --key <key> \
-  [--content-type <content-type>] \
   [--label <label>] \
   [--lock <lock>]
 ```
@@ -260,9 +259,51 @@ azmcp azurebackup policy create \
   --resource-group <resource-group> \
   --vault <vault> \
   --workload-type <workload-type> \
+  [--archive-tier-after-days <archive-tier-after-days>] \
+  [--archive-tier-mode <archive-tier-mode>] \
+  [--backup-mode <backup-mode>] \
   [--daily-retention-days <daily-retention-days>] \
-  [--schedule-time <schedule-time>] \
-  [--vault-type <vault-type>]
+  [--differential-retention-days <differential-retention-days>] \
+  [--differential-schedule-days-of-week <differential-schedule-days-of-week>] \
+  [--enable-snapshot-backup <enable-snapshot-backup>] \
+  [--enable-vault-tier-copy <enable-vault-tier-copy>] \
+  [--full-schedule-days-of-week <full-schedule-days-of-week>] \
+  [--full-schedule-frequency <full-schedule-frequency>] \
+  [--hourly-interval-hours <hourly-interval-hours>] \
+  [--hourly-window-duration-hours <hourly-window-duration-hours>] \
+  [--hourly-window-start-time <hourly-window-start-time>] \
+  [--incremental-retention-days <incremental-retention-days>] \
+  [--incremental-schedule-days-of-week <incremental-schedule-days-of-week>] \
+  [--instant-rp-resource-group <instant-rp-resource-group>] \
+  [--instant-rp-retention-days <instant-rp-retention-days>] \
+  [--is-compression <is-compression>] \
+  [--is-sql-compression <is-sql-compression>] \
+  [--log-frequency-minutes <log-frequency-minutes>] \
+  [--log-retention-days <log-retention-days>] \
+  [--monthly-retention-days-of-month <monthly-retention-days-of-month>] \
+  [--monthly-retention-days-of-week <monthly-retention-days-of-week>] \
+  [--monthly-retention-months <monthly-retention-months>] \
+  [--monthly-retention-week-of-month <monthly-retention-week-of-month>] \
+  [--pitr-retention-days <pitr-retention-days>] \
+  [--policy-sub-type <policy-sub-type>] \
+  [--policy-tags <policy-tags>] \
+  [--schedule-days-of-week <schedule-days-of-week>] \
+  [--schedule-frequency <schedule-frequency>] \
+  [--schedule-times <schedule-times>] \
+  [--smart-tier <smart-tier>] \
+  [--snapshot-consistency <snapshot-consistency>] \
+  [--snapshot-instant-rp-resource-group <snapshot-instant-rp-resource-group>] \
+  [--snapshot-instant-rp-retention-days <snapshot-instant-rp-retention-days>] \
+  [--time-zone <time-zone>] \
+  [--vault-tier-copy-after-days <vault-tier-copy-after-days>] \
+  [--vault-type <vault-type>] \
+  [--weekly-retention-days-of-week <weekly-retention-days-of-week>] \
+  [--weekly-retention-weeks <weekly-retention-weeks>] \
+  [--yearly-retention-days-of-month <yearly-retention-days-of-month>] \
+  [--yearly-retention-days-of-week <yearly-retention-days-of-week>] \
+  [--yearly-retention-months <yearly-retention-months>] \
+  [--yearly-retention-week-of-month <yearly-retention-week-of-month>] \
+  [--yearly-retention-years <yearly-retention-years>]
 ```
 
 ```console
@@ -313,6 +354,11 @@ azmcp azurebackup protecteditem protect \
   --policy <policy> \
   --resource-group <resource-group> \
   --vault <vault> \
+  [--aks-excluded-namespaces <aks-excluded-namespaces>] \
+  [--aks-include-cluster-scope-resources <aks-include-cluster-scope-resources>] \
+  [--aks-included-namespaces <aks-included-namespaces>] \
+  [--aks-label-selectors <aks-label-selectors>] \
+  [--aks-snapshot-resource-group <aks-snapshot-resource-group>] \
   [--container <container>] \
   [--datasource-type <datasource-type>] \
   [--vault-type <vault-type>]
@@ -342,6 +388,18 @@ azmcp azurebackup recoverypoint get \
 
 
 ## azurebackup security
+
+```console
+azmcp azurebackup security configure-encryption \
+  --identity-type <identity-type> \
+  --key-name <key-name> \
+  --key-vault-uri <key-vault-uri> \
+  --resource-group <resource-group> \
+  --vault <vault> \
+  [--key-version <key-version>] \
+  [--user-assigned-identity-id <user-assigned-identity-id>] \
+  [--vault-type <vault-type>]
+```
 
 ```console
 azmcp azurebackup security configure-mua \
@@ -664,6 +722,15 @@ azmcp compute vm get \
   [--instance-view <instance-view>] \
   [--resource-group <resource-group>] \
   [--vm-name <vm-name>]
+```
+
+```console
+azmcp compute vm power-state \
+  --power-action <power-action> \
+  --resource-group <resource-group> \
+  --vm-name <vm-name> \
+  [--no-wait <no-wait>] \
+  [--skip-shutdown <skip-shutdown>]
 ```
 
 ```console
