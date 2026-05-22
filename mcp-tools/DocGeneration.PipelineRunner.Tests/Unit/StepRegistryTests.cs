@@ -1,3 +1,4 @@
+using PipelineRunner.Cli;
 using PipelineRunner.Contracts;
 using PipelineRunner.Context;
 using PipelineRunner.Registry;
@@ -61,6 +62,25 @@ public class StepRegistryTests
             Assert.IsType<ToolFamilyCleanupStep>(registry.GetStep(4));
             Assert.IsType<SkillsRelevanceStep>(registry.GetStep(5));
             Assert.IsType<HorizontalArticlesStep>(registry.GetStep(6));
+        }
+        finally
+        {
+            Directory.Delete(scriptsRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void AllValidSteps_MatchesRegisteredSteps()
+    {
+        var scriptsRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-scripts-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(scriptsRoot);
+
+        try
+        {
+            var registry = StepRegistry.CreateDefault(scriptsRoot);
+            var registeredSteps = registry.GetAllSteps().Select(step => step.Id).ToArray();
+
+            Assert.Equal(registeredSteps, PipelineRequest.AllValidSteps);
         }
         finally
         {

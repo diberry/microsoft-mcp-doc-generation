@@ -30,6 +30,35 @@ public class CliArgumentParsingTests
     }
 
     [Fact]
+    public void Parse_StepsIncludingBootstrap_AcceptsStepZero()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0,1"]);
+
+        Assert.NotNull(result.Request);
+        Assert.Equal(new[] { 0, 1 }, result.Request!.Steps);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Parse_BootstrapOnlyStep_AcceptsStepZero()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0"]);
+
+        Assert.NotNull(result.Request);
+        Assert.Equal(new[] { 0 }, result.Request!.Steps);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Parse_StepsIncludingBootstrapAndInvalidStep_RejectsRequest()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0,9"]);
+
+        Assert.Null(result.Request);
+        Assert.Contains(result.Errors, error => error.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task InvokeAsync_InvalidArguments_ReturnsInvalidUsageExitCode()
     {
         var handlerCalled = false;
@@ -46,7 +75,7 @@ public class CliArgumentParsingTests
 
         Assert.False(handlerCalled);
         Assert.Equal(global::PipelineRunner.PipelineRunner.InvalidArgumentsExitCode, exitCode);
-        Assert.Contains("Unsupported step identifiers", errorWriter.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", errorWriter.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
