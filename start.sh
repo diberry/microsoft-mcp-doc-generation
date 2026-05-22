@@ -16,6 +16,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 NAMESPACE_ARG=""
 STEPS_ARG="1,2,3,4,5,6"
+STEP_PATTERN='^[0-6](,[0-6])*$'
 EXTRA_ARGS=()
 
 # If first arg starts with -, pass all args through directly to DocGeneration.PipelineRunner
@@ -25,13 +26,13 @@ if [[ $# -gt 0 && "$1" =~ ^- ]]; then
 fi
 
 if [[ $# -gt 0 ]]; then
-    if [[ "$1" =~ ^[1-6](,[1-6])*$ ]]; then
+    if [[ "$1" =~ $STEP_PATTERN ]]; then
         STEPS_ARG="$1"
         shift
     else
         NAMESPACE_ARG="$1"
         shift
-        if [[ $# -gt 0 && "$1" =~ ^[1-6](,[1-6])*$ ]]; then
+        if [[ $# -gt 0 && "$1" =~ $STEP_PATTERN ]]; then
             STEPS_ARG="$1"
             shift
         fi

@@ -40,6 +40,25 @@ public class CliArgumentParsingTests
     }
 
     [Fact]
+    public void Parse_BootstrapOnlyStep_AcceptsStepZero()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0"]);
+
+        Assert.NotNull(result.Request);
+        Assert.Equal(new[] { 0 }, result.Request!.Steps);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public void Parse_StepsIncludingBootstrapAndInvalidStep_RejectsRequest()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0,9"]);
+
+        Assert.Null(result.Request);
+        Assert.Contains(result.Errors, error => error.Contains("Unsupported step identifiers: 9", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task InvokeAsync_InvalidArguments_ReturnsInvalidUsageExitCode()
     {
         var handlerCalled = false;
