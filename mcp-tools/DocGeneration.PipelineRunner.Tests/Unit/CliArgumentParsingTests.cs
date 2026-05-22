@@ -30,6 +30,16 @@ public class CliArgumentParsingTests
     }
 
     [Fact]
+    public void Parse_StepsIncludingBootstrap_AcceptsStepZero()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0,1"]);
+
+        Assert.NotNull(result.Request);
+        Assert.Equal(new[] { 0, 1 }, result.Request!.Steps);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
     public async Task InvokeAsync_InvalidArguments_ReturnsInvalidUsageExitCode()
     {
         var handlerCalled = false;

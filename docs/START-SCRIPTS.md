@@ -56,7 +56,7 @@ These flags are passed through to the .NET runner:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--namespace <name>` | all | Process single namespace |
-| `--steps <csv>` | `1,2,3,4,5,6` | Comma-separated step IDs |
+| `--steps <csv>` | `1,2,3,4,5,6` | Comma-separated step IDs. Valid IDs are `0-6`; the default omits `0` because Bootstrap runs automatically unless explicitly requested. |
 | `--output <path>` | auto | Output directory |
 | `--mcp-branch <branch>` | `release/azure/2.x` | Branch of `microsoft/mcp` for upstream files |
 | `--skip-build` | false | Reuse existing Release build |

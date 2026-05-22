@@ -38,6 +38,7 @@ public sealed record PipelineRequest(
             return DefaultMcpBranch;
         }
     }
+    public static IReadOnlyList<int> AllValidSteps { get; } = [0, 1, 2, 3, 4, 5, 6];
     public static IReadOnlyList<int> DefaultSteps { get; } = [1, 2, 3, 4, 5, 6];
 
     public static string GetDefaultOutputPath(string? targetNamespace)
@@ -104,7 +105,7 @@ public sealed record PipelineRequest(
             errors.Add($"Duplicate step identifiers are not allowed: {string.Join(", ", duplicates)}.");
         }
 
-        var allowedSteps = validStepIds ?? DefaultSteps;
+        var allowedSteps = validStepIds ?? AllValidSteps;
         var invalidSteps = Steps
             .Where(step => !allowedSteps.Contains(step))
             .Distinct()
