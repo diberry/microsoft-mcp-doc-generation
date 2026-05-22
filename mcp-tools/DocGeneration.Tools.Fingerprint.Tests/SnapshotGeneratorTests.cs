@@ -8,6 +8,7 @@ public class SnapshotGeneratorTests
         Assert.Equal("advisor", SnapshotGenerator.ExtractNamespaceName("/repo/generated-advisor"));
         Assert.Equal("storage", SnapshotGenerator.ExtractNamespaceName(Path.Combine("C:", "repo", "generated-storage")));
         Assert.Equal("appservice", SnapshotGenerator.ExtractNamespaceName("generated-appservice"));
+        Assert.Equal("compute", SnapshotGenerator.ExtractNamespaceName("generated-compute-20990101T000001000Z"));
     }
 
     [Fact]
@@ -22,11 +23,13 @@ public class SnapshotGeneratorTests
         var tempDir = CreateTempRepoStructure();
         try
         {
+            Directory.CreateDirectory(Path.Combine(tempDir, "generated-advisor-20990101T000001000Z"));
+
             var generator = new SnapshotGenerator(tempDir);
             var dirs = generator.FindNamespaceDirectories("advisor");
 
             Assert.Single(dirs);
-            Assert.EndsWith("generated-advisor", dirs[0].Replace('\\', '/'));
+            Assert.EndsWith("generated-advisor-20990101T000001000Z", dirs[0].Replace('\\', '/'));
         }
         finally
         {
@@ -40,10 +43,15 @@ public class SnapshotGeneratorTests
         var tempDir = CreateTempRepoStructure();
         try
         {
+            Directory.CreateDirectory(Path.Combine(tempDir, "generated-advisor-20990101T000001000Z"));
+            Directory.CreateDirectory(Path.Combine(tempDir, "generated-20990101T000001000Z"));
+
             var generator = new SnapshotGenerator(tempDir);
             var dirs = generator.FindNamespaceDirectories();
 
             Assert.Equal(2, dirs.Count);
+            Assert.DoesNotContain(dirs, path => path.EndsWith("generated-20990101T000001000Z", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(dirs, path => path.EndsWith("generated-advisor-20990101T000001000Z", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -171,6 +179,8 @@ public class SnapshotGeneratorTests
         var tempDir = CreateTempRepoStructure();
         try
         {
+            Directory.CreateDirectory(Path.Combine(tempDir, "generated-advisor-20990101T000001000Z"));
+
             var generator = new SnapshotGenerator(tempDir);
             var snapshot = generator.GenerateSnapshot("advisor");
 

@@ -130,7 +130,7 @@ public static class PipelineCli
         => new(
             new Option<string?>("--namespace", "Namespace/service area to process. Omit to process all namespaces."),
             new Option<string>("--steps", () => string.Join(',', PipelineRequest.DefaultSteps), "Comma-separated list of step identifiers to run."),
-            new Option<string?>("--output", "Output directory. Defaults to .\\generated or .\\generated-<namespace>."),
+            new Option<string?>("--output", "Output directory. Defaults to .\\generated-<timestamp> or .\\generated-<namespace>-<timestamp>."),
             new Option<bool>("--skip-build", "Skip build work and require existing Release outputs."),
             new Option<bool>("--skip-validation", "Skip validation checks executed by the typed runner."),
             new Option<bool>("--skip-env-validation", "Skip Azure OpenAI environment validation during bootstrap."),

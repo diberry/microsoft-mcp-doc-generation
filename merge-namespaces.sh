@@ -46,6 +46,22 @@ console.log('===================================================================
 console.log('Post-Assembly: Namespace Merge (AD-011)');
 console.log('===================================================================');
 
+function resolveGeneratedDir(namespaceName) {
+    const prefix = 'generated-' + namespaceName + '-';
+    const candidates = fs.readdirSync(rootDir, { withFileTypes: true })
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .filter(name => name === 'generated-' + namespaceName || (name.startsWith(prefix) && /^\d{8}T\d{9}Z$/i.test(name.slice(prefix.length))))
+        .map(name => ({
+            name,
+            path: path.join(rootDir, name),
+            mtimeMs: fs.statSync(path.join(rootDir, name)).mtimeMs
+        }))
+        .sort((a, b) => b.mtimeMs - a.mtimeMs || b.name.localeCompare(a.name));
+
+    return candidates.length > 0 ? candidates[0].path : null;
+}
+
 function parseArticle(md) {
     const lines = md.split('\n');
     let header = [], tools = [], related = [], currentTool = [];
@@ -82,12 +98,15 @@ for (const [groupName, members] of groups) {
         continue;
     }
 
-    // Load articles from generated-{ns}/tool-family/{ns}.md
+    // Load articles from the most recent generated-{ns}*/tool-family/{ns}.md directory.
     const articles = {};
+    const generatedDirs = {};
     let missing = false;
     for (const m of members) {
-        const articlePath = path.join(rootDir, 'generated-' + m.ns, 'tool-family', m.ns + '.md');
-        if (fs.existsSync(articlePath)) {
+        const generatedDir = resolveGeneratedDir(m.ns);
+        const articlePath = generatedDir ? path.join(generatedDir, 'tool-family', m.ns + '.md') : null;
+        if (articlePath && fs.existsSync(articlePath)) {
+            generatedDirs[m.ns] = generatedDir;
             articles[m.ns] = fs.readFileSync(articlePath, 'utf8');
         } else {
             console.log('  Skipping group ' + groupName + ': ' + m.ns + '.md not found');
@@ -110,7 +129,7 @@ for (const [groupName, members] of groups) {
     const updatedHeader = primaryParsed.header.replace(/tool_count:\s*\d+/, 'tool_count: ' + totalTools);
     const merged = updatedHeader + '\n' + allTools.join('\n\n') + '\n\n## Related content\n\n' + primaryParsed.related + '\n';
 
-    const outputPath = path.join(rootDir, 'generated-' + primary.ns, 'tool-family', primary.ns + '.md');
+    const outputPath = path.join(generatedDirs[primary.ns], 'tool-family', primary.ns + '.md');
     const toolCounts = members.map(m => m.ns + ':' + parseArticle(articles[m.ns]).tools.length).join(' + ');
 
     if (dryRun) {

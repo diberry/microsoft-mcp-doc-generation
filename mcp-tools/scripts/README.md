@@ -60,7 +60,7 @@ dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.Pipeli
 |---|---|
 | `--namespace <name>` | Run a single namespace/service area. Omit to process all namespaces discovered from CLI metadata. |
 | `--steps <csv>` | Comma-separated step list. Default: `1,2,3,4,5,6`. |
-| `--output <path>` | Output directory. Defaults to `./generated` or `./generated-<namespace>`. |
+| `--output <path>` | Output directory. When omitted, PipelineRunner defaults to `./generated-<timestamp>` or `./generated-<namespace>-<timestamp>` with `yyyyMMddTHHmmssfffZ` precision. |
 | `--skip-build` | Reuse existing Release outputs and skip build work. |
 | `--skip-validation` | Skip validation behavior that is modeled in the runner/steps. |
 | `--skip-env-validation` | Skip Azure OpenAI environment validation during `BootstrapStep`. |

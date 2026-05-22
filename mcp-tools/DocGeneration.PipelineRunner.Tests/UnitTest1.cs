@@ -5,6 +5,11 @@ namespace PipelineRunner.Tests.Unit;
 
 public class PipelineRequestTests
 {
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
+    }
+
     [Fact]
     public void TryParseSteps_ValidCsv_ReturnsOrderedValues()
     {
@@ -36,10 +41,22 @@ public class PipelineRequestTests
     }
 
     [Fact]
-    public void GetDefaultOutputPath_SingleNamespace_UsesNamespaceSuffix()
+    public void GetDefaultOutputPath_SingleNamespace_UsesNamespaceSuffixAndTimestamp()
     {
-        var outputPath = PipelineRequest.GetDefaultOutputPath("compute");
+        var outputPath = PipelineRequest.GetDefaultOutputPath(
+            "compute",
+            new FixedTimeProvider(new DateTimeOffset(2026, 05, 22, 15, 25, 17, TimeSpan.Zero)));
 
-        Assert.Equal(".\\generated-compute", outputPath);
+        Assert.Equal(".\\generated-compute-20260522T152517000Z", outputPath);
+    }
+
+    [Fact]
+    public void GetDefaultOutputPath_NoNamespace_UsesTimestampedGeneratedDirectory()
+    {
+        var outputPath = PipelineRequest.GetDefaultOutputPath(
+            null,
+            new FixedTimeProvider(new DateTimeOffset(2026, 05, 22, 15, 25, 17, TimeSpan.Zero)));
+
+        Assert.Equal(".\\generated-20260522T152517000Z", outputPath);
     }
 }

@@ -38,6 +38,7 @@ public sealed record PipelineRequest(
             return DefaultMcpBranch;
         }
     }
+
     /// <summary>
     /// Parse-time validation allowlist for explicit <c>--steps</c> requests.
     /// This includes Bootstrap (step 0) even though <see cref="DefaultSteps"/> omits it from the default run set.
@@ -51,10 +52,15 @@ public sealed record PipelineRequest(
     /// </summary>
     public static IReadOnlyList<int> DefaultSteps { get; } = [1, 2, 3, 4, 5, 6];
 
-    public static string GetDefaultOutputPath(string? targetNamespace)
-        => string.IsNullOrWhiteSpace(targetNamespace)
-            ? ".\\generated"
-            : $".\\generated-{targetNamespace.Trim()}";
+    public static string GetDefaultOutputPath(string? targetNamespace, TimeProvider? timeProvider = null)
+    {
+        // Millisecond precision keeps default paths readable while making same-moment collisions vanishingly unlikely.
+        // Callers can still pass --output explicitly when they need a fully caller-controlled path.
+        var timestamp = (timeProvider ?? TimeProvider.System).GetUtcNow().ToString("yyyyMMddTHHmmssfffZ");
+        return string.IsNullOrWhiteSpace(targetNamespace)
+            ? $".\\generated-{timestamp}"
+            : $".\\generated-{targetNamespace.Trim()}-{timestamp}";
+    }
 
     public static bool TryParseSteps(string? csv, out IReadOnlyList<int> steps, out string? error)
     {

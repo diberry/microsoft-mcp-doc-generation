@@ -423,8 +423,10 @@ public sealed class BootstrapStep : StepDefinition
             }
         }
 
+        var targetFramework = Path.GetFileName(Path.GetDirectoryName(typeof(BootstrapStep).Assembly.Location)) ?? "net10.0";
+
         return requiredProjects
-            .Select(project => Path.Combine(mcpToolsRoot, project, "bin", "Release", "net9.0", $"{project}.dll"))
+            .Select(project => Path.Combine(mcpToolsRoot, project, "bin", "Release", targetFramework, $"{project}.dll"))
             .ToArray();
     }
 

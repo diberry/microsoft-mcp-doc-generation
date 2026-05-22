@@ -20,13 +20,22 @@ public class CliArgumentParsingTests
     }
 
     [Fact]
-    public void Parse_OmittedOutput_UsesLegacyDefaultConvention()
+    public void Parse_OmittedOutput_UsesTimestampedDefaultConvention()
     {
         var result = PipelineCli.Parse(["--namespace", "compute"]);
 
         Assert.NotNull(result.Request);
-        Assert.Equal(".\\generated-compute", result.Request!.OutputPath);
+        Assert.Matches(@"^\.\\generated-compute-\d{8}T\d{9}Z$", result.Request!.OutputPath);
         Assert.Equal(PipelineRequest.DefaultSteps, result.Request.Steps);
+    }
+
+    [Fact]
+    public void Parse_ExplicitOutput_UsesValueAsIs()
+    {
+        var result = PipelineCli.Parse(["--namespace", "compute", "--output", ".\\my-output"]);
+
+        Assert.NotNull(result.Request);
+        Assert.Equal(".\\my-output", result.Request!.OutputPath);
     }
 
     [Fact]

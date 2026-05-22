@@ -35,23 +35,11 @@
 
 | Position | Example | Meaning |
 |----------|---------|---------|
-| 1st arg matches `^[0-6](,[0-6])*$` | `0,1,2` | Steps (all namespaces) |
+| 1st arg matches `^[1-6](,[1-6])*$` | `1,2,3` | Steps (all namespaces) |
 | 1st arg is a word | `advisor` | Namespace |
-| 2nd arg after namespace | `advisor 0,1` | Steps for that namespace |
+| 2nd arg after namespace | `advisor 1,2` | Steps for that namespace |
 | Trailing flags | `--skip-deps` | Forwarded to PipelineRunner |
 | Leading `-` flag | `--dry-run` | Direct passthrough mode |
-
-## When to Pass Step 0 Explicitly
-
-You usually do **not** need to pass step `0` manually. The runner prepends Bootstrap automatically when it builds the execution plan.
-
-Pass step `0` explicitly when you need the CLI/parser layer to preserve an exact requested step list, such as:
-
-- **CI-generated step lists** — workflows like deterministic regression can resolve data/config file changes to `0,1`, and the CLI should accept that exact list.
-- **Bootstrap-only runs** — use `./start.sh advisor 0` (or direct `PipelineRunner --steps 0`) when you only want bootstrap outputs such as CLI metadata, upstream file parsing, or brand validation refreshed.
-- **Debugging partial reruns** — include `0` when you intentionally want Bootstrap work to rerun before a targeted namespace step.
-
-If you omit `--steps`, the default remains `1,2,3,4,5,6`; Bootstrap is still added automatically, but it is not shown in that default list because it is not an opt-in namespace step.
 
 ## Output Directories
 
@@ -68,8 +56,8 @@ These flags are passed through to the .NET runner:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--namespace <name>` | all | Process single namespace |
-| `--steps <csv>` | `1,2,3,4,5,6` | Comma-separated step IDs. Valid IDs are `0-6`; the default omits `0` because Bootstrap runs automatically unless explicitly requested. |
-| `--output <path>` | auto | Output directory. If omitted when calling PipelineRunner directly, defaults to `./generated-<timestamp>` or `./generated-<namespace>-<timestamp>` |
+| `--steps <csv>` | `1,2,3,4,5,6` | Comma-separated step IDs |
+| `--output <path>` | auto | Output directory. If omitted when calling PipelineRunner directly, defaults to `./generated-<timestamp>` or `./generated-<namespace>-<timestamp>` with `yyyyMMddTHHmmssfffZ` precision |
 | `--mcp-branch <branch>` | `release/azure/2.x` | Branch of `microsoft/mcp` for upstream files |
 | `--skip-build` | false | Reuse existing Release build |
 | `--skip-validation` | false | Skip post-assembly validation |

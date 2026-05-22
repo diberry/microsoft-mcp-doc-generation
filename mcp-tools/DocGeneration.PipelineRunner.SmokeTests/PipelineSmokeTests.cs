@@ -115,9 +115,10 @@ public class PipelineSmokeTests
         Assert.Equal(0, exitCode);
         
         // Verify output directory exists
-        var outputDir = Path.Combine(_repoRoot, $"generated-{namespaceName}");
+        var outputDir = BaselineManager.FindGeneratedDirectory(_repoRoot, namespaceName)
+            ?? throw new Xunit.Sdk.XunitException($"Generated output directory not found for namespace: {namespaceName}");
         Assert.True(Directory.Exists(outputDir),
-            $"Generated output directory not found: {outputDir}");
+            $"Generated output directory not found for namespace: {namespaceName}");
 
         // Verify required subdirectories exist (only those produced by Step 1)
         var requiredDirs = new[] { "annotations", "parameters" };

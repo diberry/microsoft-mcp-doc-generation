@@ -696,6 +696,7 @@ All generated content goes to:
 | `./start.sh` | `./generated/` |
 | `./start.sh advisor` | `./generated-advisor/` |
 | `./start.sh cosmos 1,2` | `./generated-cosmos/` |
+| `dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace advisor` | `./generated-advisor-{yyyyMMddTHHmmssfffZ}/` |
 
 **Directory structure:**
 ```
@@ -909,7 +910,8 @@ project-root/
 │   ├── templates/                        # Handlebars templates
 │   └── [Generator projects]/             # Each .NET generator project
 ├── generated/                            # Output directory (single full run)
-├── generated-{namespace}/                # Output directory (single namespace run)
+├── generated-{namespace}/                # Output directory (single namespace run via start.sh)
+├── generated-{namespace}-{yyyyMMddTHHmmssfffZ}/ # Output directory (PipelineRunner default when --output is omitted)
 └── docs/
     ├── PROJECT-GUIDE.md                  # This file
     └── [Other documentation]
