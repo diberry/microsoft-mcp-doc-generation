@@ -37,19 +37,19 @@ public sealed record PipelineRequest(
 
             return DefaultMcpBranch;
         }
-    }
-    /// <summary>
-    /// Parse-time validation allowlist for explicit <c>--steps</c> requests.
-    /// This includes Bootstrap (step 0) even though <see cref="DefaultSteps"/> omits it from the default run set.
-    /// Keep this list aligned with <see cref="Registry.StepRegistry.CreateDefault(string)"/>.
-    /// </summary>
-    public static IReadOnlyList<int> AllValidSteps { get; } = [0, 1, 2, 3, 4, 5, 6];
+}
+/// <summary>
+/// Parse-time validation allowlist for explicit <c>--steps</c> requests.
+/// This includes Bootstrap (step 0) even though <see cref="DefaultSteps"/> omits it from the default run set.
+/// Keep this list aligned with <see cref="Registry.StepRegistry.CreateDefault(string)"/>.
+/// </summary>
+public static IReadOnlyList<int> AllValidSteps { get; } = [0, 1, 2, 3, 4, 5, 6];
 
-    /// <summary>
-    /// Default namespace step run set used when <c>--steps</c> is omitted.
-    /// Bootstrap (step 0) is not included because it is added automatically by the runner.
-    /// </summary>
-    public static IReadOnlyList<int> DefaultSteps { get; } = [1, 2, 3, 4, 5, 6];
+/// <summary>
+/// Default namespace step run set used when <c>--steps</c> is omitted.
+/// Bootstrap (step 0) is not included because it is added automatically by the runner.
+/// </summary>
+public static IReadOnlyList<int> DefaultSteps { get; } = [1, 2, 3, 4, 5, 6];
 
     public static string GetDefaultOutputPath(string? targetNamespace)
         => string.IsNullOrWhiteSpace(targetNamespace)

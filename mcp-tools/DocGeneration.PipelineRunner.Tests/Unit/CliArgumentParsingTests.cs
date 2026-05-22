@@ -37,44 +37,44 @@ public class CliArgumentParsingTests
         Assert.NotNull(result.Request);
         Assert.Equal(new[] { 0, 1 }, result.Request!.Steps);
         Assert.Empty(result.Errors);
-    }
+}
 
-    [Fact]
-    public void Parse_BootstrapOnlyStep_AcceptsStepZero()
-    {
-        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0"]);
+[Fact]
+public void Parse_BootstrapOnlyStep_AcceptsStepZero()
+{
+    var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0"]);
 
-        Assert.NotNull(result.Request);
-        Assert.Equal(new[] { 0 }, result.Request!.Steps);
-        Assert.Empty(result.Errors);
-    }
+    Assert.NotNull(result.Request);
+    Assert.Equal(new[] { 0 }, result.Request!.Steps);
+    Assert.Empty(result.Errors);
+}
 
-    [Fact]
-    public void Parse_StepsIncludingBootstrapAndInvalidStep_RejectsRequest()
-    {
-        var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0,9"]);
+[Fact]
+public void Parse_StepsIncludingBootstrapAndInvalidStep_RejectsRequest()
+{
+    var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0,9"]);
 
-        Assert.Null(result.Request);
-        Assert.Contains(result.Errors, error => error.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", StringComparison.Ordinal));
-    }
+    Assert.Null(result.Request);
+    Assert.Contains(result.Errors, error => error.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", StringComparison.Ordinal));
+}
 
-    [Fact]
-    public async Task InvokeAsync_InvalidArguments_ReturnsInvalidUsageExitCode()
-    {
-        var handlerCalled = false;
-        using var errorWriter = new StringWriter();
+[Fact]
+public async Task InvokeAsync_InvalidArguments_ReturnsInvalidUsageExitCode()
+{
+    var handlerCalled = false;
+    using var errorWriter = new StringWriter();
 
-        var exitCode = await PipelineCli.InvokeAsync(
-            ["--steps", "1,9"],
-            (_, _) =>
-            {
-                handlerCalled = true;
-                return Task.FromResult(0);
-            },
-            errorWriter: errorWriter);
+    var exitCode = await PipelineCli.InvokeAsync(
+        ["--steps", "1,9"],
+        (_, _) =>
+        {
+            handlerCalled = true;
+            return Task.FromResult(0);
+        },
+        errorWriter: errorWriter);
 
-        Assert.False(handlerCalled);
-        Assert.Equal(global::PipelineRunner.PipelineRunner.InvalidArgumentsExitCode, exitCode);
+    Assert.False(handlerCalled);
+    Assert.Equal(global::PipelineRunner.PipelineRunner.InvalidArgumentsExitCode, exitCode);
         Assert.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", errorWriter.ToString(), StringComparison.Ordinal);
     }
 
