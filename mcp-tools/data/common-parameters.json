@@ -52,5 +52,11 @@
     "type": "string",
     "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
     "isRequired": false
+  },
+  {
+    "name": "--learn",
+    "type": "string",
+    "description": "Discover available sub-commands and their parameters without executing any Azure operation. Use on a command group (e.g. 'azmcp storage --learn') to list all commands in that group, or on a specific command (e.g. 'azmcp storage account list --learn') to see its options.",
+    "isRequired": false
   }
 ]

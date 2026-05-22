@@ -164,7 +164,7 @@ public class ParameterGeneratorTests
             new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         Assert.NotNull(commonParams);
-        var allowedPrefixes = new[] { "--retry-", "--auth-method", "--tenant", "--subscription", "--resource-group" };
+        var allowedPrefixes = new[] { "--retry-", "--auth-method", "--tenant", "--subscription", "--resource-group", "--learn" };
         foreach (var param in commonParams)
         {
             Assert.True(
