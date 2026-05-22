@@ -38,7 +38,17 @@ public sealed record PipelineRequest(
             return DefaultMcpBranch;
         }
     }
+    /// <summary>
+    /// Parse-time validation allowlist for explicit <c>--steps</c> requests.
+    /// This includes Bootstrap (step 0) even though <see cref="DefaultSteps"/> omits it from the default run set.
+    /// Keep this list aligned with <see cref="Registry.StepRegistry.CreateDefault(string)"/>.
+    /// </summary>
     public static IReadOnlyList<int> AllValidSteps { get; } = [0, 1, 2, 3, 4, 5, 6];
+
+    /// <summary>
+    /// Default namespace step run set used when <c>--steps</c> is omitted.
+    /// Bootstrap (step 0) is not included because it is added automatically by the runner.
+    /// </summary>
     public static IReadOnlyList<int> DefaultSteps { get; } = [1, 2, 3, 4, 5, 6];
 
     public static string GetDefaultOutputPath(string? targetNamespace)
@@ -114,7 +124,13 @@ public sealed record PipelineRequest(
 
         if (invalidSteps.Length > 0)
         {
-            errors.Add($"Unsupported step identifiers: {string.Join(", ", invalidSteps)}.");
+            var orderedAllowedSteps = allowedSteps.OrderBy(value => value).ToArray();
+            var validStepDescription = orderedAllowedSteps.Length == 0
+                ? "(none)"
+                : orderedAllowedSteps.SequenceEqual(Enumerable.Range(orderedAllowedSteps.First(), orderedAllowedSteps.Length))
+                    ? $"{orderedAllowedSteps.First()}-{orderedAllowedSteps.Last()}"
+                    : string.Join(", ", orderedAllowedSteps);
+            errors.Add($"Unsupported step identifiers: {string.Join(", ", invalidSteps)}. Valid step identifiers: {validStepDescription}.");
         }
 
         if (Namespace is not null && string.IsNullOrWhiteSpace(Namespace))

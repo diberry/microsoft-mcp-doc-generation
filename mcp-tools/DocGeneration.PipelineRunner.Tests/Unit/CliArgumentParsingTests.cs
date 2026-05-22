@@ -55,7 +55,7 @@ public class CliArgumentParsingTests
         var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0,9"]);
 
         Assert.Null(result.Request);
-        Assert.Contains(result.Errors, error => error.Contains("Unsupported step identifiers: 9", StringComparison.Ordinal));
+        Assert.Contains(result.Errors, error => error.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public class CliArgumentParsingTests
 
         Assert.False(handlerCalled);
         Assert.Equal(global::PipelineRunner.PipelineRunner.InvalidArgumentsExitCode, exitCode);
-        Assert.Contains("Unsupported step identifiers", errorWriter.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", errorWriter.ToString(), StringComparison.Ordinal);
     }
 
     [Fact]
