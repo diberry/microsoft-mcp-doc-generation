@@ -52,5 +52,11 @@
     "type": "string",
     "description": "The name of the Azure resource group. This is a logical container for Azure resources.",
     "isRequired": false
+  },
+  {
+    "name": "--learn",
+    "type": "boolean",
+    "description": "Discover available sub-commands and their parameters without executing any Azure operation.",
+    "isRequired": false
   }
 ]
