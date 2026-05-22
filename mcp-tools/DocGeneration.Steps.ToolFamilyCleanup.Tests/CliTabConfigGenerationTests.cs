@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Xunit;
@@ -14,6 +15,10 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// </summary>
 public class CliTabConfigGenerationTests
 {
+    private static readonly Regex TimestampedNamespaceDirectoryPattern = new(
+        @"^generated-(?<namespace>.+)-(?<timestamp>\d{8}T\d{9}Z)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
     private static string RepoRoot => RegressionTestHelpers.RepoRoot;
 
     // ── R-CG1: Config is deterministically generated from mapping ────────
@@ -65,8 +70,10 @@ public class CliTabConfigGenerationTests
         // Check that generated output directories exist for namespaces we've generated
         // (not all namespaces may have been generated in test environment, but those that exist must be valid)
         var generatedDirs = Directory.GetDirectories(RepoRoot, "generated-*")
-            .Select(d => Path.GetFileName(d).Replace("generated-", ""))
-            .Where(d => !d.Contains("-old-") && !d.Contains("-prev"))
+            .Select(TryExtractNamespace)
+            .Where(d => d is not null && !d.Contains("-old-") && !d.Contains("-prev"))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         // At minimum, azurebackup must exist (our primary test namespace)
@@ -109,7 +116,10 @@ public class CliTabConfigGenerationTests
 
             if (string.IsNullOrEmpty(fileName)) continue;
 
-            var toolFamilyPath = Path.Combine(RepoRoot, $"generated-{ns}", "tool-family", $"{fileName}.md");
+            var generatedDir = FindLatestGeneratedDirectory(ns);
+            if (generatedDir is null) continue;
+
+            var toolFamilyPath = Path.Combine(generatedDir, "tool-family", $"{fileName}.md");
             if (!File.Exists(toolFamilyPath)) continue;
 
             var content = File.ReadAllText(toolFamilyPath);
@@ -120,5 +130,46 @@ public class CliTabConfigGenerationTests
                 Assert.Equal(brandName, h1Match.Groups[1].Value.Trim());
             }
         }
+    }
+
+    private static string? TryExtractNamespace(string directoryPath)
+    {
+        var directoryName = Path.GetFileName(directoryPath);
+        if (string.IsNullOrWhiteSpace(directoryName) || directoryName.Equals("generated", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var timestampedMatch = TimestampedNamespaceDirectoryPattern.Match(directoryName);
+        if (timestampedMatch.Success)
+            return timestampedMatch.Groups["namespace"].Value;
+
+        return directoryName.StartsWith("generated-", StringComparison.OrdinalIgnoreCase)
+            ? directoryName["generated-".Length..]
+            : null;
+    }
+
+    private static string? FindLatestGeneratedDirectory(string namespaceName)
+    {
+        return Directory.GetDirectories(RepoRoot, $"generated-{namespaceName}*")
+            .Where(path => string.Equals(TryExtractNamespace(path), namespaceName, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(GetGeneratedDirectorySortKey)
+            .ThenByDescending(Directory.GetLastWriteTimeUtc)
+            .FirstOrDefault();
+    }
+
+    private static DateTimeOffset GetGeneratedDirectorySortKey(string directoryPath)
+    {
+        var directoryName = Path.GetFileName(directoryPath) ?? string.Empty;
+        var timestampedMatch = TimestampedNamespaceDirectoryPattern.Match(directoryName);
+        if (timestampedMatch.Success && DateTimeOffset.TryParseExact(
+                timestampedMatch.Groups["timestamp"].Value,
+                "yyyyMMdd'T'HHmmssfff'Z'",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsedTimestamp))
+        {
+            return parsedTimestamp;
+        }
+
+        return Directory.GetLastWriteTimeUtc(directoryPath);
     }
 }

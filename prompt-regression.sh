@@ -43,15 +43,28 @@ Examples:
 EOF
 }
 
+resolve_generated_dir() {
+    local ns="$1"
+    local latest=""
+
+    latest=$(ls -td "$REPO_ROOT/generated-$ns-"* 2>/dev/null | head -1 || true)
+    if [ -z "$latest" ] && [ -d "$REPO_ROOT/generated-$ns" ]; then
+        latest="$REPO_ROOT/generated-$ns"
+    fi
+
+    printf '%s\n' "$latest"
+}
+
 # Copy key articles from generated output to a target directory
 copy_articles() {
     local ns="$1"
     local target_dir="$2"
+    local generated_dir="$3"
 
     mkdir -p "$target_dir/$ns"
 
     # Tool-family article
-    local tf_dir="$REPO_ROOT/generated-$ns/tool-family"
+    local tf_dir="$generated_dir/tool-family"
     if [ -d "$tf_dir" ]; then
         local tf_file
         tf_file=$(find "$tf_dir" -name "*.md" -type f | sort | head -1)
@@ -61,7 +74,7 @@ copy_articles() {
     fi
 
     # Horizontal article
-    local ha_dir="$REPO_ROOT/generated-$ns/horizontal-articles"
+    local ha_dir="$generated_dir/horizontal-articles"
     if [ -d "$ha_dir" ]; then
         local ha_file
         ha_file=$(find "$ha_dir" -name "*.md" -type f | sort | head -1)
@@ -78,12 +91,14 @@ cmd_seed() {
 
     local count=0
     for ns in "${NAMESPACES[@]}"; do
-        if [ ! -d "$REPO_ROOT/generated-$ns" ]; then
-            echo "   ⚠️  $ns: generated-$ns/ not found, skipping"
+        local generated_dir
+        generated_dir=$(resolve_generated_dir "$ns")
+        if [ -z "$generated_dir" ] || [ ! -d "$generated_dir" ]; then
+            echo "   ⚠️  $ns: no generated directory found (checked generated-$ns and generated-$ns-*)"
             continue
         fi
 
-        copy_articles "$ns" "$BASELINES_DIR"
+        copy_articles "$ns" "$BASELINES_DIR" "$generated_dir"
         local files
         files=$(find "$BASELINES_DIR/$ns" -name "*.md" -type f 2>/dev/null | wc -l)
         echo "   ✅ $ns: $files article(s) saved as baseline"
@@ -128,11 +143,13 @@ cmd_compare() {
 
     # Copy current output as candidates
     for ns in "${NAMESPACES[@]}"; do
-        if [ ! -d "$REPO_ROOT/generated-$ns" ]; then
-            echo "   ⚠️  $ns: generated-$ns/ not found, skipping"
+        local generated_dir
+        generated_dir=$(resolve_generated_dir "$ns")
+        if [ -z "$generated_dir" ] || [ ! -d "$generated_dir" ]; then
+            echo "   ⚠️  $ns: no generated directory found (checked generated-$ns and generated-$ns-*)"
             continue
         fi
-        copy_articles "$ns" "$CANDIDATES_DIR"
+        copy_articles "$ns" "$CANDIDATES_DIR" "$generated_dir"
     done
 
     # Take candidate fingerprint

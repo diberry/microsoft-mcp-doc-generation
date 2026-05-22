@@ -318,7 +318,8 @@ Each namespace writes to its own `generated-{namespace}/` directory with no shar
 | Mode | Output Path |
 |------|-------------|
 | All namespaces | `./generated/` |
-| Single namespace | `./generated-{namespace}/` |
+| Single namespace (start.sh wrapper) | `./generated-{namespace}/` |
+| Single namespace (PipelineRunner default) | `./generated-{namespace}-{yyyyMMddTHHmmssfffZ}/` |
 | Validated output | `./generated-validated-{namespace}/` |
 
 ## Exit Codes

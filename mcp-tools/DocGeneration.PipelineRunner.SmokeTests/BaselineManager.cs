@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace DocGeneration.PipelineRunner.SmokeTests;
 
@@ -14,6 +16,10 @@ public static class BaselineManager
 {
     private const string BaselinesDirectory = "Baselines";
     private const string ManifestFileName = "baseline-manifest.json";
+    private static readonly Regex TimestampedNamespaceDirectoryPattern = new(
+        @"^generated-(?<namespace>.+)-(?<timestamp>\d{8}T\d{9}Z)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
 
     /// <summary>
     /// Captures current generated output as baseline fixtures for the given namespace.
@@ -23,8 +29,8 @@ public static class BaselineManager
     /// <param name="namespaceName">Azure namespace name (e.g., "quota", "redis")</param>
     public static void CaptureBaseline(string testProjectRoot, string repoRoot, string namespaceName)
     {
-        var generatedDir = Path.Combine(repoRoot, $"generated-{namespaceName}");
-        if (!Directory.Exists(generatedDir))
+        var generatedDir = FindGeneratedDirectory(repoRoot, namespaceName);
+        if (generatedDir is null)
         {
             throw new InvalidOperationException(
                 $"Generated output not found for namespace '{namespaceName}'. " +
@@ -83,10 +89,10 @@ public static class BaselineManager
             return result;
         }
 
-        var generatedDir = Path.Combine(repoRoot, $"generated-{namespaceName}");
-        if (!Directory.Exists(generatedDir))
+        var generatedDir = FindGeneratedDirectory(repoRoot, namespaceName);
+        if (generatedDir is null)
         {
-            result.AddIssue($"Generated output not found: {generatedDir}");
+            result.AddIssue($"Generated output not found for namespace '{namespaceName}'.");
             return result;
         }
 
@@ -106,6 +112,54 @@ public static class BaselineManager
     {
         var baselineDir = Path.Combine(testProjectRoot, BaselinesDirectory, namespaceName);
         return Directory.Exists(baselineDir);
+    }
+
+    internal static string? FindGeneratedDirectory(string repoRoot, string namespaceName)
+    {
+        if (!Directory.Exists(repoRoot))
+            return null;
+
+        return Directory.GetDirectories(repoRoot, "generated-*")
+            .Select(path => new
+            {
+                Path = path,
+                Match = TryMatchGeneratedDirectory(path, namespaceName, out var sortKey) ? sortKey : (DateTimeOffset?)null
+            })
+            .Where(candidate => candidate.Match is not null)
+            .OrderByDescending(candidate => candidate.Match)
+            .ThenByDescending(candidate => Directory.GetLastWriteTimeUtc(candidate.Path))
+            .Select(candidate => candidate.Path)
+            .FirstOrDefault();
+    }
+
+    private static bool TryMatchGeneratedDirectory(string dirPath, string namespaceName, out DateTimeOffset? sortKey)
+    {
+        sortKey = null;
+
+        var dirName = Path.GetFileName(dirPath) ?? string.Empty;
+        if (dirName.Equals($"generated-{namespaceName}", StringComparison.OrdinalIgnoreCase))
+        {
+            sortKey = Directory.GetLastWriteTimeUtc(dirPath);
+            return true;
+        }
+
+        var match = TimestampedNamespaceDirectoryPattern.Match(dirName);
+        if (!match.Success || !match.Groups["namespace"].Value.Equals(namespaceName, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (DateTimeOffset.TryParseExact(
+                match.Groups["timestamp"].Value,
+                "yyyyMMdd'T'HHmmssfff'Z'",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsedTimestamp))
+        {
+            sortKey = parsedTimestamp;
+            return true;
+        }
+
+        sortKey = Directory.GetLastWriteTimeUtc(dirPath);
+        return true;
     }
 
     private static void CompareDirectory(
