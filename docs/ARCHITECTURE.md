@@ -44,6 +44,7 @@ Step 0: Bootstrap ────────────────────�
   │  • Brand mapping validation → reports/
   │  • E2E test prompt parsing → e2e-test-prompts/
   │  • Deterministic H2 headings → h2-headings/
+  │  • Namespace mapping emission → namespace-mapping.json
   │
   ▼
 Step 1: Annotations + Parameters + Raw Tools ──────────────────────
@@ -128,7 +129,7 @@ Steps declare their dependencies, failure policy, and whether they need AI confi
 
 | Step | Class | AI? | Failure | Retries | Key Outputs |
 |------|-------|-----|---------|---------|-------------|
-| 0 | `BootstrapStep` | No | Fatal | 0 | `cli/`, `h2-headings/`, `e2e-test-prompts/` |
+| 0 | `BootstrapStep` | No | Fatal | 0 | `cli/`, `h2-headings/`, `e2e-test-prompts/`, `namespace-mapping.json` |
 | 1 | `AnnotationsParametersRawStep` | No | Fatal | 0 | `annotations/`, `parameters/`, `tools-raw/` |
 | 2 | `ExamplePromptsStep` | Yes | Fatal | 0 | `example-prompts/` |
 | 3 | `ToolGenerationStep` | Yes | Fatal | 0 | `tools-composed/`, `tools/` |
