@@ -41,7 +41,9 @@ public sealed class BootstrapStep : StepDefinition
         "tool-family",
     ];
 
-    public BootstrapStep()
+    private readonly INamespaceMappingEmitter _namespaceMappingEmitter;
+
+    public BootstrapStep(INamespaceMappingEmitter? namespaceMappingEmitter = null)
         : base(
             0,
             "Bootstrap pipeline",
@@ -59,8 +61,10 @@ public sealed class BootstrapStep : StepDefinition
                 "annotations",
                 "logs",
                 "tool-family",
+                "namespace-mapping.json",
             ])
     {
+        _namespaceMappingEmitter = namespaceMappingEmitter ?? new NamespaceMappingEmitter();
     }
 
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
@@ -349,6 +353,15 @@ public sealed class BootstrapStep : StepDefinition
                 cancellationToken);
             context.Reports.Info($"Generated cli-tab-config.json with {cliTabConfig.AllowedNamespaces.Count} namespace(s).");
 
+            var brandEntries = await LoadBrandMappingEntriesAsync(brandMappingPath, cancellationToken);
+            await _namespaceMappingEmitter.EmitAsync(
+                brandEntries,
+                context.CliOutput!,
+                context.CliVersion!,
+                context.OutputPath,
+                cancellationToken);
+            context.Reports.Info("Emitted namespace-mapping.json.");
+
             CreateDirectories(context.OutputPath, BaseOutputDirectories);
             return BuildResult(context, processResults, success: true, warnings);
         }
@@ -395,6 +408,32 @@ public sealed class BootstrapStep : StepDefinition
 
     private static string GetNpmExecutable()
         => OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
+
+    /// <summary>
+    /// Loads <c>brand-to-server-mapping.json</c> from the given path as a list of <see cref="BrandMappingEntry"/>.
+    /// Returns an empty list if the file does not exist or contains malformed JSON.
+    /// </summary>
+    private static async Task<IReadOnlyList<BrandMappingEntry>> LoadBrandMappingEntriesAsync(
+        string brandMappingPath,
+        CancellationToken cancellationToken)
+    {
+        if (!File.Exists(brandMappingPath))
+        {
+            return [];
+        }
+
+        var json = await File.ReadAllTextAsync(brandMappingPath, cancellationToken);
+        try
+        {
+            return JsonSerializer.Deserialize<BrandMappingEntry[]>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
 
     private static IReadOnlyList<string> GetRequiredArtifacts(string mcpToolsRoot, IReadOnlyList<IPipelineStep> plannedSteps)
     {

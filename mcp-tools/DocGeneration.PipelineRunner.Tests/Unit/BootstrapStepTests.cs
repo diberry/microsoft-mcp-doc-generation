@@ -298,6 +298,28 @@ public class BootstrapStepTests
         Assert.Contains(result.Warnings, w => w.Contains("latest @azure/mcp", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task ExecuteAsync_EmitsNamespaceMappingJson_AfterSuccessfulBootstrap()
+    {
+        // Bootstrap with a brand mapping that includes the "compute" namespace from the test CLI output
+        using var harness = CreateHarness(
+            brandMappingJson: """[{"mcpServerName":"compute","brandName":"Azure Compute","shortName":"Compute","fileName":"azure-compute"}]""");
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        var mappingPath = Path.Combine(harness.Context.OutputPath, "namespace-mapping.json");
+        Assert.True(File.Exists(mappingPath), "namespace-mapping.json was not created in the output directory.");
+
+        // Validate that the compute namespace is present with the expected tool
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(mappingPath));
+        var root = doc.RootElement;
+        Assert.True(root.TryGetProperty("namespaces", out var namespaces));
+        Assert.True(namespaces.TryGetProperty("compute", out var computeNs));
+        var tools = computeNs.GetProperty("tools").EnumerateArray().Select(t => t.GetString()).ToArray();
+        Assert.Contains("compute list", tools);
+    }
+
     private static TestHarness CreateHarness(
         bool skipBuild = false,
         bool skipValidation = false,

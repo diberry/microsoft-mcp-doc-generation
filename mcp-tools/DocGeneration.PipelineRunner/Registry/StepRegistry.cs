@@ -1,4 +1,5 @@
 using PipelineRunner.Contracts;
+using PipelineRunner.Services;
 using PipelineRunner.Steps;
 
 namespace PipelineRunner.Registry;
@@ -26,7 +27,7 @@ public sealed class StepRegistry
 
     public static StepRegistry CreateDefault(string scriptsRoot)
         => new([
-            new BootstrapStep(),
+            new BootstrapStep(new NamespaceMappingEmitter()),
             new AnnotationsParametersRawStep(),
             new ExamplePromptsStep(),
             new ToolGenerationStep(),
