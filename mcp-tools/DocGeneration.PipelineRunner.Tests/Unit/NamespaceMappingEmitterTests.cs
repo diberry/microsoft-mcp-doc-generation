@@ -40,9 +40,9 @@ public class NamespaceMappingEmitterTests
         var emitter = new NamespaceMappingEmitter();
 
         // Act
-        await emitter.EmitAsync(brandMappings, cliOutput, "1.0.0", tempDir.Path, CancellationToken.None);
+        var unmatched = await emitter.EmitAsync(brandMappings, cliOutput, "1.0.0", tempDir.Path, CancellationToken.None);
 
-        // Assert — parse output and verify every tool appears exactly once
+        // Assert — every tool appears in exactly one namespace; nothing unmatched
         var doc = ReadOutputDocument(tempDir.Path);
         var allMappedTools = doc.RootElement.GetProperty("namespaces")
             .EnumerateObject()
@@ -54,6 +54,7 @@ public class NamespaceMappingEmitterTests
         Assert.Contains("storage_account_list", allMappedTools);
         Assert.Equal(3, allMappedTools.Length);
         Assert.Equal(allMappedTools.Length, allMappedTools.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Empty(unmatched);
     }
 
     [Fact]
@@ -98,6 +99,10 @@ public class NamespaceMappingEmitterTests
         Assert.True(computeNs.TryGetProperty("short_name", out _),   "Missing: short_name");
         Assert.True(computeNs.TryGetProperty("merge_group", out _),  "Missing: merge_group");
         Assert.True(computeNs.TryGetProperty("tools", out _),        "Missing: tools");
+
+        // F1: unmatched_tools field must exist
+        Assert.True(root.TryGetProperty("unmatched_tools", out var unmatchedTools), "Missing: unmatched_tools");
+        Assert.Equal(JsonValueKind.Array, unmatchedTools.ValueKind);
     }
 
     [Fact]
@@ -134,6 +139,109 @@ public class NamespaceMappingEmitterTests
         Assert.Equal("azure-monitor", workbooksMergeGroup);
     }
 
+    // F1 regression test: unmatched tools surface in output
+    [Fact]
+    public async Task UnmatchedTool_AppearsInUnmatchedToolsField()
+    {
+        // Arrange — one brand mapping for "keyvault", but tool is "storage account list" (no match)
+        using var tempDir = new TempDirectory();
+
+        var brandMappings = new List<BrandMappingEntry>
+        {
+            new("keyvault", "Azure Key Vault", "Key Vault", "azure-key-vault"),
+        };
+
+        var cliOutput = BuildCliOutput(("storage account list", "storage_account_list"));
+        var emitter = new NamespaceMappingEmitter();
+
+        // Act
+        var unmatched = await emitter.EmitAsync(brandMappings, cliOutput, "1.0.0", tempDir.Path, CancellationToken.None);
+
+        // Assert — unmatched tool returned and present in JSON
+        Assert.Single(unmatched);
+        Assert.Equal("storage_account_list", unmatched[0]);
+
+        var doc = ReadOutputDocument(tempDir.Path);
+        var unmatchedInFile = doc.RootElement.GetProperty("unmatched_tools")
+            .EnumerateArray().Select(t => t.GetString()).ToArray();
+        Assert.Contains("storage_account_list", unmatchedInFile);
+
+        // The keyvault namespace has zero tools
+        var tools = doc.RootElement.GetProperty("namespaces")
+            .GetProperty("keyvault").GetProperty("tools").GetArrayLength();
+        Assert.Equal(0, tools);
+    }
+
+    // F2 regression test: overlapping prefix — tool matches longest prefix only
+    [Fact]
+    public async Task OverlappingPrefix_ToolMatchesLongestPrefixOnly()
+    {
+        // Arrange — "extension" (short) and "extension_azqr" (long) both match "extension azqr list"
+        // Correct: tool belongs to "extension_azqr" only (longest prefix wins)
+        using var tempDir = new TempDirectory();
+
+        var brandMappings = new List<BrandMappingEntry>
+        {
+            new("extension",      "Azure Extension",      "Extension",      "azure-extension"),
+            new("extension_azqr", "Azure Extension AZQR", "Extension AZQR", "azure-extension-azqr"),
+        };
+
+        var cliOutput = BuildCliOutput(
+            ("extension azqr list", "extension_azqr_list"),
+            ("extension other cmd", "extension_other_cmd"));
+
+        var emitter = new NamespaceMappingEmitter();
+
+        // Act
+        var unmatched = await emitter.EmitAsync(brandMappings, cliOutput, "1.0.0", tempDir.Path, CancellationToken.None);
+
+        // Assert — "extension azqr list" belongs ONLY to extension_azqr, not to extension
+        var doc = ReadOutputDocument(tempDir.Path);
+        var namespaces = doc.RootElement.GetProperty("namespaces");
+
+        var azqrTools = namespaces.GetProperty("extension_azqr")
+            .GetProperty("tools").EnumerateArray().Select(t => t.GetString()).ToArray();
+        var extensionTools = namespaces.GetProperty("extension")
+            .GetProperty("tools").EnumerateArray().Select(t => t.GetString()).ToArray();
+
+        Assert.Contains("extension_azqr_list", azqrTools);
+        Assert.DoesNotContain("extension_azqr_list", extensionTools);
+
+        // "extension other cmd" has no specific match, so falls to "extension"
+        Assert.Contains("extension_other_cmd", extensionTools);
+
+        Assert.Empty(unmatched);
+
+        // Total across all namespaces = 2 (each tool appears exactly once)
+        var total = namespaces.EnumerateObject()
+            .Sum(ns => ns.Value.GetProperty("tools").GetArrayLength());
+        Assert.Equal(2, total);
+    }
+
+    // F3 regression test: empty brand mappings produce valid JSON with a visible warning
+    [Fact]
+    public async Task EmptyBrandMappings_ProducesValidJsonWithZeroNamespaces()
+    {
+        // Arrange
+        using var tempDir = new TempDirectory();
+        var cliOutput = BuildCliOutput(("compute list", "compute_list"));
+        var emitter = new NamespaceMappingEmitter();
+
+        // Act — empty brand mapping list
+        var unmatched = await emitter.EmitAsync([], cliOutput, "1.0.0", tempDir.Path, CancellationToken.None);
+
+        // Assert — file is valid JSON with zero namespaces
+        var doc = ReadOutputDocument(tempDir.Path);
+        var root = doc.RootElement;
+        Assert.Equal(0, root.GetProperty("namespace_count").GetInt32());
+        Assert.Equal(0, root.GetProperty("tool_count").GetInt32());
+        Assert.Empty(root.GetProperty("namespaces").EnumerateObject());
+
+        // All CLI tools are unmatched
+        Assert.Single(unmatched);
+        Assert.Equal("compute_list", unmatched[0]);
+    }
+
     // -----------------------------------------------------------------------
     // Phase 2 Integration Test — BootstrapStep + emitter
     // -----------------------------------------------------------------------
@@ -141,7 +249,7 @@ public class NamespaceMappingEmitterTests
     [Fact]
     public async Task NotEmittedOnBootstrapFailure()
     {
-        // Arrange — CLI metadata loader reports output missing → BootstrapStep returns failure
+        // Arrange — npm install fails → BootstrapStep returns failure before EmitAsync is called
         var recording = new RecordingNamespaceMappingEmitter();
         var repoRoot = Path.Combine(Path.GetTempPath(), $"nme-failure-test-{Guid.NewGuid():N}");
         var mcpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
@@ -154,7 +262,6 @@ public class NamespaceMappingEmitterTests
 
         try
         {
-            // DelegatingCliMetadataLoader with outputExists:false forces the "CLI output missing" failure path
             var step = new BootstrapStep(recording);
             var context = new PipelineContext
             {
@@ -166,7 +273,7 @@ public class NamespaceMappingEmitterTests
                 OutputPath = Path.Combine(repoRoot, "generated-compute"),
                 ProcessRunner = new FailingNpmProcessRunner(),
                 Workspaces = new WorkspaceManager(),
-                CliMetadataLoader = new StubCliMetadataLoader(),   // Always reports missing
+                CliMetadataLoader = new StubCliMetadataLoader(),   // always reports missing
                 TargetMatcher = new TargetMatcher(),
                 FilteredCliWriter = new StubFilteredCliWriter(),
                 BuildCoordinator = new StubBuildCoordinator(),
@@ -216,7 +323,7 @@ public class NamespaceMappingEmitterTests
     {
         public int CallCount { get; private set; }
 
-        public Task EmitAsync(
+        public Task<IReadOnlyList<string>> EmitAsync(
             IReadOnlyList<BrandMappingEntry> brandMappings,
             CliMetadataSnapshot cliOutput,
             string cliVersion,
@@ -224,12 +331,12 @@ public class NamespaceMappingEmitterTests
             CancellationToken cancellationToken)
         {
             CallCount++;
-            return Task.CompletedTask;
+            return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
         }
     }
 
     /// <summary>
-    /// Process runner stub that makes npm commands fail, causing BootstrapStep to return early
+    /// Process runner stub that makes npm install fail, causing BootstrapStep to return early
     /// before it ever reaches the namespace-mapping emission code.
     /// </summary>
     private sealed class FailingNpmProcessRunner : IProcessRunner

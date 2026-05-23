@@ -301,7 +301,9 @@ public class BootstrapStepTests
     [Fact]
     public async Task ExecuteAsync_EmitsNamespaceMappingJson_AfterSuccessfulBootstrap()
     {
-        // Bootstrap with a brand mapping that includes the "compute" namespace from the test CLI output
+        // Bootstrap with a brand mapping that includes the "compute" namespace from the test CLI output.
+        // The ScriptedProcessRunner returns name="compute list" for the tool — integration test asserts
+        // against the Name field (matching real production data where Name is the tool identifier).
         using var harness = CreateHarness(
             brandMappingJson: """[{"mcpServerName":"compute","brandName":"Azure Compute","shortName":"Compute","fileName":"azure-compute"}]""");
 
@@ -311,13 +313,18 @@ public class BootstrapStepTests
         var mappingPath = Path.Combine(harness.Context.OutputPath, "namespace-mapping.json");
         Assert.True(File.Exists(mappingPath), "namespace-mapping.json was not created in the output directory.");
 
-        // Validate that the compute namespace is present with the expected tool
+        // Validate that the compute namespace is present with the expected tool name.
+        // ScriptedProcessRunner returns name="compute list" — the emitter uses Name when non-empty.
         using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(mappingPath));
         var root = doc.RootElement;
         Assert.True(root.TryGetProperty("namespaces", out var namespaces));
         Assert.True(namespaces.TryGetProperty("compute", out var computeNs));
         var tools = computeNs.GetProperty("tools").EnumerateArray().Select(t => t.GetString()).ToArray();
-        Assert.Contains("compute list", tools);
+        Assert.Contains("compute list", tools);  // Name field from ScriptedProcessRunner
+
+        // unmatched_tools array must be present (may be empty when all tools are matched)
+        Assert.True(root.TryGetProperty("unmatched_tools", out var unmatchedTools));
+        Assert.Equal(0, unmatchedTools.GetArrayLength());
     }
 
     private static TestHarness CreateHarness(

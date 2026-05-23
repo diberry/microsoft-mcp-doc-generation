@@ -9,13 +9,16 @@ public interface INamespaceMappingEmitter
 {
     /// <summary>
     /// Builds and writes <c>namespace-mapping.json</c> to <paramref name="outputPath"/>.
+    /// Returns the tool names that were not matched to any namespace prefix (may be empty).
+    /// Callers should log a warning when the returned collection is non-empty.
     /// </summary>
     /// <param name="brandMappings">Resolved brand mapping entries from <c>brand-to-server-mapping.json</c>.</param>
     /// <param name="cliOutput">CLI tool metadata extracted during bootstrap.</param>
     /// <param name="cliVersion">Version string from <c>cli-version.json</c> (value of <c>context.CliVersion</c>).</param>
     /// <param name="outputPath">Root output directory (e.g. <c>generated/</c>).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task EmitAsync(
+    /// <returns>Tool names present in CLI output that were not matched to any brand mapping namespace.</returns>
+    Task<IReadOnlyList<string>> EmitAsync(
         IReadOnlyList<BrandMappingEntry> brandMappings,
         CliMetadataSnapshot cliOutput,
         string cliVersion,

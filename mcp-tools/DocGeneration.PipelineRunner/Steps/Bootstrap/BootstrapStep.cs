@@ -339,10 +339,19 @@ public sealed class BootstrapStep : StepDefinition
                 }
             }
 
-            // Generate cli-tab-config.json so ToolFamilyCleanupStep can enable CLI tab generation.
-            // AllowedNamespaces is sourced from brand-to-server-mapping.json (the source of truth for
-            // which namespaces produce tool-family files), expanding merge group peers when needed.
             var brandMappingPath = Path.Combine(context.McpToolsRoot, "data", "brand-to-server-mapping.json");
+
+            // Load brand entries once for both the CLI tab config and the namespace mapping emitter.
+            // TODO(F5): ResolveCliTabNamespacesAsync also reads this file independently; consolidate
+            // to a single read to eliminate the inconsistency window if these diverge.
+            var brandEntries = await LoadBrandMappingEntriesAsync(brandMappingPath, cancellationToken);
+
+            // F3: warn visibly when brand-to-server-mapping.json produces no entries
+            if (brandEntries.Count == 0)
+            {
+                context.Reports.Warning("brand-to-server-mapping.json is empty or missing — namespace-mapping.json will contain no namespaces.");
+            }
+
             var namespacesForConfig = await ResolveCliTabNamespacesAsync(brandMappingPath, context.SelectedNamespaces, cancellationToken);
             var cliTabConfig = CliTabConfig.ForNamespaces([.. namespacesForConfig]);
             var cliTabConfigPath = Path.Combine(context.OutputPath, "cli-tab-config.json");
@@ -353,13 +362,20 @@ public sealed class BootstrapStep : StepDefinition
                 cancellationToken);
             context.Reports.Info($"Generated cli-tab-config.json with {cliTabConfig.AllowedNamespaces.Count} namespace(s).");
 
-            var brandEntries = await LoadBrandMappingEntriesAsync(brandMappingPath, cancellationToken);
-            await _namespaceMappingEmitter.EmitAsync(
+            var unmatchedTools = await _namespaceMappingEmitter.EmitAsync(
                 brandEntries,
                 context.CliOutput!,
                 context.CliVersion!,
                 context.OutputPath,
                 cancellationToken);
+
+            // F1: warn when any tool was not matched to a namespace prefix
+            if (unmatchedTools.Count > 0)
+            {
+                context.Reports.Warning(
+                    $"namespace-mapping.json: {unmatchedTools.Count} tool(s) were not matched to any brand mapping namespace: {string.Join(", ", unmatchedTools)}");
+            }
+
             context.Reports.Info("Emitted namespace-mapping.json.");
 
             CreateDirectories(context.OutputPath, BaseOutputDirectories);
