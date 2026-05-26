@@ -367,7 +367,43 @@ microsoft-mcp-doc-generation/
 │   ├── data/                         # Configuration JSON files
 │   ├── templates/                    # Handlebars templates
 │   └── scripts/                      # Legacy PowerShell (fallback only)
+├── shared/
+│   ├── DocGeneration.Core.Tracing/   # Pipeline observability (trace AI + steps)
+│   ├── DocGeneration.Core.GenerativeAI/ # Shared AI client
+│   ├── DocGeneration.Core.Shared/    # Shared utilities
+│   └── shared.slnx                   # Shared libraries solution
+├── skills-generation/                # Skills documentation pipeline
 ├── docs/                             # Documentation
 ├── generated-validated-*/            # Validated pipeline output
 └── test-npm-azure-mcp/               # npm project for CLI extraction
 ```
+
+## Pipeline Observability
+
+Both pipelines emit structured trace files after every run to `{output-dir}/trace/`:
+
+| File | Content |
+|------|---------|
+| `pipeline-trace.json` | Full execution graph with step timing, classification, and status |
+| `ai-interactions.json` | Every LLM call with system prompt, user prompt, response, tokens, model |
+| `summary.md` | Human-readable run summary with step table and AI statistics |
+
+Tracing is always-on (no opt-in flag), uses in-memory collection during execution, and flushes once at the end of each run. The `NullTracer` pattern ensures zero overhead when the tracer is not wired (e.g., in unit tests).
+
+### Trace Architecture
+
+```
+shared/DocGeneration.Core.Tracing/
+├── IPipelineTracer.cs         # Interface + IStepHandle + StepClassification enum
+├── PipelineTracer.cs          # ConcurrentBag-based in-memory collector
+├── NullTracer.cs              # No-op for tests and disabled paths
+├── AiInteractionRecord.cs     # Input record for RecordAiCall()
+├── Models/                    # Serialization models
+│   ├── TraceEvent.cs
+│   ├── AiInteraction.cs
+│   └── PipelineTrace.cs
+└── TraceWriter.cs             # Atomic JSON + markdown emission
+```
+
+- **Skills pipeline:** Fresh tracer created per `ProcessBatchAsync()` run, flushed in `finally` block
+- **MCP pipeline:** Fresh tracer created per namespace iteration, flushed to `generated-{namespace}/trace/`

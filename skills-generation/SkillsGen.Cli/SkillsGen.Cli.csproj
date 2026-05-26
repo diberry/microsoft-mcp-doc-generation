@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\SkillsGen.Core\SkillsGen.Core.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.Tracing\DocGeneration.Core.Tracing.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />

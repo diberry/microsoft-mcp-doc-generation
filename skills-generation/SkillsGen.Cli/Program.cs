@@ -1,4 +1,5 @@
 using System.CommandLine;
+using DocGeneration.Core.Tracing;
 using Microsoft.Extensions.Logging;
 using SkillsGen.Core.Assessment;
 using SkillsGen.Core.Data;
@@ -57,21 +58,29 @@ generateSkillCommand.SetHandler(async (context) =>
     var dataPath = context.ParseResult.GetValueForOption(dataPathOption) ?? "./data/";
     var templatePath = context.ParseResult.GetValueForOption(templatePathOption) ?? "./templates/skill-page-template.hbs";
 
-    var orchestrator = BuildOrchestrator(loggerFactory, source, sourcePath, testsPath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
-    var result = await orchestrator.ProcessSkillAsync(skillName);
+    var (orchestrator, tracer) = BuildOrchestrator(loggerFactory, source, sourcePath, testsPath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
 
-    var status = result.Validation.IsValid ? "✅ PASSED" : "❌ FAILED";
-    Console.WriteLine($"\n{status}: {skillName} (Tier {result.Tier}, {result.DurationMs}ms)");
-
-    if (!result.Validation.IsValid)
+    try
     {
-        foreach (var error in result.Validation.Errors)
-            Console.WriteLine($"  ERROR: {error}");
-    }
-    foreach (var warning in result.Validation.Warnings)
-        Console.WriteLine($"  WARN: {warning}");
+        var result = await orchestrator.ProcessSkillAsync(skillName);
 
-    context.ExitCode = result.Validation.IsValid ? 0 : 1;
+        var status = result.Validation.IsValid ? "✅ PASSED" : "❌ FAILED";
+        Console.WriteLine($"\n{status}: {skillName} (Tier {result.Tier}, {result.DurationMs}ms)");
+
+        if (!result.Validation.IsValid)
+        {
+            foreach (var error in result.Validation.Errors)
+                Console.WriteLine($"  ERROR: {error}");
+        }
+        foreach (var warning in result.Validation.Warnings)
+            Console.WriteLine($"  WARN: {warning}");
+
+        context.ExitCode = result.Validation.IsValid ? 0 : 1;
+    }
+    finally
+    {
+        await tracer.FlushAsync(Path.Combine(outputDir, "trace"));
+    }
 });
 
 generateSkillsCommand.SetHandler(async (context) =>
@@ -99,14 +108,22 @@ generateSkillsCommand.SetHandler(async (context) =>
 
     Console.WriteLine($"[skills-gen] Found {skills.Count} skills in inventory.");
 
-    var orchestrator = BuildOrchestrator(loggerFactory, source, sourcePath, testsPath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
-    var report = await orchestrator.ProcessBatchAsync(skills);
+    var (orchestrator, tracer) = BuildOrchestrator(loggerFactory, source, sourcePath, testsPath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
 
-    var succeeded = report.Results.Count(r => r.Validation.IsValid);
-    var failed = report.Results.Count - succeeded;
-    Console.WriteLine($"\n[skills-gen] Complete: {succeeded}/{report.Results.Count} passed, {failed} failed ({report.TotalDurationMs}ms)");
+    try
+    {
+        var report = await orchestrator.ProcessBatchAsync(skills);
 
-    context.ExitCode = failed > 0 ? 1 : 0;
+        var succeeded = report.Results.Count(r => r.Validation.IsValid);
+        var failed = report.Results.Count - succeeded;
+        Console.WriteLine($"\n[skills-gen] Complete: {succeeded}/{report.Results.Count} passed, {failed} failed ({report.TotalDurationMs}ms)");
+
+        context.ExitCode = failed > 0 ? 1 : 0;
+    }
+    finally
+    {
+        await tracer.FlushAsync(Path.Combine(outputDir, "trace"));
+    }
 });
 
 rootCommand.AddCommand(generateSkillCommand);
@@ -114,16 +131,15 @@ rootCommand.AddCommand(generateSkillsCommand);
 
 return await rootCommand.InvokeAsync(args);
 
-static SkillPipelineOrchestrator BuildOrchestrator(
+static (SkillPipelineOrchestrator Orchestrator, PipelineTracer Tracer) BuildOrchestrator(
     ILoggerFactory loggerFactory,
     string source, string sourcePath, string? testsPath, string dataPath,
     string templatePath, string outputDir,
     bool noLlm, bool dryRun, bool force)
 {
     var startupLogger = loggerFactory.CreateLogger("Startup");
+    var tracer = new PipelineTracer("skills-generation");
 
-    // --- Startup file validation ---
-    // REQUIRED files — fail fast if missing
     var inventoryPath = Path.Combine(dataPath, "skills-inventory.json");
     if (!File.Exists(inventoryPath))
     {
@@ -136,7 +152,6 @@ static SkillPipelineOrchestrator BuildOrchestrator(
         Environment.Exit(1);
     }
 
-    // OPTIONAL files — warn if missing
     var replacementsPath = Path.Combine(dataPath, "static-text-replacement.json");
     var acronymsPath = Path.Combine(dataPath, "acronym-definitions.json");
     if (!File.Exists(replacementsPath))
@@ -151,21 +166,15 @@ static SkillPipelineOrchestrator BuildOrchestrator(
     if (!File.Exists(userPromptPath))
         startupLogger.LogWarning("⚠️ Missing prompt file: {Path}", userPromptPath);
 
-    // --- Build components ---
-    // Fetcher
     ISkillSourceFetcher fetcher = source == "github"
         ? new GitHubSkillFetcher(new HttpClient(), loggerFactory.CreateLogger<GitHubSkillFetcher>(),
             token: Environment.GetEnvironmentVariable("GITHUB_TOKEN"))
         : new LocalSkillFetcher(sourcePath, loggerFactory.CreateLogger<LocalSkillFetcher>(), testsPath);
 
-    // Parsers
     var parser = new SkillMarkdownParser();
     var triggerParser = new TriggerTestParser();
-
-    // Assessment
     var tierAssessor = new TierAssessor();
 
-    // LLM Rewriter
     ILlmRewriter rewriter;
     if (noLlm)
     {
@@ -187,7 +196,7 @@ static SkillPipelineOrchestrator BuildOrchestrator(
 
             rewriter = new AzureOpenAiRewriter(endpoint, apiKey, modelName,
                 systemPrompt, userPrompt, acrolinxRules,
-                loggerFactory.CreateLogger<AzureOpenAiRewriter>());
+                loggerFactory.CreateLogger<AzureOpenAiRewriter>(), tracer);
         }
         else
         {
@@ -196,27 +205,23 @@ static SkillPipelineOrchestrator BuildOrchestrator(
         }
     }
 
-    // Template
     var templateContent = File.Exists(templatePath)
         ? File.ReadAllText(templatePath)
         : throw new FileNotFoundException($"Template not found: {templatePath}");
     var curatedData = CuratedDataLoader.Load(dataPath, startupLogger);
     var pageGenerator = new SkillPageGenerator(templateContent, loggerFactory.CreateLogger<SkillPageGenerator>(), curatedData);
 
-    // Post-processor
     var replacementsJson = File.Exists(replacementsPath) ? File.ReadAllText(replacementsPath) : null;
     var acronymsJson = File.Exists(acronymsPath) ? File.ReadAllText(acronymsPath) : null;
     var postProcessor = new AcrolinxPostProcessor(replacementsJson, acronymsJson,
         loggerFactory.CreateLogger<AcrolinxPostProcessor>());
 
-    // Validator
     var validator = new SkillPageValidator();
-
-    // Logger
     var skillsLogger = new SkillsLogger(loggerFactory.CreateLogger<SkillsLogger>(), Path.Combine(outputDir, "logs"));
-
-    return new SkillPipelineOrchestrator(
+    var orchestrator = new SkillPipelineOrchestrator(
         fetcher, parser, triggerParser, tierAssessor,
         rewriter, pageGenerator, postProcessor, validator,
-        skillsLogger, outputDir, dryRun, force);
+        skillsLogger, outputDir, dryRun, force, tracer);
+
+    return (orchestrator, tracer);
 }

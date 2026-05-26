@@ -14,5 +14,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="..\DocGeneration.Core.Tracing\DocGeneration.Core.Tracing.csproj" />
   </ItemGroup>
 </Project>

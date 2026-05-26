@@ -81,3 +81,10 @@ dotnet build skills-generation/skills-generation.slnx --configuration Release
 ### LLM retry logic
 
 `AzureOpenAiRewriter` uses exponential backoff (5 retries: 1s → 2s → 4s → 8s → 16s) on rate-limit errors (HTTP 429). Non-rate-limit errors fail immediately.
+
+### Trace output
+
+Each CLI run writes observability artifacts to `<output>/trace/`:
+- `pipeline-trace.json`
+- `ai-interactions.json`
+- `summary.md`

@@ -28,6 +28,9 @@ prototype/
 /docs/commandline
 git
 
+# Pipeline trace output (generated per run, not committed)
+**/trace/
+
 # LKG baseline directories (created during pipeline validation, not committed)
 lkg-*/
 
