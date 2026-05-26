@@ -26,7 +26,8 @@ function findLatestToolsList(baseDir) {
   const toolsPath = path.join(baseDir, dirs[0], 'tools-list.json');
   if (!fs.existsSync(toolsPath)) throw new Error(`No tools-list.json in ${dirs[0]}`);
   console.log(`Using: ${dirs[0]}/tools-list.json\n`);
-  return toolsPath;
+  // Return both the tools path and the version directory
+  return { toolsPath, versionDir: dirs[0] };
 }
 
 function buildCliCommand(tool) {
@@ -63,7 +64,7 @@ function getNamespace(command) {
 
 // Main
 const baseDir = __dirname;
-const toolsPath = findLatestToolsList(baseDir);
+const { toolsPath, versionDir } = findLatestToolsList(baseDir);
 const data = JSON.parse(fs.readFileSync(toolsPath, 'utf8'));
 const tools = data.results || [];
 
@@ -90,6 +91,7 @@ for (const tool of tools) {
 }
 
 const output = lines.join('\n');
-const outPath = path.join(baseDir, 'cli-examples.md');
+// Output cli-examples.md inside the version folder
+const outPath = path.join(baseDir, versionDir, 'cli-examples.md');
 fs.writeFileSync(outPath, output, 'utf8');
-console.log(`Generated ${tools.length} CLI examples ΓåÆ cli-examples.md`);
+console.log(`Generated ${tools.length} CLI examples → ${versionDir}/cli-examples.md`);

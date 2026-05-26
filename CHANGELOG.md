@@ -6,6 +6,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`update-azure-mcp.yml` workflow commits directly to main** — The nightly version check workflow now commits package updates directly to `main` instead of creating pull requests. Breaking changes (major version bumps) are blocked and require manual review. Added inline tests, error handling for git operations, concurrency control (`cancel-in-progress: true`), and directory validation before staging. (#621)
+- **`cli-examples.md` moved to version-specific folders** — `generate-cli-examples.js` now outputs `cli-examples.md` inside version folders (e.g., `3.0.0-beta.11+hash/cli-examples.md`) instead of the `test-npm-azure-mcp` root. Each version snapshot now includes both `tools-list.json` and `cli-examples.md`. (#621)
+
 ### Added
 
 - **Namespace mapping emission** (`BootstrapStep`) — After brand validation succeeds, `BootstrapStep` now emits `generated/namespace-mapping.json` at the root of the global output directory. The file is a machine-readable snapshot of every brand mapping entry joined with the tools that belong to it, keyed by `McpServerName`. Fields include `generated_at`, `source_version`, `namespace_count`, `tool_count`, and a `namespaces` dictionary with per-namespace `display_name`, `file_name`, `short_name`, `merge_group`, and sorted `tools` list. Downstream validation agents (coverage audit, drift detection, agents marketplace) can now consume this stable artifact instead of re-deriving the mapping each run. Implements `INamespaceMappingEmitter` / `NamespaceMappingEmitter` in `DocGeneration.PipelineRunner/Services/`. Closes #618.
