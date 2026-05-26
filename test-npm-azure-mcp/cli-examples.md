@@ -1062,6 +1062,7 @@ azmcp fileshares fileshare create \
   [--allowed-subnets <allowed-subnets>] \
   [--media-tier <media-tier>] \
   [--mount-name <mount-name>] \
+  [--nfs-encryption-in-transit <nfs-encryption-in-transit>] \
   [--nfs-root-squash <nfs-root-squash>] \
   [--protocol <protocol>] \
   [--provisioned-io-per-sec <provisioned-io-per-sec>] \
@@ -1144,6 +1145,7 @@ azmcp fileshares fileshare update \
   --name <name> \
   --resource-group <resource-group> \
   [--allowed-subnets <allowed-subnets>] \
+  [--nfs-encryption-in-transit <nfs-encryption-in-transit>] \
   [--nfs-root-squash <nfs-root-squash>] \
   [--provisioned-io-per-sec <provisioned-io-per-sec>] \
   [--provisioned-storage-in-gib <provisioned-storage-in-gib>] \
