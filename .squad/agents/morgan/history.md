@@ -88,7 +88,7 @@
 
 ## Learnings
 
-### Issue #488: Architecture Simplification (2025-05-29)
+### Issue #488: Architecture Simplification (2026-05-29)
 
 **What:** Deleted CliAnalyzer (8 files, not in pipeline) and merged PostProcessVerifier into ToolFamilyCleanup as `--verify-only` mode.
 
@@ -121,4 +121,14 @@
 - `param-annotation-template.hbs` renders metadata flags inline with ternary emoji (✅/❌)
 
 **Test strategy:** Each test renders the actual .hbs file with controlled data, asserts backtick-wrapped raw names appear, and asserts NL-converted forms do NOT appear. If templates revert to NL names, tests fail immediately.
+## 2026-05-26 — Bug Fixes #603, #604, #602 Documented
+
+- **Event:** Completed namespace resolution fixes
+- **Status:** Three interconnected bugs fixed:
+  - #603: ResolveFamilyName uses CLI prefix instead of raw namespace key
+  - #604: BrandMappingValidator rejects prefix-covered namespaces
+  - #602: Step 4 fails when Step 3 is skipped (tools/ empty)
+- **Test Coverage:** 12/12 ToolFamilyCleanup tests, 6/6 ResolveFamilyFileName tests, 17/17 bootstrap brand mapping tests passing
+- **Branch:** squad/603-604-602-namespace-resolution-fixes
+- **Decision:** Bug fixes recorded in .squad/decisions.md
 

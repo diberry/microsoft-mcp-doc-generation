@@ -1,0 +1,19 @@
+{
+  "results": [
+    {
+      "command": "keyvault secret get",
+      "name": "keyvault_secret_get",
+      "option": [
+        { "name": "--subscription",  "required": false },
+        { "name": "--vault-name",    "required": true  },
+        { "name": "--secret-name",   "required": true  }
+      ],
+      "metadata": {
+        "destructive":   { "value": false },
+        "idempotent":    { "value": true  },
+        "openWorld":     { "value": false },
+        "readOnly":      { "value": true  }
+      }
+    }
+  ]
+}

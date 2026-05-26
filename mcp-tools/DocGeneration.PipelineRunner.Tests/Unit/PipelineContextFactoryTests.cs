@@ -33,6 +33,25 @@ public class PipelineContextFactoryTests
     }
 
     [Fact]
+    public async Task CreateAsync_WithWindowsStyleRelativePath_NormalizesSeparatorsBeforeResolvingOutputPath()
+    {
+        var repoRoot = CreateTempRepo();
+        try
+        {
+            var factory = CreateFactory(repoRoot, new StubCliMetadataLoader());
+            var request = new PipelineRequest("compute", new[] { 1 }, ".\\generated", false, false, false);
+
+            var context = await factory.CreateAsync(request, CancellationToken.None);
+
+            Assert.Equal(Path.Combine(repoRoot, "generated"), context.OutputPath);
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task CreateAsync_WhenMetadataExists_LoadsNamespacesAndCliVersion()
     {
         var repoRoot = CreateTempRepo();
@@ -59,6 +78,17 @@ public class PipelineContextFactoryTests
         {
             Directory.Delete(repoRoot, recursive: true);
         }
+    }
+
+    [Theory]
+    [InlineData(".\\generated", "generated")]
+    [InlineData("./generated-compute", "generated-compute")]
+    public void NormalizePathSeparators_UsesCurrentPlatformSeparator(string input, string expectedLeaf)
+    {
+        var normalized = PipelineContextFactory.NormalizePathSeparators(input);
+
+        Assert.DoesNotContain(Path.DirectorySeparatorChar == '\\' ? "/" : "\\", normalized);
+        Assert.EndsWith(Path.Combine(".", expectedLeaf), normalized);
     }
 
     private static PipelineContextFactory CreateFactory(string repoRoot, ICliMetadataLoader cliMetadataLoader)
