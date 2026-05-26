@@ -1,3 +1,4 @@
+using DocGeneration.Core.Tracing;
 using PipelineRunner.Cli;
 using PipelineRunner.Contracts;
 using PipelineRunner.Context;
@@ -13,12 +14,24 @@ public sealed class PipelineRunner
     public const int HumanReviewExitCode = 2;
     public const int InvalidArgumentsExitCode = 64;
 
+    private static readonly Dictionary<int, StepClassification> StepClassifications = new()
+    {
+        { 0, StepClassification.Deterministic },
+        { 1, StepClassification.Deterministic },
+        { 2, StepClassification.AI },
+        { 3, StepClassification.AI },
+        { 4, StepClassification.Hybrid },
+        { 5, StepClassification.Deterministic },
+        { 6, StepClassification.AI },
+    };
+
     private readonly StepRegistry _stepRegistry;
     private readonly PipelineContextFactory _contextFactory;
     private readonly IBrandMappingLoader _brandMappingLoader;
     private readonly IChangelogGate? _changelogGate;
     private readonly IFingerprintGate? _fingerprintGate;
     private readonly IPromptRegressionGate? _promptRegressionGate;
+    private IPipelineTracer _currentTracer = NullTracer.Instance;
 
     public PipelineRunner(
         StepRegistry stepRegistry,
@@ -105,14 +118,26 @@ public sealed class PipelineRunner
         var globalSteps = selectedSteps.Where(step => step.Scope == StepScope.Global).ToArray();
         var namespaceSteps = selectedSteps.Where(step => step.Scope == StepScope.Namespace).ToArray();
 
-        foreach (var step in globalSteps)
+        var globalTracer = new PipelineTracer("mcp-pipeline");
+        context.Tracer = globalTracer;
+        _currentTracer = globalTracer;
+        try
         {
-            var stepOutcome = await ExecuteStepAsync(context, step, warnings, cancellationToken);
-            criticalFailures.AddRange(stepOutcome.PersistedFailures);
-            if (stepOutcome.ExitCode != SuccessExitCode)
+            foreach (var step in globalSteps)
             {
-                return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
+                var stepOutcome = await ExecuteStepAsync(context, step, warnings, cancellationToken);
+                criticalFailures.AddRange(stepOutcome.PersistedFailures);
+                if (stepOutcome.ExitCode != SuccessExitCode)
+                {
+                    return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
+                }
             }
+        }
+        finally
+        {
+            await FlushTracerAsync(globalTracer, Path.Combine(context.OutputPath, "trace"), cancellationToken);
+            context.Tracer = NullTracer.Instance;
+            _currentTracer = NullTracer.Instance;
         }
 
         context.CliOutput ??= await context.CliMetadataLoader.LoadCliOutputAsync(context.OutputPath, cancellationToken);
@@ -138,34 +163,47 @@ public sealed class PipelineRunner
 
         foreach (var namespaceName in resolvedNamespaces)
         {
-            context.Reports.Info($"Namespace: {namespaceName}");
-            context.Items["Namespace"] = namespaceName;
+            var namespaceTracer = new PipelineTracer("mcp-pipeline");
+            context.Tracer = namespaceTracer;
+            _currentTracer = namespaceTracer;
 
-            if (!request.SkipChangelogGate && _changelogGate is not null)
+            try
             {
-                var hasExistingArticle = HasExistingArticle(context, namespaceName);
-                var gateResult = await _changelogGate.EvaluateAsync(
-                    namespaceName,
-                    context.CliVersion ?? string.Empty,
-                    context.McpBranch,
-                    hasExistingArticle,
-                    cancellationToken);
+                context.Reports.Info($"Namespace: {namespaceName}");
+                context.Items["Namespace"] = namespaceName;
 
-                if (gateResult.ShouldSkip)
+                if (!request.SkipChangelogGate && _changelogGate is not null)
                 {
-                    context.Reports.Info($"  Skipped (changelog gate): {gateResult.Reason}");
-                    continue;
+                    var hasExistingArticle = HasExistingArticle(context, namespaceName);
+                    var gateResult = await _changelogGate.EvaluateAsync(
+                        namespaceName,
+                        context.CliVersion ?? string.Empty,
+                        context.McpBranch,
+                        hasExistingArticle,
+                        cancellationToken);
+
+                    if (gateResult.ShouldSkip)
+                    {
+                        context.Reports.Info($"  Skipped (changelog gate): {gateResult.Reason}");
+                        continue;
+                    }
+                }
+
+                foreach (var step in namespaceSteps)
+                {
+                    var stepOutcome = await ExecuteStepAsync(context, step, warnings, cancellationToken);
+                    criticalFailures.AddRange(stepOutcome.PersistedFailures);
+                    if (stepOutcome.ExitCode != SuccessExitCode)
+                    {
+                        return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
+                    }
                 }
             }
-
-            foreach (var step in namespaceSteps)
+            finally
             {
-                var stepOutcome = await ExecuteStepAsync(context, step, warnings, cancellationToken);
-                criticalFailures.AddRange(stepOutcome.PersistedFailures);
-                if (stepOutcome.ExitCode != SuccessExitCode)
-                {
-                    return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
-                }
+                await FlushTracerAsync(namespaceTracer, GetNamespaceTraceOutputDirectory(context, namespaceName), cancellationToken);
+                context.Tracer = NullTracer.Instance;
+                _currentTracer = NullTracer.Instance;
             }
         }
 
@@ -286,58 +324,93 @@ public sealed class PipelineRunner
         };
     }
 
-    private static async Task<StepExecutionOutcome> ExecuteStepAsync(
+    private async Task<StepExecutionOutcome> ExecuteStepAsync(
         PipelineContext context,
         IPipelineStep step,
         ICollection<string> warnings,
         CancellationToken cancellationToken)
     {
         context.Reports.Info($"  Step {step.Id}: {step.Name}");
-        
-        // Determine max attempts (1 + MaxRetries)
-        var maxAttempts = 1 + step.MaxRetries;
-        var hasValidators = !context.Request.SkipValidation && step.PostValidators.Count > 0;
-        
-        StepResult result = null!;
-        
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+
+        var classification = StepClassifications.GetValueOrDefault(step.Id, StepClassification.Deterministic);
+        var namespaceName = context.Items.GetValueOrDefault("Namespace") as string;
+        using var handle = _currentTracer.StartStep(
+            step.Name,
+            classification,
+            step.Scope == StepScope.Namespace ? namespaceName : null,
+            $"stepId={step.Id}; maxRetries={step.MaxRetries}");
+
+        try
         {
-            if (attempt > 1)
+            var maxAttempts = 1 + step.MaxRetries;
+            var hasValidators = !context.Request.SkipValidation && step.PostValidators.Count > 0;
+
+            StepResult result = null!;
+
+            for (var attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                context.Reports.Warning($"    Retry attempt {attempt - 1}/{step.MaxRetries} for step {step.Id}");
+                if (attempt > 1)
+                {
+                    context.Reports.Warning($"    Retry attempt {attempt - 1}/{step.MaxRetries} for step {step.Id}");
+                }
+
+                result = await step.ExecuteAsync(context, cancellationToken);
+
+                if (result.Success && hasValidators)
+                {
+                    result = await RunPostValidatorsAsync(context, step, result, cancellationToken);
+                }
+
+                if (result.Success || attempt == maxAttempts)
+                {
+                    break;
+                }
+
+                context.Reports.Warning($"    Step {step.Id} validation failed, retrying ({attempt}/{maxAttempts - 1})");
             }
-            
-            result = await step.ExecuteAsync(context, cancellationToken);
-            
-            if (result.Success && hasValidators)
+
+            foreach (var warning in result.Warnings)
             {
-                result = await RunPostValidatorsAsync(context, step, result, cancellationToken);
+                warnings.Add(warning);
+                context.Reports.Warning(warning);
             }
-            
-            // If successful or no retries available, break out
-            if (result.Success || attempt == maxAttempts)
+
+            var persistedFailures = CriticalFailureRecorder.Persist(context, step, result);
+            var stepExitCode = MapStepFailureExitCode(step.FailurePolicy, result.Success, result.ExitCodeOverride);
+            if (stepExitCode != SuccessExitCode)
             {
-                break;
+                context.Reports.Error($"Step {step.Id} failed.");
+                handle.Fail($"Exit code {stepExitCode}");
             }
-            
-            // Validation failed, but we have more retries
-            context.Reports.Warning($"    Step {step.Id} validation failed, retrying ({attempt}/{maxAttempts - 1})");
+            else
+            {
+                handle.Complete(result.Success ? "completed" : "warning-only completion");
+            }
+
+            return new StepExecutionOutcome(stepExitCode, result, persistedFailures);
+        }
+        catch (Exception ex)
+        {
+            handle.Fail(ex.Message);
+            throw;
+        }
+    }
+
+    private static Task FlushTracerAsync(IPipelineTracer tracer, string outputDirectory, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        return tracer.FlushAsync(outputDirectory, CancellationToken.None);
+    }
+
+    private static string GetNamespaceTraceOutputDirectory(PipelineContext context, string namespaceName)
+    {
+        var parentDirectory = Directory.GetParent(context.OutputPath)?.FullName;
+        if (string.IsNullOrWhiteSpace(parentDirectory))
+        {
+            parentDirectory = context.OutputPath;
         }
 
-        foreach (var warning in result.Warnings)
-        {
-            warnings.Add(warning);
-            context.Reports.Warning(warning);
-        }
-
-        var persistedFailures = CriticalFailureRecorder.Persist(context, step, result);
-        var stepExitCode = MapStepFailureExitCode(step.FailurePolicy, result.Success, result.ExitCodeOverride);
-        if (stepExitCode != SuccessExitCode)
-        {
-            context.Reports.Error($"Step {step.Id} failed.");
-        }
-
-        return new StepExecutionOutcome(stepExitCode, result, persistedFailures);
+        return Path.Combine(parentDirectory, $"generated-{namespaceName}", "trace");
     }
 
     private static int CompleteRun(

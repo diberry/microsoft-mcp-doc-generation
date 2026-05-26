@@ -13,6 +13,9 @@
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.Tracing\DocGeneration.Core.Tracing.csproj" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="SkillsGen.Core.Tests" />
   </ItemGroup>
 </Project>

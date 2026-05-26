@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using Azure;
 using Azure.AI.OpenAI;
+using DocGeneration.Core.Tracing;
 using Microsoft.Extensions.Logging;
 using OpenAI.Chat;
 using SkillsGen.Core.Models;
@@ -13,6 +15,8 @@ public class AzureOpenAiRewriter : ILlmRewriter
 {
     private readonly ChatClient _chatClient;
     private readonly ILogger<AzureOpenAiRewriter> _logger;
+    private readonly IPipelineTracer _tracer;
+    private readonly string _modelName;
     private readonly string _systemPromptIntro;
     private readonly string _userPromptIntroTemplate;
     private readonly string _systemPromptKnowledge;
@@ -24,9 +28,12 @@ public class AzureOpenAiRewriter : ILlmRewriter
         string systemPromptIntro,
         string userPromptIntroTemplate,
         string? acrolinxRules,
-        ILogger<AzureOpenAiRewriter> logger)
+        ILogger<AzureOpenAiRewriter> logger,
+        IPipelineTracer? tracer = null)
     {
         _logger = logger;
+        _tracer = tracer ?? NullTracer.Instance;
+        _modelName = modelName;
 
         var client = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
         _chatClient = client.GetChatClient(modelName);
@@ -43,13 +50,13 @@ public class AzureOpenAiRewriter : ILlmRewriter
             .Replace("{{skillName}}", skillName)
             .Replace("{{description}}", rawDescription);
 
-        return await CallLlmAsync(_systemPromptIntro, userPrompt, ct);
+        return await CallLlmAsync(skillName, "rewrite-intro", _systemPromptIntro, userPrompt, ct);
     }
 
     public async Task<string> GenerateKnowledgeOverviewAsync(string skillName, string rawBody, CancellationToken ct = default)
     {
         var userPrompt = $"Write a 2-3 sentence knowledge overview for the Azure Skill \"{skillName}\".\n\nSource content:\n{rawBody}";
-        return await CallLlmAsync(_systemPromptKnowledge, userPrompt, ct);
+        return await CallLlmAsync(skillName, "generate-knowledge-overview", _systemPromptKnowledge, userPrompt, ct);
     }
 
     public async Task<string?> SynthesizeWhatItProvidesAsync(string skillName, SkillData skillData, CancellationToken ct = default)
@@ -83,7 +90,7 @@ public class AzureOpenAiRewriter : ILlmRewriter
 
         try
         {
-            return await CallLlmAsync(systemPrompt, userPrompt, ct);
+            return await CallLlmAsync(skillName, "synthesize-what-it-provides", systemPrompt, userPrompt, ct);
         }
         catch (Exception ex)
         {
@@ -124,7 +131,7 @@ public class AzureOpenAiRewriter : ILlmRewriter
 
         try
         {
-            var response = await CallLlmAsync(systemPrompt, userPrompt, ct);
+            var response = await CallLlmAsync(skillName, "translate-workflow-steps", systemPrompt, userPrompt, ct);
             return ParseWorkflowStepsResponse(response, rawSteps);
         }
         catch (Exception ex)
@@ -171,8 +178,9 @@ public class AzureOpenAiRewriter : ILlmRewriter
     private const int MaxRetries = 5;
     private static readonly int[] RetryDelaysMs = [1000, 2000, 4000, 8000, 16000];
 
-    private async Task<string> CallLlmAsync(string systemPrompt, string userPrompt, CancellationToken ct)
+    private async Task<string> CallLlmAsync(string skillName, string operationName, string systemPrompt, string userPrompt, CancellationToken ct)
     {
+        var sw = Stopwatch.StartNew();
         var messages = new List<ChatMessage>
         {
             new SystemChatMessage(systemPrompt),
@@ -197,6 +205,19 @@ public class AzureOpenAiRewriter : ILlmRewriter
 
                 var result = response.Value.Content[0].Text;
                 _logger.LogDebug("Received {ResponseLength} char response", result.Length);
+
+                _tracer.RecordAiCall(new AiInteractionRecord
+                {
+                    SkillOrToolName = skillName,
+                    Operation = operationName,
+                    SystemPrompt = systemPrompt,
+                    UserPrompt = userPrompt,
+                    ResponseContent = result,
+                    Model = _modelName,
+                    TotalTokens = null,
+                    DurationMs = sw.ElapsedMilliseconds,
+                    RetryCount = attempt
+                });
 
                 return result;
             }

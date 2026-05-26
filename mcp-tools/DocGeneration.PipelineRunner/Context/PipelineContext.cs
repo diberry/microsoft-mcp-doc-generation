@@ -1,3 +1,4 @@
+using DocGeneration.Core.Tracing;
 using PipelineRunner.Cli;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
@@ -45,6 +46,8 @@ public sealed class PipelineContext
     public IReadOnlyList<IPipelineStep> PlannedSteps { get; set; } = Array.Empty<IPipelineStep>();
 
     public IReadOnlyList<string> SelectedNamespaces { get; set; } = Array.Empty<string>();
+
+    public IPipelineTracer Tracer { get; set; } = NullTracer.Instance;
 
     public Dictionary<string, object> Items { get; } = new(StringComparer.OrdinalIgnoreCase);
 }

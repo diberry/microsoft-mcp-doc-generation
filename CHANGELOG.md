@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Pipeline Observability — Trace AI Requests/Responses** — New shared tracing infrastructure (`shared/DocGeneration.Core.Tracing/`) that captures full pipeline execution traces including step timing, AI prompt/response content, token usage, and model metadata. Both the Skills pipeline (`SkillPipelineOrchestrator`, `AzureOpenAiRewriter`) and MCP pipeline (`PipelineRunner`, `GenerativeAIClient`) now emit structured trace files after every run: `pipeline-trace.json` (full execution graph), `ai-interactions.json` (all LLM calls with prompts/responses), and `summary.md` (human-readable report). Tracing is always-on with zero configuration, uses in-memory collection with single end-of-run flush (≤2% overhead), and the `NullTracer` pattern ensures no breaking changes to existing APIs. Implements #590.
+
 ### Changed
 
 - **`update-azure-mcp.yml` workflow commits directly to main** — The nightly version check workflow now commits package updates directly to `main` instead of creating pull requests. Breaking changes (major version bumps) are blocked and require manual review. Added inline tests, error handling for git operations, concurrency control (`cancel-in-progress: true`), and directory validation before staging. (#621)

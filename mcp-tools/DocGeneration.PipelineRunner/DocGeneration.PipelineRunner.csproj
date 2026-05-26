@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
     <ProjectReference Include="..\..\shared\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.Tracing\DocGeneration.Core.Tracing.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />
