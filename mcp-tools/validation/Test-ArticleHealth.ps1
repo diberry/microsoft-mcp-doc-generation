@@ -4,12 +4,18 @@
 # Usage:
 #   .\Test-ArticleHealth.ps1 -ArticlePath <file.md> [-Strict] [-OutputJson <path>]
 #   .\Test-ArticleHealth.ps1 -ArticlesDir <dir> [-Strict] [-OutputJson <path>]
+#   .\Test-ArticleHealth.ps1 -ArticlesDir <dir> -RunId <guid> -Namespace <name> -OutputJson <path>
+#
+# When -RunId and -Namespace are supplied, -OutputJson emits a pipeline-contract schema
+# (schemaVersion 1.0) that the ArticleHealthValidatorStep C# wrapper reads.
 
 param(
     [string]$ArticlePath,
     [string]$ArticlesDir,
     [switch]$Strict,
-    [string]$OutputJson
+    [string]$OutputJson,
+    [string]$RunId      = "",
+    [string]$Namespace  = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -215,10 +221,72 @@ foreach ($file in $files) {
     }
 }
 
+# ─── Placeholder-token check (across all files) ───────────────────────────────
+
+$placeholderPattern = '(?i)(\{\{[^}]+\}\}|<PLACEHOLDER>|TODO:|FIXME:|__[A-Z_]{3,}__|\[INSERT\s|\[REPLACE\s)'
+$placeholderCount   = 0
+foreach ($f in $files) {
+    $raw = Get-Content $f.FullName -Raw -Encoding UTF8
+    $pmatches = [regex]::Matches($raw, $placeholderPattern)
+    $placeholderCount += $pmatches.Count
+}
+
 # ─── JSON output ──────────────────────────────────────────────────────────────
 
 if ($OutputJson) {
-    $allResults | ConvertTo-Json -Depth 6 | Set-Content $OutputJson -Encoding UTF8
+    # Compute per-status counts across all checks across all files
+    $allChecks = $allResults | ForEach-Object { $_.Checks }
+    $passCount = ($allChecks | Where-Object Status -eq "pass").Count
+    $warnCount = ($allChecks | Where-Object Status -eq "warn").Count
+    $failCount = ($allChecks | Where-Object Status -eq "fail").Count
+
+    # Derive top-level verdict from counts
+    $topVerdict = if ($failCount -gt 0) { "fail" } elseif ($warnCount -gt 0) { "warn" } else { "pass" }
+
+    # Flatten all checks for the contract output
+    $allChecksFlat = @($allChecks | ForEach-Object {
+        [PSCustomObject]@{ name = $_.Name; status = $_.Status; detail = $_.Detail }
+    })
+
+    # Append placeholder check result
+    if ($placeholderCount -gt 0) {
+        $allChecksFlat += [PSCustomObject]@{
+            name   = "tokens.placeholder-detected"
+            status = "warn"
+            detail = "Found $placeholderCount unresolved placeholder token(s)"
+        }
+        $warnCount++
+        if ($topVerdict -eq "pass") { $topVerdict = "warn" }
+    } else {
+        $allChecksFlat += [PSCustomObject]@{
+            name   = "tokens.placeholder-detected"
+            status = "pass"
+            detail = "No placeholder tokens detected"
+        }
+        $passCount++
+    }
+
+    $articleFileNames = @($files | ForEach-Object { $_.Name })
+
+    $outputObj = [PSCustomObject]@{
+        schemaVersion = "1.0"
+        runId         = $RunId
+        namespace     = $Namespace
+        generatedAt   = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+        verdict       = $topVerdict
+        articleFiles  = $articleFileNames
+        filesChecked  = $files.Count
+        summary       = [PSCustomObject]@{ pass = $passCount; warn = $warnCount; fail = $failCount }
+        checks        = $allChecksFlat
+    }
+
+    # Ensure the output directory exists
+    $outputDir = Split-Path $OutputJson -Parent
+    if ($outputDir -and -not (Test-Path $outputDir)) {
+        New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+    }
+
+    $outputObj | ConvertTo-Json -Depth 6 | Set-Content $OutputJson -Encoding UTF8
     Write-Host "`nJSON written to: $OutputJson" -ForegroundColor DarkGray
 }
 
