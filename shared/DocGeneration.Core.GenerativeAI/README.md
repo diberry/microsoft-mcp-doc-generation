@@ -48,6 +48,10 @@ dotnet test shared/DocGeneration.Core.GenerativeAI.Tests/DocGeneration.Core.Gene
 
 To run with actual Azure OpenAI credentials, remove the `Skip` attribute from the test or set environment variables.
 
+## Known Limitations
+
+- **RetryCount always 0:** The retry middleware in `GenerativeAIClient` uses a delegating handler pattern (`ChatClientBuilder.Use(...)`) that encapsulates retries transparently. The retry count is not propagated back to the caller, so `AiInteractionRecord.RetryCount` is always recorded as 0 for MCP pipeline calls. The Skills pipeline (`AzureOpenAiRewriter`) correctly captures retry count because it implements retries inline.
+
 ## SDK Details
 
 This wrapper uses:
