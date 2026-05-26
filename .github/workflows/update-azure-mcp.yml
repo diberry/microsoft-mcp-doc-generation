@@ -147,7 +147,7 @@ jobs:
         run: |
           echo "Generating CLI example commands..."
           node generate-cli-examples.js
-          echo "✅ CLI examples generated → cli-examples.md"
+          echo "✅ CLI examples generated in version folder"
 
       - name: Diff against previous version
         if: steps.cli-snapshot.outputs.is_new == 'true'
@@ -285,104 +285,74 @@ jobs:
           echo "Running npm audit..."
           npm audit --audit-level=high
 
-      - name: Close previous automated PRs
+      - name: Configure Git
         if: steps.version-check.outputs.needs_update == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Checking for existing automated PRs..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and Push Changes
+        if: steps.version-check.outputs.needs_update == 'true'
+        id: commit-push
+        run: |
+          echo "Committing changes to main branch..."
           
-          # Find all open PRs with the 'automated' label created by this workflow
-          EXISTING_PRS=$(gh pr list --label "automated" --label "dependencies" --json number,headRefName,title --jq '.[] | select(.headRefName | startswith("update-azure-mcp-")) | .number')
+          # Stage the changed files
+          git add test-npm-azure-mcp/package.json test-npm-azure-mcp/package-lock.json
           
-          if [ -n "$EXISTING_PRS" ]; then
-            echo "Found existing automated PR(s) to close:"
-            for PR_NUMBER in $EXISTING_PRS; do
-              echo "  Closing PR #$PR_NUMBER"
-              gh pr close $PR_NUMBER --comment "Closing this PR as a newer version update is available." --delete-branch || true
-            done
-            echo "✅ Closed previous automated PRs"
-          else
-            echo "No existing automated PRs found"
+          # Stage the new CLI snapshot and examples if they exist
+          if [ "${{ steps.cli-snapshot.outputs.is_new }}" == "true" ]; then
+            git add "test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/"
+          fi
+          
+          # Stage the diff file if it exists
+          if [ -f "test-npm-azure-mcp/${{ steps.diff-check.outputs.diff_file }}" ]; then
+            git add "test-npm-azure-mcp/${{ steps.diff-check.outputs.diff_file }}"
+          fi
+          
+          # Create commit message
+          COMMIT_MSG="chore(deps): update @azure/mcp to ${{ steps.version-check.outputs.latest_version }}
+
+Automated update from nightly version check workflow.
+
+- Package: @azure/mcp
+- Previous Version: ${{ steps.version-check.outputs.current_version }}
+- New Version: ${{ steps.version-check.outputs.latest_version }}
+- CLI Version: ${{ steps.cli-snapshot.outputs.cli_version }}"
+
+          if [ "${{ steps.breaking-check.outputs.breaking }}" == "true" ]; then
+            COMMIT_MSG="$COMMIT_MSG
+
+⚠️ MAJOR VERSION CHANGE - Review for breaking changes
+Release notes: https://www.npmjs.com/package/@azure/mcp?activeTab=versions"
           fi
 
-      - name: Create Pull Request
-        if: steps.version-check.outputs.needs_update == 'true'
-        id: create-pr
-        uses: peter-evans/create-pull-request@v7
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore(deps): update @azure/mcp to ${{ steps.version-check.outputs.latest_version }}'
-          title: 'chore(deps): update @azure/mcp to ${{ steps.version-check.outputs.latest_version }}'
-          body: |
-            ${{ steps.breaking-check.outputs.breaking == 'true' && '⚠️ **MAJOR VERSION CHANGE - BREAKING CHANGES LIKELY**\n\n' || '' }}## Automated Dependency Update
-            
-            This PR updates `@azure/mcp` in the `test-npm-azure-mcp` directory to the latest version.
-            
-            ### Changes
-            - **Package**: `@azure/mcp`
-            - **Current Version**: `${{ steps.version-check.outputs.current_version }}`
-            - **New Version**: `${{ steps.version-check.outputs.latest_version }}`
-            - **CLI Version**: `${{ steps.cli-snapshot.outputs.cli_version }}`
-            ${{ steps.breaking-check.outputs.breaking == 'true' && '- **⚠️ Major Version Change**: Review for breaking changes' || '' }}
-            
-            ### Files Updated
-            - `test-npm-azure-mcp/package.json`
-            - `test-npm-azure-mcp/package-lock.json`
-            ${{ steps.cli-snapshot.outputs.is_new == 'true' && format('- `test-npm-azure-mcp/{0}/tools-list.json` (new CLI snapshot)', steps.cli-snapshot.outputs.cli_version) || '' }}
-            ${{ steps.cli-snapshot.outputs.is_new == 'true' && format('- `test-npm-azure-mcp/{0}/cli-examples.md` (regenerated CLI examples)', steps.cli-snapshot.outputs.cli_version) || '' }}
-            
-            ### CLI Diff
-            ${{ steps.diff-check.outputs.previous_version && format('Compared against previous version `{0}`: **{1} lines changed** (+{2} / -{3})', steps.diff-check.outputs.previous_version, steps.diff-check.outputs.lines_changed, steps.diff-check.outputs.lines_added, steps.diff-check.outputs.lines_removed) || 'No previous version to diff against.' }}
-            
-            > Download the full diff from the workflow artifacts.
-            
-            ### Verification Steps
-            Please verify that:
-            - [ ] The package installs correctly
-            - [ ] All scripts in package.json still work
-            - [ ] The Azure MCP CLI commands function as expected
-            - [ ] The CLI tools diff looks reasonable
-            
-            ### Release Notes
-            Check the release notes for breaking changes: https://www.npmjs.com/package/@azure/mcp?activeTab=versions
-            
-            ${{ steps.gap-audit.outputs.total_tools && '### 📊 Coverage Audit' || '' }}
-            ${{ steps.gap-audit.outputs.total_tools && format('- **Total tools:** {0}', steps.gap-audit.outputs.total_tools) || '' }}
-            ${{ steps.gap-audit.outputs.total_tools && format('- **Documented:** {0}', steps.gap-audit.outputs.documented_tools) || '' }}
-            ${{ steps.gap-audit.outputs.total_tools && format('- **Missing:** {0}', steps.gap-audit.outputs.missing_tools) || '' }}
-            ${{ steps.gap-audit.outputs.total_tools && format('- **Params missing:** {0}', steps.gap-audit.outputs.params_missing) || '' }}
-            ${{ steps.gap-audit.outputs.total_tools && format('- **Annotation mismatches:** {0}', steps.gap-audit.outputs.anno_mismatches) || '' }}
-            ${{ steps.gap-audit.outputs.total_tools && format('> Full gap report available as artifact `mcp-gap-report-{0}`.', steps.cli-snapshot.outputs.cli_version) || '' }}
-            
-            ---
-            
-            🤖 This PR was automatically generated by the `update-azure-mcp` workflow.
-          branch: update-azure-mcp-${{ steps.version-check.outputs.branch_version }}
-          delete-branch: true
-          labels: |
-            dependencies
-            automated
-          assignees: ${{ github.repository_owner }}
+          if [ "${{ steps.cli-snapshot.outputs.is_new }}" == "true" ]; then
+            COMMIT_MSG="$COMMIT_MSG
 
-      - name: PR Created Info
-        if: steps.version-check.outputs.needs_update == 'true' && steps.create-pr.outputs.pull-request-number
-        run: |
-          echo "✅ Pull Request created successfully!"
-          echo "PR Number: ${{ steps.create-pr.outputs.pull-request-number }}"
-          echo "PR URL: ${{ steps.create-pr.outputs.pull-request-url }}"
-
-      - name: Enable Auto-merge
-        if: steps.create-pr.outputs.pull-request-number && steps.breaking-check.outputs.breaking != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Enabling auto-merge for PR #${{ steps.create-pr.outputs.pull-request-number }}..."
-          if ! gh pr merge --auto --squash ${{ steps.create-pr.outputs.pull-request-number }}; then
-            echo "::warning::Auto-merge not enabled - this repo may need branch protection rules configured"
-          else
-            echo "✅ Auto-merge enabled (will merge when checks pass)"
+Files updated:
+- test-npm-azure-mcp/package.json
+- test-npm-azure-mcp/package-lock.json
+- test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json (new)
+- test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/cli-examples.md (new)"
           fi
+
+          if [ -n "${{ steps.diff-check.outputs.previous_version }}" ]; then
+            COMMIT_MSG="$COMMIT_MSG
+
+CLI diff: ${{ steps.diff-check.outputs.previous_version }} → ${{ steps.cli-snapshot.outputs.cli_version }}
+- Lines changed: ${{ steps.diff-check.outputs.lines_changed }}
+- Added: ${{ steps.diff-check.outputs.lines_added }}
+- Removed: ${{ steps.diff-check.outputs.lines_removed }}"
+          fi
+
+          git commit -m "$COMMIT_MSG"
+          
+          # Push directly to main
+          git push origin HEAD:main
+          
+          echo "✅ Changes committed and pushed to main"
+          echo "committed=true" >> $GITHUB_OUTPUT
 
       - name: Summary
         if: always()
@@ -393,12 +363,12 @@ jobs:
           echo "- **Latest Version**: ${{ steps.version-check.outputs.latest_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Update Needed**: ${{ steps.version-check.outputs.needs_update }}" >> $GITHUB_STEP_SUMMARY
           
-          if [ -n "${{ steps.create-pr.outputs.pull-request-number }}" ]; then
+          if [ "${{ steps.commit-push.outputs.committed }}" == "true" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ PR #${{ steps.create-pr.outputs.pull-request-number }} created to update @azure/mcp" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Changes committed and pushed to main" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ steps.version-check.outputs.needs_update }}" == "true" ]; then
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "⚠️ Update was needed but PR creation failed — check logs" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Update was needed but commit failed — check logs" >> $GITHUB_STEP_SUMMARY
           else
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "✅ No update needed — already using the latest version" >> $GITHUB_STEP_SUMMARY
@@ -409,6 +379,7 @@ jobs:
             echo "### CLI Snapshot" >> $GITHUB_STEP_SUMMARY
             echo "- **CLI Version**: ${{ steps.cli-snapshot.outputs.cli_version }}" >> $GITHUB_STEP_SUMMARY
             echo "- **Snapshot**: \`test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Examples**: \`test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/cli-examples.md\`" >> $GITHUB_STEP_SUMMARY
             if [ -n "${{ steps.diff-check.outputs.previous_version }}" ]; then
               echo "- **Diff**: ${{ steps.diff-check.outputs.previous_version }} → ${{ steps.cli-snapshot.outputs.cli_version }} — **${{ steps.diff-check.outputs.lines_changed }} lines changed**" >> $GITHUB_STEP_SUMMARY
             fi
