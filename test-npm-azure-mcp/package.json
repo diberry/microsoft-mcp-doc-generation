@@ -15,7 +15,9 @@
     "get:chat-completion": "bash chat-completion.sh",
     "validate": "node validate-cli-output.js",
     "generate:report": "node generate-report.js",
-    "test:report": "node --test test/generate-report.test.js"
+    "test:report": "node --test test/generate-report.test.js",
+    "test": "node --test test/generate-cli-examples.test.js",
+    "build": "echo 'No build step required for Node.js scripts'"
   },
   "keywords": [],
   "author": "",
