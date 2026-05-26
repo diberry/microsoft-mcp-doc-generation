@@ -91,6 +91,10 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
         {
             scriptResult = await scriptRunner.RunAsync(request, cancellationToken);
         }
+        catch (OperationCanceledException)
+        {
+            throw; // Do not swallow cancellation requests
+        }
         catch (Exception ex)
         {
             warnings.Add($"Article health script failed to launch: {ex.Message}");

@@ -272,7 +272,7 @@ if ($OutputJson) {
         schemaVersion = "1.0"
         runId         = $RunId
         namespace     = $Namespace
-        generatedAt   = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+        generatedAt   = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
         verdict       = $topVerdict
         articleFiles  = $articleFileNames
         filesChecked  = $files.Count
