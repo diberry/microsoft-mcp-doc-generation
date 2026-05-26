@@ -50,6 +50,24 @@ public class ArticleHealthValidatorStepTests
     // ── No tool-family articles found ────────────────────────────────────────
 
     [Fact]
+    public void ValidationScriptRunner_BuildArguments_EmptyArticlePaths_Throws()
+    {
+        var runner = new ValidationScriptRunner(new RecordingProcessRunner());
+        var request = new ValidationScriptRequest(
+            ScriptPath: "Test-ArticleHealth.ps1",
+            RunId: Guid.NewGuid().ToString(),
+            Namespace: "storage",
+            RepoRoot: Path.GetTempPath(),
+            OutputRoot: Path.GetTempPath(),
+            OutputJsonPath: Path.Combine(Path.GetTempPath(), "article-health.json"),
+            ArticlePaths: [],
+            AdditionalArguments: new Dictionary<string, string>());
+
+        var ex = Assert.ThrowsAsync<ArgumentException>(() => runner.RunAsync(request, CancellationToken.None));
+        Assert.NotNull(ex);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_NoToolFamilyArticles_ReturnsFalseWithWarning()
     {
         var env = SetupTestEnvironment();

@@ -72,6 +72,9 @@ public sealed class ValidationScriptRunner(IProcessRunner processRunner) : IVali
 
     private static IReadOnlyList<string> BuildArguments(ValidationScriptRequest request)
     {
+        if (request.ArticlePaths.Count == 0)
+            throw new ArgumentException("ArticlePaths cannot be empty.", nameof(request));
+
         var args = new List<string>();
 
         if (request.ArticlePaths.Count == 1)
