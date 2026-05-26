@@ -9,11 +9,10 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 concurrency:
   group: update-azure-mcp
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   check-and-update:
@@ -283,7 +282,27 @@ jobs:
         working-directory: ./test-npm-azure-mcp
         run: |
           echo "Running npm audit..."
-          npm audit --audit-level=high
+          if ! npm audit --audit-level=high; then
+            echo "::error::High-severity vulnerabilities detected in @azure/mcp"
+            exit 1
+          fi
+
+      - name: Block breaking changes from auto-commit
+        if: steps.version-check.outputs.needs_update == 'true' && steps.breaking-check.outputs.breaking == 'true'
+        run: |
+          echo "::error::Breaking change detected (major version bump)"
+          echo "::error::Major version updates require manual review and approval"
+          echo "::error::Please create a PR manually with: gh pr create --fill"
+          exit 1
+
+      - name: Run tests before commit
+        if: steps.version-check.outputs.needs_update == 'true'
+        working-directory: ./test-npm-azure-mcp
+        run: |
+          echo "Running tests to satisfy branch protection..."
+          npm run build
+          npm run test
+          echo "✅ All tests passed"
 
       - name: Configure Git
         if: steps.version-check.outputs.needs_update == 'true'
@@ -302,7 +321,13 @@ jobs:
           
           # Stage the new CLI snapshot and examples if they exist
           if [ "${{ steps.cli-snapshot.outputs.is_new }}" == "true" ]; then
-            git add "test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/"
+            VERSION_DIR="test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}"
+            if [ -d "$VERSION_DIR" ] && [ "$(ls -A $VERSION_DIR 2>/dev/null)" ]; then
+              git add "$VERSION_DIR/"
+            else
+              echo "::error::Version directory is missing or empty: $VERSION_DIR"
+              exit 1
+            fi
           fi
           
           # Stage the diff file if it exists
@@ -319,13 +344,6 @@ Automated update from nightly version check workflow.
 - Previous Version: ${{ steps.version-check.outputs.current_version }}
 - New Version: ${{ steps.version-check.outputs.latest_version }}
 - CLI Version: ${{ steps.cli-snapshot.outputs.cli_version }}"
-
-          if [ "${{ steps.breaking-check.outputs.breaking }}" == "true" ]; then
-            COMMIT_MSG="$COMMIT_MSG
-
-⚠️ MAJOR VERSION CHANGE - Review for breaking changes
-Release notes: https://www.npmjs.com/package/@azure/mcp?activeTab=versions"
-          fi
 
           if [ "${{ steps.cli-snapshot.outputs.is_new }}" == "true" ]; then
             COMMIT_MSG="$COMMIT_MSG
@@ -346,10 +364,25 @@ CLI diff: ${{ steps.diff-check.outputs.previous_version }} → ${{ steps.cli-sna
 - Removed: ${{ steps.diff-check.outputs.lines_removed }}"
           fi
 
-          git commit -m "$COMMIT_MSG"
+          # Commit with error handling
+          if ! git commit -m "$COMMIT_MSG"; then
+            echo "::error::Failed to create commit - check if there are any changes to commit"
+            exit 1
+          fi
           
-          # Push directly to main
-          git push origin HEAD:main
+          # Detect conflicts before pushing
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "::error::main branch has diverged - another commit was pushed during workflow"
+            echo "::error::Please retry workflow manually"
+            exit 1
+          fi
+          
+          # Push with error handling
+          if ! git push origin HEAD:main; then
+            echo "::error::Failed to push to main - check branch protection rules and permissions"
+            exit 1
+          fi
           
           echo "✅ Changes committed and pushed to main"
           echo "committed=true" >> $GITHUB_OUTPUT
