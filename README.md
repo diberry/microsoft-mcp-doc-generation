@@ -317,6 +317,7 @@ To modify AI-generated content quality or style:
 | [docs/GENERATION-SCRIPTS.md](docs/GENERATION-SCRIPTS.md) | Script execution order and dependencies |
 | [docs/GET-MCP-VERSION.md](docs/GET-MCP-VERSION.md) | Retrieving MCP version information |
 | [docs/ci-integration.md](docs/ci-integration.md) | CI pipeline structure, local dev commands, test inventory, debugging guide |
+| [docs/VALIDATION-RUNBOOK.md](docs/VALIDATION-RUNBOOK.md) | Manual validation workflow for repo-local article-health and coverage scripts |
 
 ### Quality & Testing
 
@@ -325,6 +326,7 @@ To modify AI-generated content quality or style:
 | [docs/test-strategy.md](docs/test-strategy.md) | Test strategy for the documentation pipeline |
 | [docs/FINGERPRINTING.md](docs/FINGERPRINTING.md) | Baseline fingerprinting tool — snapshot and diff generated output |
 | [docs/acrolinx-compliance-strategy.md](docs/acrolinx-compliance-strategy.md) | Acrolinx compliance strategy for tool-family articles |
+| [mcp-tools/validation/README.md](mcp-tools/validation/README.md) | Repo-local validation scripts, test fixtures, and manual execution commands |
 | [mcp-tools/DocGeneration.PromptRegression.Tests/README.md](mcp-tools/DocGeneration.PromptRegression.Tests/README.md) | Prompt regression testing — baselines, metrics, comparison |
 | [docs/prompt-versioning.md](docs/prompt-versioning.md) | Prompt versioning — SHA256 hashing, `PromptSnapshot`, `StepResultFile` v2 schema |
 

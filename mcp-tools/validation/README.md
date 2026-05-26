@@ -18,7 +18,7 @@ Repo-local deterministic validators for Azure MCP generated articles.
 ## Running the tests
 
 ```powershell
-Invoke-Pester -Path .\mcp-tools\validation\tests -Output Detailed
+Invoke-Pester -Path ./mcp-tools/validation/tests -Output Detailed
 ```
 
 ## Running the validators manually

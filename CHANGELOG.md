@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Repo-local validation scripts and tests** — Moved `Test-ArticleHealth.ps1`, `Scan-McpToolCoverage.ps1`, and their 72 Pester tests into `mcp-tools/validation/` so deterministic article-health and coverage checks now live beside the generation source instead of only in the project-dina ops hub. Added `mcp-tools/validation/README.md`, `docs/VALIDATION-RUNBOOK.md`, and a dedicated `pester-tests` CI job for the relocated suite. Implements Phase 1 of #574.
 - **Pipeline Observability — Trace AI Requests/Responses** — New shared tracing infrastructure (`shared/DocGeneration.Core.Tracing/`) that captures full pipeline execution traces including step timing, AI prompt/response content, token usage, and model metadata. Both the Skills pipeline (`SkillPipelineOrchestrator`, `AzureOpenAiRewriter`) and MCP pipeline (`PipelineRunner`, `GenerativeAIClient`) now emit structured trace files after every run: `pipeline-trace.json` (full execution graph), `ai-interactions.json` (all LLM calls with prompts/responses), and `summary.md` (human-readable report). Tracing is always-on with zero configuration, uses in-memory collection with single end-of-run flush (≤2% overhead), and the `NullTracer` pattern ensures no breaking changes to existing APIs. Implements #590.
 
 ### Changed

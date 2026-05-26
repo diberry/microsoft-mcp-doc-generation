@@ -1,0 +1,91 @@
+{
+  "results": [
+    {
+      "command": "storage account list",
+      "name": "storage_account_list",
+      "option": [
+        { "name": "--subscription", "required": false },
+        { "name": "--resource-group", "required": false },
+        { "name": "--account-name", "required": false }
+      ],
+      "metadata": {
+        "annotations": {
+          "destructive": { "value": false },
+          "idempotent": { "value": true },
+          "openWorld": { "value": false },
+          "readOnly": { "value": true }
+        },
+        "destructive": { "value": false },
+        "idempotent": { "value": true },
+        "openWorld": { "value": false },
+        "readOnly": { "value": true }
+      }
+    },
+    {
+      "command": "storage blob upload",
+      "name": "storage_blob_upload",
+      "option": [
+        { "name": "--subscription", "required": false },
+        { "name": "--resource-group", "required": true },
+        { "name": "--account-name", "required": true },
+        { "name": "--container-name", "required": true },
+        { "name": "--blob-name", "required": true }
+      ],
+      "metadata": {
+        "annotations": {
+          "destructive": { "value": true },
+          "idempotent": { "value": false },
+          "openWorld": { "value": false },
+          "readOnly": { "value": false }
+        },
+        "destructive": { "value": true },
+        "idempotent": { "value": false },
+        "openWorld": { "value": false },
+        "readOnly": { "value": false }
+      }
+    },
+    {
+      "command": "compute vm list",
+      "name": "compute_vm_list",
+      "option": [
+        { "name": "--subscription", "required": false },
+        { "name": "--resource-group", "required": false },
+        { "name": "--vm-name", "required": false }
+      ],
+      "metadata": {
+        "annotations": {
+          "destructive": { "value": false },
+          "idempotent": { "value": true },
+          "openWorld": { "value": true },
+          "readOnly": { "value": true }
+        },
+        "destructive": { "value": false },
+        "idempotent": { "value": true },
+        "openWorld": { "value": true },
+        "readOnly": { "value": true }
+      }
+    },
+    {
+      "command": "compute vm start",
+      "name": "compute_vm_start",
+      "option": [
+        { "name": "--subscription", "required": false },
+        { "name": "--resource-group", "required": true },
+        { "name": "--vm-name", "required": true },
+        { "name": "--no-wait", "required": false }
+      ],
+      "metadata": {
+        "annotations": {
+          "destructive": { "value": false },
+          "idempotent": { "value": true },
+          "openWorld": { "value": false },
+          "readOnly": { "value": false }
+        },
+        "destructive": { "value": false },
+        "idempotent": { "value": true },
+        "openWorld": { "value": false },
+        "readOnly": { "value": false }
+      }
+    }
+  ]
+}

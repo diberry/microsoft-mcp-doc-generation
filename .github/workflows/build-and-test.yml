@@ -47,6 +47,21 @@ jobs:
       - name: Run tests
         run: dotnet test mcp-doc-generation.sln --no-build --configuration Release --verbosity normal
 
+  pester-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -MinimumVersion '5.0.0' -MaximumVersion '5.99.99' -Scope CurrentUser -Force -SkipPublisherCheck
+
+      - name: Run validation Pester tests
+        shell: pwsh
+        run: Invoke-Pester -Path ./mcp-tools/validation/tests -Output Detailed -CI
+
   vale-lint:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
