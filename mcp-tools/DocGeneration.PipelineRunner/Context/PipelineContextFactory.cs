@@ -41,10 +41,11 @@ public sealed class PipelineContextFactory
     {
         var repoRoot = ResolveRepoRoot(_repoRootOverride);
         var mcpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
+        var normalizedOutputPath = NormalizePathSeparators(request.OutputPath);
         var outputPath = Path.GetFullPath(
-            Path.IsPathRooted(request.OutputPath)
-                ? request.OutputPath
-                : Path.Combine(repoRoot, request.OutputPath));
+            Path.IsPathRooted(normalizedOutputPath)
+                ? normalizedOutputPath
+                : Path.Combine(repoRoot, normalizedOutputPath));
 
         var context = new PipelineContext
         {
@@ -100,5 +101,12 @@ public sealed class PipelineContextFactory
         }
 
         throw new InvalidOperationException("Could not locate the repository root from the current application base directory.");
+    }
+
+    internal static string NormalizePathSeparators(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return path.Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
     }
 }
