@@ -212,3 +212,11 @@ The `WrapExampleValues` space-detection heuristic (`IndexOf(' ')` to split value
 - `tool-complete-template.hbs` still uses `[!INCLUDE]` with different path pattern — separate rendering context, not affected.
 - CI `build-and-test` failures on both PRs are infrastructure-related (0 errors, all 204 tests pass, exit code 1 from orphan dotnet cleanup).
 - Three separate `StripFrontmatter` implementations exist across assemblies — tech debt to consolidate.
+## 2026-05-26 — PRD #574 Formalization Complete
+
+- **Event:** Formalized issue #574 into comprehensive 17-dimension PRD
+- **Status:** 6-round review cycle, 8/8 approval complete
+- **Artifact:** projects/azure-ai-tools/prds/2026-05-26T11-57-prd-574-validation-pipeline-integration.md
+- **Impact:** High blast-radius feature; integrated validation pipeline now has clear architecture, gate ownership, versioned contracts, and rollout criteria
+- **Decision:** Recorded in .squad/decisions.md as PRD approval landmark
+
