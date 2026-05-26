@@ -118,6 +118,8 @@ public sealed class PipelineRunner
         var globalSteps = selectedSteps.Where(step => step.Scope == StepScope.Global).ToArray();
         var namespaceSteps = selectedSteps.Where(step => step.Scope == StepScope.Namespace).ToArray();
 
+        // Tracing is scoped to the PipelineRunner process. Steps that shell out to standalone programs
+        // are captured as step-level events only; those subprocesses need their own trace files for full AI-call detail.
         var globalTracer = new PipelineTracer("mcp-pipeline");
         context.Tracer = globalTracer;
         _currentTracer = globalTracer;
@@ -135,7 +137,7 @@ public sealed class PipelineRunner
         }
         finally
         {
-            await FlushTracerAsync(globalTracer, Path.Combine(context.OutputPath, "trace"), cancellationToken);
+            await FlushTracerAsync(globalTracer, Path.Combine(context.OutputPath, "trace"));
             context.Tracer = NullTracer.Instance;
             _currentTracer = NullTracer.Instance;
         }
@@ -201,7 +203,7 @@ public sealed class PipelineRunner
             }
             finally
             {
-                await FlushTracerAsync(namespaceTracer, GetNamespaceTraceOutputDirectory(context, namespaceName), cancellationToken);
+                await FlushTracerAsync(namespaceTracer, GetNamespaceTraceOutputDirectory(context, namespaceName));
                 context.Tracer = NullTracer.Instance;
                 _currentTracer = NullTracer.Instance;
             }
@@ -396,9 +398,10 @@ public sealed class PipelineRunner
         }
     }
 
-    private static Task FlushTracerAsync(IPipelineTracer tracer, string outputDirectory, CancellationToken cancellationToken)
+    // Flush is deliberately non-cancellable to ensure traces are written even when pipeline execution is cancelled.
+    // Trace files are small (<20MB), so the final flush completes quickly.
+    private static Task FlushTracerAsync(IPipelineTracer tracer, string outputDirectory)
     {
-        _ = cancellationToken;
         return tracer.FlushAsync(outputDirectory, CancellationToken.None);
     }
 

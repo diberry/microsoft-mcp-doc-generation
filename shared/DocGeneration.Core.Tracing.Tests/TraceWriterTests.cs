@@ -90,6 +90,47 @@ public sealed class TraceWriterTests : IDisposable
         interactions.Should().BeEmpty();
     }
 
+    [Fact]
+    public void BuildSummary_EscapesPipesInErrorList()
+    {
+        var trace = CreatePipelineTrace() with
+        {
+            Steps =
+            [
+                new TraceEvent
+                {
+                    SequenceNumber = 1,
+                    StepName = "rewrite|tool",
+                    StepType = StepClassification.AI,
+                    Status = StepStatus.Failed,
+                    TargetName = "azure|functions",
+                    Error = "bad | input",
+                    StartedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 2, TimeSpan.Zero),
+                    EndedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 5, TimeSpan.Zero),
+                    DurationMs = 3000
+                }
+            ]
+        };
+
+        var summary = TraceWriter.BuildSummary(trace, Array.Empty<AiInteraction>());
+
+        summary.Should().Contain("- rewrite\\|tool: bad \\| input");
+    }
+
+    [Fact]
+    public async Task WriteAsync_WhenOutputDirectoryIsAFile_ThrowsWithoutLeavingTempFiles()
+    {
+        var writer = new TraceWriter();
+        var blockedPath = Path.Combine(_outputDirectory, "blocked-output");
+        Directory.CreateDirectory(_outputDirectory);
+        await File.WriteAllTextAsync(blockedPath, "not a directory");
+
+        var act = async () => await writer.WriteAsync(blockedPath, CreatePipelineTrace(), CreateAiInteractions());
+
+        await act.Should().ThrowAsync<IOException>();
+        Directory.EnumerateFiles(_outputDirectory, "*.tmp", SearchOption.AllDirectories).Should().BeEmpty();
+    }
+
     private static PipelineTrace CreatePipelineTrace() => new()
     {
         PipelineName = "mcp-pipeline",

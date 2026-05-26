@@ -43,10 +43,12 @@ public sealed class TraceWriter
         var orderedSteps = pipelineTrace.Steps.OrderBy(step => step.SequenceNumber).ToArray();
         var orderedErrors = orderedSteps
             .Where(step => !string.IsNullOrWhiteSpace(step.Error))
-            .Select(step => $"- {step.StepName}: {step.Error}")
+            .Select(step => $"- {EscapeMarkdownText(step.StepName)}: {EscapeMarkdownText(step.Error!)}")
             .ToArray();
         var totalTokens = aiInteractions.Sum(interaction => interaction.TotalTokens ?? 0);
-        var averageLatency = aiInteractions.Count == 0 ? 0 : Math.Round(aiInteractions.Average(interaction => interaction.DurationMs), MidpointRounding.AwayFromZero);
+        var averageLatency = Math.Round(
+            aiInteractions.Select(interaction => (double)interaction.DurationMs).DefaultIfEmpty(0).Average(),
+            MidpointRounding.AwayFromZero);
 
         builder.AppendLine("# Pipeline Trace Summary");
         builder.AppendLine();
@@ -124,7 +126,9 @@ public sealed class TraceWriter
         }
     }
 
-    private static string EscapeCell(string value) => value.Replace("|", "\\|").Replace(Environment.NewLine, " ").Replace("\n", " ").Replace("\r", " ");
+    private static string EscapeCell(string value) => EscapeMarkdownText(value);
+
+    private static string EscapeMarkdownText(string value) => value.Replace("|", "\\|").Replace(Environment.NewLine, " ").Replace("\n", " ").Replace("\r", " ");
 
     private static string GetStatusGlyph(StepStatus status) => status switch
     {
