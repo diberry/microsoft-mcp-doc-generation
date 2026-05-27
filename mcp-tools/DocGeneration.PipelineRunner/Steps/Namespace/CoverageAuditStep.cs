@@ -28,7 +28,7 @@ public sealed class CoverageAuditStep : NamespaceStepBase
             8,
             "Validate tool coverage",
             FailurePolicy.Warn,
-            dependsOn: [0, 4],
+            dependsOn: [0, 4, 7],
             expectedOutputs: [$"{ValidationSubdir}/{ArtifactFileName}", $"{ValidationSubdir}/validation-summary.md"])
     {
     }
@@ -248,6 +248,9 @@ public sealed class CoverageAuditStep : NamespaceStepBase
         return "warn";
     }
 
+    // NOTE: Both Step 7 (ArticleHealthValidator) and Step 8 (CoverageAudit) write to
+    // validation-summary.md. Sequential execution is guaranteed by the dependsOn: [0, 4, 7]
+    // declaration. If parallelization is ever introduced, a file-locking mechanism must be added.
     private static void WriteSummaryMarkdown(
         string validationDir,
         string currentNamespace,

@@ -33,11 +33,12 @@ public class CoverageAuditStepTests
     }
 
     [Fact]
-    public void Step_DependsOnStep0And4()
+    public void Step_DependsOnSteps0_4_7()
     {
         var step = new CoverageAuditStep();
         Assert.Contains(0, step.DependsOn);
         Assert.Contains(4, step.DependsOn);
+        Assert.Contains(7, step.DependsOn);
     }
 
     [Fact]
@@ -435,6 +436,194 @@ public class CoverageAuditStepTests
         Assert.Throws<ArgumentException>(() => ValidationScriptRunner.BuildArguments(request));
     }
 
+    [Fact]
+    public void BuildArguments_ArticlePathsAndAdditionalArticlePath_Throws()
+    {
+        var request = new ValidationScriptRequest(
+            ScriptPath: "Test-ArticleHealth.ps1",
+            RunId: "run-1",
+            Namespace: "storage",
+            RepoRoot: "/repo",
+            OutputRoot: "/output",
+            OutputJsonPath: "/output/validation/article-health.json",
+            ArticlePaths: ["/output/tool-family/storage.md"],
+            AdditionalArguments: new Dictionary<string, string>
+            {
+                ["-ArticlePath"] = "/output/tool-family/storage.md"
+            });
+
+        Assert.Throws<ArgumentException>(() => ValidationScriptRunner.BuildArguments(request));
+    }
+
+    [Fact]
+    public void BuildArguments_EmptyArticlePathsList_SkipsArticleArgs()
+    {
+        var request = new ValidationScriptRequest(
+            ScriptPath: "Test-ArticleHealth.ps1",
+            RunId: "run-1",
+            Namespace: "storage",
+            RepoRoot: "/repo",
+            OutputRoot: "/output",
+            OutputJsonPath: "/output/validation/article-health.json",
+            ArticlePaths: []);
+
+        var args = ValidationScriptRunner.BuildArguments(request);
+
+        Assert.DoesNotContain("-ArticlePath", args);
+        Assert.DoesNotContain("-ArticlesDir", args);
+        Assert.Contains("-RunId", args);
+    }
+
+    // ── Cancellation propagation ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task ExecuteAsync_CancellationRequested_ThrowsOperationCanceled()
+    {
+        var env = SetupTestEnvironment();
+        try
+        {
+            CreateCliOutput(env);
+            CreateArticlesDirectory(env);
+
+            var runner = new CancellingProcessRunner();
+            var step = new CoverageAuditStep();
+            var context = await BuildContextAsync(env, runner);
+
+            await Assert.ThrowsAsync<OperationCanceledException>(
+                () => step.ExecuteAsync(context, CancellationToken.None).AsTask());
+        }
+        finally { TearDown(env); }
+    }
+
+    // ── Script launch exception ──────────────────────────────────────────────
+
+    [Fact]
+    public async Task ExecuteAsync_ScriptThrowsException_ReturnsFalseWithLaunchError()
+    {
+        var env = SetupTestEnvironment();
+        try
+        {
+            CreateCliOutput(env);
+            CreateArticlesDirectory(env);
+
+            var runner = new ThrowingProcessRunner(new InvalidOperationException("Process not found"));
+            var step = new CoverageAuditStep();
+            var context = await BuildContextAsync(env, runner);
+
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("failed to launch") || w.Contains("Process not found"));
+        }
+        finally { TearDown(env); }
+    }
+
+    // ── WriteSummaryMarkdown append path ─────────────────────────────────────
+
+    [Fact]
+    public async Task ExecuteAsync_ExistingSummary_AppendsWithSeparator()
+    {
+        var env = SetupTestEnvironment();
+        try
+        {
+            CreateCliOutput(env);
+            CreateArticlesDirectory(env);
+
+            // Pre-create summary from Step 7
+            var validationDir = Path.Combine(env.OutputPath, "validation");
+            Directory.CreateDirectory(validationDir);
+            var summaryPath = Path.Combine(validationDir, "validation-summary.md");
+            File.WriteAllText(summaryPath, "# Validation Summary\n\n## Article Health\n\n**Verdict:** pass\n");
+
+            var runner = new RunIdCapturingProcessRunner("pass");
+            var step = new CoverageAuditStep();
+            var context = await BuildContextAsync(env, runner);
+
+            await step.ExecuteAsync(context, CancellationToken.None);
+
+            var content = File.ReadAllText(summaryPath);
+            Assert.Contains("Article Health", content);
+            Assert.Contains("---", content);
+            Assert.Contains("Coverage Audit", content);
+        }
+        finally { TearDown(env); }
+    }
+
+    // ── Corrupt gate config ──────────────────────────────────────────────────
+
+    [Fact]
+    public async Task ExecuteAsync_CorruptGateConfig_DefaultsToWarnMode()
+    {
+        var env = SetupTestEnvironment();
+        try
+        {
+            // Overwrite gate config with invalid JSON
+            File.WriteAllText(env.GateConfigPath, "NOT VALID JSON {{{");
+            CreateCliOutput(env);
+            CreateArticlesDirectory(env);
+
+            var runner = new RunIdCapturingProcessRunner("warn");
+            var step = new CoverageAuditStep();
+            var context = await BuildContextAsync(env, runner);
+
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            // Should fall back to warn mode → warn verdict is non-blocking
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("Failed to read gate config"));
+        }
+        finally { TearDown(env); }
+    }
+
+    // ── Invalid gateMode value ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidGateModeValue_DefaultsToWarnMode()
+    {
+        var env = SetupTestEnvironment();
+        try
+        {
+            // Write config with unrecognized gateMode
+            File.WriteAllText(env.GateConfigPath, "{\"gateMode\":\"invalid-mode\"}");
+            CreateCliOutput(env);
+            CreateArticlesDirectory(env);
+
+            var runner = new RunIdCapturingProcessRunner("warn");
+            var step = new CoverageAuditStep();
+            var context = await BuildContextAsync(env, runner);
+
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            // Should fall back to warn mode → warn verdict is non-blocking
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("Unrecognized gateMode"));
+        }
+        finally { TearDown(env); }
+    }
+
+    // ── Unknown verdict default case ─────────────────────────────────────────
+
+    [Fact]
+    public async Task ExecuteAsync_UnknownVerdict_ReturnsFalse()
+    {
+        var env = SetupTestEnvironment();
+        try
+        {
+            CreateCliOutput(env);
+            CreateArticlesDirectory(env);
+
+            // Write artifact with an unrecognized verdict
+            var runner = new RunIdCapturingProcessRunner("unknown-verdict");
+            var step = new CoverageAuditStep();
+            var context = await BuildContextAsync(env, runner);
+
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+        }
+        finally { TearDown(env); }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private sealed record TestEnvironment(
@@ -640,5 +829,29 @@ public class CoverageAuditStepTests
             }
             return null;
         }
+    }
+
+    private sealed class CancellingProcessRunner : IProcessRunner
+    {
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken ct)
+            => ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, "", "", TimeSpan.Zero));
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken ct) => RunAsync(new ProcessSpec("dotnet", [], "."), ct);
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string p, IEnumerable<string> a, bool nb, string wd, CancellationToken ct) => RunAsync(new ProcessSpec("dotnet", [], wd), ct);
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken ct)
+            => throw new OperationCanceledException("Cancellation requested");
+    }
+
+    private sealed class ThrowingProcessRunner(Exception exception) : IProcessRunner
+    {
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken ct)
+            => ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, "", "", TimeSpan.Zero));
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken ct) => RunAsync(new ProcessSpec("dotnet", [], "."), ct);
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string p, IEnumerable<string> a, bool nb, string wd, CancellationToken ct) => RunAsync(new ProcessSpec("dotnet", [], wd), ct);
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken ct)
+            => throw exception;
     }
 }
