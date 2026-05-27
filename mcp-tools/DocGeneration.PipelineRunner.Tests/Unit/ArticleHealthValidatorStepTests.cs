@@ -93,7 +93,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment();
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             // PowerShell exits 1, writes no JSON
             var runner = new FailingProcessRunner(exitCode: 1);
             var step = new ArticleHealthValidatorStep();
@@ -115,7 +115,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment();
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             // Exit 0 but no JSON written
             var runner = new SucceedingProcessRunner();
             var step = new ArticleHealthValidatorStep();
@@ -137,7 +137,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment();
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             var runner = new ArtifactWritingProcessRunner("THIS IS NOT JSON");
             var step = new ArticleHealthValidatorStep();
             var context = await BuildContextAsync(env, runner);
@@ -158,7 +158,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment();
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             // Write an artifact with a different runId
             var wrongRunId = Guid.NewGuid().ToString();
             var runner = new ArtifactWritingProcessRunner(BuildValidArtifactJson(wrongRunId, "storage", "warn"));
@@ -181,7 +181,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment();
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             var runner = new RunIdCapturingProcessRunner("pass");
             var step = new ArticleHealthValidatorStep();
             var context = await BuildContextAsync(env, runner);
@@ -201,7 +201,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment(gateMode: "warn");
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             var runner = new RunIdCapturingProcessRunner("warn");
             var step = new ArticleHealthValidatorStep();
             var context = await BuildContextAsync(env, runner);
@@ -222,7 +222,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment(gateMode: "block");
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             var runner = new RunIdCapturingProcessRunner("warn");
             var step = new ArticleHealthValidatorStep();
             var context = await BuildContextAsync(env, runner);
@@ -243,7 +243,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment();
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             var runner = new RunIdCapturingProcessRunner("fail");
             var step = new ArticleHealthValidatorStep();
             var context = await BuildContextAsync(env, runner);
@@ -264,7 +264,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment();
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             var runner = new RunIdCapturingProcessRunner("pass");
             var step = new ArticleHealthValidatorStep();
             var context = await BuildContextAsync(env, runner);
@@ -285,7 +285,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment(writeGateConfig: false);
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
             var runner = new RunIdCapturingProcessRunner("warn");
             var step = new ArticleHealthValidatorStep();
             var context = await BuildContextAsync(env, runner);
@@ -306,7 +306,7 @@ public class ArticleHealthValidatorStepTests
         var env = SetupTestEnvironment();
         try
         {
-            CreateToolFamilyArticle(env, "azure-storage.md");
+            CreateToolFamilyArticle(env, "storage.md");
 
             // Write a stale artifact file before running
             var validationDir = Path.Combine(env.OutputPath, "validation");
@@ -410,7 +410,7 @@ public class ArticleHealthValidatorStepTests
             @namespace = ns,
             generatedAt = DateTimeOffset.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
             verdict,
-            articleFiles = new[] { "azure-storage.md" },
+            articleFiles = new[] { "storage.md" },
             filesChecked = 1,
             summary = new { pass = verdict == "pass" ? 5 : 4, warn = verdict == "warn" ? 1 : 0, fail = verdict == "fail" ? 1 : 0 },
             checks = new[]

@@ -29,7 +29,7 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
             "Validate article health",
             FailurePolicy.Warn,
             dependsOn: [4],
-            expectedOutputs: [$"{ValidationSubdir}/{ArtifactFileName}"])
+            expectedOutputs: [$"{ValidationSubdir}/{ArtifactFileName}", $"{ValidationSubdir}/validation-summary.md"])
     {
     }
 
@@ -50,23 +50,23 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
         var validationDir = Path.Combine(context.OutputPath, ValidationSubdir);
         var outputJsonPath = Path.Combine(validationDir, ArtifactFileName);
 
-        // Determine which article files exist for this namespace
-        var articlePaths = ResolveArticlePaths(toolFamilyDir);
+        // Determine which article files exist for this namespace only
+        var articlePaths = ResolveArticlePaths(toolFamilyDir, currentNamespace);
 
         if (articlePaths.Count == 0)
         {
-            warnings.Add($"No tool-family article files found at '{toolFamilyDir}'. Article health validation skipped.");
+            warnings.Add($"No tool-family article files found for namespace '{currentNamespace}' at '{toolFamilyDir}'. Article health validation skipped.");
             artifactFailures.Add(CreateArtifactFailure(
                 "article-health",
                 ArtifactFileName,
-                "No assembled articles found for namespace.",
+                $"No assembled articles found for namespace '{currentNamespace}'.",
                 warnings,
                 [toolFamilyDir]));
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
         // Read gate mode from config
-        var gateMode = ReadGateMode(context.McpToolsRoot);
+        var gateMode = ReadGateMode(context.McpToolsRoot, warnings);
 
         // Generate a run identifier for this invocation
         var runId = Guid.NewGuid().ToString();
@@ -190,16 +190,28 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
             $"Article health validation returned '{verdict.ToString().ToLowerInvariant()}' verdict.",
             relatedPaths: [outputJsonPath]);
 
-    private static IReadOnlyList<string> ResolveArticlePaths(string toolFamilyDir)
+    private static IReadOnlyList<string> ResolveArticlePaths(string toolFamilyDir, string currentNamespace)
     {
         if (!Directory.Exists(toolFamilyDir))
         {
             return Array.Empty<string>();
         }
 
+        // Filter to only articles belonging to the current namespace to prevent
+        // cross-namespace contamination in multi-namespace runs.
+        // Convention: tool-family articles are named {namespace}.md or {brand-name}.md.
         return Directory.GetFiles(toolFamilyDir, "*.md", SearchOption.TopDirectoryOnly)
+            .Where(p => IsArticleForNamespace(p, currentNamespace))
             .OrderBy(static p => p, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private static bool IsArticleForNamespace(string filePath, string currentNamespace)
+    {
+        var fileName = Path.GetFileNameWithoutExtension(filePath);
+        // Match exact namespace name or namespace-prefixed files (e.g., "storage" matches "storage.md")
+        return string.Equals(fileName, currentNamespace, StringComparison.OrdinalIgnoreCase)
+            || fileName.StartsWith($"{currentNamespace}-", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void EnsureValidationDirectory(string validationDir)
@@ -213,12 +225,13 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
         }
     }
 
-    private static string ReadGateMode(string mcpToolsRoot)
+    private static string ReadGateMode(string mcpToolsRoot, List<string> warnings)
     {
         var configPath = Path.Combine(mcpToolsRoot, GateConfigRelativePath);
         if (!File.Exists(configPath))
         {
-            return "warn"; // default to warn when config is missing
+            warnings.Add($"Gate config not found at '{configPath}'; defaulting to 'warn' mode.");
+            return "warn";
         }
 
         try
@@ -227,12 +240,21 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
             using var doc = JsonDocument.Parse(json);
             if (doc.RootElement.TryGetProperty("gateMode", out var gm))
             {
-                return gm.GetString()?.ToLowerInvariant() ?? "warn";
+                var mode = gm.GetString()?.ToLowerInvariant() ?? "";
+                if (mode is "warn" or "block")
+                {
+                    return mode;
+                }
+
+                warnings.Add($"Unrecognized gateMode value '{gm.GetString()}' in '{configPath}'; defaulting to 'warn'.");
+                return "warn";
             }
+
+            warnings.Add($"Gate config at '{configPath}' missing 'gateMode' property; defaulting to 'warn'.");
         }
-        catch
+        catch (Exception ex)
         {
-            // Config unreadable — default to safe warn mode
+            warnings.Add($"Failed to read gate config at '{configPath}': {ex.Message}. Defaulting to 'warn' mode.");
         }
 
         return "warn";
