@@ -35,6 +35,7 @@ public sealed class StepRegistry
             new SkillsRelevanceStep(),
             new HorizontalArticlesStep(),
             new ArticleHealthValidatorStep(),
+            new CoverageAuditStep(),
         ]);
 
     public IReadOnlyList<IPipelineStep> GetAllSteps()

@@ -13,8 +13,8 @@ public sealed record ValidationScriptRequest(
     string RepoRoot,
     string OutputRoot,
     string OutputJsonPath,
-    IReadOnlyList<string> ArticlePaths,
-    IReadOnlyDictionary<string, string> AdditionalArguments);
+    IReadOnlyList<string>? ArticlePaths = null,
+    IReadOnlyDictionary<string, string>? AdditionalArguments = null);
 
 /// <summary>
 /// Result of a validation script invocation, capturing all observable execution data.
@@ -70,18 +70,26 @@ public sealed class ValidationScriptRunner(IProcessRunner processRunner) : IVali
             CompletedAt: completedAt);
     }
 
-    private static IReadOnlyList<string> BuildArguments(ValidationScriptRequest request)
+    internal static IReadOnlyList<string> BuildArguments(ValidationScriptRequest request)
     {
-        if (request.ArticlePaths.Count == 0)
-            throw new ArgumentException("ArticlePaths cannot be empty.", nameof(request));
+        var additional = request.AdditionalArguments ?? new Dictionary<string, string>();
+
+        // Validate: ArticlePaths and AdditionalArguments must not both supply article path args
+        if (request.ArticlePaths is { Count: > 0 } &&
+            (additional.ContainsKey("-ArticlePath") || additional.ContainsKey("-ArticlesDir")))
+        {
+            throw new ArgumentException(
+                "ArticlePaths and AdditionalArguments must not both supply -ArticlePath/-ArticlesDir.",
+                nameof(request));
+        }
 
         var args = new List<string>();
 
-        if (request.ArticlePaths.Count == 1)
+        if (request.ArticlePaths is { Count: 1 })
         {
             args.AddRange(["-ArticlePath", request.ArticlePaths[0]]);
         }
-        else if (request.ArticlePaths.Count > 1)
+        else if (request.ArticlePaths is { Count: > 1 })
         {
             // Find the common directory for multi-file validation
             var directory = Path.GetDirectoryName(request.ArticlePaths[0]) ?? request.OutputRoot;
@@ -92,7 +100,7 @@ public sealed class ValidationScriptRunner(IProcessRunner processRunner) : IVali
         args.AddRange(["-Namespace", request.Namespace]);
         args.AddRange(["-OutputJson", request.OutputJsonPath]);
 
-        foreach (var (key, value) in request.AdditionalArguments)
+        foreach (var (key, value) in additional)
         {
             args.Add(key);
             if (!string.IsNullOrEmpty(value))

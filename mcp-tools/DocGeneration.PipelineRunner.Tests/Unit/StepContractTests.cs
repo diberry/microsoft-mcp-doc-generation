@@ -31,16 +31,16 @@ public class StepContractTests
     }
 
     [Fact]
-    public void AllSteps_IdsAreContiguousFromZeroToSeven()
+    public void AllSteps_IdsAreContiguousFromZeroToEight()
     {
         var ids = _allSteps.Select(s => s.Id).OrderBy(id => id).ToArray();
-        Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7 }, ids);
+        Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 }, ids);
     }
 
     [Fact]
-    public void Registry_ReturnsExactly8Steps()
+    public void Registry_ReturnsExactly9Steps()
     {
-        Assert.Equal(8, _allSteps.Count);
+        Assert.Equal(9, _allSteps.Count);
     }
 
     // ── Step scope ──────────────────────────────────────────────────────
