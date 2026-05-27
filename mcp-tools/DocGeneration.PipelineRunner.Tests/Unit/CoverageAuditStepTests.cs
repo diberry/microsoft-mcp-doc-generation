@@ -345,7 +345,7 @@ public class CoverageAuditStepTests
             var summaryPath = Path.Combine(env.OutputPath, "validation", "validation-summary.md");
             Assert.True(File.Exists(summaryPath));
             var content = File.ReadAllText(summaryPath);
-            Assert.Contains("Coverage Audit", content);
+            Assert.Contains("Coverage audit", content);
             Assert.Contains("pass", content);
         }
         finally { TearDown(env); }
@@ -544,7 +544,7 @@ public class CoverageAuditStepTests
             var content = File.ReadAllText(summaryPath);
             Assert.Contains("Article Health", content);
             Assert.Contains("---", content);
-            Assert.Contains("Coverage Audit", content);
+            Assert.Contains("Coverage audit", content);
         }
         finally { TearDown(env); }
     }

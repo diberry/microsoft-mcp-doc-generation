@@ -16,12 +16,14 @@ namespace PipelineRunner.Steps;
 /// In <c>block</c> mode, both <c>warn</c> and <c>fail</c> findings fail the step.
 /// </para>
 /// </summary>
-public sealed class ArticleHealthValidatorStep : NamespaceStepBase
+public sealed class ArticleHealthValidatorStep : ValidationStepBase
 {
     private const string ScriptRelativePath = "validation/Test-ArticleHealth.ps1";
-    private const string GateConfigRelativePath = "data/validation-gate-config.json";
-    private const string ValidationSubdir = "validation";
-    private const string ArtifactFileName = "article-health.json";
+    private const string ArtifactFileNameConst = "article-health.json";
+
+    protected override string ValidationDisplayName => "Article health";
+    protected override string ValidationId => "article-health";
+    protected override string ArtifactFileName => ArtifactFileNameConst;
 
     public ArticleHealthValidatorStep()
         : base(
@@ -29,7 +31,7 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
             "Validate article health",
             FailurePolicy.Warn,
             dependsOn: [4],
-            expectedOutputs: [$"{ValidationSubdir}/{ArtifactFileName}", $"{ValidationSubdir}/validation-summary.md"])
+            expectedOutputs: [$"validation/{ArtifactFileNameConst}", "validation/validation-summary.md"])
     {
     }
 
@@ -47,8 +49,8 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
             Path.Combine(context.McpToolsRoot, ScriptRelativePath));
 
         var toolFamilyDir = Path.Combine(context.OutputPath, "tool-family");
-        var validationDir = Path.Combine(context.OutputPath, ValidationSubdir);
-        var outputJsonPath = Path.Combine(validationDir, ArtifactFileName);
+        var validationDir = GetValidationDir(context.OutputPath);
+        var outputJsonPath = Path.Combine(validationDir, ArtifactFileNameConst);
 
         // Determine which article files exist for this namespace only
         var articlePaths = ResolveArticlePaths(toolFamilyDir, currentNamespace);
@@ -57,8 +59,8 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
         {
             warnings.Add($"No tool-family article files found for namespace '{currentNamespace}' at '{toolFamilyDir}'. Article health validation skipped.");
             artifactFailures.Add(CreateArtifactFailure(
-                "article-health",
-                ArtifactFileName,
+                ValidationId,
+                ArtifactFileNameConst,
                 $"No assembled articles found for namespace '{currentNamespace}'.",
                 warnings,
                 [toolFamilyDir]));
@@ -93,14 +95,14 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
         }
         catch (OperationCanceledException)
         {
-            throw; // Do not swallow cancellation requests
+            throw;
         }
         catch (Exception ex)
         {
             warnings.Add($"Article health script failed to launch: {ex.Message}");
             artifactFailures.Add(CreateArtifactFailure(
-                "article-health",
-                ArtifactFileName,
+                ValidationId,
+                ArtifactFileNameConst,
                 "Script launch exception.",
                 [$"Exception: {ex.Message}"],
                 [scriptPath]));
@@ -130,65 +132,10 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
         var success = DetermineSuccess(normalized.Verdict, gateMode, warnings, artifactFailures, outputJsonPath);
 
         // Write the validation summary
-        WriteSummaryMarkdown(
-            validationDir,
-            currentNamespace,
-            gateMode,
-            normalized,
-            outputJsonPath);
+        WriteSummarySection(validationDir, currentNamespace, gateMode, normalized, outputJsonPath);
 
         return BuildResult(context, processResults, success, warnings, artifactFailures: artifactFailures);
     }
-
-    private static bool DetermineSuccess(
-        ValidationVerdict verdict,
-        string gateMode,
-        List<string> warnings,
-        List<ArtifactFailure> artifactFailures,
-        string outputJsonPath)
-    {
-        switch (verdict)
-        {
-            case ValidationVerdict.Pass:
-                return true;
-
-            case ValidationVerdict.Warn:
-                if (string.Equals(gateMode, "block", StringComparison.OrdinalIgnoreCase))
-                {
-                    warnings.Add("Article health verdict is 'warn' and gate mode is 'block'. Step failed.");
-                    artifactFailures.Add(CreateBlockingFailure(verdict, outputJsonPath));
-                    return false;
-                }
-                // warn mode: warn findings are non-blocking
-                return true;
-
-            case ValidationVerdict.Fail:
-                warnings.Add("Article health verdict is 'fail'. Step failed.");
-                artifactFailures.Add(CreateBlockingFailure(verdict, outputJsonPath));
-                return false;
-
-            case ValidationVerdict.ScriptError:
-                warnings.Add("Article health script encountered an execution error.");
-                artifactFailures.Add(CreateBlockingFailure(verdict, outputJsonPath));
-                return false;
-
-            case ValidationVerdict.ArtifactError:
-                warnings.Add("Article health artifact is missing, malformed, or stale.");
-                artifactFailures.Add(CreateBlockingFailure(verdict, outputJsonPath));
-                return false;
-
-            default:
-                warnings.Add($"Unknown validation verdict: {verdict}.");
-                return false;
-        }
-    }
-
-    private static ArtifactFailure CreateBlockingFailure(ValidationVerdict verdict, string outputJsonPath)
-        => ArtifactFailure.Create(
-            "article-health",
-            ArtifactFileName,
-            $"Article health validation returned '{verdict.ToString().ToLowerInvariant()}' verdict.",
-            relatedPaths: [outputJsonPath]);
 
     private static IReadOnlyList<string> ResolveArticlePaths(string toolFamilyDir, string currentNamespace)
     {
@@ -212,96 +159,5 @@ public sealed class ArticleHealthValidatorStep : NamespaceStepBase
         // Match exact namespace name or namespace-prefixed files (e.g., "storage" matches "storage.md")
         return string.Equals(fileName, currentNamespace, StringComparison.OrdinalIgnoreCase)
             || fileName.StartsWith($"{currentNamespace}-", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void EnsureValidationDirectory(string validationDir)
-    {
-        Directory.CreateDirectory(validationDir);
-        // Remove stale artifact from a prior run to prevent false positives
-        var staleArtifact = Path.Combine(validationDir, ArtifactFileName);
-        if (File.Exists(staleArtifact))
-        {
-            File.Delete(staleArtifact);
-        }
-    }
-
-    private static string ReadGateMode(string mcpToolsRoot, List<string> warnings)
-    {
-        var configPath = Path.Combine(mcpToolsRoot, GateConfigRelativePath);
-        if (!File.Exists(configPath))
-        {
-            warnings.Add($"Gate config not found at '{configPath}'; defaulting to 'warn' mode.");
-            return "warn";
-        }
-
-        try
-        {
-            var json = File.ReadAllText(configPath);
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("gateMode", out var gm))
-            {
-                var mode = gm.GetString()?.ToLowerInvariant() ?? "";
-                if (mode is "warn" or "block")
-                {
-                    return mode;
-                }
-
-                warnings.Add($"Unrecognized gateMode value '{gm.GetString()}' in '{configPath}'; defaulting to 'warn'.");
-                return "warn";
-            }
-
-            warnings.Add($"Gate config at '{configPath}' missing 'gateMode' property; defaulting to 'warn'.");
-        }
-        catch (Exception ex)
-        {
-            warnings.Add($"Failed to read gate config at '{configPath}': {ex.Message}. Defaulting to 'warn' mode.");
-        }
-
-        return "warn";
-    }
-
-    private static void WriteSummaryMarkdown(
-        string validationDir,
-        string currentNamespace,
-        string gateMode,
-        ValidationNormalizedResult normalized,
-        string artifactJsonPath)
-    {
-        try
-        {
-            var summaryPath = Path.Combine(validationDir, "validation-summary.md");
-            var lines = new List<string>
-            {
-                "# Validation Summary",
-                string.Empty,
-                $"**Namespace:** {currentNamespace}",
-                $"**Gate mode:** {gateMode}",
-                $"**Article health verdict:** {normalized.Verdict.ToString().ToLowerInvariant()}",
-                $"**Final verdict:** {normalized.Verdict.ToString().ToLowerInvariant()}",
-                string.Empty,
-            };
-
-            if (normalized.Diagnostics.Count > 0)
-            {
-                lines.Add("## Diagnostics");
-                lines.Add(string.Empty);
-                foreach (var d in normalized.Diagnostics)
-                {
-                    lines.Add($"- {d}");
-                }
-
-                lines.Add(string.Empty);
-            }
-
-            lines.Add("## Artifacts");
-            lines.Add(string.Empty);
-            lines.Add($"- Article health JSON: `{artifactJsonPath}`");
-
-            File.WriteAllLines(summaryPath, lines);
-        }
-        catch
-        {
-            // Non-critical: summary write failure should not affect step success
-        }
     }
 }
