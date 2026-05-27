@@ -148,10 +148,10 @@ public class ValidationResultNormalizerTests
         finally { CleanupTempFile(artifactPath); }
     }
 
-    // ── Missing generatedAt accepted (no stale check) ────────────────────────
+    // ── Missing generatedAt rejected ────────────────────────────────────────
 
     [Fact]
-    public void Normalize_MissingGeneratedAt_AcceptsArtifact()
+    public void Normalize_MissingGeneratedAt_ReturnsArtifactError()
     {
         var json = JsonSerializer.Serialize(new
         {
@@ -166,7 +166,33 @@ public class ValidationResultNormalizerTests
             var scriptResult = CreateSuccessResult(artifactPath);
             var result = ValidationResultNormalizer.Normalize(scriptResult, ExpectedRunId, ExpectedNamespace);
 
-            Assert.Equal(ValidationVerdict.Pass, result.Verdict);
+            Assert.Equal(ValidationVerdict.ArtifactError, result.Verdict);
+            Assert.Contains(result.Diagnostics, d => d.Contains("generatedAt"));
+        }
+        finally { CleanupTempFile(artifactPath); }
+    }
+
+    // ── Invalid generatedAt rejected ─────────────────────────────────────────
+
+    [Fact]
+    public void Normalize_InvalidGeneratedAt_ReturnsArtifactError()
+    {
+        var json = JsonSerializer.Serialize(new
+        {
+            schemaVersion = "1.0",
+            runId = ExpectedRunId,
+            @namespace = ExpectedNamespace,
+            generatedAt = "not-a-date",
+            verdict = "pass"
+        });
+        var artifactPath = WriteTempArtifact(json);
+        try
+        {
+            var scriptResult = CreateSuccessResult(artifactPath);
+            var result = ValidationResultNormalizer.Normalize(scriptResult, ExpectedRunId, ExpectedNamespace);
+
+            Assert.Equal(ValidationVerdict.ArtifactError, result.Verdict);
+            Assert.Contains(result.Diagnostics, d => d.Contains("not a valid timestamp"));
         }
         finally { CleanupTempFile(artifactPath); }
     }
@@ -337,7 +363,62 @@ public class ValidationResultNormalizerTests
         }
     }
 
+    // ── Cancellation propagation ────────────────────────────────────────────
+
+    [Fact]
+    public async Task ValidationScriptRunner_CancellationToken_PropagatedToProcessRunner()
+    {
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var cancellingRunner = new CancellingProcessRunner();
+        var runner = new ValidationScriptRunner(cancellingRunner);
+        var tempDir = Path.Combine(Path.GetTempPath(), $"vsr-cancel-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            var request = new ValidationScriptRequest(
+                ScriptPath: "Test-ArticleHealth.ps1",
+                RunId: "run-cancel",
+                Namespace: "storage",
+                RepoRoot: tempDir,
+                OutputRoot: tempDir,
+                OutputJsonPath: Path.Combine(tempDir, "output.json"),
+                ArticlePaths: [Path.Combine(tempDir, "storage.md")],
+                AdditionalArguments: new Dictionary<string, string>());
+
+            await Assert.ThrowsAsync<OperationCanceledException>(
+                () => runner.RunAsync(request, cts.Token));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private sealed class CancellingProcessRunner : IProcessRunner
+    {
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, "", "", TimeSpan.Zero));
+        }
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken ct)
+            => RunAsync(new ProcessSpec("dotnet", [], solutionPath), ct);
+
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string p, IEnumerable<string> a, bool nb, string wd, CancellationToken ct)
+            => RunAsync(new ProcessSpec("dotnet", [], wd), ct);
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new ProcessExecutionResult("pwsh", ["-File", scriptPath], workingDirectory, 0, "", "", TimeSpan.Zero));
+        }
+    }
 
     private static string BuildArtifactJson(string runId, string ns, string verdict)
     {

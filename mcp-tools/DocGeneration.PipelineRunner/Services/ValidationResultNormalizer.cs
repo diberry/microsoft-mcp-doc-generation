@@ -107,19 +107,25 @@ public static class ValidationResultNormalizer
                 return new ValidationNormalizedResult(ValidationVerdict.ArtifactError, expectedRunId, expectedNamespace, null, diagnostics);
             }
 
-            // Verify generatedAt is recent
-            if (root.TryGetProperty("generatedAt", out var gat))
+            // Verify generatedAt is present, parseable, and recent
+            if (!root.TryGetProperty("generatedAt", out var gat))
             {
-                var generatedAtStr = gat.GetString();
-                if (DateTimeOffset.TryParse(generatedAtStr, out var generatedAt))
-                {
-                    var age = DateTimeOffset.UtcNow - generatedAt;
-                    if (age > StaleArtifactThreshold)
-                    {
-                        diagnostics.Add($"Artifact timestamp '{generatedAtStr}' is stale (age: {age:hh\\:mm\\:ss}).");
-                        return new ValidationNormalizedResult(ValidationVerdict.ArtifactError, artifactRunId, expectedNamespace, null, diagnostics);
-                    }
-                }
+                diagnostics.Add("Artifact missing required 'generatedAt' field.");
+                return new ValidationNormalizedResult(ValidationVerdict.ArtifactError, artifactRunId, expectedNamespace, null, diagnostics);
+            }
+
+            var generatedAtStr = gat.GetString();
+            if (!DateTimeOffset.TryParse(generatedAtStr, out var generatedAt))
+            {
+                diagnostics.Add($"Artifact 'generatedAt' value '{generatedAtStr}' is not a valid timestamp.");
+                return new ValidationNormalizedResult(ValidationVerdict.ArtifactError, artifactRunId, expectedNamespace, null, diagnostics);
+            }
+
+            var age = DateTimeOffset.UtcNow - generatedAt;
+            if (age > StaleArtifactThreshold)
+            {
+                diagnostics.Add($"Artifact timestamp '{generatedAtStr}' is stale (age: {age:hh\\:mm\\:ss}).");
+                return new ValidationNormalizedResult(ValidationVerdict.ArtifactError, artifactRunId, expectedNamespace, null, diagnostics);
             }
 
             // Read script-level verdict
