@@ -50,7 +50,7 @@ public class ArticleHealthValidatorStepTests
     // ── No tool-family articles found ────────────────────────────────────────
 
     [Fact]
-    public async Task ValidationScriptRunner_BuildArguments_EmptyArticlePaths_Throws()
+    public async Task ValidationScriptRunner_BuildArguments_EmptyArticlePaths_DoesNotThrow()
     {
         var runner = new ValidationScriptRunner(new RecordingProcessRunner());
         var request = new ValidationScriptRequest(
@@ -63,8 +63,9 @@ public class ArticleHealthValidatorStepTests
             ArticlePaths: [],
             AdditionalArguments: new Dictionary<string, string>());
 
-        var ex = await Assert.ThrowsAsync<ArgumentException>(() => runner.RunAsync(request, CancellationToken.None));
-        Assert.NotNull(ex);
+        // Empty ArticlePaths no longer throws — coverage step uses AdditionalArguments instead
+        var result = await runner.RunAsync(request, CancellationToken.None);
+        Assert.NotNull(result);
     }
 
     [Fact]

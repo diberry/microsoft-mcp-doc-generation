@@ -31,7 +31,11 @@ param(
     [string]$OpenPRsJson,
 
     # Git repo root for the articles repo (used with OpenPRsJson to read PR branch files via git show)
-    [string]$RepoRoot
+    [string]$RepoRoot,
+
+    # Pipeline contract mode: when provided, emits a schemaVersion 1.0 artifact
+    # compatible with ValidationResultNormalizer (same shape as Test-ArticleHealth.ps1).
+    [string]$RunId = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -599,8 +603,54 @@ if ($paramIssues) {
 
 Write-Host "═══════════════════════════════════════════════════════════════" -ForegroundColor Cyan
 
-# ─── JSON Output ─────────────────────────────────────────────────────────────
-if ($OutputJson) {
+# ─── Pipeline Contract Output (schemaVersion 1.0) ────────────────────────────
+# When -RunId is provided, emit the standardized artifact that ValidationResultNormalizer reads.
+if ($RunId) {
+    # Determine verdict: pass/warn/fail based on coverage gaps
+    $coverageVerdict = if ($report.summary.tools_missing -gt 0) {
+        "fail"
+    } elseif ($report.summary.params_missing -gt 0 -or $report.summary.annotation_mismatches -gt 0) {
+        "warn"
+    } else {
+        "pass"
+    }
+
+    $checks = @(
+        [PSCustomObject]@{
+            name   = "tools_coverage"
+            status = if ($report.summary.tools_missing -gt 0) { "fail" } else { "pass" }
+            detail = "$($report.summary.tools_documented)/$($report.summary.tools_documented + $report.summary.tools_missing) tools documented"
+        },
+        [PSCustomObject]@{
+            name   = "params_coverage"
+            status = if ($report.summary.params_missing -gt 0) { "warn" } else { "pass" }
+            detail = "$($report.summary.params_documented)/$($report.summary.params_documented + $report.summary.params_missing) params documented"
+        },
+        [PSCustomObject]@{
+            name   = "annotation_accuracy"
+            status = if ($report.summary.annotation_mismatches -gt 0) { "warn" } else { "pass" }
+            detail = "$($report.summary.annotation_mismatches) mismatches"
+        }
+    )
+
+    $contractArtifact = [PSCustomObject]@{
+        schemaVersion = "1.0"
+        runId         = $RunId
+        namespace     = if ($Namespace) { $Namespace } else { "all" }
+        generatedAt   = (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')
+        verdict       = $coverageVerdict
+        checks        = $checks
+        summary       = $report.summary
+    }
+
+    # Write to -OutputJson path (required in pipeline contract mode)
+    if ($OutputJson) {
+        $contractArtifact | ConvertTo-Json -Depth 10 | Set-Content $OutputJson -Encoding UTF8
+        Write-Host "  Pipeline contract artifact saved to: $OutputJson" -ForegroundColor Green
+    }
+}
+# ─── Legacy JSON Output (when no -RunId) ─────────────────────────────────────
+elseif ($OutputJson) {
     $report | ConvertTo-Json -Depth 10 | Set-Content $OutputJson -Encoding UTF8
     Write-Host "  JSON report saved to: $OutputJson" -ForegroundColor Green
 }
