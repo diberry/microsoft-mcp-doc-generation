@@ -26,6 +26,7 @@ The Azure MCP Documentation Generator is a typed .NET pipeline that transforms r
 │  │  Step 4: ToolFamilyCleanup ──────── Namespace (AI+Retry)   │  │
 │  │  Step 5: SkillsRelevance ────────── Namespace (Warn-only)  │  │
 │  │  Step 6: HorizontalArticles ─────── Namespace (AI)         │  │
+│  │  Step 7: ArticleHealthValidator ─── Namespace (Warn-only)  │  │
 │  └────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -89,6 +90,14 @@ Step 6: Horizontal Articles (AI) ───────────────�
   │  • ArticleContentProcessor validates and transforms AI output
   │
   ▼
+Step 7: Article Health Validation (non-blocking) ──────────────────
+  │  • Invokes Test-ArticleHealth.ps1 on tool-family/*.md
+  │  • Checks: placeholder tokens, required frontmatter, broken links
+  │  • Gate mode: "warn" (advisory) or "block" (fail pipeline)
+  │  • Configured via mcp-tools/data/validation-gate-config.json
+  │  • Depends on Step 4; warn-only — failures don't stop the pipeline
+  │
+  ▼
 Final Output ──────────────────────────────────────────────────────
   generated-{namespace}/
   ├── tool-family/{namespace}.md         ← Primary deliverable
@@ -136,6 +145,7 @@ Steps declare their dependencies, failure policy, and whether they need AI confi
 | 4 | `ToolFamilyCleanupStep` | Yes | Fatal | **2** | `tool-family/`, `reports/` |
 | 5 | `SkillsRelevanceStep` | No | **Warn** | 0 | `skills-relevance/` |
 | 6 | `HorizontalArticlesStep` | Yes | Fatal | 0 | `horizontal-articles/` |
+| 7 | `ArticleHealthValidatorStep` | No | **Warn** | 0 | `article-health.json`, `validation-summary.md` |
 
 ### Dependencies
 
@@ -146,6 +156,7 @@ Step 3 → depends on Step 2
 Step 4 → depends on Step 3
 Step 5 → (no deps, reads tools/ directly)
 Step 6 → (no deps, reads tools/ + cli-output.json)
+Step 7 → depends on Step 4 (validates tool-family/ output)
 ```
 
 ## Key Design Decisions

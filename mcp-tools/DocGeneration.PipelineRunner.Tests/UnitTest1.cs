@@ -33,7 +33,7 @@ public class PipelineRequestTests
     [Fact]
     public void Validate_UnsupportedStep_ReturnsError()
     {
-        var request = new PipelineRequest("compute", new[] { 1, 7 }, ".\\generated-compute", SkipBuild: false, SkipValidation: false, DryRun: false);
+        var request = new PipelineRequest("compute", new[] { 1, 99 }, ".\\generated-compute", SkipBuild: false, SkipValidation: false, DryRun: false);
 
         var errors = request.Validate();
 
