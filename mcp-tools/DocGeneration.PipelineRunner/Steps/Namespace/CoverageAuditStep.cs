@@ -1,4 +1,3 @@
-using System.Text.Json;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
@@ -15,13 +14,15 @@ namespace PipelineRunner.Steps;
 /// In <c>block</c> mode, both <c>warn</c> and <c>fail</c> findings fail the step.
 /// </para>
 /// </summary>
-public sealed class CoverageAuditStep : NamespaceStepBase
+public sealed class CoverageAuditStep : ValidationStepBase
 {
     private const string ScriptRelativePath = "validation/Scan-McpToolCoverage.ps1";
-    private const string GateConfigRelativePath = "data/validation-gate-config.json";
-    private const string ValidationSubdir = "validation";
-    private const string ArtifactFileName = "coverage-audit.json";
+    private const string ArtifactFileNameConst = "coverage-audit.json";
     private const string CliOutputRelativePath = "cli/cli-output.json";
+
+    protected override string ValidationDisplayName => "Coverage audit";
+    protected override string ValidationId => "coverage-audit";
+    protected override string ArtifactFileName => ArtifactFileNameConst;
 
     public CoverageAuditStep()
         : base(
@@ -29,7 +30,7 @@ public sealed class CoverageAuditStep : NamespaceStepBase
             "Validate tool coverage",
             FailurePolicy.Warn,
             dependsOn: [0, 4, 7],
-            expectedOutputs: [$"{ValidationSubdir}/{ArtifactFileName}", $"{ValidationSubdir}/validation-summary.md"])
+            expectedOutputs: [$"validation/{ArtifactFileNameConst}", "validation/validation-summary.md"])
     {
     }
 
@@ -48,16 +49,16 @@ public sealed class CoverageAuditStep : NamespaceStepBase
 
         var toolsJsonPath = Path.Combine(context.OutputPath, CliOutputRelativePath);
         var articlesDir = Path.Combine(context.OutputPath, "tool-family");
-        var validationDir = Path.Combine(context.OutputPath, ValidationSubdir);
-        var outputJsonPath = Path.Combine(validationDir, ArtifactFileName);
+        var validationDir = GetValidationDir(context.OutputPath);
+        var outputJsonPath = Path.Combine(validationDir, ArtifactFileNameConst);
 
         // Verify prerequisites exist
         if (!File.Exists(toolsJsonPath))
         {
             warnings.Add($"CLI output not found at '{toolsJsonPath}'. Coverage audit skipped (bootstrap may not have run).");
             artifactFailures.Add(CreateArtifactFailure(
-                "coverage-audit",
-                ArtifactFileName,
+                ValidationId,
+                ArtifactFileNameConst,
                 $"CLI metadata (cli-output.json) not found for namespace '{currentNamespace}'.",
                 warnings,
                 [toolsJsonPath]));
@@ -68,8 +69,8 @@ public sealed class CoverageAuditStep : NamespaceStepBase
         {
             warnings.Add($"Articles directory not found at '{articlesDir}'. Coverage audit skipped.");
             artifactFailures.Add(CreateArtifactFailure(
-                "coverage-audit",
-                ArtifactFileName,
+                ValidationId,
+                ArtifactFileNameConst,
                 $"Tool-family articles directory not found for namespace '{currentNamespace}'.",
                 warnings,
                 [articlesDir]));
@@ -83,7 +84,7 @@ public sealed class CoverageAuditStep : NamespaceStepBase
         var runId = Guid.NewGuid().ToString();
 
         // Clean stale artifacts before running
-        EnsureValidationDirectory(validationDir, outputJsonPath);
+        EnsureValidationDirectory(validationDir);
 
         // Build and execute the script request
         var request = new ValidationScriptRequest(
@@ -113,8 +114,8 @@ public sealed class CoverageAuditStep : NamespaceStepBase
         {
             warnings.Add($"Coverage audit script failed to launch: {ex.Message}");
             artifactFailures.Add(CreateArtifactFailure(
-                "coverage-audit",
-                ArtifactFileName,
+                ValidationId,
+                ArtifactFileNameConst,
                 "Script launch exception.",
                 [$"Exception: {ex.Message}"],
                 [scriptPath]));
@@ -144,168 +145,8 @@ public sealed class CoverageAuditStep : NamespaceStepBase
         var success = DetermineSuccess(normalized.Verdict, gateMode, warnings, artifactFailures, outputJsonPath);
 
         // Write the validation summary
-        WriteSummaryMarkdown(
-            validationDir,
-            currentNamespace,
-            gateMode,
-            normalized,
-            outputJsonPath);
+        WriteSummarySection(validationDir, currentNamespace, gateMode, normalized, outputJsonPath);
 
         return BuildResult(context, processResults, success, warnings, artifactFailures: artifactFailures);
-    }
-
-    private static bool DetermineSuccess(
-        ValidationVerdict verdict,
-        string gateMode,
-        List<string> warnings,
-        List<ArtifactFailure> artifactFailures,
-        string outputJsonPath)
-    {
-        switch (verdict)
-        {
-            case ValidationVerdict.Pass:
-                return true;
-
-            case ValidationVerdict.Warn:
-                if (string.Equals(gateMode, "block", StringComparison.OrdinalIgnoreCase))
-                {
-                    warnings.Add("Coverage audit verdict is 'warn' and gate mode is 'block'. Step failed.");
-                    artifactFailures.Add(CreateBlockingFailure(verdict, outputJsonPath));
-                    return false;
-                }
-                // warn mode: param/annotation gaps are non-blocking
-                return true;
-
-            case ValidationVerdict.Fail:
-                warnings.Add("Coverage audit verdict is 'fail' (missing tools detected). Step failed.");
-                artifactFailures.Add(CreateBlockingFailure(verdict, outputJsonPath));
-                return false;
-
-            case ValidationVerdict.ScriptError:
-                warnings.Add("Coverage audit script encountered an execution error.");
-                artifactFailures.Add(CreateBlockingFailure(verdict, outputJsonPath));
-                return false;
-
-            case ValidationVerdict.ArtifactError:
-                warnings.Add("Coverage audit artifact is missing, malformed, or stale.");
-                artifactFailures.Add(CreateBlockingFailure(verdict, outputJsonPath));
-                return false;
-
-            default:
-                warnings.Add($"Unknown validation verdict: {verdict}.");
-                return false;
-        }
-    }
-
-    private static ArtifactFailure CreateBlockingFailure(ValidationVerdict verdict, string outputJsonPath)
-        => ArtifactFailure.Create(
-            "coverage-audit",
-            ArtifactFileName,
-            $"Coverage audit validation returned '{verdict.ToString().ToLowerInvariant()}' verdict.",
-            relatedPaths: [outputJsonPath]);
-
-    private static void EnsureValidationDirectory(string validationDir, string artifactPath)
-    {
-        Directory.CreateDirectory(validationDir);
-        if (File.Exists(artifactPath))
-        {
-            File.Delete(artifactPath);
-        }
-    }
-
-    private static string ReadGateMode(string mcpToolsRoot, List<string> warnings)
-    {
-        var configPath = Path.Combine(mcpToolsRoot, GateConfigRelativePath);
-        if (!File.Exists(configPath))
-        {
-            warnings.Add($"Gate config not found at '{configPath}'; defaulting to 'warn' mode.");
-            return "warn";
-        }
-
-        try
-        {
-            var json = File.ReadAllText(configPath);
-            using var doc = JsonDocument.Parse(json);
-            if (doc.RootElement.TryGetProperty("gateMode", out var gm))
-            {
-                var mode = gm.GetString()?.ToLowerInvariant() ?? "";
-                if (mode is "warn" or "block")
-                {
-                    return mode;
-                }
-
-                warnings.Add($"Unrecognized gateMode value '{gm.GetString()}' in '{configPath}'; defaulting to 'warn'.");
-                return "warn";
-            }
-
-            warnings.Add($"Gate config at '{configPath}' missing 'gateMode' property; defaulting to 'warn'.");
-        }
-        catch (Exception ex)
-        {
-            warnings.Add($"Failed to read gate config at '{configPath}': {ex.Message}. Defaulting to 'warn' mode.");
-        }
-
-        return "warn";
-    }
-
-    // NOTE: Both Step 7 (ArticleHealthValidator) and Step 8 (CoverageAudit) write to
-    // validation-summary.md. Sequential execution is guaranteed by the dependsOn: [0, 4, 7]
-    // declaration. If parallelization is ever introduced, a file-locking mechanism must be added.
-    private static void WriteSummaryMarkdown(
-        string validationDir,
-        string currentNamespace,
-        string gateMode,
-        ValidationNormalizedResult normalized,
-        string artifactJsonPath)
-    {
-        try
-        {
-            var summaryPath = Path.Combine(validationDir, "validation-summary.md");
-
-            // Append to summary if article health already wrote it
-            var lines = new List<string>();
-            if (File.Exists(summaryPath))
-            {
-                lines.AddRange(File.ReadAllLines(summaryPath));
-                lines.Add(string.Empty);
-                lines.Add("---");
-                lines.Add(string.Empty);
-            }
-            else
-            {
-                lines.Add("# Validation Summary");
-                lines.Add(string.Empty);
-                lines.Add($"**Namespace:** {currentNamespace}");
-                lines.Add($"**Gate mode:** {gateMode}");
-                lines.Add(string.Empty);
-            }
-
-            lines.Add("## Coverage Audit");
-            lines.Add(string.Empty);
-            lines.Add($"**Verdict:** {normalized.Verdict.ToString().ToLowerInvariant()}");
-            lines.Add(string.Empty);
-
-            if (normalized.Diagnostics.Count > 0)
-            {
-                lines.Add("### Diagnostics");
-                lines.Add(string.Empty);
-                foreach (var d in normalized.Diagnostics)
-                {
-                    lines.Add($"- {d}");
-                }
-
-                lines.Add(string.Empty);
-            }
-
-            lines.Add("### Artifacts");
-            lines.Add(string.Empty);
-            lines.Add($"- Coverage audit JSON: `{artifactJsonPath}`");
-
-            File.WriteAllLines(summaryPath, lines);
-        }
-        catch
-        {
-            // Non-critical: summary write failure should not affect step success
-        }
     }
 }
