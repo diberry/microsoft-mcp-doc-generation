@@ -58,6 +58,7 @@ The project uses GitHub Actions with workflows in `.github/workflows/`. There ar
 | Workflow | File | Trigger | What it does |
 |----------|------|---------|--------------|
 | **Build and Test** | `build-and-test.yml` | PR to `main`, push to `main` (when `mcp-tools/**` changes) | Restores, builds, and runs all tests in `mcp-doc-generation.sln` using .NET 9 on `ubuntu-latest` |
+| **Validation Gate** | `validation-gate.yml` | Every PR to `main` (opened, synchronize, reopened) | Builds `DocGeneration.PipelineRunner`, runs `Test-ArticleHealth.ps1` + `Scan-McpToolCoverage.ps1` against changed articles (or committed fixtures), posts results as a PR comment. Starts in warn-only mode; promote to blocking by changing `GATE_MODE: warn` → `GATE_MODE: block` after 2 clean weeks. |
 | **Squad CI** | `squad-ci.yml` | PR to `dev`/`preview`/`main`/`insider`, push to `dev`/`insider` | Placeholder for additional build/test commands (currently echoes a TODO) |
 | **Generate MCP Documentation** | `generate-docs.yml` | Manual (`workflow_dispatch`) only | Three-job pipeline: (1) generate CLI output via Docker, (2) generate documentation, (3) optionally generate AI example prompts. Uploads artifacts with 10-day retention |
 | **Test @azure/mcp Update** | `test-azure-mcp-update.yml` | PR changing `test-npm-azure-mcp/package.json` or `package-lock.json` | Installs `@azure/mcp` npm package and runs `azmcp --version` and `azmcp --help` to validate the CLI still works |
@@ -104,6 +105,18 @@ The job performs three steps:
 1. `dotnet restore mcp-doc-generation.sln`
 2. `dotnet build mcp-doc-generation.sln --no-restore --configuration Release`
 3. `dotnet test mcp-doc-generation.sln --no-build --configuration Release --verbosity normal`
+
+### Validation Gate
+
+The **Validation Gate** workflow (`validation-gate.yml`) runs on every PR to `main` (opened, synchronize, reopened). It:
+
+1. Builds `DocGeneration.PipelineRunner` (verifies Steps 7 and 8 compile)
+2. Detects changed tool-family article `.md` files in the PR
+3. Runs `Test-ArticleHealth.ps1` against changed articles (or committed test fixtures as a smoke test)
+4. Runs `Scan-McpToolCoverage.ps1` against committed coverage fixtures
+5. Posts a PR comment with the results table
+
+**Gate mode:** Starts in `warn` (non-blocking). Promote to `block` by editing `GATE_MODE: warn` → `GATE_MODE: block` in the workflow file after 2 clean weeks.
 
 ---
 
