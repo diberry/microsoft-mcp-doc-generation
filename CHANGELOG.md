@@ -8,7 +8,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- **`AzmcpRunner` Windows binary resolution** — On Windows, `azmcp` is installed as `azmcp.cmd` (a batch wrapper). `Process.Start` with `UseShellExecute=false` cannot locate `.cmd` files by bare name. `AzmcpRunner` now resolves the binary as `azmcp.cmd` on Windows and `azmcp` on all other platforms, matching the existing pattern in `PipelineRunner`. The generation pipeline is now fully PowerShell + .NET end-to-end with no npm dependency required. Updated `McpCliMetadata/README.md` to remove the npm installation instruction.
+- **`AzmcpRunner` PATH resolution on Windows** — `Process.Start` with `UseShellExecute=false` does not reliably resolve `.cmd` batch wrappers from `PATH`. `AzmcpRunner` now walks each `PATH` directory to locate `azmcp.cmd` (Windows) or `azmcp` (non-Windows) and passes the full absolute path to `Process.Start`, falling back to the bare name if not found. This fixes `azmcp` invocation failures when the `azure.mcp` dotnet global tool is installed at `~/.dotnet/tools/azmcp.cmd`. Extracted to `internal static ResolveBinaryPath()` for testability.
+- **`BootstrapStep` migrated from npm to dotnet tool** — The bootstrap step previously ran `npm install -g @azure/mcp@latest` to update the MCP CLI. This has been replaced with `dotnet tool update azure.mcp --global`, matching the current installation method. Removed the dead `GetNpmExecutable()` helper and unused `CaptureCommandOutputAsync` method. The `--skip-npm-update` / `SkipNpmUpdate` flag is preserved for backwards compatibility with existing CLI scripts.
+
 
 ### Changed
 - Added .NET CLI metadata extractor (`mcp-tools/McpCliMetadata/`) alongside existing Node.js scripts. The `azmcp` binary is now invoked via `Process.Start` in a typed C# console app; `preflight.ps1` calls the .NET project instead of npm. The folder `test-npm-azure-mcp/` was renamed to `mcp-cli-metadata/` (all Node.js scripts and version snapshot directories preserved). Closes #627, PR #628.

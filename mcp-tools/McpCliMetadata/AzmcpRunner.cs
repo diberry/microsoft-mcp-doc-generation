@@ -37,8 +37,27 @@ internal sealed class ProcessRunner : IProcessRunner
 
 internal sealed class AzmcpRunner
 {
-    private static string Binary => OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+    private static string Binary => ResolveBinaryPath(Environment.GetEnvironmentVariable("PATH") ?? string.Empty);
     private const int DefaultTimeoutMs = 30_000;
+
+    /// <summary>
+    /// Resolves the full path to the azmcp binary by searching each directory in <paramref name="pathVar"/>.
+    /// Returns the first matching full path if found; otherwise falls back to the bare binary name.
+    /// This is required because <see cref="System.Diagnostics.ProcessStartInfo"/> with
+    /// <c>UseShellExecute=false</c> does not reliably resolve <c>.cmd</c> wrappers from PATH on Windows.
+    /// </summary>
+    internal static string ResolveBinaryPath(string pathVar)
+    {
+        var name = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+        var separator = OperatingSystem.IsWindows() ? ';' : ':';
+        foreach (var dir in pathVar.Split(separator, StringSplitOptions.RemoveEmptyEntries))
+        {
+            var candidate = Path.Combine(dir, name);
+            if (File.Exists(candidate))
+                return candidate;
+        }
+        return name;
+    }
     private readonly IProcessRunner _runner;
 
     internal AzmcpRunner(IProcessRunner? runner = null)

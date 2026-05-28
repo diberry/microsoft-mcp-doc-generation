@@ -264,12 +264,12 @@ public class BootstrapStepTests
 
         Assert.True(result.Success);
         var latestIdx = harness.ProcessRunner.Invocations.FindIndex(
-            s => s.Arguments.SequenceEqual(["install", "-g", "@azure/mcp@latest"]));
+            s => s.FileName == "dotnet" && s.Arguments.SequenceEqual(["tool", "update", "azure.mcp", "--global"]));
         var metadataIdx = harness.ProcessRunner.Invocations.FindIndex(
             s => s.FileName == "dotnet" && s.Arguments.Any(a => a.EndsWith("McpCliMetadata.csproj", StringComparison.OrdinalIgnoreCase)));
-        Assert.True(latestIdx >= 0, "Expected npm install -g @azure/mcp@latest to be invoked.");
+        Assert.True(latestIdx >= 0, "Expected dotnet tool update azure.mcp --global to be invoked.");
         Assert.True(metadataIdx >= 0, "Expected McpCliMetadata dotnet run to be invoked.");
-        Assert.True(latestIdx < metadataIdx, "Latest install must run before metadata generation.");
+        Assert.True(latestIdx < metadataIdx, "dotnet tool update must run before metadata generation.");
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public class BootstrapStepTests
         Assert.True(result.Success);
         Assert.DoesNotContain(
             harness.ProcessRunner.Invocations,
-            s => s.Arguments.SequenceEqual(["install", "-g", "@azure/mcp@latest"]));
+            s => s.FileName == "dotnet" && s.Arguments.SequenceEqual(["tool", "update", "azure.mcp", "--global"]));
         var messages = ((BufferedReportWriter)harness.Context.Reports).Messages;
         Assert.Contains(messages, m => m.Contains("--skip-npm-update", StringComparison.Ordinal));
     }
@@ -295,7 +295,7 @@ public class BootstrapStepTests
         var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains(result.Warnings, w => w.Contains("latest @azure/mcp", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Warnings, w => w.Contains("azure.mcp", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -509,10 +509,10 @@ public class BootstrapStepTests
         {
             Invocations.Add(spec);
 
-            if (spec.Arguments.SequenceEqual(["install", "-g", "@azure/mcp@latest"]))
+            if (spec.FileName == "dotnet" && spec.Arguments.SequenceEqual(["tool", "update", "azure.mcp", "--global"]))
             {
                 return FailNpmLatestInstall
-                    ? ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, string.Empty, "npm ERR! 404", TimeSpan.Zero))
+                    ? ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, string.Empty, "error: failed to update azure.mcp", TimeSpan.Zero))
                     : ValueTask.FromResult(Success(spec));
             }
 
