@@ -37,7 +37,7 @@ internal sealed class ProcessRunner : IProcessRunner
 
 internal sealed class AzmcpRunner
 {
-    private const string Binary = "azmcp";
+    private static string Binary => OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
     private const int DefaultTimeoutMs = 30_000;
     private readonly IProcessRunner _runner;
 

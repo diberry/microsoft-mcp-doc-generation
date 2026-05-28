@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`AzmcpRunner` Windows binary resolution** — On Windows, `azmcp` is installed as `azmcp.cmd` (a batch wrapper). `Process.Start` with `UseShellExecute=false` cannot locate `.cmd` files by bare name. `AzmcpRunner` now resolves the binary as `azmcp.cmd` on Windows and `azmcp` on all other platforms, matching the existing pattern in `PipelineRunner`. The generation pipeline is now fully PowerShell + .NET end-to-end with no npm dependency required. Updated `McpCliMetadata/README.md` to remove the npm installation instruction.
+
 ### Changed
 - Added .NET CLI metadata extractor (`mcp-tools/McpCliMetadata/`) alongside existing Node.js scripts. The `azmcp` binary is now invoked via `Process.Start` in a typed C# console app; `preflight.ps1` calls the .NET project instead of npm. The folder `test-npm-azure-mcp/` was renamed to `mcp-cli-metadata/` (all Node.js scripts and version snapshot directories preserved). Closes #627, PR #628.
 
