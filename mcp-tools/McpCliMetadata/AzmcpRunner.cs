@@ -27,6 +27,8 @@ internal sealed class ProcessRunner : IProcessRunner
         var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
+        // Read both streams concurrently to prevent deadlocks
+        await Task.WhenAll(outputTask, errorTask);
         await process.WaitForExitAsync(cancellationToken);
 
         return new ProcessRunResult(process.ExitCode, await outputTask, await errorTask);
@@ -36,6 +38,7 @@ internal sealed class ProcessRunner : IProcessRunner
 internal sealed class AzmcpRunner
 {
     private const string Binary = "azmcp";
+    private const int DefaultTimeoutMs = 30_000;
     private readonly IProcessRunner _runner;
 
     internal AzmcpRunner(IProcessRunner? runner = null)
@@ -45,21 +48,30 @@ internal sealed class AzmcpRunner
 
     internal async Task<string> GetVersionAsync(CancellationToken cancellationToken = default)
     {
-        var result = await _runner.RunAsync(Binary, "--version", cancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(DefaultTimeoutMs);
+        var result = await _runner.RunAsync(Binary, "--version", cts.Token);
         ThrowIfFailed(result, "--version");
-        return result.Output.Trim();
+        var trimmed = result.Output.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+            throw new InvalidOperationException("azmcp --version returned empty output");
+        return trimmed;
     }
 
     internal async Task<string> GetToolsJsonAsync(CancellationToken cancellationToken = default)
     {
-        var result = await _runner.RunAsync(Binary, "tools list", cancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(DefaultTimeoutMs);
+        var result = await _runner.RunAsync(Binary, "tools list", cts.Token);
         ThrowIfFailed(result, "tools list");
         return result.Output.Trim();
     }
 
     internal async Task<string> GetNamespaceJsonAsync(CancellationToken cancellationToken = default)
     {
-        var result = await _runner.RunAsync(Binary, "tools list --namespace-mode", cancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(DefaultTimeoutMs);
+        var result = await _runner.RunAsync(Binary, "tools list --namespace-mode", cts.Token);
         ThrowIfFailed(result, "tools list --namespace-mode");
         return result.Output.Trim();
     }

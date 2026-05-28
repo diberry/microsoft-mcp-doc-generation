@@ -29,7 +29,7 @@
 
 ### #195 — Generation Report Script (2026-03-24)
 - **PR:** #217
-- CLI metadata lives in `test-npm-azure-mcp/{version}/tools-list.json` (same schema as `cli-output.json`)
+- CLI metadata lives in `mcp-cli-metadata/{version}/tools-list.json` (same schema as `cli-output.json`)
 - Namespace JSON (`31-namespace.json`) has npm output prefix before JSON — any reader must handle that
 - 55 namespaces, 235 tools in beta.31 — up from the 52 referenced in older docs
 - Common params (7 total) are defined in `mcp-tools/data/common-parameters.json`

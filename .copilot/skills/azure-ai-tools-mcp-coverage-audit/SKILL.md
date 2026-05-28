@@ -52,7 +52,7 @@ Deterministic (script-based) coverage audit that compares published Azure MCP Se
 
 | Requirement | Details |
 |---|---|
-| `tools-list.json` | Latest version from `test-npm-azure-mcp/{version}/tools-list.json` in the doc-generation repo |
+| `tools-list.json` | Latest version from `mcp-cli-metadata/{version}/tools-list.json` in the doc-generation repo |
 | Articles directory | Local clone of `MicrosoftDocs/azure-dev-docs-pr` at `articles/azure-mcp-server/tools/` |
 | PowerShell 7+ | Scripts use PS7 syntax |
 
@@ -83,7 +83,7 @@ Scans all articles against all tools in `tools-list.json`. Outputs both console 
 ```powershell
 # Full audit (all namespaces) with report
 .\scripts\Scan-McpToolCoverage.ps1 `
-  -ToolsJsonPath "C:\project-dina-ai-dev-tools\repos\public-diberry-microsoft-mcp-doc-generation\test-npm-azure-mcp\3.0.0-beta.10+7287903f962dd029489594e2ae68842f3e10ac30\tools-list.json" `
+  -ToolsJsonPath "C:\project-dina-ai-dev-tools\repos\public-diberry-microsoft-mcp-doc-generation\mcp-cli-metadata\3.0.0-beta.10+7287903f962dd029489594e2ae68842f3e10ac30\tools-list.json" `
   -ArticlesDir "C:\project-dina-ai-dev-tools\repos\public-microsoftdocs-azure-dev-docs-pr\articles\azure-mcp-server\tools" `
   -ReportDir "C:\project-dina-ai-dev-tools\projects\azure-ai-tools\status" `
   -OutputJson "coverage-report.json"

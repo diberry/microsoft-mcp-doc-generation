@@ -4,7 +4,7 @@ Console app that extracts Azure MCP CLI tool metadata by invoking the `azmcp` bi
 
 ## Purpose
 
-Replaces the Node.js-based `test-npm-azure-mcp/` scripts with a typed .NET console app.
+Replaces the Node.js-based `mcp-cli-metadata/` scripts with a typed .NET console app.
 Writes three JSON files to `generated/cli/`:
 
 | File | Command |

@@ -85,7 +85,7 @@ wait
 - **Prompt templates:** `mcp-tools/prompts/`
 - **Handlebars templates:** `mcp-tools/templates/`
 - **Configuration data:** `mcp-tools/data/`
-- **MCP CLI metadata extraction:** `test-npm-azure-mcp/`
+- **MCP CLI metadata extraction:** `mcp-cli-metadata/`
 - **Generated output:** `generated/` or `generated-<namespace>/`
 
 ### Legacy naming notes
@@ -203,7 +203,7 @@ microsoft-mcp-doc-generation/
 │   ├── reports/                 # Validation reports
 │   └── logs/                    # Generation logs
 │
-├── test-npm-azure-mcp/          # MCP CLI metadata extractor
+├── mcp-cli-metadata/          # MCP CLI metadata extractor
 └── start.sh                     # Main entry point
 ```
 
@@ -351,7 +351,7 @@ To modify AI-generated content quality or style:
 
 | Document | Description |
 |----------|-------------|
-| [test-npm-azure-mcp/README.md](test-npm-azure-mcp/README.md) | MCP CLI metadata extractor |
+| [mcp-cli-metadata/README.md](mcp-cli-metadata/README.md) | MCP CLI metadata extractor |
 
 ### Repository Configuration
 

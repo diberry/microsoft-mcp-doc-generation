@@ -73,7 +73,7 @@ Testing is now part of the workflow:
 ```yaml
       - name: Test installation
         if: steps.version-check.outputs.needs_update == 'true'
-        working-directory: ./test-npm-azure-mcp
+        working-directory: ./mcp-cli-metadata
         run: |
           echo "Testing @azure/mcp installation..."
           npx azmcp --version
@@ -130,7 +130,7 @@ Speed up the workflow with caching:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('test-npm-azure-mcp/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('mcp-cli-metadata/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 ```
@@ -173,7 +173,7 @@ Check for security vulnerabilities after update:
 ```yaml
       - name: Run npm audit
         if: steps.version-check.outputs.needs_update == 'true'
-        working-directory: ./test-npm-azure-mcp
+        working-directory: ./mcp-cli-metadata
         run: |
           npm audit --audit-level=moderate || echo "⚠️ Security vulnerabilities found - review carefully"
 ```
@@ -230,7 +230,7 @@ Create these labels for better organization:
 ### Test with Older Version
 To test PR creation:
 
-1. Temporarily downgrade version in `test-npm-azure-mcp/package.json`
+1. Temporarily downgrade version in `mcp-cli-metadata/package.json`
 2. Run workflow manually
 3. Verify PR is created correctly
 4. Close PR and restore version

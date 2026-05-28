@@ -7,7 +7,7 @@
 #
 # Examples:
 #   .\Scan-McpToolCoverage.ps1 `
-#     -ToolsJsonPath "repos/public-diberry-microsoft-mcp-doc-generation/test-npm-azure-mcp/3.0.0-beta.10+7287903f962dd029489594e2ae68842f3e10ac30/tools-list.json" `
+#     -ToolsJsonPath "repos/public-diberry-microsoft-mcp-doc-generation/mcp-cli-metadata/3.0.0-beta.10+7287903f962dd029489594e2ae68842f3e10ac30/tools-list.json" `
 #     -ArticlesDir "repos/public-microsoftdocs-azure-dev-docs-pr/articles/azure-mcp-server/tools"
 #
 #   # Single namespace:

@@ -386,7 +386,7 @@ microsoft-mcp-doc-generation/
 ├── skills-generation/                # Skills documentation pipeline
 ├── docs/                             # Documentation
 ├── generated-validated-*/            # Validated pipeline output
-└── test-npm-azure-mcp/               # npm project for CLI extraction
+└── mcp-cli-metadata/               # npm project for CLI extraction
 ```
 
 ## Pipeline Observability
