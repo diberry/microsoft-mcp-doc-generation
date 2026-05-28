@@ -96,6 +96,14 @@ jobs:
             $usedFixtures = $true
           }
 
+          # If fixtures fallback also yielded no files, mark as skipped
+          $noFilesAvailable = $false
+          if ($articleFiles.Count -eq 0) {
+            $usedFixtures     = $false
+            $noFilesAvailable = $true
+            Write-Host "No article files or fixtures found — validation will be skipped."
+          }
+
           $anyFail = $false; $anyWarn = $false; $filesChecked = 0
           $failCount = 0; $warnCount = 0; $passCount = 0
 
@@ -130,7 +138,7 @@ jobs:
             $verdict = 'warn'
             Write-Host "No files available for validation — smoke test skipped."
           }
-          $scope   = if ($usedFixtures) { 'fixtures' } else { 'pr-changed' }
+          $scope   = if ($noFilesAvailable) { 'no-files' } elseif ($usedFixtures) { 'fixtures' } else { 'pr-changed' }
 
           Write-Host "Health verdict: $verdict  Files: $filesChecked  Pass: $passCount  Warn: $warnCount  Fail: $failCount"
 
@@ -201,13 +209,15 @@ jobs:
             const pass     = process.env.HEALTH_PASS  || '0';
             const warn     = process.env.HEALTH_WARN  || '0';
             const fail     = process.env.HEALTH_FAIL  || '0';
-            const scope    = process.env.HEALTH_SCOPE || 'fixtures';
+            const scope    = process.env.HEALTH_SCOPE || 'no-files';
 
             const modeNote = gateMode === 'warn'
               ? '> ⚠️ **Warn-only mode** — non-blocking. Will be promoted to blocking after 2 clean weeks.'
               : '> 🚫 **Blocking mode** — failures will block merge.';
 
-            const scopeNote = scope === 'fixtures'
+            const scopeNote = scope === 'no-files'
+              ? `No article files or fixtures available — validation skipped.`
+              : scope === 'fixtures'
               ? `No changed articles in PR — ran smoke test against committed fixtures.`
               : `Checked ${files} changed article(s) from this PR.`;
 
