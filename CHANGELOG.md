@@ -6,6 +6,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Added .NET CLI metadata extractor (`mcp-tools/McpCliMetadata/`) alongside existing Node.js scripts. The `azmcp` binary is now invoked via `Process.Start` in a typed C# console app; `preflight.ps1` calls the .NET project instead of npm. The folder `test-npm-azure-mcp/` was renamed to `mcp-cli-metadata/` (all Node.js scripts and version snapshot directories preserved). Closes #627, PR #628.
+
 ### Added
 
 - **Validation Gate CI workflow — Phase 4** (`.github/workflows/validation-gate.yml`) — New GitHub Actions workflow that runs on every PR to `main`. Builds `DocGeneration.PipelineRunner` to verify Steps 7 and 8 compile, then runs `Test-ArticleHealth.ps1` and `Scan-McpToolCoverage.ps1` against any changed tool-family articles (falling back to committed test fixtures as a smoke test when no articles are changed). Results are posted as a PR comment and the gate starts in **warn-only mode** (non-blocking). To promote to blocking after 2 clean weeks, change `GATE_MODE: warn` → `GATE_MODE: block` in the workflow file. Implements Phase 4 of #574.

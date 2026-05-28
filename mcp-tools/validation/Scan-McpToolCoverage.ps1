@@ -7,7 +7,7 @@
 #
 # Examples:
 #   .\Scan-McpToolCoverage.ps1 `
-#     -ToolsJsonPath ".\test-npm-azure-mcp\<version>\tools-list.json" `
+#     -ToolsJsonPath ".\mcp-cli-metadata\<version>\tools-list.json" `
 #     -ArticlesDir ".\generated-storage\tool-family"
 #
 #   # Single namespace:

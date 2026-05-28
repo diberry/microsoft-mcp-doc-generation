@@ -249,13 +249,15 @@ public class NamespaceMappingEmitterTests
     [Fact]
     public async Task NotEmittedOnBootstrapFailure()
     {
-        // Arrange — npm install fails → BootstrapStep returns failure before EmitAsync is called
+        // Arrange — global @azure/mcp install fails → BootstrapStep returns failure before EmitAsync is called
         var recording = new RecordingNamespaceMappingEmitter();
         var repoRoot = Path.Combine(Path.GetTempPath(), $"nme-failure-test-{Guid.NewGuid():N}");
         var mcpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
         Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
         Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "azure-mcp"));
-        Directory.CreateDirectory(Path.Combine(repoRoot, "test-npm-azure-mcp"));
+        Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "McpCliMetadata"));
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-cli-metadata"));
+        File.WriteAllText(Path.Combine(mcpToolsRoot, "McpCliMetadata", "McpCliMetadata.csproj"), "<Project />");
         File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
         File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), "[]");
         File.WriteAllText(Path.Combine(mcpToolsRoot, "azure-mcp", "azmcp-commands.md"), "# Commands");

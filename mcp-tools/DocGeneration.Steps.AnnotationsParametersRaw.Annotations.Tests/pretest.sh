@@ -7,7 +7,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEST_DATA_DIR="$SCRIPT_DIR/TestData"
 DATA_DIR="$SCRIPT_DIR/../data"
-NPM_MCP_DIR="$SCRIPT_DIR/../../test-npm-azure-mcp"
+MCP_METADATA_DIR="$SCRIPT_DIR/../../mcp-cli-metadata"
+TRACKED_VERSION_FILE="$MCP_METADATA_DIR/tracked-version.txt"
 
 mkdir -p "$TEST_DATA_DIR"
 
@@ -16,11 +17,17 @@ echo "Generating live CLI output from azmcp tools list..."
 if command -v azmcp &>/dev/null; then
     azmcp tools list > "$TEST_DATA_DIR/cli-output-live.json" 2>/dev/null
     echo "  -> Saved cli-output-live.json ($(wc -l < "$TEST_DATA_DIR/cli-output-live.json") lines)"
-elif [[ -f "$NPM_MCP_DIR/package.json" ]]; then
-    (cd "$NPM_MCP_DIR" && npm run --silent get:tools-json > "$TEST_DATA_DIR/cli-output-live.json" 2>/dev/null)
-    echo "  -> Saved cli-output-live.json via npm ($(wc -l < "$TEST_DATA_DIR/cli-output-live.json") lines)"
+elif [[ -f "$TRACKED_VERSION_FILE" ]]; then
+    TRACKED_VERSION="$(tr -d '[:space:]' < "$TRACKED_VERSION_FILE")"
+    SNAPSHOT_PATH="$MCP_METADATA_DIR/$TRACKED_VERSION/tools-list.json"
+    if [[ -f "$SNAPSHOT_PATH" ]]; then
+        cp "$SNAPSHOT_PATH" "$TEST_DATA_DIR/cli-output-live.json"
+        echo "  -> Saved cli-output-live.json from tracked snapshot ($TRACKED_VERSION)"
+    else
+        echo "  -> azmcp not found and tracked snapshot $TRACKED_VERSION is unavailable, skipping live CLI output"
+    fi
 else
-    echo "  -> azmcp not found and test-npm-azure-mcp not available, skipping live CLI output"
+    echo "  -> azmcp not found and tracked-version.txt is unavailable, skipping live CLI output"
 fi
 
 # --- 2. Copy latest config files from data/ ---

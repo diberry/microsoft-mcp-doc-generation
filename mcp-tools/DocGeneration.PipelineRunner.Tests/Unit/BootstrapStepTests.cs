@@ -256,7 +256,7 @@ public class BootstrapStepTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_RunsNpmInstallLatestBeforePinnedInstall()
+    public async Task ExecuteAsync_InstallsLatestPackageBeforeMetadataRun()
     {
         using var harness = CreateHarness();
 
@@ -264,12 +264,12 @@ public class BootstrapStepTests
 
         Assert.True(result.Success);
         var latestIdx = harness.ProcessRunner.Invocations.FindIndex(
-            s => s.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]));
-        var pinnedIdx = harness.ProcessRunner.Invocations.FindIndex(
-            s => s.Arguments.SequenceEqual(["install", "--silent"]));
-        Assert.True(latestIdx >= 0, "Expected npm install @azure/mcp@latest --save to be invoked.");
-        Assert.True(pinnedIdx >= 0, "Expected npm install --silent to be invoked.");
-        Assert.True(latestIdx < pinnedIdx, "Latest install must run before pinned install.");
+            s => s.Arguments.SequenceEqual(["install", "-g", "@azure/mcp@latest"]));
+        var metadataIdx = harness.ProcessRunner.Invocations.FindIndex(
+            s => s.FileName == "dotnet" && s.Arguments.Any(a => a.EndsWith("McpCliMetadata.csproj", StringComparison.OrdinalIgnoreCase)));
+        Assert.True(latestIdx >= 0, "Expected npm install -g @azure/mcp@latest to be invoked.");
+        Assert.True(metadataIdx >= 0, "Expected McpCliMetadata dotnet run to be invoked.");
+        Assert.True(latestIdx < metadataIdx, "Latest install must run before metadata generation.");
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public class BootstrapStepTests
         Assert.True(result.Success);
         Assert.DoesNotContain(
             harness.ProcessRunner.Invocations,
-            s => s.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]));
+            s => s.Arguments.SequenceEqual(["install", "-g", "@azure/mcp@latest"]));
         var messages = ((BufferedReportWriter)harness.Context.Reports).Messages;
         Assert.Contains(messages, m => m.Contains("--skip-npm-update", StringComparison.Ordinal));
     }
@@ -343,7 +343,9 @@ public class BootstrapStepTests
         var mcpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
         Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
         Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "azure-mcp"));
-        Directory.CreateDirectory(Path.Combine(repoRoot, "test-npm-azure-mcp"));
+        Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "McpCliMetadata"));
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-cli-metadata"));
+        File.WriteAllText(Path.Combine(mcpToolsRoot, "McpCliMetadata", "McpCliMetadata.csproj"), "<Project />");
         File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
         File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappingJson ?? "[]");
         File.WriteAllText(Path.Combine(mcpToolsRoot, "azure-mcp", "azmcp-commands.md"), "# Commands");
@@ -507,28 +509,25 @@ public class BootstrapStepTests
         {
             Invocations.Add(spec);
 
-            if (spec.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]))
+            if (spec.Arguments.SequenceEqual(["install", "-g", "@azure/mcp@latest"]))
             {
                 return FailNpmLatestInstall
                     ? ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, string.Empty, "npm ERR! 404", TimeSpan.Zero))
                     : ValueTask.FromResult(Success(spec));
             }
 
-            if (spec.Arguments.SequenceEqual(["install", "--silent"]))
+            if (spec.FileName == "dotnet" && spec.Arguments.Any(arg => arg.EndsWith("McpCliMetadata.csproj", StringComparison.OrdinalIgnoreCase)))
             {
+                var outputPath = spec.Arguments.Last();
+                var cliDir = Path.Combine(outputPath, "cli");
+                Directory.CreateDirectory(cliDir);
+                File.WriteAllText(Path.Combine(cliDir, "cli-version.json"), "{\"version\":\"1.2.3\"}");
+                File.WriteAllText(Path.Combine(cliDir, "cli-output.json"), CliOutputJson);
+                File.WriteAllText(Path.Combine(cliDir, "cli-namespace.json"), NamespaceJson);
                 return ValueTask.FromResult(Success(spec));
             }
 
-            var scriptName = spec.Arguments.LastOrDefault();
-            var standardOutput = scriptName switch
-            {
-                "get:version" => "1.2.3",
-                "get:tools-json" => CliOutputJson,
-                "get:tools-namespace" => NamespaceJson,
-                _ => string.Empty,
-            };
-
-            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, standardOutput, string.Empty, TimeSpan.Zero));
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero));
         }
 
         public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)

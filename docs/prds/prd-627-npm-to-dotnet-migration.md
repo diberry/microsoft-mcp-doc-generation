@@ -7,7 +7,7 @@
 | **Issue** | #627 |
 | **Author** | nigel-prd-planning |
 | **Date** | 2026-05-27T16-12 |
-| **Status** | Draft — Blocked on OQ1 |
+| **Status** | Implemented |
 | **Project** | azure-ai-tools |
 | **Post-Ship Owner** | aspira-eng-dotnet |
 

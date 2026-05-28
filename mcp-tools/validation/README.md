@@ -13,7 +13,7 @@ Repo-local deterministic validators for Azure MCP generated articles.
 - PowerShell 7+
 - Pester 5+
 - Generated article output to validate (`generated/` or `generated-<namespace>/`)
-- `tools-list.json` from `test-npm-azure-mcp/` when running coverage audit
+- `tools-list.json` from `mcp-cli-metadata/` when running coverage audit
 
 ## Running the tests
 
@@ -43,7 +43,7 @@ Coverage audit:
 
 ```powershell
 pwsh -File .\mcp-tools\validation\Scan-McpToolCoverage.ps1 `
-  -ToolsJsonPath .\test-npm-azure-mcp\<version>\tools-list.json `
+  -ToolsJsonPath .\mcp-cli-metadata\<version>\tools-list.json `
   -ArticlesDir .\generated-storage\tool-family `
   -Namespace storage `
   -OutputJson .\generated-storage\validation\coverage-audit.json
