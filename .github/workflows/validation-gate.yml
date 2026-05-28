@@ -27,11 +27,11 @@ jobs:
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────────
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v5
 
       # ── 2. .NET SDK (net9.0 for generator projects, net10.0 for pipeline runner) ──
       - name: Setup .NET SDKs
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4
         with:
           dotnet-version: |
             9.0.x
@@ -48,7 +48,7 @@ jobs:
       # ── 4. Detect changed tool-family article files in the PR ─────────────────
       - name: Detect changed article files
         id: changed
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcda3a68da5ab  # v7
         with:
           script: |
             const response = await github.paginate(github.rest.pulls.listFiles, {
@@ -125,6 +125,11 @@ jobs:
           }
 
           $verdict = if ($anyFail) { 'fail' } elseif ($anyWarn) { 'warn' } else { 'pass' }
+
+          if ($filesChecked -eq 0) {
+            $verdict = 'warn'
+            Write-Host "No files available for validation — smoke test skipped."
+          }
           $scope   = if ($usedFixtures) { 'fixtures' } else { 'pr-changed' }
 
           Write-Host "Health verdict: $verdict  Files: $filesChecked  Pass: $passCount  Warn: $warnCount  Fail: $failCount"
@@ -175,7 +180,7 @@ jobs:
       # ── 7. Post PR comment with results ──────────────────────────────────────
       - name: Post PR validation comment
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcda3a68da5ab  # v7
         env:
           HEALTH_VERDICT:   ${{ steps.health.outputs.verdict }}
           HEALTH_FILES:     ${{ steps.health.outputs.files_checked }}
@@ -184,6 +189,7 @@ jobs:
           HEALTH_FAIL:      ${{ steps.health.outputs.fail_count }}
           HEALTH_SCOPE:     ${{ steps.health.outputs.scope }}
           COVERAGE_VERDICT: ${{ steps.coverage.outputs.verdict }}
+          GATE_MODE:        ${{ env.GATE_MODE }}
         with:
           script: |
             const icon = v => ({pass:'✅', warn:'⚠️', fail:'❌', skipped:'⏭️'}[v] ?? '❓');
