@@ -105,6 +105,36 @@ public class AzmcpRunnerTests
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => runner.GetNamespaceJsonAsync());
         Assert.Contains("namespace-mode", ex.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task GetVersionAsync_UsesCorrectBinaryNameForPlatform()
+    {
+        var capturing = new CapturingFakeProcessRunner("3.0.0", 0);
+        var runner = new AzmcpRunner(capturing);
+        await runner.GetVersionAsync();
+        var expected = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+        Assert.Equal(expected, capturing.LastFileName);
+    }
+
+    [Fact]
+    public async Task GetToolsJsonAsync_UsesCorrectBinaryNameForPlatform()
+    {
+        var capturing = new CapturingFakeProcessRunner("{}", 0);
+        var runner = new AzmcpRunner(capturing);
+        await runner.GetToolsJsonAsync();
+        var expected = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+        Assert.Equal(expected, capturing.LastFileName);
+    }
+
+    [Fact]
+    public async Task GetNamespaceJsonAsync_UsesCorrectBinaryNameForPlatform()
+    {
+        var capturing = new CapturingFakeProcessRunner("{}", 0);
+        var runner = new AzmcpRunner(capturing);
+        await runner.GetNamespaceJsonAsync();
+        var expected = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+        Assert.Equal(expected, capturing.LastFileName);
+    }
 }
 
 internal sealed class FakeProcessRunner : IProcessRunner
@@ -122,6 +152,26 @@ internal sealed class FakeProcessRunner : IProcessRunner
 
     public Task<ProcessRunResult> RunAsync(string fileName, string arguments, CancellationToken cancellationToken = default)
         => Task.FromResult(new ProcessRunResult(_exitCode, _output, _error));
+}
+
+internal sealed class CapturingFakeProcessRunner : IProcessRunner
+{
+    private readonly string _output;
+    private readonly int _exitCode;
+
+    internal string? LastFileName { get; private set; }
+
+    internal CapturingFakeProcessRunner(string output, int exitCode)
+    {
+        _output = output;
+        _exitCode = exitCode;
+    }
+
+    public Task<ProcessRunResult> RunAsync(string fileName, string arguments, CancellationToken cancellationToken = default)
+    {
+        LastFileName = fileName;
+        return Task.FromResult(new ProcessRunResult(_exitCode, _output, string.Empty));
+    }
 }
 
 internal sealed class SlowFakeProcessRunner : IProcessRunner

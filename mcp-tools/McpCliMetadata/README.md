@@ -19,7 +19,7 @@ Writes three JSON files to `generated/cli/`:
 dotnet run --project mcp-tools/McpCliMetadata -- ./generated
 ```
 
-The `azmcp` binary must be on `PATH` (installed via `npm install -g @azure/mcp` or via Docker).
+The `azmcp` binary must be available on `PATH` as a prerequisite.
 
 ## Architecture
 
