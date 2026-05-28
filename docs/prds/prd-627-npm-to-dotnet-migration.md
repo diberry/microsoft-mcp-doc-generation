@@ -1,3 +1,5 @@
+﻿<!-- Location: docs/prds/ is correct per this repo's convention. project-dina operating rules apply to the hub repo only. -->
+
 # PRD — Migrate `test-npm-azure-mcp` from NPM to .NET
 
 | Field | Value |
@@ -5,7 +7,7 @@
 | **Issue** | #627 |
 | **Author** | nigel-prd-planning |
 | **Date** | 2026-05-27T16-12 |
-| **Status** | Draft |
+| **Status** | Draft — Blocked on OQ1 |
 | **Project** | azure-ai-tools |
 | **Post-Ship Owner** | aspira-eng-dotnet |
 
@@ -68,16 +70,17 @@ Replace the Node.js-based CLI metadata extraction layer with an equivalent .NET-
 | AC1 | Folder `test-npm-azure-mcp/` is renamed to `mcp-cli-metadata/` in the repo | `git ls-files mcp-cli-metadata/ \| wc -l` > 0; `git ls-files test-npm-azure-mcp/ \| wc -l` = 0 |
 | AC2 | No `package.json` or `node_modules/` at repo root or in `mcp-cli-metadata/` | `Find-ChildItem mcp-cli-metadata -Name package.json -Recurse` returns empty |
 | AC3 | `preflight.ps1` calls the .NET tool/binary instead of `npm run` | `grep -r "npm run" mcp-tools/scripts/preflight.ps1` returns no matches |
-| AC4 | `generated/cli/cli-output.json`, `cli-namespace.json`, `cli-version.json` produced correctly | `dotnet test mcp-doc-generation.sln` passes all BootstrapStep tests |
+| AC4 | `generated/cli/cli-output.json`, `cli-namespace.json`, `cli-version.json` produced correctly | `dotnet test mcp-doc-generation.sln` passes all BootstrapStep tests; output JSON structure byte-for-byte matches existing Node.js output when run against the same azmcp binary (validated by comparison test in McpCliMetadata.Tests) |
 | AC5 | `build-and-test.yml` path triggers updated to `mcp-cli-metadata/**` | File content confirms no `test-npm-azure-mcp` path trigger |
 | AC6 | `update-azure-mcp.yml` tracks .NET tool/NuGet version | Workflow file contains no `npm install @azure/mcp` or `npm view` commands |
 | AC7 | `test-azure-mcp-update.yml` updated or replaced with .NET equivalent | File references `mcp-cli-metadata/` not `test-npm-azure-mcp/` |
-| AC8 | All version snapshot JSON files preserved in `mcp-cli-metadata/` (git history retained) | `git log --oneline mcp-cli-metadata/` shows history from `test-npm-azure-mcp/` via `git mv` |
+| AC8 | All version snapshot JSON files preserved in `mcp-cli-metadata/` (git history retained) | `git log --follow --oneline mcp-cli-metadata/ \| wc -l` shows commits spanning the rename boundary |
 | AC9 | All Node.js test files migrated to xUnit with equivalent coverage | `dotnet test mcp-doc-generation.sln` includes new `McpCliMetadata.Tests` project; all tests pass |
 | AC10 | `generate-cli-examples` logic produces same output as before | Existing fixture-based test assertions pass with new implementation |
 | AC11 | No references to `test-npm-azure-mcp` remain in non-historical files | `grep -r "test-npm-azure-mcp" --include="*.md" --include="*.yml" --include="*.ps1" --include="*.sh" --include="*.cs" .` returns 0 matches (excluding git log and this PRD) |
 | AC12 | `dotnet build mcp-doc-generation.sln --configuration Release` succeeds with 0 warnings | CI `build-and-test` job passes |
 | AC13 | CHANGELOG.md updated with migration entry | `CHANGELOG.md` contains entry for issue #627 |
+| AC14 | Schema validation test asserts JSON structure of all three CLI output files | A schema validation test in McpCliMetadata.Tests asserts the JSON structure of `cli-output.json`, `cli-namespace.json`, and `cli-version.json` matches the documented contract (field names, types, nesting) |
 
 ---
 
@@ -95,6 +98,8 @@ Replace the Node.js-based CLI metadata extraction layer with an equivalent .NET-
 5. Record resolution in OQ1 below.
 
 **Acceptance check:** OQ1 closed with a concrete command (`dotnet tool install -g X` or binary invocation string).
+
+> **PRD remains in Draft status until OQ1 is resolved. Self-score reflects structural completeness only, not dispatch readiness.**
 
 ---
 
@@ -126,6 +131,7 @@ Replace the Node.js-based CLI metadata extraction layer with an equivalent .NET-
 - `CliExamplesGeneratorTests.cs` — equivalent of `generate-cli-examples.test.js` (3 test cases with fixture data)
 - `CliOutputValidatorTests.cs` — equivalent of `validate-cli-output.js` tests
 - `VersionDifferTests.cs` — unit tests for diff logic
+- `VersionDifferTests.cs` includes test cases for pre-release version strings (e.g., 3.0.0-rc1 → 3.0.0, 3.0.0-beta.2 → 3.0.0-beta.3)
 
 **Acceptance check:** `dotnet test mcp-doc-generation.sln --no-build --configuration Release` passes all new tests.
 
@@ -134,6 +140,8 @@ Replace the Node.js-based CLI metadata extraction layer with an equivalent .NET-
 ### Phase 4 — Folder Rename & Reference Fixes (Owner: aspira-eng-dotnet)
 
 **Deliverable:** `test-npm-azure-mcp/` renamed to `mcp-cli-metadata/` via `git mv`; all references updated.
+
+**Pre-condition:** Verify McpCliMetadata.Tests pass before removing Node.js test files (Phase 3 must be complete).
 
 **Steps:**
 1. `git mv test-npm-azure-mcp mcp-cli-metadata` (preserves history).
@@ -285,6 +293,7 @@ This PRD is done when **all** of the following are verifiable from the repositor
 
 - **OQ1 resolution** (Phase 1) must complete before Phase 2 begins — the implementation approach depends on whether `azmcp` is available as a .NET global tool.
 - **Phase 2** (C# extractor) must complete before **Phase 3** (tests), **Phase 4** (rename), and **Phase 5** (script updates) — tests need the implementation to verify, rename needs the new files to exist.
+- **Phase 3** (tests) MUST complete before **Phase 4** (rename) — Phase 4 Step 2 (Remove Node.js test files) is blocked until Phase 3 verifies all test behavior is replicated in xUnit. Phases 3/4/5 are NOT parallelizable: Phase 3 → Phase 4 is a hard dependency.
 - **Phase 3** (tests) must complete before **Phase 6** (CI) — CI must run the new tests.
 - **All phases** must complete before the PR is created — this is a single atomic PR.
 - `dotnet build mcp-doc-generation.sln --configuration Release` must pass at the end of Phase 2 — zero warnings policy (AD-007).
@@ -475,9 +484,9 @@ must-not-change:
 | 16 | Scope Fence | ✅ 2/2 | Three sub-sections; YAML must-not-change block present |
 | 17 | Trigger Documentation | ✅ 2/2 | One-time change type; cleanup criteria defined |
 | 18 | Environment Integration | ✅ 2/2 | Integration points table, consumer identification, discovery path, wiring checklist |
-| **Total** | | **36/36** ✅ | Ready for autonomous dispatch after OQs resolved |
+| **Total** | | **36/36** ✅ | Structural completeness only. OQ1 must close before dispatch — PRD status is Draft — Blocked on OQ1. |
 
 **Score guide:**
-- **31–36** ✅ Ready for autonomous dispatch
+- **31–36** ✅ Ready for autonomous dispatch (structural score only — OQ1 must be resolved before this PRD is dispatch-ready)
 - **22–30** ⚠️ Needs refinement — fill gaps before dispatch
 - **0–21** ❌ Not ready — rework required
