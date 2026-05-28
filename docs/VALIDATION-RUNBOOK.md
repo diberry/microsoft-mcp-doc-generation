@@ -7,7 +7,7 @@ Use these repo-local validators to check generated Azure MCP article output befo
 - PowerShell 7+
 - Pester 5+
 - Generated output under `generated/` or `generated-<namespace>/`
-- `tools-list.json` from `test-npm-azure-mcp/`
+- `tools-list.json` from `mcp-cli-metadata/`
 
 Install Pester if needed:
 
@@ -43,7 +43,7 @@ Use `-Strict` if warnings should fail the command.
 
 ```powershell
 pwsh -File .\mcp-tools\validation\Scan-McpToolCoverage.ps1 `
-  -ToolsJsonPath .\test-npm-azure-mcp\<version>\tools-list.json `
+  -ToolsJsonPath .\mcp-cli-metadata\<version>\tools-list.json `
   -ArticlesDir .\generated-storage\tool-family `
   -Namespace storage `
   -OutputJson .\generated-storage\validation\coverage-audit.json

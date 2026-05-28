@@ -113,10 +113,10 @@ public sealed class BootstrapStep : StepDefinition
                 cancellationToken);
 
             var cliDirectory = Path.Combine(context.OutputPath, "cli");
-            var testNpmDirectory = Path.Combine(context.RepoRoot, "test-npm-azure-mcp");
-            if (!Directory.Exists(testNpmDirectory))
+            var mcpCliMetadataProject = Path.Combine(context.McpToolsRoot, "McpCliMetadata", "McpCliMetadata.csproj");
+            if (!File.Exists(mcpCliMetadataProject))
             {
-                warnings.Add($"CLI metadata extractor directory was not found: {testNpmDirectory}");
+                warnings.Add($"CLI metadata project was not found: {mcpCliMetadataProject}");
                 return BuildResult(context, processResults, success: false, warnings);
             }
 
@@ -126,12 +126,12 @@ public sealed class BootstrapStep : StepDefinition
             {
                 context.Reports.Info("Updating @azure/mcp to latest version...");
                 var latestInstallResult = await context.ProcessRunner.RunAsync(
-                    new ProcessSpec(npmExecutable, ["install", "@azure/mcp@latest", "--save"], testNpmDirectory),
+                    new ProcessSpec(npmExecutable, ["install", "-g", "@azure/mcp@latest"], context.RepoRoot),
                     cancellationToken);
                 processResults.Add(latestInstallResult);
                 if (!latestInstallResult.Succeeded)
                 {
-                    AddProcessIssue(latestInstallResult, warnings, "Failed to install latest @azure/mcp — use --skip-npm-update for offline or reproducible builds");
+                    AddProcessIssue(latestInstallResult, warnings, "Failed to install latest @azure/mcp globally — use --skip-npm-update for offline or reproducible builds");
                     return BuildResult(context, processResults, success: false, warnings);
                 }
 
@@ -142,55 +142,16 @@ public sealed class BootstrapStep : StepDefinition
                 context.Reports.Info("Skipping @azure/mcp latest update (--skip-npm-update).");
             }
 
-            var npmInstallResult = await context.ProcessRunner.RunAsync(
-                new ProcessSpec(npmExecutable, ["install", "--silent"], testNpmDirectory),
+            var metadataGenerationResult = await context.ProcessRunner.RunDotNetProjectAsync(
+                mcpCliMetadataProject,
+                [context.OutputPath],
+                noBuild: true,
+                context.RepoRoot,
                 cancellationToken);
-            processResults.Add(npmInstallResult);
-            if (!npmInstallResult.Succeeded)
+            processResults.Add(metadataGenerationResult);
+            if (!metadataGenerationResult.Succeeded)
             {
-                AddProcessIssue(npmInstallResult, warnings, "CLI metadata dependency installation failed");
-                return BuildResult(context, processResults, success: false, warnings);
-            }
-
-            var versionResult = await CaptureCommandOutputAsync(
-                context,
-                processResults,
-                testNpmDirectory,
-                cliDirectory,
-                "get:version",
-                "cli-version.json",
-                cancellationToken);
-            if (!versionResult.Succeeded)
-            {
-                AddProcessIssue(versionResult, warnings, "CLI version extraction failed");
-                return BuildResult(context, processResults, success: false, warnings);
-            }
-
-            var cliOutputResult = await CaptureCommandOutputAsync(
-                context,
-                processResults,
-                testNpmDirectory,
-                cliDirectory,
-                "get:tools-json",
-                "cli-output.json",
-                cancellationToken);
-            if (!cliOutputResult.Succeeded)
-            {
-                AddProcessIssue(cliOutputResult, warnings, "CLI tool metadata extraction failed");
-                return BuildResult(context, processResults, success: false, warnings);
-            }
-
-            var namespaceResult = await CaptureCommandOutputAsync(
-                context,
-                processResults,
-                testNpmDirectory,
-                cliDirectory,
-                "get:tools-namespace",
-                "cli-namespace.json",
-                cancellationToken);
-            if (!namespaceResult.Succeeded)
-            {
-                AddProcessIssue(namespaceResult, warnings, "CLI namespace metadata extraction failed");
+                AddProcessIssue(metadataGenerationResult, warnings, "CLI metadata extraction failed");
                 return BuildResult(context, processResults, success: false, warnings);
             }
 

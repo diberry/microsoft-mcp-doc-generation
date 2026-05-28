@@ -18,7 +18,7 @@ concurrency:
 jobs:
   check-and-update:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -31,46 +31,35 @@ jobs:
 
       - name: Check current and latest versions
         id: version-check
-        working-directory: ./test-npm-azure-mcp
         run: |
           echo "Checking @azure/mcp version..."
           
-          # Install current dependencies to resolve the actual installed version
-          npm ci --ignore-scripts
-          
-          # Get the actual installed version (handles ^, ~, ranges correctly)
-          CURRENT_VERSION=$(npm ls @azure/mcp --json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).dependencies['@azure/mcp'].version")
-          echo "Current version: $CURRENT_VERSION"
+          # Read the currently tracked version from file
+          CURRENT_VERSION=$(cat ./mcp-cli-metadata/tracked-version.txt | tr -d '[:space:]')
+          echo "Current tracked version: $CURRENT_VERSION"
           
           # Detect if current version is a pre-release (beta, alpha, rc, etc.)
-          SPEC=$(node -p "require('./package.json').dependencies['@azure/mcp']")
-          if echo "$SPEC" | grep -qiE 'beta|alpha|rc|preview|next'; then
-            # Track the pre-release channel — get the latest version with a matching pre-release tag
-            PRE_TAG=$(echo "$SPEC" | grep -oiE 'beta|alpha|rc|preview|next' | head -1)
+          if echo "$CURRENT_VERSION" | grep -qiE 'beta|alpha|rc|preview|next'; then
+            PRE_TAG=$(echo "$CURRENT_VERSION" | grep -oiE 'beta|alpha|rc|preview|next' | head -1)
             LATEST_VERSION=$(npm view @azure/mcp versions --json | node -p "
               JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))
                 .filter(v => v.includes('$PRE_TAG'))
                 .pop() || ''")
-            # Fall back to latest stable if no matching pre-release found
             if [ -z "$LATEST_VERSION" ]; then
               LATEST_VERSION=$(npm view @azure/mcp version)
             fi
             echo "Pre-release channel detected: $PRE_TAG"
           else
-            # Track latest stable
             LATEST_VERSION=$(npm view @azure/mcp version)
           fi
           echo "Latest version: $LATEST_VERSION"
           
-          # Export for use in other steps
           echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           
-          # Sanitize version for branch name (replace dots and special chars with dashes)
           BRANCH_VERSION=$(echo "$LATEST_VERSION" | sed 's/[^a-zA-Z0-9-]/-/g')
           echo "branch_version=$BRANCH_VERSION" >> $GITHUB_OUTPUT
           
-          # Check if update is needed
           if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
             echo "needs_update=true" >> $GITHUB_OUTPUT
             echo "✅ Update available: $CURRENT_VERSION → $LATEST_VERSION"
@@ -79,43 +68,28 @@ jobs:
             echo "✅ Already up to date at version $CURRENT_VERSION"
           fi
 
-      - name: Update package to latest version
+      - name: Install latest azmcp binary
         if: steps.version-check.outputs.needs_update == 'true'
-        working-directory: ./test-npm-azure-mcp
         run: |
-          echo "Updating @azure/mcp to version ${{ steps.version-check.outputs.latest_version }}..."
-          
-          # Update to the exact target version
-          npm install @azure/mcp@${{ steps.version-check.outputs.latest_version }}
-          
-          # Verify the update succeeded using the actual installed version
-          NEW_VERSION=$(npm ls @azure/mcp --json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).dependencies['@azure/mcp'].version")
-          echo "Updated to version: $NEW_VERSION"
-          
-          # Validate version matches expected
-          if [ "$NEW_VERSION" != "${{ steps.version-check.outputs.latest_version }}" ]; then
-            echo "::error::Version mismatch after update. Expected ${{ steps.version-check.outputs.latest_version }}, got $NEW_VERSION"
-            exit 1
-          fi
-          
-          echo "✅ Version verified successfully"
+          echo "Installing @azure/mcp@${{ steps.version-check.outputs.latest_version }} globally..."
+          npm install -g @azure/mcp@${{ steps.version-check.outputs.latest_version }}
+          echo "✅ Installed @azure/mcp@${{ steps.version-check.outputs.latest_version }}"
 
       - name: Test installation
         if: steps.version-check.outputs.needs_update == 'true'
-        working-directory: ./test-npm-azure-mcp
         run: |
           echo "Testing @azure/mcp installation..."
-          npx azmcp --version
-          npx azmcp --help
+          azmcp --version
+          azmcp --help
           echo "✅ Installation test passed"
 
       - name: Capture CLI version and generate tools list
         if: steps.version-check.outputs.needs_update == 'true'
         id: cli-snapshot
-        working-directory: ./test-npm-azure-mcp
+        working-directory: ./mcp-cli-metadata
         run: |
           # Get the CLI version string from the binary itself
-          CLI_VERSION=$(npx azmcp --version | tr -d '[:space:]')
+          CLI_VERSION=$(azmcp --version | tr -d '[:space:]')
           echo "CLI version: $CLI_VERSION"
           echo "cli_version=$CLI_VERSION" >> $GITHUB_OUTPUT
           
@@ -130,7 +104,7 @@ jobs:
             mkdir -p "$VERSION_DIR"
             
             # Generate and validate the tools list
-            npx azmcp tools list > "$VERSION_DIR/tools-list.json" 2>/dev/null
+            azmcp tools list > "$VERSION_DIR/tools-list.json" 2>/dev/null
             if ! node -e "JSON.parse(require('fs').readFileSync('$VERSION_DIR/tools-list.json','utf8'))" 2>/dev/null; then
               echo "::error::CLI output is not valid JSON"
               cat "$VERSION_DIR/tools-list.json"
@@ -143,7 +117,7 @@ jobs:
 
       - name: Generate CLI examples
         if: steps.cli-snapshot.outputs.is_new == 'true'
-        working-directory: ./test-npm-azure-mcp
+        working-directory: ./mcp-cli-metadata
         run: |
           echo "Generating CLI example commands..."
           node generate-cli-examples.js
@@ -152,7 +126,7 @@ jobs:
       - name: Diff against previous version
         if: steps.cli-snapshot.outputs.is_new == 'true'
         id: diff-check
-        working-directory: ./test-npm-azure-mcp
+        working-directory: ./mcp-cli-metadata
         run: |
           CLI_VERSION="${{ steps.cli-snapshot.outputs.cli_version }}"
           
@@ -161,7 +135,6 @@ jobs:
           PREV_VERSION=$(ls -d */ 2>/dev/null \
             | sed 's|/||' \
             | grep -v "^${CLI_VERSION}$" \
-            | grep -v 'node_modules' \
             | sort -V \
             | tail -1)
           
@@ -208,7 +181,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cli-diff-${{ steps.cli-snapshot.outputs.cli_version }}
-          path: test-npm-azure-mcp/${{ steps.diff-check.outputs.diff_file }}
+          path: mcp-cli-metadata/${{ steps.diff-check.outputs.diff_file }}
           retention-days: 90
 
       - name: Clone articles repo for gap detection
@@ -233,7 +206,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $toolsListPath = "./test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json"
+          $toolsListPath = "./mcp-cli-metadata/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json"
           $articlesPath  = "./articles-repo/articles/azure-mcp-server/tools"
           $reportDir     = "./gap-report"
           $jsonOut       = "$reportDir/gap-report.json"
@@ -280,9 +253,10 @@ jobs:
 
       - name: Run npm audit
         if: steps.version-check.outputs.needs_update == 'true'
-        working-directory: ./test-npm-azure-mcp
+        working-directory: ./mcp-cli-metadata
         run: |
           echo "Running npm audit..."
+          npm install --ignore-scripts
           if ! npm audit --audit-level=high; then
             echo "::error::High-severity vulnerabilities detected in @azure/mcp"
             exit 1
@@ -296,14 +270,11 @@ jobs:
           echo "::error::Please create a PR manually with: gh pr create --fill"
           exit 1
 
-      - name: Run tests before commit
+      - name: Update tracked version file
         if: steps.version-check.outputs.needs_update == 'true'
-        working-directory: ./test-npm-azure-mcp
         run: |
-          echo "Running tests to satisfy branch protection..."
-          npm run build
-          npm run test
-          echo "✅ All tests passed"
+          echo "${{ steps.version-check.outputs.latest_version }}" > mcp-cli-metadata/tracked-version.txt
+          echo "✅ Updated tracked-version.txt to ${{ steps.version-check.outputs.latest_version }}"
 
       - name: Configure Git
         if: steps.version-check.outputs.needs_update == 'true'
@@ -317,12 +288,12 @@ jobs:
         run: |
           echo "Committing changes to main branch..."
           
-          # Stage the changed files
-          git add test-npm-azure-mcp/package.json test-npm-azure-mcp/package-lock.json
+          # Stage the updated tracked version file
+          git add mcp-cli-metadata/tracked-version.txt
           
-          # Stage the new CLI snapshot and examples if they exist
+          # Stage the new CLI snapshot if it exists
           if [ "${{ steps.cli-snapshot.outputs.is_new }}" == "true" ]; then
-            VERSION_DIR="test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}"
+            VERSION_DIR="mcp-cli-metadata/${{ steps.cli-snapshot.outputs.cli_version }}"
             if [ -d "$VERSION_DIR" ] && [ "$(ls -A $VERSION_DIR 2>/dev/null)" ]; then
               git add "$VERSION_DIR/"
             else
@@ -332,8 +303,8 @@ jobs:
           fi
           
           # Stage the diff file if it exists
-          if [ -f "test-npm-azure-mcp/${{ steps.diff-check.outputs.diff_file }}" ]; then
-            git add "test-npm-azure-mcp/${{ steps.diff-check.outputs.diff_file }}"
+          if [ -f "mcp-cli-metadata/${{ steps.diff-check.outputs.diff_file }}" ]; then
+            git add "mcp-cli-metadata/${{ steps.diff-check.outputs.diff_file }}"
           fi
           
           # Create commit message
@@ -350,10 +321,13 @@ Automated update from nightly version check workflow.
             COMMIT_MSG="$COMMIT_MSG
 
 Files updated:
-- test-npm-azure-mcp/package.json
-- test-npm-azure-mcp/package-lock.json
-- test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json (new)
-- test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/cli-examples.md (new)"
+- mcp-cli-metadata/tracked-version.txt
+- mcp-cli-metadata/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json (new)"
+          else
+            COMMIT_MSG="$COMMIT_MSG
+
+Files updated:
+- mcp-cli-metadata/tracked-version.txt"
           fi
 
           if [ -n "${{ steps.diff-check.outputs.previous_version }}" ]; then
@@ -412,8 +386,7 @@ CLI diff: ${{ steps.diff-check.outputs.previous_version }} → ${{ steps.cli-sna
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### CLI Snapshot" >> $GITHUB_STEP_SUMMARY
             echo "- **CLI Version**: ${{ steps.cli-snapshot.outputs.cli_version }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Snapshot**: \`test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json\`" >> $GITHUB_STEP_SUMMARY
-            echo "- **Examples**: \`test-npm-azure-mcp/${{ steps.cli-snapshot.outputs.cli_version }}/cli-examples.md\`" >> $GITHUB_STEP_SUMMARY
+            echo "- **Snapshot**: \`mcp-cli-metadata/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json\`" >> $GITHUB_STEP_SUMMARY
             if [ -n "${{ steps.diff-check.outputs.previous_version }}" ]; then
               echo "- **Diff**: ${{ steps.diff-check.outputs.previous_version }} → ${{ steps.cli-snapshot.outputs.cli_version }} — **${{ steps.diff-check.outputs.lines_changed }} lines changed**" >> $GITHUB_STEP_SUMMARY
             fi

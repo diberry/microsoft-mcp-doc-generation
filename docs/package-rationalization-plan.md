@@ -132,14 +132,14 @@ Key findings:
 | # | Package | Purpose | Dependencies | Scripts | Lock File |
 |---|---------|---------|-------------|---------|-----------|
 | 1 | `azure-mcp-summary-generator` | Generate documentation summaries (JS port from PowerShell) | None | `start`, `summary`, `test` | ❌ |
-| 2 | `test-npm-azure-mcp` | MCP CLI metadata extraction, validation | `@azure/mcp: ^2.0.0-beta.38` | `start`, `validate`, `generate:report`, `test:report`, + 8 CLI helpers | ✅ |
+| 2 | `mcp-cli-metadata` | MCP CLI metadata extraction, validation | `@azure/mcp: ^2.0.0-beta.38` | `start`, `validate`, `generate:report`, `test:report`, + 8 CLI helpers | ✅ |
 | 3 | `verify-quantity` | Verify completeness of generated docs | None | `verify`, `report` | ✅ |
 
 **Notes:**
 - No npm workspace configuration (no root `package.json` with `workspaces`)
 - No shared npm dependencies between packages
 - `summary-generator` has no lock file (should have one for reproducible builds)
-- `test-npm-azure-mcp` is the only package with a runtime dependency
+- `mcp-cli-metadata` is the only package with a runtime dependency
 
 ---
 
@@ -274,7 +274,7 @@ Both solution trees use `Directory.Packages.props` for centralized version manag
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
 │  summary-generator      [standalone, zero deps]                     │
-│  test-npm-azure-mcp     [standalone, @azure/mcp dep]                │
+│  mcp-cli-metadata     [standalone, @azure/mcp dep]                │
 │  verify-quantity         [standalone, zero deps]                     │
 │                                                                     │
 │  [No cross-references between npm packages]                         │

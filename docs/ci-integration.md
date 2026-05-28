@@ -61,7 +61,7 @@ The project uses GitHub Actions with workflows in `.github/workflows/`. There ar
 | **Validation Gate** | `validation-gate.yml` | Every PR to `main` (opened, synchronize, reopened) | Builds `DocGeneration.PipelineRunner`, runs `Test-ArticleHealth.ps1` + `Scan-McpToolCoverage.ps1` against changed articles (or committed fixtures), posts results as a PR comment. Starts in warn-only mode; promote to blocking by changing `GATE_MODE: warn` → `GATE_MODE: block` after 2 clean weeks. |
 | **Squad CI** | `squad-ci.yml` | PR to `dev`/`preview`/`main`/`insider`, push to `dev`/`insider` | Placeholder for additional build/test commands (currently echoes a TODO) |
 | **Generate MCP Documentation** | `generate-docs.yml` | Manual (`workflow_dispatch`) only | Three-job pipeline: (1) generate CLI output via Docker, (2) generate documentation, (3) optionally generate AI example prompts. Uploads artifacts with 10-day retention |
-| **Test @azure/mcp Update** | `test-azure-mcp-update.yml` | PR changing `test-npm-azure-mcp/package.json` or `package-lock.json` | Installs `@azure/mcp` npm package and runs `azmcp --version` and `azmcp --help` to validate the CLI still works |
+| **Test @azure/mcp Update** | `test-azure-mcp-update.yml` | PR changing `mcp-cli-metadata/package.json` or `package-lock.json` | Installs `@azure/mcp` npm package and runs `azmcp --version` and `azmcp --help` to validate the CLI still works |
 | **Update @azure/mcp Version** | `update-azure-mcp.yml` | Nightly schedule (9:00 AM UTC), manual | Checks for new `@azure/mcp` versions, creates a PR with the update, snapshots tool list, diffs against previous version, runs npm audit, enables auto-merge for non-breaking changes |
 
 ### Operational Workflows (Squad Management)

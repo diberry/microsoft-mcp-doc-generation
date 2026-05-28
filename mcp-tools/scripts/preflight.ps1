@@ -41,7 +41,6 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-Path (Join-Path $scriptDir "../..")
 $mcpToolsDir = Join-Path $repoRoot "mcp-tools"
-$testNpmDir = Join-Path $repoRoot "test-npm-azure-mcp"
 
 # Determine output directory
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
@@ -107,27 +106,13 @@ Write-Host ""
 
 # Step 4: Generate tool metadata from MCP CLI
 Write-Host "Generating CLI tool metadata..." -ForegroundColor Yellow
-Push-Location $testNpmDir
-try {
-    Write-Host "  Installing npm dependencies..." -ForegroundColor Gray
-    npm install --silent 2>&1 | Out-Null
-    
-    Write-Host "  Extracting CLI version..." -ForegroundColor Gray
-    $versionFile = Join-Path $OutputPath "cli/cli-version.json"
-    npm run --silent get:version | Out-File -FilePath $versionFile -Encoding utf8 -NoNewline
-    
-    Write-Host "  Extracting tool metadata..." -ForegroundColor Gray
-    $outputFile = Join-Path $OutputPath "cli/cli-output.json"
-    npm run --silent get:tools-json | Out-File -FilePath $outputFile -Encoding utf8 -NoNewline
-    
-    Write-Host "  Extracting namespace metadata..." -ForegroundColor Gray
-    $namespaceFile = Join-Path $OutputPath "cli/cli-namespace.json"
-    npm run --silent get:tools-namespace | Out-File -FilePath $namespaceFile -Encoding utf8 -NoNewline
-    
-    Write-Host "✓ Generated CLI tool metadata" -ForegroundColor Green
-} finally {
-    Pop-Location
+$mcpCliMetadataProject = Join-Path $mcpToolsDir "McpCliMetadata\McpCliMetadata.csproj"
+& dotnet run --project $mcpCliMetadataProject --configuration Release --no-build -- $OutputPath
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "⛔ PIPELINE HALTED: CLI metadata generation failed" -ForegroundColor Red
+    exit 1
 }
+Write-Host "✓ Generated CLI tool metadata" -ForegroundColor Green
 Write-Host ""
 
 # Step 5: Validate brand mappings (CRITICAL - stops pipeline if validation fails)

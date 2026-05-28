@@ -47,7 +47,7 @@ To generate the live file:
 bash mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests/pretest.sh
 ```
 
-The script tries `azmcp` directly, then falls back to `npm run --silent get:tools-json` via `test-npm-azure-mcp/`.
+The script tries `azmcp` directly, then falls back to the tracked snapshot in `mcp-cli-metadata/` when the CLI isn't installed locally.
 
 ## Test Structure
 
