@@ -120,26 +120,25 @@ public sealed class BootstrapStep : StepDefinition
                 return BuildResult(context, processResults, success: false, warnings);
             }
 
-            var npmExecutable = GetNpmExecutable();
 
             if (!context.Request.SkipNpmUpdate)
             {
-                context.Reports.Info("Updating @azure/mcp to latest version...");
+                context.Reports.Info("Updating azure.mcp dotnet tool to latest version...");
                 var latestInstallResult = await context.ProcessRunner.RunAsync(
-                    new ProcessSpec(npmExecutable, ["install", "-g", "@azure/mcp@latest"], context.RepoRoot),
+                    new ProcessSpec("dotnet", ["tool", "update", "azure.mcp", "--global"], context.RepoRoot),
                     cancellationToken);
                 processResults.Add(latestInstallResult);
                 if (!latestInstallResult.Succeeded)
                 {
-                    AddProcessIssue(latestInstallResult, warnings, "Failed to install latest @azure/mcp globally — use --skip-npm-update for offline or reproducible builds");
+                    AddProcessIssue(latestInstallResult, warnings, "Failed to update azure.mcp dotnet tool globally — use --skip-tool-update for offline or reproducible builds");
                     return BuildResult(context, processResults, success: false, warnings);
                 }
 
-                context.Reports.Info("@azure/mcp updated to latest.");
+                context.Reports.Info("azure.mcp dotnet tool updated to latest.");
             }
             else
             {
-                context.Reports.Info("Skipping @azure/mcp latest update (--skip-npm-update).");
+                context.Reports.Info("Skipping azure.mcp dotnet tool update (--skip-npm-update).");
             }
 
             var metadataGenerationResult = await context.ProcessRunner.RunDotNetProjectAsync(
@@ -383,9 +382,6 @@ public sealed class BootstrapStep : StepDefinition
         }
     }
 
-    private static string GetNpmExecutable()
-        => OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
-
     /// <summary>
     /// Loads <c>brand-to-server-mapping.json</c> from the given path as a list of <see cref="BrandMappingEntry"/>.
     /// Returns an empty list if the file does not exist or contains malformed JSON.
@@ -444,30 +440,6 @@ public sealed class BootstrapStep : StepDefinition
         return requiredProjects
             .Select(project => Path.Combine(mcpToolsRoot, project, "bin", "Release", targetFramework, $"{project}.dll"))
             .ToArray();
-    }
-
-    private static async ValueTask<ProcessExecutionResult> CaptureCommandOutputAsync(
-        PipelineContext context,
-        ICollection<ProcessExecutionResult> processResults,
-        string workingDirectory,
-        string outputDirectory,
-        string scriptName,
-        string outputFileName,
-        CancellationToken cancellationToken)
-    {
-        var result = await context.ProcessRunner.RunAsync(
-            new ProcessSpec(GetNpmExecutable(), ["run", "--silent", scriptName], workingDirectory),
-            cancellationToken);
-        processResults.Add(result);
-
-        if (result.Succeeded)
-        {
-            var outputPath = Path.Combine(outputDirectory, outputFileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-            await File.WriteAllTextAsync(outputPath, result.StandardOutput.Trim(), Encoding.UTF8, cancellationToken);
-        }
-
-        return result;
     }
 
     /// <summary>

@@ -113,7 +113,8 @@ public class AzmcpRunnerTests
         var runner = new AzmcpRunner(capturing);
         await runner.GetVersionAsync();
         var expected = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
-        Assert.Equal(expected, capturing.LastFileName);
+        // Binary may be a full path — just verify the filename portion matches
+        Assert.Equal(expected, Path.GetFileName(capturing.LastFileName));
     }
 
     [Fact]
@@ -123,7 +124,7 @@ public class AzmcpRunnerTests
         var runner = new AzmcpRunner(capturing);
         await runner.GetToolsJsonAsync();
         var expected = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
-        Assert.Equal(expected, capturing.LastFileName);
+        Assert.Equal(expected, Path.GetFileName(capturing.LastFileName));
     }
 
     [Fact]
@@ -133,7 +134,75 @@ public class AzmcpRunnerTests
         var runner = new AzmcpRunner(capturing);
         await runner.GetNamespaceJsonAsync();
         var expected = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
-        Assert.Equal(expected, capturing.LastFileName);
+        Assert.Equal(expected, Path.GetFileName(capturing.LastFileName));
+    }
+
+    // --- ResolveBinaryPath tests ---
+
+    [Fact]
+    public void ResolveBinaryPath_EmptyPath_ReturnsFallbackName()
+    {
+        var result = AzmcpRunner.ResolveBinaryPath(string.Empty);
+        var expected = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ResolveBinaryPath_PathWithNonExistentDirs_ReturnsFallbackName()
+    {
+        var fakePath = OperatingSystem.IsWindows()
+            ? @"C:\no-such-dir-abc123;C:\another-fake-dir"
+            : "/no-such-dir-abc123:/another-fake-dir";
+        var result = AzmcpRunner.ResolveBinaryPath(fakePath);
+        var expected = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ResolveBinaryPath_BinaryExistsInPathDir_ReturnsFullPath()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"azmcp-path-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var binaryName = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+        var binaryPath = Path.Combine(tempDir, binaryName);
+        File.WriteAllText(binaryPath, string.Empty);
+        try
+        {
+            var separator = OperatingSystem.IsWindows() ? ';' : ':';
+            var fakePath = $"/no-such-dir-abc123{separator}{tempDir}";
+            var result = AzmcpRunner.ResolveBinaryPath(fakePath);
+            Assert.Equal(binaryPath, result);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolveBinaryPath_ReturnsFirstMatchWhenMultipleDirsContainBinary()
+    {
+        var tempDir1 = Path.Combine(Path.GetTempPath(), $"azmcp-path-test-first-{Guid.NewGuid():N}");
+        var tempDir2 = Path.Combine(Path.GetTempPath(), $"azmcp-path-test-second-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir1);
+        Directory.CreateDirectory(tempDir2);
+        var binaryName = OperatingSystem.IsWindows() ? "azmcp.cmd" : "azmcp";
+        var binaryPath1 = Path.Combine(tempDir1, binaryName);
+        var binaryPath2 = Path.Combine(tempDir2, binaryName);
+        File.WriteAllText(binaryPath1, string.Empty);
+        File.WriteAllText(binaryPath2, string.Empty);
+        try
+        {
+            var separator = OperatingSystem.IsWindows() ? ';' : ':';
+            var fakePath = $"{tempDir1}{separator}{tempDir2}";
+            var result = AzmcpRunner.ResolveBinaryPath(fakePath);
+            Assert.Equal(binaryPath1, result);
+        }
+        finally
+        {
+            Directory.Delete(tempDir1, recursive: true);
+            Directory.Delete(tempDir2, recursive: true);
+        }
     }
 }
 
