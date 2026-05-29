@@ -20,9 +20,10 @@ public class CliTabWrapperTests
 
         Assert.Contains("#### [MCP Server](#tab/mcp-server)", result);
         Assert.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
-        Assert.Contains(mcpContent.TrimEnd(), result);
+        Assert.Contains("| Parameter | Required |", result);
+        Assert.DoesNotContain("List storage accounts.", result);
         Assert.Contains(cliContent.TrimEnd(), result);
-        // Must end with tab group terminator
+        AssertCliTabBeforeMcpTab(result);
         Assert.Contains("---", result);
     }
 
@@ -40,8 +41,9 @@ public class CliTabWrapperTests
     public void WrapWithTabs_EmptyCliContent_ReturnsOriginal()
     {
         var mcpContent = "Some MCP content here.";
+        const string cliContent = "   ";
 
-        var result = CliTabWrapper.WrapWithTabs(mcpContent, "   ");
+        var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
         Assert.Equal(mcpContent, result);
     }
@@ -53,6 +55,7 @@ public class CliTabWrapperTests
 
         Assert.Contains("#tab/mcp-server", result);
         Assert.Contains("#tab/azure-mcp-cli", result);
+        AssertCliTabBeforeMcpTab(result);
     }
 
     [Fact]
@@ -65,7 +68,6 @@ public class CliTabWrapperTests
 
         var lines = result.Split('\n');
 
-        // The only standalone "---" should be the tab terminator at the end
         int dashCount = 0;
         foreach (var line in lines)
         {
@@ -73,6 +75,261 @@ public class CliTabWrapperTests
                 dashCount++;
         }
         Assert.Equal(1, dashCount);
+    }
+
+    [Fact]
+    public void WrapWithTabs_DescriptionExtracted_NotInEitherTab()
+    {
+        const string description = "List storage accounts in the current subscription.";
+        var mcpContent = $"{description}\n\n| Parameter | Required |\n|---|---|\n| Subscription | Yes |";
+        var cliContent = $"{description}\n\n```bash\naz storage account list\n```";
+
+        var (tabBlock, extractedDescription) = CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent);
+
+        Assert.Equal(description, extractedDescription);
+        Assert.Equal(0, CountOccurrences(tabBlock, description));
+        AssertCliTabBeforeMcpTab(tabBlock);
+    }
+
+    [Fact]
+    public void WrapWithTabs_DescriptionPlaced_AboveTabBlock()
+    {
+        const string article = """
+            ## List accounts
+            <!-- @mcpcli storage account list -->
+
+            List storage accounts in a subscription.
+
+            | Parameter | Required |
+            |---|---|
+            | Subscription | Yes |
+            """;
+
+        var cliContent = new Dictionary<string, string>
+        {
+            ["storage account list"] = """
+                List storage accounts in a subscription.
+
+                ```bash
+                az storage account list
+                ```
+                """
+        };
+
+        var result = CliTabWrapper.ApplyTabsToFamilyArticle(article, cliContent).ReplaceLineEndings("\n");
+
+        Assert.Contains("## List accounts\n\nList storage accounts in a subscription.\n\n#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
+    }
+
+    [Fact]
+    public void WrapWithTabs_NullDescription_NoEmptyParagraph()
+    {
+        const string article = """
+            ## List accounts
+            <!-- @mcpcli storage account list -->
+
+            | Parameter | Required |
+            |---|---|
+            | Subscription | Yes |
+            """;
+
+        var cliContent = new Dictionary<string, string>
+        {
+            ["storage account list"] = "```bash\naz storage account list\n```"
+        };
+
+        var result = CliTabWrapper.ApplyTabsToFamilyArticle(article, cliContent).ReplaceLineEndings("\n");
+
+        Assert.DoesNotContain("## List accounts\n\n\n#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
+        Assert.Contains("## List accounts\n#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
+    }
+
+    [Fact]
+    public void WrapWithTabs_EmptyMcpDescription_TabsStillRender()
+    {
+        var mcpContent = "| Parameter | Required |\n|---|---|\n| Subscription | Yes |";
+        var cliContent = "```bash\naz storage account list\n```";
+
+        var (tabBlock, description) = CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent);
+
+        Assert.Null(description);
+        Assert.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", tabBlock);
+        Assert.Contains("#### [MCP Server](#tab/mcp-server)", tabBlock);
+        AssertCliTabBeforeMcpTab(tabBlock);
+    }
+
+    [Fact]
+    public void WrapWithTabs_LongDescription_PlacedVerbatim()
+    {
+        var description = string.Join(" ", Enumerable.Repeat("This tool lists storage accounts across filtered scopes for reporting and inventory scenarios.", 7));
+        var mcpContent = $"{description}\n\n| Parameter | Required |\n|---|---|\n| Subscription | Yes |";
+        var cliContent = $"{description}\n\n```bash\naz storage account list\n```";
+
+        var article = $"""
+            ## List accounts
+            <!-- @mcpcli storage account list -->
+
+            {description}
+
+            | Parameter | Required |
+            |---|---|
+            | Subscription | Yes |
+            """;
+
+        var cliContentByCommand = new Dictionary<string, string>
+        {
+            ["storage account list"] = cliContent
+        };
+
+        var result = CliTabWrapper.ApplyTabsToFamilyArticle(article, cliContentByCommand);
+        var normalized = result.ReplaceLineEndings("\n");
+
+        Assert.Contains(description, normalized);
+        Assert.Contains($"\n\n{description}\n\n#### [Azure MCP CLI](#tab/azure-mcp-cli)", normalized);
+        Assert.DoesNotContain($"{description}\n\n```bash", CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent).TabBlock);
+    }
+
+    [Fact]
+    public void WrapWithTabs_Output_DoesNotContainMcpBranding()
+    {
+        const string description = "Use Model Context Protocol (MCP) wording here.";
+        var mcpContent = $"{description}\n\n| Parameter | Required |\n|---|---|\n| Subscription | Yes |";
+        var cliContent = $"{description}\n\n```bash\naz storage account list\n```";
+
+        var result = CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent).TabBlock;
+
+        Assert.DoesNotContain("(MCP)", result);
+    }
+
+    [Fact]
+    public void StripMatchingDescriptionFromCli_DifferentDescription_LeavesCliUnchanged()
+    {
+        var cliContent = "Different CLI description.\n\n```bash\naz storage list\n```";
+
+        var result = Shared.CliTabWrapper.StripMatchingDescriptionFromCli(cliContent, "MCP description text.");
+
+        Assert.Contains("Different CLI description.", result);
+    }
+
+    [Fact]
+    public void ExtractDescription_MultiLineDescription_JoinsAsOneParagraph()
+    {
+        var content = "First line of description\nsecond line continues here.\n\n| Parameter | Required |\n|---|---|";
+
+        var (remaining, description) = Shared.CliTabWrapper.ExtractDescription(content);
+
+        Assert.Equal("First line of description second line continues here.", description);
+        Assert.Contains("| Parameter | Required |", remaining);
+    }
+
+    [Fact]
+    public void ExtractDescription_PipeInDescription_DoesNotTruncate()
+    {
+        // Pipe at start of line IS a boundary; pipe mid-line is NOT
+        var content = "Lists items and their status.\n\n| Parameter | Required |\n|---|---|";
+
+        var (_, description) = Shared.CliTabWrapper.ExtractDescription(content);
+
+        Assert.Equal("Lists items and their status.", description);
+    }
+
+    [Fact]
+    public void ExtractDescription_DescriptionOnly_NoTable_ExtractsCorrectly()
+    {
+        var content = "Creates a new storage account in the specified resource group.";
+
+        var (remaining, description) = Shared.CliTabWrapper.ExtractDescription(content);
+
+        Assert.Equal("Creates a new storage account in the specified resource group.", description);
+        Assert.Equal("", remaining.Trim());
+    }
+
+    [Fact]
+    public void StripProseFromMcpContent_RemovesExtraParagraphsBeforeExamplePrompts()
+    {
+        var content = """
+            <!-- @mcpcli foundryextensions knowledge index list -->
+
+            List the knowledge indexes in a Microsoft Foundry project.
+
+            Requires the project endpoint URL and authentication context before you run the tool.
+
+            Notes:
+            - The list shows indexes that are available to your project.
+
+            Example prompts include:
+
+            - "List all knowledge indexes in my project."
+
+            | Parameter | Required or optional | Description |
+            |-----------|----------------------|-------------|
+            | **Project endpoint** | Required | The project endpoint URL. |
+            """;
+
+        var result = Shared.CliTabWrapper.StripProseFromMcpContent(content).ReplaceLineEndings("\n");
+
+        Assert.StartsWith("<!-- @mcpcli foundryextensions knowledge index list -->\n\nExample prompts include:", result);
+        Assert.DoesNotContain("Requires the project endpoint URL", result);
+        Assert.DoesNotContain("Notes:", result);
+        Assert.Contains("| Parameter | Required or optional | Description |", result);
+    }
+
+    [Fact]
+    public void StripProseFromMcpContent_WithoutExamplePrompts_KeepsParameterTable()
+    {
+        var content = """
+            <!-- @mcpcli storage account list -->
+
+            List storage accounts in a subscription.
+
+            Use this to inspect account inventory before you take action.
+
+            | Parameter | Required |
+            |---|---|
+            | Subscription | Yes |
+            """;
+
+        var result = Shared.CliTabWrapper.StripProseFromMcpContent(content).ReplaceLineEndings("\n");
+
+        Assert.StartsWith("<!-- @mcpcli storage account list -->\n\n| Parameter | Required |", result);
+        Assert.DoesNotContain("Use this to inspect account inventory", result);
+    }
+
+    [Fact]
+    public void WrapWithTabsAndExtractDescription_StripsMcpProseButPreservesAnnotationBlock()
+    {
+        var mcpContent = """
+            <!-- @mcpcli storage account list -->
+
+            List storage accounts in a subscription.
+
+            Use this to inspect inventory before you take action.
+
+            Example prompts include:
+
+            - "List storage accounts in subscription 'sub1'."
+
+            | Parameter | Required |
+            |---|---|
+            | Subscription | Yes |
+
+            [Tool annotation hints](index.md#tool-annotations):
+
+            Destructive: ❌ | Idempotent: ✅ | Read-only: ✅
+            """;
+        var cliContent = """
+            ```bash
+            az storage account list
+            ```
+            """;
+
+        var (tabBlock, description) = CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent);
+
+        Assert.Equal("List storage accounts in a subscription.", description);
+        Assert.DoesNotContain("Use this to inspect inventory before you take action.", tabBlock);
+        Assert.Contains("Example prompts include:", tabBlock);
+        Assert.Contains("[Tool annotation hints](index.md#tool-annotations):", tabBlock);
+        Assert.Contains("Destructive: ❌ | Idempotent: ✅ | Read-only: ✅", tabBlock);
     }
 
     // ── ApplyTabsToFamilyArticle ──────────────────────────────────
@@ -111,7 +368,7 @@ public class CliTabWrapperTests
     {
         var cliContent = new Dictionary<string, string>
         {
-            ["storage account list"] = "```bash\naz storage account list\n```"
+            ["storage account list"] = "List storage accounts in a subscription.\n\n```bash\naz storage account list\n```"
         };
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(FamilyArticle, cliContent);
@@ -119,6 +376,7 @@ public class CliTabWrapperTests
         Assert.Contains("#### [MCP Server](#tab/mcp-server)", result);
         Assert.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
         Assert.Contains("az storage account list", result);
+        AssertCliTabBeforeMcpTab(result);
     }
 
     [Fact]
@@ -126,36 +384,33 @@ public class CliTabWrapperTests
     {
         var cliContent = new Dictionary<string, string>
         {
-            ["storage account list"] = "```bash\naz storage account list\n```",
-            ["storage account create"] = "```bash\naz storage account create\n```"
+            ["storage account list"] = "List storage accounts in a subscription.\n\n```bash\naz storage account list\n```",
+            ["storage account create"] = "Create a new storage account.\n\n```bash\naz storage account create\n```"
         };
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(FamilyArticle, cliContent);
 
-        // Count MCP Server tab headers — should have 2 (one per tool)
         var mcpTabCount = CountOccurrences(result, "#### [MCP Server](#tab/mcp-server)");
         Assert.Equal(2, mcpTabCount);
 
         var cliTabCount = CountOccurrences(result, "#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         Assert.Equal(2, cliTabCount);
+        AssertCliTabBeforeMcpTab(result);
     }
 
     [Fact]
     public void ApplyTabsToFamilyArticle_ToolWithoutCliContent_LeftUnchanged()
     {
-        // Only provide CLI content for one of the two tools
         var cliContent = new Dictionary<string, string>
         {
-            ["storage account list"] = "```bash\naz storage account list\n```"
+            ["storage account list"] = "List storage accounts in a subscription.\n\n```bash\naz storage account list\n```"
         };
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(FamilyArticle, cliContent);
 
-        // Should have exactly 1 tab group (only for "list")
         var mcpTabCount = CountOccurrences(result, "#### [MCP Server](#tab/mcp-server)");
         Assert.Equal(1, mcpTabCount);
 
-        // "Create account" section content should still be present
         Assert.Contains("Create a new storage account.", result);
     }
 
@@ -179,19 +434,14 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(FamilyArticle, cliContent);
 
-        // Frontmatter preserved
         Assert.Contains("ms.topic: include", result);
-        // Title preserved
         Assert.Contains("# Azure Storage tools", result);
-        // Quick Navigation preserved
         Assert.Contains("## Quick Navigation", result);
     }
 
     [Fact]
     public void ApplyTabsToFamilyArticle_CommandNormalized_CaseInsensitive()
     {
-        // The marker says "storage account list" but we provide uppercase key
-        // NormalizeCommand lowercases, so matching should work
         var cliContent = new Dictionary<string, string>
         {
             ["storage account list"] = "cli content for list"
@@ -201,12 +451,12 @@ public class CliTabWrapperTests
 
         Assert.Contains("#### [MCP Server](#tab/mcp-server)", result);
         Assert.Contains("cli content for list", result);
+        AssertCliTabBeforeMcpTab(result);
     }
 
     [Fact]
     public void ApplyTabsToFamilyArticle_NoMcpCliMarkers_NoTabsInjected()
     {
-        // Article with NO @mcpcli markers — MCP-only content
         const string mcpOnlyArticle = """
             ---
             ms.topic: include
@@ -241,10 +491,8 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(mcpOnlyArticle, cliContent);
 
-        // Verify no tab markers added (content may have normalized line endings)
         Assert.DoesNotContain("#### [MCP Server](#tab/mcp-server)", result);
         Assert.DoesNotContain("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
-        // Verify original content is preserved (key sections present)
         Assert.Contains("# Azure Key Vault tools", result);
         Assert.Contains("## Overview", result);
         Assert.Contains("## List secrets", result);
@@ -274,8 +522,7 @@ public class CliTabWrapperTests
             ["some tool"] = "cli content"
         };
 
-        // Should not throw
-        var exception = Record.Exception(() => 
+        var exception = Record.Exception(() =>
             CliTabWrapper.ApplyTabsToFamilyArticle(mcpOnlyArticle, cliContent));
 
         Assert.Null(exception);
@@ -290,23 +537,16 @@ public class CliTabWrapperTests
             "| Parameter | Required |\n|---|---|\n| Sub | Yes |\n\n" +
             "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\n\n" +
             "Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌";
-        var cliContent = "```bash\naz storage account list\n```\n\n| Parameter | Required |\n|---|---|\n| --sub | Yes |";
+        var cliContent = "List storage accounts.\n\n```bash\naz storage account list\n```\n\n| Parameter | Required |\n|---|---|\n| --sub | Yes |";
 
         var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
-        // Annotation block should appear exactly once — after the --- separator
         var annotationCount = CountOccurrences(result, "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):");
         Assert.Equal(1, annotationCount);
 
-        // Annotation must be AFTER the --- separator
         var separatorPos = result.IndexOf("\n---", StringComparison.Ordinal);
         var annotationPos = result.IndexOf("[Tool annotation hints]", StringComparison.Ordinal);
         Assert.True(annotationPos > separatorPos, "Annotation should be after --- separator");
-
-        // Annotation must NOT be inside either tab
-        var mcpTabStart = result.IndexOf("#### [MCP Server](#tab/mcp-server)", StringComparison.Ordinal);
-        var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
-        Assert.True(annotationPos > separatorPos, "Annotation must be outside tabs");
     }
 
     [Fact]
@@ -317,7 +557,6 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
-        // No annotation anywhere
         Assert.DoesNotContain("[Tool annotation hints]", result);
         Assert.Contains("az storage account list", result);
     }
@@ -328,20 +567,21 @@ public class CliTabWrapperTests
         var mcpContent = "Description.\n\n" +
             "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\n\n" +
             "Destructive: ✅ | Idempotent: ❌ | Open World: ✅ | Read Only: ❌ | Secret: ❌ | Local Required: ❌";
-        var cliContent = "```bash\naz tool run\n```";
+        var cliContent = "Description.\n\n```bash\naz tool run\n```";
 
         var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
-        // Annotation should be AFTER the --- terminator
         var terminatorPos = result.IndexOf("\n---", StringComparison.Ordinal);
         var annotationPos = result.IndexOf("Destructive: ✅", StringComparison.Ordinal);
 
         Assert.True(annotationPos > terminatorPos, "Annotation should be after --- terminator");
 
-        // The MCP tab content should NOT contain annotation
-        var mcpTabStart = result.IndexOf("#### [MCP Server](#tab/mcp-server)", StringComparison.Ordinal);
         var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
-        var mcpTabContent = result.Substring(mcpTabStart, cliTabStart - mcpTabStart);
+        var mcpTabStart = result.IndexOf("#### [MCP Server](#tab/mcp-server)", StringComparison.Ordinal);
+        var cliTabContent = result.Substring(cliTabStart, mcpTabStart - cliTabStart);
+        var mcpTabContent = result.Substring(mcpTabStart, terminatorPos - mcpTabStart);
+
+        Assert.DoesNotContain("[Tool annotation hints]", cliTabContent);
         Assert.DoesNotContain("[Tool annotation hints]", mcpTabContent);
     }
 
@@ -369,19 +609,24 @@ public class CliTabWrapperTests
 
         var cliContent = new Dictionary<string, string>
         {
-            ["storage account list"] = "```bash\naz storage account list\n```"
+            ["storage account list"] = "List storage accounts in a subscription.\n\n```bash\naz storage account list\n```"
         };
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(familyWithAnnotations, cliContent);
 
-        // Annotation should appear exactly once — after the --- separator, outside tabs
         var annotationCount = CountOccurrences(result, "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):");
         Assert.Equal(1, annotationCount);
 
-        // Verify annotation is after --- separator
         var separatorPos = result.IndexOf("\n---", StringComparison.Ordinal);
         var annotationPos = result.IndexOf("[Tool annotation hints]", StringComparison.Ordinal);
         Assert.True(annotationPos > separatorPos, "Annotation should be after --- separator");
+    }
+
+    private static void AssertCliTabBeforeMcpTab(string text)
+    {
+        Assert.True(
+            text.IndexOf("#tab/azure-mcp-cli", StringComparison.Ordinal) <
+            text.IndexOf("#tab/mcp-server", StringComparison.Ordinal));
     }
 
     private static int CountOccurrences(string text, string pattern)

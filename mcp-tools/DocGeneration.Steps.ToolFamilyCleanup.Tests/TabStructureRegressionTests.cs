@@ -15,11 +15,11 @@ public class TabStructureRegressionTests
     private static string FixturesDir => RegressionTestHelpers.FixturesDir;
     private static string RepoRoot => RegressionTestHelpers.RepoRoot;
 
-    // ── R-TS1: MCP tab appears first ─────────────────────────────────────
+    // ── R-TS1: CLI tab appears first ─────────────────────────────────────
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
-    public void R_TS1_McpTabAppearsFirst()
+    public void R_TS1_CliTabAppearsFirst()
     {
         var content = LoadFixture("ValidToolFamily.md");
         var toolSections = GetToolSections(content);
@@ -31,16 +31,16 @@ public class TabStructureRegressionTests
 
             if (mcpIndex >= 0 && cliIndex >= 0)
             {
-                Assert.True(mcpIndex < cliIndex, "MCP tab must appear before CLI tab");
+                Assert.True(cliIndex < mcpIndex, "CLI tab must appear before MCP tab");
             }
         }
     }
 
-    // ── R-TS2: CLI tab appears second ────────────────────────────────────
+    // ── R-TS2: MCP tab appears second ────────────────────────────────────
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
-    public void R_TS2_CliTabAppearsSecond()
+    public void R_TS2_McpTabAppearsSecond()
     {
         var content = LoadFixture("ValidToolFamily.md");
         var toolSections = GetToolSections(content);
@@ -52,7 +52,7 @@ public class TabStructureRegressionTests
 
             Assert.True(mcpIndex >= 0, "MCP tab header missing");
             Assert.True(cliIndex >= 0, "CLI tab header missing");
-            Assert.True(cliIndex > mcpIndex, "CLI tab must appear after MCP tab");
+            Assert.True(mcpIndex > cliIndex, "MCP tab must appear after CLI tab");
         }
     }
 
@@ -92,38 +92,17 @@ public class TabStructureRegressionTests
             var cliStart = section.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
             if (mcpStart < 0 || cliStart < 0) continue;
 
-            // Content between MCP header and CLI header (MCP tab content)
-            var mcpHeaderEnd = section.IndexOf('\n', mcpStart) + 1;
-            var mcpContent = section[mcpHeaderEnd..cliStart];
-            Assert.Equal(0, RegressionTestHelpers.CountSeparatorsOutsideCodeBlocks(mcpContent));
-
-            // CLI tab content: from after CLI header to end of section
+            // CLI content is between the CLI header and MCP header.
             var cliHeaderEnd = section.IndexOf('\n', cliStart) + 1;
-            var cliContent = section[cliHeaderEnd..];
+            var cliContent = section[cliHeaderEnd..mcpStart];
+            Assert.Equal(0, RegressionTestHelpers.CountSeparatorsOutsideCodeBlocks(cliContent));
 
-            // Count separators in CLI tab — should be exactly 1 (the tab terminator)
-            var lines = cliContent.Split('\n');
-            bool inCodeBlock = false;
-            int separatorsBeforeTerminator = 0;
-            bool foundTerminator = false;
-            foreach (var line in lines)
-            {
-                var trimmed = line.TrimEnd('\r');
-                if (trimmed.StartsWith("```")) inCodeBlock = !inCodeBlock;
-                if (!inCodeBlock && trimmed == "---")
-                {
-                    if (!foundTerminator)
-                    {
-                        foundTerminator = true; // First --- is the tab terminator
-                    }
-                    else
-                    {
-                        separatorsBeforeTerminator++;
-                    }
-                }
-            }
-            Assert.True(foundTerminator, "Tab terminator --- not found in CLI tab content");
-            Assert.Equal(0, separatorsBeforeTerminator);
+            // MCP tab content is between the MCP header and the tab terminator.
+            var mcpHeaderEnd = section.IndexOf('\n', mcpStart) + 1;
+            var separatorIndex = RegressionTestHelpers.FindTabSeparatorIndex(section);
+            Assert.True(separatorIndex > mcpHeaderEnd, "Tab terminator --- not found after MCP tab");
+            var mcpContent = section[mcpHeaderEnd..separatorIndex];
+            Assert.Equal(0, RegressionTestHelpers.CountSeparatorsOutsideCodeBlocks(mcpContent));
         }
     }
 

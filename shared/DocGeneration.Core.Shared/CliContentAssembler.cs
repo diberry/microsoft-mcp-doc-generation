@@ -23,10 +23,6 @@ public static class CliContentAssembler
     {
         var sb = new StringBuilder();
 
-        // CLI description (AI-improved)
-        sb.AppendLine(tool.Description);
-        sb.AppendLine();
-
         // Example commands (deterministic, from include file or generated)
         if (!string.IsNullOrWhiteSpace(exampleCommandsContent))
         {

@@ -14,13 +14,13 @@ public class CliTabValidatorTests
         var markdown = """
             ## Tool A
 
-            #### [MCP Server](#tab/mcp-server)
-
-            MCP content here.
-
             #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI content here.
+
+            #### [MCP Server](#tab/mcp-server)
+
+            MCP content here.
 
             ---
 
@@ -36,9 +36,9 @@ public class CliTabValidatorTests
     public void Validate_MismatchedTabCounts_ReturnsError()
     {
         var markdown = """
-            #### [MCP Server](#tab/mcp-server)
+            #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
-            MCP content.
+            CLI content.
 
             ---
             """;
@@ -53,13 +53,13 @@ public class CliTabValidatorTests
     public void Validate_UnterminatedTabGroup_ReturnsError()
     {
         var markdown = """
-            #### [MCP Server](#tab/mcp-server)
-
-            MCP content.
-
             #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI content.
+
+            #### [MCP Server](#tab/mcp-server)
+
+            MCP content.
             """;
 
         var result = CliTabValidator.Validate(markdown);
@@ -72,17 +72,13 @@ public class CliTabValidatorTests
     public void Validate_NestedTabGroup_ReturnsError()
     {
         var markdown = """
-            #### [MCP Server](#tab/mcp-server)
-
-            MCP content.
-
-            #### [MCP Server](#tab/mcp-server)
-
-            Nested MCP content.
-
             #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI content.
+
+            #### [Azure MCP CLI](#tab/azure-mcp-cli)
+
+            Nested CLI content.
 
             ---
             """;
@@ -94,12 +90,12 @@ public class CliTabValidatorTests
     }
 
     [Fact]
-    public void Validate_CliTabWithoutMcpTab_ReturnsError()
+    public void Validate_McpTabWithoutCliTab_ReturnsError()
     {
         var markdown = """
-            #### [Azure MCP CLI](#tab/azure-mcp-cli)
+            #### [MCP Server](#tab/mcp-server)
 
-            CLI content without MCP tab.
+            MCP content without CLI tab.
 
             ---
             """;
@@ -107,7 +103,7 @@ public class CliTabValidatorTests
         var result = CliTabValidator.Validate(markdown);
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.Contains("CLI tab opened without preceding MCP Server tab"));
+        Assert.Contains(result.Errors, e => e.Contains("MCP Server tab opened without preceding Azure MCP CLI tab"));
     }
 
     [Fact]
@@ -132,25 +128,25 @@ public class CliTabValidatorTests
         var markdown = """
             ## Tool A
 
-            #### [MCP Server](#tab/mcp-server)
-
-            MCP A content.
-
             #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI A content.
+
+            #### [MCP Server](#tab/mcp-server)
+
+            MCP A content.
 
             ---
 
             ## Tool B
 
-            #### [MCP Server](#tab/mcp-server)
-
-            MCP B content.
-
             #### [Azure MCP CLI](#tab/azure-mcp-cli)
 
             CLI B content.
+
+            #### [MCP Server](#tab/mcp-server)
+
+            MCP B content.
 
             ---
             """;
