@@ -512,7 +512,6 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
    - PowerShell: Create separate `.ps1` files for distinct functionality (e.g., `validate-env.ps1`, `preflight.ps1`)
    - Bash: Create separate `.sh` files for reusable scripts
    - C#: Create separate projects or packages in `mcp-tools/` (e.g., `GenerativeAI`, `Shared`)
-   - Node.js: Create separate npm packages when appropriate
    - Benefits: Testability, reusability, maintainability, clear separation of concerns
    - Example: Environment validation extracted to `validate-env.ps1` instead of inline in preflight script
 8. **Cross-platform (bash ↔ PowerShell)**: See "Cross-Platform Script Interop" section below

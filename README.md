@@ -363,9 +363,8 @@ To modify AI-generated content quality or style:
 ## Prerequisites
 
 ### Required
-- **Node.js + npm** - For MCP CLI metadata extraction
-- **PowerShell (pwsh)** - Optional for legacy/manual fallback scripts; the standard `start.sh` path no longer depends on PowerShell
-- **.NET SDK** - For C# generator projects (projects use .NET 9.0)
+- **.NET SDK** — For C# generator projects (projects use .NET 9.0) and CLI metadata extraction (`mcp-tools/McpCliMetadata/`, .NET 10)
+- **PowerShell (pwsh)** — For orchestration scripts (`preflight.ps1`, etc.)
 
 ### Optional (for AI-enhanced steps)
 - **Azure OpenAI** - For steps 2, 3, 4, and 6 (example prompts, improvements, assembly cleanup, horizontal articles)

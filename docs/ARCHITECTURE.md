@@ -36,11 +36,11 @@ The Azure MCP Documentation Generator is a typed .NET pipeline that transforms r
 Raw CLI metadata flows through each step, transformed into richer content at each stage:
 
 ```
-npm (Azure MCP package)
+dotnet run --project mcp-tools/McpCliMetadata (Azure MCP package)
   │
   ▼
 Step 0: Bootstrap ─────────────────────────────────────────────────
-  │  • npm install + extract CLI metadata → cli-output.json
+  │  • dotnet run McpCliMetadata → cli-output.json, cli-namespace.json, cli-version.json
   │  • Build .NET solution
   │  • Brand mapping validation → reports/
   │  • E2E test prompt parsing → e2e-test-prompts/

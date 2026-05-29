@@ -1,1 +1,56 @@
-# mcp-cli-metadataAzure MCP CLI metadata extractor — the single integration point between the npm `@azure/mcp` package and the C# documentation generation pipeline.## PurposeThis package installs the Azure MCP CLI and extracts structured tool metadata (JSON) that feeds every step of the documentation pipeline. **All 52 namespace documentation generations depend on this package.**## Setup1. Copy `samples.env` to `.env` and fill in your Azure credentials:   ```bash   cp samples.env .env   ```2. Install dependencies:   ```bash   npm install   ```3. Verify the CLI works:   ```bash   npm run get:version   ```## Scripts| Script | Purpose | Used by Pipeline ||--------|---------|:---:|| `get:version` | Get MCP CLI version string | ✅ Bootstrap Step 0 || `get:tools-json` | Extract all tools as JSON | ✅ Bootstrap Step 0 || `get:tools-namespace` | Extract tools by namespace | ✅ Bootstrap Step 0 || `start` | Azure CLI login | Manual || `start:info` | MCP server info | Manual || `start:help` | CLI help text | Manual || `start:list` | List tools (human readable) | Manual || `get:subscriptions` | List Azure subscriptions | Manual || `get:chat-completion` | Test Azure OpenAI via MCP | Manual |## Pipeline Integration```start.sh → PipelineRunner → BootstrapStep (Step 0)  ├─ npm install (this package)  ├─ npm run get:version      → cli/cli-version.json  ├─ npm run get:tools-json   → cli/cli-output.json  └─ npm run get:tools-namespace → cli/cli-namespace.json      ↓  Steps 1-6 consume cli-output.json for all generation```## Version SnapshotsEach `@azure/mcp` version has a snapshot directory (e.g., `2.0.0-beta.31+.../tools-list.json`) preserving the tool metadata at that version. The GitHub workflow `update-azure-mcp.yml` automatically creates these on version updates.## Environment Variables (.env)| Variable | Required | Description ||----------|:---:|-------------|| `AZURE_SUBSCRIPTION_ID` | ✅ | Azure subscription GUID || `AZURE_TENANT_ID` | ✅ | Azure AD tenant GUID || `FOUNDRY_KEY` | For chat | Azure OpenAI API key || `AZURE_RESOURCE_GROUP` | For chat | Resource group name || `AZURE_FOUNDRY_NAME` | For chat | Foundry resource name || `AZURE_OPENAI_DEPLOYMENT_NAME` | For chat | Model deployment name || `AUTH_METHOD` | For chat | Authentication method (`key`) |
+# mcp-cli-metadata
+
+Azure MCP CLI metadata extractor — the single integration point between the `azmcp` binary and the C# documentation generation pipeline.
+
+## Purpose
+
+This directory contains two things:
+
+1. **Version snapshots** — per-version directories (e.g., `3.0.0-beta.10+.../tools-list.json`) preserving tool metadata at each `@azure/mcp` release. These are read-only historical artifacts created automatically by the `update-azure-mcp.yml` workflow.
+2. **Legacy reference** — historical Node.js scripts (now removed). CLI metadata extraction is handled exclusively by the .NET tool described below.
+
+**All 52 namespace documentation generations depend on the CLI metadata produced by `mcp-tools/McpCliMetadata/`.**
+
+## How CLI Metadata Is Extracted
+
+CLI metadata is extracted by `mcp-tools/McpCliMetadata/`, a .NET 10 console app that invokes the `azmcp` binary directly via `Process.Start`. It replaces the former Node.js npm scripts.
+
+### Run the extractor
+
+```bash
+dotnet run --project mcp-tools/McpCliMetadata -- ./generated
+```
+
+This produces three files in `./generated/cli/`:
+
+| Output file | Contents |
+|-------------|---------|
+| `cli-output.json` | All tools as structured JSON |
+| `cli-namespace.json` | Tools grouped by namespace |
+| `cli-version.json` | `azmcp` version string |
+
+### Pipeline integration
+
+```
+start.sh → PipelineRunner → BootstrapStep (Step 0)
+  ├─ dotnet run mcp-tools/McpCliMetadata   → cli/cli-version.json
+  │                                        → cli/cli-output.json
+  │                                        → cli/cli-namespace.json
+  ↓
+  Steps 1–6 consume cli-output.json for all generation
+```
+
+`preflight.ps1` calls `dotnet run --project mcp-tools/McpCliMetadata` instead of any npm scripts.
+
+### .NET tool location
+
+| Component | Path |
+|-----------|------|
+| Project file | `mcp-tools/McpCliMetadata/McpCliMetadata.csproj` |
+| Runner | `mcp-tools/McpCliMetadata/AzmcpRunner.cs` |
+| Entry point | `mcp-tools/McpCliMetadata/Program.cs` |
+| Tests | `mcp-tools/McpCliMetadata.Tests/` |
+
+## Version Snapshots
+
+Each `@azure/mcp` release has a snapshot directory here (e.g., `3.0.0-beta.10+7287903f.../tools-list.json`) preserving the tool metadata at that version. The GitHub workflow `update-azure-mcp.yml` creates these automatically on version updates. Do not edit snapshot directories — they are historical artifacts.
