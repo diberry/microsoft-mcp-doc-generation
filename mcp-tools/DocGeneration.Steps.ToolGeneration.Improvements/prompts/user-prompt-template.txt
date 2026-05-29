@@ -1,4 +1,4 @@
-Please review and improve the following Azure MCP tool documentation according to Microsoft style guidelines:
+Please review and improve the following Azure tool documentation according to Microsoft style guidelines:
 
 {0}
 
