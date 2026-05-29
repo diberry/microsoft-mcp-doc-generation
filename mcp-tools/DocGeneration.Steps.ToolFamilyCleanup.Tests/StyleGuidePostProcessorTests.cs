@@ -101,6 +101,15 @@ public class StyleGuidePostProcessorTests
     }
 
     [Fact]
+    public void Fix_DoesNotSplitCompoundWordsInsideMcpCliMarkers()
+    {
+        var input = "## Activity log: List\n\n<!-- @mcpcli monitor activitylog list -->\n\nThe activitylog shows events.";
+        var result = StyleGuidePostProcessor.Fix(input);
+        Assert.Contains("<!-- @mcpcli monitor activitylog list -->", result);
+        Assert.Contains("activity log", result.Split("-->")[1]);
+    }
+
+    [Fact]
     public void Fix_CompoundWord_SkipsFrontmatter()
     {
         var input = "---\ntitle: activitylog overview\n---\n\nThe activitylog tracks events.";

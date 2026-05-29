@@ -143,6 +143,7 @@ public static class StyleGuidePostProcessor
             return key;
         });
 
+        // MC = McpCli comment (matches CB=CodeBlock, IC=InlineCode, HD=HeaDing convention)
         body = McpCliCommentPattern.Replace(body, m =>
         {
             var key = $"\x00MC{placeholderIndex++}\x00";

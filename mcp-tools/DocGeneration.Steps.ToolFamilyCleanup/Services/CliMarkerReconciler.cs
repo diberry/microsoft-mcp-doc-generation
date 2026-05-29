@@ -36,7 +36,7 @@ public static class CliMarkerReconciler
     /// Null entries are skipped (tool had no @mcpcli annotation).
     /// </param>
     /// <returns>Markdown with all @mcpcli markers reconciled.</returns>
-    public static string Reconcile(string markdown, IReadOnlyList<string?> authoritativeCommands)
+    internal static string Reconcile(string markdown, IReadOnlyList<string?> authoritativeCommands)
     {
         if (string.IsNullOrEmpty(markdown) || authoritativeCommands.Count == 0)
             return markdown;
