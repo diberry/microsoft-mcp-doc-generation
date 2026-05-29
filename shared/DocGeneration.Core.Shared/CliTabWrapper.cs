@@ -42,16 +42,16 @@ public static class CliTabWrapper
 
         var sb = new StringBuilder();
 
-        // MCP Server tab
-        sb.AppendLine("#### [MCP Server](#tab/mcp-server)");
-        sb.AppendLine();
-        sb.AppendLine(mcpWithoutAnnotation.TrimEnd());
-        sb.AppendLine();
-
-        // CLI tab (no annotations inside)
+        // CLI tab first (ground truth, deterministic from tools JSON)
         sb.AppendLine("#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         sb.AppendLine();
         sb.AppendLine(cliContent.TrimEnd());
+        sb.AppendLine();
+
+        // MCP Server tab second (AI-improved derivative)
+        sb.AppendLine("#### [MCP Server](#tab/mcp-server)");
+        sb.AppendLine();
+        sb.AppendLine(mcpWithoutAnnotation.TrimEnd());
         sb.AppendLine();
 
         // Tab group terminator
