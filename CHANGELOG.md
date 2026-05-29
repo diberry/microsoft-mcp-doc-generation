@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Completed npm-to-dotnet migration** — Removed all Node.js scripts from `mcp-cli-metadata/`. CLI metadata extraction now uses `mcp-tools/McpCliMetadata/` exclusively. Updated CI workflows, preflight.ps1, and documentation. Closes #627.
+
 ### Fixed
 
 - **`AzmcpRunner` PATH resolution on Windows** — `Process.Start` with `UseShellExecute=false` does not reliably resolve `.cmd` batch wrappers from `PATH`. `AzmcpRunner` now walks each `PATH` directory to locate `azmcp.cmd` (Windows) or `azmcp` (non-Windows) and passes the full absolute path to `Process.Start`, falling back to the bare name if not found. This fixes `azmcp` invocation failures when the `azure.mcp` dotnet global tool is installed at `~/.dotnet/tools/azmcp.cmd`. Extracted to `internal static ResolveBinaryPath()` for testability.
