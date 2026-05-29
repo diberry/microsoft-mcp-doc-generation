@@ -105,13 +105,13 @@ jobs:
             
             # Generate and validate the tools list
             azmcp tools list > "$VERSION_DIR/tools-list.json" 2>/dev/null
-            if ! python3 -c "import json,sys; json.load(open('$VERSION_DIR/tools-list.json'))" 2>/dev/null; then
+            if ! node -e "JSON.parse(require('fs').readFileSync('$VERSION_DIR/tools-list.json','utf8'))" 2>/dev/null; then
               echo "::error::CLI output is not valid JSON"
               cat "$VERSION_DIR/tools-list.json"
               exit 1
             fi
             
-            TOOL_COUNT=$(python3 -c "import json; d=json.load(open('$VERSION_DIR/tools-list.json')); print(len(d.get('results', [])))")
+            TOOL_COUNT=$(node -p "JSON.parse(require('fs').readFileSync('$VERSION_DIR/tools-list.json','utf8')).results?.length ?? 0")
             echo "✅ Snapshot created: $VERSION_DIR/tools-list.json ($TOOL_COUNT tools)"
           fi
 
