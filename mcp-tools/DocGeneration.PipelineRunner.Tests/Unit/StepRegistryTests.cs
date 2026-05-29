@@ -1,3 +1,4 @@
+using System.Text;
 using PipelineRunner.Cli;
 using PipelineRunner.Contracts;
 using PipelineRunner.Context;
@@ -87,6 +88,120 @@ public class StepRegistryTests
         {
             Directory.Delete(scriptsRoot, recursive: true);
         }
+    }
+
+    [Fact]
+    public void ValidateAgainstConfig_ConfigMatchesRegistry_NoWarningEmitted()
+    {
+        var registry = new StepRegistry([
+            new FakeStep(0, "bootstrap"),
+            new FakeStep(1, "step-one"),
+        ]);
+        var configJson = """[{"id":0,"name":"bootstrap"},{"id":1,"name":"step-one"}]""";
+        var configPath = WriteTempConfig(configJson);
+        var writer = new StringWriter();
+
+        StepRegistry.ValidateAgainstConfig(registry, configPath, writer);
+
+        Assert.Empty(writer.ToString());
+    }
+
+    [Fact]
+    public void ValidateAgainstConfig_ConfigHasExtraStepId_EmitsWarningForExtraId()
+    {
+        var registry = new StepRegistry([new FakeStep(1, "step-one")]);
+        var configJson = """[{"id":1,"name":"step-one"},{"id":99,"name":"phantom"}]""";
+        var configPath = WriteTempConfig(configJson);
+        var writer = new StringWriter();
+
+        StepRegistry.ValidateAgainstConfig(registry, configPath, writer);
+
+        var output = writer.ToString();
+        Assert.Contains("[WARN]", output);
+        Assert.Contains("99", output);
+        Assert.Contains("pipeline.config.json but not in registry", output);
+    }
+
+    [Fact]
+    public void ValidateAgainstConfig_RegistryHasExtraStepId_EmitsWarningForExtraId()
+    {
+        var registry = new StepRegistry([
+            new FakeStep(1, "step-one"),
+            new FakeStep(99, "unlisted"),
+        ]);
+        var configJson = """[{"id":1,"name":"step-one"}]""";
+        var configPath = WriteTempConfig(configJson);
+        var writer = new StringWriter();
+
+        StepRegistry.ValidateAgainstConfig(registry, configPath, writer);
+
+        var output = writer.ToString();
+        Assert.Contains("[WARN]", output);
+        Assert.Contains("99", output);
+        Assert.Contains("registry but not in pipeline.config.json", output);
+    }
+
+    [Fact]
+    public void ValidateAgainstConfig_ConfigFileNotFound_EmitsFileNotFoundWarning()
+    {
+        var registry = new StepRegistry([new FakeStep(1, "step-one")]);
+        var missingPath = Path.Combine(Path.GetTempPath(), $"no-such-config-{Guid.NewGuid():N}.json");
+        var writer = new StringWriter();
+
+        StepRegistry.ValidateAgainstConfig(registry, missingPath, writer);
+
+        var output = writer.ToString();
+        Assert.Contains("[WARN]", output);
+        Assert.Contains("pipeline.config.json not found", output);
+    }
+
+    [Fact]
+    public void ValidateAgainstConfig_InvalidJson_EmitsParseFailureWarning()
+    {
+        var registry = new StepRegistry([new FakeStep(1, "step-one")]);
+        var configPath = WriteTempConfig("this is not json {{{{");
+        var writer = new StringWriter();
+
+        StepRegistry.ValidateAgainstConfig(registry, configPath, writer);
+
+        var output = writer.ToString();
+        Assert.Contains("[WARN]", output);
+        Assert.Contains("Failed to parse pipeline.config.json", output);
+    }
+
+    [Fact]
+    public void ValidateAgainstConfig_NoMismatch_DoesNotThrow()
+    {
+        var registry = new StepRegistry([new FakeStep(0, "bootstrap")]);
+        var configJson = """[{"id":0,"name":"bootstrap"}]""";
+        var configPath = WriteTempConfig(configJson);
+
+        // Phase 1 must never throw on divergence — even for extra/missing steps
+        var exception = Record.Exception(() =>
+            StepRegistry.ValidateAgainstConfig(registry, configPath, TextWriter.Null));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void ValidateAgainstConfig_Divergence_DoesNotThrow()
+    {
+        var registry = new StepRegistry([new FakeStep(1, "step-one")]);
+        var configJson = """[{"id":99,"name":"unregistered"}]""";
+        var configPath = WriteTempConfig(configJson);
+
+        // Phase 1: divergence must emit a warning, not throw
+        var exception = Record.Exception(() =>
+            StepRegistry.ValidateAgainstConfig(registry, configPath, TextWriter.Null));
+
+        Assert.Null(exception);
+    }
+
+    private static string WriteTempConfig(string json)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"pipeline-config-test-{Guid.NewGuid():N}.json");
+        File.WriteAllText(path, json, Encoding.UTF8);
+        return path;
     }
 
     private sealed class FakeStep : IPipelineStep

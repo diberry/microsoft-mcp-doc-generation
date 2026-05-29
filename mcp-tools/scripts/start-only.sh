@@ -40,6 +40,7 @@ fi
 
 TOOL_FAMILY="$(echo "$1" | strip_cr)"
 STEPS="${2:-1,2,3,4,5,6}"
+# TODO(future): derive default step ordering from mcp-tools/pipeline.config.json instead of hardcoding here
 OUTPUT_DIR="${3:-$ROOT_DIR/generated}"
 
 # Verify CLI metadata files exist

@@ -56,6 +56,7 @@ jobs:
         dotnet-version: '9.0.x'
 
     - name: Run content generation (documentation)
+      # TODO(future): step names and ordering should derive from mcp-tools/pipeline.config.json
       run: dotnet run --project mcp-tools/DocGeneration.PipelineRunner
 
     - name: Upload documentation artifact
