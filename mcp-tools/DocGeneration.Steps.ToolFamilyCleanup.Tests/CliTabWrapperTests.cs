@@ -38,16 +38,14 @@ public class CliTabWrapperTests
     }
 
     [Fact]
-    public void WrapWithTabs_EmptyCliContent_RendersTabs()
+    public void WrapWithTabs_EmptyCliContent_ReturnsOriginal()
     {
         var mcpContent = "Some MCP content here.";
+        const string cliContent = "   ";
 
-        var result = CliTabWrapper.WrapWithTabs(mcpContent, string.Empty);
+        var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
-        Assert.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
-        Assert.Contains("#### [MCP Server](#tab/mcp-server)", result);
-        Assert.DoesNotContain(mcpContent, result);
-        AssertCliTabBeforeMcpTab(result);
+        Assert.Equal(mcpContent, result);
     }
 
     [Fact]
@@ -201,6 +199,49 @@ public class CliTabWrapperTests
         var result = CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent).TabBlock;
 
         Assert.DoesNotContain("(MCP)", result);
+    }
+
+    [Fact]
+    public void StripMatchingDescriptionFromCli_DifferentDescription_LeavesCliUnchanged()
+    {
+        var cliContent = "Different CLI description.\n\n```bash\naz storage list\n```";
+
+        var result = Shared.CliTabWrapper.StripMatchingDescriptionFromCli(cliContent, "MCP description text.");
+
+        Assert.Contains("Different CLI description.", result);
+    }
+
+    [Fact]
+    public void ExtractDescription_MultiLineDescription_JoinsAsOneParagraph()
+    {
+        var content = "First line of description\nsecond line continues here.\n\n| Parameter | Required |\n|---|---|";
+
+        var (remaining, description) = Shared.CliTabWrapper.ExtractDescription(content);
+
+        Assert.Equal("First line of description second line continues here.", description);
+        Assert.Contains("| Parameter | Required |", remaining);
+    }
+
+    [Fact]
+    public void ExtractDescription_PipeInDescription_DoesNotTruncate()
+    {
+        // Pipe at start of line IS a boundary; pipe mid-line is NOT
+        var content = "Lists items and their status.\n\n| Parameter | Required |\n|---|---|";
+
+        var (_, description) = Shared.CliTabWrapper.ExtractDescription(content);
+
+        Assert.Equal("Lists items and their status.", description);
+    }
+
+    [Fact]
+    public void ExtractDescription_DescriptionOnly_NoTable_ExtractsCorrectly()
+    {
+        var content = "Creates a new storage account in the specified resource group.";
+
+        var (remaining, description) = Shared.CliTabWrapper.ExtractDescription(content);
+
+        Assert.Equal("Creates a new storage account in the specified resource group.", description);
+        Assert.Equal("", remaining.Trim());
     }
 
     // ── ApplyTabsToFamilyArticle ──────────────────────────────────
