@@ -281,7 +281,7 @@ public class NlpParameterNameRegressionTests
             var cliStart = section.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
             if (mcpStart < 0 || cliStart < 0) continue;
 
-            var mcpContent = section[mcpStart..cliStart];
+            var mcpContent = section[mcpStart..];
             var tableMatch = Regex.Match(mcpContent, @"(\| Parameter .+Required or optional.+\r?\n\|[-| ]+\r?\n(?:\|.+\r?\n)+)", RegexOptions.Multiline);
             if (tableMatch.Success)
                 tables.Add(tableMatch.Value.TrimEnd());

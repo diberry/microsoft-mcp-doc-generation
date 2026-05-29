@@ -17,20 +17,10 @@ The Azure MCP Server lets you manage Azure Storage resources.
 
 
 ## Account list
-#### [MCP Server](#tab/mcp-server)
-
-
-<!-- @mcpcli storage account list -->
 
 Lists all storage accounts in the subscription.
-
-| Parameter |  Required or optional | Description |
-|-----------------------|----------------------|-------------|
-| **Subscription** |  Required | The Azure subscription ID. |
 
 #### [Azure MCP CLI](#tab/azure-mcp-cli)
-
-Lists all storage accounts in the subscription.
 
 **Example CLI command**
 
@@ -42,6 +32,14 @@ azmcp storage account list \
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `--subscription` | string | Yes | The Azure subscription ID. |
+
+#### [MCP Server](#tab/mcp-server)
+
+<!-- @mcpcli storage account list -->
+
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
+| **Subscription** |  Required | The Azure subscription ID. |
 
 ---
 

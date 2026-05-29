@@ -21,27 +21,10 @@ The Azure MCP Server lets you manage Azure Backup resources with natural languag
 
 
 ## Create vault
-#### [MCP Server](#tab/mcp-server)
-
-
-<!-- @mcpcli azurebackup vault create -->
 
 Creates a new backup vault.
-
-Example prompts include:
-
-- "Create vault 'rsv-backup-prod' in resource group 'rg-prod' in location 'eastus'."
-
-| Parameter |  Required or optional | Description |
-|-----------------------|----------------------|-------------|
-| **Location** |  Required | The Azure region. |
-| **Resource group** |  Required | The name of the Azure resource group. |
-| **Vault name** |  Required | The name of the backup vault. |
-| **Vault type** |  Optional | The type of backup vault: 'rsv' or 'dpp'. |
 
 #### [Azure MCP CLI](#tab/azure-mcp-cli)
-
-Creates a new backup vault.
 
 **Example CLI command**
 
@@ -60,6 +43,21 @@ azmcp azurebackup vault create \
 | `--location` | string | Yes | The Azure region. |
 | `--vault-type` | string | No | The type of backup vault: 'rsv' or 'dpp'. |
 
+#### [MCP Server](#tab/mcp-server)
+
+<!-- @mcpcli azurebackup vault create -->
+
+Example prompts include:
+
+- "Create vault 'rsv-backup-prod' in resource group 'rg-prod' in location 'eastus'."
+
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
+| **Location** |  Required | The Azure region. |
+| **Resource group** |  Required | The name of the Azure resource group. |
+| **Vault name** |  Required | The name of the backup vault. |
+| **Vault type** |  Optional | The type of backup vault: 'rsv' or 'dpp'. |
+
 ---
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
@@ -67,25 +65,10 @@ azmcp azurebackup vault create \
 Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
 
 ## List policies
-#### [MCP Server](#tab/mcp-server)
-
-
-<!-- @mcpcli azurebackup policy list -->
 
 Lists all protection policies in the specified vault.
-
-Example prompts include:
-
-- "List all backup policies in my vault"
-
-| Parameter |  Required or optional | Description |
-|-----------------------|----------------------|-------------|
-| **Vault name** |  Required | The name of the Recovery Services vault |
-| **Resource group** |  Required | The resource group containing the vault |
 
 #### [Azure MCP CLI](#tab/azure-mcp-cli)
-
-Lists all protection policies in the specified vault.
 
 **Example CLI command**
 
@@ -99,6 +82,19 @@ azmcp azurebackup policy list \
 |-----------|------|----------|-------------|
 | `--vault-name` | string | Yes | The name of the Recovery Services vault |
 | `--resource-group` | string | Yes | The resource group containing the vault |
+
+#### [MCP Server](#tab/mcp-server)
+
+<!-- @mcpcli azurebackup policy list -->
+
+Example prompts include:
+
+- "List all backup policies in my vault"
+
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
+| **Vault name** |  Required | The name of the Recovery Services vault |
+| **Resource group** |  Required | The resource group containing the vault |
 
 ---
 

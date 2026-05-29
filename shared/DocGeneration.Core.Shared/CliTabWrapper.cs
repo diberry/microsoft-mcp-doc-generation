@@ -41,7 +41,8 @@ public static class CliTabWrapper
             return (mcpContent, null);
 
         var (mcpContentWithoutDescription, description) = ExtractDescription(mcpContent);
-        return (BuildTabBlock(mcpContentWithoutDescription, cliContent), description);
+        var cliContentWithoutDescription = StripMatchingDescriptionFromCli(cliContent, description);
+        return (BuildTabBlock(mcpContentWithoutDescription, cliContentWithoutDescription), description);
     }
 
     private static string BuildTabBlock(string mcpContent, string cliContent)
@@ -139,6 +140,50 @@ public static class CliTabWrapper
         remainingLines.AddRange(lines[remainderStart..]);
 
         return (string.Join("\n", remainingLines).TrimEnd(), description);
+    }
+
+    internal static string StripMatchingDescriptionFromCli(string cliContent, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return cliContent;
+        }
+
+        var normalizedContent = cliContent.ReplaceLineEndings("\n");
+        var lines = normalizedContent.Split('\n');
+        var descriptionStart = 0;
+
+        while (descriptionStart < lines.Length && string.IsNullOrWhiteSpace(lines[descriptionStart]))
+        {
+            descriptionStart++;
+        }
+
+        if (descriptionStart >= lines.Length || IsDescriptionBoundary(lines[descriptionStart]))
+        {
+            return cliContent;
+        }
+
+        var descriptionEnd = descriptionStart;
+        while (descriptionEnd < lines.Length
+            && !string.IsNullOrWhiteSpace(lines[descriptionEnd])
+            && !IsDescriptionBoundary(lines[descriptionEnd]))
+        {
+            descriptionEnd++;
+        }
+
+        var cliDescription = string.Join(" ", lines[descriptionStart..descriptionEnd].Select(line => line.Trim())).Trim();
+        if (!string.Equals(cliDescription, description, StringComparison.Ordinal))
+        {
+            return cliContent;
+        }
+
+        var remainderStart = descriptionEnd;
+        while (remainderStart < lines.Length && string.IsNullOrWhiteSpace(lines[remainderStart]))
+        {
+            remainderStart++;
+        }
+
+        return string.Join("\n", lines[..descriptionStart].Concat(lines[remainderStart..])).TrimEnd();
     }
 
     private static bool IsMcpMarker(string line)
