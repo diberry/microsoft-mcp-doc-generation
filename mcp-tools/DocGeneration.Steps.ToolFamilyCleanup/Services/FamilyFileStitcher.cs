@@ -40,17 +40,21 @@ public class FamilyFileStitcher
         sb.AppendLine();
 
         // 2. Tool sections - group by resource type if multi-resource (#412)
+        // Track the ordered tool commands for deterministic marker reconciliation
         var isMultiResource = IsMultiResourceFamily(familyContent.Tools);
+        List<string?> orderedCommands;
 
         if (isMultiResource)
         {
-            StitchMultiResource(sb, familyContent.Tools);
+            orderedCommands = StitchMultiResource(sb, familyContent.Tools);
         }
         else
         {
             // Sort tools for consistent single-resource presentation order (#503).
             // Ordering delegated to ToolOrderingPolicy (alphabetical by ToolName).
-            foreach (var tool in ToolOrderingPolicy.OrderForSingleResource(familyContent.Tools))
+            var orderedTools = ToolOrderingPolicy.OrderForSingleResource(familyContent.Tools).ToList();
+            orderedCommands = orderedTools.Select(t => t.Command).ToList();
+            foreach (var tool in orderedTools)
             {
                 sb.AppendLine(tool.Content);
                 sb.AppendLine();
@@ -109,6 +113,11 @@ public class FamilyFileStitcher
         // 15. Post-processing: escape bare <placeholder> values for MS Learn validation (#416)
         markdown = PlaceholderEscaper.Escape(markdown);
 
+        // 16. Post-processing: deterministic CLI marker reconciliation (#638)
+        // Safety net — ensures @mcpcli markers match authoritative commands from tool files,
+        // regardless of what any previous AI step or post-processor may have done.
+        markdown = CliMarkerReconciler.ReconcileAndInject(markdown, orderedCommands);
+
         return markdown;
     }
 
@@ -136,9 +145,11 @@ public class FamilyFileStitcher
     /// Emits tool sections for multi-resource families. Each tool gets a flat H2 heading
     /// in "Resource type: action" format. No resource group headers or heading demotion —
     /// the published articles use H2 per tool only.
+    /// Returns the ordered list of commands matching output order for reconciliation.
     /// </summary>
-    private static void StitchMultiResource(StringBuilder sb, List<ToolContent> tools)
+    private static List<string?> StitchMultiResource(StringBuilder sb, List<ToolContent> tools)
     {
+        var orderedCommands = new List<string?>();
         // Group tools preserving existing sort order (already sorted by resource type then verb)
         var groups = new List<(string ResourceType, List<ToolContent> Tools)>();
         string currentResourceType = "";
@@ -167,8 +178,11 @@ public class FamilyFileStitcher
                 var reformattedContent = ReformatToolHeadingForMultiResource(tool);
                 sb.AppendLine(reformattedContent);
                 sb.AppendLine();
+                orderedCommands.Add(tool.Command);
             }
         }
+
+        return orderedCommands;
     }
 
     /// <summary>
