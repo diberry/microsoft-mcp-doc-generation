@@ -244,6 +244,94 @@ public class CliTabWrapperTests
         Assert.Equal("", remaining.Trim());
     }
 
+    [Fact]
+    public void StripProseFromMcpContent_RemovesExtraParagraphsBeforeExamplePrompts()
+    {
+        var content = """
+            <!-- @mcpcli foundryextensions knowledge index list -->
+
+            List the knowledge indexes in a Microsoft Foundry project.
+
+            Requires the project endpoint URL and authentication context before you run the tool.
+
+            Notes:
+            - The list shows indexes that are available to your project.
+
+            Example prompts include:
+
+            - "List all knowledge indexes in my project."
+
+            | Parameter | Required or optional | Description |
+            |-----------|----------------------|-------------|
+            | **Project endpoint** | Required | The project endpoint URL. |
+            """;
+
+        var result = Shared.CliTabWrapper.StripProseFromMcpContent(content).ReplaceLineEndings("\n");
+
+        Assert.StartsWith("<!-- @mcpcli foundryextensions knowledge index list -->\n\nExample prompts include:", result);
+        Assert.DoesNotContain("Requires the project endpoint URL", result);
+        Assert.DoesNotContain("Notes:", result);
+        Assert.Contains("| Parameter | Required or optional | Description |", result);
+    }
+
+    [Fact]
+    public void StripProseFromMcpContent_WithoutExamplePrompts_KeepsParameterTable()
+    {
+        var content = """
+            <!-- @mcpcli storage account list -->
+
+            List storage accounts in a subscription.
+
+            Use this to inspect account inventory before you take action.
+
+            | Parameter | Required |
+            |---|---|
+            | Subscription | Yes |
+            """;
+
+        var result = Shared.CliTabWrapper.StripProseFromMcpContent(content).ReplaceLineEndings("\n");
+
+        Assert.StartsWith("<!-- @mcpcli storage account list -->\n\n| Parameter | Required |", result);
+        Assert.DoesNotContain("Use this to inspect account inventory", result);
+    }
+
+    [Fact]
+    public void WrapWithTabsAndExtractDescription_StripsMcpProseButPreservesAnnotationBlock()
+    {
+        var mcpContent = """
+            <!-- @mcpcli storage account list -->
+
+            List storage accounts in a subscription.
+
+            Use this to inspect inventory before you take action.
+
+            Example prompts include:
+
+            - "List storage accounts in subscription 'sub1'."
+
+            | Parameter | Required |
+            |---|---|
+            | Subscription | Yes |
+
+            [Tool annotation hints](index.md#tool-annotations):
+
+            Destructive: ❌ | Idempotent: ✅ | Read-only: ✅
+            """;
+        var cliContent = """
+            ```bash
+            az storage account list
+            ```
+            """;
+
+        var (tabBlock, description) = CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent);
+
+        Assert.Equal("List storage accounts in a subscription.", description);
+        Assert.DoesNotContain("Use this to inspect inventory before you take action.", tabBlock);
+        Assert.Contains("Example prompts include:", tabBlock);
+        Assert.Contains("[Tool annotation hints](index.md#tool-annotations):", tabBlock);
+        Assert.Contains("Destructive: ❌ | Idempotent: ✅ | Read-only: ✅", tabBlock);
+    }
+
     // ── ApplyTabsToFamilyArticle ──────────────────────────────────
 
     private const string FamilyArticle = """

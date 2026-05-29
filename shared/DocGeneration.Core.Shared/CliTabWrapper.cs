@@ -49,8 +49,9 @@ public static class CliTabWrapper
             return (mcpContent, null);
 
         var (mcpContentWithoutDescription, description) = ExtractDescription(mcpContent);
+        var strippedMcpContent = StripProseFromMcpContent(mcpContentWithoutDescription);
         var cliContentWithoutDescription = StripMatchingDescriptionFromCli(cliContent, description);
-        return (BuildTabBlock(mcpContentWithoutDescription, cliContentWithoutDescription), description);
+        return (BuildTabBlock(strippedMcpContent, cliContentWithoutDescription), description);
     }
 
     private static string BuildTabBlock(string mcpContent, string cliContent)
@@ -156,8 +157,64 @@ public static class CliTabWrapper
         return string.Join("\n", lines[..descriptionStart].Concat(lines[remainderStart..])).TrimEnd();
     }
 
+    internal static string StripProseFromMcpContent(string content)
+    {
+        var normalizedContent = content.ReplaceLineEndings("\n");
+        var lines = normalizedContent.Split('\n');
+
+        var markerIndex = Array.FindIndex(lines, IsMcpMarker);
+        var markerEnd = 0;
+        if (markerIndex >= 0)
+        {
+            markerEnd = markerIndex + 1;
+            while (markerEnd < lines.Length && string.IsNullOrWhiteSpace(lines[markerEnd]))
+            {
+                markerEnd++;
+            }
+        }
+
+        var keepStart = -1;
+        for (int i = markerEnd; i < lines.Length; i++)
+        {
+            if (IsMcpTabContentStart(lines[i]))
+            {
+                keepStart = i;
+                break;
+            }
+        }
+
+        if (keepStart < 0)
+        {
+            return content.TrimEnd();
+        }
+
+        var keptLines = new List<string>();
+        if (markerIndex >= 0)
+        {
+            keptLines.Add(lines[markerIndex]);
+            keptLines.Add(string.Empty);
+        }
+
+        keptLines.AddRange(lines[keepStart..]);
+        return string.Join("\n", keptLines).TrimEnd();
+    }
+
     private static bool IsMcpMarker(string line)
         => line.TrimStart().StartsWith("<!-- @mcpcli ", StringComparison.Ordinal);
+
+    private static bool IsMcpTabContentStart(string line)
+    {
+        var trimmed = line.TrimStart();
+        return trimmed.StartsWith("Example prompts", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("|", StringComparison.Ordinal)
+            || (IsBulletLine(trimmed) && trimmed.Contains('"'));
+    }
+
+    private static bool IsBulletLine(string line)
+        => line.StartsWith("- ", StringComparison.Ordinal)
+            || line.StartsWith("* ", StringComparison.Ordinal)
+            || line.StartsWith("+ ", StringComparison.Ordinal)
+            || NumberedListPattern.IsMatch(line);
 
     private static (int Start, int End) FindDescriptionRange(string[] lines)
     {
