@@ -1,0 +1,167 @@
+[
+  {
+    "id": 0,
+    "name": "Bootstrap pipeline",
+    "schemaVersion": "1.0",
+    "scope": "global",
+    "dependencies": [],
+    "inputArtifacts": [],
+    "outputArtifacts": [
+      "generated/cli/cli-output.json",
+      "generated/cli/cli-version.json",
+      "generated/cli/cli-namespace.json",
+      "generated/namespace-mapping.json"
+    ],
+    "outputMultiplicity": "single",
+    "localCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --steps 0",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --steps 0"
+  },
+  {
+    "id": 1,
+    "name": "Generate annotations, parameters, and raw tools",
+    "schemaVersion": "1.0",
+    "scope": "namespace",
+    "dependencies": [],
+    "inputArtifacts": [
+      "generated/cli/cli-output.json",
+      "generated/cli/cli-namespace.json"
+    ],
+    "outputArtifacts": [
+      "generated/{namespace}/annotations/*.md",
+      "generated/{namespace}/parameters/*.md",
+      "generated/{namespace}/tools-raw/*.md",
+      "generated/{namespace}/parameter-cli/*.md",
+      "generated/{namespace}/example-commands/*.md"
+    ],
+    "outputMultiplicity": "per-tool",
+    "localCommand": "./start-only.sh <namespace> 1",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace <namespace> --steps 1"
+  },
+  {
+    "id": 2,
+    "name": "Generate example prompts",
+    "schemaVersion": "1.0",
+    "scope": "namespace",
+    "dependencies": [1],
+    "inputArtifacts": [
+      "generated/cli/cli-output.json",
+      "generated/{namespace}/tools-raw/*.md"
+    ],
+    "outputArtifacts": [
+      "generated/{namespace}/example-prompts/*.md",
+      "generated/{namespace}/example-prompts-prompts/*.md",
+      "generated/{namespace}/example-prompts-raw-output/*.md"
+    ],
+    "outputMultiplicity": "per-tool",
+    "localCommand": "./start-only.sh <namespace> 2",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace <namespace> --steps 2"
+  },
+  {
+    "id": 3,
+    "name": "Compose and improve tool files",
+    "schemaVersion": "1.0",
+    "scope": "namespace",
+    "dependencies": [1, 2],
+    "inputArtifacts": [
+      "generated/{namespace}/tools-raw/*.md",
+      "generated/{namespace}/annotations/*.md",
+      "generated/{namespace}/parameters/*.md",
+      "generated/{namespace}/example-prompts/*.md"
+    ],
+    "outputArtifacts": [
+      "generated/{namespace}/tools-composed/*.md",
+      "generated/{namespace}/tools/*.md"
+    ],
+    "outputMultiplicity": "per-tool",
+    "localCommand": "./start-only.sh <namespace> 3",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace <namespace> --steps 3"
+  },
+  {
+    "id": 4,
+    "name": "Generate tool-family article",
+    "schemaVersion": "1.0",
+    "scope": "namespace",
+    "dependencies": [3],
+    "inputArtifacts": [
+      "generated/{namespace}/tools/*.md",
+      "generated/{namespace}/tools-raw/*.md"
+    ],
+    "outputArtifacts": [
+      "generated/{namespace}/tool-family/*.md",
+      "generated/{namespace}/tool-family-metadata/*.json",
+      "generated/{namespace}/tool-family-related/*.md",
+      "generated/{namespace}/reports/*.md"
+    ],
+    "outputMultiplicity": "per-namespace",
+    "localCommand": "./start-only.sh <namespace> 4",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace <namespace> --steps 4"
+  },
+  {
+    "id": 5,
+    "name": "Generate skills relevance",
+    "schemaVersion": "1.0",
+    "scope": "namespace",
+    "dependencies": [0],
+    "inputArtifacts": [
+      "generated/cli/cli-output.json"
+    ],
+    "outputArtifacts": [
+      "generated/{namespace}/skills-relevance/{namespace}-skills-relevance.md"
+    ],
+    "outputMultiplicity": "per-namespace",
+    "localCommand": "./start-only.sh <namespace> 5",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace <namespace> --steps 5"
+  },
+  {
+    "id": 6,
+    "name": "Generate horizontal article",
+    "schemaVersion": "1.0",
+    "scope": "namespace",
+    "dependencies": [0],
+    "inputArtifacts": [
+      "generated/cli/cli-output.json",
+      "generated/cli/cli-version.json"
+    ],
+    "outputArtifacts": [
+      "generated/{namespace}/horizontal-articles/horizontal-article-{namespace}.md"
+    ],
+    "outputMultiplicity": "per-namespace",
+    "localCommand": "./start-only.sh <namespace> 6",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace <namespace> --steps 6"
+  },
+  {
+    "id": 7,
+    "name": "Validate article health",
+    "schemaVersion": "1.0",
+    "scope": "namespace",
+    "dependencies": [4],
+    "inputArtifacts": [
+      "generated/{namespace}/tool-family/*.md"
+    ],
+    "outputArtifacts": [
+      "generated/{namespace}/validation/article-health.json",
+      "generated/{namespace}/validation/validation-summary.md"
+    ],
+    "outputMultiplicity": "per-namespace",
+    "localCommand": "./start-only.sh <namespace> 7",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace <namespace> --steps 7"
+  },
+  {
+    "id": 8,
+    "name": "Validate tool coverage",
+    "schemaVersion": "1.0",
+    "scope": "namespace",
+    "dependencies": [0, 4, 7],
+    "inputArtifacts": [
+      "generated/cli/cli-output.json",
+      "generated/{namespace}/tool-family/*.md"
+    ],
+    "outputArtifacts": [
+      "generated/{namespace}/validation/coverage-audit.json",
+      "generated/{namespace}/validation/validation-summary.md"
+    ],
+    "outputMultiplicity": "per-namespace",
+    "localCommand": "./start-only.sh <namespace> 8",
+    "ciCommand": "dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --namespace <namespace> --steps 8"
+  }
+]
