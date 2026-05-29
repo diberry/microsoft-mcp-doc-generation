@@ -18,6 +18,10 @@ public static class CliTabWrapper
     public static string WrapWithTabs(string mcpContent, string? cliContent)
         => Shared.CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
 
+    /// <inheritdoc cref="Shared.CliTabWrapper.WrapWithTabsAndExtractDescription"/>
+    public static (string TabBlock, string? Description) WrapWithTabsAndExtractDescription(string mcpContent, string? cliContent)
+        => Shared.CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent);
+
     /// <inheritdoc cref="Shared.CliTabWrapper.ApplyTabsToFamilyArticle"/>
     public static string ApplyTabsToFamilyArticle(
         string familyMarkdown,

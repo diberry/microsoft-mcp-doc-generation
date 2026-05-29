@@ -31,9 +31,21 @@ public static class CliTabWrapper
     /// <returns>Tab-wrapped content, or original content if no CLI available</returns>
     public static string WrapWithTabs(string mcpContent, string? cliContent)
     {
-        if (string.IsNullOrWhiteSpace(cliContent))
-            return mcpContent;
+        var (tabBlock, _) = WrapWithTabsAndExtractDescription(mcpContent, cliContent);
+        return tabBlock;
+    }
 
+    public static (string TabBlock, string? Description) WrapWithTabsAndExtractDescription(string mcpContent, string? cliContent)
+    {
+        if (cliContent is null)
+            return (mcpContent, null);
+
+        var (mcpContentWithoutDescription, description) = ExtractDescription(mcpContent);
+        return (BuildTabBlock(mcpContentWithoutDescription, cliContent), description);
+    }
+
+    private static string BuildTabBlock(string mcpContent, string cliContent)
+    {
         // Extract and strip annotation block from MCP content
         var annotationBlock = ExtractAnnotationBlock(mcpContent);
         var mcpWithoutAnnotation = annotationBlock != null
@@ -65,6 +77,85 @@ public static class CliTabWrapper
         }
 
         return sb.ToString();
+    }
+
+    internal static (string ContentWithoutDescription, string? Description) ExtractDescription(string content)
+    {
+        var normalizedContent = content.ReplaceLineEndings("\n");
+        var lines = normalizedContent.Split('\n');
+        var descriptionStart = 0;
+
+        while (descriptionStart < lines.Length && string.IsNullOrWhiteSpace(lines[descriptionStart]))
+        {
+            descriptionStart++;
+        }
+
+        if (descriptionStart < lines.Length && IsMcpMarker(lines[descriptionStart]))
+        {
+            descriptionStart++;
+
+            while (descriptionStart < lines.Length && string.IsNullOrWhiteSpace(lines[descriptionStart]))
+            {
+                descriptionStart++;
+            }
+        }
+
+        if (descriptionStart >= lines.Length || IsDescriptionBoundary(lines[descriptionStart]))
+        {
+            return (content, null);
+        }
+
+        var descriptionEnd = descriptionStart;
+        while (descriptionEnd < lines.Length
+            && !string.IsNullOrWhiteSpace(lines[descriptionEnd])
+            && !IsDescriptionBoundary(lines[descriptionEnd]))
+        {
+            descriptionEnd++;
+        }
+
+        var description = string.Join(" ", lines[descriptionStart..descriptionEnd].Select(line => line.Trim())).Trim();
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return (content, null);
+        }
+
+        var remainderStart = descriptionEnd;
+        while (remainderStart < lines.Length && string.IsNullOrWhiteSpace(lines[remainderStart]))
+        {
+            remainderStart++;
+        }
+
+        var remainingLines = lines[..descriptionStart].ToList();
+        while (remainingLines.Count > 0 && string.IsNullOrWhiteSpace(remainingLines[^1]))
+        {
+            remainingLines.RemoveAt(remainingLines.Count - 1);
+        }
+
+        if (remainingLines.Count > 0 && remainderStart < lines.Length)
+        {
+            remainingLines.Add(string.Empty);
+        }
+
+        remainingLines.AddRange(lines[remainderStart..]);
+
+        return (string.Join("\n", remainingLines).TrimEnd(), description);
+    }
+
+    private static bool IsMcpMarker(string line)
+        => line.TrimStart().StartsWith("<!-- @mcpcli ", StringComparison.Ordinal);
+
+    private static bool IsDescriptionBoundary(string line)
+    {
+        var trimmed = line.TrimStart();
+        return trimmed.StartsWith("|", StringComparison.Ordinal)
+            || trimmed.StartsWith("#", StringComparison.Ordinal)
+            || trimmed.StartsWith("{{", StringComparison.Ordinal)
+            || trimmed.StartsWith("[Tool annotation", StringComparison.Ordinal)
+            || trimmed.StartsWith("```", StringComparison.Ordinal)
+            || trimmed.StartsWith("- ", StringComparison.Ordinal)
+            || trimmed.StartsWith("* ", StringComparison.Ordinal)
+            || trimmed.StartsWith("+ ", StringComparison.Ordinal)
+            || Regex.IsMatch(trimmed, @"^\d+\.\s");
     }
 
     /// <summary>
@@ -170,8 +261,16 @@ public static class CliTabWrapper
             var normalizedCmd = CliJsonMapper.NormalizeCommand(command);
             if (cliContentByCommand.TryGetValue(normalizedCmd, out var cliContent))
             {
+                var (tabBlock, description) = WrapWithTabsAndExtractDescription(content, cliContent);
                 result.AppendLine(heading);
-                result.AppendLine(WrapWithTabs(content, cliContent));
+                if (!string.IsNullOrWhiteSpace(description))
+                {
+                    result.AppendLine();
+                    result.AppendLine(description);
+                    result.AppendLine();
+                }
+
+                result.AppendLine(tabBlock);
                 return;
             }
         }
