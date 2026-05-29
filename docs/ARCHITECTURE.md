@@ -386,7 +386,7 @@ microsoft-mcp-doc-generation/
 ├── skills-generation/                # Skills documentation pipeline
 ├── docs/                             # Documentation
 ├── generated-validated-*/            # Validated pipeline output
-└── mcp-cli-metadata/               # npm project for CLI extraction
+└── mcp-cli-metadata/               # CLI metadata version snapshots
 ```
 
 ## Pipeline Observability
