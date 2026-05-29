@@ -160,4 +160,189 @@ public class StepResultReaderTests : IDisposable
     {
         Assert.False(StepResultReader.Exists(Path.Combine(_testDir, "nope")));
     }
+
+    // ── Phase 1 Point 3: Schema version awareness tests ──────────────────────
+
+    [Fact]
+    public void TryRead_LegacyV0_NoSchemaVersion_Succeeds()
+    {
+        // Legacy file without schemaVersion field — should be treated as v0, no exception
+        var filePath = Path.Combine(_testDir, "step-result.json");
+        File.WriteAllText(filePath, """
+        {
+          "version": 1,
+          "status": "success",
+          "step": "Step 1",
+          "namespace": "monitor",
+          "outputFileCount": 2,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:00:30.000"
+        }
+        """);
+
+        var found = StepResultReader.TryRead(_testDir, out var result);
+
+        Assert.True(found);
+        Assert.NotNull(result);
+        Assert.Equal(StepResultStatus.Success, result!.Status);
+        Assert.Null(result.SchemaVersion);
+    }
+
+    [Fact]
+    public void TryRead_SchemaVersion1_0_Succeeds()
+    {
+        var filePath = Path.Combine(_testDir, "step-result.json");
+        File.WriteAllText(filePath, """
+        {
+          "version": 1,
+          "schemaVersion": "1.0",
+          "status": "success",
+          "step": "Step 3",
+          "namespace": "keyvault",
+          "outputFileCount": 5,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:02:00.000"
+        }
+        """);
+
+        var found = StepResultReader.TryRead(_testDir, out var result);
+
+        Assert.True(found);
+        Assert.NotNull(result);
+        Assert.Equal("1.0", result!.SchemaVersion);
+    }
+
+    [Fact]
+    public void TryRead_UnrecognizedSchemaVersion_ThrowsStepResultSchemaException()
+    {
+        var filePath = Path.Combine(_testDir, "step-result.json");
+        File.WriteAllText(filePath, """
+        {
+          "version": 1,
+          "schemaVersion": "99.0",
+          "status": "success",
+          "step": "Step 3",
+          "namespace": "sql",
+          "outputFileCount": 0,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:00:00"
+        }
+        """);
+
+        var ex = Assert.Throws<StepResultSchemaException>(
+            () => StepResultReader.TryRead(_testDir, out _));
+
+        Assert.Equal("99.0", ex.ActualVersion);
+        Assert.Contains("99.0", ex.Message);
+    }
+
+    [Fact]
+    public async Task ReadAsync_ReadsFileSuccessfully()
+    {
+        var stepName = "step-3";
+        var stepDir = Path.Combine(_testDir, stepName);
+        Directory.CreateDirectory(stepDir);
+        File.WriteAllText(Path.Combine(stepDir, "step-result.json"), """
+        {
+          "version": 1,
+          "schemaVersion": "1.0",
+          "status": "success",
+          "step": "Step 3 - Tool Generation",
+          "namespace": "aks",
+          "outputFileCount": 4,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:01:30.000",
+          "durationMs": 90000,
+          "timestamp": "2026-05-29T09:00:00Z"
+        }
+        """);
+
+        var result = await StepResultReader.ReadAsync(stepName, _testDir);
+
+        Assert.NotNull(result);
+        Assert.Equal(StepResultStatus.Success, result.Status);
+        Assert.Equal("1.0", result.SchemaVersion);
+        Assert.Equal(90000L, result.DurationMs);
+        Assert.Equal("2026-05-29T09:00:00Z", result.Timestamp);
+    }
+
+    [Fact]
+    public async Task ReadAsync_FileNotFound_ThrowsFileNotFoundException()
+    {
+        await Assert.ThrowsAsync<FileNotFoundException>(
+            () => StepResultReader.ReadAsync("missing-step", _testDir));
+    }
+
+    [Fact]
+    public async Task ReadAsync_UnrecognizedSchemaVersion_ThrowsStepResultSchemaException()
+    {
+        var stepName = "step-bad";
+        var stepDir = Path.Combine(_testDir, stepName);
+        Directory.CreateDirectory(stepDir);
+        File.WriteAllText(Path.Combine(stepDir, "step-result.json"), """
+        {
+          "version": 1,
+          "schemaVersion": "future-version",
+          "status": "success",
+          "step": "Step X",
+          "namespace": "cosmos",
+          "outputFileCount": 0,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:00:00"
+        }
+        """);
+
+        var ex = await Assert.ThrowsAsync<StepResultSchemaException>(
+            () => StepResultReader.ReadAsync(stepName, _testDir));
+
+        Assert.Equal("future-version", ex.ActualVersion);
+    }
+
+    [Fact]
+    public void TryRead_WithAllNewEnvelopeFields_ReadsCorrectly()
+    {
+        var filePath = Path.Combine(_testDir, "step-result.json");
+        File.WriteAllText(filePath, """
+        {
+          "version": 1,
+          "schemaVersion": "1.0",
+          "status": "success",
+          "step": "Step 3",
+          "stepName": "step-3-tool-generation",
+          "namespace": "speech",
+          "outputFileCount": 6,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:03:00.000",
+          "inputArtifacts": [{ "path": "input/speech.json", "sha256": "aabb" }],
+          "outputArtifacts": [{ "path": "output/speech-recognize.md", "sha256": "ccdd" }],
+          "validationStatus": "passed",
+          "tokenUsageEnvelope": { "promptTokens": 1200, "completionTokens": 600 },
+          "promptArchivePath": "archives/step3.zip",
+          "durationMs": 180000,
+          "timestamp": "2026-05-29T09:35:00Z"
+        }
+        """);
+
+        var found = StepResultReader.TryRead(_testDir, out var result);
+
+        Assert.True(found);
+        Assert.NotNull(result);
+        Assert.Equal("step-3-tool-generation", result!.StepName);
+        Assert.Single(result.InputArtifacts!);
+        Assert.Equal("input/speech.json", result.InputArtifacts![0].Path);
+        Assert.Equal("aabb", result.InputArtifacts[0].Sha256);
+        Assert.Single(result.OutputArtifacts!);
+        Assert.Equal(ValidationStatus.Passed, result.ValidationStatus);
+        Assert.Equal(1200, result.TokenUsageEnvelope!.PromptTokens);
+        Assert.Equal(600, result.TokenUsageEnvelope.CompletionTokens);
+        Assert.Equal("archives/step3.zip", result.PromptArchivePath);
+        Assert.Equal(180000L, result.DurationMs);
+        Assert.Equal("2026-05-29T09:35:00Z", result.Timestamp);
+    }
 }
