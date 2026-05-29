@@ -1,3 +1,4 @@
+# LEGACY: CI wrapper only — pipeline definition lives in StepRegistry
 name: Generate MCP Documentation
 
 on:
@@ -43,19 +44,19 @@ jobs:
     - name: Checkout this repository
       uses: actions/checkout@v5
       
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
     - name: Download CLI output artifact
       uses: actions/download-artifact@v4
       with:
         name: cli-output-${{ github.run_id }}
         path: generated/cli/
-    
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
     - name: Run content generation (documentation)
-      run: |
-        chmod +x ./run-content-generation-output.sh
-        ./run-content-generation-output.sh
+      run: dotnet run --project mcp-tools/DocGeneration.PipelineRunner
 
     - name: Upload documentation artifact
       uses: actions/upload-artifact@v4

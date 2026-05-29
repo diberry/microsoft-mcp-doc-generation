@@ -2,6 +2,10 @@
 
 The Azure MCP Documentation Generator is a typed .NET pipeline that transforms raw Azure MCP CLI metadata into 800+ publication-ready markdown files across 52 Azure service namespaces.
 
+## Pipeline Authority
+
+The runner is the pipeline definition; the GitHub Actions workflow is a CI host.
+
 ## System Overview
 
 ```
