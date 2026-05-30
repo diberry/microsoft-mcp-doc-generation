@@ -451,12 +451,15 @@ These terms are introduced by the pipeline manageability work (Points 1–17) an
 
 | Term | Definition |
 |------|------------|
+| **LLM** | Large Language Model — the Azure OpenAI model invoked by AI stages (Steps 2, 3, 4, and 6). Configured via `FOUNDRY_MODEL_NAME` and related environment variables. |
 | **step envelope** | The `StepResultFile` JSON artifact written by every step to its workspace directory after execution. Contains schema version, input/output artifacts, validation status, token usage, and timing. |
 | **frozen artifact** | A `step-result.json` from a prior pipeline run stored in a versioned run directory. Used by `--replay` to re-run a single step against fixed upstream outputs without re-running predecessors. |
 | **reducer** | A deterministic class that extracts only the inputs one AI stage needs from the upstream envelopes, producing a compact typed context object. No LLM call; runs before the pre-AI gate. See `ToolGenerationReducer`. |
 | **builder** | Synonym for reducer in the `ToolFamilyCleanup` and `HorizontalArticles` contexts; additionally generates structural scaffolding (headings, section order, skeleton) so the AI stage handles prose only. See `FamilyStructureBuilder`, `ArticleOutlineBuilder`. |
 | **seam validator** | An `IPreAiValidator<TContext>` implementation that gates an AI stage. Runs after the reducer but before the LLM call; can block the call by returning `isValid: false`. See `ToolGenerationBudgetValidator`, `ArticleOutlineBudgetValidator`. |
 | **pre-AI gate** | The point in `PipelineRunner` where all registered seam validators for a stage are invoked before any LLM call is dispatched. When a seam validator fails, the stage is skipped and `validationStatus: failed` is written to the step envelope. |
+| **workspace directory** | The per-run, per-step scratch directory managed by `WorkspaceManager`. Path: `{runId}/{stepName}/`. Step wrappers read upstream inputs from and write the step envelope to this directory. |
+| **step wrapper** | A class in `DocGeneration.PipelineRunner/Steps/Namespace/` that implements `IPipelineStep` and orchestrates one pipeline stage — invoking the reducer, running the pre-AI gate, dispatching the LLM call, and writing the step envelope. |
 | **replay mode** | CLI mode (`--replay`) that loads frozen step envelopes from a past run directory and re-executes only the target step against those fixed inputs, without re-running predecessors. Entry point: `RunReplayAsync`. |
 | **inspect mode** | CLI mode (`--inspect`) that runs the reducer for a named step against the current workspace inputs and prints a prompt budget summary — without invoking the LLM. A pre-flight check, not a debugging tool. Entry point: `RunInspectAsync`. |
 

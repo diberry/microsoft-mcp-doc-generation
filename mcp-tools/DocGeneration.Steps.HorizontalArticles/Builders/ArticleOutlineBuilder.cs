@@ -11,7 +11,9 @@ using Shared;
 namespace HorizontalArticleGenerator.Builders;
 
 /// <summary>
-/// Deterministically assembles the minimal evidence pack used to prompt horizontal article generation.
+/// Builder that deterministically assembles the minimal evidence pack for the HorizontalArticles
+/// AI stage, producing a typed <see cref="ArticleOutlineContext"/> step envelope containing the
+/// article title, ordered sections, and per-section evidence items.
 /// </summary>
 public sealed class ArticleOutlineBuilder
 {

@@ -7,7 +7,9 @@ using ToolGeneration_Improved.Models;
 namespace ToolGeneration_Improved.Services;
 
 /// <summary>
-/// Deterministically reduces a composed tool file into typed improvement context.
+/// Reducer that deterministically extracts the inputs for the ToolGeneration AI stage
+/// from upstream step envelopes, producing a typed <see cref="ToolGenerationContext"/>
+/// for the pre-AI gate and the LLM call.
 /// </summary>
 public sealed class ToolGenerationReducer
 {
