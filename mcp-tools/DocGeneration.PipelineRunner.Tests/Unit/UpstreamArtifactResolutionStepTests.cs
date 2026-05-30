@@ -1,4 +1,5 @@
 using System.Text.Json;
+using HorizontalArticleGenerator.Models;
 using PipelineRunner.Cli;
 using PipelineRunner.Context;
 using PipelineRunner.Services;
@@ -133,7 +134,15 @@ public sealed class UpstreamArtifactResolutionStepTests
             context.Items["Namespace"] = "advisor";
 
             SeedFile(Path.Combine(context.OutputPath, "custom-bootstrap", "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
-            SeedFile(Path.Combine(context.OutputPath, "horizontal-articles", "horizontal-article-advisor.md"), "article");
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                JsonSerializer.Serialize(new
+                {
+                    results = new[]
+                    {
+                        new { command = "advisor list", name = "advisor list", description = "List advisor recommendations." }
+                    }
+                }));
 
             WriteEnvelope(
                 context.OutputPath,
@@ -142,11 +151,15 @@ public sealed class UpstreamArtifactResolutionStepTests
                 "advisor",
                 ["custom-bootstrap/cli/cli-version.json"]);
 
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] =
+                (Func<ArticleOutlineContext, CancellationToken, Task<string>>)((_, _) => Task.FromResult("article"));
+
             var step = new HorizontalArticlesStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Single(runner.Invocations);
+            Assert.Empty(runner.Invocations);
+            Assert.Equal("article", File.ReadAllText(Path.Combine(context.OutputPath, "horizontal-articles", "horizontal-article-advisor.md")));
         }
         finally
         {
