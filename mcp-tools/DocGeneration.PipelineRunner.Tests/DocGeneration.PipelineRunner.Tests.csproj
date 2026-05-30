@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\DocGeneration.PipelineRunner\DocGeneration.PipelineRunner.csproj" />
+    <ProjectReference Include="..\DocGeneration.Steps.ToolGeneration.Improvements\DocGeneration.Steps.ToolGeneration.Improvements.csproj" />
     <ProjectReference Include="..\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.csproj" />
     <ProjectReference Include="..\DocGeneration.Steps.ToolFamilyCleanup\DocGeneration.Steps.ToolFamilyCleanup.csproj" />
     <ProjectReference Include="..\DocGeneration.Steps.ToolGeneration.Composition\DocGeneration.Steps.ToolGeneration.Composition.csproj" />
