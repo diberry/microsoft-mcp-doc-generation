@@ -443,5 +443,14 @@
     "mergeGroup": "azure-monitor",
     "mergeOrder": 2,
     "mergeRole": "secondary"
+  },
+  {
+    "brandName": "Azure Sreagent",
+    "mcpServerName": "sreagent",
+    "shortName": "Sreagent",
+    "fileName": "azure-sreagent",
+    "mergeGroup": null,
+    "mergeOrder": null,
+    "mergeRole": null
   }
 ]
