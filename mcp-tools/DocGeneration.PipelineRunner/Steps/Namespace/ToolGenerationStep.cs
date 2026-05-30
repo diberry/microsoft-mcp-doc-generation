@@ -10,6 +10,7 @@ namespace PipelineRunner.Steps;
 public sealed class ToolGenerationStep : NamespaceStepBase
 {
     private const int DefaultMaxTokens = 8000;
+    private static readonly ReducerRegistry Reducers = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
 
     private static readonly Regex ComposedFailureRegex = new(
@@ -36,6 +37,12 @@ public sealed class ToolGenerationStep : NamespaceStepBase
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
     {
         var (_, cliOutput, _, matchingTools) = ResolveTarget(context);
+        // P8: ReducerRegistry scaffold — when a reducer is registered, use it exclusively
+        if (Reducers.HasReducer(Id))
+        {
+            throw new NotImplementedException($"Reducer registered for step {Id} but execution path not yet implemented.");
+        }
+
         _ = await CreateFilteredCliFileAsync(context, cliOutput, matchingTools, "pipeline-runner-step3", cancellationToken);
         var nameContext = await FileNameContext.CreateAsync();
         var processResults = new List<ProcessExecutionResult>();

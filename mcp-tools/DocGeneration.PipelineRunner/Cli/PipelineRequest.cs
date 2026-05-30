@@ -13,7 +13,10 @@ public sealed record PipelineRequest(
     bool SkipChangelogGate = false,
     bool RunFingerprintGate = false,
     bool RunPromptRegressionGate = false,
-    bool SkipNpmUpdate = false)
+    bool SkipNpmUpdate = false,
+    bool Replay = false,
+    string? ReplayFromRunId = null,
+    string? ReplayStepName = null)
 {
     /// <summary>
     /// Default upstream branch for fetching files from the microsoft/mcp repository.
@@ -104,17 +107,31 @@ public sealed record PipelineRequest(
             errors.Add("OutputPath is required.");
         }
 
-        if (Steps.Count == 0)
+        if (Replay)
+        {
+            if (string.IsNullOrWhiteSpace(ReplayFromRunId))
+            {
+                errors.Add("--from is required when --replay is set.");
+            }
+
+            if (string.IsNullOrWhiteSpace(ReplayStepName))
+            {
+                errors.Add("--step-name is required when --replay is set.");
+            }
+        }
+        else if (Steps.Count == 0)
         {
             errors.Add("At least one step must be selected.");
         }
 
-        var duplicates = Steps
-            .GroupBy(step => step)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .OrderBy(value => value)
-            .ToArray();
+        var duplicates = Replay
+            ? Array.Empty<int>()
+            : Steps
+                .GroupBy(step => step)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .OrderBy(value => value)
+                .ToArray();
 
         if (duplicates.Length > 0)
         {
@@ -122,11 +139,13 @@ public sealed record PipelineRequest(
         }
 
         var allowedSteps = validStepIds ?? AllValidSteps;
-        var invalidSteps = Steps
-            .Where(step => !allowedSteps.Contains(step))
-            .Distinct()
-            .OrderBy(value => value)
-            .ToArray();
+        var invalidSteps = Replay
+            ? Array.Empty<int>()
+            : Steps
+                .Where(step => !allowedSteps.Contains(step))
+                .Distinct()
+                .OrderBy(value => value)
+                .ToArray();
 
         if (invalidSteps.Length > 0)
         {

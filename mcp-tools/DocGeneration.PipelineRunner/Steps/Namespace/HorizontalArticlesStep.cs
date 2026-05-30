@@ -8,6 +8,7 @@ namespace PipelineRunner.Steps;
 
 public sealed class HorizontalArticlesStep : NamespaceStepBase
 {
+    private static readonly ReducerRegistry Reducers = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
 
     public HorizontalArticlesStep()
@@ -26,6 +27,12 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
     {
         var (currentNamespace, cliOutput, _, matchingTools) = ResolveTarget(context);
+        // P8: ReducerRegistry scaffold — when a reducer is registered, use it exclusively
+        if (Reducers.HasReducer(Id))
+        {
+            throw new NotImplementedException($"Reducer registered for step {Id} but execution path not yet implemented.");
+        }
+
         _ = await CreateFilteredCliFileAsync(context, cliOutput, matchingTools, "pipeline-runner-step6", cancellationToken);
 
         var processResults = new List<ProcessExecutionResult>();

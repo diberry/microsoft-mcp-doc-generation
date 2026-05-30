@@ -6,6 +6,21 @@ public sealed class WorkspaceManager
 {
     private readonly HashSet<string> _trackedDirectories = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Resolves the workspace directory for a prior pipeline run.
+    /// Run directories are expected at: {repoRoot}\runs\{runId}\
+    /// </summary>
+    public static string GetReplayWorkspace(string repoRoot, string runId)
+    {
+        var path = Path.Combine(repoRoot, "runs", runId);
+        if (!Directory.Exists(path))
+        {
+            throw new DirectoryNotFoundException($"Replay run directory not found: {path}");
+        }
+
+        return path;
+    }
+
     public string CreateTemporaryDirectory(string prefix)
     {
         var directoryPath = Path.Combine(Path.GetTempPath(), $"{prefix}-{Guid.NewGuid():N}");

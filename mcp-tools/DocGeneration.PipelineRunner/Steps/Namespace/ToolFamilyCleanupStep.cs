@@ -9,6 +9,7 @@ namespace PipelineRunner.Steps;
 
 public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 {
+    private static readonly ReducerRegistry Reducers = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
 
     public ToolFamilyCleanupStep()
@@ -28,6 +29,12 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
     {
         var (currentNamespace, _, _, matchingTools) = ResolveTarget(context);
+        // P8: ReducerRegistry scaffold — when a reducer is registered, use it exclusively
+        if (Reducers.HasReducer(Id))
+        {
+            throw new NotImplementedException($"Reducer registered for step {Id} but execution path not yet implemented.");
+        }
+
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
