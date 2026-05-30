@@ -1,3 +1,5 @@
+using PipelineRunner.Contracts;
+
 namespace PipelineRunner.Services;
 
 public sealed class WorkspaceManager
@@ -33,5 +35,24 @@ public sealed class WorkspaceManager
         {
             Delete(directory);
         }
+    }
+
+    /// <summary>
+    /// Checks the step workspace for the 5-file observability contract.
+    /// Returns list of missing file names (empty if all present).
+    /// Does NOT throw — enforcement is at WARNING level.
+    /// </summary>
+    public IReadOnlyList<string> AssertOutputContract(StageOutputContract contract)
+    {
+        var missing = new List<string>();
+        foreach (var expectedPath in contract.GetExpectedFiles())
+        {
+            if (!File.Exists(expectedPath))
+            {
+                missing.Add(Path.GetFileName(expectedPath));
+            }
+        }
+
+        return missing;
     }
 }

@@ -3,6 +3,7 @@ using PipelineRunner.Context;
 using PipelineRunner.Registry;
 using PipelineRunner.Services;
 using PipelineRunner.Tests.Fixtures;
+using Shared;
 using Xunit;
 
 namespace PipelineRunner.Tests.Integration;
@@ -20,6 +21,7 @@ public class DryRunIntegrationTests
         {
             var processRunner = new RecordingProcessRunner();
             var reportWriter = new BufferedReportWriter();
+            var stepRegistry = StepRegistry.CreateDefault(Path.Combine(repoRoot, "mcp-tools", "scripts"));
             var contextFactory = new PipelineContextFactory(
                 processRunner,
                 new WorkspaceManager(),
@@ -32,7 +34,7 @@ public class DryRunIntegrationTests
                 repoRoot);
 
             var runner = new global::PipelineRunner.PipelineRunner(
-                StepRegistry.CreateDefault(Path.Combine(repoRoot, "mcp-tools", "scripts")),
+                stepRegistry,
                 contextFactory);
 
             var request = new PipelineRequest("compute", new[] { 1, 2, 3, 4, 5, 6 }, ".\\generated-compute", false, false, true, SkipChangelogGate: true);
@@ -48,6 +50,25 @@ public class DryRunIntegrationTests
             Assert.Contains(reportWriter.Messages, message => message.Contains("Step 6: Generate horizontal article [Namespace, Fatal, Typed]", StringComparison.Ordinal));
             Assert.Contains(reportWriter.Messages, message => message.Contains("Post-validators: ToolFamilyPostAssemblyValidator", StringComparison.Ordinal));
             Assert.Contains(reportWriter.Messages, message => message.Contains("Dependency check: passed", StringComparison.Ordinal));
+
+            var outputRoot = Path.GetFullPath(Path.Combine(repoRoot, "generated-compute"));
+            var selectedSteps = stepRegistry.GetOrderedSteps(request.Steps).ToDictionary(step => step.Id);
+            var step1Directory = Path.Combine(outputRoot, global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(selectedSteps[1]));
+            var step2Directory = Path.Combine(outputRoot, global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(selectedSteps[2]));
+            var step3Directory = Path.Combine(outputRoot, global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(selectedSteps[3]));
+
+            Assert.True(StepResultReader.TryRead(step1Directory, out var step1Envelope));
+            Assert.NotNull(step1Envelope);
+            Assert.Equal(global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(selectedSteps[1]), step1Envelope!.StepName);
+
+            Assert.True(StepResultReader.TryRead(step2Directory, out var step2Envelope));
+            Assert.NotNull(step2Envelope);
+            Assert.Equal(global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(selectedSteps[2]), step2Envelope!.StepName);
+
+            Assert.True(StepResultReader.TryRead(step3Directory, out var step3Envelope));
+            Assert.NotNull(step3Envelope);
+            Assert.Equal(global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(selectedSteps[3]), step3Envelope!.StepName);
+            Assert.Equal(StepResultStatus.Success, step3Envelope.Status);
         }
         finally
         {

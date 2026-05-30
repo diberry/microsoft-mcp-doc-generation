@@ -9,9 +9,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - **Completed npm-to-dotnet migration** — Removed all Node.js scripts from `mcp-cli-metadata/`. CLI metadata extraction now uses `mcp-tools/McpCliMetadata/` exclusively. Updated CI workflows, preflight.ps1, and documentation. Closes #627.
+- **PipelineRunner stage observability contract** — Each step now emits a standard observability bundle under `{output}/observability/{stepId}-{slug}/`: `summary.md`, `step-result.json`, `validation.json`, `prompt-preview.txt` (or `prompt-preview-na.txt` for deterministic steps), and `metrics.json`. Missing files are enforced at warning level so incomplete step instrumentation surfaces immediately without breaking existing runs.
 
 ### Fixed
 
+- **PipelineRunner step-result enforcement** — Every PipelineRunner step wrapper now writes a shared `step-result.json` envelope to `{output}/step-<id>-<slug>/` after `ExecuteAsync` and post-validation complete, including dry-run placeholders. Missing envelopes are now treated as fatal for non-warn steps, while warn-only steps continue with a warning. 
 - **`AzmcpRunner` PATH resolution on Windows** — `Process.Start` with `UseShellExecute=false` does not reliably resolve `.cmd` batch wrappers from `PATH`. `AzmcpRunner` now walks each `PATH` directory to locate `azmcp.cmd` (Windows) or `azmcp` (non-Windows) and passes the full absolute path to `Process.Start`, falling back to the bare name if not found. This fixes `azmcp` invocation failures when the `azure.mcp` dotnet global tool is installed at `~/.dotnet/tools/azmcp.cmd`. Extracted to `internal static ResolveBinaryPath()` for testability.
 - **`BootstrapStep` migrated from npm to dotnet tool** — The bootstrap step previously ran `npm install -g @azure/mcp@latest` to update the MCP CLI. This has been replaced with `dotnet tool update azure.mcp --global`, matching the current installation method. Removed the dead `GetNpmExecutable()` helper and unused `CaptureCommandOutputAsync` method. The `--skip-npm-update` / `SkipNpmUpdate` flag is preserved for backwards compatibility with existing CLI scripts.
 

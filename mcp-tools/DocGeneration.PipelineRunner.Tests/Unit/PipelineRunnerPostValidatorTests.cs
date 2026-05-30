@@ -5,6 +5,7 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Registry;
 using PipelineRunner.Services;
 using PipelineRunner.Tests.Fixtures;
+using Shared;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -189,6 +190,99 @@ public class PipelineRunnerPostValidatorTests
             Assert.Equal(1, nextStep.Executions);
             Assert.Contains(reportWriter.Messages, message => message.Contains("skills relevance generation failed", StringComparison.Ordinal));
             Assert.Contains(reportWriter.Messages, message => message.Contains("critical failure record", StringComparison.OrdinalIgnoreCase));
+
+            var outputRoot = Path.GetFullPath(Path.Combine(repoRoot, "generated-compute"));
+            var warnStepDirectory = Path.Combine(outputRoot, global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(warnStep));
+            var nextStepDirectory = Path.Combine(outputRoot, global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(nextStep));
+
+            Assert.True(StepResultReader.TryRead(warnStepDirectory, out var warnEnvelope));
+            Assert.NotNull(warnEnvelope);
+            Assert.Equal(global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(warnStep), warnEnvelope!.StepName);
+            Assert.Equal(StepResultStatus.Failure, warnEnvelope.Status);
+
+            Assert.True(StepResultReader.TryRead(nextStepDirectory, out var nextEnvelope));
+            Assert.NotNull(nextEnvelope);
+            Assert.Equal(global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(nextStep), nextEnvelope!.StepName);
+            Assert.Equal(StepResultStatus.Success, nextEnvelope.Status);
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void BuildStepResultEnvelope_MapsRunnerResultToSharedEnvelope()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-envelope-{Guid.NewGuid():N}");
+        var outputRoot = Path.Combine(repoRoot, "generated-compute");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
+        Directory.CreateDirectory(Path.Combine(outputRoot, "reports"));
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
+
+        try
+        {
+            var reportWriter = new BufferedReportWriter();
+            var context = new PipelineContext
+            {
+                Request = new PipelineRequest("compute", [4], outputRoot, SkipBuild: true, SkipValidation: false, DryRun: false),
+                RepoRoot = repoRoot,
+                McpToolsRoot = Path.Combine(repoRoot, "mcp-tools"),
+                OutputPath = outputRoot,
+                ProcessRunner = new RecordingProcessRunner(),
+                Workspaces = new WorkspaceManager(),
+                CliMetadataLoader = new StaticCliMetadataLoader(),
+                TargetMatcher = new TargetMatcher(),
+                FilteredCliWriter = new StubFilteredCliWriter(),
+                BuildCoordinator = new StubBuildCoordinator(),
+                AiCapabilityProbe = new StubAiCapabilityProbe(),
+                Reports = reportWriter
+            };
+            context.Items["Namespace"] = "compute";
+
+            var outputFile = Path.Combine(outputRoot, "reports", "summary.json");
+            File.WriteAllText(outputFile, """{ "ok": true }""");
+
+            var step = new RecordingStep(
+                id: 4,
+                name: "Generate tool-family article",
+                failurePolicy: FailurePolicy.Fatal,
+                success: false,
+                postValidators: [new FixedValidator(success: false, warnings: ["validator failed"])]);
+            var result = new StepResult(
+                Success: false,
+                Warnings: ["artifact incomplete"],
+                Duration: TimeSpan.FromMilliseconds(1250),
+                Outputs: [outputFile],
+                ProcessInvocations: ["dotnet run --project tool-family"],
+                ValidatorResults: [new ValidatorResult("FixedValidator", false, ["validator failed"])],
+                ArtifactFailures:
+                [
+                    ArtifactFailure.Create(
+                        "tool",
+                        "compute list",
+                        "Article assembly failed.",
+                        ["Missing H2 section."])
+                ]);
+
+            var envelope = global::PipelineRunner.PipelineRunner.BuildStepResultEnvelope(context, step, result);
+
+            Assert.Equal("1.0", envelope.SchemaVersion);
+            Assert.Equal("Generate tool-family article", envelope.Step);
+            Assert.Equal("step-4-generate-tool-family-article", envelope.StepName);
+            Assert.Equal("compute", envelope.Namespace);
+            Assert.Equal(StepResultStatus.Partial, envelope.Status);
+            Assert.Equal(1, envelope.OutputFileCount);
+            Assert.Equal(1250L, envelope.DurationMs);
+            Assert.Equal("00:00:01.2500000", envelope.Duration);
+            Assert.Equal(ValidationStatus.Failed, envelope.ValidationStatus);
+            Assert.NotNull(envelope.OutputArtifacts);
+            Assert.Single(envelope.OutputArtifacts!);
+            Assert.Equal("reports/summary.json", envelope.OutputArtifacts[0].Path);
+            Assert.NotEmpty(envelope.OutputArtifacts[0].Sha256);
+            Assert.Contains("Article assembly failed.", envelope.Errors);
+            Assert.Contains("validator failed", envelope.Warnings);
+            Assert.True(DateTimeOffset.TryParse(envelope.Timestamp, out _));
         }
         finally
         {

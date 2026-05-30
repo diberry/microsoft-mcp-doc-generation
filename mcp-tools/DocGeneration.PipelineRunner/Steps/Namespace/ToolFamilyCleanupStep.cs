@@ -9,6 +9,8 @@ namespace PipelineRunner.Steps;
 
 public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 {
+    private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
+
     public ToolFamilyCleanupStep()
         : base(
             4,
@@ -35,8 +37,58 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         context.Items[ToolFamilyPostAssemblyValidator.FamilyNameContextKey] = familyName;
         context.Items[ToolFamilyPostAssemblyValidator.OutputFileNameContextKey] = outputFileName;
 
-        var toolsInputDirectory = Path.Combine(context.OutputPath, "tools");
-        var toolsRawDirectory = Path.Combine(context.OutputPath, "tools-raw");
+        var bootstrapEnvelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 0, "bootstrap-pipeline");
+        var step1Envelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 1, "generate-annotations-parameters-and-raw-tools");
+        var step3Envelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 3, "compose-and-improve-tool-files");
+
+        var toolsInputDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step3Envelope,
+            "tools",
+            Path.Combine(context.OutputPath, "tools"),
+            "step 3");
+        var toolsRawDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step3Envelope,
+            "tools-raw",
+            Path.Combine(context.OutputPath, "tools-raw"),
+            "step 3");
+        var cliVersionPath = ResolveUpstreamFile(
+            context.OutputPath,
+            bootstrapEnvelope,
+            Path.Combine("cli", "cli-version.json"),
+            Path.Combine(context.OutputPath, "cli", "cli-version.json"),
+            "bootstrap");
+        var h2HeadingsSource = ResolveUpstreamDirectory(
+            context.OutputPath,
+            bootstrapEnvelope,
+            "h2-headings",
+            Path.Combine(context.OutputPath, "h2-headings"),
+            "bootstrap");
+        var cliTabConfigPath = ResolveUpstreamFile(
+            context.OutputPath,
+            bootstrapEnvelope,
+            "cli-tab-config.json",
+            Path.Combine(context.OutputPath, "cli-tab-config.json"),
+            "bootstrap");
+        var cliOutputPath = ResolveUpstreamFile(
+            context.OutputPath,
+            bootstrapEnvelope,
+            Path.Combine("cli", "cli-output.json"),
+            Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+            "bootstrap");
+        var parameterCliDir = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step1Envelope,
+            "parameter-cli",
+            Path.Combine(context.OutputPath, "parameter-cli"),
+            "step 1");
+        var exampleCommandsDir = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step1Envelope,
+            "example-commands",
+            Path.Combine(context.OutputPath, "example-commands"),
+            "step 1");
 
         // Fallback: if tools/ is empty or doesn't exist, try tools-raw/ (#602)
         if (!Directory.Exists(toolsInputDirectory)
@@ -78,7 +130,6 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             Directory.CreateDirectory(tempCliDirectory);
             Directory.CreateDirectory(tempDataDirectory);
 
-            var cliVersionPath = Path.Combine(context.OutputPath, "cli", "cli-version.json");
             if (File.Exists(cliVersionPath))
             {
                 File.Copy(cliVersionPath, Path.Combine(tempCliDirectory, "cli-version.json"), overwrite: true);
@@ -102,7 +153,6 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             }
 
             // Copy h2-headings JSON for deterministic heading lookup in Phase 1.5
-            var h2HeadingsSource = Path.Combine(context.OutputPath, "h2-headings");
             if (Directory.Exists(h2HeadingsSource))
             {
                 var tempH2Directory = Path.Combine(tempGeneratedDirectory, "h2-headings");
@@ -203,7 +253,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             if (File.Exists(familyArticlePath))
             {
                 // Check if CLI tab generation is allowed for this namespace
-                var cliTabConfig = CliTabConfig.LoadFromFile(Path.Combine(context.OutputPath, "cli-tab-config.json"));
+                var cliTabConfig = CliTabConfig.LoadFromFile(cliTabConfigPath);
                 if (!cliTabConfig.IsNamespaceAllowed(currentNamespace))
                 {
                     Console.WriteLine($"  ⊘ CLI tab generation disabled for namespace '{currentNamespace}'");
@@ -212,10 +262,6 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 
                 try
                 {
-                    var cliOutputPath = Path.Combine(context.OutputPath, "cli", "cli-output.json");
-                    var parameterCliDir = Path.Combine(context.OutputPath, "parameter-cli");
-                    var exampleCommandsDir = Path.Combine(context.OutputPath, "example-commands");
-
                     if (File.Exists(cliOutputPath) && Directory.Exists(parameterCliDir) && Directory.Exists(exampleCommandsDir))
                     {
                         var cliJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
@@ -232,9 +278,8 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                         }
 
                         // Extract NLP descriptions from tools-raw files (source of truth)
-                        var toolsRawDir = Path.Combine(context.OutputPath, "tools-raw");
                         var nlpDescriptions = await NlpDescriptionExtractor.ExtractNlpDescriptionsAsync(
-                            toolsRawDir, nameContext, cliTools.Keys);
+                            toolsRawDirectory, nameContext, cliTools.Keys);
 
                         // Align CLI descriptions with NLP descriptions (deterministic, no AI)
                         if (nlpDescriptions.Count > 0)
@@ -358,6 +403,40 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         }
 
         return tokens[0].ToLowerInvariant();
+    }
+
+    private static string ResolveUpstreamDirectory(
+        string outputPath,
+        StepResultFile? envelope,
+        string relativeDirectory,
+        string fallbackPath,
+        string upstreamStep)
+    {
+        if (UpstreamArtifacts.TryResolveOutputDirectory(outputPath, envelope, relativeDirectory, out var resolvedPath))
+        {
+            Console.WriteLine(
+                $"INFO: Using {upstreamStep} envelope-based resolution for '{relativeDirectory}' at '{resolvedPath}'.");
+            return resolvedPath;
+        }
+
+        return fallbackPath;
+    }
+
+    private static string ResolveUpstreamFile(
+        string outputPath,
+        StepResultFile? envelope,
+        string relativeFilePath,
+        string fallbackPath,
+        string upstreamStep)
+    {
+        if (UpstreamArtifacts.TryResolveOutputFile(outputPath, envelope, relativeFilePath, out var resolvedPath))
+        {
+            Console.WriteLine(
+                $"INFO: Using {upstreamStep} envelope-based resolution for '{relativeFilePath}' at '{resolvedPath}'.");
+            return resolvedPath;
+        }
+
+        return fallbackPath;
     }
 
     private static async Task<IReadOnlyList<string>> ResolveFamilyToolFilesAsync(string toolsInputDirectory, string familyName, CancellationToken cancellationToken)
