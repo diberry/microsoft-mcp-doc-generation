@@ -1,15 +1,37 @@
+using Azure.Mcp.TextTransformation.Services;
+using Azure.Mcp.TextTransformation.Models;
+using GenerativeAI;
+using HorizontalArticleGenerator.Builders;
+using HorizontalArticleGenerator.Models;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Validation;
 using Shared;
+using HorizontalArticleGeneratorClass = HorizontalArticleGenerator.Generators.HorizontalArticleGenerator;
 
 namespace PipelineRunner.Steps;
 
 public sealed class HorizontalArticlesStep : NamespaceStepBase
 {
+    public const string ArticleOutlineOverrideKey = "HorizontalArticlesStep.ArticleOutlineOverride";
+
     private static readonly ReducerRegistry Reducers = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
+
+    static HorizontalArticlesStep()
+    {
+        Reducers.Register(6, static async (ctx, ct) =>
+        {
+            if (ctx is not ArticleOutlineReducerInput input)
+            {
+                throw new InvalidOperationException($"Reducer input for step 6 must be {nameof(ArticleOutlineReducerInput)}.");
+            }
+
+            var builder = new ArticleOutlineBuilder();
+            return await builder.BuildAsync(input.OutputPath, input.ServiceNamespace, ct);
+        });
+    }
 
     public HorizontalArticlesStep()
         : base(
@@ -27,11 +49,8 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
     {
         var (currentNamespace, cliOutput, _, matchingTools) = ResolveTarget(context);
-        // P8: ReducerRegistry scaffold — when a reducer is registered, use it exclusively
-        if (Reducers.HasReducer(Id))
-        {
-            throw new NotImplementedException($"Reducer registered for step {Id} but execution path not yet implemented.");
-        }
+        var useReducerPath = Reducers.HasReducer(Id);
+        var hasOverride = context.Items.ContainsKey(ArticleOutlineOverrideKey);
 
         _ = await CreateFilteredCliFileAsync(context, cliOutput, matchingTools, "pipeline-runner-step6", cancellationToken);
 
@@ -49,6 +68,48 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             warnings.Add($"CLI version file not found at '{cliVersionPath}'.");
             artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+        }
+
+        if (useReducerPath)
+        {
+            try
+            {
+                var reducer = Reducers.GetReducer(6);
+                if (reducer is null)
+                {
+                    throw new InvalidOperationException("Reducer path was selected for step 6, but no reducer is registered.");
+                }
+
+                var outline = (ArticleOutlineContext)await reducer(
+                    new ArticleOutlineReducerInput(context.OutputPath, currentNamespace),
+                    cancellationToken);
+                var renderArticleAsync = await ResolveArticleRendererAsync(context, cancellationToken);
+                var articleContent = await renderArticleAsync(outline, cancellationToken);
+                var reducerArticleDirectory = Path.Combine(context.OutputPath, "horizontal-articles");
+                Directory.CreateDirectory(reducerArticleDirectory);
+                File.WriteAllText(
+                    Path.Combine(reducerArticleDirectory, $"horizontal-article-{currentNamespace}.md"),
+                    articleContent);
+                RemoveStaleFile(Path.Combine(reducerArticleDirectory, $"error-{currentNamespace}.txt"));
+                RemoveStaleFile(Path.Combine(reducerArticleDirectory, $"error-{currentNamespace}-airesponse.txt"));
+
+                return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (hasOverride)
+                {
+                    warnings.Add($"Horizontal article generation failed: {ex.Message}");
+                    artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
+                    return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+                }
+
+                Console.WriteLine($"Reducer path failed for namespace '{currentNamespace}', falling back to subprocess: {ex.Message}");
+            }
         }
 
         var processResult = await context.ProcessRunner.RunDotNetProjectAsync(
@@ -91,6 +152,39 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
         return BuildResult(context, processResults, success, warnings, artifactFailures: artifactFailures);
     }
 
+    private static async Task<Func<ArticleOutlineContext, CancellationToken, Task<string>>> ResolveArticleRendererAsync(
+        PipelineContext context,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (context.Items.TryGetValue(ArticleOutlineOverrideKey, out var overrideValue))
+        {
+            if (overrideValue is Func<ArticleOutlineContext, CancellationToken, Task<string>> articleOverride)
+            {
+                return articleOverride;
+            }
+
+            throw new InvalidOperationException(
+                $"Context item '{ArticleOutlineOverrideKey}' must be {typeof(Func<ArticleOutlineContext, CancellationToken, Task<string>>).FullName}.");
+        }
+
+        var transformConfigPath = Path.Combine(context.McpToolsRoot, "data", "transformation-config.json");
+        TransformationEngine? transformationEngine = null;
+        if (File.Exists(transformConfigPath))
+        {
+            var loader = new ConfigLoader(transformConfigPath);
+            transformationEngine = new TransformationEngine(await loader.LoadAsync());
+        }
+
+        var generator = new HorizontalArticleGeneratorClass(
+            GenerativeAIOptions.LoadFromEnvironmentOrDotEnv(),
+            useTextTransformation: transformationEngine is not null,
+            generateAllArticles: false,
+            transformationEngine,
+            outputBasePath: context.OutputPath);
+        return generator.GenerateArticleMarkdownAsync;
+    }
+
     private static ArtifactFailure CreateHorizontalFailure(PipelineContext context, string currentNamespace, IEnumerable<string> details)
     {
         var articleDirectory = Path.Combine(context.OutputPath, "horizontal-articles");
@@ -121,4 +215,14 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
 
         return fallbackPath;
     }
+
+    private static void RemoveStaleFile(string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    private sealed record ArticleOutlineReducerInput(string OutputPath, string ServiceNamespace);
 }

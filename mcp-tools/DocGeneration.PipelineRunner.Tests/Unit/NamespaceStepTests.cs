@@ -1,4 +1,5 @@
 using System.Text.Json;
+using HorizontalArticleGenerator.Models;
 using PipelineRunner.Cli;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
@@ -570,7 +571,7 @@ public class NamespaceStepTests
     }
 
     [Fact]
-    public async Task Step6_HorizontalArticles_UsesExpectedGeneratorArguments()
+    public async Task Step6_HorizontalArticles_UsesReducerOverride_AndWritesOutput()
     {
         var testRoot = CreateTestRoot();
         try
@@ -580,19 +581,35 @@ public class NamespaceStepTests
             context.Items["Namespace"] = "compute";
 
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
-            SeedFile(Path.Combine(context.OutputPath, "horizontal-articles", "horizontal-article-compute.md"));
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                JsonSerializer.Serialize(new
+                {
+                    results = new[]
+                    {
+                        new { command = "compute list", name = "compute list", description = "List compute resources." },
+                        new { command = "compute show", name = "compute show", description = "Show compute resources." }
+                    }
+                }));
+
+            ArticleOutlineContext? capturedOutline = null;
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] =
+                (Func<ArticleOutlineContext, CancellationToken, Task<string>>)((outline, _) =>
+                {
+                    capturedOutline = outline;
+                    return Task.FromResult("# Horizontal article");
+                });
 
             var step = new HorizontalArticlesStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Single(runner.Invocations);
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument.EndsWith("DocGeneration.Steps.HorizontalArticles.csproj", StringComparison.Ordinal));
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--single-service");
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "compute");
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--output-path");
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == context.OutputPath);
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--transform");
+            Assert.Empty(runner.Invocations);
+            Assert.NotNull(capturedOutline);
+            Assert.Equal("compute", capturedOutline!.ServiceIdentifier);
+            Assert.Equal(
+                "# Horizontal article",
+                File.ReadAllText(Path.Combine(context.OutputPath, "horizontal-articles", "horizontal-article-compute.md")));
         }
         finally
         {

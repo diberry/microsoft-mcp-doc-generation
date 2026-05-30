@@ -4,6 +4,7 @@
 using System.Text.Json;
 using GenerativeAI;
 using CSharpGenerator.Models;
+using HorizontalArticleGenerator.Builders;
 using HorizontalArticleGenerator.Models;
 using TemplateEngine;
 using Shared;
@@ -191,30 +192,43 @@ public class HorizontalArticleGenerator
     /// </summary>
     public async Task GenerateSingleServiceArticle(string serviceArea)
     {
-        // Phase 1: Extract static data
-        var staticDataList = await ExtractStaticData();
-        
-        // Find the requested service
-        var targetService = staticDataList.FirstOrDefault(s => 
-            s.ServiceIdentifier.Equals(serviceArea, StringComparison.OrdinalIgnoreCase));
-        
-        if (targetService == null)
+        var outlineBuilder = new ArticleOutlineBuilder();
+        var outline = await outlineBuilder.BuildAsync(_outputBasePath, serviceArea, CancellationToken.None);
+        var hasToolEvidence = outline.Sections
+            .FirstOrDefault(section => section.Heading == "Tool overview")?
+            .EvidenceItems
+            .Any() ?? false;
+        if (!hasToolEvidence)
         {
             Console.Error.WriteLine($"✗ Service not found: {serviceArea}");
-            Console.Error.WriteLine($"Available services: {string.Join(", ", staticDataList.Select(s => s.ServiceIdentifier))}");
             return;
         }
-        
-        // Create output directory
+
         Directory.CreateDirectory(_outputDir);
-        
-        // Generate the article
-        bool result = await GenerateSingleArticleAsync(targetService, _outputDir, "[1/1]");
-        
+        bool result = await GenerateSingleArticleAsync(outline, _outputDir, "[1/1]", CancellationToken.None);
+
         if (!result)
         {
             Console.Error.WriteLine($"✗ Single service article generation failed for {serviceArea}");
         }
+    }
+
+    public async Task<string> GenerateArticleMarkdownAsync(ArticleOutlineContext outlineContext, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var staticData = await BuildStaticArticleDataAsync(outlineContext, cancellationToken);
+        var aiResponse = await GenerateAIContent(staticData);
+        var aiData = ParseAIResponse(aiResponse);
+        var processor = new ArticleContentProcessor(_transformationEngine);
+        var validationResult = processor.Process(aiData, staticData.ServiceBrandName, staticData.ServiceIdentifier);
+        if (validationResult.HasCriticalErrors)
+        {
+            throw new InvalidOperationException(string.Join(Environment.NewLine, validationResult.CriticalErrors));
+        }
+
+        var templateData = MergeData(staticData, aiData);
+        templateData.Skills = SkillsRelevanceReader.LoadRelevantSkills(_outputBasePath, staticData.ServiceIdentifier);
+        return await RenderArticleAsync(templateData);
     }
 
     /// <summary>
@@ -589,6 +603,14 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
     /// </summary>
     private async Task RenderAndSaveArticle(HorizontalArticleTemplateData templateData)
     {
+        var filename = $"horizontal-article-{templateData.ServiceIdentifier}.md";
+        var outputPath = Path.Combine(_outputDir, filename);
+        var renderedContent = await RenderArticleAsync(templateData);
+        await File.WriteAllTextAsync(outputPath, renderedContent, Encoding.UTF8);
+    }
+
+    private async Task<string> RenderArticleAsync(HorizontalArticleTemplateData templateData)
+    {
         var templatePath = Path.GetFullPath(TEMPLATE_PATH);
         
         // Manually build dictionary with correct field names (including genai- prefix)
@@ -635,14 +657,93 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             }).ToList();
         }
         
-        var renderedContent = await HandlebarsTemplateEngine.ProcessTemplateAsync(templatePath, data);
-        
-        // Save to file
-        var filename = $"horizontal-article-{templateData.ServiceIdentifier}.md";
-        var outputPath = Path.Combine(_outputDir, filename);
-        
-        await File.WriteAllTextAsync(outputPath, renderedContent, Encoding.UTF8);
+        return await HandlebarsTemplateEngine.ProcessTemplateAsync(templatePath, data);
+    }
+
+    private async Task<bool> GenerateSingleArticleAsync(
+        ArticleOutlineContext outlineContext,
+        string outputDir,
+        string progress,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            Console.WriteLine($"{progress} Processing {outlineContext.ArticleTitle}...");
+            var renderedContent = await GenerateArticleMarkdownAsync(outlineContext, cancellationToken);
+            Directory.CreateDirectory(outputDir);
+            await File.WriteAllTextAsync(
+                Path.Combine(outputDir, $"horizontal-article-{outlineContext.ServiceIdentifier}.md"),
+                renderedContent,
+                Encoding.UTF8,
+                cancellationToken);
+            Console.WriteLine($"{progress} ✓ Generated: horizontal-article-{outlineContext.ServiceIdentifier}.md");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{progress} ✗ Failed for {outlineContext.ArticleTitle}: {ex.Message}");
+            var errorLog = Path.Combine(outputDir, $"error-{outlineContext.ServiceIdentifier}.txt");
+            await File.WriteAllTextAsync(errorLog, $"{ex.Message}{Environment.NewLine}{Environment.NewLine}{ex.StackTrace}", Encoding.UTF8, cancellationToken);
+            Console.WriteLine();
+            return false;
+        }
+    }
+
+    private async Task<StaticArticleData> BuildStaticArticleDataAsync(ArticleOutlineContext outlineContext, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var cliVersion = await CliVersionReader.ReadCliVersionAsync(_outputBasePath);
+        var tools = ExtractToolsFromOutline(outlineContext);
+
+        return new StaticArticleData
+        {
+            ServiceBrandName = outlineContext.ArticleTitle,
+            ServiceIdentifier = outlineContext.ServiceIdentifier,
+            GeneratedAt = DateTime.UtcNow.ToString("o"),
+            Version = cliVersion,
+            ToolsReferenceLink = outlineContext.Sections
+                .SelectMany(section => section.EvidenceItems)
+                .FirstOrDefault(item => item.StartsWith("xref:../tool-family/", StringComparison.OrdinalIgnoreCase))?
+                .Replace("xref:", string.Empty, StringComparison.OrdinalIgnoreCase)
+                ?? $"../tool-family/{outlineContext.ServiceIdentifier}.md",
+            Tools = tools
+        };
+    }
+
+    private static List<HorizontalToolSummary> ExtractToolsFromOutline(ArticleOutlineContext outlineContext)
+    {
+        var toolOverviewSection = outlineContext.Sections.FirstOrDefault(section => section.Heading == "Tool overview");
+        if (toolOverviewSection is null)
+        {
+            return [];
+        }
+
+        var tools = new List<HorizontalToolSummary>();
+        foreach (var evidenceItem in toolOverviewSection.EvidenceItems)
+        {
+            using var document = JsonDocument.Parse(evidenceItem);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("kind", out var kind) || !string.Equals(kind.GetString(), "tool", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            tools.Add(new HorizontalToolSummary
+            {
+                Command = root.GetProperty("command").GetString() ?? string.Empty,
+                Description = root.GetProperty("description").GetString() ?? string.Empty,
+                ParameterCount = root.TryGetProperty("parameterCount", out var parameterCount) ? parameterCount.GetInt32() : 0,
+                MoreInfoLink = root.TryGetProperty("moreInfoLink", out var moreInfoLink) ? moreInfoLink.GetString() ?? string.Empty : string.Empty,
+                Metadata = new Dictionary<string, MetadataValue>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["destructive"] = new MetadataValue { Value = root.TryGetProperty("destructive", out var destructive) && destructive.GetBoolean() },
+                    ["readOnly"] = new MetadataValue { Value = root.TryGetProperty("readOnly", out var readOnly) && readOnly.GetBoolean() },
+                    ["secret"] = new MetadataValue { Value = root.TryGetProperty("secret", out var secret) && secret.GetBoolean() }
+                }
+            });
+        }
+
+        return tools;
     }
 
 }
-

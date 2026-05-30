@@ -1,4 +1,5 @@
 using System.Text.Json;
+using HorizontalArticleGenerator.Models;
 using PipelineRunner.Cli;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
@@ -445,25 +446,35 @@ public class FailurePathTests
     }
 
     [Fact]
-    public async Task Step6_SubprocessExitCodeNonZero_ReturnsFailureWithProcessDiagnostics()
+    public async Task Step6_InvalidOverrideType_ReturnsFailureWithActionableMessage()
     {
         var testRoot = CreateTestRoot();
         try
         {
-            var runner = new FailingProcessRunner(exitCode: 1, standardError: "Azure OpenAI returned 429 Too Many Requests");
+            var runner = new RecordingProcessRunner();
             var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["eventgrid list"]);
             context.Items["Namespace"] = "eventgrid";
 
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                JsonSerializer.Serialize(new
+                {
+                    results = new[]
+                    {
+                        new { command = "eventgrid list", name = "eventgrid list", description = "List event subscriptions." }
+                    }
+                }));
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] = "invalid";
 
             var step = new HorizontalArticlesStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.False(result.Success);
             Assert.Contains(result.Warnings, w => w.Contains("Horizontal article generation failed", StringComparison.Ordinal));
-            Assert.Contains(result.Warnings, w => w.Contains("exit code 1", StringComparison.Ordinal));
-            Assert.Contains(result.Warnings, w => w.Contains("429 Too Many Requests", StringComparison.Ordinal));
+            Assert.Contains(result.Warnings, w => w.Contains(HorizontalArticlesStep.ArticleOutlineOverrideKey, StringComparison.Ordinal));
             Assert.Single(result.ArtifactFailures);
+            Assert.Empty(runner.Invocations);
         }
         finally
         {
@@ -472,7 +483,7 @@ public class FailurePathTests
     }
 
     [Fact]
-    public async Task Step6_SubprocessSucceeds_ErrorArtifactExists_ReturnsFailure()
+    public async Task Step6_OverrideThrows_ReturnsFailure()
     {
         var testRoot = CreateTestRoot();
         try
@@ -482,15 +493,25 @@ public class FailurePathTests
             context.Items["Namespace"] = "servicebus";
 
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
-            // Subprocess exit 0 but leaves an error artifact
-            SeedFile(Path.Combine(context.OutputPath, "horizontal-articles", "error-servicebus.txt"), "AI returned malformed JSON");
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                JsonSerializer.Serialize(new
+                {
+                    results = new[]
+                    {
+                        new { command = "servicebus list", name = "servicebus list", description = "List namespaces." }
+                    }
+                }));
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] =
+                (Func<ArticleOutlineContext, CancellationToken, Task<string>>)((_, _) => throw new InvalidOperationException("override exploded"));
 
             var step = new HorizontalArticlesStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.False(result.Success);
-            Assert.Contains(result.Warnings, w => w.Contains("error artifact", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(result.Warnings, w => w.Contains("override exploded", StringComparison.Ordinal));
             Assert.Single(result.ArtifactFailures);
+            Assert.Empty(runner.Invocations);
         }
         finally
         {
@@ -499,7 +520,7 @@ public class FailurePathTests
     }
 
     [Fact]
-    public async Task Step6_SubprocessSucceeds_NoArticleOutput_ReturnsFailure()
+    public async Task Step6_SuccessfulOverride_RemovesStaleErrorArtifacts()
     {
         var testRoot = CreateTestRoot();
         try
@@ -509,14 +530,28 @@ public class FailurePathTests
             context.Items["Namespace"] = "loadtesting";
 
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
-            // Subprocess succeeds but writes no article file
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                JsonSerializer.Serialize(new
+                {
+                    results = new[]
+                    {
+                        new { command = "loadtesting list", name = "loadtesting list", description = "List load tests." }
+                    }
+                }));
+            SeedFile(Path.Combine(context.OutputPath, "horizontal-articles", "error-loadtesting.txt"), "old error");
+            SeedFile(Path.Combine(context.OutputPath, "horizontal-articles", "error-loadtesting-airesponse.txt"), "old ai error");
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] =
+                (Func<ArticleOutlineContext, CancellationToken, Task<string>>)((_, _) => Task.FromResult("# Article"));
 
             var step = new HorizontalArticlesStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-            Assert.False(result.Success);
-            Assert.Contains(result.Warnings, w => w.Contains("Expected horizontal article output", StringComparison.Ordinal));
-            Assert.Single(result.ArtifactFailures);
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("error artifact", StringComparison.OrdinalIgnoreCase));
+            Assert.False(File.Exists(Path.Combine(context.OutputPath, "horizontal-articles", "error-loadtesting.txt")));
+            Assert.False(File.Exists(Path.Combine(context.OutputPath, "horizontal-articles", "error-loadtesting-airesponse.txt")));
+            Assert.Empty(runner.Invocations);
         }
         finally
         {
@@ -534,13 +569,23 @@ public class FailurePathTests
             var context = CreateContext(testRoot, runner, skipValidation: true, toolCommands: ["advisor list"]);
             context.Items["Namespace"] = "advisor";
 
-            SeedFile(Path.Combine(context.OutputPath, "horizontal-articles", "horizontal-article-advisor.md"));
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                JsonSerializer.Serialize(new
+                {
+                    results = new[]
+                    {
+                        new { command = "advisor list", name = "advisor list", description = "List advisor recommendations." }
+                    }
+                }));
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] =
+                (Func<ArticleOutlineContext, CancellationToken, Task<string>>)((_, _) => Task.FromResult("# Advisor article"));
 
             var step = new HorizontalArticlesStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Single(runner.Invocations); // Subprocess was invoked
+            Assert.Empty(runner.Invocations);
         }
         finally
         {
