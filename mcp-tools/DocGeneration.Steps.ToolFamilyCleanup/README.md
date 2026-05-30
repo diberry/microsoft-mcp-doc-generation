@@ -10,6 +10,8 @@ This tool takes generated tool family markdown files and applies AI-powered clea
 
 1. **Single-Phase Mode** (Default): Processes complete pre-assembled tool family files in one LLM call per file
 2. **Multi-Phase Mode** (Advanced): Assembles tool families from individual tool files, generating metadata and related content separately to avoid token limits
+   - `FamilyStructureBuilder` now deterministically builds a typed `FamilyStructureContext` before any AI call
+   - H2 headings come from precomputed `generated/h2-headings/{family}.json` files, with deterministic fallback when missing
 
 ### Features
 
@@ -56,9 +58,10 @@ pwsh ./GenerateDocGeneration.Steps.ToolFamilyCleanup-multifile.ps1
 
 **How It Works:**
 1. **Phase 1**: Reads individual tool files from `./generated/tools/` and groups by family
-2. **Phase 2**: Generates metadata (frontmatter + H1 + intro) using AI per family
-3. **Phase 3**: Generates "Related content" section using AI per family
-4. **Phase 4**: Stitches tools together with AI-generated metadata/related content (no AI)
+2. **Phase 1.5**: `FamilyStructureBuilder` loads deterministic H2 headings, establishes canonical section order, and emits `FamilyStructureContext`
+3. **Phase 2**: Generates metadata (frontmatter + H1 + intro) using AI per family
+4. **Phase 3**: Generates deterministic related content per family
+5. **Phase 4**: Stitches sections together with metadata/related content (no AI)
 
 **Advantages:**
 - ✓ No 16K token limit (processes tools individually)

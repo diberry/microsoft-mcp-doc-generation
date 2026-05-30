@@ -50,6 +50,56 @@ public class CleanupGenerator
         _config = config;
     }
 
+    public async Task<(string Metadata, string RelatedContent, string FinalContent)> GenerateFromStructureAsync(
+        FamilyStructureContext structureContext,
+        string displayName,
+        string cliVersion,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(structureContext);
+        ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var metadataGenerator = new FamilyMetadataGenerator(_options);
+        await metadataGenerator.LoadPromptsAsync();
+
+        var serviceDocLinks = LoadServiceDocLinks();
+        var familyContent = new FamilyContent
+        {
+            FamilyName = structureContext.FamilyName,
+            DisplayName = displayName,
+            Metadata = string.Empty,
+            RelatedContent = string.Empty,
+            Tools = structureContext.Sections.Select((section, index) => new ToolContent
+            {
+                ToolName = section.Heading,
+                FileName = $"section-{index + 1}.md",
+                FamilyName = structureContext.FamilyName,
+                Content = section.SourceContent,
+                Command = section.ToolNames.FirstOrDefault(),
+                Description = null,
+                ResourceType = ToolReader.GetResourceType(section.ToolNames.FirstOrDefault())
+            }).ToList()
+        };
+
+        var aiMetadata = await metadataGenerator.GenerateAsync(familyContent, cliVersion);
+        var metadata = aiMetadata;
+        if (serviceDocLinks.TryGetValue(structureContext.FamilyName, out var docLink) &&
+            !string.IsNullOrWhiteSpace(docLink.SeoDescription))
+        {
+            var generator = new DeterministicFrontmatterGenerator();
+            var header = generator.Generate(displayName, familyContent.ToolCount, cliVersion, docLink.SeoDescription);
+            var intros = generator.ExtractIntroParagraphs(aiMetadata);
+            metadata = generator.Assemble(header, intros);
+        }
+
+        familyContent.Metadata = metadata;
+        familyContent.RelatedContent = DeterministicRelatedContentGenerator.Generate(structureContext.FamilyName, serviceDocLinks);
+        var stitcher = new FamilyFileStitcher();
+        var finalContent = stitcher.Stitch(familyContent);
+        return (metadata, familyContent.RelatedContent, finalContent);
+    }
+
     /// <summary>
     /// Processes all tool family markdown files in the input directory.
     /// </summary>
@@ -215,6 +265,19 @@ public class CleanupGenerator
 
         Console.WriteLine("✓ Prompts loaded");
         Console.WriteLine();
+    }
+
+    private static Dictionary<string, ServiceDocLink> LoadServiceDocLinks()
+    {
+        var serviceDocLinksPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "service-doc-links.json");
+        if (!File.Exists(serviceDocLinksPath))
+        {
+            serviceDocLinksPath = Path.Combine(AppContext.BaseDirectory, "data", "service-doc-links.json");
+        }
+
+        return File.Exists(serviceDocLinksPath)
+            ? DeterministicRelatedContentGenerator.LoadServiceDocLinks(serviceDocLinksPath)
+            : new Dictionary<string, ServiceDocLink>();
     }
 
     private string GenerateUserPrompt(string fileName, string content)
