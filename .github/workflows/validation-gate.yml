@@ -48,7 +48,7 @@ jobs:
       # ── 4. Detect changed tool-family article files in the PR ─────────────────
       - name: Detect changed article files
         id: changed
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcda3a68da5ab  # v7
+        uses: actions/github-script@v7
         with:
           script: |
             const response = await github.paginate(github.rest.pulls.listFiles, {
@@ -188,7 +188,7 @@ jobs:
       # ── 7. Post PR comment with results ──────────────────────────────────────
       - name: Post PR validation comment
         if: always()
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcda3a68da5ab  # v7
+        uses: actions/github-script@v7
         env:
           HEALTH_VERDICT:   ${{ steps.health.outputs.verdict }}
           HEALTH_FILES:     ${{ steps.health.outputs.files_checked }}
