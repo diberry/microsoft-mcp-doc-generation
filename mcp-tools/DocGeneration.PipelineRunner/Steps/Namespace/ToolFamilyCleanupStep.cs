@@ -4,16 +4,20 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Validation;
 using Shared;
+using Shared.Validation;
 using ToolFamilyCleanup.Models;
 using ToolFamilyCleanup.Services;
+using ToolFamilyCleanup.Validation;
 
 namespace PipelineRunner.Steps;
 
 public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 {
     public const string FamilyCleanupOverrideKey = "ToolFamilyCleanupStep.FamilyCleanupOverride";
+    private const string ToolFamilyCleanupStageName = "tool-family-cleanup";
 
     private static readonly ReducerRegistry Reducers = new();
+    private static readonly PreAiValidatorRegistry ValidatorRegistry = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
 
     static ToolFamilyCleanupStep()
@@ -28,6 +32,8 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             var builder = new FamilyStructureBuilder();
             return await builder.BuildAsync(input.ToolsDirectory, input.FamilyName, input.H2HeadingsDirectory, ct);
         });
+
+        ValidatorRegistry.Register(ToolFamilyCleanupStageName, new FamilyStructureContextValidator());
     }
 
     public ToolFamilyCleanupStep()
@@ -141,7 +147,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         {
             try
             {
-                var artifacts = await GenerateFamilyWithReducerAsync(
+                var (artifacts, preAiErrors) = await GenerateFamilyWithReducerAsync(
                     context,
                     toolsInputDirectory,
                     familyName,
@@ -151,7 +157,21 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     warnings,
                     cancellationToken);
 
-                WriteFamilyArtifacts(context.OutputPath, outputFileName, artifacts);
+                if (preAiErrors.Count > 0)
+                {
+                    var errorMessages = preAiErrors.Select(static e => e.Message).ToArray();
+                    warnings.AddRange(errorMessages);
+                    artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
+                    return BuildResult(
+                        context,
+                        processResults,
+                        false,
+                        warnings,
+                        [new ValidatorResult("pre-ai-validation", false, errorMessages)],
+                        artifactFailures);
+                }
+
+                WriteFamilyArtifacts(context.OutputPath, outputFileName, artifacts!);
                 RemoveStaleFamilyFiles(context.OutputPath, familyName, outputFileName);
                 await ApplyCliTabWrappingAsync(
                     context,
@@ -596,7 +616,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             .ToArray();
     }
 
-    private static async Task<FamilyCleanupArtifacts> GenerateFamilyWithReducerAsync(
+    private static async Task<(FamilyCleanupArtifacts? Artifacts, IReadOnlyList<ValidationError> ValidationErrors)> GenerateFamilyWithReducerAsync(
         PipelineContext context,
         string toolsDirectory,
         string familyName,
@@ -616,8 +636,14 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             new FamilyStructureReducerInput(toolsDirectory, familyName, h2HeadingsDirectory),
             cancellationToken);
 
+        var validationResult = await ValidatorRegistry.ValidateAsync(ToolFamilyCleanupStageName, structure, cancellationToken);
+        if (!validationResult.IsValid)
+        {
+            return (null, validationResult.Errors);
+        }
+
         var cleanupAsync = await ResolveFamilyCleanupAsync(context, familyName, cliVersionPath, brandMappings, warnings, cancellationToken);
-        return await cleanupAsync(structure, cancellationToken);
+        return (await cleanupAsync(structure, cancellationToken), System.Array.Empty<ValidationError>());
     }
 
     private static async Task<Func<FamilyStructureContext, CancellationToken, Task<FamilyCleanupArtifacts>>> ResolveFamilyCleanupAsync(

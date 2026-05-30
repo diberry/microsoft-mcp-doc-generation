@@ -6,8 +6,10 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Validation;
 using Shared;
+using Shared.Validation;
 using ToolGeneration_Improved.Models;
 using ToolGeneration_Improved.Services;
+using ToolGeneration_Improved.Validation;
 
 namespace PipelineRunner.Steps;
 
@@ -15,8 +17,10 @@ public sealed class ToolGenerationStep : NamespaceStepBase
 {
     private const int DefaultMaxTokens = 8000;
     internal const string ToolImproverOverrideKey = "ToolGenerationStep.ToolImproverOverride";
+    private const string ToolGenerationStageName = "tool-generation";
 
     private static readonly ReducerRegistry Reducers = new();
+    private static readonly PreAiValidatorRegistry ValidatorRegistry = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
     private static readonly TimeSpan ReducerImprovementTimeout = TimeSpan.FromMinutes(5);
 
@@ -40,6 +44,9 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             var reducer = new ToolGenerationReducer();
             return await reducer.ReduceAsync(input.ComposedToolsDirectory, input.ToolFileName, input.MaxTokens, ct);
         });
+
+        ValidatorRegistry.Register(ToolGenerationStageName, new ToolGenerationContextValidator());
+        ValidatorRegistry.Register(ToolGenerationStageName, new ToolGenerationBudgetValidator());
     }
 
     public ToolGenerationStep()
@@ -185,9 +192,10 @@ public sealed class ToolGenerationStep : NamespaceStepBase
 
         if (useReducerPath)
         {
+            var hadValidationFailure = false;
             try
             {
-                await ImproveToolsWithReducerAsync(
+                hadValidationFailure = await ImproveToolsWithReducerAsync(
                     context,
                     toolArtifacts,
                     composedToolsDirectory,
@@ -208,6 +216,15 @@ public sealed class ToolGenerationStep : NamespaceStepBase
                     warnings,
                     [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
                 return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+            }
+
+            if (hadValidationFailure)
+            {
+                artifactFailures.Add(CreateStepLevelFailure(
+                    "DocGeneration.Steps.ToolGeneration.Improvements",
+                    "Pre-AI validation failed for one or more tools; composed content was used as fallback.",
+                    warnings,
+                    [composedToolsDirectory, improvedToolsDirectory]));
             }
         }
         else
@@ -382,7 +399,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             .Where(static fileName => !string.IsNullOrWhiteSpace(fileName))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    private static async Task ImproveToolsWithReducerAsync(
+    private static async Task<bool> ImproveToolsWithReducerAsync(
         PipelineContext context,
         IReadOnlyList<ToolArtifacts> toolArtifacts,
         string composedToolsDirectory,
@@ -399,6 +416,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
         }
 
         var improveToolAsync = await ResolveToolImproverAsync(context, cancellationToken);
+        var anyValidationFailed = false;
 
         foreach (var artifact in toolArtifacts)
         {
@@ -407,6 +425,16 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             var reduction = (ToolGenerationContext)await reducer(
                 new ToolGenerationReducerInput(composedToolsDirectory, artifact.ToolFileName, DefaultMaxTokens),
                 cancellationToken);
+
+            var validationResult = await ValidatorRegistry.ValidateAsync(ToolGenerationStageName, reduction, cancellationToken);
+            if (!validationResult.IsValid)
+            {
+                var errorSummary = string.Join("; ", validationResult.Errors.Select(static e => e.Message));
+                warnings.Add($"Pre-AI validation failed for '{artifact.ToolFileName}': {errorSummary}");
+                await File.WriteAllTextAsync(artifact.ImprovedToolPath, reduction.ComposedContent, Encoding.UTF8, cancellationToken);
+                anyValidationFailed = true;
+                continue;
+            }
 
             try
             {
@@ -433,6 +461,8 @@ public sealed class ToolGenerationStep : NamespaceStepBase
                 warnings.Add($"AI-improved tool generation failed for '{artifact.ToolFileName}': {ex.Message}");
             }
         }
+
+        return anyValidationFailed;
     }
 
     private static async Task<Func<ToolGenerationContext, CancellationToken, Task<ImprovedToolData>>> ResolveToolImproverAsync(

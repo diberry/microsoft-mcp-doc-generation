@@ -6,6 +6,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **P10: Pre-AI seam validators** — Registered `IPreAiValidator` implementations for pipeline steps 3, 4, and 6 using the `PreAiValidatorRegistry` from P9. Five validators added:
+  - `ToolGenerationContextValidator` — validates `ToolName`, `ComposedContent` non-empty, `SchemaVersion == "1.0"` before step 3 AI calls.
+  - `ToolGenerationBudgetValidator` — enforces 100,000-token input budget (via `ComposedContent.Length / 4`) before step 3 AI calls.
+  - `FamilyStructureContextValidator` — validates `FamilyName`, `Sections.Count >= 1`, all section headings non-empty, `SchemaVersion == "1.0"` before step 4 AI calls.
+  - `ArticleOutlineContextValidator` — validates `ArticleTitle`, `Sections.Count >= 2`, each section has `EvidenceItems.Count >= 1`, `SchemaVersion == "1.0"` before step 6 AI calls.
+  - `ArticleOutlineBudgetValidator` — enforces 100,000-token input budget (via total evidence item length / 4) before step 6 AI calls.
+  - 27 new unit tests covering valid and invalid inputs for all five validators. All 492 `DocGeneration.PipelineRunner.Tests` pass.
+
 ### Changed
 
 - **Completed npm-to-dotnet migration** — Removed all Node.js scripts from `mcp-cli-metadata/`. CLI metadata extraction now uses `mcp-tools/McpCliMetadata/` exclusively. Updated CI workflows, preflight.ps1, and documentation. Closes #627.
