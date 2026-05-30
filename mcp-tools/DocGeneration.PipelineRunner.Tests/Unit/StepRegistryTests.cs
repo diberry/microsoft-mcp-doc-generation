@@ -47,6 +47,34 @@ public class StepRegistryTests
     }
 
     [Fact]
+    public void TryGetBySlug_StepNameSlug_ReturnsRegisteredStep()
+    {
+        var registry = new StepRegistry([
+            new FakeStep(3, "Compose and improve tool files"),
+        ]);
+
+        var found = registry.TryGetBySlug("compose-and-improve-tool-files", out var step);
+
+        Assert.True(found);
+        Assert.NotNull(step);
+        Assert.Equal(3, step!.Id);
+    }
+
+    [Fact]
+    public void TryGetBySlug_TypeAlias_ReturnsRegisteredStep()
+    {
+        var registry = new StepRegistry([
+            new ToolGenerationStep(),
+        ]);
+
+        var found = registry.TryGetBySlug("tool-generation", out var step);
+
+        Assert.True(found);
+        Assert.NotNull(step);
+        Assert.Equal(3, step!.Id);
+    }
+
+    [Fact]
     public void CreateDefault_RegistersAllStandardStepsAsTypedImplementations()
     {
         var scriptsRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-scripts-{Guid.NewGuid():N}");
@@ -59,7 +87,7 @@ public class StepRegistryTests
             Assert.IsType<BootstrapStep>(registry.GetStep(0));
             Assert.IsType<AnnotationsParametersRawStep>(registry.GetStep(1));
             Assert.IsType<ExamplePromptsStep>(registry.GetStep(2));
-            Assert.IsType<ToolGenerationStep>(registry.GetStep(3));
+            Assert.IsType<global::PipelineRunner.Steps.ToolGenerationStep>(registry.GetStep(3));
             Assert.IsType<ToolFamilyCleanupStep>(registry.GetStep(4));
             Assert.IsType<SkillsRelevanceStep>(registry.GetStep(5));
             Assert.IsType<HorizontalArticlesStep>(registry.GetStep(6));
@@ -204,7 +232,7 @@ public class StepRegistryTests
         return path;
     }
 
-    private sealed class FakeStep : IPipelineStep
+    private class FakeStep : IPipelineStep
     {
         public FakeStep(int id, string name, StepScope scope = StepScope.Namespace)
         {
@@ -230,4 +258,7 @@ public class StepRegistryTests
         public ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
             => ValueTask.FromResult(StepResult.DryRun(Array.Empty<string>()));
     }
+
+    private sealed class ToolGenerationStep()
+        : FakeStep(3, "Compose and improve tool files");
 }

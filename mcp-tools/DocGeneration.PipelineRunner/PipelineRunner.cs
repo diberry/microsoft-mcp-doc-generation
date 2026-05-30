@@ -92,6 +92,11 @@ public sealed class PipelineRunner
             return InvalidArgumentsExitCode;
         }
 
+        if (request.Replay)
+        {
+            return await RunReplayAsync(request, cancellationToken);
+        }
+
         var context = await _contextFactory.CreateAsync(request, cancellationToken);
         var selectedSteps = _stepRegistry.GetOrderedSteps(request.Steps);
         context.PlannedSteps = selectedSteps;
@@ -216,6 +221,69 @@ public sealed class PipelineRunner
         if (gatesExitCode != SuccessExitCode)
         {
             return CompleteRun(context, warnings, criticalFailures, gatesExitCode);
+        }
+
+        return CompleteRun(context, warnings, criticalFailures, SuccessExitCode);
+    }
+
+    private async Task<int> RunReplayAsync(PipelineRequest request, CancellationToken cancellationToken)
+    {
+        var bootstrapContext = await _contextFactory.CreateAsync(request, cancellationToken);
+        var replayOutputPath = WorkspaceManager.GetReplayWorkspace(bootstrapContext.RepoRoot, request.ReplayFromRunId!);
+        if (!_stepRegistry.TryGetBySlug(request.ReplayStepName!, out var targetStep) || targetStep is null)
+        {
+            Console.Error.WriteLine($"Unknown replay step '{request.ReplayStepName}'.");
+            return InvalidArgumentsExitCode;
+        }
+
+        var replayRequest = request with
+        {
+            OutputPath = replayOutputPath,
+            Steps = [targetStep.Id],
+        };
+
+        var context = await _contextFactory.CreateAsync(replayRequest, cancellationToken);
+        context.PlannedSteps = [targetStep];
+
+        if (!TryValidateReplayUpstreamArtifacts(context, targetStep, out var missingUpstreamPath))
+        {
+            Console.Error.WriteLine($"upstream artifact not found: {missingUpstreamPath}");
+            return FatalExitCode;
+        }
+
+        var warnings = new List<string>();
+        var criticalFailures = new List<CriticalFailureRecordReference>();
+        if (targetStep.Scope == StepScope.Global)
+        {
+            var stepOutcome = await ExecuteStepAsync(context, targetStep, warnings, cancellationToken);
+            criticalFailures.AddRange(stepOutcome.PersistedFailures);
+            return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
+        }
+
+        context.CliOutput ??= await context.CliMetadataLoader.LoadCliOutputAsync(context.OutputPath, cancellationToken);
+        context.CliVersion ??= await context.CliMetadataLoader.LoadCliVersionAsync(context.OutputPath, cancellationToken);
+
+        var availableNamespaces = await context.CliMetadataLoader.LoadNamespacesAsync(context.OutputPath, cancellationToken);
+        var brandEntries = await _brandMappingLoader.LoadAsync(context.McpToolsRoot, cancellationToken);
+        if (!ResolveNamespaces(context, availableNamespaces, brandEntries, out var resolvedNamespaces, out var namespaceError))
+        {
+            context.Reports.Error(namespaceError!);
+            context.Workspaces.DeleteAll();
+            return InvalidArgumentsExitCode;
+        }
+
+        context.SelectedNamespaces = resolvedNamespaces;
+        context.Reports.Info($"Replaying step {targetStep.Id}: {targetStep.Name} from run '{request.ReplayFromRunId}'.");
+
+        foreach (var namespaceName in resolvedNamespaces)
+        {
+            context.Items["Namespace"] = namespaceName;
+            var stepOutcome = await ExecuteStepAsync(context, targetStep, warnings, cancellationToken);
+            criticalFailures.AddRange(stepOutcome.PersistedFailures);
+            if (stepOutcome.ExitCode != SuccessExitCode)
+            {
+                return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
+            }
         }
 
         return CompleteRun(context, warnings, criticalFailures, SuccessExitCode);
@@ -779,6 +847,24 @@ public sealed class PipelineRunner
         }
 
         return errors;
+    }
+
+    private bool TryValidateReplayUpstreamArtifacts(PipelineContext context, IPipelineStep targetStep, out string missingUpstreamPath)
+    {
+        foreach (var dependencyId in targetStep.DependsOn)
+        {
+            var dependencyStep = _stepRegistry.GetStep(dependencyId);
+            var dependencyDirectory = Path.Combine(context.OutputPath, GetStepIdentifierSlug(dependencyStep));
+            var dependencyResultPath = Path.Combine(dependencyDirectory, StepResultWriter.FileName);
+            if (!StepResultReader.TryRead(dependencyDirectory, out _))
+            {
+                missingUpstreamPath = dependencyResultPath;
+                return false;
+            }
+        }
+
+        missingUpstreamPath = string.Empty;
+        return true;
     }
 
     private static bool ResolveNamespaces(
