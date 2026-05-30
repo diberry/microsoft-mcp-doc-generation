@@ -65,6 +65,17 @@ Runs when `requires_ai == true`:
 
 **Timeout**: 120 minutes
 
+### 4. golden-diff
+
+Runs when deterministic or AI generation code changes and an advisor golden manifest exists:
+
+1. Builds the solution
+2. Regenerates `advisor` output
+3. Verifies deterministic files with byte-identical SHA-256 comparison
+4. Verifies AI files structurally (required keys present, section count within ±1)
+
+If `mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/GoldenSnapshot/advisor/golden-manifest.json` is absent, the job skips cleanly so the baseline can be introduced separately.
+
 ## Representative Namespaces
 
 Both gates use 5 namespaces chosen for diversity:
@@ -115,6 +126,21 @@ The prompt regression gate compares AI-generated content quality:
    - Compare generated output against baseline samples
    - Update baselines if the new output is genuinely better
 
+### Golden Diff Failure
+
+1. Re-run the advisor baseline locally:
+   ```bash
+   ./capture-golden-baseline.sh advisor
+   ```
+2. Verify the manifest explicitly:
+   ```bash
+   dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint -- golden verify \
+    --manifest mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/GoldenSnapshot/advisor/golden-manifest.json \
+    --output-dir generated-advisor
+   ```
+3. If the change is intentional, commit the updated manifest in the same PR
+4. If the change is unintentional, fix the generator and keep the manifest unchanged
+
 ### Flaky Gate Policy
 
 Per team decision (PRD #599):
@@ -143,9 +169,14 @@ When a PR intentionally improves output (new format, better prompts, etc.):
    ./prompt-regression.sh seed    # captures new baseline
    ```
 
-4. Include baseline updates in the same PR with explanation in the PR body.
+4. Update the advisor golden manifest when behavioral output changes intentionally:
+   ```bash
+   ./capture-golden-baseline.sh advisor
+   ```
 
-5. Avery (Lead) must approve baseline replacements.
+5. Include baseline updates in the same PR with explanation in the PR body.
+
+6. Avery (Lead) must approve baseline replacements.
 
 ## Baseline Freshness SLO
 
@@ -193,6 +224,12 @@ dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint -- diff \
 ./prompt-regression.sh test    # after changes: generate candidates
 ./prompt-regression.sh compare # diff baseline vs candidates
 ./prompt-regression.sh report  # human-readable report
+
+# Advisor golden verification
+./capture-golden-baseline.sh advisor
+dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint -- golden verify \
+  --manifest mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/GoldenSnapshot/advisor/golden-manifest.json \
+  --output-dir generated-advisor
 ```
 
 ## Related Files
@@ -201,6 +238,8 @@ dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint -- diff \
 |---|---|
 | `.github/workflows/pipeline-output-regression.yml` | The workflow definition |
 | `fingerprint-baseline.json` | Structural baseline for fingerprint gate |
+| `capture-golden-baseline.sh` | Refreshes the advisor golden manifest locally |
+| `mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/GoldenSnapshot/advisor/` | Stores the advisor golden manifest and guidance |
 | `mcp-tools/DocGeneration.PromptRegression.Tests/Baselines/` | Prompt regression baselines |
 | `prompt-regression.sh` | Local prompt regression script |
 | `.github/PULL_REQUEST_TEMPLATE.md` | PR template with evidence block |

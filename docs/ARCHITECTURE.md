@@ -178,6 +178,15 @@ The pipeline migrated from PowerShell scripts to a typed C# orchestrator. This p
 
 Legacy PowerShell scripts remain in `mcp-tools/scripts/` as fallback.
 
+### Behavioral Equivalence CI Gate
+
+`DocGeneration.Tools.Fingerprint` also maintains advisor golden manifests for behavioral-equivalence checks:
+
+- Deterministic outputs (`annotations/`, `parameters/`, `h2-headings/`, `cli/`, `reports/`, `logs/`, `common-general/`, and root files) are compared by SHA-256.
+- AI outputs (`tools/`, `tool-family/`, `horizontal-articles/`, `example-prompts/`, `e2e-test-prompts/`) are compared structurally by required top-level keys and H2/section-count tolerance (±1).
+
+The `golden-diff` workflow job regenerates advisor output and verifies it against `mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/GoldenSnapshot/advisor/golden-manifest.json`.
+
 ### Isolated Workspaces (Step 4)
 
 Step 4 runs in a temporary directory (`pipeline-runner-step4-{guid}`) to enable parallel namespace execution. Files are copied in, generation runs in isolation, and outputs are copied back. This prevents file conflicts when multiple namespaces run simultaneously.
