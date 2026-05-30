@@ -115,8 +115,7 @@ public sealed class ArticleOutlineBuilderTests : IDisposable
 
     [Fact]
     public async Task BuildAsync_PopulatesExpectedEvidenceItemsPerSection()
-    {
-        await WriteCliOutputAsync(new CliOutput
+    {        await WriteCliOutputAsync(new CliOutput
         {
             Results =
             [
@@ -180,6 +179,18 @@ public sealed class ArticleOutlineBuilderTests : IDisposable
 
         Assert.Contains("capability:destructive", bestPractices.EvidenceItems);
         Assert.Contains("capability:secret", bestPractices.EvidenceItems);
+    }
+
+    [Fact]
+    public async Task BuildAsync_MissingCliOutput_ArticleTitleIsDerivedFromNamespaceTitleCase()
+    {
+        // No cli-output.json written — builder derives the article title from the namespace.
+        var builder = new ArticleOutlineBuilder();
+
+        var result = await builder.BuildAsync(_testRoot, "myservice", CancellationToken.None);
+
+        Assert.Equal("Myservice", result.ArticleTitle);
+        Assert.Equal("myservice", result.ServiceIdentifier);
     }
 
     private async Task WriteCliOutputAsync(CliOutput cliOutput)

@@ -125,6 +125,47 @@ public sealed class FamilyStructureBuilderTests : IDisposable
         Assert.StartsWith("## Provision disk", result.Sections[0].SourceContent.ReplaceLineEndings());
     }
 
+    [Fact]
+    public async Task BuildAsync_FilesForDifferentFamily_AreExcludedFromSections()
+    {
+        var toolsDirectory = Path.Combine(_testRoot, "mixed-tools");
+        Directory.CreateDirectory(toolsDirectory);
+
+        await File.WriteAllTextAsync(
+            Path.Combine(toolsDirectory, "compute-vm-create.md"),
+            """
+            ---
+            ---
+            # Create VM
+
+            <!-- @mcpcli compute vm create -->
+
+            Creates a VM.
+            """);
+
+        // This file belongs to the 'storage' family — must not appear when building 'compute'.
+        await File.WriteAllTextAsync(
+            Path.Combine(toolsDirectory, "storage-account-list.md"),
+            """
+            ---
+            ---
+            # List accounts
+
+            <!-- @mcpcli storage account list -->
+
+            Lists accounts.
+            """);
+
+        var builder = new FamilyStructureBuilder();
+
+        var result = await builder.BuildAsync(toolsDirectory, "compute", h2HeadingsDirectory: null, CancellationToken.None);
+
+        Assert.Equal("compute", result.FamilyName);
+        Assert.Single(result.Sections);
+        Assert.Equal("Create virtual machine", result.Sections[0].Heading);
+        Assert.DoesNotContain(result.Sections, s => s.Heading == "List accounts");
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
