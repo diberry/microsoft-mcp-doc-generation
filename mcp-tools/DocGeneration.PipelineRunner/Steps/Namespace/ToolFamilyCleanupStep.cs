@@ -4,13 +4,31 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Validation;
 using Shared;
+using ToolFamilyCleanup.Models;
+using ToolFamilyCleanup.Services;
 
 namespace PipelineRunner.Steps;
 
 public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 {
+    public const string FamilyCleanupOverrideKey = "ToolFamilyCleanupStep.FamilyCleanupOverride";
+
     private static readonly ReducerRegistry Reducers = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
+
+    static ToolFamilyCleanupStep()
+    {
+        Reducers.Register(4, static async (ctx, ct) =>
+        {
+            if (ctx is not FamilyStructureReducerInput input)
+            {
+                throw new InvalidOperationException($"Reducer input for step 4 must be {nameof(FamilyStructureReducerInput)}.");
+            }
+
+            var builder = new FamilyStructureBuilder();
+            return await builder.BuildAsync(input.ToolsDirectory, input.FamilyName, input.H2HeadingsDirectory, ct);
+        });
+    }
 
     public ToolFamilyCleanupStep()
         : base(
@@ -29,12 +47,8 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
     {
         var (currentNamespace, _, _, matchingTools) = ResolveTarget(context);
-        // P8: ReducerRegistry scaffold — when a reducer is registered, use it exclusively
-        if (Reducers.HasReducer(Id))
-        {
-            throw new NotImplementedException($"Reducer registered for step {Id} but execution path not yet implemented.");
-        }
-
+        var useReducerPath = Reducers.HasReducer(Id);
+        var hasCleanupOverride = context.Items.ContainsKey(FamilyCleanupOverrideKey);
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
@@ -121,6 +135,53 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             warnings.Add($"No tool files found for family '{familyName}' in '{toolsInputDirectory}'.");
             artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+        }
+
+        if (useReducerPath)
+        {
+            try
+            {
+                var artifacts = await GenerateFamilyWithReducerAsync(
+                    context,
+                    toolsInputDirectory,
+                    familyName,
+                    h2HeadingsSource,
+                    cliVersionPath,
+                    brandMappings,
+                    warnings,
+                    cancellationToken);
+
+                WriteFamilyArtifacts(context.OutputPath, outputFileName, artifacts);
+                RemoveStaleFamilyFiles(context.OutputPath, familyName, outputFileName);
+                await ApplyCliTabWrappingAsync(
+                    context,
+                    currentNamespace,
+                    cliTabConfigPath,
+                    cliOutputPath,
+                    parameterCliDir,
+                    exampleCommandsDir,
+                    toolsRawDirectory,
+                    Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md"),
+                    warnings,
+                    cancellationToken);
+
+                return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (hasCleanupOverride)
+                {
+                    warnings.Add($"Tool-family cleanup failed: {ex.Message}");
+                    artifactFailures.Add(CreateFamilyFailure(context, familyName, outputFileName, warnings));
+                    return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+                }
+
+                Console.WriteLine($"Reducer path failed for family '{familyName}', falling back to subprocess: {ex.Message}");
+            }
         }
 
         var tempRoot = context.Workspaces.CreateTemporaryDirectory("pipeline-runner-step4");
@@ -384,6 +445,10 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         return await ToolFileNameBuilder.ResolveFamilyFileNameAsync(familyName);
     }
 
+    public sealed record FamilyCleanupArtifacts(string Metadata, string RelatedContent, string FinalContent);
+
+    private sealed record FamilyStructureReducerInput(string ToolsDirectory, string FamilyName, string? H2HeadingsDirectory);
+
     private static string ResolveFamilyName(string currentNamespace, IReadOnlyList<CliTool> matchingTools,
         IReadOnlyDictionary<string, BrandMapping> brandMappings)
     {
@@ -529,5 +594,194 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(prefix => prefix.Length)
             .ToArray();
+    }
+
+    private static async Task<FamilyCleanupArtifacts> GenerateFamilyWithReducerAsync(
+        PipelineContext context,
+        string toolsDirectory,
+        string familyName,
+        string? h2HeadingsDirectory,
+        string cliVersionPath,
+        IReadOnlyDictionary<string, BrandMapping> brandMappings,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        var reducer = Reducers.GetReducer(4);
+        if (reducer is null)
+        {
+            throw new InvalidOperationException("Reducer path was selected for step 4, but no reducer is registered.");
+        }
+
+        var structure = (FamilyStructureContext)await reducer(
+            new FamilyStructureReducerInput(toolsDirectory, familyName, h2HeadingsDirectory),
+            cancellationToken);
+
+        var cleanupAsync = await ResolveFamilyCleanupAsync(context, familyName, cliVersionPath, brandMappings, warnings, cancellationToken);
+        return await cleanupAsync(structure, cancellationToken);
+    }
+
+    private static async Task<Func<FamilyStructureContext, CancellationToken, Task<FamilyCleanupArtifacts>>> ResolveFamilyCleanupAsync(
+        PipelineContext context,
+        string familyName,
+        string cliVersionPath,
+        IReadOnlyDictionary<string, BrandMapping> brandMappings,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        if (context.Items.TryGetValue(FamilyCleanupOverrideKey, out var overrideValue))
+        {
+            if (overrideValue is Func<FamilyStructureContext, CancellationToken, Task<FamilyCleanupArtifacts>> cleanupOverride)
+            {
+                return cleanupOverride;
+            }
+
+            throw new InvalidOperationException(
+                $"Context item '{FamilyCleanupOverrideKey}' must be {typeof(Func<FamilyStructureContext, CancellationToken, Task<FamilyCleanupArtifacts>>).FullName}.");
+        }
+
+        var displayName = brandMappings.TryGetValue(familyName, out var mapping) && !string.IsNullOrWhiteSpace(mapping.BrandName)
+            ? mapping.BrandName!
+            : familyName;
+
+        var cliVersion = "unknown";
+        if (File.Exists(cliVersionPath))
+        {
+            var cliRoot = Path.GetDirectoryName(Path.GetDirectoryName(cliVersionPath)!)!;
+            cliVersion = await CliVersionReader.ReadCliVersionAsync(cliRoot);
+        }
+        else
+        {
+            warnings.Add($"CLI version file not found at '{cliVersionPath}'. Tool-family cleanup will use 'unknown'.");
+        }
+
+        var cleanupGenerator = new CleanupGenerator(new GenerativeAIOptions(), new CleanupConfiguration());
+        return async (structure, ct) =>
+        {
+            ct.ThrowIfCancellationRequested();
+            var artifacts = await cleanupGenerator.GenerateFromStructureAsync(structure, displayName, cliVersion, ct);
+            return new FamilyCleanupArtifacts(artifacts.Metadata, artifacts.RelatedContent, artifacts.FinalContent);
+        };
+    }
+
+    private static void WriteFamilyArtifacts(string outputPath, string outputFileName, FamilyCleanupArtifacts artifacts)
+    {
+        var metadataDirectory = Path.Combine(outputPath, "tool-family-metadata");
+        var relatedDirectory = Path.Combine(outputPath, "tool-family-related");
+        var finalDirectory = Path.Combine(outputPath, "tool-family");
+        Directory.CreateDirectory(metadataDirectory);
+        Directory.CreateDirectory(relatedDirectory);
+        Directory.CreateDirectory(finalDirectory);
+
+        File.WriteAllText(Path.Combine(metadataDirectory, $"{outputFileName}-metadata.md"), artifacts.Metadata);
+        File.WriteAllText(Path.Combine(relatedDirectory, $"{outputFileName}-related.md"), artifacts.RelatedContent);
+        File.WriteAllText(Path.Combine(finalDirectory, $"{outputFileName}.md"), artifacts.FinalContent);
+    }
+
+    private static void RemoveStaleFamilyFiles(string outputPath, string familyName, string outputFileName)
+    {
+        if (string.Equals(familyName, outputFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        RemoveStaleFile(Path.Combine(outputPath, "tool-family", $"{familyName}.md"));
+        RemoveStaleFile(Path.Combine(outputPath, "tool-family-metadata", $"{familyName}-metadata.md"));
+        RemoveStaleFile(Path.Combine(outputPath, "tool-family-related", $"{familyName}-related.md"));
+    }
+
+    private static async Task ApplyCliTabWrappingAsync(
+        PipelineContext context,
+        string currentNamespace,
+        string cliTabConfigPath,
+        string cliOutputPath,
+        string parameterCliDir,
+        string exampleCommandsDir,
+        string toolsRawDirectory,
+        string familyArticlePath,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        if (!File.Exists(familyArticlePath))
+        {
+            return;
+        }
+
+        var cliTabConfig = CliTabConfig.LoadFromFile(cliTabConfigPath);
+        if (!cliTabConfig.IsNamespaceAllowed(currentNamespace))
+        {
+            Console.WriteLine($"  ⊘ CLI tab generation disabled for namespace '{currentNamespace}'");
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(cliOutputPath) && Directory.Exists(parameterCliDir) && Directory.Exists(exampleCommandsDir))
+            {
+                var cliJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
+                var allCliTools = CliJsonMapper.MapFromCliOutput(cliJson);
+                var nameContext = await FileNameContext.CreateAsync();
+
+                var cliTools = new Dictionary<string, CliToolInfo>(StringComparer.OrdinalIgnoreCase);
+                foreach (var (key, tool) in allCliTools)
+                {
+                    if (key.StartsWith(currentNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
+                        key.Equals(currentNamespace, StringComparison.OrdinalIgnoreCase))
+                    {
+                        cliTools[key] = tool;
+                    }
+                }
+
+                var nlpDescriptions = await NlpDescriptionExtractor.ExtractNlpDescriptionsAsync(
+                    toolsRawDirectory, nameContext, cliTools.Keys);
+
+                if (nlpDescriptions.Count > 0)
+                {
+                    var improver = new CliProseImprover();
+                    var improved = await improver.ImproveProseAsync(cliTools, nlpDescriptions, cancellationToken: cancellationToken);
+                    cliTools = new Dictionary<string, CliToolInfo>(improved, StringComparer.OrdinalIgnoreCase);
+                    Console.WriteLine($"  ✓ Aligned {cliTools.Count} CLI descriptions with NLP (deterministic)");
+                }
+
+                var assembledContent = await CliContentAssembler.AssembleAllCliContentAsync(
+                    cliTools, parameterCliDir, exampleCommandsDir, nameContext);
+
+                if (nlpDescriptions.Count > 0)
+                {
+                    var cliDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var (key, tool) in cliTools)
+                    {
+                        cliDescriptions[key] = tool.Description;
+                    }
+
+                    var alignmentResult = DescriptionAlignmentValidator.Validate(nlpDescriptions, cliDescriptions);
+                    foreach (var warning in alignmentResult.Warnings)
+                    {
+                        Console.WriteLine($"  ⚠ Alignment: {warning}");
+                        warnings.Add($"Description alignment warning: {warning}");
+                    }
+
+                    foreach (var error in alignmentResult.Errors)
+                    {
+                        Console.WriteLine($"  ✗ Alignment: {error}");
+                        warnings.Add($"Description alignment error: {error}");
+                    }
+                }
+
+                if (assembledContent.Count > 0)
+                {
+                    var familyMarkdown = await File.ReadAllTextAsync(familyArticlePath, cancellationToken);
+                    var tabbedMarkdown = CliTabWrapper.ApplyTabsToFamilyArticle(familyMarkdown, assembledContent);
+                    await File.WriteAllTextAsync(familyArticlePath, tabbedMarkdown, cancellationToken);
+                }
+            }
+            else
+            {
+                warnings.Add("CLI tab wrapping skipped: missing cli-output.json, parameter-cli, or example-commands directories.");
+            }
+        }
+        catch (Exception ex)
+        {
+            warnings.Add($"CLI tab wrapping failed (non-fatal): {ex.Message}");
+        }
     }
 }

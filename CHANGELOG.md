@@ -11,6 +11,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Completed npm-to-dotnet migration** — Removed all Node.js scripts from `mcp-cli-metadata/`. CLI metadata extraction now uses `mcp-tools/McpCliMetadata/` exclusively. Updated CI workflows, preflight.ps1, and documentation. Closes #627.
 - **PipelineRunner stage observability contract** — Each step now emits a standard observability bundle under `{output}/observability/{stepId}-{slug}/`: `summary.md`, `step-result.json`, `validation.json`, `prompt-preview.txt` (or `prompt-preview-na.txt` for deterministic steps), and `metrics.json`. Missing files are enforced at warning level so incomplete step instrumentation surfaces immediately without breaking existing runs.
 - **Advisor golden behavioral-equivalence gate** — Added `fingerprint golden capture` / `fingerprint golden verify`, an advisor golden manifest fixture, a local capture helper script, and a `golden-diff` workflow job that enforces SHA-256 parity for deterministic outputs plus structural parity for AI-authored outputs.
+- **Step 4 deterministic family structure builder** — Tool-family cleanup now constructs a typed `FamilyStructureContext` via `FamilyStructureBuilder` before AI cleanup, using precomputed `h2-headings/*.json` data for canonical section headings and order. The legacy subprocess path remains available as a fallback.
 
 ### Fixed
 

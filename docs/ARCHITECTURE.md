@@ -73,6 +73,10 @@ Step 3: Tool Composition + AI Improvements ────────────�
   ▼
 Step 4: Tool Family Assembly (AI + Retry + Validation) ────────────
   │  • tools/*.md → tool-family/{namespace}.md (one article per service)
+  │  • `FamilyStructureBuilder` deterministically emits
+  │    `FamilyStructureContext` (family name, section order, headings,
+  │    source content, schema version) before AI metadata generation
+  │  • H2 headings come from bootstrap `h2-headings/*.json`
   │  • AI generates: frontmatter, intro, related content
   │  • Post-processing: MCP acronym expansion, frontmatter enrichment,
   │    duplicate example stripping
