@@ -501,3 +501,96 @@ jobs:
             artifacts/prompt-regression-report.md
             mcp-tools/DocGeneration.PromptRegression.Tests/Reports/
           retention-days: 10
+
+  golden-diff:
+    name: golden-diff
+    runs-on: ubuntu-latest
+    needs: [classify-change, deterministic-regression, ai-regression]
+    if: >
+      ${{
+        always() &&
+        (needs.classify-change.outputs.requires_deterministic == 'true' || needs.classify-change.outputs.requires_ai == 'true') &&
+        (needs.deterministic-regression.result == 'success' || needs.deterministic-regression.result == 'skipped') &&
+        (needs.ai-regression.result == 'success' || needs.ai-regression.result == 'skipped')
+      }}
+    timeout-minutes: 120
+    env:
+      FOUNDRY_API_KEY: ${{ secrets.FOUNDRY_API_KEY }}
+      FOUNDRY_ENDPOINT: ${{ secrets.FOUNDRY_ENDPOINT }}
+      FOUNDRY_MODEL_NAME: ${{ secrets.FOUNDRY_MODEL_NAME }}
+      FOUNDRY_MODEL_API_VERSION: ${{ secrets.FOUNDRY_MODEL_API_VERSION }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check golden manifest
+        id: manifest
+        shell: bash
+        run: |
+          MANIFEST_PATH="mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/GoldenSnapshot/advisor/golden-manifest.json"
+          if [ -f "$MANIFEST_PATH" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "path=$MANIFEST_PATH" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Golden manifest not found at $MANIFEST_PATH. Skipping golden diff."
+          fi
+
+      - name: Setup .NET SDKs
+        if: ${{ steps.manifest.outputs.exists == 'true' }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+          include-prerelease: true
+
+      - name: Restore dependencies
+        if: ${{ steps.manifest.outputs.exists == 'true' }}
+        run: dotnet restore mcp-doc-generation.sln
+
+      - name: Build solution
+        if: ${{ steps.manifest.outputs.exists == 'true' }}
+        run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
+
+      - name: Resolve golden steps
+        if: ${{ steps.manifest.outputs.exists == 'true' }}
+        id: resolve
+        shell: bash
+        run: |
+          if [ "${{ needs.classify-change.outputs.requires_ai }}" = "true" ]; then
+            echo "steps=0,1,2,3,4,5,6" >> "$GITHUB_OUTPUT"
+            echo "skip_env_validation=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "steps=0,1,5" >> "$GITHUB_OUTPUT"
+            echo "skip_env_validation=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate advisor golden candidate
+        if: ${{ steps.manifest.outputs.exists == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf generated-advisor-golden
+
+          EXTRA_FLAGS=()
+          if [ "${{ steps.resolve.outputs.skip_env_validation }}" = "true" ]; then
+            EXTRA_FLAGS+=(--skip-env-validation)
+          fi
+
+          dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --configuration Release --no-build -- \
+            --namespace advisor \
+            --steps "${{ steps.resolve.outputs.steps }}" \
+            --output "./generated-advisor-golden" \
+            --skip-build \
+            --skip-changelog-gate \
+            "${EXTRA_FLAGS[@]}"
+
+      - name: Verify golden manifest
+        if: ${{ steps.manifest.outputs.exists == 'true' }}
+        run: |
+          dotnet run --project mcp-tools/DocGeneration.Tools.Fingerprint/DocGeneration.Tools.Fingerprint.csproj --configuration Release --no-build -- \
+            golden verify \
+            --manifest "${{ steps.manifest.outputs.path }}" \
+            --output-dir "./generated-advisor-golden"
