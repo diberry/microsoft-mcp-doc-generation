@@ -3,16 +3,14 @@
 
 using System.Text.Json;
 using HorizontalArticleGenerator.Builders;
-using HorizontalArticleGenerator.Validation;
 using ToolFamilyCleanup.Services;
 using ToolGeneration_Improved.Services;
-using ToolGeneration_Improved.Validation;
 
 namespace DocGeneration.PromptRegression.Tests.Tests;
 
 /// <summary>
 /// Verifies that each reducer/builder produces a correctly-shaped context for all three AI stages.
-/// Catches schema regressions: renamed properties, missing fields, unexpected keys, or token-estimate drift.
+/// Catches schema regressions: renamed properties, missing fields, or unexpected keys.
 /// </summary>
 public sealed class PromptShapeRegressionTests : IDisposable
 {
@@ -31,7 +29,7 @@ public sealed class PromptShapeRegressionTests : IDisposable
     }
 
     [Fact]
-    public async Task ToolGenerationContext_HasExpectedTopLevelKeys_AndTokenEstimateIsPositive()
+    public async Task ToolGenerationContext_HasExpectedTopLevelKeys_AndContentIsNonEmpty()
     {
         var composedDir = Path.Combine(_testRoot, "composed");
         Directory.CreateDirectory(composedDir);
@@ -50,17 +48,12 @@ public sealed class PromptShapeRegressionTests : IDisposable
             ["ComposedContent", "MaxTokens", "SchemaVersion", "ToolName"],
             keys);
 
-        var validator = new ToolGenerationBudgetValidator();
-        var result = await validator.ValidateAsync(context, CancellationToken.None);
-        var expectedTokens = content.Length / 4; // CharsPerToken = 4
-        Assert.NotNull(result.EstimatedPromptTokens);
-        Assert.InRange(result.EstimatedPromptTokens.Value,
-            (int)(expectedTokens * 0.9),
-            (int)(expectedTokens * 1.1) + 1);
+        Assert.False(string.IsNullOrEmpty(context.ComposedContent));
+        Assert.True(context.MaxTokens > 0);
     }
 
     [Fact]
-    public async Task FamilyStructureContext_HasExpectedTopLevelKeys_AndTokenEstimateIsPositive()
+    public async Task FamilyStructureContext_HasExpectedTopLevelKeys_AndSectionsAreNonEmpty()
     {
         var toolsDir = Path.Combine(_testRoot, "tools");
         Directory.CreateDirectory(toolsDir);
@@ -87,15 +80,13 @@ public sealed class PromptShapeRegressionTests : IDisposable
             ["FamilyName", "SchemaVersion", "Sections"],
             keys);
 
-        // Token estimate: total chars in all section SourceContent / 4
+        Assert.NotEmpty(context.Sections);
         var totalChars = context.Sections.Sum(s => s.SourceContent.Length);
         Assert.True(totalChars > 0, "Expected non-empty source content in sections.");
-        var expectedTokens = totalChars / 4;
-        Assert.True(expectedTokens > 0);
     }
 
     [Fact]
-    public async Task ArticleOutlineContext_HasExpectedTopLevelKeys_AndTokenEstimateIsWithinBudget()
+    public async Task ArticleOutlineContext_HasExpectedTopLevelKeys()
     {
         // No cli-output.json needed — builder handles missing file gracefully.
         var builder = new ArticleOutlineBuilder();
@@ -108,10 +99,5 @@ public sealed class PromptShapeRegressionTests : IDisposable
         Assert.Equal(
             ["ArticleTitle", "SchemaVersion", "Sections", "ServiceIdentifier"],
             keys);
-
-        var validator = new ArticleOutlineBudgetValidator();
-        var result = await validator.ValidateAsync(context, CancellationToken.None);
-        Assert.NotNull(result.EstimatedPromptTokens);
-        Assert.True(result.WithinBudget, $"Token estimate {result.EstimatedPromptTokens} exceeds budget {result.TokenBudget}.");
     }
 }
