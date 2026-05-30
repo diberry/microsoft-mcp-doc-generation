@@ -5,6 +5,7 @@ using PipelineRunner.Services;
 using PipelineRunner.Steps;
 using PipelineRunner.Tests.Fixtures;
 using Shared;
+using ToolGeneration_Improved.Models;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -54,17 +55,11 @@ public sealed class UpstreamArtifactResolutionStepTests
             runner.OnRun = spec =>
             {
                 invocationCount++;
-                if (invocationCount == 1)
-                {
-                    Assert.Contains(Path.Combine(context.OutputPath, "custom-upstream", "tools-raw"), spec.Arguments);
-                    Assert.Contains(Path.Combine(context.OutputPath, "custom-upstream", "annotations"), spec.Arguments);
-                    Assert.Contains(Path.Combine(context.OutputPath, "custom-upstream", "parameters"), spec.Arguments);
-                    Assert.Contains(Path.Combine(context.OutputPath, "custom-upstream", "example-prompts"), spec.Arguments);
-                    SeedFile(Path.Combine(context.OutputPath, "tools-composed", toolFileName));
-                    return CallbackProcessRunner.Success(spec);
-                }
-
-                SeedFile(Path.Combine(context.OutputPath, "tools", toolFileName));
+                Assert.Contains(Path.Combine(context.OutputPath, "custom-upstream", "tools-raw"), spec.Arguments);
+                Assert.Contains(Path.Combine(context.OutputPath, "custom-upstream", "annotations"), spec.Arguments);
+                Assert.Contains(Path.Combine(context.OutputPath, "custom-upstream", "parameters"), spec.Arguments);
+                Assert.Contains(Path.Combine(context.OutputPath, "custom-upstream", "example-prompts"), spec.Arguments);
+                SeedFile(Path.Combine(context.OutputPath, "tools-composed", toolFileName));
                 return CallbackProcessRunner.Success(spec);
             };
 
@@ -72,7 +67,7 @@ public sealed class UpstreamArtifactResolutionStepTests
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Equal(2, runner.Invocations.Count);
+            Assert.Single(runner.Invocations);
         }
         finally
         {
@@ -183,7 +178,7 @@ public sealed class UpstreamArtifactResolutionStepTests
         Directory.CreateDirectory(outputPath);
         File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), "[]");
 
-        return new PipelineContext
+        var context = new PipelineContext
         {
             Request = new PipelineRequest("compute", [1], outputPath, SkipBuild: true, SkipValidation: skipValidation, DryRun: false),
             RepoRoot = testRoot,
@@ -201,6 +196,17 @@ public sealed class UpstreamArtifactResolutionStepTests
             CliOutput = CreateSnapshot(toolCommands),
             SelectedNamespaces = ["compute"],
         };
+
+        context.Items[ToolGenerationStep.ToolImproverOverrideKey] =
+            static (ToolGenerationContext toolContext, CancellationToken _) => Task.FromResult(new ImprovedToolData
+            {
+                FileName = toolContext.ToolName,
+                OriginalContent = toolContext.ComposedContent,
+                ImprovedContent = toolContext.ComposedContent,
+                WasImproved = false
+            });
+
+        return context;
     }
 
     private static CliMetadataSnapshot CreateSnapshot(IReadOnlyList<string> toolCommands)
