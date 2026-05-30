@@ -204,4 +204,75 @@ public class StepResultWriterTests : IDisposable
         Assert.Equal("input/monitor.json", readBack.InputArtifacts![0].Path);
         Assert.Single(readBack.OutputArtifacts!);
     }
+
+    [Fact]
+    public void Write_UniqueOutputArtifactPaths_Succeeds()
+    {
+        var result = new StepResultFile
+        {
+            Status = StepResultStatus.Success,
+            Namespace = "storage",
+            OutputArtifacts = new List<ArtifactReference>
+            {
+                new() { Path = "output/storage-list.md", Sha256 = "aa11" },
+                new() { Path = "output/storage-show.md", Sha256 = "bb22" }
+            }
+        };
+
+        StepResultWriter.Write(_testDir, result);
+
+        var filePath = Path.Combine(_testDir, StepResultWriter.FileName);
+        Assert.True(File.Exists(filePath));
+    }
+
+    [Fact]
+    public void Write_DuplicateOutputArtifactPaths_ThrowsArtifactPathCollisionException()
+    {
+        var result = new StepResultFile
+        {
+            Status = StepResultStatus.Success,
+            Namespace = "monitor",
+            OutputArtifacts = new List<ArtifactReference>
+            {
+                new() { Path = "output/health.md", Sha256 = "aa11" },
+                new() { Path = "output/health.md", Sha256 = "bb22" }
+            }
+        };
+
+        var ex = Assert.Throws<ArtifactPathCollisionException>(() => StepResultWriter.Write(_testDir, result));
+
+        Assert.Equal("output/health.md", ex.DuplicatePath);
+    }
+
+    [Fact]
+    public void Write_NullOutputArtifacts_Succeeds()
+    {
+        var result = new StepResultFile
+        {
+            Status = StepResultStatus.Success,
+            Namespace = "aks",
+            OutputArtifacts = null
+        };
+
+        StepResultWriter.Write(_testDir, result);
+
+        var filePath = Path.Combine(_testDir, StepResultWriter.FileName);
+        Assert.True(File.Exists(filePath));
+    }
+
+    [Fact]
+    public void Write_EmptyOutputArtifacts_Succeeds()
+    {
+        var result = new StepResultFile
+        {
+            Status = StepResultStatus.Success,
+            Namespace = "sql",
+            OutputArtifacts = new List<ArtifactReference>()
+        };
+
+        StepResultWriter.Write(_testDir, result);
+
+        var filePath = Path.Combine(_testDir, StepResultWriter.FileName);
+        Assert.True(File.Exists(filePath));
+    }
 }

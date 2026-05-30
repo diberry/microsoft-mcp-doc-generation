@@ -10,6 +10,7 @@ namespace PipelineRunner.Steps;
 public sealed class ToolGenerationStep : NamespaceStepBase
 {
     private const int DefaultMaxTokens = 8000;
+    private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
 
     private static readonly Regex ComposedFailureRegex = new(
         @"Error processing (?<file>[^:]+\.md):",
@@ -37,19 +38,48 @@ public sealed class ToolGenerationStep : NamespaceStepBase
         var (_, cliOutput, _, matchingTools) = ResolveTarget(context);
         _ = await CreateFilteredCliFileAsync(context, cliOutput, matchingTools, "pipeline-runner-step3", cancellationToken);
         var nameContext = await FileNameContext.CreateAsync();
-        var toolArtifacts = matchingTools
-            .Select(tool => ToolArtifacts.Create(tool.Command, context.OutputPath, nameContext))
-            .ToArray();
-
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
-        var rawToolsDirectory = Path.Combine(context.OutputPath, "tools-raw");
+        var step1Envelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 1, "generate-annotations-parameters-and-raw-tools");
+        var step2Envelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 2, "generate-example-prompts");
+        var rawToolsDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step1Envelope,
+            "tools-raw",
+            Path.Combine(context.OutputPath, "tools-raw"),
+            "step 1");
         var composedToolsDirectory = Path.Combine(context.OutputPath, "tools-composed");
         var improvedToolsDirectory = Path.Combine(context.OutputPath, "tools");
-        var annotationsDirectory = Path.Combine(context.OutputPath, "annotations");
-        var parametersDirectory = Path.Combine(context.OutputPath, "parameters");
-        var examplePromptsDirectory = Path.Combine(context.OutputPath, "example-prompts");
+        var annotationsDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step1Envelope,
+            "annotations",
+            Path.Combine(context.OutputPath, "annotations"),
+            "step 1");
+        var parametersDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step1Envelope,
+            "parameters",
+            Path.Combine(context.OutputPath, "parameters"),
+            "step 1");
+        var examplePromptsDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step2Envelope,
+            "example-prompts",
+            Path.Combine(context.OutputPath, "example-prompts"),
+            "step 2");
+        var toolArtifacts = matchingTools
+            .Select(tool => ToolArtifacts.Create(
+                tool.Command,
+                rawToolsDirectory,
+                annotationsDirectory,
+                parametersDirectory,
+                examplePromptsDirectory,
+                composedToolsDirectory,
+                improvedToolsDirectory,
+                nameContext))
+            .ToArray();
 
         var prerequisiteIssues = GetPrerequisiteIssues(toolArtifacts);
         if (prerequisiteIssues.Count > 0)
@@ -289,6 +319,23 @@ public sealed class ToolGenerationStep : NamespaceStepBase
         IEnumerable<string> relatedPaths)
         => ArtifactFailure.Create("pipeline step", artifactName, summary, details, relatedPaths);
 
+    private static string ResolveUpstreamDirectory(
+        string outputPath,
+        StepResultFile? envelope,
+        string relativeDirectory,
+        string fallbackPath,
+        string upstreamStep)
+    {
+        if (UpstreamArtifacts.TryResolveOutputDirectory(outputPath, envelope, relativeDirectory, out var resolvedPath))
+        {
+            Console.WriteLine(
+                $"INFO: Using {upstreamStep} envelope-based resolution for '{relativeDirectory}' at '{resolvedPath}'.");
+            return resolvedPath;
+        }
+
+        return fallbackPath;
+    }
+
     private sealed record ToolArtifacts(
         string Command,
         string ToolFileName,
@@ -303,18 +350,26 @@ public sealed class ToolGenerationStep : NamespaceStepBase
 
         public string[] GenerationPaths => [RawToolPath, ComposedToolPath, ImprovedToolPath, AnnotationPath, ParameterPath, ExamplePromptsPath];
 
-        public static ToolArtifacts Create(string command, string outputPath, FileNameContext nameContext)
+        public static ToolArtifacts Create(
+            string command,
+            string rawToolsDirectory,
+            string annotationsDirectory,
+            string parametersDirectory,
+            string examplePromptsDirectory,
+            string composedToolsDirectory,
+            string improvedToolsDirectory,
+            FileNameContext nameContext)
         {
             var toolFileName = ToolFileNameBuilder.BuildToolFileName(command, nameContext);
             return new ToolArtifacts(
                 command,
                 toolFileName,
-                Path.Combine(outputPath, "tools-raw", toolFileName),
-                Path.Combine(outputPath, "annotations", ToolFileNameBuilder.BuildAnnotationFileName(command, nameContext)),
-                Path.Combine(outputPath, "parameters", ToolFileNameBuilder.BuildParameterFileName(command, nameContext)),
-                Path.Combine(outputPath, "example-prompts", ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext)),
-                Path.Combine(outputPath, "tools-composed", toolFileName),
-                Path.Combine(outputPath, "tools", toolFileName));
+                Path.Combine(rawToolsDirectory, toolFileName),
+                Path.Combine(annotationsDirectory, ToolFileNameBuilder.BuildAnnotationFileName(command, nameContext)),
+                Path.Combine(parametersDirectory, ToolFileNameBuilder.BuildParameterFileName(command, nameContext)),
+                Path.Combine(examplePromptsDirectory, ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext)),
+                Path.Combine(composedToolsDirectory, toolFileName),
+                Path.Combine(improvedToolsDirectory, toolFileName));
         }
     }
 }

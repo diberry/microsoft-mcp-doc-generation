@@ -2,11 +2,14 @@ using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Validation;
+using Shared;
 
 namespace PipelineRunner.Steps;
 
 public sealed class HorizontalArticlesStep : NamespaceStepBase
 {
+    private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
+
     public HorizontalArticlesStep()
         : base(
             6,
@@ -28,7 +31,12 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
-        var cliVersionPath = Path.Combine(context.OutputPath, "cli", "cli-version.json");
+        var bootstrapEnvelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 0, "bootstrap-pipeline");
+        var cliVersionPath = ResolveUpstreamFile(
+            context.OutputPath,
+            bootstrapEnvelope,
+            Path.Combine("cli", "cli-version.json"),
+            Path.Combine(context.OutputPath, "cli", "cli-version.json"));
         if (!context.Request.SkipValidation && !File.Exists(cliVersionPath))
         {
             warnings.Add($"CLI version file not found at '{cliVersionPath}'.");
@@ -89,5 +97,21 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
                 Path.Combine(articleDirectory, $"error-{currentNamespace}.txt"),
                 Path.Combine(articleDirectory, $"error-{currentNamespace}-airesponse.txt"),
             ]);
+    }
+
+    private static string ResolveUpstreamFile(
+        string outputPath,
+        StepResultFile? envelope,
+        string relativeFilePath,
+        string fallbackPath)
+    {
+        if (UpstreamArtifacts.TryResolveOutputFile(outputPath, envelope, relativeFilePath, out var resolvedPath))
+        {
+            Console.WriteLine(
+                $"INFO: Using bootstrap envelope-based resolution for '{relativeFilePath}' at '{resolvedPath}'.");
+            return resolvedPath;
+        }
+
+        return fallbackPath;
     }
 }

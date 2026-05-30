@@ -74,7 +74,7 @@ public static class NlpDescriptionExtractor
     internal static string? ExtractNlpDescription(string toolMarkdown)
     {
         // Strip frontmatter first
-        var contentWithoutFrontmatter = FrontmatterUtility.StripFrontmatter(toolMarkdown);
+        var contentWithoutFrontmatter = FrontmatterUtility.StripFrontmatter(toolMarkdown) ?? string.Empty;
 
         // Match the paragraph after the @mcpcli comment
         var match = NlpDescriptionRegex.Match(contentWithoutFrontmatter);

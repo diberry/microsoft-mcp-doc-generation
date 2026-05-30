@@ -4,6 +4,8 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Context;
 using PipelineRunner.Registry;
 using PipelineRunner.Services;
+using Shared;
+using System.Security.Cryptography;
 
 namespace PipelineRunner;
 
@@ -100,6 +102,7 @@ public sealed class PipelineRunner
         if (request.DryRun)
         {
             WriteDryRunPlan(context, selectedSteps, dependencyErrors);
+            WriteDryRunStepResults(context, selectedSteps);
             return dependencyErrors.Count == 0 ? SuccessExitCode : InvalidArgumentsExitCode;
         }
 
@@ -378,6 +381,23 @@ public sealed class PipelineRunner
             }
 
             var persistedFailures = CriticalFailureRecorder.Persist(context, step, result);
+            if (!TryWriteStepResultEnvelope(context, step, result, out var stepResultError))
+            {
+                if (step.FailurePolicy == FailurePolicy.Warn)
+                {
+                    warnings.Add(stepResultError);
+                    context.Reports.Warning(stepResultError);
+                }
+                else
+                {
+                    context.Reports.Error($"FATAL: {stepResultError}");
+                    handle.Fail(stepResultError);
+                    return new StepExecutionOutcome(FatalExitCode, result, persistedFailures);
+                }
+            }
+
+            WriteObservabilityOutputs(context, step, result, classification);
+
             var stepExitCode = MapStepFailureExitCode(step.FailurePolicy, result.Success, result.ExitCodeOverride);
             if (stepExitCode != SuccessExitCode)
             {
@@ -396,6 +416,268 @@ public sealed class PipelineRunner
             handle.Fail(ex.Message);
             throw;
         }
+    }
+
+    private static void WriteObservabilityOutputs(
+        PipelineContext context,
+        IPipelineStep step,
+        StepResult result,
+        StepClassification classification)
+    {
+        var directory = GetObservabilityDirectory(context.OutputPath, step);
+        var validationStatus = GetValidationStatus(result.ValidatorResults);
+        Directory.CreateDirectory(directory);
+
+        var stepWorkspaceDirectory = GetStepWorkspaceDirectory(context, step);
+        var stepResultPath = Path.Combine(stepWorkspaceDirectory, StepResultWriter.FileName);
+        if (File.Exists(stepResultPath))
+        {
+            File.Copy(stepResultPath, Path.Combine(directory, StageOutputContract.StepResultFileName), overwrite: true);
+        }
+        else
+        {
+            StepResultWriter.Write(directory, BuildStepResultEnvelope(context, step, result));
+        }
+
+        ObservabilityWriter.WriteMetrics(
+            directory,
+            step.Name,
+            result.Duration,
+            inputCount: 0,
+            outputCount: result.Outputs.Count,
+            validationStatus.ToString().ToLowerInvariant());
+        ObservabilityWriter.WriteValidation(directory, step.Name, result.ValidatorResults);
+        ObservabilityWriter.WriteSummary(directory, step.Name, result.Success, result.Duration, result.Warnings);
+
+        if (classification == StepClassification.Deterministic)
+        {
+            ObservabilityWriter.WritePromptPreviewNa(directory);
+        }
+
+        var contract = new StageOutputContract(
+            step.Name,
+            directory,
+            IsDeterministic: classification == StepClassification.Deterministic);
+        var missingFiles = context.Workspaces.AssertOutputContract(contract);
+        if (missingFiles.Count > 0)
+        {
+            context.Reports.Warning(
+                $"Step {step.Id} observability contract missing file(s): {string.Join(", ", missingFiles)}");
+        }
+    }
+
+    public static StepResultFile BuildStepResultEnvelope(
+        PipelineContext context,
+        IPipelineStep step,
+        StepResult result)
+    {
+        return new StepResultFile
+        {
+            Version = 3,
+            SchemaVersion = "1.0",
+            Status = GetStepResultStatus(result),
+            Step = step.Name,
+            StepName = GetStepIdentifierSlug(step),
+            Namespace = ResolveNamespace(context),
+            OutputFileCount = result.Outputs.Count,
+            Warnings = GetWarnings(result),
+            Errors = GetErrors(result),
+            Duration = result.Duration.ToString("c"),
+            DurationMs = (long)result.Duration.TotalMilliseconds,
+            ValidationStatus = GetStepResultValidationStatus(step, result.ValidatorResults),
+            Timestamp = DateTimeOffset.UtcNow.ToString("O"),
+            OutputArtifacts = BuildArtifactReferences(context.OutputPath, result.Outputs),
+        };
+    }
+
+    private static bool TryWriteStepResultEnvelope(
+        PipelineContext context,
+        IPipelineStep step,
+        StepResult result,
+        out string error)
+    {
+        var stepWorkspaceDirectory = GetStepWorkspaceDirectory(context, step);
+        Directory.CreateDirectory(stepWorkspaceDirectory);
+
+        try
+        {
+            StepResultWriter.Write(stepWorkspaceDirectory, BuildStepResultEnvelope(context, step, result));
+        }
+        catch (Exception ex)
+        {
+            error = $"Step {step.Id} failed to write {StepResultWriter.FileName}: {ex.Message}";
+            return false;
+        }
+
+        if (StepResultReader.TryRead(stepWorkspaceDirectory, out _))
+        {
+            error = string.Empty;
+            return true;
+        }
+
+        error = $"Step {step.Id} did not produce {StepResultWriter.FileName} in '{stepWorkspaceDirectory}'.";
+        return false;
+    }
+
+    private static void WriteDryRunStepResults(PipelineContext context, IReadOnlyList<IPipelineStep> selectedSteps)
+    {
+        foreach (var step in selectedSteps)
+        {
+            var stepWorkspaceDirectory = GetStepWorkspaceDirectory(context, step);
+            Directory.CreateDirectory(stepWorkspaceDirectory);
+
+            var dryRunOutputs = (step as StepDefinition)?.ExpectedOutputs
+                ?? Array.Empty<string>();
+
+            var resolvedOutputs = dryRunOutputs
+                .Select(output => Path.Combine(context.OutputPath, output))
+                .ToArray();
+
+            StepResultWriter.Write(
+                stepWorkspaceDirectory,
+                BuildStepResultEnvelope(context, step, StepResult.DryRun(resolvedOutputs)));
+        }
+    }
+
+    private static List<ArtifactReference>? BuildArtifactReferences(string outputRoot, IReadOnlyList<string> outputs)
+    {
+        var artifacts = new List<ArtifactReference>();
+        foreach (var output in outputs)
+        {
+            if (!File.Exists(output))
+            {
+                continue;
+            }
+
+            artifacts.Add(new ArtifactReference
+            {
+                Path = GetRelativePath(outputRoot, output),
+                Sha256 = ComputeFileHash(output),
+            });
+        }
+
+        return artifacts.Count == 0 ? null : artifacts;
+    }
+
+    private static string ComputeFileHash(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexStringLower(SHA256.HashData(stream));
+    }
+
+    private static List<string> GetWarnings(StepResult result)
+    {
+        return result.Warnings
+            .Concat(result.ValidatorResults.SelectMany(validator => validator.Warnings))
+            .Where(warning => !string.IsNullOrWhiteSpace(warning))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static List<string> GetErrors(StepResult result)
+    {
+        if (result.Success)
+        {
+            return [];
+        }
+
+        var errors = result.ArtifactFailures
+            .Select(failure => failure.Summary)
+            .Where(summary => !string.IsNullOrWhiteSpace(summary))
+            .ToList();
+
+        if (errors.Count == 0)
+        {
+            errors.Add("Step execution reported failure.");
+        }
+
+        return errors;
+    }
+
+    private static ValidationStatus GetValidationStatus(IReadOnlyList<ValidatorResult> validatorResults)
+    {
+        if (validatorResults.Count == 0)
+        {
+            return ValidationStatus.Skipped;
+        }
+
+        return validatorResults.All(result => result.Success)
+            ? ValidationStatus.Passed
+            : ValidationStatus.Failed;
+    }
+
+    private static ValidationStatus? GetStepResultValidationStatus(
+        IPipelineStep step,
+        IReadOnlyList<ValidatorResult> validatorResults)
+    {
+        if (step.PostValidators.Count == 0)
+        {
+            return null;
+        }
+
+        return GetValidationStatus(validatorResults);
+    }
+
+    private static StepResultStatus GetStepResultStatus(StepResult result)
+    {
+        if (result.Success)
+        {
+            return StepResultStatus.Success;
+        }
+
+        return result.Outputs.Count > 0
+            ? StepResultStatus.Partial
+            : StepResultStatus.Failure;
+    }
+
+    private static string ResolveNamespace(PipelineContext context)
+        => context.Items.TryGetValue("Namespace", out var namespaceName)
+            ? namespaceName as string ?? string.Empty
+            : context.Request.Namespace ?? string.Empty;
+
+    private static string GetObservabilityDirectory(string outputPath, IPipelineStep step)
+        => Path.Combine(outputPath, "observability", $"{step.Id}-{Slugify(step.Name)}");
+
+    internal static string GetStepIdentifierSlug(IPipelineStep step)
+        => Slugify($"Step {step.Id} - {step.Name}");
+
+    private static string GetStepWorkspaceDirectory(PipelineContext context, IPipelineStep step)
+        => Path.Combine(context.OutputPath, GetStepIdentifierSlug(step));
+
+    private static string GetRelativePath(string rootPath, string path)
+    {
+        var relativePath = Path.GetRelativePath(rootPath, path);
+        var normalizedPath = relativePath.StartsWith("..", StringComparison.Ordinal)
+            ? path
+            : relativePath;
+
+        return normalizedPath.Replace('\\', '/');
+    }
+
+    private static string Slugify(string value)
+    {
+        var buffer = new char[value.Length];
+        var length = 0;
+        var previousDash = false;
+
+        foreach (var character in value.Trim().ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                buffer[length++] = character;
+                previousDash = false;
+                continue;
+            }
+
+            if (!previousDash)
+            {
+                buffer[length++] = '-';
+                previousDash = true;
+            }
+        }
+
+        var sanitized = new string(buffer, 0, length).Trim('-');
+        return string.IsNullOrWhiteSpace(sanitized) ? $"step-{Guid.NewGuid():N}" : sanitized;
     }
 
     // Flush is deliberately non-cancellable to ensure traces are written even when pipeline execution is cancelled.

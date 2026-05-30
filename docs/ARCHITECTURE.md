@@ -109,6 +109,7 @@ Final Output ──────────────────────�
   ├── annotations/*.md                   ← Include files
   ├── parameters/*.md                    ← Include files
   ├── example-prompts/*.md               ← Include files
+  ├── observability/{stepId}-{slug}/     ← 5-file step observability contract
   └── reports/                           ← Validation reports
 
 Post-Assembly: Multi-Namespace Merge (AD-011) ────────────────────
@@ -172,6 +173,8 @@ The pipeline migrated from PowerShell scripts to a typed C# orchestrator. This p
 - **Integrated retry logic** for AI-dependent steps
 - **Post-validation framework** (`IPostValidator`) attached to specific steps
 - **Isolated workspaces** via `WorkspaceManager` for parallel execution
+- **Per-step execution envelopes** written to `{output}/step-<id>-<slug>/step-result.json` after each wrapper completes so downstream automation can inspect normalized status, outputs, validation state, and timing without reading step-specific logs
+- **Per-step observability bundles** written to `{output}/observability/{stepId}-{slug}/` with `summary.md`, `step-result.json`, `validation.json`, `prompt-preview.txt` (or `prompt-preview-na.txt`), and `metrics.json`; missing files log warnings so instrumentation gaps are visible without breaking the pipeline
 
 Legacy PowerShell scripts remain in `mcp-tools/scripts/` as fallback.
 
@@ -404,6 +407,10 @@ Both pipelines emit structured trace files after every run to `{output-dir}/trac
 | `summary.md` | Human-readable run summary with step table and AI statistics |
 
 Tracing is always-on (no opt-in flag), uses in-memory collection during execution, and flushes once at the end of each run. The `NullTracer` pattern ensures zero overhead when the tracer is not wired (e.g., in unit tests).
+
+PipelineRunner also writes a shared `step-result.json` envelope for every selected step under `{output-dir}/step-<id>-<slug>/`. Dry runs emit the same envelope with placeholder values, and missing envelopes abort the run for fatal steps while warn-only steps continue.
+
+In addition, every executed step now gets an observability directory at `{output-dir}/observability/{stepId}-{slug}/`. The runner writes `summary.md`, `validation.json`, and `metrics.json`, writes `prompt-preview-na.txt` for deterministic steps, and checks for the full 5-file contract (`prompt-preview.txt` for AI/hybrid steps). Missing contract files are surfaced as warnings so partial instrumentation is visible during rollout.
 
 ### Trace Architecture
 
