@@ -27,6 +27,8 @@ public static class PipelineCli
         rootCommand.AddOption(options.Replay);
         rootCommand.AddOption(options.From);
         rootCommand.AddOption(options.StepName);
+        rootCommand.AddOption(options.Inspect);
+        rootCommand.AddOption(options.Show);
         return rootCommand;
     }
 
@@ -41,6 +43,7 @@ public static class PipelineCli
         var rootCommand = CreateCommandWith(options);
         var parseResult = rootCommand.Parse(args);
         var replay = parseResult.GetValueForOption(options.Replay);
+        var inspect = parseResult.GetValueForOption(options.Inspect);
 
         if (parseResult.Errors.Count > 0)
         {
@@ -50,7 +53,7 @@ public static class PipelineCli
         var namespaceValue = parseResult.GetValueForOption(options.Namespace);
         var outputValue = parseResult.GetValueForOption(options.Output) ?? PipelineRequest.GetDefaultOutputPath(namespaceValue);
         IReadOnlyList<int> steps = Array.Empty<int>();
-        if (!replay)
+        if (!replay && !inspect)
         {
             var stepsCsv = parseResult.GetValueForOption(options.Steps) ?? string.Join(',', PipelineRequest.DefaultSteps);
             if (!PipelineRequest.TryParseSteps(stepsCsv, out steps, out var stepError))
@@ -75,7 +78,9 @@ public static class PipelineCli
             parseResult.GetValueForOption(options.SkipNpmUpdate),
             replay,
             parseResult.GetValueForOption(options.From),
-            parseResult.GetValueForOption(options.StepName));
+            parseResult.GetValueForOption(options.StepName),
+            inspect,
+            parseResult.GetValueForOption(options.Show));
 
         var validationErrors = request.Validate();
         return validationErrors.Count > 0
@@ -136,6 +141,8 @@ public static class PipelineCli
         rootCommand.AddOption(options.Replay);
         rootCommand.AddOption(options.From);
         rootCommand.AddOption(options.StepName);
+        rootCommand.AddOption(options.Inspect);
+        rootCommand.AddOption(options.Show);
         return rootCommand;
     }
 
@@ -156,7 +163,9 @@ public static class PipelineCli
             new Option<bool>("--skip-npm-update", "Skip updating @azure/mcp to latest before installing. Use for offline runs or reproducible builds."),
             new Option<bool>("--replay", "Replay a single step against frozen upstream outputs from a prior run."),
             new Option<string?>("--from", "Run ID to replay from. Expected under .\\runs\\<run-id>\\."),
-            new Option<string?>(["--step-name", "--step"], "Step slug to replay (for example: tool-generation or horizontal-articles)."));
+            new Option<string?>(["--step-name", "--step"], "Step slug to inspect or replay (for example: tool-generation or horizontal-articles)."),
+            new Option<bool>("--inspect", "Run the reducer for the named step against the current workspace and print a prompt budget table. No LLM call is made."),
+            new Option<string?>("--show", "What to display in inspect mode. Supported value: prompt-budget."));
 
     private sealed record CliOptions(
         Option<string?> Namespace,
@@ -174,5 +183,7 @@ public static class PipelineCli
         Option<bool> SkipNpmUpdate,
         Option<bool> Replay,
         Option<string?> From,
-        Option<string?> StepName);
+        Option<string?> StepName,
+        Option<bool> Inspect,
+        Option<string?> Show);
 }

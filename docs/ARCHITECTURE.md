@@ -442,3 +442,114 @@ shared/DocGeneration.Core.Tracing/
 
 - **Skills pipeline:** Fresh tracer created per `ProcessBatchAsync()` run, flushed in `finally` block
 - **MCP pipeline:** Fresh tracer created per namespace iteration, flushed to `generated-{namespace}/trace/`
+
+---
+
+## Key Concepts
+
+These terms are introduced by the pipeline manageability work (Points 1–17) and used throughout new code and comments.
+
+| Term | Definition |
+|------|------------|
+| **step envelope** | The `StepResultFile` JSON artifact written by every step to its workspace directory after execution. Contains schema version, input/output artifacts, validation status, token usage, and timing. |
+| **frozen artifact** | A `step-result.json` from a prior pipeline run stored in a versioned run directory. Used by `--replay` to re-run a single step against fixed upstream outputs without re-running predecessors. |
+| **reducer** | A deterministic class that extracts only the inputs one AI stage needs from the upstream envelopes, producing a compact typed context object. No LLM call; runs before the pre-AI gate. See `ToolGenerationReducer`. |
+| **builder** | Synonym for reducer in the `ToolFamilyCleanup` and `HorizontalArticles` contexts; additionally generates structural scaffolding (headings, section order, skeleton) so the AI stage handles prose only. See `FamilyStructureBuilder`, `ArticleOutlineBuilder`. |
+| **seam validator** | An `IPreAiValidator<TContext>` implementation that gates an AI stage. Runs after the reducer but before the LLM call; can block the call by returning `isValid: false`. See `ToolGenerationBudgetValidator`, `ArticleOutlineBudgetValidator`. |
+| **pre-AI gate** | The point in `PipelineRunner` where all registered seam validators for a stage are invoked before any LLM call is dispatched. When a seam validator fails, the stage is skipped and `validationStatus: failed` is written to the step envelope. |
+| **replay mode** | CLI mode (`--replay`) that loads frozen step envelopes from a past run directory and re-executes only the target step against those fixed inputs, without re-running predecessors. Entry point: `RunReplayAsync`. |
+| **inspect mode** | CLI mode (`--inspect`) that runs the reducer for a named step against the current workspace inputs and prints a prompt budget summary — without invoking the LLM. A pre-flight check, not a debugging tool. Entry point: `RunInspectAsync`. |
+
+---
+
+## Developer Loop
+
+Three common workflows for working with the pipeline locally.
+
+### 1. Fresh full run
+
+Run all steps for all namespaces:
+
+```bash
+./start.sh
+# Equivalent:
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --output ./generated
+```
+
+Run specific steps for a single namespace (e.g., only `advisor`):
+
+```bash
+./start.sh advisor 1,2,3
+# Equivalent:
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- \
+  --namespace advisor --steps 1,2,3 --output ./generated-advisor
+```
+
+Skip dependency validation (useful when re-running a single step that you know has all inputs):
+
+```bash
+./start.sh advisor 4 --skip-deps
+```
+
+---
+
+### 2. Replay a single step
+
+After a full run, re-run only `tool-generation` using frozen inputs from a previous run:
+
+```bash
+./start.sh --replay --step tool-generation --from 20240501T120000Z --namespace advisor
+# Equivalent:
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- \
+  --replay --step tool-generation --from 20240501T120000Z \
+  --namespace advisor --output ./generated-advisor
+```
+
+Replay loads the frozen `step-result.json` envelopes from `--from` run directory and passes
+them directly to the step executor, skipping all predecessors. No LLM calls are made for
+deterministic steps; AI stages still invoke the LLM but against fixed upstream context.
+
+---
+
+### 3. Inspect prompt budget before running
+
+Before invoking `horizontal-articles` for `advisor`, verify the prompt will be within budget:
+
+```bash
+./start.sh --inspect --step horizontal-articles --namespace advisor \
+  --show prompt-budget --output ./generated-advisor
+# Prints: step | namespace | estimatedTokens | budget | headroom | topItems (top-5 sections)
+# Exits 0 if within budget (≤ 100,000 tokens); exits 1 if over budget.
+```
+
+Inspect `tool-generation` to see per-tool estimated token usage:
+
+```bash
+./start.sh --inspect --step tool-generation --namespace advisor \
+  --show prompt-budget --output ./generated-advisor
+```
+
+Inspect `tool-family-cleanup` to check structural section counts (no token budget — deterministic step):
+
+```bash
+./start.sh --inspect --step tool-family-cleanup --namespace advisor \
+  --output ./generated-advisor
+```
+
+Use `--inspect` in CI as a pre-flight gate before dispatching a full LLM run.
+Exit code 0 = all items within budget; exit code 1 = at least one item exceeds budget.
+
+---
+
+## Enforcement Model
+
+All enforcement decisions across the pipeline follow a four-tier model.
+
+| Level | Condition | Response |
+|-------|-----------|----------|
+| **Fatal** | `step-result.json` absent after a non-warn-only step completes | Runner logs FATAL and aborts the pipeline. |
+| **Validation skip** | Pre-AI seam validator returns `isValid: false` | Stage is skipped; `validationStatus: failed` written to step envelope; pipeline continues to next independent step. |
+| **Warning** | Observability files (`summary.md`, `metrics.json`, etc.) missing after a step | Logged as WARNING; pipeline continues. |
+| **Phase-gated** | `StepRegistry` in-memory registry diverges from `pipeline.config.json` | Phase 1: WARNING; Phase 2 and beyond: throws `StepRegistryConfigMismatchException`. |
+
+`SkillsRelevanceStep` is **warn-only by design**: its `step-result.json` is required, but a `validationStatus: failed` in that file does not abort the pipeline.

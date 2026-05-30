@@ -9,6 +9,17 @@
 #   ./start.sh 1,2,3                # Run bootstrap + steps 1,2,3 for all namespaces (output: ./generated/)
 #   ./start.sh advisor 4 --skip-deps  # Run step 4 skipping dependency validation
 #
+# Developer shortcuts (pass flags directly):
+#   ./start.sh --inspect --step <step> --namespace <ns> --show prompt-budget --output ./generated-<ns>
+#     # Pre-flight: estimate prompt tokens for a step without running the LLM.
+#     # Exits 0 if within budget, 1 if over budget. Example:
+#     #   ./start.sh --inspect --step horizontal-articles --namespace advisor --show prompt-budget --output ./generated-advisor
+#     #   ./start.sh --inspect --step tool-generation --namespace advisor --show prompt-budget --output ./generated-advisor
+#
+#   ./start.sh --replay --step <step> --from <runId> [--namespace <ns>]
+#     # Replay a single step against frozen outputs from a prior run (no LLM call for deterministic steps).
+#     # Example: ./start.sh --replay --step tool-generation --from 20240501T120000Z --namespace advisor
+#
 # Bootstrap step 0 always runs inside DocGeneration.PipelineRunner; start.sh is only a thin wrapper.
 
 set -euo pipefail
