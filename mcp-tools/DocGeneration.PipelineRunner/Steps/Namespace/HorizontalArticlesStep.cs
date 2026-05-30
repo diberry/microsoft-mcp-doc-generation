@@ -3,11 +3,13 @@ using Azure.Mcp.TextTransformation.Models;
 using GenerativeAI;
 using HorizontalArticleGenerator.Builders;
 using HorizontalArticleGenerator.Models;
+using HorizontalArticleGenerator.Validation;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Validation;
 using Shared;
+using Shared.Validation;
 using HorizontalArticleGeneratorClass = HorizontalArticleGenerator.Generators.HorizontalArticleGenerator;
 
 namespace PipelineRunner.Steps;
@@ -15,8 +17,10 @@ namespace PipelineRunner.Steps;
 public sealed class HorizontalArticlesStep : NamespaceStepBase
 {
     public const string ArticleOutlineOverrideKey = "HorizontalArticlesStep.ArticleOutlineOverride";
+    private const string HorizontalArticlesStageName = "horizontal-articles";
 
     private static readonly ReducerRegistry Reducers = new();
+    private static readonly PreAiValidatorRegistry ValidatorRegistry = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
 
     static HorizontalArticlesStep()
@@ -31,6 +35,9 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             var builder = new ArticleOutlineBuilder();
             return await builder.BuildAsync(input.OutputPath, input.ServiceNamespace, ct);
         });
+
+        ValidatorRegistry.Register(HorizontalArticlesStageName, new ArticleOutlineContextValidator());
+        ValidatorRegistry.Register(HorizontalArticlesStageName, new ArticleOutlineBudgetValidator());
     }
 
     public HorizontalArticlesStep()
@@ -83,6 +90,22 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
                 var outline = (ArticleOutlineContext)await reducer(
                     new ArticleOutlineReducerInput(context.OutputPath, currentNamespace),
                     cancellationToken);
+
+                var validationResult = await ValidatorRegistry.ValidateAsync(HorizontalArticlesStageName, outline, cancellationToken);
+                if (!validationResult.IsValid)
+                {
+                    var errorMessages = validationResult.Errors.Select(static e => e.Message).ToArray();
+                    warnings.AddRange(errorMessages);
+                    artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
+                    return BuildResult(
+                        context,
+                        processResults,
+                        false,
+                        warnings,
+                        [new ValidatorResult("pre-ai-validation", false, errorMessages)],
+                        artifactFailures);
+                }
+
                 var renderArticleAsync = await ResolveArticleRendererAsync(context, cancellationToken);
                 var articleContent = await renderArticleAsync(outline, cancellationToken);
                 var reducerArticleDirectory = Path.Combine(context.OutputPath, "horizontal-articles");
