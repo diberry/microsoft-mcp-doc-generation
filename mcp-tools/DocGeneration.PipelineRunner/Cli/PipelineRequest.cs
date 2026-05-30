@@ -1,5 +1,10 @@
 namespace PipelineRunner.Cli;
 
+/// <summary>
+/// Validated, immutable request object produced by <see cref="PipelineCli"/> and consumed by
+/// <see cref="PipelineRunner"/>. Carries all resolved options for a single pipeline invocation,
+/// including replay mode (<see cref="Replay"/>) and inspect mode (<see cref="Inspect"/>) flags.
+/// </summary>
 public sealed record PipelineRequest(
     string? Namespace,
     IReadOnlyList<int> Steps,

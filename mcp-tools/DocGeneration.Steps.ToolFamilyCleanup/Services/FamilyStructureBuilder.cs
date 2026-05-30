@@ -9,7 +9,9 @@ using Shared;
 namespace ToolFamilyCleanup.Services;
 
 /// <summary>
-/// Deterministically assembles canonical tool-family structure from staged tool files.
+/// Builder that deterministically assembles the canonical <see cref="FamilyStructureContext"/>
+/// step envelope from staged tool files, emitting family name, section order, H2 headings,
+/// and source content so the ToolFamilyCleanup AI stage handles prose only.
 /// </summary>
 public sealed class FamilyStructureBuilder
 {

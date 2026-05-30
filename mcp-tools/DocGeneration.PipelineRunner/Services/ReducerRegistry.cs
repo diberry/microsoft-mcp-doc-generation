@@ -1,9 +1,9 @@
 namespace PipelineRunner.Services;
 
 /// <summary>
-/// Migration scaffold: maps AI stage step IDs to their optional reducer delegates.
-/// When no reducer is registered, step wrappers fall back to their pre-Point-6 direct paths.
-/// This registry will be removed after all Point 6 reducers are merged and validated.
+/// Migration scaffold that maps AI stage step IDs to their registered reducer delegates.
+/// When no reducer is registered, the step wrapper falls back to its direct upstream path.
+/// Removed once all reducers introduced by Points 6–8 are merged and validated.
 /// </summary>
 public sealed class ReducerRegistry
 {

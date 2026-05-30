@@ -10,7 +10,8 @@ using System.Threading.Tasks;
 namespace Shared.Validation;
 
 /// <summary>
-/// Registry that maps step names to their pre-AI validators.
+/// Registry that maps AI stage names to their registered seam validators.
+/// Invoked at the pre-AI gate to run all validators for a stage before any LLM call is dispatched.
 /// </summary>
 public sealed class PreAiValidatorRegistry
 {
