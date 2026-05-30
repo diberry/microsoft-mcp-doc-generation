@@ -16,7 +16,9 @@ public sealed record PipelineRequest(
     bool SkipNpmUpdate = false,
     bool Replay = false,
     string? ReplayFromRunId = null,
-    string? ReplayStepName = null)
+    string? ReplayStepName = null,
+    bool Inspect = false,
+    string? InspectShow = null)
 {
     /// <summary>
     /// Default upstream branch for fetching files from the microsoft/mcp repository.
@@ -119,12 +121,19 @@ public sealed record PipelineRequest(
                 errors.Add("--step-name is required when --replay is set.");
             }
         }
+        else if (Inspect)
+        {
+            if (string.IsNullOrWhiteSpace(ReplayStepName))
+            {
+                errors.Add("--step-name is required when --inspect is set.");
+            }
+        }
         else if (Steps.Count == 0)
         {
             errors.Add("At least one step must be selected.");
         }
 
-        var duplicates = Replay
+        var duplicates = Replay || Inspect
             ? Array.Empty<int>()
             : Steps
                 .GroupBy(step => step)
@@ -139,7 +148,7 @@ public sealed record PipelineRequest(
         }
 
         var allowedSteps = validStepIds ?? AllValidSteps;
-        var invalidSteps = Replay
+        var invalidSteps = Replay || Inspect
             ? Array.Empty<int>()
             : Steps
                 .Where(step => !allowedSteps.Contains(step))

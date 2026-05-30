@@ -1,4 +1,6 @@
 using DocGeneration.Core.Tracing;
+using HorizontalArticleGenerator.Builders;
+using HorizontalArticleGenerator.Validation;
 using PipelineRunner.Cli;
 using PipelineRunner.Contracts;
 using PipelineRunner.Context;
@@ -6,6 +8,10 @@ using PipelineRunner.Registry;
 using PipelineRunner.Services;
 using Shared;
 using System.Security.Cryptography;
+using System.Text;
+using ToolFamilyCleanup.Services;
+using ToolGeneration_Improved.Services;
+using ToolGeneration_Improved.Validation;
 
 namespace PipelineRunner;
 
@@ -95,6 +101,11 @@ public sealed class PipelineRunner
         if (request.Replay)
         {
             return await RunReplayAsync(request, cancellationToken);
+        }
+
+        if (request.Inspect)
+        {
+            return await RunInspectAsync(request, cancellationToken);
         }
 
         var context = await _contextFactory.CreateAsync(request, cancellationToken);
@@ -224,6 +235,199 @@ public sealed class PipelineRunner
         }
 
         return CompleteRun(context, warnings, criticalFailures, SuccessExitCode);
+    }
+
+    private async Task<int> RunInspectAsync(PipelineRequest request, CancellationToken cancellationToken)
+    {
+        var stepSlug = request.ReplayStepName!;
+        var outputPath = request.OutputPath;
+        var namespaceName = request.Namespace;
+
+        Console.WriteLine($"Inspect: step={stepSlug} namespace={namespaceName ?? "(all)"} output={outputPath}");
+        Console.WriteLine();
+
+        return stepSlug switch
+        {
+            "tool-generation" => await InspectToolGenerationAsync(outputPath, namespaceName, cancellationToken),
+            "horizontal-articles" => await InspectHorizontalArticlesAsync(outputPath, namespaceName, cancellationToken),
+            "tool-family-cleanup" => await InspectToolFamilyCleanupAsync(outputPath, namespaceName, cancellationToken),
+            _ => ReportUnknownInspectStep(stepSlug),
+        };
+    }
+
+    private static int ReportUnknownInspectStep(string stepSlug)
+    {
+        Console.Error.WriteLine($"Unknown inspect step '{stepSlug}'. Supported: tool-generation, horizontal-articles, tool-family-cleanup.");
+        return InvalidArgumentsExitCode;
+    }
+
+    private static async Task<int> InspectToolGenerationAsync(
+        string outputPath,
+        string? namespaceName,
+        CancellationToken cancellationToken)
+    {
+        var composedDir = Path.Combine(outputPath, "tools-composed");
+        if (!Directory.Exists(composedDir))
+        {
+            Console.Error.WriteLine($"tools-composed directory not found: {composedDir}");
+            Console.Error.WriteLine("Run step 3 (tool-generation) first to produce composed tool files.");
+            return FatalExitCode;
+        }
+
+        var toolFiles = Directory.EnumerateFiles(composedDir, "*.md", SearchOption.TopDirectoryOnly)
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (namespaceName is not null)
+        {
+            toolFiles = toolFiles
+                .Where(f => Path.GetFileName(f).StartsWith(namespaceName + "-", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        }
+
+        if (toolFiles.Length == 0)
+        {
+            Console.WriteLine(namespaceName is null
+                ? $"No composed tool files found in: {composedDir}"
+                : $"No composed tool files found for namespace '{namespaceName}' in: {composedDir}");
+            return SuccessExitCode;
+        }
+
+        var reducer = new ToolGenerationReducer();
+        var validator = new ToolGenerationBudgetValidator();
+        const int DefaultMaxTokens = 8000;
+
+        PrintBudgetTableHeader("tool", "namespace", "estimatedTokens", "budget", "headroom", "topItems");
+
+        var anyOverBudget = false;
+        foreach (var filePath in toolFiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var fileName = Path.GetFileName(filePath);
+            var ns = namespaceName ?? InferNamespace(fileName);
+
+            var context = await reducer.ReduceAsync(composedDir, fileName, DefaultMaxTokens, cancellationToken);
+            var result = await validator.ValidateAsync(context, cancellationToken);
+
+            var estimated = result.EstimatedPromptTokens ?? 0;
+            var budget = result.TokenBudget ?? ToolGenerationBudgetValidator.InputTokenBudget;
+            var headroom = budget - estimated;
+            var topItem = context.ToolName;
+
+            PrintBudgetTableRow("tool-generation", ns, estimated, budget, headroom, topItem);
+
+            if (!result.WithinBudget)
+            {
+                anyOverBudget = true;
+            }
+        }
+
+        return anyOverBudget ? FatalExitCode : SuccessExitCode;
+    }
+
+    private static async Task<int> InspectHorizontalArticlesAsync(
+        string outputPath,
+        string? namespaceName,
+        CancellationToken cancellationToken)
+    {
+        if (namespaceName is null)
+        {
+            Console.Error.WriteLine("--namespace is required for --inspect --step horizontal-articles.");
+            return InvalidArgumentsExitCode;
+        }
+
+        var builder = new ArticleOutlineBuilder();
+        var validator = new ArticleOutlineBudgetValidator();
+
+        var context = await builder.BuildAsync(outputPath, namespaceName, cancellationToken);
+        var result = await validator.ValidateAsync(context, cancellationToken);
+
+        var estimated = result.EstimatedPromptTokens ?? 0;
+        var budget = result.TokenBudget ?? ArticleOutlineBudgetValidator.InputTokenBudget;
+        var headroom = budget - estimated;
+
+        var topItems = context.Sections
+            .OrderByDescending(s => s.EvidenceItems.Sum(e => e.Length))
+            .Take(5)
+            .Select(s => s.Heading)
+            .ToArray();
+
+        PrintBudgetTableHeader("step", "namespace", "estimatedTokens", "budget", "headroom", "topItems");
+        PrintBudgetTableRow("horizontal-articles", namespaceName, estimated, budget, headroom, string.Join(", ", topItems));
+
+        return result.WithinBudget ? SuccessExitCode : FatalExitCode;
+    }
+
+    private static async Task<int> InspectToolFamilyCleanupAsync(
+        string outputPath,
+        string? namespaceName,
+        CancellationToken cancellationToken)
+    {
+        if (namespaceName is null)
+        {
+            Console.Error.WriteLine("--namespace is required for --inspect --step tool-family-cleanup.");
+            return InvalidArgumentsExitCode;
+        }
+
+        var toolsDir = Path.Combine(outputPath, "tools");
+        if (!Directory.Exists(toolsDir))
+        {
+            Console.Error.WriteLine($"tools directory not found: {toolsDir}");
+            Console.Error.WriteLine("Run step 4 (tool-family-cleanup) first to produce tool files.");
+            return FatalExitCode;
+        }
+
+        var builder = new FamilyStructureBuilder();
+        var context = await builder.BuildAsync(toolsDir, namespaceName, h2HeadingsDirectory: null, cancellationToken);
+
+        PrintBudgetTableHeader("step", "namespace", "sections", "budget", "headroom", "topItems");
+
+        var topItems = context.Sections
+            .Take(5)
+            .Select(s => s.Heading)
+            .ToArray();
+
+        var sb = new StringBuilder();
+        sb.Append("tool-family-cleanup".PadRight(22));
+        sb.Append(namespaceName.PadRight(18));
+        sb.Append(context.Sections.Count.ToString().PadRight(16));
+        sb.Append("n/a".PadRight(12));
+        sb.Append("n/a".PadRight(12));
+        sb.Append(string.Join(", ", topItems));
+        Console.WriteLine(sb.ToString());
+        Console.WriteLine();
+
+        return SuccessExitCode;
+    }
+
+    private static string InferNamespace(string fileName)
+    {
+        var dashIndex = fileName.IndexOf('-', StringComparison.Ordinal);
+        return dashIndex < 0 ? fileName : fileName[..dashIndex];
+    }
+
+    private static void PrintBudgetTableHeader(string col1, string col2, string col3, string col4, string col5, string col6)
+    {
+        Console.WriteLine(
+            col1.PadRight(22) +
+            col2.PadRight(18) +
+            col3.PadRight(16) +
+            col4.PadRight(12) +
+            col5.PadRight(12) +
+            col6);
+        Console.WriteLine(new string('-', 90));
+    }
+
+    private static void PrintBudgetTableRow(string step, string ns, int estimated, int budget, int headroom, string topItem)
+    {
+        var status = headroom >= 0 ? "✅" : "❌";
+        Console.WriteLine(
+            step.PadRight(22) +
+            ns.PadRight(18) +
+            $"{estimated:N0}".PadRight(16) +
+            $"{budget:N0}".PadRight(12) +
+            $"{headroom:+#;-#;0}".PadRight(12) +
+            $"{status} {topItem}");
     }
 
     private async Task<int> RunReplayAsync(PipelineRequest request, CancellationToken cancellationToken)

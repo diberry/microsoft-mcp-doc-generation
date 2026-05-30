@@ -19,7 +19,7 @@ public sealed class ToolGenerationBudgetValidator : IPreAiValidator<ToolGenerati
     internal const int CharsPerToken = 4;
 
     /// <summary>Maximum input tokens allowed for the tool-generation AI stage.</summary>
-    internal const int InputTokenBudget = 100_000;
+    public const int InputTokenBudget = 100_000;
 
     /// <inheritdoc />
     public Task<PreAiValidationResult> ValidateAsync(ToolGenerationContext context, CancellationToken cancellationToken)
