@@ -10,7 +10,8 @@ public class ParameterCoverageCheckerTests
     [Theory]
     [InlineData("account", "account")]
     [InlineData("resource-group", "resource-group")]
-    [InlineData("ResourceGroup", "resourcegroup")]
+    [InlineData("ResourceGroup", "resource-group")]
+    [InlineData("outputAudio", "output-audio")]
     [InlineData("", "")]
     [InlineData("  ", "")]
     public void ConvertToSlug_ReturnsExpected(string input, string expected)
@@ -357,15 +358,13 @@ public class ParameterCoverageCheckerTests
     }
 
     [Fact]
-    public void MultiplePrompts_OneHasCoverage_ReturnsCovered()
+    public void CamelCaseParam_OutputAudio_MatchesNaturalLanguage()
     {
-        // At least one prompt in the set has concrete coverage
-        var prompts = new[] {
-            "Update the file share quota",  // no concrete name
-            "Update file share 'data-share' to 500 GB"  // has concrete name
-        };
-        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "name", 2);
+        // "outputAudio" should match "output audio 'welcome.wav'" — camelCase splits into words
+        var prompts = new[] { "Synthesize speech from text 'Hello' using endpoint 'https://my-service.cognitiveservices.azure.com/' and save to output audio 'welcome.wav'." };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "outputAudio", 3);
+
         Assert.True(result.Covered,
-            "Should be covered if ANY prompt in the set has the parameter with concrete value");
+            "camelCase param 'outputAudio' should match 'output audio' + concrete quoted value in prompt");
     }
 }
