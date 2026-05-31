@@ -26,7 +26,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Removed `ContractionFixer.Fix` (former step 9) — AI now produces contractions per Microsoft style
   - Removed `ExampleValueBackticker.Fix` (former step 11) — AI now wraps example values in backticks
   - Token delta: 0% (prompt changes affect AI quality, not tool-file character counts measured by `--inspect`)
-
 - **P10: Pre-AI seam validators** — Registered `IPreAiValidator` implementations for pipeline steps 3, 4, and 6 using the `PreAiValidatorRegistry` from P9. Five validators added:
   - `ToolGenerationContextValidator` — validates `ToolName`, `ComposedContent` non-empty, `SchemaVersion == "1.0"` before step 3 AI calls.
   - `ToolGenerationBudgetValidator` — enforces 100,000-token input budget (via `ComposedContent.Length / 4`) before step 3 AI calls.

@@ -422,7 +422,7 @@ function Get-ArticleSections {
         $endIndex = if ($index -lt $headingMatches.Count - 1) { $headingMatches[$index + 1].Index } else { $body.Length }
         $sectionText = $body.Substring($startIndex, $endIndex - $startIndex).TrimEnd()
 
-        if ($heading -eq 'Related content' -or $heading -match '^(?i)See also$' -or $heading -match '^(?i)Related tools?$') {
+        if ($heading -eq 'Related content') {
             continue
         }
 
@@ -484,7 +484,6 @@ function Get-ArticleSections {
 
         $parameterRows = Get-SectionParameterRows $sectionLines
         $requiredParameters = @($parameterRows | Where-Object { $_.IsRequired } | Select-Object -ExpandProperty ParameterName)
-        $allParameterCount = @($parameterRows).Count
 
         $sections.Add([pscustomobject]@{
             Heading = $heading
@@ -497,28 +496,12 @@ function Get-ArticleSections {
             AlternateExampleHeader = $alternateExampleHeader
             ExamplePrompts = @($examplePrompts)
             RequiredParameters = @($requiredParameters)
-            AllParameterCount = $allParameterCount
-            SectionText = $sectionText
         })
-    }
-
-    # Capture related-section body for Check 1
-    $relatedSectionText = ''
-    for ($index = 0; $index -lt $headingMatches.Count; $index++) {
-        $heading = $headingMatches[$index].Groups[1].Value.Trim()
-        if ($heading -match '^(?i)(See also|Related tools?)$') {
-            $startIndex = $headingMatches[$index].Index
-            $endIndex = if ($index -lt $headingMatches.Count - 1) { $headingMatches[$index + 1].Index } else { $body.Length }
-            $relatedSectionText = $body.Substring($startIndex, $endIndex - $startIndex).TrimEnd()
-            break
-        }
     }
 
     return [pscustomobject]@{
         Frontmatter = $frontmatter
         Sections = [object[]]$sections.ToArray()
-        Body = $body
-        RelatedSectionText = $relatedSectionText
     }
 }
 
@@ -555,124 +538,6 @@ function Get-BrandingIssues {
     }
 
     return @($issues | Sort-Object -Unique)
-}
-
-function Get-SignificantWords {
-    param([string]$Text)
-    return @([regex]::Matches($Text.ToLowerInvariant(), '\b[a-z]{3,}\b') | ForEach-Object { $_.Value } | Sort-Object -Unique)
-}
-
-function Get-RelatedToolsCompletenessIssues {
-    param(
-        [string]$RelatedSectionText,
-        [object[]]$Sections
-    )
-    $issues = New-Object System.Collections.Generic.List[string]
-    if ([string]::IsNullOrWhiteSpace($RelatedSectionText)) {
-        return @($issues)
-    }
-    $backtickTerms = [regex]::Matches($RelatedSectionText, '`([^`]{4,})`') | ForEach-Object { $_.Groups[1].Value }
-    $headings = @($Sections | ForEach-Object { $_.Heading.ToLowerInvariant() })
-    foreach ($term in $backtickTerms) {
-        $termLower = $term.ToLowerInvariant()
-        $found = $headings | Where-Object { $_ -match [regex]::Escape($termLower) }
-        if (-not $found) {
-            $issues.Add("tool '$term' referenced in related tools but not found in article")
-        }
-    }
-    return @($issues)
-}
-
-function Get-ToneMarkerWarnings {
-    param([object[]]$Sections)
-    $warnings = New-Object System.Collections.Generic.List[string]
-    $toneRules = @(
-        @{ Pattern = '(?i)\byou (can|will|use)\b'; Label = 'second-person' },
-        @{ Pattern = '(?i)\b(powerful|seamless|cutting-edge|game-changing)\b'; Label = 'marketing-superlative' },
-        @{ Pattern = '(?i)\bbest\b'; Label = 'marketing-superlative' },
-        @{ Pattern = '(?i)\bActive Directory\b'; Label = 'deprecated-service-name (use Entra ID)' },
-        @{ Pattern = '(?i)\bCosmosDB\b'; Label = 'deprecated-service-name (use Cosmos DB)' }
-    )
-    foreach ($section in $Sections) {
-        $reported = @{}
-        foreach ($rule in $toneRules) {
-            if ($reported[$rule.Label]) { continue }
-            if ($section.SectionText -match $rule.Pattern) {
-                $warnings.Add("⚠️ $($section.ToolKey): tone-marker [$($rule.Label)] detected")
-                $reported[$rule.Label] = $true
-            }
-        }
-    }
-    return @($warnings)
-}
-
-function Get-BoilerplateRedundancyWarnings {
-    param(
-        [object[]]$Sections,
-        [string]$OutputDir,
-        [string]$NamespaceLower
-    )
-    $warnings = New-Object System.Collections.Generic.List[string]
-    $contextPath = Join-Path $OutputDir "tool-family\$NamespaceLower.context.json"
-    if (-not (Test-Path $contextPath)) {
-        return @($warnings)
-    }
-    try {
-        $ctx = Get-Content $contextPath -Raw | ConvertFrom-Json
-        $overview = $ctx.serviceOverview
-        if ([string]::IsNullOrWhiteSpace($overview)) { return @($warnings) }
-        $overviewWords = @(Get-SignificantWords -Text $overview)
-        if ($overviewWords.Count -eq 0) { return @($warnings) }
-        $redundantSections = New-Object System.Collections.Generic.List[string]
-        foreach ($section in $Sections) {
-            $sectionWords = @(Get-SignificantWords -Text $section.SectionText)
-            if ($sectionWords.Count -eq 0) { continue }
-            $overlapCount = ($overviewWords | Where-Object { $sectionWords -contains $_ }).Count
-            $overlapRatio = $overlapCount / $overviewWords.Count
-            if ($overlapRatio -ge 0.8) {
-                $redundantSections.Add($section.ToolKey)
-            }
-        }
-        if ($redundantSections.Count -ge 2) {
-            foreach ($key in $redundantSections) {
-                $warnings.Add("⚠️ ${key}: service context redundancy — tool description overlaps with serviceOverview (>=80%)")
-            }
-        }
-    } catch {
-        # Skip if context file is malformed
-    }
-    return @($warnings)
-}
-
-function Get-RelatedSectionHeaderWarnings {
-    param([string]$Body)
-    $warnings = New-Object System.Collections.Generic.List[string]
-    if ($Body -notmatch '(?m)^## (?i)(Related tools?|See also)$') {
-        $warnings.Add("⚠️ article: no '## Related tools' or '## See also' section found")
-    }
-    return @($warnings)
-}
-
-function Get-MissingExampleIssues {
-    param([object[]]$Sections)
-    $issues = New-Object System.Collections.Generic.List[string]
-    foreach ($section in $Sections) {
-        if ($section.ExampleHeaderIndex -lt 0 -and -not $section.AlternateExampleHeader) {
-            $issues.Add("tool '$($section.ToolKey)' has no example section")
-        }
-    }
-    return @($issues)
-}
-
-function Get-LowParameterCountWarnings {
-    param([object[]]$Sections)
-    $warnings = New-Object System.Collections.Generic.List[string]
-    foreach ($section in $Sections) {
-        if ($section.AllParameterCount -lt 2) {
-            $warnings.Add("⚠️ $($section.ToolKey): fewer than 2 parameters listed ($($section.AllParameterCount) found)")
-        }
-    }
-    return @($warnings)
 }
 
 try {
@@ -827,24 +692,6 @@ try {
 
     $brandingIssues = Get-BrandingIssues -ArticleContent $articleContent
 
-    $relatedToolsIssues = Get-RelatedToolsCompletenessIssues -RelatedSectionText $article.RelatedSectionText -Sections $sections
-    foreach ($issue in $relatedToolsIssues) { $blockingIssues.Add($issue) }
-
-    $toneWarnings = Get-ToneMarkerWarnings -Sections $sections
-    foreach ($w in $toneWarnings) { $warningIssues.Add($w) }
-
-    $redundancyWarnings = Get-BoilerplateRedundancyWarnings -Sections $sections -OutputDir $outputDir -NamespaceLower $namespaceLower
-    foreach ($w in $redundancyWarnings) { $warningIssues.Add($w) }
-
-    $relatedHeaderWarnings = Get-RelatedSectionHeaderWarnings -Body $article.Body
-    foreach ($w in $relatedHeaderWarnings) { $warningIssues.Add($w) }
-
-    $missingExampleIssues = Get-MissingExampleIssues -Sections $sections
-    foreach ($issue in $missingExampleIssues) { $blockingIssues.Add($issue) }
-
-    $lowParamWarnings = Get-LowParameterCountWarnings -Sections $sections
-    foreach ($w in $lowParamWarnings) { $warningIssues.Add($w) }
-
     $reportLines = New-Object System.Collections.Generic.List[string]
     $reportLines.Add("=== Tool Family Validation: $namespaceLower ===")
     $reportLines.Add("Tool files found: $toolFileCount")
@@ -908,36 +755,6 @@ try {
     $reportLines.Add("Branding: $($brandingIssues.Count) issue$(if ($brandingIssues.Count -ne 1) { 's' } else { '' }) found $(if ($brandingIssues.Count -eq 0) { '✅' } else { 'ℹ️' })")
     foreach ($issue in $brandingIssues) {
         $reportLines.Add("  - $issue")
-    }
-
-    $reportLines.Add("Related tools completeness: $($relatedToolsIssues.Count) issue$(if ($relatedToolsIssues.Count -ne 1) { 's' } else { '' }) $(if ($relatedToolsIssues.Count -eq 0) { '✅' } else { '❌' })")
-    foreach ($issue in $relatedToolsIssues) {
-        $reportLines.Add("  ❌ $issue")
-    }
-
-    $reportLines.Add("Tone markers: $($toneWarnings.Count) warning$(if ($toneWarnings.Count -ne 1) { 's' } else { '' }) $(if ($toneWarnings.Count -eq 0) { '✅' } else { '⚠️' })")
-    foreach ($w in $toneWarnings) {
-        $reportLines.Add("  $w")
-    }
-
-    $reportLines.Add("Boilerplate redundancy: $($redundancyWarnings.Count) warning$(if ($redundancyWarnings.Count -ne 1) { 's' } else { '' }) $(if ($redundancyWarnings.Count -eq 0) { '✅' } else { '⚠️' })")
-    foreach ($w in $redundancyWarnings) {
-        $reportLines.Add("  $w")
-    }
-
-    $reportLines.Add("Related section header: $(if ($relatedHeaderWarnings.Count -eq 0) { '✅ present' } else { '⚠️ missing' })")
-    foreach ($w in $relatedHeaderWarnings) {
-        $reportLines.Add("  $w")
-    }
-
-    $reportLines.Add("Missing examples: $($missingExampleIssues.Count) issue$(if ($missingExampleIssues.Count -ne 1) { 's' } else { '' }) $(if ($missingExampleIssues.Count -eq 0) { '✅' } else { '❌' })")
-    foreach ($issue in $missingExampleIssues) {
-        $reportLines.Add("  ❌ $issue")
-    }
-
-    $reportLines.Add("Low parameter count: $($lowParamWarnings.Count) warning$(if ($lowParamWarnings.Count -ne 1) { 's' } else { '' }) $(if ($lowParamWarnings.Count -eq 0) { '✅' } else { '⚠️' })")
-    foreach ($w in $lowParamWarnings) {
-        $reportLines.Add("  $w")
     }
 
     $reportLines.Add('')

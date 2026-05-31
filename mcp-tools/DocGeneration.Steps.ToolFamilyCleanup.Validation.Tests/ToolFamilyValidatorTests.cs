@@ -196,9 +196,9 @@ public class ToolFamilyValidatorTests
     {
         await UpdateArticleAsync(articlePath, content =>
         {
-            const string anchor = "\n## See also\n";
+            const string anchor = "\n## Related content\n";
             Assert.Contains(anchor, content);
-            return content.Replace(anchor, $"\n{sectionText.Trim()}\n\n## See also\n");
+            return content.Replace(anchor, $"\n{sectionText.Trim()}\n\n## Related content\n");
         });
     }
 

@@ -541,26 +541,6 @@ For explicit truncation errors:
 - LLM token limit: 16,000 for large files
 - Failed files logged but don't stop overall process
 
-## Post-Assembly Validation
-
-`ToolFamilyPostAssemblyValidator` runs after Step 3 (ToolFamilyCleanup) to catch quality issues before the article is finalized. Checks are grouped by severity.
-
-### Fatal checks (block pipeline after 2 retries)
-
-| Check | Description |
-| --- | --- |
-| **Related tools completeness** | Extracts backtick-quoted tool names (≥4 chars) from `## See also` / `## Related tools` and verifies each has an H2 section in the article. Reports: `tool 'X' referenced in related tools but not found in article` |
-| **Missing examples** | Each tool section must have an example section (`Example prompts include:` or an alternate header). Reports: `tool 'X' has no example section` |
-
-### Warning checks (logged, do not block pipeline)
-
-| Check | Description |
-| --- | --- |
-| **Tone markers** | Flags second-person language (`you can`, `you will`, `you use`), marketing superlatives (`powerful`, `best`, `seamless`, `cutting-edge`, `game-changing`), and deprecated service names (`Active Directory` → Entra ID, `CosmosDB` → Cosmos DB). One warning per section per category. |
-| **Boilerplate redundancy** | Loads `serviceOverview` from `{output}/tool-family/{namespace}.context.json`. Flags as "service context redundancy" if ≥2 tool sections share ≥80% significant-word overlap with the overview. |
-| **Related section header** | Warns if neither `## Related tools` nor `## See also` is present in the article. |
-| **Low parameter count** | Warns if a tool section lists fewer than 2 parameters in its parameter table. |
-
 ## Format Validation
 
 **Known Limitation**: Generated files do not yet match published Microsoft Learn format exactly. Key differences:

@@ -32,7 +32,6 @@ Example prompts include:
 | Parameter | Required | Description |
 | --- | --- | --- |
 | `Filter` | No | Optional gamma filter. |
-| `Max Results` | No | Maximum number of results to return. |
 
-## See also
+## Related content
 - [Sample reference](https://example.com/sample)

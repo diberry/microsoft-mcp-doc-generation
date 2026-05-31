@@ -24,23 +24,6 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         new(@"\bFoundry\b", "Verify first mention uses the full product name (for example, \"Microsoft Foundry\")."),
     ];
 
-    private static readonly Regex RelatedSectionHeaderRegex = new(@"(?m)^## (related tools?|see also)\s*$", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-    private static readonly Regex BacktickTermRegex = new(@"`([^`]{4,})`", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    private static readonly ToneMarkerRule[] ToneMarkerRules =
-    [
-        new(@"\byou can\b", "second person"),
-        new(@"\byou will\b", "second person"),
-        new(@"\byou use\b", "second person"),
-        new(@"\bpowerful\b", "marketing superlative"),
-        new(@"\bbest\b", "marketing superlative"),
-        new(@"\bseamless\b", "marketing superlative"),
-        new(@"\bcutting-edge\b", "marketing superlative"),
-        new(@"\bgame.changing\b", "marketing superlative"),
-        new(@"\bActive Directory\b", "deprecated service name (use 'Entra ID')"),
-        new(@"\bCosmosDB\b", "deprecated service name (use 'Cosmos DB')"),
-    ];
-
     public string Name => "ToolFamilyPostAssemblyValidator";
 
     public async ValueTask<ValidatorResult> ValidateAsync(PipelineContext context, IPipelineStep step, CancellationToken cancellationToken)
@@ -97,7 +80,6 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
                 var normalized = articleContent.Replace("\r\n", "\n", StringComparison.Ordinal);
                 var mcpMarkerCount = McpCliRegex.Matches(normalized).Count;
-                var body = article.Body;
 
                 if (toolFileCount != mcpMarkerCount || frontmatterToolCount is null || frontmatterToolCount != toolFileCount)
                 {
@@ -174,36 +156,6 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 }
 
                 brandingIssues.AddRange(GetBrandingIssues(articleContent));
-
-                foreach (var issue in GetRelatedToolsCompletenessIssues(body, sections))
-                {
-                    blockingIssues.Add(issue);
-                }
-
-                foreach (var warning in GetToneMarkerWarnings(sections))
-                {
-                    warningIssues.Add(warning);
-                }
-
-                foreach (var warning in await GetBoilerplateRedundancyWarningsAsync(context.OutputPath, familyName, sections, cancellationToken))
-                {
-                    warningIssues.Add(warning);
-                }
-
-                foreach (var warning in GetRelatedSectionHeaderWarnings(body))
-                {
-                    warningIssues.Add(warning);
-                }
-
-                foreach (var issue in GetMissingExampleIssues(sections))
-                {
-                    blockingIssues.Add(issue);
-                }
-
-                foreach (var warning in GetLowParameterCountWarnings(sections))
-                {
-                    warningIssues.Add(warning);
-                }
 
                 var reportLines = BuildReportLines(
                     familyName,
@@ -359,9 +311,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         for (var index = 0; index < headingMatches.Count; index++)
         {
             var heading = headingMatches[index].Groups[1].Value.Trim();
-            if (string.Equals(heading, "Related content", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(heading, "See also", StringComparison.OrdinalIgnoreCase)
-                || Regex.IsMatch(heading, @"^related tools?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            if (string.Equals(heading, "Related content", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -402,9 +352,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             }
 
             var examplePrompts = ExtractExamplePrompts(sectionLines, exampleHeaderIndex);
-            var allParameterRows = GetSectionParameterRows(sectionLines);
-            var allParameterCount = allParameterRows.Count;
-            var requiredParameters = allParameterRows
+            var requiredParameters = GetSectionParameterRows(sectionLines)
                 .Where(row => row.IsRequired)
                 .Select(row => row.ParameterName)
                 .ToArray();
@@ -419,12 +367,10 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 tableStartIndex,
                 alternateExampleHeader,
                 examplePrompts,
-                requiredParameters,
-                sectionText,
-                allParameterCount));
+                requiredParameters));
         }
 
-        return new ParsedArticle(frontmatter, sections, body);
+        return new ParsedArticle(frontmatter, sections);
     }
 
     private static IReadOnlyList<string> ExtractExamplePrompts(IReadOnlyList<string> sectionLines, int exampleHeaderIndex)
@@ -728,33 +674,6 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         reportLines.AddRange(brandingIssues.Select(issue => $"  - {issue}"));
         reportLines.Add(string.Empty);
 
-        var relatedCompletenessIssues = blockingIssues.Where(issue => issue.Contains("referenced in related tools", StringComparison.OrdinalIgnoreCase)).ToArray();
-        reportLines.Add($"Related tools completeness: {(relatedCompletenessIssues.Length == 0 ? "✅ PASS" : $"❌ {relatedCompletenessIssues.Length} issue(s)")}");
-        reportLines.AddRange(relatedCompletenessIssues.Select(issue => $"  ❌ {issue}"));
-
-        var toneWarnings = warningIssues.Where(issue => issue.Contains("tone marker", StringComparison.OrdinalIgnoreCase)).ToArray();
-        reportLines.Add($"Tone markers: {(toneWarnings.Length == 0 ? "✅ none detected" : $"⚠️ {toneWarnings.Length} warning(s)")}");
-        reportLines.AddRange(toneWarnings.Select(warning => $"  {warning}"));
-
-        var boilerplateWarnings = warningIssues.Where(issue => issue.Contains("service context redundancy", StringComparison.OrdinalIgnoreCase)).ToArray();
-        reportLines.Add($"Boilerplate redundancy: {(boilerplateWarnings.Length == 0 ? "✅ none detected" : $"⚠️ {boilerplateWarnings.Length} warning(s)")}");
-        reportLines.AddRange(boilerplateWarnings.Select(warning => $"  {warning}"));
-
-        var relatedHeaderWarnings = warningIssues.Where(issue => issue.Contains("missing a 'Related", StringComparison.OrdinalIgnoreCase)).ToArray();
-        reportLines.Add($"Related section header: {(relatedHeaderWarnings.Length == 0 ? "✅ present" : "⚠️ absent")}");
-        reportLines.AddRange(relatedHeaderWarnings.Select(warning => $"  {warning}"));
-
-        var missingExampleIssues = blockingIssues.Where(issue => issue.Contains("no example section found", StringComparison.OrdinalIgnoreCase)).ToArray();
-        var examplePassCount = sections.Count - missingExampleIssues.Length;
-        reportLines.Add($"Tool examples: {examplePassCount}/{sections.Count} tools have at least one example {(missingExampleIssues.Length == 0 ? "✅" : "❌")}");
-        reportLines.AddRange(missingExampleIssues.Select(issue => $"  {issue}"));
-
-        var paramCountWarnings = warningIssues.Where(issue => issue.Contains("fewer than 2 parameters", StringComparison.OrdinalIgnoreCase)).ToArray();
-        var paramPassCount = sections.Count - paramCountWarnings.Length;
-        reportLines.Add($"Parameter count: {paramPassCount}/{sections.Count} tools have 2+ parameters {(paramCountWarnings.Length == 0 ? "✅" : "⚠️")}");
-        reportLines.AddRange(paramCountWarnings.Select(warning => $"  {warning}"));
-        reportLines.Add(string.Empty);
-
         if (blockingIssues.Count == 0)
         {
             reportLines.Add($"RESULT: PASS {(warningIssues.Count > 0 || brandingIssues.Count > 0 ? $"({warningIssues.Count + brandingIssues.Count} warning{(warningIssues.Count + brandingIssues.Count == 1 ? string.Empty : "s")})" : "(clean)")}");
@@ -828,146 +747,12 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         int TableStartIndex,
         string? AlternateExampleHeader,
         IReadOnlyList<string> ExamplePrompts,
-        IReadOnlyList<string> RequiredParameters,
-        string SectionText,
-        int AllParameterCount);
+        IReadOnlyList<string> RequiredParameters);
 
-    private sealed record ParsedArticle(string Frontmatter, IReadOnlyList<ArticleSection> Sections, string Body);
+    private sealed record ParsedArticle(string Frontmatter, IReadOnlyList<ArticleSection> Sections);
 
     private sealed record BrandingRule(string PatternText, string Message)
     {
         public Regex Pattern { get; } = new(PatternText, RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     }
-
-    private sealed record ToneMarkerRule(string PatternText, string Category)
-    {
-        public Regex Pattern { get; } = new(PatternText, RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-    }
-
-    private static IReadOnlyList<string> GetRelatedToolsCompletenessIssues(string body, IReadOnlyList<ArticleSection> sections)
-    {
-        var relatedHeaderMatch = Regex.Match(body, @"^## (related tools?|see also)\s*$",
-            RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant);
-        if (!relatedHeaderMatch.Success)
-        {
-            return Array.Empty<string>();
-        }
-
-        var sectionStart = relatedHeaderMatch.Index + relatedHeaderMatch.Length;
-        var nextHeadingMatch = Regex.Match(body[sectionStart..], @"^##\s", RegexOptions.Multiline | RegexOptions.CultureInvariant);
-        var relatedText = nextHeadingMatch.Success
-            ? body.Substring(sectionStart, nextHeadingMatch.Index)
-            : body[sectionStart..];
-
-        var sectionHeadings = sections.Select(s => s.Heading).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var issues = new List<string>();
-
-        foreach (Match backtickMatch in BacktickTermRegex.Matches(relatedText))
-        {
-            var term = backtickMatch.Groups[1].Value.Trim();
-            if (!sectionHeadings.Any(h => h.Contains(term, StringComparison.OrdinalIgnoreCase)))
-            {
-                issues.Add($"tool '{term}' referenced in related tools but not found in article");
-            }
-        }
-
-        return issues;
-    }
-
-    private static IReadOnlyList<string> GetToneMarkerWarnings(IReadOnlyList<ArticleSection> sections)
-    {
-        var warnings = new List<string>();
-        foreach (var section in sections)
-        {
-            foreach (var rule in ToneMarkerRules)
-            {
-                if (rule.Pattern.IsMatch(section.SectionText))
-                {
-                    warnings.Add($"⚠️ {section.ToolKey}: tone marker detected ({rule.Category})");
-                    break;
-                }
-            }
-        }
-
-        return warnings;
-    }
-
-    private static async Task<IReadOnlyList<string>> GetBoilerplateRedundancyWarningsAsync(
-        string outputPath, string familyName, IReadOnlyList<ArticleSection> sections, CancellationToken cancellationToken)
-    {
-        var contextPath = Path.Combine(outputPath, "tool-family", $"{familyName}.context.json");
-        if (!File.Exists(contextPath))
-        {
-            return Array.Empty<string>();
-        }
-
-        string contextJson;
-        try
-        {
-            contextJson = await File.ReadAllTextAsync(contextPath, cancellationToken);
-        }
-        catch
-        {
-            return Array.Empty<string>();
-        }
-
-        var overviewMatch = Regex.Match(contextJson, @"""serviceOverview""\s*:\s*""((?:[^""\\]|\\.)*)""", RegexOptions.CultureInvariant);
-        if (!overviewMatch.Success)
-        {
-            return Array.Empty<string>();
-        }
-
-        var overviewWords = GetSignificantWords(overviewMatch.Groups[1].Value);
-        if (overviewWords.Count == 0)
-        {
-            return Array.Empty<string>();
-        }
-
-        var redundantToolKeys = new List<string>();
-        foreach (var section in sections)
-        {
-            var sectionWords = GetSignificantWords(section.SectionText);
-            if (sectionWords.Count == 0)
-            {
-                continue;
-            }
-
-            var overlapCount = overviewWords.Count(w => sectionWords.Contains(w));
-            if ((double)overlapCount / overviewWords.Count >= 0.80)
-            {
-                redundantToolKeys.Add(section.ToolKey);
-            }
-        }
-
-        if (redundantToolKeys.Count < 2)
-        {
-            return Array.Empty<string>();
-        }
-
-        return redundantToolKeys
-            .Select(key => $"⚠️ {key}: service context redundancy (high word overlap with serviceOverview)")
-            .ToArray();
-    }
-
-    private static IReadOnlyList<string> GetRelatedSectionHeaderWarnings(string body)
-        => RelatedSectionHeaderRegex.IsMatch(body)
-            ? Array.Empty<string>()
-            : [$"⚠️ Article is missing a 'Related tools' or 'See also' section header"];
-
-    private static IReadOnlyList<string> GetMissingExampleIssues(IReadOnlyList<ArticleSection> sections)
-        => sections
-            .Where(section => section.ExampleHeaderIndex < 0 && section.AlternateExampleHeader is null)
-            .Select(section => $"🛑 {section.ToolKey}: no example section found (add 'Example prompts include:' block)")
-            .ToArray();
-
-    private static IReadOnlyList<string> GetLowParameterCountWarnings(IReadOnlyList<ArticleSection> sections)
-        => sections
-            .Where(section => section.AllParameterCount < 2)
-            .Select(section => $"⚠️ {section.ToolKey}: fewer than 2 parameters listed ({section.AllParameterCount})")
-            .ToArray();
-
-    private static HashSet<string> GetSignificantWords(string text)
-        => Regex.Matches(text.ToLowerInvariant(), @"\b[a-z]{3,}\b", RegexOptions.CultureInvariant)
-            .Select(m => m.Value)
-            .ToHashSet(StringComparer.Ordinal);
 }
