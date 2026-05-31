@@ -2,6 +2,12 @@
 
 ## Active Decisions
 
+### 2026-05-31: AD-026 — PR CHANGELOG requirement (summary reference)
+**By:** Dina Berry (via Copilot)
+**What:** Every PR must update `CHANGELOG.md` under `## [Unreleased]` with a user-facing description before team review. Full definition in `.squad/decisions-archive.md` under AD-026.
+**Exemptions** (must be stated in PR comment): test-only changes, internal refactors with no behavior change.
+**Why:** Surfaced as required but unresolvable reference in parameter-filtering PRD review (Rounds 1–2). Active decisions.md is the lookup point agents use during dispatch; archive entry alone was insufficient for routing.
+
 ### 2026-05-30: Per-tool AI call refactor
 **By:** Morgan
 **What:** GenerateAIContent now calls AI once per tool + once for namespace summary, instead of once per namespace with all tools. Eliminates token overflow on large namespaces like storage.
