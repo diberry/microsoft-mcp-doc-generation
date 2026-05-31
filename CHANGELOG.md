@@ -27,6 +27,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `ArticleOutlineBudgetValidator` — enforces 100,000-token input budget (via total evidence item length / 4) before step 6 AI calls.
   - 27 new unit tests covering valid and invalid inputs for all five validators. All 492 `DocGeneration.PipelineRunner.Tests` pass.
 
+- **Item B: Pre-AI seam validator observability and E2E coverage** — Adds integration and smoke tests confirming validator outcomes are durably recorded in the per-step observability bundle. References PRD-QUALITY-2026-05-30 Item B.
+  - `TryRunPreAiGateAsync_ValidatorFailure_IsRecordedInStepEnvelope` — integration test that runs a pipeline step whose pre-AI gate fires, then asserts `validationStatus: "failed"` is present in both `metrics.json` and the `step-result.json` envelope.
+  - `RunAsync_AdvisorNamespace_ValidatorsFireForAllThreeSteps` — E2E smoke test that runs the advisor namespace with all three pre-AI gated steps (3, 4, 6), confirms each validator fired, and confirms `validationStatus` is recorded for every stage.
+
 ### Changed
 
 - **Completed npm-to-dotnet migration** — Removed all Node.js scripts from `mcp-cli-metadata/`. CLI metadata extraction now uses `mcp-tools/McpCliMetadata/` exclusively. Updated CI workflows, preflight.ps1, and documentation. Closes #627.
