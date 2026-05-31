@@ -89,4 +89,12 @@ public static class ObservabilityWriter
             Path.Combine(directory, StageOutputContract.PromptPreviewNaFileName),
             "N/A — deterministic step (no AI prompt)");
     }
+
+    public static void WritePromptPreview(string directory, string content)
+    {
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(
+            Path.Combine(directory, StageOutputContract.PromptPreviewFileName),
+            content);
+    }
 }
