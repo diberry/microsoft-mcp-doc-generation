@@ -65,9 +65,9 @@ public sealed record PipelineRequest(
 
     public static string GetDefaultOutputPath(string? targetNamespace, TimeProvider? timeProvider = null)
     {
-        // Millisecond precision keeps default paths readable while making same-moment collisions vanishingly unlikely.
+        // Human-readable timestamp format (yyyy-MM-dd-HHmmss) keeps default paths easy to sort and identify.
         // Callers can still pass --output explicitly when they need a fully caller-controlled path.
-        var timestamp = (timeProvider ?? TimeProvider.System).GetUtcNow().ToString("yyyyMMddTHHmmssfffZ");
+        var timestamp = (timeProvider ?? TimeProvider.System).GetUtcNow().ToString("yyyy-MM-dd-HHmmss");
         return string.IsNullOrWhiteSpace(targetNamespace)
             ? $".\\generated-{timestamp}"
             : $".\\generated-{targetNamespace.Trim()}-{timestamp}";
