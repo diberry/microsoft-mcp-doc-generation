@@ -17,10 +17,8 @@ namespace PipelineRunner.Steps;
 public sealed class HorizontalArticlesStep : NamespaceStepBase
 {
     public const string ArticleOutlineOverrideKey = "HorizontalArticlesStep.ArticleOutlineOverride";
-    private const string HorizontalArticlesStageName = "horizontal-articles";
 
     private static readonly ReducerRegistry Reducers = new();
-    private static readonly PreAiValidatorRegistry ValidatorRegistry = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
 
     static HorizontalArticlesStep()
@@ -36,8 +34,8 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             return await builder.BuildAsync(input.OutputPath, input.ServiceNamespace, ct);
         });
 
-        ValidatorRegistry.Register(HorizontalArticlesStageName, new ArticleOutlineContextValidator());
-        ValidatorRegistry.Register(HorizontalArticlesStageName, new ArticleOutlineBudgetValidator());
+        Reducers.RegisterValidator(new ArticleOutlineContextValidator());
+        Reducers.RegisterValidator(new ArticleOutlineBudgetValidator());
     }
 
     public HorizontalArticlesStep()
@@ -91,7 +89,7 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
                     new ArticleOutlineReducerInput(context.OutputPath, currentNamespace),
                     cancellationToken);
 
-                var validationResult = await ValidatorRegistry.ValidateAsync(HorizontalArticlesStageName, outline, cancellationToken);
+                var validationResult = await ReducerRegistry.AggregateAsync(Reducers.GetValidators<ArticleOutlineContext>(), outline, cancellationToken);
                 if (!validationResult.IsValid)
                 {
                     var errorMessages = validationResult.Errors.Select(static e => e.Message).ToArray();
@@ -100,7 +98,7 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
                     return BuildResult(
                         context,
                         processResults,
-                        false,
+                        true,
                         warnings,
                         [new ValidatorResult("pre-ai-validation", false, errorMessages)],
                         artifactFailures);

@@ -17,10 +17,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
 {
     private const int DefaultMaxTokens = 8000;
     internal const string ToolImproverOverrideKey = "ToolGenerationStep.ToolImproverOverride";
-    private const string ToolGenerationStageName = "tool-generation";
-
     private static readonly ReducerRegistry Reducers = new();
-    private static readonly PreAiValidatorRegistry ValidatorRegistry = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
     private static readonly TimeSpan ReducerImprovementTimeout = TimeSpan.FromMinutes(5);
 
@@ -45,8 +42,8 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             return await reducer.ReduceAsync(input.ComposedToolsDirectory, input.ToolFileName, input.MaxTokens, ct);
         });
 
-        ValidatorRegistry.Register(ToolGenerationStageName, new ToolGenerationContextValidator());
-        ValidatorRegistry.Register(ToolGenerationStageName, new ToolGenerationBudgetValidator());
+        Reducers.RegisterValidator(new ToolGenerationContextValidator());
+        Reducers.RegisterValidator(new ToolGenerationBudgetValidator());
     }
 
     public ToolGenerationStep()
@@ -426,7 +423,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
                 new ToolGenerationReducerInput(composedToolsDirectory, artifact.ToolFileName, DefaultMaxTokens),
                 cancellationToken);
 
-            var validationResult = await ValidatorRegistry.ValidateAsync(ToolGenerationStageName, reduction, cancellationToken);
+            var validationResult = await ReducerRegistry.AggregateAsync(Reducers.GetValidators<ToolGenerationContext>(), reduction, cancellationToken);
             if (!validationResult.IsValid)
             {
                 var errorSummary = string.Join("; ", validationResult.Errors.Select(static e => e.Message));

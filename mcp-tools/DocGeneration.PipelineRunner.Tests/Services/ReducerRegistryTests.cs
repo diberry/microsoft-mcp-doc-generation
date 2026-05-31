@@ -1,4 +1,5 @@
 using PipelineRunner.Services;
+using Shared.Validation;
 using Xunit;
 
 namespace PipelineRunner.Tests.Services;
@@ -52,5 +53,76 @@ public sealed class ReducerRegistryTests
         var reducer = registry.GetReducer(4);
 
         Assert.Same(secondReducer, reducer);
+    }
+
+    [Fact]
+    public void RegisterValidator_StoresValidatorByContextType()
+    {
+        var registry = new ReducerRegistry();
+        var validator = new AlwaysPassValidator();
+
+        registry.RegisterValidator(validator);
+
+        var validators = registry.GetValidators<string>();
+
+        Assert.Contains(validator, validators);
+    }
+
+    [Fact]
+    public void GetValidators_ReturnsEmpty_WhenNoneRegistered()
+    {
+        var registry = new ReducerRegistry();
+
+        var validators = registry.GetValidators<int>();
+
+        Assert.Empty(validators);
+    }
+
+    [Fact]
+    public async Task AggregateAsync_ReturnsPass_WhenNoValidators()
+    {
+        var result = await ReducerRegistry.AggregateAsync<string>([], "context", CancellationToken.None);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public async Task AggregateAsync_AggregatesErrors_FromMultipleValidators()
+    {
+        var validators = new IPreAiValidator<string>[]
+        {
+            new AlwaysFailValidator("error-one"),
+            new AlwaysFailValidator("error-two"),
+        };
+
+        var result = await ReducerRegistry.AggregateAsync<string>(validators, "context", CancellationToken.None);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(2, result.Errors.Count);
+        Assert.Contains(result.Errors, e => e.Message == "error-one");
+        Assert.Contains(result.Errors, e => e.Message == "error-two");
+    }
+
+    private sealed class AlwaysPassValidator : IPreAiValidator<string>
+    {
+        public Type ContextType => typeof(string);
+
+        public Task<PreAiValidationResult> ValidateAsync(string context, CancellationToken cancellationToken)
+            => Task.FromResult(PreAiValidationResult.Pass());
+
+        public Task<PreAiValidationResult> ValidateAsync(object context, CancellationToken cancellationToken)
+            => ValidateAsync((string)context, cancellationToken);
+    }
+
+    private sealed class AlwaysFailValidator(string message) : IPreAiValidator<string>
+    {
+        public Type ContextType => typeof(string);
+
+        public Task<PreAiValidationResult> ValidateAsync(string context, CancellationToken cancellationToken)
+            => Task.FromResult(PreAiValidationResult.Fail(new ValidationError("field", message, ValidationSeverity.Error)));
+
+        public Task<PreAiValidationResult> ValidateAsync(object context, CancellationToken cancellationToken)
+            => ValidateAsync((string)context, cancellationToken);
     }
 }

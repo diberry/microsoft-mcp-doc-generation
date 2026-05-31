@@ -7,6 +7,7 @@ using PipelineRunner.Context;
 using PipelineRunner.Registry;
 using PipelineRunner.Services;
 using Shared;
+using Shared.Validation;
 using System.Security.Cryptography;
 using System.Text;
 using ToolFamilyCleanup.Services;
@@ -39,6 +40,7 @@ public sealed class PipelineRunner
     private readonly IChangelogGate? _changelogGate;
     private readonly IFingerprintGate? _fingerprintGate;
     private readonly IPromptRegressionGate? _promptRegressionGate;
+    private readonly ReducerRegistry? _preAiRegistry;
     private IPipelineTracer _currentTracer = NullTracer.Instance;
 
     public PipelineRunner(
@@ -47,7 +49,8 @@ public sealed class PipelineRunner
         IChangelogGate? changelogGate = null,
         IFingerprintGate? fingerprintGate = null,
         IPromptRegressionGate? promptRegressionGate = null,
-        IBrandMappingLoader? brandMappingLoader = null)
+        IBrandMappingLoader? brandMappingLoader = null,
+        ReducerRegistry? preAiRegistry = null)
     {
         _stepRegistry = stepRegistry;
         _contextFactory = contextFactory;
@@ -55,9 +58,10 @@ public sealed class PipelineRunner
         _fingerprintGate = fingerprintGate;
         _promptRegressionGate = promptRegressionGate;
         _brandMappingLoader = brandMappingLoader ?? new BrandMappingLoader();
+        _preAiRegistry = preAiRegistry;
     }
 
-    public static PipelineRunner CreateDefault(string? repoRoot = null, TextWriter? output = null, TextWriter? error = null)
+    public static PipelineRunner CreateDefault(string? repoRoot = null, TextWriter? output = null, TextWriter? error = null, ReducerRegistry? preAiRegistry = null)
     {
         var reportWriter = new ConsoleReportWriter(output, error);
         var processRunner = new ProcessRunner();
@@ -82,7 +86,7 @@ public sealed class PipelineRunner
         var stepRegistry = StepRegistry.CreateDefault(Path.Combine(resolvedRepoRoot, "mcp-tools", "scripts"));
         var fingerprintGate = new FingerprintGate(processRunner, reportWriter);
         var promptRegressionGate = new PromptRegressionGate(processRunner, reportWriter);
-        return new PipelineRunner(stepRegistry, contextFactory, new ChangelogGate(), fingerprintGate, promptRegressionGate);
+        return new PipelineRunner(stepRegistry, contextFactory, new ChangelogGate(), fingerprintGate, promptRegressionGate, preAiRegistry: preAiRegistry);
     }
 
     public async Task<int> RunAsync(PipelineRequest request, CancellationToken cancellationToken = default)
@@ -619,6 +623,25 @@ public sealed class PipelineRunner
 
         try
         {
+            if (_preAiRegistry is not null && !context.Request.SkipValidation)
+            {
+                var preAiResult = await TryRunPreAiGateAsync(_preAiRegistry, context, step, cancellationToken);
+                if (preAiResult is not null)
+                {
+                    foreach (var w in preAiResult.Warnings)
+                    {
+                        warnings.Add(w);
+                        context.Reports.Warning(w);
+                    }
+                    context.Reports.Warning($"  \u2296 Step {step.Id} skipped: pre-AI validation failed.");
+                    var skippedPersisted = CriticalFailureRecorder.Persist(context, step, preAiResult);
+                    TryWriteStepResultEnvelope(context, step, preAiResult, out _);
+                    WriteObservabilityOutputs(context, step, preAiResult, classification);
+                    handle.Complete("pre-ai validation failed \u2013 step skipped");
+                    return new StepExecutionOutcome(SuccessExitCode, preAiResult, skippedPersisted);
+                }
+            }
+
             var maxAttempts = 1 + step.MaxRetries;
             var hasValidators = !context.Request.SkipValidation && step.PostValidators.Count > 0;
 
@@ -882,7 +905,7 @@ public sealed class PipelineRunner
         IPipelineStep step,
         IReadOnlyList<ValidatorResult> validatorResults)
     {
-        if (step.PostValidators.Count == 0)
+        if (step.PostValidators.Count == 0 && validatorResults.Count == 0)
         {
             return null;
         }
@@ -1034,6 +1057,62 @@ public sealed class PipelineRunner
             context.Reports.Error($"    Error: {failure.Summary}");
             context.Reports.Error($"    Record: {failure.RecordPath}");
         }
+    }
+
+    private static async Task<StepResult?> TryRunPreAiGateAsync(
+        ReducerRegistry preAiRegistry,
+        PipelineContext context,
+        IPipelineStep step,
+        CancellationToken cancellationToken)
+    {
+        var reducer = preAiRegistry.GetReducer(step.Id);
+        if (reducer is null)
+        {
+            return null;
+        }
+
+        object typedContext;
+        try
+        {
+            typedContext = await reducer(context, cancellationToken);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var validators = preAiRegistry.GetValidatorsForType(typedContext.GetType()).ToList();
+        if (validators.Count == 0)
+        {
+            return null;
+        }
+
+        var allErrors = new List<ValidationError>();
+        foreach (var validator in validators)
+        {
+            var result = await validator.ValidateAsync(typedContext, cancellationToken);
+            allErrors.AddRange(result.Errors);
+        }
+
+        var isValid = allErrors.All(static e => e.Severity != ValidationSeverity.Error);
+        if (isValid)
+        {
+            return null;
+        }
+
+        var errorMessages = allErrors
+            .Where(static e => e.Severity >= ValidationSeverity.Error)
+            .Select(static e => e.Message)
+            .ToArray();
+
+        return new StepResult(
+            Success: true,
+            Warnings: errorMessages,
+            Duration: TimeSpan.Zero,
+            Outputs: [],
+            ProcessInvocations: [],
+            ValidatorResults: [new ValidatorResult("pre-ai-validation", false, errorMessages)],
+            ArtifactFailures: []);
     }
 
     private static IReadOnlyList<string> ValidateDependencies(IReadOnlyList<IPipelineStep> selectedSteps)
