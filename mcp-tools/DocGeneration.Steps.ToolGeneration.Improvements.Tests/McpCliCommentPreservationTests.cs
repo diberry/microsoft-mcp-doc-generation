@@ -78,4 +78,22 @@ public class McpCliCommentPreservationTests
         var restored = ImprovedToolGeneratorService.RestoreMcpCliComment(aiOutput, comment);
         Assert.Contains("<!-- @mcpcli fileshares fileshare create -->", restored);
     }
+
+    [Fact]
+    public void RemoveMcpCliComment_RemovesFromContent()
+    {
+        var content = "# Title\n\n<!-- @mcpcli cosmos database-container-item-query -->\n\nDescription.";
+        var result = ImprovedToolGeneratorService.RemoveMcpCliComment(content);
+        Assert.DoesNotContain("@mcpcli", result);
+        Assert.Contains("# Title", result);
+        Assert.Contains("Description.", result);
+    }
+
+    [Fact]
+    public void RemoveMcpCliComment_NoComment_ReturnsUnchanged()
+    {
+        var content = "# Title\n\nDescription without comment.";
+        var result = ImprovedToolGeneratorService.RemoveMcpCliComment(content);
+        Assert.Equal(content, result);
+    }
 }
