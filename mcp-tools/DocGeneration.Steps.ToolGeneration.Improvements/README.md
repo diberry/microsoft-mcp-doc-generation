@@ -62,7 +62,50 @@ dotnet run --project ImprovedToolGenerator \
   8000
 ```
 
-## AI Prompts
+## Style Guide Assumptions (PRD-QUALITY Item A)
+
+The Step 3 system prompt (`prompts/system-prompt.txt`) now encodes the following style rules that the AI must follow when generating tool descriptions. Downstream post-processors in `FamilyFileStitcher` no longer compensate for these patterns.
+
+### Contraction rules
+
+The AI uses contractions per Microsoft Learn style:
+- "doesn't" not "does not", "can't" not "cannot", "won't" not "will not", "isn't" not "is not", "it's" not "it is"
+
+### Backtick conventions
+
+| Content type | Format |
+|---|---|
+| CLI flag names | `` `--resource-group` `` |
+| Example values | `` `myResourceGroup` `` |
+| CLI tool names | `` `az` ``, `` `mcp` `` |
+| Plain English references | no backtick |
+
+### MCP acronym expansion
+
+First mention of MCP in any tool description must expand to "Microsoft Model Context Protocol (MCP)". Subsequent mentions may use "MCP" alone.
+
+### Prohibited patterns
+
+The AI must not produce:
+- Second-person phrases: "you can", "you will", "you use" — rephrase to imperative or third person
+- Marketing superlatives: "powerful", "best", "seamless", "cutting-edge", "game-changing" — describe specific capability instead
+- Deprecated names: "Active Directory" (use "Microsoft Entra ID"), "CosmosDB" (use "Azure Cosmos DB")
+
+### FamilyFileStitcher steps removed (Item A)
+
+The following 3 post-processing steps were removed from `FamilyFileStitcher.Stitch()` because the Step 3 AI prompt now handles these concerns upstream:
+
+| Former step | Class removed | Reason |
+|---|---|---|
+| Step 4 | `AcronymExpander.ExpandAll` | AI now expands MCP/VM acronyms on first body use per system-prompt.txt |
+| Step 9 | `ContractionFixer.Fix` | AI now produces contractions per Microsoft style per system-prompt.txt |
+| Step 11 | `ExampleValueBackticker.Fix` | AI now wraps example values in backticks per system-prompt.txt |
+
+**Before (17 steps) → After (14 steps)**
+
+Steps not removed remain because they catch patterns the AI cannot reliably guarantee (URL relativization, frontmatter injection, CLI marker reconciliation, scaffolding comment stripping, placeholder escaping).
+
+
 
 The generator uses two prompt files located in the `Prompts/` directory:
 

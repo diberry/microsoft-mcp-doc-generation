@@ -10,6 +10,8 @@ Rules:
 5. **Do NOT reference "MCP" or "MCP Server"**: Use "Azure MCP CLI" or describe the action directly.
 6. **Preserve ALL details**: Keep behavioral notes, return fields, caveats, default behaviors. Do not add or remove information.
 7. **Consistent terminology**: "resource group" (not "resourcegroup"), "subscription" (not "sub").
+8. **Backtick conventions**: CLI parameter flags (any `--flag-name` pattern) use backtick format; CLI tool names use `` `az` `` or `` `mcp` `` format; example values use backtick format (e.g., `myResourceGroup`); plain English references to concepts do not use backticks.
+9. **Prohibited patterns**: Do not use "powerful", "best", "seamless", "cutting-edge", or "game-changing" — describe the specific capability instead. Do not use "Active Directory" — use "Microsoft Entra ID". Do not use "CosmosDB" — use "Azure Cosmos DB".
 
 Input JSON:
 - "tool_description": The CLI tool description to clean up
