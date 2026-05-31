@@ -18,6 +18,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `GetMissingExampleIssues` — blocking; requires each tool section to contain an `Example prompts include:` header or recognized alternate.
   - `GetLowParameterCountWarnings` — warning; flags tool sections with fewer than 2 documented parameters.
   All six checks are inline methods on `ToolFamilyPostAssemblyValidator` with no new registered types. Results appear in the per-namespace validation report under `reports/tool-family-validation-{namespace}.txt` and in the step-envelope `validation.json`. Regression tests added for advisor, compute, and monitor namespaces; E2E test verifies `overallStatus: passed` in the step envelope for a valid advisor assembly. Implements PRD-QUALITY-2026-05-30 Item C.
+- **Inspect mode (`--inspect`) for budget analysis** — New CLI mode that runs a pipeline step's input reducer without invoking the LLM, emitting structured JSON budget output including `estimatedTokens`, `budget`, `headroom`, and `topItems[]` (top-5 consuming sections/tools). When `--output` is provided, writes `inspect-budget.json` for programmatic consumption by CI gates and developer tooling. `start-only.sh` now passes `--inspect` through to `PipelineRunner`. Implemented via `RunInspectAsync()` in PipelineRunner. Enables fast token headroom verification before prompt changes. Documented in ARCHITECTURE.md with 4 annotated `--inspect` CLI examples. References PRD-QUALITY-2026-05-30 Item D. Resolves #[PR]
+  - `ArticleOutlineBudgetValidator.InputTokenBudget` corrected from 100k to 150k (horizontal articles require higher budget)
+  - Developer Loop documentation added to ARCHITECTURE.md Section "Developer Loop" with inspect mode walkthrough and 4 complete examples
+  - CI gate pattern documented (inspect as preflight before full LLM run)
 
 ### Changed
 
