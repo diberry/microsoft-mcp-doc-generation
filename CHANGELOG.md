@@ -38,11 +38,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `ArticleOutlineBudgetValidator` — enforces 100,000-token input budget (via total evidence item length / 4) before step 6 AI calls.
   - 27 new unit tests covering valid and invalid inputs for all five validators. All 492 `DocGeneration.PipelineRunner.Tests` pass.
 
-- **Item B: Pre-AI validation gate wired into `ReducerRegistry` and `PipelineRunner`** — Validator registration and invocation is now consolidated into `ReducerRegistry`; `PipelineRunner.RunAsync` invokes the pre-AI gate before every LLM call for steps 3, 4, and 6. References PRD-QUALITY-2026-05-30 Item B.
-  - `ReducerRegistry` extended with `RegisterValidator`, `GetValidators`, and `AggregateAsync` — validator registration now lives alongside reducer registration so each step's AI-input contracts are co-located with its reducer.
-  - `PipelineRunner.RunAsync` invokes the pre-AI validation gate before each LLM call; a gate failure sets `validationStatus: "failed"` in `metrics.json` and the `step-result.json` envelope and returns a fatal exit code.
-  - `PreAiValidatorRegistry.cs` removed — the standalone registry is consolidated into `ReducerRegistry`; no public API changes for callers.
-  - Test coverage: observability integration test (`TryRunPreAiGateAsync_ValidatorFailure_IsRecordedInStepEnvelope`) and E2E advisor namespace smoke test (`RunAsync_AdvisorNamespace_ValidatorsFireForAllThreeSteps`) confirm gate fires for steps 3, 4, 6 and that `validationStatus` is recorded for each stage.
+- **Item B: Pre-AI seam validator observability and E2E coverage** — Adds integration and smoke tests confirming validator outcomes are durably recorded in the per-step observability bundle. References PRD-QUALITY-2026-05-30 Item B.
+  - `TryRunPreAiGateAsync_ValidatorFailure_IsRecordedInStepEnvelope` — integration test that runs a pipeline step whose pre-AI gate fires, then asserts `validationStatus: "failed"` is present in both `metrics.json` and the `step-result.json` envelope.
+  - `RunAsync_AdvisorNamespace_ValidatorsFireForAllThreeSteps` — E2E smoke test that runs the advisor namespace with all three pre-AI gated steps (3, 4, 6), confirms each validator fired, and confirms `validationStatus` is recorded for every stage.
 
 ### Changed
 
