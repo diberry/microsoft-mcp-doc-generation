@@ -112,7 +112,7 @@ public class ObservabilityContractTests
     // where WritePromptPreview is removed or stops creating the file.
 
     [Fact]
-    public void WritePromptPreview_CreatesFileWithContent()
+    public void WritePromptPreview_RegressionGuard_FileIsNonEmpty()
     {
         // Regression guard for #664: ObservabilityWriter.WritePromptPreview must:
         //   1. Create the prompt-preview.txt file in the target directory

@@ -93,6 +93,7 @@ public class PipelineRequestTests
         var result = PipelineRequest.GetDefaultOutputPath("storage");
 
         Assert.DoesNotMatch(@"\d{3}Z", result); // No millisecond triplet + Z suffix
+        Assert.DoesNotMatch(@"Z$", result);               // No trailing Z at all
     }
 
     [Fact]

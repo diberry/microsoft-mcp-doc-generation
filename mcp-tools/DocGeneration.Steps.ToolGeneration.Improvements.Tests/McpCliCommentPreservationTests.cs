@@ -115,13 +115,17 @@ public class McpCliCommentPreservationTests
         var comment = ImprovedToolGeneratorService.ExtractMcpCliComment(original);
         var withoutComment = ImprovedToolGeneratorService.RemoveMcpCliComment(original);
 
-        // Simulate AI moving the example-prompts section above or below — comment is gone
-        var restored = ImprovedToolGeneratorService.RestoreMcpCliComment(withoutComment, comment);
+        // Simulate AI reordering: example-prompts section moved before the description (AI scrambled the order)
+        var aiReordered = "# list\n\nExample prompts include:\n- \"List metrics in workspace 'my-workspace'\"\n\nSome description added by AI.\n\n";
+
+        // Restore must pin the comment after H1 regardless of AI reordering
+        var restored = ImprovedToolGeneratorService.RestoreMcpCliComment(aiReordered, comment);
 
         var h1Index = restored.IndexOf("# list", StringComparison.Ordinal);
         var commentIndex = restored.IndexOf("@mcpcli", StringComparison.Ordinal);
         var exampleIndex = restored.IndexOf("Example prompts include:", StringComparison.Ordinal);
 
+        Assert.True(h1Index >= 0, "H1 must be present");
         Assert.True(commentIndex > h1Index, "Comment must be after H1");
         Assert.True(commentIndex < exampleIndex, "Comment must be before 'Example prompts include:'");
     }
