@@ -413,7 +413,7 @@ public class ToolFamilyPostAssemblyValidatorTests
             Assert.False(result.Success);
             Assert.Contains(result.Warnings, warning => warning.Contains("example prompt header is Examples:", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning =>
-                warning.StartsWith("Blocking: ⚠️", StringComparison.Ordinal)
+                warning.StartsWith("Blocking: 🛑", StringComparison.Ordinal)
                 && warning.Contains("missing 'resource group name'", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("Branding: Use \"this tool\" instead of \"this command\".", StringComparison.Ordinal));
             Assert.Contains("Required params in prompts:", reportText, StringComparison.Ordinal);

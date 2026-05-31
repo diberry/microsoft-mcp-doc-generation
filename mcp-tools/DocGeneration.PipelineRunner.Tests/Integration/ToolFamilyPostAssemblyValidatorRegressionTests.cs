@@ -91,7 +91,7 @@ public class ToolFamilyPostAssemblyValidatorRegressionTests
             Assert.Contains("Related tools completeness: ✅ PASS", reportText, StringComparison.Ordinal);
             Assert.Contains("Tone markers: ✅ none detected", reportText, StringComparison.Ordinal);
             Assert.Contains("Boilerplate redundancy: ✅ none detected", reportText, StringComparison.Ordinal);
-            Assert.Contains("Related section header: ✅ none detected", reportText, StringComparison.Ordinal);
+            Assert.Contains("Related section header: ✅ present", reportText, StringComparison.Ordinal);
             Assert.Contains("RESULT: PASS", reportText, StringComparison.Ordinal);
         }
         finally

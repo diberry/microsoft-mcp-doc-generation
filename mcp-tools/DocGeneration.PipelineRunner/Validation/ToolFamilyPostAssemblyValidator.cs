@@ -607,7 +607,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             {
                 var suffix = missingParameters.Count > 1 ? "s" : string.Empty;
                 var joined = string.Join(", ", missingParameters.Select(parameter => $"'{parameter}'"));
-                issues.Add($"⚠️ {section.ToolKey}: missing {joined} in example prompt{suffix}");
+                issues.Add($"🛑 {section.ToolKey}: missing {joined} in example prompt{suffix}");
             }
         }
 
@@ -771,10 +771,13 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         AppendPassFailSection(reportLines, "Related tools completeness", ctx.PostAssemblyChecks.RelatedToolsIssues);
         AppendCountSection(reportLines, "Tone markers", ctx.PostAssemblyChecks.ToneMarkerWarnings, isBlocking: false);
         AppendCountSection(reportLines, "Boilerplate redundancy", ctx.PostAssemblyChecks.BoilerplateWarnings, isBlocking: false);
-        var relatedSectionIssues = ctx.PostAssemblyChecks.HasRelatedSection
-            ? Array.Empty<string>()
-            : ["Related section header absent"];
-        AppendCountSection(reportLines, "Related section header", relatedSectionIssues, isBlocking: false);
+        reportLines.Add(ctx.PostAssemblyChecks.HasRelatedSection
+            ? "Related section header: ✅ present"
+            : "Related section header: ⚠️ absent");
+        if (!ctx.PostAssemblyChecks.HasRelatedSection)
+        {
+            reportLines.Add("  ⚠️ Related section header absent: article is missing a '## See also' or '## Related content' section");
+        }
         AppendRatioSection(reportLines, "Tool examples", ctx.PostAssemblyChecks.MissingExampleIssues, ctx.Sections.Count, isBlocking: true, itemDescription: "tools have examples");
         AppendRatioSection(reportLines, "Parameter count", ctx.PostAssemblyChecks.LowParamCountWarnings, ctx.Sections.Count, isBlocking: false, itemDescription: "tools have ≥2 parameters");
         reportLines.Add(string.Empty);
