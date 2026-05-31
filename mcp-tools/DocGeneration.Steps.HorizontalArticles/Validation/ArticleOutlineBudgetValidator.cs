@@ -20,7 +20,7 @@ public sealed class ArticleOutlineBudgetValidator : IPreAiValidator<ArticleOutli
     internal const int CharsPerToken = 4;
 
     /// <summary>Maximum input tokens allowed for the horizontal-articles AI stage.</summary>
-    public const int InputTokenBudget = 100_000;
+    public const int InputTokenBudget = 150_000;
 
     /// <inheritdoc />
     public Task<PreAiValidationResult> ValidateAsync(ArticleOutlineContext context, CancellationToken cancellationToken)

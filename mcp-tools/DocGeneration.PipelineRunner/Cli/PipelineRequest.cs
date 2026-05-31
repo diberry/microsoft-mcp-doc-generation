@@ -23,7 +23,8 @@ public sealed record PipelineRequest(
     string? ReplayFromRunId = null,
     string? ReplayStepName = null,
     bool Inspect = false,
-    string? InspectShow = null)
+    string? InspectShow = null,
+    bool WriteJsonOutput = false)
 {
     /// <summary>
     /// Default upstream branch for fetching files from the microsoft/mcp repository.
