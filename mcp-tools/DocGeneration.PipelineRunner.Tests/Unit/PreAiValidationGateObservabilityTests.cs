@@ -248,11 +248,13 @@ public class PreAiValidationGateObservabilityTests
             PipelineContext context, CancellationToken cancellationToken)
         {
             var registry = new ReducerRegistry();
-            registry.RegisterValidator(new TrackingValidator());
+            var tracker = new TrackingValidator();
+            registry.RegisterValidator(tracker);
 
+            var validators = registry.GetValidators<object>();
             var validationResult = await ReducerRegistry.AggregateAsync(
-                registry.GetValidators<object>(), new object(), cancellationToken);
-            ValidatorFired = true;
+                validators, new object(), cancellationToken);
+            ValidatorFired = tracker.WasCalled;
 
             var validatorResults = new[]
             {
@@ -285,9 +287,14 @@ public class PreAiValidationGateObservabilityTests
 
     private sealed class TrackingValidator : IPreAiValidator<object>
     {
+        public bool WasCalled { get; private set; }
+
         public Task<PreAiValidationResult> ValidateAsync(
             object context, CancellationToken cancellationToken)
-            => Task.FromResult(PreAiValidationResult.Pass());
+        {
+            WasCalled = true;
+            return Task.FromResult(PreAiValidationResult.Pass());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

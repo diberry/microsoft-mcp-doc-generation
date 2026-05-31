@@ -278,12 +278,19 @@ public class ValidationGatePipelineTests
                 Array.Empty<ArtifactFailure>()));
     }
 
-    private sealed class OrderTrackingStep(int id, string name, StepScope scope, List<string> order)
-        : StepDefinition(id, name, scope, FailurePolicy.Fatal)
+    private sealed class OrderTrackingStep : StepDefinition
     {
+        private readonly List<string> _order;
+
+        public OrderTrackingStep(int id, string name, StepScope scope, List<string> order)
+            : base(id, name, scope, FailurePolicy.Fatal)
+        {
+            _order = order;
+        }
+
         public override ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken ct)
         {
-            order.Add($"step:{id}");
+            _order.Add($"step:{Id}");
             return ValueTask.FromResult(new StepResult(true, Array.Empty<string>(), TimeSpan.Zero,
                 Array.Empty<string>(), Array.Empty<string>(), Array.Empty<ValidatorResult>(),
                 Array.Empty<ArtifactFailure>()));

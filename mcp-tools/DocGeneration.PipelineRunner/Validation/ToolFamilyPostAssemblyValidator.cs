@@ -161,7 +161,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
                 brandingIssues.AddRange(GetBrandingIssues(articleContent));
 
-                var relatedToolsIssues = GetRelatedToolsCompletenessIssues(article.RelatedSectionText, sections);
+                var relatedToolsIssues = GetRelatedToolsCompletenessIssues(article.RelatedSectionText, sections, toolFiles);
                 foreach (var issue in relatedToolsIssues)
                 {
                     blockingIssues.Add(issue);
@@ -170,7 +170,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 var toneMarkerWarnings = GetToneMarkerWarnings(articleContent);
                 warningIssues.AddRange(toneMarkerWarnings);
 
-                var boilerplateWarnings = await GetBoilerplateRedundancyWarningsAsync(familyName, context, cancellationToken);
+                var boilerplateWarnings = GetBoilerplateRedundancyWarnings();
                 warningIssues.AddRange(boilerplateWarnings);
 
                 var relatedSectionWarnings = GetRelatedSectionHeaderWarnings(article.HasRelatedSection);
@@ -193,7 +193,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     missingExampleIssues,
                     lowParamCountWarnings);
 
-                var reportLines = BuildReportLines(
+                var reportLines = BuildReportLines(new ValidatorReportContext(
                     familyName,
                     toolFiles,
                     sections,
@@ -203,7 +203,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     blockingIssues,
                     warningIssues,
                     brandingIssues,
-                    newChecks);
+                    newChecks));
 
                 await WriteReportAsync(reportDirectory, reportPath, reportLines, cancellationToken);
             }
@@ -651,117 +651,113 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             .ToArray();
     }
 
-    private static IReadOnlyList<string> BuildReportLines(
-        string familyName,
-        IReadOnlyList<NamespaceToolFile> toolFiles,
-        IReadOnlyList<ArticleSection> sections,
-        int? frontmatterToolCount,
-        IReadOnlyList<string> missingFromArticle,
-        IReadOnlyList<string> missingFromFiles,
-        IReadOnlyList<string> blockingIssues,
-        IReadOnlyList<string> warningIssues,
-        IReadOnlyList<string> brandingIssues,
-        NewCheckResults newChecks)
+    private static void AppendPassFailSection(
+        List<string> lines, string label, IReadOnlyList<string> issues)
+    {
+        lines.Add(issues.Count == 0
+            ? $"{label}: ✅ PASS"
+            : $"{label}: ❌ FAIL ({issues.Count} issue(s))");
+        lines.AddRange(issues.Select(issue => $"  - {issue}"));
+    }
+
+    private static void AppendCountSection(
+        List<string> lines, string label, IReadOnlyList<string> items, bool isBlocking)
+    {
+        lines.Add(items.Count == 0
+            ? $"{label}: ✅ none detected"
+            : $"{label}: {(isBlocking ? "❌" : "⚠️")} {items.Count} detected");
+        lines.AddRange(items.Select(item => $"  {item}"));
+    }
+
+    private static void AppendRatioSection(
+        List<string> lines, string label, IReadOnlyList<string> issues, int total,
+        bool isBlocking, string itemDescription)
+    {
+        var passing = total - issues.Count;
+        lines.Add(issues.Count == 0
+            ? $"{label}: ✅ {passing}/{total} {itemDescription}"
+            : $"{label}: {(isBlocking ? "❌" : "⚠️")} {passing}/{total} {itemDescription}");
+        lines.AddRange(issues.Select(item => $"  {item}"));
+    }
+
+    private static IReadOnlyList<string> BuildReportLines(ValidatorReportContext ctx)
     {
         var reportLines = new List<string>
         {
-            $"=== Tool Family Validation: {familyName} ===",
-            $"Tool files found: {toolFiles.Count}",
-            $"Article H2 sections: {sections.Count}",
-            $"Frontmatter tool_count: {(frontmatterToolCount is not null ? frontmatterToolCount.Value : "missing")}",
-            toolFiles.Count == sections.Count && frontmatterToolCount == toolFiles.Count
+            $"=== Tool Family Validation: {ctx.FamilyName} ===",
+            $"Tool files found: {ctx.ToolFiles.Count}",
+            $"Article H2 sections: {ctx.Sections.Count}",
+            $"Frontmatter tool_count: {(ctx.FrontmatterToolCount is not null ? ctx.FrontmatterToolCount.Value : "missing")}",
+            ctx.ToolFiles.Count == ctx.Sections.Count && ctx.FrontmatterToolCount == ctx.ToolFiles.Count
                 ? "✅ Tool count integrity: PASS"
                 : "❌ Tool count integrity: FAIL",
             string.Empty,
             "Cross-reference:",
-            missingFromArticle.Count == 0
-                ? $"  ✅ All {toolFiles.Count} tool files have matching article sections"
-                : $"  ❌ Missing from article: {missingFromArticle.Count}",
+            ctx.MissingFromArticle.Count == 0
+                ? $"  ✅ All {ctx.ToolFiles.Count} tool files have matching article sections"
+                : $"  ❌ Missing from article: {ctx.MissingFromArticle.Count}",
         };
 
-        if (missingFromArticle.Count > 0)
+        if (ctx.MissingFromArticle.Count > 0)
         {
-            reportLines.AddRange(missingFromArticle.Select(item => $"    - {item}"));
+            reportLines.AddRange(ctx.MissingFromArticle.Select(item => $"    - {item}"));
         }
 
-        reportLines.Add(missingFromFiles.Count == 0
-            ? $"  ✅ All {sections.Count} article sections have matching tool files"
-            : $"  ❌ Missing from files: {missingFromFiles.Count}");
-        if (missingFromFiles.Count > 0)
+        reportLines.Add(ctx.MissingFromFiles.Count == 0
+            ? $"  ✅ All {ctx.Sections.Count} article sections have matching tool files"
+            : $"  ❌ Missing from files: {ctx.MissingFromFiles.Count}");
+        if (ctx.MissingFromFiles.Count > 0)
         {
-            reportLines.AddRange(missingFromFiles.Select(item => $"    - {item}"));
+            reportLines.AddRange(ctx.MissingFromFiles.Select(item => $"    - {item}"));
         }
 
-        foreach (var duplicateIssue in blockingIssues.Where(issue => issue.StartsWith("Duplicate ", StringComparison.Ordinal)))
+        foreach (var duplicateIssue in ctx.BlockingIssues.Where(issue => issue.StartsWith("Duplicate ", StringComparison.Ordinal)))
         {
             reportLines.Add($"  ❌ {duplicateIssue}");
         }
 
         reportLines.Add(string.Empty);
         reportLines.Add("Required params in prompts:");
-        var requiredParamWarnings = warningIssues.Where(issue => issue.Contains("missing", StringComparison.OrdinalIgnoreCase)).ToArray();
-        var requiredParamsPassingTools = sections.Count - requiredParamWarnings.Length;
+        var requiredParamWarnings = ctx.WarningIssues.Where(issue => issue.Contains("missing", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var requiredParamsPassingTools = ctx.Sections.Count - requiredParamWarnings.Length;
         reportLines.Add(requiredParamWarnings.Length == 0
-            ? $"  ✅ {requiredParamsPassingTools}/{sections.Count} tools have all required params in examples"
-            : $"  ⚠️ {requiredParamsPassingTools}/{sections.Count} tools have all required params in examples");
+            ? $"  ✅ {requiredParamsPassingTools}/{ctx.Sections.Count} tools have all required params in examples"
+            : $"  ⚠️ {requiredParamsPassingTools}/{ctx.Sections.Count} tools have all required params in examples");
         reportLines.AddRange(requiredParamWarnings.Select(warning => $"  {warning}"));
 
         reportLines.Add(string.Empty);
-        var markerWarnings = warningIssues.Where(issue => issue.Contains("annotation marker", StringComparison.OrdinalIgnoreCase)).ToArray();
-        var totalMarkers = sections.Sum(section => section.MarkerCount);
-        reportLines.Add($"Annotation markers: {totalMarkers} found (expected {sections.Count}) {(markerWarnings.Length == 0 && totalMarkers == sections.Count ? "✅" : "⚠️")}");
+        var markerWarnings = ctx.WarningIssues.Where(issue => issue.Contains("annotation marker", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var totalMarkers = ctx.Sections.Sum(section => section.MarkerCount);
+        reportLines.Add($"Annotation markers: {totalMarkers} found (expected {ctx.Sections.Count}) {(markerWarnings.Length == 0 && totalMarkers == ctx.Sections.Count ? "✅" : "⚠️")}");
         reportLines.AddRange(markerWarnings.Select(warning => $"  {warning}"));
 
-        var headerWarnings = warningIssues.Where(issue => issue.Contains("example prompt header", StringComparison.OrdinalIgnoreCase)).ToArray();
-        var standardHeaderSections = sections.Count - headerWarnings.Length;
-        reportLines.Add($"Example headers: {standardHeaderSections}/{sections.Count} use standard format {(headerWarnings.Length == 0 ? "✅" : "⚠️")}");
+        var headerWarnings = ctx.WarningIssues.Where(issue => issue.Contains("example prompt header", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var standardHeaderSections = ctx.Sections.Count - headerWarnings.Length;
+        reportLines.Add($"Example headers: {standardHeaderSections}/{ctx.Sections.Count} use standard format {(headerWarnings.Length == 0 ? "✅" : "⚠️")}");
         reportLines.AddRange(headerWarnings.Select(warning => $"  {warning}"));
 
-        reportLines.Add($"Branding: {brandingIssues.Count} issue{(brandingIssues.Count == 1 ? string.Empty : "s")} found {(brandingIssues.Count == 0 ? "✅" : "ℹ️")}");
-        reportLines.AddRange(brandingIssues.Select(issue => $"  - {issue}"));
+        reportLines.Add($"Branding: {ctx.BrandingIssues.Count} issue{(ctx.BrandingIssues.Count == 1 ? string.Empty : "s")} found {(ctx.BrandingIssues.Count == 0 ? "✅" : "ℹ️")}");
+        reportLines.AddRange(ctx.BrandingIssues.Select(issue => $"  - {issue}"));
         reportLines.Add(string.Empty);
 
         // 6 new post-assembly checks (PRD-QUALITY Item C)
-        var relatedToolsPass = newChecks.RelatedToolsIssues.Count == 0;
-        reportLines.Add(relatedToolsPass
-            ? "Related tools completeness: ✅ PASS"
-            : $"Related tools completeness: ❌ FAIL ({newChecks.RelatedToolsIssues.Count} issue(s))");
-        reportLines.AddRange(newChecks.RelatedToolsIssues.Select(issue => $"  - {issue}"));
-
-        reportLines.Add(newChecks.ToneMarkerWarnings.Count == 0
-            ? "Tone markers: ✅ none detected"
-            : $"Tone markers: ⚠️ {newChecks.ToneMarkerWarnings.Count} detected");
-        reportLines.AddRange(newChecks.ToneMarkerWarnings.Select(w => $"  {w}"));
-
-        reportLines.Add(newChecks.BoilerplateWarnings.Count == 0
-            ? "Boilerplate redundancy: ✅ none detected"
-            : $"Boilerplate redundancy: ⚠️ {newChecks.BoilerplateWarnings.Count} detected");
-        reportLines.AddRange(newChecks.BoilerplateWarnings.Select(w => $"  {w}"));
-
-        reportLines.Add(newChecks.HasRelatedSection
+        AppendPassFailSection(reportLines, "Related tools completeness", ctx.NewChecks.RelatedToolsIssues);
+        AppendCountSection(reportLines, "Tone markers", ctx.NewChecks.ToneMarkerWarnings, isBlocking: false);
+        AppendCountSection(reportLines, "Boilerplate redundancy", ctx.NewChecks.BoilerplateWarnings, isBlocking: false);
+        reportLines.Add(ctx.NewChecks.HasRelatedSection
             ? "Related section header: ✅ present"
             : "Related section header: ⚠️ absent");
-
-        var toolsWithExamples = sections.Count - newChecks.MissingExampleIssues.Count;
-        reportLines.Add(newChecks.MissingExampleIssues.Count == 0
-            ? $"Tool examples: ✅ {toolsWithExamples}/{sections.Count} tools have examples"
-            : $"Tool examples: ❌ {toolsWithExamples}/{sections.Count} tools have examples");
-        reportLines.AddRange(newChecks.MissingExampleIssues.Select(issue => $"  {issue}"));
-
-        var toolsWithEnoughParams = sections.Count - newChecks.LowParamCountWarnings.Count;
-        reportLines.Add(newChecks.LowParamCountWarnings.Count == 0
-            ? $"Parameter count: ✅ {toolsWithEnoughParams}/{sections.Count} tools have ≥2 parameters"
-            : $"Parameter count: ⚠️ {toolsWithEnoughParams}/{sections.Count} tools have ≥2 parameters");
-        reportLines.AddRange(newChecks.LowParamCountWarnings.Select(w => $"  {w}"));
+        AppendRatioSection(reportLines, "Tool examples", ctx.NewChecks.MissingExampleIssues, ctx.Sections.Count, isBlocking: true, itemDescription: "tools have examples");
+        AppendRatioSection(reportLines, "Parameter count", ctx.NewChecks.LowParamCountWarnings, ctx.Sections.Count, isBlocking: false, itemDescription: "tools have ≥2 parameters");
         reportLines.Add(string.Empty);
 
-        if (blockingIssues.Count == 0)
+        if (ctx.BlockingIssues.Count == 0)
         {
-            reportLines.Add($"RESULT: PASS {(warningIssues.Count > 0 || brandingIssues.Count > 0 ? $"({warningIssues.Count + brandingIssues.Count} warning{(warningIssues.Count + brandingIssues.Count == 1 ? string.Empty : "s")})" : "(clean)")}");
+            reportLines.Add($"RESULT: PASS {(ctx.WarningIssues.Count > 0 || ctx.BrandingIssues.Count > 0 ? $"({ctx.WarningIssues.Count + ctx.BrandingIssues.Count} warning{(ctx.WarningIssues.Count + ctx.BrandingIssues.Count == 1 ? string.Empty : "s")})" : "(clean)")}");
         }
         else
         {
-            reportLines.Add($"RESULT: FAIL ({blockingIssues.Count} blocking issue{(blockingIssues.Count == 1 ? string.Empty : "s")}, {warningIssues.Count + brandingIssues.Count} warning{(warningIssues.Count + brandingIssues.Count == 1 ? string.Empty : "s")})");
+            reportLines.Add($"RESULT: FAIL ({ctx.BlockingIssues.Count} blocking issue{(ctx.BlockingIssues.Count == 1 ? string.Empty : "s")}, {ctx.WarningIssues.Count + ctx.BrandingIssues.Count} warning{(ctx.WarningIssues.Count + ctx.BrandingIssues.Count == 1 ? string.Empty : "s")})");
         }
 
         return reportLines;
@@ -785,9 +781,22 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private static IReadOnlyList<string> GetRelatedToolsCompletenessIssues(
         string relatedSectionText,
-        IReadOnlyList<ArticleSection> sections)
+        IReadOnlyList<ArticleSection> sections,
+        IReadOnlyList<NamespaceToolFile> toolFiles)
     {
+        // Checks that backtick terms in the related section which reference THIS family's own tools
+        // are present as H2 sections. External tool references (other namespaces, Azure CLI commands,
+        // etc.) are skipped because they won't match this family's tool keys.
         if (string.IsNullOrWhiteSpace(relatedSectionText))
+        {
+            return Array.Empty<string>();
+        }
+
+        var familyToolKeys = toolFiles
+            .Select(file => file.ToolKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (familyToolKeys.Count == 0)
         {
             return Array.Empty<string>();
         }
@@ -806,12 +815,21 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         var issues = new List<string>();
         foreach (var term in backtickTerms)
         {
+            var normalizedTerm = term.Replace(' ', '-');
+            var isInternalTool = familyToolKeys.Any(key =>
+                string.Equals(key, normalizedTerm, StringComparison.OrdinalIgnoreCase)
+                || key.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase));
+            if (!isInternalTool)
+            {
+                continue;
+            }
+
             var found = sections.Any(s =>
                 s.Heading.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || s.ToolKey.Contains(term.Replace(' ', '-'), StringComparison.OrdinalIgnoreCase));
+                || s.ToolKey.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase));
             if (!found)
             {
-                issues.Add($"Related tools completeness: '{term}' referenced in related section but has no matching H2 section");
+                issues.Add($"⚠️ '{term}' is referenced in the related section but has no matching H2 section in this article");
             }
         }
 
@@ -853,20 +871,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         return warnings.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private static Task<IReadOnlyList<string>> GetBoilerplateRedundancyWarningsAsync(
-        string familyName,
-        PipelineContext context,
-        CancellationToken cancellationToken)
+    private static IReadOnlyList<string> GetBoilerplateRedundancyWarnings()
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        var contextFilePath = Path.Combine(context.OutputPath, $"{familyName}.context.json");
-        if (!File.Exists(contextFilePath))
-        {
-            return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
-        }
-
-        // Full boilerplate check deferred when context file is present (non-blocking for now)
-        return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        // Placeholder: boilerplate redundancy check not yet implemented.
+        // Tracked for future implementation — always returns empty for now.
+        return Array.Empty<string>();
     }
 
     private static IReadOnlyList<string> GetRelatedSectionHeaderWarnings(bool hasRelatedSection)
@@ -893,9 +902,9 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         var warnings = new List<string>();
         foreach (var section in sections)
         {
-            if (section.ParameterCount < 2)
+            if (section.TotalParameterCount < 2)
             {
-                warnings.Add($"⚠️ {section.ToolKey}: only {section.ParameterCount} documented parameter(s) (expected ≥2)");
+                warnings.Add($"⚠️ {section.ToolKey}: only {section.TotalParameterCount} documented parameter(s) (expected ≥2)");
             }
         }
 
@@ -949,7 +958,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         string? AlternateExampleHeader,
         IReadOnlyList<string> ExamplePrompts,
         IReadOnlyList<string> RequiredParameters,
-        int ParameterCount);
+        int TotalParameterCount);
 
     private sealed record ParsedArticle(
         string Frontmatter,
@@ -964,6 +973,18 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         bool HasRelatedSection,
         IReadOnlyList<string> MissingExampleIssues,
         IReadOnlyList<string> LowParamCountWarnings);
+
+    private sealed record ValidatorReportContext(
+        string FamilyName,
+        IReadOnlyList<NamespaceToolFile> ToolFiles,
+        IReadOnlyList<ArticleSection> Sections,
+        int? FrontmatterToolCount,
+        IReadOnlyList<string> MissingFromArticle,
+        IReadOnlyList<string> MissingFromFiles,
+        IReadOnlyList<string> BlockingIssues,
+        IReadOnlyList<string> WarningIssues,
+        IReadOnlyList<string> BrandingIssues,
+        NewCheckResults NewChecks);
 
     private sealed record BrandingRule(string PatternText, string Message)
     {

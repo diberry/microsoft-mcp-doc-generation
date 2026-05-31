@@ -36,6 +36,148 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_ToneMarkerPhrase_ReturnsWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithToneMarkerPhrase());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                warning.Contains("Tone marker", StringComparison.Ordinal)
+                && warning.Contains("you can", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ToneMarkerInTableRow_NotDetected()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithToneMarkerOnlyInTableRow());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("Tone marker", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ExternalToolReferenceInRelatedSection_NotFlagged()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithExternalRelatedToolReferences());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("az vm list", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("referenced in related section", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_InternalToolReferencedInRelatedSection_WithNoH2_IsBlocking()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute compute-list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute compute-show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithInternalRelatedToolMissingH2());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                warning.Contains("'compute-show' is referenced in the related section", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("no matching H2 section", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MissingRelatedSection_ReturnsWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithoutRelatedSection());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                warning.Contains("Related section", StringComparison.Ordinal)
+                && warning.Contains("absent", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ToolWithNoExampleHeader_IsBlocking()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithMissingExampleHeader());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                warning.Contains("list", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("no example prompt header", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task ValidateAsync_BlockingFailure_ReturnsFailedResult()
     {
         var testRoot = CreateTestRoot();
@@ -221,6 +363,52 @@ public class ToolFamilyPostAssemblyValidatorTests
         - Link
         """;
 
+    private static string ArticleWithToneMarkerPhrase()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        You can list virtual machines by resource group and location.
+        Example prompts include:
+        - List virtual machines in resource group 'rg-one' for location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | Yes |
+        | location | No |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string ArticleWithToneMarkerOnlyInTableRow()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List virtual machines in resource group 'rg-one' for location 'eastus'
+        | Note | Guidance |
+        | --- | --- |
+        | example | you can use this row for formatting only |
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | Yes |
+        | location | No |
+
+        ## Related content
+        - Link
+        """;
+
     private static PipelineContext CreateContext(string testRoot)
     {
         var outputPath = Path.Combine(testRoot, "generated-compute");
@@ -293,6 +481,86 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | resource group name | Yes |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string ArticleWithExternalRelatedToolReferences()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List resources where resource group name is 'rg-one' in location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## Related content
+        - For cross-namespace workflows, see `monitor query` and `az vm list`.
+        """;
+
+    private static string ArticleWithInternalRelatedToolMissingH2()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute compute-list -->
+        Example prompts include:
+        - List virtual machines in resource group 'rg-one' for location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | Yes |
+        | location | No |
+
+        ## Related content
+        - Use `compute-show` when you need details for a single virtual machine.
+        """;
+
+    private static string ArticleWithoutRelatedSection()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List virtual machines in resource group 'rg-one' for location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | Yes |
+        | location | No |
+        """;
+
+    private static string ArticleWithMissingExampleHeader()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Use this tool to list virtual machines by resource group and location.
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | Yes |
+        | location | No |
 
         ## Related content
         - Link
