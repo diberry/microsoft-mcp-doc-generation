@@ -176,42 +176,29 @@ if ($SkipPipelineRuns) {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Phase 4: Tab-ordering check on existing tool-family files
+# Phase 4: Tab-ordering check on tool-family files in target namespace dirs
 # ═══════════════════════════════════════════════════════════════════════════════
-Write-Header "Phase 4: Tab-Ordering Check — Existing Tool-Family Files"
+Write-Header "Phase 4: Tab-Ordering Check — Target Namespace Tool-Family Files"
 
 $toolFamilyFiles = @()
 
-# Collect from all generated-* directories (both target namespaces and prior full runs)
-Get-ChildItem $repoRoot -Directory -Filter "generated-*" | ForEach-Object {
-    $tfDir = Join-Path $_.FullName "tool-family"
+# Collect only from the target namespace dirs tested in Phase 3
+foreach ($entry in $targetNamespaces) {
+    $tfDir = Join-Path $repoRoot "generated-$($entry.Namespace)" "tool-family"
     if (Test-Path $tfDir) {
         $toolFamilyFiles += Get-ChildItem $tfDir -Filter "*.md" -ErrorAction SilentlyContinue
     }
 }
 
-# Also collect from generated/tool-family (global output dir)
-$globalTfDir = Join-Path $repoRoot "generated" "tool-family"
-if (Test-Path $globalTfDir) {
-    $toolFamilyFiles += Get-ChildItem $globalTfDir -Filter "*.md" -ErrorAction SilentlyContinue
-}
-
-# Deduplicate by full path
 $toolFamilyFiles = $toolFamilyFiles | Sort-Object FullName -Unique
 
 if ($toolFamilyFiles.Count -eq 0) {
-    Write-Warn "No tool-family/*.md files found — tab-order check skipped (run full pipeline to generate)"
-    Write-Info "Tip: Run Generate-ToolFamily.ps1 -ToolFamily monitor -Steps @(1,2,3,4) to produce tool-family files"
+    Write-Info "No tool-family/*.md files in target namespace dirs — skipped (steps 2-4 not run)"
+    Write-Info "Tab ordering is validated by Phase 2 unit tests (CliTabWrapperTests + CliTabPilotTests)"
 } else {
-    # Identify which files are from the current PR's target namespaces (generated in Phase 3)
-    $targetOutputDirs = $targetNamespaces | ForEach-Object { Join-Path $repoRoot "generated-$($_.Namespace)" "tool-family" }
-
-    Write-Info "Checking $($toolFamilyFiles.Count) tool-family file(s)..."
-    Write-Info "Note: Files NOT in target namespace dirs are from prior pipeline runs."
-    Write-Info "      Pre-fix files will show ordering violations — regenerate them with Phase 3."
+    Write-Info "Checking $($toolFamilyFiles.Count) tool-family file(s) in target namespace dirs..."
     $tabCheckFail = 0
     $tabCheckPass = 0
-    $tabCheckStale = 0
 
     foreach ($f in $toolFamilyFiles) {
         $content = Get-Content $f.FullName -Raw
@@ -219,28 +206,20 @@ if ($toolFamilyFiles.Count -eq 0) {
         $cliIdx  = $content.IndexOf($CLI_TAG)
 
         if ($mcpIdx -lt 0 -or $cliIdx -lt 0) {
-            Write-Warn "$($f.Name): no tab markers found (skipping)"
+            Write-Info "$($f.Name): no tab markers found (skipping)"
             continue
         }
 
-        $isTargetNs = $targetOutputDirs | Where-Object { $f.DirectoryName -eq $_ }
-        $label = if ($isTargetNs) { "(new)" } else { "(pre-existing)" }
-
         if ($mcpIdx -gt $cliIdx) {
-            if ($isTargetNs) {
-                Record-Failure "$($f.Name) $label`: MCP Server tab appears AFTER CLI tab — fix not applied"
-                $tabCheckFail++
-            } else {
-                Record-Warning "$($f.Name) $label`: MCP Server tab after CLI tab — file pre-dates fix, needs regeneration"
-                $tabCheckStale++
-            }
+            Record-Failure "$($f.Name): MCP Server tab appears AFTER CLI tab — fix not applied"
+            $tabCheckFail++
         } else {
-            Write-Ok "$($f.Name) $label`: MCP Server tab before CLI tab ✓"
+            Write-Ok "$($f.Name): MCP Server tab before CLI tab ✓"
             $tabCheckPass++
         }
     }
 
-    Write-Info "Tab check: $tabCheckPass correct, $tabCheckFail new-file failures, $tabCheckStale pre-existing (stale)"
+    Write-Info "Tab check: $tabCheckPass correct, $tabCheckFail failures"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
