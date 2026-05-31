@@ -263,6 +263,7 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | resource group name | Yes |
+        | location | No |
 
         ## Show virtual machine
         <!-- @mcpcli compute show -->
@@ -271,8 +272,9 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | vm name | Yes |
+        | resource group name | No |
 
-        ## Related content
+        ## See also
         - Link
         """;
 
@@ -416,6 +418,7 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | subscription | No |
+        | location | No |
 
         ## Show virtual machine
         <!-- @mcpcli compute show -->
@@ -424,6 +427,7 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | vm name | Yes |
+        | resource group name | No |
 
         ## Delete virtual machine
         <!-- @mcpcli compute delete -->
@@ -432,8 +436,9 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | vm name | Yes |
+        | resource group name | No |
 
-        ## Related content
+        ## See also
         - Link
         """;
 
@@ -452,6 +457,7 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | subscription | No |
+        | location | No |
 
         ## Show virtual machine
         <!-- @mcpcli compute show -->
@@ -460,8 +466,9 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | vm name | Yes |
+        | resource group name | No |
 
-        ## Related content
+        ## See also
         - Link
         """;
 
@@ -519,6 +526,279 @@ public class ToolFamilyPostAssemblyValidatorTests
         | vm name | Yes |
 
         ## Related content
+        - Link
+        """;
+
+    [Fact]
+    public async Task ValidateAsync_RelatedToolsReferenceMissingSection_ReturnsBlockingIssue()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), RelatedToolsWithMissingSection());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Warnings, w =>
+                w.Contains("referenced in related tools but not found in article", StringComparison.Ordinal)
+                && w.Contains("compute show", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ToneMarkerInDescription_ReturnsWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ToneMarkerContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, w =>
+                w.Contains("tone marker detected", StringComparison.Ordinal)
+                && w.Contains("second person", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_BoilerplateRedundancy_WhenContextJsonPresent_ReturnsWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), BoilerplateRedundancyContent());
+            var contextJson = """{"serviceOverview":"Manage virtual machines in Azure subscription resource group."}""";
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.context.json"), contextJson);
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("service context redundancy", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_NoRelatedSectionHeader_ReturnsWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), NoRelatedSectionContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("missing a 'Related tools' or 'See also' section header", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ToolMissingExample_ReturnsBlockingIssue()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), NoExamplesContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Warnings, w =>
+                w.Contains("no example section found", StringComparison.Ordinal)
+                && w.Contains("list", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ToolWithSingleParameter_ReturnsWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), SingleParameterContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("fewer than 2 parameters listed", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static string RelatedToolsWithMissingSection()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List resources where resource group name is 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## See also
+        - Use `compute show` to inspect individual virtual machines.
+        """;
+
+    private static string ToneMarkerContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        You can use this tool to list virtual machines in your subscription.
+        Example prompts include:
+        - List resources where resource group name is 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## See also
+        - Link
+        """;
+
+    private static string BoilerplateRedundancyContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Manage virtual machines in Azure subscription resource group.
+        Example prompts include:
+        - List all virtual machines in resource group
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## Show virtual machine
+        <!-- @mcpcli compute show -->
+        Manage virtual machines in Azure subscription resource group.
+        Example prompts include:
+        - Show the VM named 'vm-one' in resource group
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+        | resource group name | No |
+
+        ## See also
+        - Link
+        """;
+
+    private static string NoRelatedSectionContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List resources where resource group name is 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+        """;
+
+    private static string NoExamplesContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## See also
+        - Link
+        """;
+
+    private static string SingleParameterContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List resources where resource group name is 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+
+        ## See also
         - Link
         """;
 

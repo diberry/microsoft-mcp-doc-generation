@@ -21,7 +21,7 @@ public class ToolFamilyValidatorIntegrationTests
             Directory.CreateDirectory(outputPath);
             SeedFile(Path.Combine(outputPath, "tools", "compute-list.md"), "---\n---\n# Tool\n\n<!-- @mcpcli compute list -->\nBody\n");
             SeedFile(Path.Combine(outputPath, "tool-family", "compute.md"),
-                "---\ntitle: Compute\ntool_count: 1\n---\n# Compute\n\n## List virtual machines\n<!-- @mcpcli compute list -->\nExample prompts include:\n- List resources where resource group name is 'rg-one'\n| Parameter | Required |\n| --- | --- |\n| resource group name | Yes |\n\n## Related content\n- Link\n");
+                "---\ntitle: Compute\ntool_count: 1\n---\n# Compute\n\n## List virtual machines\n<!-- @mcpcli compute list -->\nExample prompts include:\n- List resources where resource group name is 'rg-one'\n| Parameter | Required |\n| --- | --- |\n| resource group name | Yes |\n| location | No |\n\n## See also\n- Link\n");
 
             var context = new PipelineContext
             {

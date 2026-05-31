@@ -7,3 +7,4 @@ description: Synthetic gamma tool fixture.
 | Parameter | Required | Description |
 | --- | --- | --- |
 | `Filter` | No | Optional gamma filter. |
+| `Max Results` | No | Maximum number of results to return. |
