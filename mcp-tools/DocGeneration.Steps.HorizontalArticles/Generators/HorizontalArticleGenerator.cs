@@ -98,6 +98,13 @@ public class HorizontalArticleGenerator
                 Console.WriteLine($"{progress} Generating namespace summary...");
                 var summaryData = await GenerateNamespaceSummaryAIContent(staticData, perToolResults);
                 aiData = AggregateAIData(staticData, perToolResults, summaryData);
+
+                // Fail fast if namespace summary returned empty required fields (indicates failed AI call)
+                if (string.IsNullOrWhiteSpace(aiData.ServiceShortDescription) || string.IsNullOrWhiteSpace(aiData.ServiceOverview))
+                {
+                    Console.WriteLine($"{progress} ✗ Namespace summary returned empty required fields for {staticData.ServiceBrandName} — article generation failed.");
+                    return false;
+                }
             }
 
             if (aiData == null) return false;
@@ -718,7 +725,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
     /// Aggregates per-tool AI results and namespace summary into a single AIGeneratedArticleData
     /// for compatibility with the existing ArticleContentProcessor and MergeData pipeline.
     /// </summary>
-    private static AIGeneratedArticleData AggregateAIData(
+    internal static AIGeneratedArticleData AggregateAIData(
         StaticArticleData staticData,
         IReadOnlyList<PerToolAIData> perToolResults,
         NamespaceSummaryAIData summaryData)
