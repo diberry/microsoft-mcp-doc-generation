@@ -8,6 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **#666: Readable output folder timestamp format** — `GetDefaultOutputPath()` in `PipelineRequest.cs` now uses `yyyy-MM-dd-HHmmss` instead of `yyyyMMddTHHmmssfffZ`, producing folders like `generated-appconfig-2026-05-31-062940` that are easier to read and sort. CLI help text for `--output` updated to show the new format. Test regex updated to match new pattern. Resolves #666.
+
 - **PRD-QUALITY Item A: Step 3 style guide** — `system-prompt.txt` for `ToolGenerationStep` now includes a "Style Guide for Tool Descriptions" section covering contraction rules (Microsoft Learn style), backtick conventions (CLI flags, example values, tool names), MCP acronym expansion on first body mention, and prohibited patterns (second-person phrases, marketing superlatives, deprecated product names). `user-prompt-template.txt` adds "Tone Consistency Heuristics" for active voice, lead-with-action, and avoiding service-level context in per-tool descriptions. `cli-prose-system-prompt.txt` updated with matching backtick conventions and prohibited patterns.
 - **PRD-QUALITY Item A: TDD contract tests** — `StitcherStep3PromptHandlingTests.cs` added with 6 tests defining the new contract: `FamilyFileStitcher.Stitch()` does NOT apply contractions, MCP acronym expansion, VM acronym expansion, or bare example-value backtick wrapping (these are now Step 3 AI responsibilities).
 - **PRD-QUALITY Item C: Step 4 post-assembly validation extended** — `ToolFamilyPostAssemblyValidator` now runs 6 additional inline checks after tool-family article assembly:
