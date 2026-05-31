@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **#664A: `prompt-preview.txt` never written for AI/Hybrid pipeline steps** — `ObservabilityWriter.WritePromptPreview()` added and called for all non-deterministic steps (Steps 2, 3, 4, 6) in `PipelineRunner.WriteObservabilityOutputs()`. Previously only deterministic steps wrote `prompt-preview-na.txt`, leaving AI/Hybrid steps without the file `StageOutputContract` expected, causing a spurious "observability contract missing file" warning on every AI step run. The new method writes a pipeline-level placeholder (`"AI step — prompt preview not captured at pipeline level."`) that satisfies the contract. Test `RunAsync_AiStep_MissingPromptPreviewLogsWarning` renamed to `RunAsync_AiStep_WritesPromptPreviewAndNoContractWarning` and updated to assert the file is present and no contract warning is emitted; `WritePromptPreview_CreatesFileWithExpectedContent` unit test added. Resolves #664 sub-issue A.
+
 ### Added
 
 - **PRD-QUALITY Item A: Step 3 style guide** — `system-prompt.txt` for `ToolGenerationStep` now includes a "Style Guide for Tool Descriptions" section covering contraction rules (Microsoft Learn style), backtick conventions (CLI flags, example values, tool names), MCP acronym expansion on first body mention, and prohibited patterns (second-person phrases, marketing superlatives, deprecated product names). `user-prompt-template.txt` adds "Tone Consistency Heuristics" for active voice, lead-with-action, and avoiding service-level context in per-tool descriptions. `cli-prose-system-prompt.txt` updated with matching backtick conventions and prohibited patterns.
