@@ -1,0 +1,48 @@
+Generate JSON data for a single Azure MCP Server tool used with {{serviceBrandName}}.
+
+## Input Data
+
+**Service Information:**
+- Service Brand Name: {{serviceBrandName}}
+- Service Identifier: {{serviceIdentifier}}
+
+**Tool:**
+- Command: {{toolCommand}}
+- Description: {{toolDescription}}
+- Parameter Count (non-common): {{parameterCount}}
+- Characteristics:
+  - Destructive: {{isDestructive}}
+  - Read-only: {{isReadOnly}}
+  - Requires secrets: {{requiresSecret}}
+
+## Your Task
+
+**FIRST**: Analyze the tool to determine data plane vs management plane focus:
+- **Data plane tools**: Work with data or functionality in existing resources (get, list, query, read, upload, execute, write)
+- **Management plane tools**: Manage resource lifecycle (create, delete, update, provision, configure resources)
+- **Default assumption**: If unclear, assume **data plane** unless the command explicitly includes resource lifecycle verbs such as "create", "delete", or "provision"
+
+**SECOND**: Based on the analysis above, generate a JSON object following the system prompt schema. For each field:
+
+1. **genai-shortDescription**: Condense the tool description to its essential action and target. 10-15 words. Start with a verb. Be specific — include what data or resource type is affected.
+
+2. **genai-scenario**: Create exactly ONE scenario that maps to this specific tool:
+   - `title`: Short action phrase for this scenario. No trailing period.
+   - `description`: One sentence stating the real-world business motivation.
+   - `examples`: 3-5 conversational natural language prompts using real resource names (e.g., "prod-secrets", "eastus", "Standard_LRS"). The first example must be the most representative. For data plane tools, assume the resource already exists. For management plane tools, focus on provisioning.
+   - `expectedOutcome`: Describe the category of result the user sees — do NOT assert specific field names unless documented in the tool description.
+
+3. **genai-capability**: A single action phrase describing what this tool enables. Rephrase the tool description as a user-facing outcome. MUST NOT end with a period.
+
+## Key Constraints
+
+- **Tool grounding**: Every field must be grounded to THIS tool's operation only. Do NOT reference operations, features, or parameters that this tool does not support.
+- **Authentication**: Azure MCP Server uses `DefaultAzureCredential` (Microsoft Entra ID). Do NOT mention API keys anywhere.
+- **Naming**: Use "Microsoft Entra ID" — NEVER "Azure Active Directory".
+- **No trailing periods** on `genai-capability`, `genai-scenario.title`, or `genai-shortDescription`.
+- **Destructive tools**: If `isDestructive` is true, the expectedOutcome must acknowledge the destructive nature (e.g., "Confirmation that the resource was permanently deleted").
+- **Read-only tools**: If `isReadOnly` is true, all examples must be read-only operations — do NOT add write or delete examples.
+
+## Output Format
+
+Return ONLY valid JSON — no markdown code blocks, no explanations. The response must begin with `{` and end with `}`.
