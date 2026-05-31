@@ -10,6 +10,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - **PRD-QUALITY Item A: Step 3 style guide** — `system-prompt.txt` for `ToolGenerationStep` now includes a "Style Guide for Tool Descriptions" section covering contraction rules (Microsoft Learn style), backtick conventions (CLI flags, example values, tool names), MCP acronym expansion on first body mention, and prohibited patterns (second-person phrases, marketing superlatives, deprecated product names). `user-prompt-template.txt` adds "Tone Consistency Heuristics" for active voice, lead-with-action, and avoiding service-level context in per-tool descriptions. `cli-prose-system-prompt.txt` updated with matching backtick conventions and prohibited patterns.
 - **PRD-QUALITY Item A: TDD contract tests** — `StitcherStep3PromptHandlingTests.cs` added with 6 tests defining the new contract: `FamilyFileStitcher.Stitch()` does NOT apply contractions, MCP acronym expansion, VM acronym expansion, or bare example-value backtick wrapping (these are now Step 3 AI responsibilities).
+- **PRD-QUALITY Item C: Step 4 post-assembly validation extended** — `ToolFamilyPostAssemblyValidator` now runs 6 additional inline checks after tool-family article assembly:
+  - `GetRelatedToolsCompletenessIssues` — blocking; verifies every backtick-quoted term (4+ chars) in the `## Related tools` / `## See also` section resolves to an H2 section heading in the same article.
+  - `GetToneMarkerWarnings` — warning; flags second-person phrases, marketing superlatives, and deprecated service names in article body text.
+  - `GetBoilerplateRedundancyWarningsAsync` — warning; detects near-duplicate section bodies using `{namespace}.context.json` as the reference corpus (skipped when context file is absent).
+  - `GetRelatedSectionHeaderWarnings` — warning; alerts when neither `## Related tools` nor `## See also` is present in the assembled article.
+  - `GetMissingExampleIssues` — blocking; requires each tool section to contain an `Example prompts include:` header or recognized alternate.
+  - `GetLowParameterCountWarnings` — warning; flags tool sections with fewer than 2 documented parameters.
+  All six checks are inline methods on `ToolFamilyPostAssemblyValidator` with no new registered types. Results appear in the per-namespace validation report under `reports/tool-family-validation-{namespace}.txt` and in the step-envelope `validation.json`. Regression tests added for advisor, compute, and monitor namespaces; E2E test verifies `overallStatus: passed` in the step envelope for a valid advisor assembly. Implements PRD-QUALITY-2026-05-30 Item C.
 
 ### Changed
 
