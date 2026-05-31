@@ -1,0 +1,79 @@
+Generate JSON data for a how-to article about managing {{serviceBrandName}} with Azure MCP Server.
+
+## Input Data
+
+**Service Information:**
+- Service Brand Name: {{serviceBrandName}}
+- Service Identifier: {{serviceIdentifier}}
+- Tools Reference Link: {{toolsReferenceLink}}
+
+**Available MCP Tools for this service (compact list):**
+{{#each tools}}
+- {{command}} — {{description}}
+{{/each}}
+
+## Your Task
+
+**FIRST**: Analyze the tool list to determine the service's primary plane focus:
+- **Data plane**: Majority of tools work with data in existing resources (get, list, query, read, upload, execute, write)
+- **Management plane**: Majority of tools manage resource lifecycle (create, delete, update, provision, configure)
+- **Mixed**: Roughly equal split between data and management operations
+
+**SECOND**: Search official Azure documentation for {{serviceBrandName}}. Find:
+- Official service overview and description
+- Prerequisites and setup requirements
+- RBAC roles and permissions (data plane vs management plane roles)
+- Best practices and security recommendations
+- Service documentation URL path
+
+**THEN**: Generate a JSON object following the system prompt schema. Focus on:
+
+1. **genai-serviceShortDescription**: A noun phrase describing what users manage via MCP tools. MUST NOT end with a period. Must read naturally after "Manage" — e.g., "keys, secrets, and certificates" or "web applications and database connections". Keep under 8 words. This is about MCP tool capabilities, not Azure service marketing.
+
+2. **genai-serviceOverview**: A 2-3 sentence description of {{serviceBrandName}}. CRITICAL: Do NOT start with the service name — the template prepends it automatically. Start with "is a..." or "provides...". Include what problem the service solves and key capabilities. Grounded in official Azure documentation.
+
+3. **genai-serviceSpecificPrerequisites**: Service-specific prerequisites only. Do NOT include "Azure subscription" — already in the template. Titles must be short resource/service names only (no verbs, no state words like "existing" or "provisioned" — move that context to the description field).
+
+4. **genai-requiredRoles**: RBAC roles grounded ONLY to the tool operations in the compact list above.
+   - **Authoritative source ONLY**: https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles — every role name MUST appear on that page
+   - Apply minimum privilege: if all tools are read-only, suggest only Reader-level roles; if tools include write or delete operations, include Contributor-level roles
+   - The `purpose` field must reference the specific tool operations that require that role
+   - NEVER invent role names — use the exact names from the authoritative source
+   - NEVER use patterns like "[Service] Knowledge Base Data Reader", "[Service] Feature Data Reader", or "[Service] Administrator" (fabricated patterns)
+   - If unsure whether a role exists: use a verified generic fallback (e.g., "Contributor", "Reader", "[Service] Service Contributor")
+   - Suggest at least 2 roles: one read-only (for list/get tools), one contributor (for write/delete tools) — omit the write role if no write tools exist
+
+5. **genai-bestPractices**: 2-5 best practices scoped to using these MCP tools effectively.
+   - Every best practice must directly relate to how a user should use the tools listed above
+   - Reference specific tool commands when giving advice (e.g., "Use `{{serviceIdentifier}} list` before running delete operations to confirm the target resource")
+   - Do NOT include general Azure service administration advice (scaling, monitoring, backup, disaster recovery) unless a tool in the list directly supports that operation
+   - Titles MUST NOT end with a period
+   - Priority order: security (Entra ID / RBAC), safe usage (read before write), efficiency (filtering, batching)
+
+6. **genai-serviceDocLink**: Path to the official Azure service documentation overview. Remove `https://learn.microsoft.com/en-us` prefix — use `/azure/...` format. Use `/azure/ai-services/` instead of deprecated `/azure/cognitive-services/`. **If you are not confident the URL path is correct, leave this as an empty string** — an empty link is better than a fabricated 404.
+
+7. **genai-additionalLinks**: 2-4 additional documentation links relevant to these tool operations. Use `/azure/...` paths (remove `https://learn.microsoft.com/en-us` prefix). Empty string is better than a fabricated URL.
+
+## Key Constraints
+
+- **Do NOT generate per-tool descriptions** — those come from separate per-tool AI calls. This call produces only service-level content.
+- **Do NOT generate `genai-capabilities`, `tools`, or `genai-scenarios`** — those fields are assembled from per-tool call results.
+- **SEO Differentiation**: This article is about using Azure MCP Server tools with {{serviceBrandName}}, not a replacement for the official Azure service documentation. Content must complement, not compete.
+- **Authentication**: Azure MCP Server uses `DefaultAzureCredential` (Microsoft Entra ID). Do NOT mention API keys anywhere.
+- **Naming**: Use "Microsoft Entra ID" — NEVER "Azure Active Directory".
+- **No trailing periods** on: `genai-serviceShortDescription`, best practice titles, prerequisite titles, additional link titles.
+- **URL discipline**: Remove `https://learn.microsoft.com/en-us` prefix from all URLs. If uncertain about a path, use an empty string.
+- **Universality**: This prompt runs for ALL 52 Azure MCP namespaces. Apply all rules generically regardless of which service is provided above.
+
+## Output Format
+
+Return ONLY valid JSON — no markdown code blocks, no explanations. The response must begin with `{` and end with `}`.
+
+The JSON must contain exactly these top-level keys:
+- `genai-serviceShortDescription`
+- `genai-serviceOverview`
+- `genai-serviceSpecificPrerequisites`
+- `genai-requiredRoles`
+- `genai-bestPractices`
+- `genai-serviceDocLink`
+- `genai-additionalLinks`
