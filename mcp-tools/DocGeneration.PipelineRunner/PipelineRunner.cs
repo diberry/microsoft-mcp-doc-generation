@@ -856,6 +856,10 @@ public sealed class PipelineRunner
         {
             ObservabilityWriter.WritePromptPreviewNa(directory);
         }
+        else
+        {
+            ObservabilityWriter.WritePromptPreview(directory, "AI step — prompt preview not captured at pipeline level.");
+        }
 
         var contract = new StageOutputContract(
             step.Name,

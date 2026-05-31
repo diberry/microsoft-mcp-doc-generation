@@ -77,7 +77,7 @@ public class ObservabilityContractTests
     }
 
     [Fact]
-    public async Task RunAsync_AiStep_MissingPromptPreviewLogsWarning()
+    public async Task RunAsync_AiStep_WritesPromptPreviewAndNoContractWarning()
     {
         var repoRoot = CreateRepoRoot("pipeline-runner-observability-ai");
         var outputRelativePath = Path.Combine(".", "generated-compute");
@@ -96,10 +96,14 @@ public class ObservabilityContractTests
             var exitCode = await runner.RunAsync(request, CancellationToken.None);
 
             Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
-            Assert.Contains(
-                reportWriter.Messages,
-                message => message.Contains("prompt-preview.txt", StringComparison.Ordinal)
-                    && message.Contains("observability contract", StringComparison.OrdinalIgnoreCase));
+
+            var observabilityDirectory = Path.Combine(
+                Path.GetFullPath(Path.Combine(repoRoot, outputRelativePath)),
+                "observability",
+                "2-generate-example-prompts");
+
+            Assert.True(File.Exists(Path.Combine(observabilityDirectory, StageOutputContract.PromptPreviewFileName)));
+            Assert.DoesNotContain(reportWriter.Messages, message => message.Contains("observability contract", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -107,16 +111,9 @@ public class ObservabilityContractTests
         }
     }
 
-    // ── Issue #664 Part 3a: WritePromptPreview ──────────────────────────────
-    // AI steps must write prompt-preview.txt. This test guards against regressions
-    // where WritePromptPreview is removed or stops creating the file.
-
     [Fact]
     public void WritePromptPreview_RegressionGuard_FileIsNonEmpty()
     {
-        // Regression guard for #664: ObservabilityWriter.WritePromptPreview must:
-        //   1. Create the prompt-preview.txt file in the target directory
-        //   2. Write non-empty content so the observability contract is satisfied
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
         try
         {
@@ -129,6 +126,25 @@ public class ObservabilityContractTests
         finally
         {
             if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void WritePromptPreview_CreatesFileWithExpectedContent()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), $"observability-writer-test-{Guid.NewGuid():N}");
+        try
+        {
+            ObservabilityWriter.WritePromptPreview(dir, "AI step — prompt preview not captured at pipeline level.");
+
+            var filePath = Path.Combine(dir, StageOutputContract.PromptPreviewFileName);
+            Assert.True(File.Exists(filePath));
+            Assert.Equal("AI step — prompt preview not captured at pipeline level.", File.ReadAllText(filePath));
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+                Directory.Delete(dir, recursive: true);
         }
     }
 
