@@ -132,3 +132,23 @@
 - **Branch:** squad/603-604-602-namespace-resolution-fixes
 - **Decision:** Bug fixes recorded in .squad/decisions.md
 
+### 2026-05-30: Empty Summary Validation & Per-Tool AI Refactor (PR #659)
+
+**Event:** Fixed blocker from rubber-duck review; completed per-tool AI call refactor.
+
+**Changes:**
+1. **Empty summary validation (blocker fix)**
+   - Modified `HorizontalArticleGenerator.cs`: Added post-AI validation check
+   - Made `AggregateAIData.cs` internal, added 5 unit tests in `AggregateAIDataTests.cs`
+   - Checks `ServiceShortDescription` and `ServiceOverview` non-empty; fails with clear error if empty
+   - Root cause: Empty-fallback path produced content-corrupted articles that passed all validation gates
+
+2. **Per-tool AI call refactor**
+   - Updated `GenerateAIContent` to call AI once per tool + once for namespace summary (instead of once per namespace with all tools)
+   - Eliminates 18k token overflow on large namespaces (storage namespace example: 18k → bounded to ~1 tool)
+   - Sage created corresponding per-tool prompts (`horizontal-article-tool-system-prompt.txt`, etc.)
+
+**Test Coverage:** 5 new unit tests, all passing
+
+**Status:** PR #659 merged to main (with --admin flag); branch feat/per-tool-ai-calls complete; issues #660 (deterministic ordering) and #661 (retry/backoff) filed for non-blocking findings
+
