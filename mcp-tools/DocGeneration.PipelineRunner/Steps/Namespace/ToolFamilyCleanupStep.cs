@@ -14,10 +14,8 @@ namespace PipelineRunner.Steps;
 public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 {
     public const string FamilyCleanupOverrideKey = "ToolFamilyCleanupStep.FamilyCleanupOverride";
-    private const string ToolFamilyCleanupStageName = "tool-family-cleanup";
 
     private static readonly ReducerRegistry Reducers = new();
-    private static readonly PreAiValidatorRegistry ValidatorRegistry = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
 
     static ToolFamilyCleanupStep()
@@ -33,7 +31,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             return await builder.BuildAsync(input.ToolsDirectory, input.FamilyName, input.H2HeadingsDirectory, ct);
         });
 
-        ValidatorRegistry.Register(ToolFamilyCleanupStageName, new FamilyStructureContextValidator());
+        Reducers.RegisterValidator(new FamilyStructureContextValidator());
     }
 
     public ToolFamilyCleanupStep()
@@ -165,11 +163,10 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     return BuildResult(
                         context,
                         processResults,
-                        false,
+                        true,
                         warnings,
                         [new ValidatorResult("pre-ai-validation", false, errorMessages)],
-                        artifactFailures);
-                }
+                        artifactFailures);                }
 
                 WriteFamilyArtifacts(context.OutputPath, outputFileName, artifacts!);
                 RemoveStaleFamilyFiles(context.OutputPath, familyName, outputFileName);
@@ -636,7 +633,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             new FamilyStructureReducerInput(toolsDirectory, familyName, h2HeadingsDirectory),
             cancellationToken);
 
-        var validationResult = await ValidatorRegistry.ValidateAsync(ToolFamilyCleanupStageName, structure, cancellationToken);
+        var validationResult = await ReducerRegistry.AggregateAsync(Reducers.GetValidators<FamilyStructureContext>(), structure, cancellationToken);
         if (!validationResult.IsValid)
         {
             return (null, validationResult.Errors);
