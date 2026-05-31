@@ -10,6 +10,8 @@ using Shared;
 using Shared.Validation;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using ToolFamilyCleanup.Services;
 using ToolGeneration_Improved.Services;
 using ToolGeneration_Improved.Validation;
@@ -246,17 +248,53 @@ public sealed class PipelineRunner
         var stepSlug = request.ReplayStepName!;
         var outputPath = request.OutputPath;
         var namespaceName = request.Namespace;
+        var modelName = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_NAME") ?? "gpt-4.1-mini";
 
-        Console.WriteLine($"Inspect: step={stepSlug} namespace={namespaceName ?? "(all)"} output={outputPath}");
+        Console.WriteLine($"Inspect: step={stepSlug} namespace={namespaceName ?? "(all)"} output={outputPath} model={modelName}");
         Console.WriteLine();
 
-        return stepSlug switch
+        var rows = new List<InspectBudgetRow>();
+
+        var exitCode = stepSlug switch
         {
-            "tool-generation" => await InspectToolGenerationAsync(outputPath, namespaceName, cancellationToken),
-            "horizontal-articles" => await InspectHorizontalArticlesAsync(outputPath, namespaceName, cancellationToken),
-            "tool-family-cleanup" => await InspectToolFamilyCleanupAsync(outputPath, namespaceName, cancellationToken),
+            "tool-generation" => await InspectToolGenerationAsync(outputPath, namespaceName, rows, cancellationToken),
+            "horizontal-articles" => await InspectHorizontalArticlesAsync(outputPath, namespaceName, rows, cancellationToken),
+            "tool-family-cleanup" => await InspectToolFamilyCleanupAsync(outputPath, namespaceName, rows, cancellationToken),
             _ => ReportUnknownInspectStep(stepSlug),
         };
+
+        if (request.WriteJsonOutput && rows.Count > 0)
+        {
+            await WriteInspectJsonAsync(outputPath, modelName, rows, cancellationToken);
+        }
+
+        return exitCode;
+    }
+
+    private static async Task WriteInspectJsonAsync(
+        string outputPath,
+        string modelName,
+        IReadOnlyList<InspectBudgetRow> rows,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(outputPath);
+        var jsonPath = Path.Combine(outputPath, "inspect-budget.json");
+        var payload = new
+        {
+            model = modelName,
+            rows = rows.Select(r => new
+            {
+                step = r.Step,
+                @namespace = r.Namespace,
+                estimatedTokens = r.EstimatedTokens,
+                budget = r.Budget,
+                headroom = r.Headroom,
+                topItems = r.TopItems,
+            }).ToArray(),
+        };
+        var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
+        await File.WriteAllTextAsync(jsonPath, json, cancellationToken);
+        Console.WriteLine($"Inspect JSON written to: {jsonPath}");
     }
 
     private static int ReportUnknownInspectStep(string stepSlug)
@@ -268,6 +306,7 @@ public sealed class PipelineRunner
     private static async Task<int> InspectToolGenerationAsync(
         string outputPath,
         string? namespaceName,
+        IList<InspectBudgetRow> rows,
         CancellationToken cancellationToken)
     {
         var composedDir = Path.Combine(outputPath, "tools-composed");
@@ -316,9 +355,22 @@ public sealed class PipelineRunner
             var estimated = result.EstimatedPromptTokens ?? 0;
             var budget = result.TokenBudget ?? ToolGenerationBudgetValidator.InputTokenBudget;
             var headroom = budget - estimated;
-            var topItem = context.ToolName;
+            var topSections = ExtractTopSections(context.ComposedContent, 5);
+            var topItemsDisplay = topSections.Length > 0
+                ? string.Join(", ", topSections.Select(s => $"{s.Name}:{s.EstimatedTokens:N0}"))
+                : context.ToolName;
 
-            PrintBudgetTableRow("tool-generation", ns, estimated, budget, headroom, topItem);
+            PrintBudgetTableRow("tool-generation", ns, estimated, budget, headroom, topItemsDisplay);
+
+            rows.Add(new InspectBudgetRow(
+                "tool-generation",
+                ns,
+                estimated,
+                budget,
+                headroom,
+                topSections.Length > 0
+                    ? topSections.Select(s => $"{s.Name}:{s.EstimatedTokens:N0}").ToArray()
+                    : [context.ToolName]));
 
             if (!result.WithinBudget)
             {
@@ -332,6 +384,7 @@ public sealed class PipelineRunner
     private static async Task<int> InspectHorizontalArticlesAsync(
         string outputPath,
         string? namespaceName,
+        IList<InspectBudgetRow> rows,
         CancellationToken cancellationToken)
     {
         if (namespaceName is null)
@@ -359,12 +412,21 @@ public sealed class PipelineRunner
         PrintBudgetTableHeader("step", "namespace", "estimatedTokens", "budget", "headroom", "topItems");
         PrintBudgetTableRow("horizontal-articles", namespaceName, estimated, budget, headroom, string.Join(", ", topItems));
 
+        rows.Add(new InspectBudgetRow(
+            "horizontal-articles",
+            namespaceName,
+            estimated,
+            budget,
+            headroom,
+            topItems));
+
         return result.WithinBudget ? SuccessExitCode : FatalExitCode;
     }
 
     private static async Task<int> InspectToolFamilyCleanupAsync(
         string outputPath,
         string? namespaceName,
+        IList<InspectBudgetRow> rows,
         CancellationToken cancellationToken)
     {
         if (namespaceName is null)
@@ -381,27 +443,44 @@ public sealed class PipelineRunner
             return FatalExitCode;
         }
 
+        const int FamilyCleanupBudget = 150_000;
+        const int CharsPerToken = 4;
+
         var builder = new FamilyStructureBuilder();
         var context = await builder.BuildAsync(toolsDir, namespaceName, h2HeadingsDirectory: null, cancellationToken);
 
-        PrintBudgetTableHeader("step", "namespace", "sections", "budget", "headroom", "topItems");
+        var totalChars = context.Sections.Sum(s => s.SourceContent.Length);
+        var estimatedTokens = totalChars / CharsPerToken;
+        var headroom = FamilyCleanupBudget - estimatedTokens;
 
         var topItems = context.Sections
+            .OrderByDescending(s => s.SourceContent.Length)
             .Take(5)
             .Select(s => s.Heading)
             .ToArray();
 
+        PrintBudgetTableHeader("step", "namespace", "estimatedTokens", "budget", "headroom", "topItems");
+
+        var status = headroom >= 0 ? "✅" : "❌";
         var sb = new StringBuilder();
         sb.Append("tool-family-cleanup".PadRight(22));
         sb.Append(namespaceName.PadRight(18));
-        sb.Append(context.Sections.Count.ToString().PadRight(16));
-        sb.Append("n/a".PadRight(12));
-        sb.Append("n/a".PadRight(12));
-        sb.Append(string.Join(", ", topItems));
+        sb.Append($"{estimatedTokens:N0}".PadRight(16));
+        sb.Append($"{FamilyCleanupBudget:N0}".PadRight(12));
+        sb.Append($"{headroom:+#;-#;0}".PadRight(12));
+        sb.Append($"{status} {string.Join(", ", topItems)}");
         Console.WriteLine(sb.ToString());
         Console.WriteLine();
 
-        return SuccessExitCode;
+        rows.Add(new InspectBudgetRow(
+            "tool-family-cleanup",
+            namespaceName,
+            estimatedTokens,
+            FamilyCleanupBudget,
+            headroom,
+            topItems));
+
+        return headroom >= 0 ? SuccessExitCode : FatalExitCode;
     }
 
     private static string InferNamespace(string fileName)
@@ -433,6 +512,35 @@ public sealed class PipelineRunner
             $"{headroom:+#;-#;0}".PadRight(12) +
             $"{status} {topItem}");
     }
+
+    private static readonly Regex MarkdownH2Regex = new(@"^## (.+)$", RegexOptions.Multiline | RegexOptions.Compiled);
+
+    /// <summary>Returns the top <paramref name="count"/> markdown H2 sections sorted by estimated token count.</summary>
+    internal static MarkdownSection[] ExtractTopSections(string content, int count)
+    {
+        const int CharsPerToken = 4;
+        var matches = MarkdownH2Regex.Matches(content);
+        if (matches.Count == 0)
+            return [];
+
+        var sections = new List<MarkdownSection>(matches.Count);
+        for (var i = 0; i < matches.Count; i++)
+        {
+            var heading = matches[i].Groups[1].Value.Trim();
+            var start = matches[i].Index;
+            var end = i + 1 < matches.Count ? matches[i + 1].Index : content.Length;
+            var sectionLength = end - start;
+            sections.Add(new MarkdownSection(heading, sectionLength / CharsPerToken));
+        }
+
+        return sections
+            .OrderByDescending(s => s.EstimatedTokens)
+            .Take(count)
+            .ToArray();
+    }
+
+    /// <summary>A markdown section with its estimated token count.</summary>
+    internal sealed record MarkdownSection(string Name, int EstimatedTokens);
 
     private async Task<int> RunReplayAsync(PipelineRequest request, CancellationToken cancellationToken)
     {
@@ -1282,3 +1390,12 @@ public sealed class PipelineRunner
         StepResult Result,
         IReadOnlyList<CriticalFailureRecordReference> PersistedFailures);
 }
+
+/// <summary>A single row from an <c>--inspect</c> budget table run.</summary>
+internal sealed record InspectBudgetRow(
+    string Step,
+    string Namespace,
+    int EstimatedTokens,
+    int Budget,
+    int Headroom,
+    string[] TopItems);

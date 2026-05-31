@@ -30,6 +30,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/bash-common.sh"
 
+# Pass --inspect and other flag-prefixed arguments directly to PipelineRunner
+if [[ $# -gt 0 && "$1" =~ ^- ]]; then
+    dotnet run --project "$ROOT_DIR/mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "$@"
+    exit $?
+fi
+
 if [[ $# -lt 1 ]]; then
 	echo "Usage: $0 <tool-family> [steps] [output-dir]"
 	echo "Example: $0 advisor"

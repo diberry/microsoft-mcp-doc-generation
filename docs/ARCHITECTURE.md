@@ -516,31 +516,61 @@ deterministic steps; AI stages still invoke the LLM but against fixed upstream c
 
 ### 3. Inspect prompt budget before running
 
-Before invoking `horizontal-articles` for `advisor`, verify the prompt will be within budget:
+Use `--inspect` before making prompt changes to verify you have enough headroom. No LLM call is made; the reducer runs deterministically against the current workspace.
+
+**Example 1 — Check horizontal-articles budget before editing the system prompt:**
 
 ```bash
+# Check how many tokens the advisor namespace will consume at Step 6.
+# Use this BEFORE editing horizontal-article-system-prompt.txt to confirm headroom.
 ./start.sh --inspect --step horizontal-articles --namespace advisor \
   --show prompt-budget --output ./generated-advisor
 # Prints: step | namespace | estimatedTokens | budget | headroom | topItems (top-5 sections)
-# Exits 0 if within budget (≤ 100,000 tokens); exits 1 if over budget.
+# Exits 0 if within budget (≤ 150,000 tokens); exits 1 if over budget.
 ```
 
-Inspect `tool-generation` to see per-tool estimated token usage:
+**Example 2 — Check tool-generation budget and export results to JSON (CI pre-flight):**
 
 ```bash
+# Export the budget table as JSON so CI can parse the results.
+# --output is required to enable JSON file writing; without it only stdout is printed.
 ./start.sh --inspect --step tool-generation --namespace advisor \
   --show prompt-budget --output ./generated-advisor
+# Creates ./generated-advisor/inspect-budget.json:
+#   { "model": "gpt-4.1-mini", "rows": [{ "step", "namespace", "estimatedTokens",
+#     "budget", "headroom", "topItems" }, ...] }
+# Exits 0 if all tools within 100k budget; exits 1 if any tool exceeds budget.
 ```
 
-Inspect `tool-family-cleanup` to check structural section counts (no token budget — deterministic step):
+**Example 3 — Verify headroom before and after a prompt change (tool-family-cleanup):**
 
 ```bash
-./start.sh --inspect --step tool-family-cleanup --namespace advisor \
-  --output ./generated-advisor
+# Before editing the tool-family cleanup prompt, capture the baseline budget:
+./start.sh --inspect --step tool-family-cleanup --namespace compute \
+  --show prompt-budget --output ./generated-compute
+# Note the headroom value in the output (budget = 150,000 tokens).
+
+# Make your prompt change, then re-run inspect to confirm headroom is still positive:
+./start.sh --inspect --step tool-family-cleanup --namespace compute \
+  --show prompt-budget --output ./generated-compute
+# If headroom < 0, the prompt is too large — trim before running the full pipeline.
 ```
 
-Use `--inspect` in CI as a pre-flight gate before dispatching a full LLM run.
+**Example 4 — Run `--inspect` in CI as a gate before dispatching a full LLM run:**
+
+```bash
+# Use in a CI job to block the LLM step if the prompt would exceed budget.
+# FOUNDRY_MODEL_NAME is shown in inspect output for traceability.
+FOUNDRY_MODEL_NAME=gpt-4.1-mini \
+  dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- \
+  --inspect --step horizontal-articles --namespace advisor \
+  --show prompt-budget --output ./generated-advisor
+# Exit code 0 = within budget → proceed to full run
+# Exit code 1 = over budget → fail CI, notify author to trim the prompt
+```
+
 Exit code 0 = all items within budget; exit code 1 = at least one item exceeds budget.
+JSON is written to `{output}/inspect-budget.json` only when `--output` is explicitly provided.
 
 ---
 

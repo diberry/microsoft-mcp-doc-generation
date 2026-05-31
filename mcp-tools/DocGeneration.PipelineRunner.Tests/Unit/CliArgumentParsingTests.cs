@@ -88,6 +88,36 @@ public class CliArgumentParsingTests
     }
 
     [Fact]
+    public void Parse_InspectWithExplicitOutput_SetsWriteJsonOutputTrue()
+    {
+        var result = PipelineCli.Parse([
+            "--inspect",
+            "--step", "horizontal-articles",
+            "--namespace", "advisor",
+            "--show", "prompt-budget",
+            "--output", ".\\generated-advisor"]);
+
+        Assert.NotNull(result.Request);
+        Assert.True(result.Request!.Inspect);
+        Assert.Equal("horizontal-articles", result.Request.ReplayStepName);
+        Assert.True(result.Request.WriteJsonOutput, "WriteJsonOutput should be true when --output is explicitly provided in inspect mode");
+    }
+
+    [Fact]
+    public void Parse_InspectWithoutOutput_SetsWriteJsonOutputFalse()
+    {
+        var result = PipelineCli.Parse([
+            "--inspect",
+            "--step", "horizontal-articles",
+            "--namespace", "advisor",
+            "--show", "prompt-budget"]);
+
+        Assert.NotNull(result.Request);
+        Assert.True(result.Request!.Inspect);
+        Assert.False(result.Request.WriteJsonOutput, "WriteJsonOutput should be false when --output is omitted in inspect mode");
+    }
+
+    [Fact]
     public void Parse_SkipNpmUpdate_SetsFlag()
     {
         var result = PipelineCli.Parse(["--namespace", "compute", "--skip-npm-update"]);

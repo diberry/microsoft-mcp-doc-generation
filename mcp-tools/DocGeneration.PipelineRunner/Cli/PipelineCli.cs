@@ -44,6 +44,7 @@ public static class PipelineCli
         var parseResult = rootCommand.Parse(args);
         var replay = parseResult.GetValueForOption(options.Replay);
         var inspect = parseResult.GetValueForOption(options.Inspect);
+        var outputExplicit = parseResult.GetValueForOption(options.Output);
 
         if (parseResult.Errors.Count > 0)
         {
@@ -51,7 +52,7 @@ public static class PipelineCli
         }
 
         var namespaceValue = parseResult.GetValueForOption(options.Namespace);
-        var outputValue = parseResult.GetValueForOption(options.Output) ?? PipelineRequest.GetDefaultOutputPath(namespaceValue);
+        var outputValue = outputExplicit ?? PipelineRequest.GetDefaultOutputPath(namespaceValue);
         IReadOnlyList<int> steps = Array.Empty<int>();
         if (!replay && !inspect)
         {
@@ -80,7 +81,8 @@ public static class PipelineCli
             parseResult.GetValueForOption(options.From),
             parseResult.GetValueForOption(options.StepName),
             inspect,
-            parseResult.GetValueForOption(options.Show));
+            parseResult.GetValueForOption(options.Show),
+            WriteJsonOutput: inspect && outputExplicit is not null);
 
         var validationErrors = request.Validate();
         return validationErrors.Count > 0
