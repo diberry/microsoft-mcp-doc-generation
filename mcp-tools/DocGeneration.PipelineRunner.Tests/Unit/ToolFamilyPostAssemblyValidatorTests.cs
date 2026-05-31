@@ -60,6 +60,30 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_ToneMarkerInBulletItem_IsDetected()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithToneMarkerInBulletItem());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                warning.Contains("Tone marker", StringComparison.Ordinal)
+                && warning.Contains("you can", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task ValidateAsync_ToneMarkerInTableRow_NotDetected()
     {
         var testRoot = CreateTestRoot();
@@ -68,6 +92,29 @@ public class ToolFamilyPostAssemblyValidatorTests
             var context = CreateContext(testRoot);
             SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
             SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithToneMarkerOnlyInTableRow());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("Tone marker", StringComparison.Ordinal));
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("documented parameter", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ToneMarkerInsideFencedCodeBlock_NotDetected()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithToneMarkerOnlyInFencedCodeBlock());
 
             var validator = new ToolFamilyPostAssemblyValidator();
             var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
@@ -130,6 +177,56 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_SpaceFormInternalToolReferencedInRelatedSection_WithNoH2_IsBlocking()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithSpaceFormInternalRelatedToolMissingH2());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                warning.Contains("Blocking: 🛑 'compute show' is referenced in the related section", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("no matching H2 section", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_InternalToolReferencedInRelatedSection_WithMatchingH2_NotFlagged()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute compute-list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute compute-show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithInternalRelatedToolMatchingH2());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning =>
+                warning.Contains("compute-show", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("no matching H2 section", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task ValidateAsync_MissingRelatedSection_ReturnsWarning()
     {
         var testRoot = CreateTestRoot();
@@ -154,6 +251,28 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_AlternateExampleHeader_NotBlocking()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithAlternateExampleHeader());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning => warning.Contains("no example prompt header", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task ValidateAsync_ToolWithNoExampleHeader_IsBlocking()
     {
         var testRoot = CreateTestRoot();
@@ -170,6 +289,32 @@ public class ToolFamilyPostAssemblyValidatorTests
             Assert.Contains(result.Warnings, warning =>
                 warning.Contains("list", StringComparison.OrdinalIgnoreCase)
                 && warning.Contains("no example prompt header", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ToolWithOneParameter_EmitsLowParamWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithOneParameter());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                (warning.Contains("compute-list", StringComparison.OrdinalIgnoreCase)
+                    || warning.Contains("list", StringComparison.OrdinalIgnoreCase))
+                && (warning.Contains("1 documented parameter", StringComparison.OrdinalIgnoreCase)
+                    || warning.Contains("only 1", StringComparison.OrdinalIgnoreCase)));
         }
         finally
         {
@@ -214,11 +359,15 @@ public class ToolFamilyPostAssemblyValidatorTests
 
             var validator = new ToolFamilyPostAssemblyValidator();
             var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+            var reportText = File.ReadAllText(Path.Combine(context.OutputPath, "reports", "tool-family-validation-compute.txt"));
 
-            Assert.False(result.Success);
+            Assert.True(result.Success);
             Assert.Contains(result.Warnings, warning => warning.Contains("example prompt header is Examples:", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("missing 'resource group name'", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("Branding: Use \"this tool\" instead of \"this command\".", StringComparison.Ordinal));
+            Assert.Contains("Required params in prompts:", reportText, StringComparison.Ordinal);
+            Assert.Contains("⚠️ 0/1 tools have all required params in examples", reportText, StringComparison.Ordinal);
+            Assert.DoesNotContain("RESULT: FAIL", reportText, StringComparison.Ordinal);
         }
         finally
         {
@@ -409,6 +558,52 @@ public class ToolFamilyPostAssemblyValidatorTests
         - Link
         """;
 
+    private static string ArticleWithToneMarkerInBulletItem()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - you can list VMs by resource group
+        - List virtual machines where resource group name is 'rg-one' in location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string ArticleWithToneMarkerOnlyInFencedCodeBlock()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        ```text
+        you can use this example as a placeholder inside the code block
+        ```
+        Example prompts include:
+        - List virtual machines in resource group 'rg-one' for location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | Yes |
+        | location | No |
+
+        ## Related content
+        - Link
+        """;
+
     private static PipelineContext CreateContext(string testRoot)
     {
         var outputPath = Path.Combine(testRoot, "generated-compute");
@@ -528,6 +723,57 @@ public class ToolFamilyPostAssemblyValidatorTests
         - Use `compute-show` when you need details for a single virtual machine.
         """;
 
+    private static string ArticleWithSpaceFormInternalRelatedToolMissingH2()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List virtual machines in resource group 'rg-one' for location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | Yes |
+        | location | No |
+
+        ## Related content
+        - Use `compute show` when you need details for a single virtual machine.
+        """;
+
+    private static string ArticleWithInternalRelatedToolMatchingH2()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute compute-list -->
+        Example prompts include:
+        - List virtual machines where resource group name is 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## Show virtual machine
+        <!-- @mcpcli compute compute-show -->
+        Example prompts include:
+        - Show the virtual machine where vm name is 'vm-one' in resource group name 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+        | resource group name | No |
+
+        ## Related content
+        - Use `compute-show` when you need details for a single virtual machine.
+        """;
+
     private static string ArticleWithoutRelatedSection()
         => """
         ---
@@ -561,6 +807,47 @@ public class ToolFamilyPostAssemblyValidatorTests
         | --- | --- |
         | resource group | Yes |
         | location | No |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string ArticleWithAlternateExampleHeader()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Examples:
+        - List virtual machines where resource group name is 'rg-one' in location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string ArticleWithOneParameter()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List virtual machines where resource group name is 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
 
         ## Related content
         - Link

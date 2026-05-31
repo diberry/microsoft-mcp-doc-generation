@@ -142,11 +142,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     blockingIssues.Add($"Cross-reference check failed. {string.Join(". ", parts)}.");
                 }
 
-                // With section freezing (AD-017), missing required params
-                // indicates a freeze failure — treat as blocking error.
+                // Missing required params in example prompts are surfaced as warnings
+                // and rendered in the report's required-params section.
                 foreach (var warning in GetRequiredParameterWarnings(sections))
                 {
-                    blockingIssues.Add(warning);
+                    warningIssues.Add(warning);
                 }
 
                 foreach (var warning in GetExampleHeaderWarnings(sections))
@@ -185,7 +185,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 var lowParamCountWarnings = GetLowParameterCountWarnings(sections);
                 warningIssues.AddRange(lowParamCountWarnings);
 
-                var newChecks = new NewCheckResults(
+                var postAssemblyChecks = new PostAssemblyCheckSummary(
                     relatedToolsIssues,
                     toneMarkerWarnings,
                     boilerplateWarnings,
@@ -203,7 +203,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     blockingIssues,
                     warningIssues,
                     brandingIssues,
-                    newChecks));
+                    postAssemblyChecks));
 
                 await WriteReportAsync(reportDirectory, reportPath, reportLines, cancellationToken);
             }
@@ -465,68 +465,89 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private static IReadOnlyList<ParameterRow> GetSectionParameterRows(IReadOnlyList<string> lines)
     {
-        var tableLines = new List<string>();
-        var tableStarted = false;
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (trimmed.StartsWith('|'))
-            {
-                tableStarted = true;
-                tableLines.Add(trimmed);
-                continue;
-            }
-
-            if (tableStarted)
-            {
-                break;
-            }
-        }
-
-        if (tableLines.Count < 2)
-        {
-            return Array.Empty<ParameterRow>();
-        }
-
-        var headerCells = ConvertTableLineToCells(tableLines[0]);
-        var parameterIndex = -1;
-        var requiredIndex = -1;
-        for (var index = 0; index < headerCells.Count; index++)
-        {
-            var header = ParameterCoverageChecker.RemoveMarkup(headerCells[index]);
-            if (Regex.IsMatch(header, "(?i)^parameter$"))
-            {
-                parameterIndex = index;
-            }
-            if (Regex.IsMatch(header, "(?i)required"))
-            {
-                requiredIndex = index;
-            }
-        }
-
-        if (parameterIndex < 0 || requiredIndex < 0)
-        {
-            return Array.Empty<ParameterRow>();
-        }
-
         var rows = new List<ParameterRow>();
-        foreach (var line in tableLines.Skip(1))
+
+        static bool IsTableLine(string line)
+            => line.Trim().StartsWith('|');
+
+        static bool IsSeparatorLine(string line)
+            => Regex.IsMatch(line.Trim(), "^\\|\\s*[-: ]+\\|");
+
+        static void AddParameterRowsFromTable(List<string> sourceTableLines, List<ParameterRow> targetRows)
         {
-            if (Regex.IsMatch(line, "^\\|\\s*[-: ]+\\|"))
+            if (sourceTableLines.Count < 2)
+            {
+                return;
+            }
+
+            var headerCells = ConvertTableLineToCells(sourceTableLines[0]);
+            var parameterIndex = -1;
+            var requiredIndex = -1;
+            for (var index = 0; index < headerCells.Count; index++)
+            {
+                var header = ParameterCoverageChecker.RemoveMarkup(headerCells[index]);
+                if (Regex.IsMatch(header, "(?i)^parameter$"))
+                {
+                    parameterIndex = index;
+                }
+                if (Regex.IsMatch(header, "(?i)required"))
+                {
+                    requiredIndex = index;
+                }
+            }
+
+            if (parameterIndex < 0 || requiredIndex < 0)
+            {
+                return;
+            }
+
+            foreach (var line in sourceTableLines.Skip(1))
+            {
+                if (Regex.IsMatch(line, "^\\|\\s*[-: ]+\\|"))
+                {
+                    continue;
+                }
+
+                var cells = ConvertTableLineToCells(line);
+                if (cells.Count <= Math.Max(parameterIndex, requiredIndex))
+                {
+                    continue;
+                }
+
+                var parameterName = ParameterCoverageChecker.RemoveMarkup(cells[parameterIndex]);
+                var requiredValue = ParameterCoverageChecker.RemoveMarkup(cells[requiredIndex]);
+                var isRequired = Regex.IsMatch(requiredValue, "(?i)^(yes|✅|required\\*?)$") || Regex.IsMatch(requiredValue, "(?i)^required");
+                targetRows.Add(new ParameterRow(parameterName, requiredValue, isRequired));
+            }
+        }
+
+        for (var index = 0; index < lines.Count - 1; index++)
+        {
+            if (!IsTableLine(lines[index]) || !IsSeparatorLine(lines[index + 1]))
             {
                 continue;
             }
 
-            var cells = ConvertTableLineToCells(line);
-            if (cells.Count <= Math.Max(parameterIndex, requiredIndex))
+            var tableLines = new List<string>
             {
-                continue;
+                lines[index].Trim(),
+                lines[index + 1].Trim(),
+            };
+
+            var rowIndex = index + 2;
+            while (rowIndex < lines.Count && IsTableLine(lines[rowIndex]))
+            {
+                if (rowIndex + 1 < lines.Count && IsTableLine(lines[rowIndex]) && IsSeparatorLine(lines[rowIndex + 1]))
+                {
+                    break;
+                }
+
+                tableLines.Add(lines[rowIndex].Trim());
+                rowIndex++;
             }
 
-            var parameterName = ParameterCoverageChecker.RemoveMarkup(cells[parameterIndex]);
-            var requiredValue = ParameterCoverageChecker.RemoveMarkup(cells[requiredIndex]);
-            var isRequired = Regex.IsMatch(requiredValue, "(?i)^(yes|✅|required\\*?)$") || Regex.IsMatch(requiredValue, "(?i)^required");
-            rows.Add(new ParameterRow(parameterName, requiredValue, isRequired));
+            AddParameterRowsFromTable(tableLines, rows);
+            index = rowIndex - 1;
         }
 
         return rows;
@@ -579,7 +600,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             {
                 var suffix = missingParameters.Count > 1 ? "s" : string.Empty;
                 var joined = string.Join(", ", missingParameters.Select(parameter => $"'{parameter}'"));
-                warnings.Add($"🛑 {section.ToolKey}: missing {joined} in example prompt{suffix} (section freeze failure)");
+                warnings.Add($"⚠️ {section.ToolKey}: missing {joined} in example prompt{suffix}");
             }
         }
 
@@ -741,14 +762,14 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         reportLines.Add(string.Empty);
 
         // 6 new post-assembly checks (PRD-QUALITY Item C)
-        AppendPassFailSection(reportLines, "Related tools completeness", ctx.NewChecks.RelatedToolsIssues);
-        AppendCountSection(reportLines, "Tone markers", ctx.NewChecks.ToneMarkerWarnings, isBlocking: false);
-        AppendCountSection(reportLines, "Boilerplate redundancy", ctx.NewChecks.BoilerplateWarnings, isBlocking: false);
-        reportLines.Add(ctx.NewChecks.HasRelatedSection
+        AppendPassFailSection(reportLines, "Related tools completeness", ctx.PostAssemblyChecks.RelatedToolsIssues);
+        AppendCountSection(reportLines, "Tone markers", ctx.PostAssemblyChecks.ToneMarkerWarnings, isBlocking: false);
+        AppendCountSection(reportLines, "Boilerplate redundancy", ctx.PostAssemblyChecks.BoilerplateWarnings, isBlocking: false);
+        reportLines.Add(ctx.PostAssemblyChecks.HasRelatedSection
             ? "Related section header: ✅ present"
             : "Related section header: ⚠️ absent");
-        AppendRatioSection(reportLines, "Tool examples", ctx.NewChecks.MissingExampleIssues, ctx.Sections.Count, isBlocking: true, itemDescription: "tools have examples");
-        AppendRatioSection(reportLines, "Parameter count", ctx.NewChecks.LowParamCountWarnings, ctx.Sections.Count, isBlocking: false, itemDescription: "tools have ≥2 parameters");
+        AppendRatioSection(reportLines, "Tool examples", ctx.PostAssemblyChecks.MissingExampleIssues, ctx.Sections.Count, isBlocking: true, itemDescription: "tools have examples");
+        AppendRatioSection(reportLines, "Parameter count", ctx.PostAssemblyChecks.LowParamCountWarnings, ctx.Sections.Count, isBlocking: false, itemDescription: "tools have ≥2 parameters");
         reportLines.Add(string.Empty);
 
         if (ctx.BlockingIssues.Count == 0)
@@ -784,9 +805,10 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         IReadOnlyList<ArticleSection> sections,
         IReadOnlyList<NamespaceToolFile> toolFiles)
     {
-        // Checks that backtick terms in the related section which reference THIS family's own tools
-        // are present as H2 sections. External tool references (other namespaces, Azure CLI commands,
-        // etc.) are skipped because they won't match this family's tool keys.
+        // Checks backtick terms in the related section that match THIS family's tool keys.
+        // External references (other namespaces, Azure CLI commands, etc.) are typically skipped
+        // because they don't match this family's keys, but short or coincidentally matching
+        // terms could produce false positives.
         if (string.IsNullOrWhiteSpace(relatedSectionText))
         {
             return Array.Empty<string>();
@@ -816,8 +838,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         foreach (var term in backtickTerms)
         {
             var normalizedTerm = term.Replace(' ', '-');
+            var normalizedSegments = normalizedTerm.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            var termLastSegment = normalizedSegments.Length > 0 ? normalizedSegments[^1] : normalizedTerm;
             var isInternalTool = familyToolKeys.Any(key =>
                 string.Equals(key, normalizedTerm, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, termLastSegment, StringComparison.OrdinalIgnoreCase)
                 || key.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase));
             if (!isInternalTool)
             {
@@ -826,10 +851,12 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
             var found = sections.Any(s =>
                 s.Heading.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || s.ToolKey.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase));
+                || s.Heading.Contains(termLastSegment, StringComparison.OrdinalIgnoreCase)
+                || s.ToolKey.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase)
+                || s.ToolKey.Contains(termLastSegment, StringComparison.OrdinalIgnoreCase));
             if (!found)
             {
-                issues.Add($"⚠️ '{term}' is referenced in the related section but has no matching H2 section in this article");
+                issues.Add($"🛑 '{term}' is referenced in the related section but has no matching H2 section in this article");
             }
         }
 
@@ -840,14 +867,46 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     {
         var warnings = new List<string>();
         var normalized = articleContent.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var inFencedBlock = false;
+        var inHtmlCommentBlock = false;
         foreach (var line in normalized.Split('\n'))
         {
             var trimmed = line.Trim();
+
+            if (trimmed.StartsWith("```", StringComparison.Ordinal))
+            {
+                inFencedBlock = !inFencedBlock;
+                continue;
+            }
+
+            if (inFencedBlock)
+            {
+                continue;
+            }
+
+            if (inHtmlCommentBlock)
+            {
+                if (trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlCommentBlock = false;
+                }
+
+                continue;
+            }
+
+            if (trimmed.StartsWith("<!--", StringComparison.Ordinal))
+            {
+                if (!trimmed.Contains("-->", StringComparison.Ordinal))
+                {
+                    inHtmlCommentBlock = true;
+                }
+
+                continue;
+            }
+
             if (string.IsNullOrWhiteSpace(trimmed)
                 || trimmed.StartsWith('|')
-                || trimmed.StartsWith('#')
-                || trimmed.StartsWith("```", StringComparison.Ordinal)
-                || trimmed.StartsWith("<!-- ", StringComparison.Ordinal))
+                || trimmed.StartsWith('#'))
             {
                 continue;
             }
@@ -874,7 +933,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     private static IReadOnlyList<string> GetBoilerplateRedundancyWarnings()
     {
         // Placeholder: boilerplate redundancy check not yet implemented.
-        // Tracked for future implementation — always returns empty for now.
+        // Tracked in #662 — always returns empty for now.
         return Array.Empty<string>();
     }
 
@@ -966,7 +1025,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         bool HasRelatedSection,
         string RelatedSectionText);
 
-    private sealed record NewCheckResults(
+    private sealed record PostAssemblyCheckSummary(
         IReadOnlyList<string> RelatedToolsIssues,
         IReadOnlyList<string> ToneMarkerWarnings,
         IReadOnlyList<string> BoilerplateWarnings,
@@ -984,7 +1043,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         IReadOnlyList<string> BlockingIssues,
         IReadOnlyList<string> WarningIssues,
         IReadOnlyList<string> BrandingIssues,
-        NewCheckResults NewChecks);
+        PostAssemblyCheckSummary PostAssemblyChecks);
 
     private sealed record BrandingRule(string PatternText, string Message)
     {
