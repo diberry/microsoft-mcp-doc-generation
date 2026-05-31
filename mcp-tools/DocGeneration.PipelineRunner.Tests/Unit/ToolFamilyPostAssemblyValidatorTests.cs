@@ -259,18 +259,20 @@ public class ToolFamilyPostAssemblyValidatorTests
         ## List virtual machines
         <!-- @mcpcli compute list -->
         Example prompts include:
-        - List resources where resource group name is 'rg-one'
+        - List resources where resource group name is 'rg-one' in location 'eastus'
         | Parameter | Required |
         | --- | --- |
         | resource group name | Yes |
+        | location | No |
 
         ## Show virtual machine
         <!-- @mcpcli compute show -->
         Example prompts include:
-        - Show the VM named 'vm-one'
+        - Show the VM named 'vm-one' in resource group 'rg-one'
         | Parameter | Required |
         | --- | --- |
         | vm name | Yes |
+        | resource group name | No |
 
         ## Related content
         - Link
@@ -412,26 +414,29 @@ public class ToolFamilyPostAssemblyValidatorTests
         ## List virtual machines
         <!-- @mcpcli compute list -->
         Example prompts include:
-        - List all virtual machines
+        - List all virtual machines in resource group 'rg-one'
         | Parameter | Required |
         | --- | --- |
         | subscription | No |
+        | resource group | No |
 
         ## Show virtual machine
         <!-- @mcpcli compute show -->
         Example prompts include:
-        - Show the VM named 'vm-one'
+        - Show the VM named 'vm-one' in resource group 'rg-one'
         | Parameter | Required |
         | --- | --- |
         | vm name | Yes |
+        | resource group | No |
 
         ## Delete virtual machine
         <!-- @mcpcli compute delete -->
         Example prompts include:
-        - Delete the VM named 'vm-test'
+        - Delete the VM named 'vm-test' in resource group 'rg-dev'
         | Parameter | Required |
         | --- | --- |
         | vm name | Yes |
+        | resource group | Yes |
 
         ## Related content
         - Link
@@ -448,18 +453,20 @@ public class ToolFamilyPostAssemblyValidatorTests
         ## List virtual machines
         <!-- @mcpcli compute list -->
         Example prompts include:
-        - List all virtual machines
+        - List all virtual machines in resource group 'rg-one'
         | Parameter | Required |
         | --- | --- |
         | subscription | No |
+        | resource group | No |
 
         ## Show virtual machine
         <!-- @mcpcli compute show -->
         Example prompts include:
-        - Show the VM named 'vm-one'
+        - Show the VM named 'vm-one' in resource group 'rg-one'
         | Parameter | Required |
         | --- | --- |
         | vm name | Yes |
+        | resource group | No |
 
         ## Related content
         - Link

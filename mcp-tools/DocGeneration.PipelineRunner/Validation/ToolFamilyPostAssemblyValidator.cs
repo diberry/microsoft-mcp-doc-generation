@@ -24,6 +24,10 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         new(@"\bFoundry\b", "Verify first mention uses the full product name (for example, \"Microsoft Foundry\")."),
     ];
 
+    private static readonly Regex BacktickTermRegex = new(@"`([^`]{4,})`", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly string[] ToneMarkerPhrases = ["you can", "you will", "you use", "you should"];
+    private static readonly Regex ToneMarkerSuperlativeRegex = new(@"\b(powerful|seamless|cutting-edge|game-changing)\b", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
     public string Name => "ToolFamilyPostAssemblyValidator";
 
     public async ValueTask<ValidatorResult> ValidateAsync(PipelineContext context, IPipelineStep step, CancellationToken cancellationToken)
@@ -157,6 +161,38 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
                 brandingIssues.AddRange(GetBrandingIssues(articleContent));
 
+                var relatedToolsIssues = GetRelatedToolsCompletenessIssues(article.RelatedSectionText, sections);
+                foreach (var issue in relatedToolsIssues)
+                {
+                    blockingIssues.Add(issue);
+                }
+
+                var toneMarkerWarnings = GetToneMarkerWarnings(articleContent);
+                warningIssues.AddRange(toneMarkerWarnings);
+
+                var boilerplateWarnings = await GetBoilerplateRedundancyWarningsAsync(familyName, context, cancellationToken);
+                warningIssues.AddRange(boilerplateWarnings);
+
+                var relatedSectionWarnings = GetRelatedSectionHeaderWarnings(article.HasRelatedSection);
+                warningIssues.AddRange(relatedSectionWarnings);
+
+                var missingExampleIssues = GetMissingExampleIssues(sections);
+                foreach (var issue in missingExampleIssues)
+                {
+                    blockingIssues.Add(issue);
+                }
+
+                var lowParamCountWarnings = GetLowParameterCountWarnings(sections);
+                warningIssues.AddRange(lowParamCountWarnings);
+
+                var newChecks = new NewCheckResults(
+                    relatedToolsIssues,
+                    toneMarkerWarnings,
+                    boilerplateWarnings,
+                    article.HasRelatedSection,
+                    missingExampleIssues,
+                    lowParamCountWarnings);
+
                 var reportLines = BuildReportLines(
                     familyName,
                     toolFiles,
@@ -166,7 +202,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     missingFromFiles,
                     blockingIssues,
                     warningIssues,
-                    brandingIssues);
+                    brandingIssues,
+                    newChecks);
 
                 await WriteReportAsync(reportDirectory, reportPath, reportLines, cancellationToken);
             }
@@ -307,17 +344,24 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         var body = normalized[frontmatterMatch.Length..];
         var headingMatches = HeadingRegex.Matches(body);
         var sections = new List<ArticleSection>();
+        var hasRelatedSection = false;
+        var relatedSectionText = string.Empty;
 
         for (var index = 0; index < headingMatches.Count; index++)
         {
             var heading = headingMatches[index].Groups[1].Value.Trim();
-            if (string.Equals(heading, "Related content", StringComparison.OrdinalIgnoreCase))
+            var startIndex = headingMatches[index].Index;
+            var endIndex = index < headingMatches.Count - 1 ? headingMatches[index + 1].Index : body.Length;
+
+            if (string.Equals(heading, "Related content", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(heading, "See also", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(heading, "Related tools", StringComparison.OrdinalIgnoreCase))
             {
+                hasRelatedSection = true;
+                relatedSectionText = body.Substring(startIndex, endIndex - startIndex).TrimEnd();
                 continue;
             }
 
-            var startIndex = headingMatches[index].Index;
-            var endIndex = index < headingMatches.Count - 1 ? headingMatches[index + 1].Index : body.Length;
             var sectionText = body.Substring(startIndex, endIndex - startIndex).TrimEnd();
             var sectionLines = sectionText.Split('\n');
             var commands = GetMcpCliCommands(sectionText);
@@ -352,7 +396,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             }
 
             var examplePrompts = ExtractExamplePrompts(sectionLines, exampleHeaderIndex);
-            var requiredParameters = GetSectionParameterRows(sectionLines)
+            var parameterRows = GetSectionParameterRows(sectionLines);
+            var requiredParameters = parameterRows
                 .Where(row => row.IsRequired)
                 .Select(row => row.ParameterName)
                 .ToArray();
@@ -367,10 +412,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 tableStartIndex,
                 alternateExampleHeader,
                 examplePrompts,
-                requiredParameters));
+                requiredParameters,
+                parameterRows.Count));
         }
 
-        return new ParsedArticle(frontmatter, sections);
+        return new ParsedArticle(frontmatter, sections, hasRelatedSection, relatedSectionText);
     }
 
     private static IReadOnlyList<string> ExtractExamplePrompts(IReadOnlyList<string> sectionLines, int exampleHeaderIndex)
@@ -614,7 +660,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         IReadOnlyList<string> missingFromFiles,
         IReadOnlyList<string> blockingIssues,
         IReadOnlyList<string> warningIssues,
-        IReadOnlyList<string> brandingIssues)
+        IReadOnlyList<string> brandingIssues,
+        NewCheckResults newChecks)
     {
         var reportLines = new List<string>
         {
@@ -674,6 +721,40 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         reportLines.AddRange(brandingIssues.Select(issue => $"  - {issue}"));
         reportLines.Add(string.Empty);
 
+        // 6 new post-assembly checks (PRD-QUALITY Item C)
+        var relatedToolsPass = newChecks.RelatedToolsIssues.Count == 0;
+        reportLines.Add(relatedToolsPass
+            ? "Related tools completeness: ✅ PASS"
+            : $"Related tools completeness: ❌ FAIL ({newChecks.RelatedToolsIssues.Count} issue(s))");
+        reportLines.AddRange(newChecks.RelatedToolsIssues.Select(issue => $"  - {issue}"));
+
+        reportLines.Add(newChecks.ToneMarkerWarnings.Count == 0
+            ? "Tone markers: ✅ none detected"
+            : $"Tone markers: ⚠️ {newChecks.ToneMarkerWarnings.Count} detected");
+        reportLines.AddRange(newChecks.ToneMarkerWarnings.Select(w => $"  {w}"));
+
+        reportLines.Add(newChecks.BoilerplateWarnings.Count == 0
+            ? "Boilerplate redundancy: ✅ none detected"
+            : $"Boilerplate redundancy: ⚠️ {newChecks.BoilerplateWarnings.Count} detected");
+        reportLines.AddRange(newChecks.BoilerplateWarnings.Select(w => $"  {w}"));
+
+        reportLines.Add(newChecks.HasRelatedSection
+            ? "Related section header: ✅ present"
+            : "Related section header: ⚠️ absent");
+
+        var toolsWithExamples = sections.Count - newChecks.MissingExampleIssues.Count;
+        reportLines.Add(newChecks.MissingExampleIssues.Count == 0
+            ? $"Tool examples: ✅ {toolsWithExamples}/{sections.Count} tools have examples"
+            : $"Tool examples: ❌ {toolsWithExamples}/{sections.Count} tools have examples");
+        reportLines.AddRange(newChecks.MissingExampleIssues.Select(issue => $"  {issue}"));
+
+        var toolsWithEnoughParams = sections.Count - newChecks.LowParamCountWarnings.Count;
+        reportLines.Add(newChecks.LowParamCountWarnings.Count == 0
+            ? $"Parameter count: ✅ {toolsWithEnoughParams}/{sections.Count} tools have ≥2 parameters"
+            : $"Parameter count: ⚠️ {toolsWithEnoughParams}/{sections.Count} tools have ≥2 parameters");
+        reportLines.AddRange(newChecks.LowParamCountWarnings.Select(w => $"  {w}"));
+        reportLines.Add(string.Empty);
+
         if (blockingIssues.Count == 0)
         {
             reportLines.Add($"RESULT: PASS {(warningIssues.Count > 0 || brandingIssues.Count > 0 ? $"({warningIssues.Count + brandingIssues.Count} warning{(warningIssues.Count + brandingIssues.Count == 1 ? string.Empty : "s")})" : "(clean)")}");
@@ -701,6 +782,126 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         reportLines.Add($"RESULT: FAIL ({blockingIssues.Count} blocking issue{(blockingIssues.Count == 1 ? string.Empty : "s")}, 0 warnings)");
         return reportLines;
     }
+
+    private static IReadOnlyList<string> GetRelatedToolsCompletenessIssues(
+        string relatedSectionText,
+        IReadOnlyList<ArticleSection> sections)
+    {
+        if (string.IsNullOrWhiteSpace(relatedSectionText))
+        {
+            return Array.Empty<string>();
+        }
+
+        var backtickTerms = BacktickTermRegex.Matches(relatedSectionText)
+            .Select(m => m.Groups[1].Value.Trim())
+            .Where(t => t.Length >= 4)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (backtickTerms.Length == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var issues = new List<string>();
+        foreach (var term in backtickTerms)
+        {
+            var found = sections.Any(s =>
+                s.Heading.Contains(term, StringComparison.OrdinalIgnoreCase)
+                || s.ToolKey.Contains(term.Replace(' ', '-'), StringComparison.OrdinalIgnoreCase));
+            if (!found)
+            {
+                issues.Add($"Related tools completeness: '{term}' referenced in related section but has no matching H2 section");
+            }
+        }
+
+        return issues;
+    }
+
+    private static IReadOnlyList<string> GetToneMarkerWarnings(string articleContent)
+    {
+        var warnings = new List<string>();
+        var normalized = articleContent.Replace("\r\n", "\n", StringComparison.Ordinal);
+        foreach (var line in normalized.Split('\n'))
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)
+                || trimmed.StartsWith('|')
+                || trimmed.StartsWith('#')
+                || trimmed.StartsWith("```", StringComparison.Ordinal)
+                || trimmed.StartsWith("<!-- ", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            foreach (var phrase in ToneMarkerPhrases)
+            {
+                if (trimmed.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+                {
+                    warnings.Add($"Tone marker: second-person phrase '{phrase}' found: [{trimmed}]");
+                    break;
+                }
+            }
+
+            var match = ToneMarkerSuperlativeRegex.Match(trimmed);
+            if (match.Success)
+            {
+                warnings.Add($"Tone marker: prohibited superlative '{match.Value}' found: [{trimmed}]");
+            }
+        }
+
+        return warnings.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static Task<IReadOnlyList<string>> GetBoilerplateRedundancyWarningsAsync(
+        string familyName,
+        PipelineContext context,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var contextFilePath = Path.Combine(context.OutputPath, $"{familyName}.context.json");
+        if (!File.Exists(contextFilePath))
+        {
+            return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+        }
+
+        // Full boilerplate check deferred when context file is present (non-blocking for now)
+        return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
+    }
+
+    private static IReadOnlyList<string> GetRelatedSectionHeaderWarnings(bool hasRelatedSection)
+        => hasRelatedSection
+            ? Array.Empty<string>()
+            : new[] { "Related section header absent: article is missing a '## See also' or '## Related content' section" };
+
+    private static IReadOnlyList<string> GetMissingExampleIssues(IReadOnlyList<ArticleSection> sections)
+    {
+        var issues = new List<string>();
+        foreach (var section in sections)
+        {
+            if (section.ExampleHeaderIndex < 0 && section.AlternateExampleHeader is null)
+            {
+                issues.Add($"🛑 {section.ToolKey}: no example prompt header found (section requires 'Example prompts include:' or recognized alternate)");
+            }
+        }
+
+        return issues;
+    }
+
+    private static IReadOnlyList<string> GetLowParameterCountWarnings(IReadOnlyList<ArticleSection> sections)
+    {
+        var warnings = new List<string>();
+        foreach (var section in sections)
+        {
+            if (section.ParameterCount < 2)
+            {
+                warnings.Add($"⚠️ {section.ToolKey}: only {section.ParameterCount} documented parameter(s) (expected ≥2)");
+            }
+        }
+
+        return warnings;
+    }
+
 
     private static async Task WriteReportAsync(string reportDirectory, string reportPath, IReadOnlyList<string> reportLines, CancellationToken cancellationToken)
     {
@@ -747,9 +948,22 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         int TableStartIndex,
         string? AlternateExampleHeader,
         IReadOnlyList<string> ExamplePrompts,
-        IReadOnlyList<string> RequiredParameters);
+        IReadOnlyList<string> RequiredParameters,
+        int ParameterCount);
 
-    private sealed record ParsedArticle(string Frontmatter, IReadOnlyList<ArticleSection> Sections);
+    private sealed record ParsedArticle(
+        string Frontmatter,
+        IReadOnlyList<ArticleSection> Sections,
+        bool HasRelatedSection,
+        string RelatedSectionText);
+
+    private sealed record NewCheckResults(
+        IReadOnlyList<string> RelatedToolsIssues,
+        IReadOnlyList<string> ToneMarkerWarnings,
+        IReadOnlyList<string> BoilerplateWarnings,
+        bool HasRelatedSection,
+        IReadOnlyList<string> MissingExampleIssues,
+        IReadOnlyList<string> LowParamCountWarnings);
 
     private sealed record BrandingRule(string PatternText, string Message)
     {

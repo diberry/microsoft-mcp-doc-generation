@@ -247,11 +247,11 @@ public class PreAiValidationGateObservabilityTests
         public override async ValueTask<StepResult> ExecuteAsync(
             PipelineContext context, CancellationToken cancellationToken)
         {
-            var registry = new PreAiValidatorRegistry();
-            var stageName = $"step-{id}-pre-ai";
-            registry.Register(stageName, new TrackingValidator());
+            var registry = new ReducerRegistry();
+            registry.RegisterValidator(new TrackingValidator());
 
-            var validationResult = await registry.ValidateAsync(stageName, new object(), cancellationToken);
+            var validationResult = await ReducerRegistry.AggregateAsync(
+                registry.GetValidators<object>(), new object(), cancellationToken);
             ValidatorFired = true;
 
             var validatorResults = new[]
