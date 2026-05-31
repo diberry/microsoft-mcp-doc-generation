@@ -112,6 +112,24 @@ public class ObservabilityContractTests
     }
 
     [Fact]
+    public void WritePromptPreview_RegressionGuard_FileIsNonEmpty()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            ObservabilityWriter.WritePromptPreview(tempDir, "AI step — prompt preview not captured at pipeline level.");
+            var filePath = Path.Combine(tempDir, StageOutputContract.PromptPreviewFileName);
+            Assert.True(File.Exists(filePath), "prompt-preview.txt should exist after WritePromptPreview");
+            var content = File.ReadAllText(filePath);
+            Assert.False(string.IsNullOrWhiteSpace(content), "prompt-preview.txt should not be empty");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
     public void WritePromptPreview_CreatesFileWithExpectedContent()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"observability-writer-test-{Guid.NewGuid():N}");
