@@ -78,4 +78,51 @@ public class McpCliCommentPreservationTests
         var restored = ImprovedToolGeneratorService.RestoreMcpCliComment(aiOutput, comment);
         Assert.Contains("<!-- @mcpcli fileshares fileshare create -->", restored);
     }
+
+    // ── Issue #664 Part 3b: RemoveMcpCliComment ─────────────────────────────
+    // The protect/restore pattern requires RemoveMcpCliComment to strip the marker
+    // before the AI sees the content. These tests guard against regressions where
+    // the removal breaks existing content or fails silently on missing markers.
+
+    [Fact]
+    public void RemoveMcpCliComment_RemovesFromContent()
+    {
+        // Verify the comment is cleanly removed, other content preserved.
+        // Uses cosmos namespace to stay service-agnostic.
+        var content = "# list\n\n<!-- @mcpcli cosmos database-container list -->\n\nDescription.";
+        var result = ImprovedToolGeneratorService.RemoveMcpCliComment(content);
+        Assert.DoesNotContain("@mcpcli", result);
+        Assert.Contains("# list", result);
+        Assert.Contains("Description.", result);
+    }
+
+    [Fact]
+    public void RemoveMcpCliComment_NoComment_ReturnsUnchanged()
+    {
+        // Content without a marker must be returned verbatim — no side effects.
+        var content = "# list\n\nDescription without any comment.";
+        var result = ImprovedToolGeneratorService.RemoveMcpCliComment(content);
+        Assert.Equal(content, result);
+    }
+
+    [Fact]
+    public void RemoveThenRestore_McpCliComment_LandsAfterH1()
+    {
+        // Simulates the full protect/restore cycle:
+        //   remove → AI reorders content → restore pins comment after H1
+        // Uses monitor namespace for service variety.
+        var original = "# list\n\n<!-- @mcpcli monitor metrics list -->\n\nExample prompts include:\n- \"List metrics in workspace 'my-workspace'\"\n\n";
+        var comment = ImprovedToolGeneratorService.ExtractMcpCliComment(original);
+        var withoutComment = ImprovedToolGeneratorService.RemoveMcpCliComment(original);
+
+        // Simulate AI moving the example-prompts section above or below — comment is gone
+        var restored = ImprovedToolGeneratorService.RestoreMcpCliComment(withoutComment, comment);
+
+        var h1Index = restored.IndexOf("# list", StringComparison.Ordinal);
+        var commentIndex = restored.IndexOf("@mcpcli", StringComparison.Ordinal);
+        var exampleIndex = restored.IndexOf("Example prompts include:", StringComparison.Ordinal);
+
+        Assert.True(commentIndex > h1Index, "Comment must be after H1");
+        Assert.True(commentIndex < exampleIndex, "Comment must be before 'Example prompts include:'");
+    }
 }

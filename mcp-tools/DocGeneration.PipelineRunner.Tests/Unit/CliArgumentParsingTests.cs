@@ -25,7 +25,8 @@ public class CliArgumentParsingTests
         var result = PipelineCli.Parse(["--namespace", "compute"]);
 
         Assert.NotNull(result.Request);
-        Assert.Matches(@"^\.\\generated-compute-\d{8}T\d{9}Z$", result.Request!.OutputPath);
+        // New readable format: yyyy-MM-dd-HHmmss (e.g. generated-compute-2026-05-31-062940)
+        Assert.Matches(@"^\.\\generated-compute-\d{4}-\d{2}-\d{2}-\d{6}$", result.Request!.OutputPath);
         Assert.Equal(PipelineRequest.DefaultSteps, result.Request.Steps);
     }
 

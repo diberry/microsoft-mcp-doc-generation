@@ -367,4 +367,32 @@ public class ParameterCoverageCheckerTests
         Assert.True(result.Covered,
             "camelCase param 'outputAudio' should match 'output audio' + concrete quoted value in prompt");
     }
+
+    // ── Issue #665: --account param vs domain synonym "store" ────────
+    // The appconfig system prompt was allowing "store 'X'" as an alias for --account.
+    // The checker validates prompts contain the CLI parameter name (or a close variant),
+    // NOT just service-domain synonyms. If the LLM writes "store 'my-appconfig'" instead
+    // of "account 'my-appconfig'", validation must fail so the prompt is fixed.
+
+    [Fact]
+    public void AccountParam_AppConfigStorePrompt_ReturnsCovered()
+    {
+        // Prompt that correctly uses the CLI parameter word "account" — must be covered.
+        var prompts = new[] { "Delete the key 'my-key' from account 'my-appconfig'." };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "account", 1);
+        Assert.True(result.Covered, "Prompt with 'account' word should be covered");
+    }
+
+    [Fact]
+    public void AccountParam_DomainTermOnly_ReturnsFalse()
+    {
+        // Prompt using the domain synonym "store" but NOT the word "account".
+        // Domain synonyms are not valid substitutes for the CLI parameter name.
+        // This guards against system prompts that encourage the LLM to use service
+        // domain terms (e.g., "store", "vault", "workspace") instead of the actual
+        // CLI flag name, which causes coverage validation to block the namespace.
+        var prompts = new[] { "Delete the key 'my-key' in App Configuration store 'my-appconfig'." };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "account", 1);
+        Assert.False(result.Covered, "Prompt with only domain term 'store' but no 'account' word should not be covered");
+    }
 }

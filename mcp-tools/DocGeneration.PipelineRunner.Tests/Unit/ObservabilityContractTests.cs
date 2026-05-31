@@ -107,6 +107,31 @@ public class ObservabilityContractTests
         }
     }
 
+    // ── Issue #664 Part 3a: WritePromptPreview ──────────────────────────────
+    // AI steps must write prompt-preview.txt. This test guards against regressions
+    // where WritePromptPreview is removed or stops creating the file.
+
+    [Fact]
+    public void WritePromptPreview_CreatesFileWithContent()
+    {
+        // Regression guard for #664: ObservabilityWriter.WritePromptPreview must:
+        //   1. Create the prompt-preview.txt file in the target directory
+        //   2. Write non-empty content so the observability contract is satisfied
+        var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        try
+        {
+            ObservabilityWriter.WritePromptPreview(tempDir, "AI step — prompt preview not captured at pipeline level.");
+            var filePath = Path.Combine(tempDir, StageOutputContract.PromptPreviewFileName);
+            Assert.True(File.Exists(filePath), "prompt-preview.txt should exist after WritePromptPreview");
+            var content = File.ReadAllText(filePath);
+            Assert.False(string.IsNullOrWhiteSpace(content), "prompt-preview.txt should not be empty");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
     private static global::PipelineRunner.PipelineRunner CreateRunner(string repoRoot, BufferedReportWriter reportWriter, IPipelineStep step)
     {
         var contextFactory = new PipelineContextFactory(
