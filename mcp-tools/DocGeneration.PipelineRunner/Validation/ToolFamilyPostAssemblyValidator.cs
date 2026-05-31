@@ -14,6 +14,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     private static readonly Regex FrontmatterRegex = new(@"^---\s*\n(.*?)\n---\s*\n?", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex HeadingRegex = new(@"(?m)^##\s+(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex McpCliRegex = new(@"(?m)^\s*<!--\s*@mcpcli\s+(.+?)\s*-->$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex FencedCodeDelimiterRegex = new(@"^`{3,}(?:\s*[A-Za-z0-9_-]+)?\s*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly BrandingRule[] BrandingRules =
     [
@@ -42,6 +43,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         var blockingIssues = new List<string>();
         var warningIssues = new List<string>();
         var brandingIssues = new List<string>();
+        var requiredParamIssues = new List<string>();
         var toolFiles = Array.Empty<NamespaceToolFile>();
         var sections = Array.Empty<ArticleSection>();
         var toolFileCount = 0;
@@ -142,11 +144,10 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     blockingIssues.Add($"Cross-reference check failed. {string.Join(". ", parts)}.");
                 }
 
-                // Missing required params in example prompts are surfaced as warnings
-                // and rendered in the report's required-params section.
-                foreach (var warning in GetRequiredParameterWarnings(sections))
+                foreach (var issue in GetRequiredParameterIssues(sections))
                 {
-                    warningIssues.Add(warning);
+                    requiredParamIssues.Add(issue);
+                    blockingIssues.Add(issue);
                 }
 
                 foreach (var warning in GetExampleHeaderWarnings(sections))
@@ -202,6 +203,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     missingFromFiles,
                     blockingIssues,
                     warningIssues,
+                    requiredParamIssues,
                     brandingIssues,
                     postAssemblyChecks));
 
@@ -373,6 +375,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             var exampleHeaderIndex = -1;
             var tableStartIndex = -1;
             string? alternateExampleHeader = null;
+            var alternateExampleHeaderIndex = -1;
 
             for (var lineIndex = 0; lineIndex < sectionLines.Length; lineIndex++)
             {
@@ -392,10 +395,14 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 if (alternateExampleHeader is null && Regex.IsMatch(trimmed, "^(?i)(example prompts|example commands|usage examples|examples|try this|to .* use commands like):"))
                 {
                     alternateExampleHeader = trimmed;
+                    alternateExampleHeaderIndex = lineIndex;
                 }
             }
 
-            var examplePrompts = ExtractExamplePrompts(sectionLines, exampleHeaderIndex);
+            var examplePromptStartIndex = exampleHeaderIndex >= 0
+                ? exampleHeaderIndex
+                : alternateExampleHeaderIndex;
+            var examplePrompts = ExtractExamplePrompts(sectionLines, examplePromptStartIndex);
             var parameterRows = GetSectionParameterRows(sectionLines);
             var requiredParameters = parameterRows
                 .Where(row => row.IsRequired)
@@ -576,9 +583,9 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         => sections.GroupBy(section => section.ToolKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
 
-    private static IReadOnlyList<string> GetRequiredParameterWarnings(IEnumerable<ArticleSection> sections)
+    private static IReadOnlyList<string> GetRequiredParameterIssues(IEnumerable<ArticleSection> sections)
     {
-        var warnings = new List<string>();
+        var issues = new List<string>();
         foreach (var section in sections)
         {
             if (section.RequiredParameters.Count == 0)
@@ -600,11 +607,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             {
                 var suffix = missingParameters.Count > 1 ? "s" : string.Empty;
                 var joined = string.Join(", ", missingParameters.Select(parameter => $"'{parameter}'"));
-                warnings.Add($"⚠️ {section.ToolKey}: missing {joined} in example prompt{suffix}");
+                issues.Add($"⚠️ {section.ToolKey}: missing {joined} in example prompt{suffix}");
             }
         }
 
-        return warnings;
+        return issues;
     }
 
     private static IReadOnlyList<string> GetExampleHeaderWarnings(IEnumerable<ArticleSection> sections)
@@ -739,12 +746,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
         reportLines.Add(string.Empty);
         reportLines.Add("Required params in prompts:");
-        var requiredParamWarnings = ctx.WarningIssues.Where(issue => issue.Contains("missing", StringComparison.OrdinalIgnoreCase)).ToArray();
-        var requiredParamsPassingTools = ctx.Sections.Count - requiredParamWarnings.Length;
-        reportLines.Add(requiredParamWarnings.Length == 0
+        var requiredParamsPassingTools = ctx.Sections.Count - ctx.RequiredParamIssues.Count;
+        reportLines.Add(ctx.RequiredParamIssues.Count == 0
             ? $"  ✅ {requiredParamsPassingTools}/{ctx.Sections.Count} tools have all required params in examples"
-            : $"  ⚠️ {requiredParamsPassingTools}/{ctx.Sections.Count} tools have all required params in examples");
-        reportLines.AddRange(requiredParamWarnings.Select(warning => $"  {warning}"));
+            : $"  ❌ {requiredParamsPassingTools}/{ctx.Sections.Count} tools have all required params in examples");
+        reportLines.AddRange(ctx.RequiredParamIssues.Select(issue => $"  {issue}"));
 
         reportLines.Add(string.Empty);
         var markerWarnings = ctx.WarningIssues.Where(issue => issue.Contains("annotation marker", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -765,9 +771,10 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         AppendPassFailSection(reportLines, "Related tools completeness", ctx.PostAssemblyChecks.RelatedToolsIssues);
         AppendCountSection(reportLines, "Tone markers", ctx.PostAssemblyChecks.ToneMarkerWarnings, isBlocking: false);
         AppendCountSection(reportLines, "Boilerplate redundancy", ctx.PostAssemblyChecks.BoilerplateWarnings, isBlocking: false);
-        reportLines.Add(ctx.PostAssemblyChecks.HasRelatedSection
-            ? "Related section header: ✅ present"
-            : "Related section header: ⚠️ absent");
+        var relatedSectionIssues = ctx.PostAssemblyChecks.HasRelatedSection
+            ? Array.Empty<string>()
+            : ["Related section header absent"];
+        AppendCountSection(reportLines, "Related section header", relatedSectionIssues, isBlocking: false);
         AppendRatioSection(reportLines, "Tool examples", ctx.PostAssemblyChecks.MissingExampleIssues, ctx.Sections.Count, isBlocking: true, itemDescription: "tools have examples");
         AppendRatioSection(reportLines, "Parameter count", ctx.PostAssemblyChecks.LowParamCountWarnings, ctx.Sections.Count, isBlocking: false, itemDescription: "tools have ≥2 parameters");
         reportLines.Add(string.Empty);
@@ -837,23 +844,14 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         var issues = new List<string>();
         foreach (var term in backtickTerms)
         {
-            var normalizedTerm = term.Replace(' ', '-');
-            var normalizedSegments = normalizedTerm.Split('-', StringSplitOptions.RemoveEmptyEntries);
-            var termLastSegment = normalizedSegments.Length > 0 ? normalizedSegments[^1] : normalizedTerm;
-            var isInternalTool = familyToolKeys.Any(key =>
-                string.Equals(key, normalizedTerm, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(key, termLastSegment, StringComparison.OrdinalIgnoreCase)
-                || key.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase));
+            var normalizedTerm = ParameterCoverageChecker.ConvertToSlug(term);
+            var isInternalTool = familyToolKeys.Any(key => MatchesRelatedToolKey(key, normalizedTerm));
             if (!isInternalTool)
             {
                 continue;
             }
 
-            var found = sections.Any(s =>
-                s.Heading.Contains(term, StringComparison.OrdinalIgnoreCase)
-                || s.Heading.Contains(termLastSegment, StringComparison.OrdinalIgnoreCase)
-                || s.ToolKey.Contains(normalizedTerm, StringComparison.OrdinalIgnoreCase)
-                || s.ToolKey.Contains(termLastSegment, StringComparison.OrdinalIgnoreCase));
+            var found = sections.Any(s => MatchesRelatedToolKey(s.ToolKey, normalizedTerm));
             if (!found)
             {
                 issues.Add($"🛑 '{term}' is referenced in the related section but has no matching H2 section in this article");
@@ -873,7 +871,9 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         {
             var trimmed = line.Trim();
 
-            if (trimmed.StartsWith("```", StringComparison.Ordinal))
+            // Standard Markdown fenced blocks are supported here.
+            // Nested 3-backtick fences inside 4+ backtick fences are not supported and are not expected in generated articles.
+            if (FencedCodeDelimiterRegex.IsMatch(trimmed))
             {
                 inFencedBlock = !inFencedBlock;
                 continue;
@@ -915,7 +915,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             {
                 if (trimmed.Contains(phrase, StringComparison.OrdinalIgnoreCase))
                 {
-                    warnings.Add($"Tone marker: second-person phrase '{phrase}' found: [{trimmed}]");
+                    warnings.Add($"⚠️ Tone marker: second-person phrase '{phrase}' found: [{trimmed}]");
                     break;
                 }
             }
@@ -923,7 +923,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             var match = ToneMarkerSuperlativeRegex.Match(trimmed);
             if (match.Success)
             {
-                warnings.Add($"Tone marker: prohibited superlative '{match.Value}' found: [{trimmed}]");
+                warnings.Add($"⚠️ Tone marker: prohibited superlative '{match.Value}' found: [{trimmed}]");
             }
         }
 
@@ -940,7 +940,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     private static IReadOnlyList<string> GetRelatedSectionHeaderWarnings(bool hasRelatedSection)
         => hasRelatedSection
             ? Array.Empty<string>()
-            : new[] { "Related section header absent: article is missing a '## See also' or '## Related content' section" };
+            : new[] { "⚠️ Related section header absent: article is missing a '## See also' or '## Related content' section" };
 
     private static IReadOnlyList<string> GetMissingExampleIssues(IReadOnlyList<ArticleSection> sections)
     {
@@ -969,6 +969,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
         return warnings;
     }
+
+    private static bool MatchesRelatedToolKey(string candidateKey, string normalizedTerm)
+        => string.Equals(candidateKey, normalizedTerm, StringComparison.OrdinalIgnoreCase)
+            || normalizedTerm.EndsWith("-" + candidateKey, StringComparison.OrdinalIgnoreCase)
+            || candidateKey.EndsWith("-" + normalizedTerm, StringComparison.OrdinalIgnoreCase);
 
 
     private static async Task WriteReportAsync(string reportDirectory, string reportPath, IReadOnlyList<string> reportLines, CancellationToken cancellationToken)
@@ -1042,6 +1047,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         IReadOnlyList<string> MissingFromFiles,
         IReadOnlyList<string> BlockingIssues,
         IReadOnlyList<string> WarningIssues,
+        IReadOnlyList<string> RequiredParamIssues,
         IReadOnlyList<string> BrandingIssues,
         PostAssemblyCheckSummary PostAssemblyChecks);
 

@@ -50,7 +50,8 @@ public class ToolFamilyPostAssemblyValidatorTests
 
             Assert.True(result.Success);
             Assert.Contains(result.Warnings, warning =>
-                warning.Contains("Tone marker", StringComparison.Ordinal)
+                warning.StartsWith("⚠️ Tone marker", StringComparison.Ordinal)
+                && warning.Contains("Tone marker", StringComparison.Ordinal)
                 && warning.Contains("you can", StringComparison.OrdinalIgnoreCase));
         }
         finally
@@ -74,7 +75,8 @@ public class ToolFamilyPostAssemblyValidatorTests
 
             Assert.True(result.Success);
             Assert.Contains(result.Warnings, warning =>
-                warning.Contains("Tone marker", StringComparison.Ordinal)
+                warning.StartsWith("⚠️ Tone marker", StringComparison.Ordinal)
+                && warning.Contains("Tone marker", StringComparison.Ordinal)
                 && warning.Contains("you can", StringComparison.OrdinalIgnoreCase));
         }
         finally
@@ -121,6 +123,27 @@ public class ToolFamilyPostAssemblyValidatorTests
 
             Assert.True(result.Success);
             Assert.DoesNotContain(result.Warnings, warning => warning.Contains("Tone marker", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_UnbalancedFencedBlock_DoesNotThrow()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithUnbalancedFencedBlock());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.NotNull(result);
         }
         finally
         {
@@ -241,7 +264,8 @@ public class ToolFamilyPostAssemblyValidatorTests
 
             Assert.True(result.Success);
             Assert.Contains(result.Warnings, warning =>
-                warning.Contains("Related section", StringComparison.Ordinal)
+                warning.StartsWith("⚠️ Related section", StringComparison.Ordinal)
+                && warning.Contains("Related section", StringComparison.Ordinal)
                 && warning.Contains("absent", StringComparison.OrdinalIgnoreCase));
         }
         finally
@@ -323,6 +347,31 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_SectionWithNoParameterTable_TotalParameterCountIsZero()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithNoParameterTable());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                warning.Contains("list", StringComparison.OrdinalIgnoreCase)
+                && (warning.Contains("0 documented parameter", StringComparison.OrdinalIgnoreCase)
+                    || warning.Contains("only 0", StringComparison.OrdinalIgnoreCase)));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task ValidateAsync_BlockingFailure_ReturnsFailedResult()
     {
         var testRoot = CreateTestRoot();
@@ -348,7 +397,7 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
-    public async Task ValidateAsync_WarningScenario_AccumulatesWarnings()
+    public async Task ValidateAsync_MissingRequiredParam_IsBlockingAndRenderedAsBlockingInReport()
     {
         var testRoot = CreateTestRoot();
         try
@@ -361,13 +410,40 @@ public class ToolFamilyPostAssemblyValidatorTests
             var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
             var reportText = File.ReadAllText(Path.Combine(context.OutputPath, "reports", "tool-family-validation-compute.txt"));
 
-            Assert.True(result.Success);
+            Assert.False(result.Success);
             Assert.Contains(result.Warnings, warning => warning.Contains("example prompt header is Examples:", StringComparison.Ordinal));
-            Assert.Contains(result.Warnings, warning => warning.Contains("missing 'resource group name'", StringComparison.Ordinal));
+            Assert.Contains(result.Warnings, warning =>
+                warning.StartsWith("Blocking: ⚠️", StringComparison.Ordinal)
+                && warning.Contains("missing 'resource group name'", StringComparison.Ordinal));
             Assert.Contains(result.Warnings, warning => warning.Contains("Branding: Use \"this tool\" instead of \"this command\".", StringComparison.Ordinal));
             Assert.Contains("Required params in prompts:", reportText, StringComparison.Ordinal);
-            Assert.Contains("⚠️ 0/1 tools have all required params in examples", reportText, StringComparison.Ordinal);
-            Assert.DoesNotContain("RESULT: FAIL", reportText, StringComparison.Ordinal);
+            Assert.Contains("❌ 0/1 tools have all required params in examples", reportText, StringComparison.Ordinal);
+            Assert.Contains("RESULT: FAIL", reportText, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_UnrelatedMultiwordRelatedTerm_DoesNotMatchByLastSegment()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-vm-show.md"), "compute vm show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithUnrelatedMultiwordRelatedToolReference());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning =>
+                warning.Contains("compute host show", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("related section", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -599,6 +675,29 @@ public class ToolFamilyPostAssemblyValidatorTests
         | --- | --- |
         | resource group | Yes |
         | location | No |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string ArticleWithUnbalancedFencedBlock()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List virtual machines in resource group 'rg-one' for location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | Yes |
+        | location | No |
+        ```csharp
+        var command = "compute list --resource-group rg-one";
 
         ## Related content
         - Link
@@ -853,6 +952,24 @@ public class ToolFamilyPostAssemblyValidatorTests
         - Link
         """;
 
+    private static string ArticleWithNoParameterTable()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List virtual machines in resource group 'rg-one'
+        - Show virtual machines in location 'eastus'
+
+        ## Related content
+        - Link
+        """;
+
     private static string WarningArticleContent()
         => """
         ---
@@ -866,13 +983,43 @@ public class ToolFamilyPostAssemblyValidatorTests
         ## List virtual machines
         <!-- @mcpcli compute list -->
         Examples:
-        - List resources with <resource-group-name>
+        - List all compute resources in the current environment
         | Parameter | Required |
         | --- | --- |
         | resource group name | Yes |
 
         ## Related content
         - Link
+        """;
+
+    private static string ArticleWithUnrelatedMultiwordRelatedToolReference()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List virtual machines where resource group name is 'rg-one' in location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## Show VM details
+        <!-- @mcpcli compute vm show -->
+        Example prompts include:
+        - Show the VM named 'vm-one' in resource group 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+        | resource group | No |
+
+        ## Related content
+        - For a different workflow, see `compute host show`.
         """;
 
     private static void SeedToolFile(string path, string command)
@@ -900,7 +1047,7 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
-    public async Task ValidateAsync_GroupedArticleWithH2CategoriesAndH3Tools_CountsMarkers()
+    public async Task ValidateAsync_FlatArticleWithThreeToolSections_CountsMarkers()
     {
         var testRoot = CreateTestRoot();
         try
@@ -909,7 +1056,7 @@ public class ToolFamilyPostAssemblyValidatorTests
             SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
             SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
             SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-delete.md"), "compute delete");
-            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), GroupedArticleWithCategories());
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), FlatArticleWithThreeToolSections());
 
             var validator = new ToolFamilyPostAssemblyValidator();
             var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
@@ -930,7 +1077,7 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
-    public async Task ValidateAsync_GroupedArticleWithCorrectMarkerCount_PassesValidation()
+    public async Task ValidateAsync_FlatArticleWithCorrectMarkerCount_PassesValidation()
     {
         var testRoot = CreateTestRoot();
         try
@@ -938,7 +1085,7 @@ public class ToolFamilyPostAssemblyValidatorTests
             var context = CreateContext(testRoot);
             SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
             SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
-            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), GroupedArticleWithCorrectCount());
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), FlatArticleWithCorrectCount());
 
             var validator = new ToolFamilyPostAssemblyValidator();
             var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
@@ -958,7 +1105,7 @@ public class ToolFamilyPostAssemblyValidatorTests
         }
     }
 
-    private static string GroupedArticleWithCategories()
+    private static string FlatArticleWithThreeToolSections()
         => """
         ---
         title: Compute tools
@@ -997,7 +1144,7 @@ public class ToolFamilyPostAssemblyValidatorTests
         - Link
         """;
 
-    private static string GroupedArticleWithCorrectCount()
+    private static string FlatArticleWithCorrectCount()
         => """
         ---
         title: Compute tools
