@@ -26,34 +26,12 @@ public class StitcherAcrolinxIntegrationTests
         };
     }
 
-    // ── AcronymExpander is applied (replaces old MCP-only expander) ──
-
-    [Fact]
-    public void Stitch_ExpandsVMAcronymOnFirstUse()
-    {
-        var content = CreateTestContent(
-            "---\ntitle: Azure MCP Server tools for Compute\n---\n\n# Azure MCP Server tools for Compute\n\nThe Azure MCP Server manages VM resources.",
-            "## List VMs\n\nList all VM instances in the subscription. Each VM has a unique ID.");
-
-        var stitcher = new FamilyFileStitcher();
-        var result = stitcher.Stitch(content);
-
-        // AcronymExpander should expand VM on first body occurrence
-        Assert.Contains("virtual machine (VM)", result);
-    }
-
-    [Fact]
-    public void Stitch_ExpandsMcpAcronymOnFirstUse()
-    {
-        var content = CreateTestContent(
-            "---\ntitle: Azure MCP Server tools for Storage\n---\n\n# Azure MCP Server tools for Storage\n\nThe Azure MCP Server manages storage.",
-            "## List accounts\n\nUse Azure MCP Server to list accounts.");
-
-        var stitcher = new FamilyFileStitcher();
-        var result = stitcher.Stitch(content);
-
-        Assert.Contains("Model Context Protocol (MCP)", result);
-    }
+    // ── AcronymExpander and ContractionFixer moved to Step 3 AI ────────────
+    // These fixers are no longer called from FamilyFileStitcher.Stitch().
+    // The Step 3 AI system prompt (system-prompt.txt) now handles:
+    //   - MCP and VM acronym expansion on first body use
+    //   - Contractions per Microsoft style guide
+    // See StitcherStep3PromptHandlingTests for the new contract tests.
 
     // ── PresentTenseFixer is applied ────────────────────────────────
 
@@ -89,26 +67,13 @@ public class StitcherAcrolinxIntegrationTests
         Assert.Contains("By default, it", result);
     }
 
-    // ── ContractionFixer still works ────────────────────────────────
+    // ── Contraction/acronym expansion handled by Step 3 AI, not Stitch ──
+    // See StitcherStep3PromptHandlingTests for the contract tests.
+
+    // ── Full pipeline integration — remaining fixers in sequence ────
 
     [Fact]
-    public void Stitch_StillAppliesContractions()
-    {
-        var content = CreateTestContent(
-            "---\ntitle: Test\n---\n\n# Test\n\nIntro paragraph.",
-            "## Test tool\n\nThis tool does not support filtering. It is not available.");
-
-        var stitcher = new FamilyFileStitcher();
-        var result = stitcher.Stitch(content);
-
-        Assert.Contains("doesn't", result);
-        Assert.Contains("isn't", result);
-    }
-
-    // ── Full pipeline integration — all fixers in sequence ──────────
-
-    [Fact]
-    public void Stitch_FullPipeline_AllFixersApplied()
+    public void Stitch_FullPipeline_DeterministicFixersApplied()
     {
         var content = CreateTestContent(
             "---\ntitle: Azure MCP Server tools for Compute\n---\n\n# Azure MCP Server tools for Compute\n\nThe Azure MCP Server manages VM resources.",
@@ -117,21 +82,18 @@ public class StitcherAcrolinxIntegrationTests
         var stitcher = new FamilyFileStitcher();
         var result = stitcher.Stitch(content);
 
-        // AcronymExpander: MCP and VM expanded
-        Assert.Contains("Model Context Protocol (MCP)", result);
-        Assert.Contains("virtual machine (VM)", result);
         // PresentTenseFixer: "will return" → "returns"
         Assert.Contains("returns all", result);
         // IntroductoryCommaFixer: "For example you" → "For example, you"
         Assert.Contains("For example, you", result);
-        // ContractionFixer: "does not" → "doesn't"
-        Assert.Contains("doesn't", result);
+        // ContractionFixer and AcronymExpander are now Step 3 AI responsibilities
+        // (see StitcherStep3PromptHandlingTests)
     }
 
-    // ── Order matters: PresentTenseFixer before ContractionFixer ────
+    // ── Order matters: PresentTenseFixer applied; ContractionFixer is not ──
 
     [Fact]
-    public void Stitch_PresentTenseBeforeContractions_WillNotBe_BecomesIsnt()
+    public void Stitch_PresentTenseApplied_WillNotBe_BecomesIsNot()
     {
         var content = CreateTestContent(
             "---\ntitle: Test\n---\n\n# Test\n\nIntro.",
@@ -141,9 +103,12 @@ public class StitcherAcrolinxIntegrationTests
         var result = stitcher.Stitch(content);
 
         // PresentTenseFixer: "will not be" → "is not"
-        // ContractionFixer: "is not" → "isn't"
-        Assert.Contains("isn't", result);
+        // ContractionFixer is no longer in the chain — "is not" stays as-is
+        // (Step 3 AI handles contractions upstream)
+        Assert.Contains("is not returned", result);
         Assert.DoesNotContain("will not", result);
+        // Stitch does NOT further contract "is not" → "isn't"
+        Assert.DoesNotContain("isn't returned", result);
     }
 
     // ── JsonSchemaCollapser is applied (Acrolinx P1) ────────────────

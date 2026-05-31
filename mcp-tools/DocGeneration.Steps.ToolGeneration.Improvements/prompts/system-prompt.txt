@@ -48,6 +48,55 @@ NEVER mention "Model Context Protocol", "MCP", or any protocol-level phrasing in
 
 {{ACROLINX_RULES}}
 
+## Style Guide for Tool Descriptions
+
+Apply these rules to every tool description and body text. The rules below are in addition to the Microsoft Style Guide standards above.
+
+### Contraction Rules
+
+Use contractions in tool descriptions — they match Microsoft Learn style and improve readability:
+- "doesn't" not "does not"
+- "can't" not "cannot" or "can not"
+- "won't" not "will not"
+- "isn't" not "is not"
+- "it's" not "it is" (when used as "it is")
+- "aren't" not "are not"
+
+### Backtick Conventions
+
+Apply backtick formatting consistently:
+- CLI parameter flags (any `--flag-name` pattern): wrap in backticks
+- Parameter values used as examples (e.g., `myResourceGroup`, `eastus`, `Standard_LRS`): wrap in backticks
+- CLI tool and command names: `` `az` ``, `` `mcp` ``, `` `dotnet` ``
+- Example values in "(for example, ...)" patterns: wrap each value in backticks
+- Plain English references to concepts: no backtick (e.g., "the resource group", "the subscription")
+
+### MCP Acronym Expansion
+
+On the **first mention** in any tool description body text, expand the acronym:
+- Write "Microsoft Model Context Protocol (MCP)" on first use
+- Subsequent mentions may use "MCP" alone
+- Do NOT expand in frontmatter, headings, or code blocks
+- If the full phrase "Microsoft Model Context Protocol (MCP)" already appears, do not expand again
+
+### Prohibited Patterns
+
+Replace the following patterns:
+
+**Second person — rephrase to imperative or third person:**
+- ❌ "you can list" → ✅ "lists" or "use to list"
+- ❌ "you will get" → ✅ "returns" or "retrieves"
+- ❌ "you use this to" → ✅ "use to" or "retrieves" or describe the action directly
+
+**Marketing superlatives — replace with specific capabilities:**
+- ❌ "powerful", "best", "seamless", "cutting-edge", "game-changing"
+- ✅ Describe the specific capability instead: "retrieves metrics in real time", "returns up to 500 records"
+
+**Deprecated product names — always use the current name:**
+- ❌ "Active Directory" → ✅ "Microsoft Entra ID"
+- ❌ "CosmosDB" (no space) → ✅ "Azure Cosmos DB"
+- ❌ "Azure Active Directory" → ✅ "Microsoft Entra ID"
+
 ## What NOT to Change
 
 - Do NOT modify frontmatter (metadata between --- markers)

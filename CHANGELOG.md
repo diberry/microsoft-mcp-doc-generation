@@ -8,6 +8,17 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **PRD-QUALITY Item A: Step 3 style guide** — `system-prompt.txt` for `ToolGenerationStep` now includes a "Style Guide for Tool Descriptions" section covering contraction rules (Microsoft Learn style), backtick conventions (CLI flags, example values, tool names), MCP acronym expansion on first body mention, and prohibited patterns (second-person phrases, marketing superlatives, deprecated product names). `user-prompt-template.txt` adds "Tone Consistency Heuristics" for active voice, lead-with-action, and avoiding service-level context in per-tool descriptions. `cli-prose-system-prompt.txt` updated with matching backtick conventions and prohibited patterns.
+- **PRD-QUALITY Item A: TDD contract tests** — `StitcherStep3PromptHandlingTests.cs` added with 6 tests defining the new contract: `FamilyFileStitcher.Stitch()` does NOT apply contractions, MCP acronym expansion, VM acronym expansion, or bare example-value backtick wrapping (these are now Step 3 AI responsibilities).
+
+### Changed
+
+- **PRD-QUALITY Item A: FamilyFileStitcher reduced from 17 to 14 steps** — Three redundant post-processing steps removed from `FamilyFileStitcher.Stitch()` because Step 3 AI prompts now handle these upstream:
+  - Removed `AcronymExpander.ExpandAll` (former step 4) — AI now expands MCP/VM on first body use
+  - Removed `ContractionFixer.Fix` (former step 9) — AI now produces contractions per Microsoft style
+  - Removed `ExampleValueBackticker.Fix` (former step 11) — AI now wraps example values in backticks
+  - Token delta: 0% (prompt changes affect AI quality, not tool-file character counts measured by `--inspect`)
+
 - **P10: Pre-AI seam validators** — Registered `IPreAiValidator` implementations for pipeline steps 3, 4, and 6 using the `PreAiValidatorRegistry` from P9. Five validators added:
   - `ToolGenerationContextValidator` — validates `ToolName`, `ComposedContent` non-empty, `SchemaVersion == "1.0"` before step 3 AI calls.
   - `ToolGenerationBudgetValidator` — enforces 100,000-token input budget (via `ComposedContent.Length / 4`) before step 3 AI calls.
