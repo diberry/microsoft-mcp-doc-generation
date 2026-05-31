@@ -247,12 +247,14 @@ public class PreAiValidationGateObservabilityTests
         public override async ValueTask<StepResult> ExecuteAsync(
             PipelineContext context, CancellationToken cancellationToken)
         {
-            var registry = new PreAiValidatorRegistry();
-            var stageName = $"step-{id}-pre-ai";
-            registry.Register(stageName, new TrackingValidator());
+            var registry = new ReducerRegistry();
+            var tracker = new TrackingValidator();
+            registry.RegisterValidator(tracker);
 
-            var validationResult = await registry.ValidateAsync(stageName, new object(), cancellationToken);
-            ValidatorFired = true;
+            var validators = registry.GetValidators<object>();
+            var validationResult = await ReducerRegistry.AggregateAsync(
+                validators, new object(), cancellationToken);
+            ValidatorFired = tracker.WasCalled;
 
             var validatorResults = new[]
             {
@@ -285,9 +287,14 @@ public class PreAiValidationGateObservabilityTests
 
     private sealed class TrackingValidator : IPreAiValidator<object>
     {
+        public bool WasCalled { get; private set; }
+
         public Task<PreAiValidationResult> ValidateAsync(
             object context, CancellationToken cancellationToken)
-            => Task.FromResult(PreAiValidationResult.Pass());
+        {
+            WasCalled = true;
+            return Task.FromResult(PreAiValidationResult.Pass());
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
