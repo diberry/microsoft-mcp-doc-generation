@@ -146,7 +146,7 @@ run_monitor_workbooks() {
         bash "$SCRIPT_DIR/merge-namespaces.sh"
         success "Merge complete"
     else
-        error "merge-namespaces.sh not found — skipping merge step"
+        info "merge-namespaces.sh not found — skipping merge step"
     fi
 }
 
@@ -168,11 +168,25 @@ case "$TARGET" in
         ;;
     all-problematic)
         info "Running full focus regression pass (5 targets)"
-        run_monitor_workbooks
-        run_namespace "storage"   "${START_ARGS[@]+"${START_ARGS[@]}"}"
-        run_namespace "functions" "${START_ARGS[@]+"${START_ARGS[@]}"}"
-        run_namespace "appconfig" "${START_ARGS[@]+"${START_ARGS[@]}"}"
-        run_namespace "cosmos"    "${START_ARGS[@]+"${START_ARGS[@]}"}"
+        OVERALL_EXIT=0
+        run_namespace "monitor"   "${START_ARGS[@]+"${START_ARGS[@]}"}" || OVERALL_EXIT=$?
+        run_namespace "workbooks" "${START_ARGS[@]+"${START_ARGS[@]}"}" || OVERALL_EXIT=$?
+        if [[ -f "$SCRIPT_DIR/merge-namespaces.sh" ]]; then
+            print_header "merge: monitor + workbooks"
+            info "Running merge-namespaces.sh"
+            bash "$SCRIPT_DIR/merge-namespaces.sh" || OVERALL_EXIT=$?
+            success "Merge complete"
+        else
+            info "merge-namespaces.sh not found — skipping merge step"
+        fi
+        run_namespace "storage"   "${START_ARGS[@]+"${START_ARGS[@]}"}" || OVERALL_EXIT=$?
+        run_namespace "functions" "${START_ARGS[@]+"${START_ARGS[@]}"}" || OVERALL_EXIT=$?
+        run_namespace "appconfig" "${START_ARGS[@]+"${START_ARGS[@]}"}" || OVERALL_EXIT=$?
+        run_namespace "cosmos"    "${START_ARGS[@]+"${START_ARGS[@]}"}" || OVERALL_EXIT=$?
+        if [[ $OVERALL_EXIT -ne 0 ]]; then
+            error "One or more targets failed in all-problematic pass (exit $OVERALL_EXIT)"
+            exit $OVERALL_EXIT
+        fi
         ;;
     *)
         error "Unknown target: '$TARGET'"
