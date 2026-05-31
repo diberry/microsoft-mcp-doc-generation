@@ -236,6 +236,7 @@ public class ImprovedToolGeneratorService
         var frozenContent = ProtectExamplePromptSections(context.ComposedContent, out var sectionMap);
         frozenContent = ProtectParameterTable(frozenContent, out var paramTableMap);
         var mcpCliComment = ExtractMcpCliComment(context.ComposedContent);
+        frozenContent = RemoveMcpCliComment(frozenContent);
         var protectedContent = ProtectTemplateLabels(frozenContent, out var labelMap);
         var userPrompt = string.Format(userPromptTemplate, protectedContent);
         userPrompt = AppendRequiredParameterPreservationInstruction(userPrompt, requiredParameters);
@@ -609,6 +610,17 @@ public class ImprovedToolGeneratorService
     {
         var match = McpCliCommentRegex.Match(content);
         return match.Success ? match.Value : null;
+    }
+
+    /// <summary>
+    /// Removes the @mcpcli command comment from content so the AI cannot move it.
+    /// Always used with <see cref="RestoreMcpCliComment"/> to reinject at the correct position.
+    /// </summary>
+    internal static string RemoveMcpCliComment(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return content;
+        return McpCliCommentRegex.Replace(content, string.Empty);
     }
 
     /// <summary>
