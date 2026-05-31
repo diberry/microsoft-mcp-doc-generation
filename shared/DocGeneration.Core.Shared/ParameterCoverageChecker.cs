@@ -260,7 +260,9 @@ public static class ParameterCoverageChecker
             return string.Empty;
         }
 
-        var slug = Regex.Replace(clean.ToLowerInvariant(), "[^a-z0-9]+", "-");
+        // Split camelCase/PascalCase before lowercasing so "outputAudio" → "output-audio"
+        var split = Regex.Replace(clean, "([a-z])([A-Z])", "$1-$2");
+        var slug = Regex.Replace(split.ToLowerInvariant(), "[^a-z0-9]+", "-");
         return slug.Trim('-');
     }
 
