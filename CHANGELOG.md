@@ -8,6 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`start.sh` now copies the repo-root `.env` into `mcp-tools/.env` before running the pipeline** — the script now fails immediately with a clear message when `.env` is missing at the repo root, instead of letting credential validation fail later in bootstrap.
+
 - **BootstrapStep no longer fails when a newer prerelease of `azure.mcp` is already installed** — `mcp-tool-version.txt` at repo root is now the single source of truth for the azure.mcp version. `BootstrapStep` reads this file and passes `--version` to `dotnet tool update`, preventing a downgrade from `3.0.0-beta.15` to the latest stable `2.0.2`. "Already at this version" exit codes are treated as success. `run-focus.sh` also reads from the same file. When the file is absent, the previous behaviour (update to latest) is preserved with a warning.
 
 - **Cosmos regeneration no longer downgrades `azure.mcp` from prerelease to stable** — `run-focus.sh` now pre-installs `azure.mcp@3.0.0-beta.15` before dispatching any namespace and always forwards `--skip-npm-update` to `start.sh`, preventing `BootstrapStep` from attempting a conflicting stable-tool downgrade during focus runs.
