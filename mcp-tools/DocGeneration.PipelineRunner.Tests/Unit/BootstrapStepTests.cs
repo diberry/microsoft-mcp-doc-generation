@@ -375,6 +375,34 @@ public class BootstrapStepTests
     }
 
     [Fact]
+    public async Task ReadMcpToolVersionAsync_ReturnsNull_WhenFileEmpty()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"mcp-ver-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir, "mcp-tool-version.txt"), "");
+            var version = await BootstrapStep.ReadMcpToolVersionAsync(tempDir, CancellationToken.None);
+            Assert.Null(version);
+        }
+        finally { Directory.Delete(tempDir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task ReadMcpToolVersionAsync_ReturnsNull_WhenFileWhitespaceOnly()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"mcp-ver-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir, "mcp-tool-version.txt"), "   \n  \t  \n");
+            var version = await BootstrapStep.ReadMcpToolVersionAsync(tempDir, CancellationToken.None);
+            Assert.Null(version);
+        }
+        finally { Directory.Delete(tempDir, recursive: true); }
+    }
+
+    [Fact]
     public async Task ExecuteAsync_EmitsNamespaceMappingJson_AfterSuccessfulBootstrap()
     {
         // Bootstrap with a brand mapping that includes the "compute" namespace from the test CLI output.

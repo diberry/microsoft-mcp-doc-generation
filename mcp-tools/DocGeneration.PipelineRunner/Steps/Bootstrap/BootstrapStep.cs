@@ -382,7 +382,8 @@ public sealed class BootstrapStep : StepDefinition
         if (!File.Exists(versionFile))
             return null;
         var content = await File.ReadAllTextAsync(versionFile, cancellationToken);
-        return content.Trim();
+        var trimmed = content.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 
     private static bool NeedsAiConfiguration(PipelineContext context)
