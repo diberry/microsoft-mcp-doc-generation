@@ -215,7 +215,7 @@ public class HorizontalArticleGenerator
         _useTextTransformation = useTextTransformation;
         _generateAllArticles = generateAllArticles;
         _transformationEngine = transformationEngine;
-        _mcpToolsRoot = mcpToolsRoot;
+        _mcpToolsRoot = string.IsNullOrWhiteSpace(mcpToolsRoot) ? null : Path.GetFullPath(mcpToolsRoot);
         _outputBasePath = outputBasePath != null ? Path.GetFullPath(outputBasePath) : DefaultOutputBase;
         _cliOutputPath = Path.Combine(_outputBasePath, "cli", "cli-output.json");
         _outputDir = Path.Combine(_outputBasePath, "horizontal-articles");

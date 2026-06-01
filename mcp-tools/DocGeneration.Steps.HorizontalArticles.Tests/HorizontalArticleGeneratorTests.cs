@@ -132,6 +132,19 @@ public class HorizontalArticleGeneratorTests : IDisposable
         Assert.Equal(expectedCwdBased, resolved);
     }
 
+    [Fact]
+    public void Constructor_WithoutMcpToolsRoot_FallsBackToCwdForTemplatePath()
+    {
+        // Subprocess path: generator created without mcpToolsRoot falls back to CWD-relative resolution
+        var generator = CreateGenerator();
+
+        var resolved = generator.GetTemplatePath("horizontal-article-template.hbs");
+
+        var expectedCwdBased = Path.GetFullPath(
+            Path.Combine(".", "DocGeneration.Steps.HorizontalArticles", "templates", "horizontal-article-template.hbs"));
+        Assert.Equal(expectedCwdBased, resolved);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
 
     private ArticleGenerator CreateGenerator()
