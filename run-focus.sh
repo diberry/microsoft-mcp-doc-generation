@@ -16,6 +16,19 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Resolve dotnet on PATH for Git Bash on Windows (no-op on Linux/macOS/CI)
+if ! command -v dotnet &>/dev/null; then
+    for _dotnet_dir in "/c/Program Files/dotnet" "${LOCALAPPDATA:-}/Microsoft/dotnet"; do
+        if [[ -x "$_dotnet_dir/dotnet" ]]; then
+            export PATH="$_dotnet_dir:$PATH"
+            break
+        fi
+    done
+    if ! command -v dotnet &>/dev/null; then
+        echo "WARNING: dotnet not found on PATH — commands may fail" >&2
+    fi
+fi
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
