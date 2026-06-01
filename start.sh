@@ -25,9 +25,21 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$ROOT_DIR"
 NAMESPACE_ARG=""
 STEPS_ARG="1,2,3,4,5,6"
 EXTRA_ARGS=()
+
+ENV_SOURCE="$SCRIPT_DIR/.env"
+ENV_TARGET="$SCRIPT_DIR/mcp-tools/.env"
+
+if [[ -f "$ENV_SOURCE" ]]; then
+    cp "$ENV_SOURCE" "$ENV_TARGET"
+    echo "[start] Copied .env → mcp-tools/.env"
+else
+    echo "[start] ERROR: .env not found at repo root. Create .env with FOUNDRY_API_KEY, FOUNDRY_ENDPOINT, FOUNDRY_MODEL_NAME." >&2
+    exit 1
+fi
 
 # If first arg starts with -, pass all args through directly to DocGeneration.PipelineRunner
 if [[ $# -gt 0 && "$1" =~ ^- ]]; then
