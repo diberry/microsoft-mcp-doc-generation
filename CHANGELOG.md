@@ -8,6 +8,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Cosmos regeneration no longer downgrades `azure.mcp` from prerelease to stable** — `run-focus.sh` now pre-installs `azure.mcp@3.0.0-beta.15` before dispatching any namespace and always forwards `--skip-npm-update` to `start.sh`, preventing `BootstrapStep` from attempting a conflicting stable-tool downgrade during focus runs.
+
 - **#673: MCP Server tab now appears before CLI tab** — `CliTabWrapper.BuildTabBlock()` previously emitted the Azure MCP CLI tab first, then the MCP Server tab. The order is now corrected: MCP Server tab is emitted first, followed by the Azure MCP CLI tab. All existing `CliTabWrapperTests` updated to reflect the new ordering; new unit test `WrapWithTabs_McpServerTabAppearsBeforeCliTab` added. Resolves #673.
 
 - **#664A: `prompt-preview.txt` never written for AI/Hybrid pipeline steps** — `ObservabilityWriter.WritePromptPreview()` added and called for all non-deterministic steps (Steps 2, 3, 4, 6) in `PipelineRunner.WriteObservabilityOutputs()`. Previously only deterministic steps wrote `prompt-preview-na.txt`, leaving AI/Hybrid steps without the file `StageOutputContract` expected, causing a spurious "observability contract missing file" warning on every AI step run. The new method writes a pipeline-level placeholder (`"AI step — prompt preview not captured at pipeline level."`) that satisfies the contract. Test `RunAsync_AiStep_MissingPromptPreviewLogsWarning` renamed to `RunAsync_AiStep_WritesPromptPreviewAndNoContractWarning` and updated to assert the file is present and no contract warning is emitted; `WritePromptPreview_CreatesFileWithExpectedContent` unit test added. Resolves #664 sub-issue A.
