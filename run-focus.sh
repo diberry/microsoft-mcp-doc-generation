@@ -22,11 +22,24 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 RESET='\033[0m'
 
+MCP_VERSION="3.0.0-beta.15"
+
 # ── helpers ──────────────────────────────────────────────────────────────────
 
 info()    { echo -e "${YELLOW}[run-focus] $*${RESET}"; }
 success() { echo -e "${GREEN}[run-focus] $*${RESET}"; }
 error()   { echo -e "${RED}[run-focus] ERROR: $*${RESET}" >&2; }
+
+ensure_mcp_version() {
+    info "Ensuring azure.mcp@${MCP_VERSION} is installed..."
+    if dotnet tool update --global azure.mcp --version "$MCP_VERSION" 2>/dev/null; then
+        success "azure.mcp updated to ${MCP_VERSION}"
+    elif dotnet tool install --global azure.mcp --version "$MCP_VERSION" 2>/dev/null; then
+        success "azure.mcp installed at ${MCP_VERSION}"
+    else
+        error "azure.mcp@${MCP_VERSION} is already at this version or install failed — continuing"
+    fi
+}
 
 print_header() {
     local label="$1"
@@ -132,6 +145,7 @@ done
 # Build the args array to forward to start.sh
 START_ARGS=()
 [[ -n "$STEPS" ]] && START_ARGS+=("$STEPS")
+START_ARGS+=("--skip-npm-update")
 START_ARGS+=("${EXTRA_FLAGS[@]+"${EXTRA_FLAGS[@]}"}")
 
 # ── dispatch ──────────────────────────────────────────────────────────────────
@@ -150,9 +164,11 @@ run_monitor_workbooks() {
     fi
 }
 
+ensure_mcp_version
+
 case "$TARGET" in
     monitor-workbooks)
-        run_monitor_workbooks
+    run_monitor_workbooks
         ;;
     storage)
         run_namespace "storage" "${START_ARGS[@]+"${START_ARGS[@]}"}"

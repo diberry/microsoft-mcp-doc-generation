@@ -138,6 +138,17 @@ Each namespace writes to its own `generated-{namespace}/` directory with no shar
 # Check: generated-advisor/reports/tool-family-validation-*.txt
 ```
 
+## Focus Regression Helper
+
+`run-focus.sh` is a thin convenience wrapper for high-friction namespace combinations such as `cosmos`, `storage`, and `monitor-workbooks`.
+
+```bash
+./run-focus.sh cosmos
+./run-focus.sh storage 3,4 --dry-run
+```
+
+Before dispatching any namespace, `run-focus.sh` ensures `azure.mcp@3.0.0-beta.15` is installed and always forwards `--skip-npm-update` to `start.sh`. This keeps focus runs on the expected prerelease tool version and prevents `BootstrapStep` from trying to downgrade to the latest stable package during regeneration.
+
 ## Post-Assembly Merge (AD-011)
 
 After all namespaces complete, `start.sh` automatically calls `merge-namespaces.sh` to combine multi-namespace tool-family articles. This is config-driven via `brand-to-server-mapping.json` merge fields.
