@@ -123,18 +123,42 @@ public sealed class BootstrapStep : StepDefinition
 
             if (!context.Request.SkipNpmUpdate)
             {
-                context.Reports.Info("Updating azure.mcp dotnet tool to latest version...");
-                var latestInstallResult = await context.ProcessRunner.RunAsync(
-                    new ProcessSpec("dotnet", ["tool", "update", "azure.mcp", "--global"], context.RepoRoot),
-                    cancellationToken);
-                processResults.Add(latestInstallResult);
-                if (!latestInstallResult.Succeeded)
+                var pinnedVersion = await ReadMcpToolVersionAsync(context.RepoRoot, cancellationToken);
+                if (pinnedVersion is not null)
                 {
-                    AddProcessIssue(latestInstallResult, warnings, "Failed to update azure.mcp dotnet tool globally — use --skip-tool-update for offline or reproducible builds");
-                    return BuildResult(context, processResults, success: false, warnings);
-                }
+                    context.Reports.Info($"Installing azure.mcp@{pinnedVersion} from mcp-tool-version.txt...");
+                    var versionedInstallResult = await context.ProcessRunner.RunAsync(
+                        new ProcessSpec("dotnet", ["tool", "update", "azure.mcp", "--global", "--version", pinnedVersion], context.RepoRoot),
+                        cancellationToken);
+                    processResults.Add(versionedInstallResult);
 
-                context.Reports.Info("azure.mcp dotnet tool updated to latest.");
+                    var combinedOutput = versionedInstallResult.StandardOutput + versionedInstallResult.StandardError;
+                    var alreadyAtVersion = !versionedInstallResult.Succeeded &&
+                        combinedOutput.Contains("already", StringComparison.OrdinalIgnoreCase);
+
+                    if (!versionedInstallResult.Succeeded && !alreadyAtVersion)
+                    {
+                        AddProcessIssue(versionedInstallResult, warnings, $"Failed to install azure.mcp@{pinnedVersion} — use --skip-tool-update for offline or reproducible builds");
+                        return BuildResult(context, processResults, success: false, warnings);
+                    }
+
+                    context.Reports.Info($"azure.mcp@{pinnedVersion} is ready.");
+                }
+                else
+                {
+                    context.Reports.Warning("mcp-tool-version.txt not found — updating azure.mcp to latest version (add mcp-tool-version.txt for reproducible builds).");
+                    var latestInstallResult = await context.ProcessRunner.RunAsync(
+                        new ProcessSpec("dotnet", ["tool", "update", "azure.mcp", "--global"], context.RepoRoot),
+                        cancellationToken);
+                    processResults.Add(latestInstallResult);
+                    if (!latestInstallResult.Succeeded)
+                    {
+                        AddProcessIssue(latestInstallResult, warnings, "Failed to update azure.mcp dotnet tool globally — use --skip-tool-update for offline or reproducible builds");
+                        return BuildResult(context, processResults, success: false, warnings);
+                    }
+
+                    context.Reports.Info("azure.mcp dotnet tool updated to latest.");
+                }
             }
             else
             {
@@ -346,6 +370,19 @@ public sealed class BootstrapStep : StepDefinition
             warnings.Add(ex.Message);
             return BuildResult(context, processResults, success: false, warnings);
         }
+    }
+
+    /// <summary>
+    /// Reads the pinned azure.mcp tool version from <c>mcp-tool-version.txt</c> in the repo root.
+    /// Returns <c>null</c> if the file does not exist, signalling a fallback to the latest version.
+    /// </summary>
+    internal static async ValueTask<string?> ReadMcpToolVersionAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        var versionFile = Path.Combine(repoRoot, "mcp-tool-version.txt");
+        if (!File.Exists(versionFile))
+            return null;
+        var content = await File.ReadAllTextAsync(versionFile, cancellationToken);
+        return content.Trim();
     }
 
     private static bool NeedsAiConfiguration(PipelineContext context)

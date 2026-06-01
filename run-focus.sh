@@ -35,7 +35,10 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 RESET='\033[0m'
 
-MCP_VERSION="3.0.0-beta.15"
+MCP_VERSION="3.0.0-beta.15"  # Pinned in mcp-tool-version.txt — edit that file to change the version
+if [[ -f "$SCRIPT_DIR/mcp-tool-version.txt" ]]; then
+    MCP_VERSION="$(tr -d '[:space:]' < "$SCRIPT_DIR/mcp-tool-version.txt")"
+fi
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 

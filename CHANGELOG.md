@@ -8,6 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **BootstrapStep no longer fails when a newer prerelease of `azure.mcp` is already installed** — `mcp-tool-version.txt` at repo root is now the single source of truth for the azure.mcp version. `BootstrapStep` reads this file and passes `--version` to `dotnet tool update`, preventing a downgrade from `3.0.0-beta.15` to the latest stable `2.0.2`. "Already at this version" exit codes are treated as success. `run-focus.sh` also reads from the same file. When the file is absent, the previous behaviour (update to latest) is preserved with a warning.
+
+### Fixed
+
 - **Cosmos regeneration no longer downgrades `azure.mcp` from prerelease to stable** — `run-focus.sh` now pre-installs `azure.mcp@3.0.0-beta.15` before dispatching any namespace and always forwards `--skip-npm-update` to `start.sh`, preventing `BootstrapStep` from attempting a conflicting stable-tool downgrade during focus runs.
 
 - **#673: MCP Server tab now appears before CLI tab** — `CliTabWrapper.BuildTabBlock()` previously emitted the Azure MCP CLI tab first, then the MCP Server tab. The order is now corrected: MCP Server tab is emitted first, followed by the Azure MCP CLI tab. All existing `CliTabWrapperTests` updated to reflect the new ordering; new unit test `WrapWithTabs_McpServerTabAppearsBeforeCliTab` added. Resolves #673.
