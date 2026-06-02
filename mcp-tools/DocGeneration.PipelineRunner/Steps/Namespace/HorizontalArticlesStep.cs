@@ -202,7 +202,8 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             useTextTransformation: transformationEngine is not null,
             generateAllArticles: false,
             transformationEngine,
-            outputBasePath: context.OutputPath);
+            outputBasePath: context.OutputPath,
+            mcpToolsRoot: context.McpToolsRoot);
         return generator.GenerateArticleMarkdownAsync;
     }
 

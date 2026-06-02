@@ -96,6 +96,9 @@ Step 6: Horizontal Articles (AI) ───────────────�
   │  • One overview article per namespace: capabilities, scenarios,
   │    prerequisites, RBAC roles, best practices
   │  • ArticleContentProcessor validates and transforms AI output
+  │  • Prompt/template paths are resolved via HorizontalArticleGenerator(
+  │    mcpToolsRoot: context.McpToolsRoot) — always anchored to mcp-tools/
+  │    regardless of the process working directory
   │
   ▼
 Step 7: Article Health Validation (non-blocking) ──────────────────

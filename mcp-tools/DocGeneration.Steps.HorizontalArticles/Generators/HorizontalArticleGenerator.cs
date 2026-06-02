@@ -56,9 +56,9 @@ public class HorizontalArticleGenerator
 
             // Use per-tool + namespace-summary approach when new prompt files are present.
             // Fall back to legacy single-call if Sage's prompt files haven't landed yet.
-            var toolSystemPromptPath = Path.GetFullPath(TOOL_SYSTEM_PROMPT_PATH);
-            var toolUserPromptPath   = Path.GetFullPath(TOOL_USER_PROMPT_PATH);
-            var namespaceUserPromptPath = Path.GetFullPath(NAMESPACE_USER_PROMPT_PATH);
+            var toolSystemPromptPath = GetPromptPath(TOOL_SYSTEM_PROMPT_FILE);
+            var toolUserPromptPath   = GetPromptPath(TOOL_USER_PROMPT_FILE);
+            var namespaceUserPromptPath = GetPromptPath(NAMESPACE_USER_PROMPT_FILE);
 
             if (!File.Exists(toolSystemPromptPath) || !File.Exists(toolUserPromptPath) || !File.Exists(namespaceUserPromptPath))
             {
@@ -162,25 +162,50 @@ public class HorizontalArticleGenerator
         }
     }
     private static string DefaultOutputBase => Path.GetFullPath("../generated");
+
+    // Prompt and template file names (relative to project subdir)
+    private const string PROJECT_SUBDIR = "DocGeneration.Steps.HorizontalArticles";
+    private const string SYSTEM_PROMPT_FILE = "horizontal-article-system-prompt.txt";
+    private const string USER_PROMPT_FILE = "horizontal-article-user-prompt.txt";
+    private const string TEMPLATE_FILE = "horizontal-article-template.hbs";
+    private const string TOOL_SYSTEM_PROMPT_FILE = "horizontal-article-tool-system-prompt.txt";
+    private const string TOOL_USER_PROMPT_FILE = "horizontal-article-tool-user-prompt.txt";
+    private const string NAMESPACE_USER_PROMPT_FILE = "horizontal-article-namespace-user-prompt.txt";
+
     private readonly string _cliOutputPath;
     private readonly string _outputDir;
     private readonly string _promptOutputDir;
     private readonly string _outputBasePath;
-    private const string SYSTEM_PROMPT_PATH = "./DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-system-prompt.txt";
-    private const string USER_PROMPT_PATH = "./DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-user-prompt.txt";
-    private const string TEMPLATE_PATH = "./DocGeneration.Steps.HorizontalArticles/templates/horizontal-article-template.hbs";
 
-    // Per-tool AI call prompts (written by Sage; may not exist yet — generator falls back gracefully)
-    private const string TOOL_SYSTEM_PROMPT_PATH = "./DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-tool-system-prompt.txt";
-    private const string TOOL_USER_PROMPT_PATH = "./DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-tool-user-prompt.txt";
-    private const string NAMESPACE_USER_PROMPT_PATH = "./DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-namespace-user-prompt.txt";
-    
+    // When set, all prompt/template paths are resolved relative to this root (mcp-tools/).
+    // When null, falls back to CWD-relative resolution (correct when running as subprocess
+    // where the working directory is already set to mcp-tools/).
+    private readonly string? _mcpToolsRoot;
+
     private readonly GenerativeAIClient _aiClient;
     private readonly bool _useTextTransformation;
     private readonly bool _generateAllArticles;
     private readonly TransformationEngine? _transformationEngine;
 
-    public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, TransformationEngine? transformationEngine = null, string? outputBasePath = null)
+    /// <summary>
+    /// Resolves a prompt file path.  When <c>mcpToolsRoot</c> was supplied to the constructor
+    /// the path is anchored to that directory; otherwise it resolves from the current working
+    /// directory (the correct behaviour when running as a dotnet subprocess with CWD = mcp-tools/).
+    /// </summary>
+    internal string GetPromptPath(string fileName) =>
+        _mcpToolsRoot is not null
+            ? Path.Combine(_mcpToolsRoot, PROJECT_SUBDIR, "prompts", fileName)
+            : Path.GetFullPath(Path.Combine(".", PROJECT_SUBDIR, "prompts", fileName));
+
+    /// <summary>
+    /// Resolves a template file path using the same strategy as <see cref="GetPromptPath"/>.
+    /// </summary>
+    internal string GetTemplatePath(string fileName) =>
+        _mcpToolsRoot is not null
+            ? Path.Combine(_mcpToolsRoot, PROJECT_SUBDIR, "templates", fileName)
+            : Path.GetFullPath(Path.Combine(".", PROJECT_SUBDIR, "templates", fileName));
+
+    public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, TransformationEngine? transformationEngine = null, string? outputBasePath = null, string? mcpToolsRoot = null)
     {
         if (string.IsNullOrEmpty(options.ApiKey)) throw new InvalidOperationException("FOUNDRY_API_KEY not set");
         if (string.IsNullOrEmpty(options.Endpoint)) throw new InvalidOperationException("FOUNDRY_ENDPOINT not set");
@@ -190,6 +215,7 @@ public class HorizontalArticleGenerator
         _useTextTransformation = useTextTransformation;
         _generateAllArticles = generateAllArticles;
         _transformationEngine = transformationEngine;
+        _mcpToolsRoot = string.IsNullOrWhiteSpace(mcpToolsRoot) ? null : Path.GetFullPath(mcpToolsRoot);
         _outputBasePath = outputBasePath != null ? Path.GetFullPath(outputBasePath) : DefaultOutputBase;
         _cliOutputPath = Path.Combine(_outputBasePath, "cli", "cli-output.json");
         _outputDir = Path.Combine(_outputBasePath, "horizontal-articles");
@@ -465,8 +491,8 @@ public class HorizontalArticleGenerator
     private async Task<string> GenerateAIContent(StaticArticleData staticData)
     {
         // Load prompts
-        var systemPromptPath = Path.GetFullPath(SYSTEM_PROMPT_PATH);
-        var userPromptPath = Path.GetFullPath(USER_PROMPT_PATH);
+        var systemPromptPath = GetPromptPath(SYSTEM_PROMPT_FILE);
+        var userPromptPath = GetPromptPath(USER_PROMPT_FILE);
         
         var systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
         systemPrompt = PromptTokenResolver.Resolve(systemPrompt, Path.Combine(AppContext.BaseDirectory, "data"));
@@ -551,8 +577,8 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         string serviceIdentifier,
         int toolIndex)
     {
-        var systemPromptPath = Path.GetFullPath(TOOL_SYSTEM_PROMPT_PATH);
-        var userPromptPath   = Path.GetFullPath(TOOL_USER_PROMPT_PATH);
+        var systemPromptPath = GetPromptPath(TOOL_SYSTEM_PROMPT_FILE);
+        var userPromptPath   = GetPromptPath(TOOL_USER_PROMPT_FILE);
 
         if (!File.Exists(systemPromptPath) || !File.Exists(userPromptPath))
         {
@@ -644,8 +670,8 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         StaticArticleData staticData,
         IReadOnlyList<PerToolAIData> perToolResults)
     {
-        var systemPromptPath = Path.GetFullPath(SYSTEM_PROMPT_PATH);
-        var userPromptPath   = Path.GetFullPath(NAMESPACE_USER_PROMPT_PATH);
+        var systemPromptPath = GetPromptPath(SYSTEM_PROMPT_FILE);
+        var userPromptPath   = GetPromptPath(NAMESPACE_USER_PROMPT_FILE);
 
         if (!File.Exists(userPromptPath))
         {
@@ -894,7 +920,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 
     private async Task<string> RenderArticleAsync(HorizontalArticleTemplateData templateData)
     {
-        var templatePath = Path.GetFullPath(TEMPLATE_PATH);
+        var templatePath = GetTemplatePath(TEMPLATE_FILE);
         
         // Manually build dictionary with correct field names (including genai- prefix)
         var data = new Dictionary<string, object>
