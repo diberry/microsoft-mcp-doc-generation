@@ -246,10 +246,10 @@ public class P1BugRegressionTests
         Assert.Equal(1, markerCount);
     }
 
-    // ── Bug #190: Backticks on "for example" values ─────────────────────
+    // ── Bug #190: Backticks on "for example" values — now handled by Step 3 AI ──
 
     [Fact]
-    public void Stitch_BareExampleValues_WrappedInBackticksByPipeline()
+    public void Stitch_BareExampleValues_PassthroughUnchanged_UpstreamAIHandles()
     {
         // Arrange — parameter table with bare (for example, ...) values
         var toolContent = string.Join("\n",
@@ -275,11 +275,13 @@ public class P1BugRegressionTests
         // Act
         var result = stitcher.Stitch(familyContent);
 
-        // Assert — bare values wrapped in backticks by ExampleValueBackticker (step 9)
-        Assert.Contains("(for example, `myserver.database.windows.net`)", result);
-        Assert.Contains("(for example, `mydb`)", result);
-        Assert.DoesNotContain("(for example, myserver.database.windows.net)", result);
-        Assert.DoesNotContain("(for example, mydb)", result);
+        // Assert — ExampleValueBackticker is no longer in FamilyFileStitcher.
+        // Step 3 AI is responsible for backtick wrapping upstream.
+        // Bare values pass through Stitch unchanged.
+        Assert.Contains("(for example, myserver.database.windows.net)", result);
+        Assert.Contains("(for example, mydb)", result);
+        Assert.DoesNotContain("(for example, `myserver.database.windows.net`)", result);
+        Assert.DoesNotContain("(for example, `mydb`)", result);
     }
 
     [Fact]
@@ -314,7 +316,7 @@ public class P1BugRegressionTests
     }
 
     [Fact]
-    public void Stitch_CommaSeparatedExampleValues_EachWrapped()
+    public void Stitch_CommaSeparatedExampleValues_PassthroughUnchanged_UpstreamAIHandles()
     {
         // Arrange — parameter with comma-separated bare values
         var toolContent = string.Join("\n",
@@ -335,8 +337,10 @@ public class P1BugRegressionTests
         // Act
         var result = stitcher.Stitch(familyContent);
 
-        // Assert — each comma-separated value wrapped individually
-        Assert.Contains("(for example, `Availability`, `CpuAnalysis`, `MemoryAnalysis`)", result);
+        // Assert — ExampleValueBackticker removed; bare values pass through Stitch unchanged.
+        // Step 3 AI is responsible for backtick wrapping upstream.
+        Assert.Contains("(for example, Availability, CpuAnalysis, MemoryAnalysis)", result);
+        Assert.DoesNotContain("(for example, `Availability`, `CpuAnalysis`, `MemoryAnalysis`)", result);
     }
 
     [Theory]
@@ -345,7 +349,7 @@ public class P1BugRegressionTests
     [InlineData("sql", "myserver.database.windows.net")]
     [InlineData("aks", "my-cluster")]
     [InlineData("storage", "mystorageaccount")]
-    public void Stitch_VariousServices_ExampleValuesWrapped(string service, string exampleValue)
+    public void Stitch_VariousServices_ExampleValuesPassthroughUnchanged(string service, string exampleValue)
     {
         var toolContent = string.Join("\n",
             $"## Resource get",
@@ -365,8 +369,10 @@ public class P1BugRegressionTests
         // Act
         var result = stitcher.Stitch(familyContent);
 
-        // Assert — example value wrapped in backticks
-        Assert.Contains($"(for example, `{exampleValue}`)", result);
+        // Assert — ExampleValueBackticker removed; bare values pass through Stitch unchanged.
+        // Step 3 AI is responsible for backtick wrapping upstream.
+        Assert.Contains($"(for example, {exampleValue})", result);
+        Assert.DoesNotContain($"(for example, `{exampleValue}`)", result);
     }
 
     // ── Integration: All bug fixes work together ────────────────────────
@@ -429,9 +435,9 @@ public class P1BugRegressionTests
         var markerCount = Regex.Matches(result, @"<!-- @mcpcli .+? -->").Count;
         Assert.Equal(2, markerCount);
 
-        // Assert Bug #190: Example values wrapped in backticks
-        Assert.Contains("(for example, `rg-prod`)", result);
-        Assert.Contains("(for example, `mystorageaccount`)", result);
+        // Note: Example value backtick wrapping is now handled upstream by Step 3 AI.
+        // FamilyFileStitcher no longer wraps bare example values — see
+        // Stitch_BareExampleValues_PassthroughUnchanged_UpstreamAIHandles for the new contract.
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────

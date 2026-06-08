@@ -25,7 +25,7 @@ public class CliArgumentParsingTests
         var result = PipelineCli.Parse(["--namespace", "compute"]);
 
         Assert.NotNull(result.Request);
-        Assert.Matches(@"^\.\\generated-compute-\d{8}T\d{9}Z$", result.Request!.OutputPath);
+        Assert.Matches(@"^\.\\generated-compute-\d{4}-\d{2}-\d{2}-\d{6}$", result.Request!.OutputPath);
         Assert.Equal(PipelineRequest.DefaultSteps, result.Request.Steps);
     }
 
@@ -64,7 +64,7 @@ public class CliArgumentParsingTests
         var result = PipelineCli.Parse(["--namespace", "compute", "--steps", "0,9"]);
 
         Assert.Null(result.Request);
-        Assert.Contains(result.Errors, error => error.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", StringComparison.Ordinal));
+        Assert.Contains(result.Errors, error => error.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-8.", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -84,7 +84,37 @@ public class CliArgumentParsingTests
 
         Assert.False(handlerCalled);
         Assert.Equal(global::PipelineRunner.PipelineRunner.InvalidArgumentsExitCode, exitCode);
-        Assert.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-6.", errorWriter.ToString(), StringComparison.Ordinal);
+        Assert.Contains("Unsupported step identifiers: 9. Valid step identifiers: 0-8.", errorWriter.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_InspectWithExplicitOutput_SetsWriteJsonOutputTrue()
+    {
+        var result = PipelineCli.Parse([
+            "--inspect",
+            "--step", "horizontal-articles",
+            "--namespace", "advisor",
+            "--show", "prompt-budget",
+            "--output", ".\\generated-advisor"]);
+
+        Assert.NotNull(result.Request);
+        Assert.True(result.Request!.Inspect);
+        Assert.Equal("horizontal-articles", result.Request.ReplayStepName);
+        Assert.True(result.Request.WriteJsonOutput, "WriteJsonOutput should be true when --output is explicitly provided in inspect mode");
+    }
+
+    [Fact]
+    public void Parse_InspectWithoutOutput_SetsWriteJsonOutputFalse()
+    {
+        var result = PipelineCli.Parse([
+            "--inspect",
+            "--step", "horizontal-articles",
+            "--namespace", "advisor",
+            "--show", "prompt-budget"]);
+
+        Assert.NotNull(result.Request);
+        Assert.True(result.Request!.Inspect);
+        Assert.False(result.Request.WriteJsonOutput, "WriteJsonOutput should be false when --output is omitted in inspect mode");
     }
 
     [Fact]

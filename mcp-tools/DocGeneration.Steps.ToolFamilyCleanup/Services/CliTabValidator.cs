@@ -26,6 +26,8 @@ public static class CliTabValidator
         int cliTabCount = 0;
         int tabTerminatorCount = 0;
         bool inTabGroup = false;
+        bool cliTabSeenInCurrentGroup = false;
+        bool mcpTabSeenInCurrentGroup = false;
         int lineNum = 0;
 
         foreach (var rawLine in lines)
@@ -33,23 +35,31 @@ public static class CliTabValidator
             lineNum++;
             var line = rawLine.TrimEnd('\r').Trim();
 
-            if (line == "#### [MCP Server](#tab/mcp-server)")
+            if (line == "#### [Azure MCP CLI](#tab/azure-mcp-cli)")
             {
                 if (inTabGroup)
-                    errors.Add($"Line {lineNum}: Nested tab group detected (MCP Server tab opened inside existing tab group).");
-                mcpTabCount++;
-                inTabGroup = true;
-            }
-            else if (line == "#### [Azure MCP CLI](#tab/azure-mcp-cli)")
-            {
-                if (!inTabGroup)
-                    errors.Add($"Line {lineNum}: CLI tab opened without preceding MCP Server tab.");
+                    errors.Add($"Line {lineNum}: Nested tab group detected (Azure MCP CLI tab opened inside existing tab group).");
                 cliTabCount++;
+                inTabGroup = true;
+                cliTabSeenInCurrentGroup = true;
+                mcpTabSeenInCurrentGroup = false;
+            }
+            else if (line == "#### [MCP Server](#tab/mcp-server)")
+            {
+                if (!inTabGroup || !cliTabSeenInCurrentGroup)
+                    errors.Add($"Line {lineNum}: MCP Server tab opened without preceding Azure MCP CLI tab.");
+                else if (mcpTabSeenInCurrentGroup)
+                    errors.Add($"Line {lineNum}: Nested tab group detected (MCP Server tab opened twice in the same tab group).");
+
+                mcpTabCount++;
+                mcpTabSeenInCurrentGroup = true;
             }
             else if (line == "---" && inTabGroup)
             {
                 tabTerminatorCount++;
                 inTabGroup = false;
+                cliTabSeenInCurrentGroup = false;
+                mcpTabSeenInCurrentGroup = false;
             }
         }
 

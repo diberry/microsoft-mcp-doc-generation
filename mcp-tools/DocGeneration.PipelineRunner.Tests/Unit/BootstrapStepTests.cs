@@ -256,20 +256,24 @@ public class BootstrapStepTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_RunsNpmInstallLatestBeforePinnedInstall()
+    public async Task ExecuteAsync_InstallsLatestPackageBeforeMetadataRun()
     {
         using var harness = CreateHarness();
 
         var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
 
         Assert.True(result.Success);
+        // With mcp-tool-version.txt present (default harness has "3.0.0-beta.15"), the versioned command is used.
         var latestIdx = harness.ProcessRunner.Invocations.FindIndex(
-            s => s.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]));
-        var pinnedIdx = harness.ProcessRunner.Invocations.FindIndex(
-            s => s.Arguments.SequenceEqual(["install", "--silent"]));
-        Assert.True(latestIdx >= 0, "Expected npm install @azure/mcp@latest --save to be invoked.");
-        Assert.True(pinnedIdx >= 0, "Expected npm install --silent to be invoked.");
-        Assert.True(latestIdx < pinnedIdx, "Latest install must run before pinned install.");
+            s => s.FileName == "dotnet" &&
+                 s.Arguments.Count == 6 &&
+                 s.Arguments.Take(4).SequenceEqual(["tool", "update", "azure.mcp", "--global"]) &&
+                 s.Arguments[4] == "--version");
+        var metadataIdx = harness.ProcessRunner.Invocations.FindIndex(
+            s => s.FileName == "dotnet" && s.Arguments.Any(a => a.EndsWith("McpCliMetadata.csproj", StringComparison.OrdinalIgnoreCase)));
+        Assert.True(latestIdx >= 0, "Expected dotnet tool update azure.mcp --global --version <ver> to be invoked.");
+        Assert.True(metadataIdx >= 0, "Expected McpCliMetadata dotnet run to be invoked.");
+        Assert.True(latestIdx < metadataIdx, "dotnet tool update must run before metadata generation.");
     }
 
     [Fact]
@@ -282,7 +286,7 @@ public class BootstrapStepTests
         Assert.True(result.Success);
         Assert.DoesNotContain(
             harness.ProcessRunner.Invocations,
-            s => s.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]));
+            s => s.FileName == "dotnet" && s.Arguments.Contains("azure.mcp"));
         var messages = ((BufferedReportWriter)harness.Context.Reports).Messages;
         Assert.Contains(messages, m => m.Contains("--skip-npm-update", StringComparison.Ordinal));
     }
@@ -295,7 +299,136 @@ public class BootstrapStepTests
         var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
 
         Assert.False(result.Success);
-        Assert.Contains(result.Warnings, w => w.Contains("latest @azure/mcp", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Warnings, w => w.Contains("azure.mcp", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_McpVersionFilePinned_UsesVersionedCommand()
+    {
+        using var harness = CreateHarness(mcpToolVersionFileContent: "3.0.0-beta.15");
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        var versionedInvocation = harness.ProcessRunner.Invocations.FirstOrDefault(
+            s => s.FileName == "dotnet" &&
+                 s.Arguments.Count == 6 &&
+                 s.Arguments.Take(4).SequenceEqual(["tool", "update", "azure.mcp", "--global"]) &&
+                 s.Arguments[4] == "--version" &&
+                 s.Arguments[5] == "3.0.0-beta.15");
+        Assert.NotNull(versionedInvocation);
+        // Must NOT use the bare (latest) form
+        Assert.DoesNotContain(
+            harness.ProcessRunner.Invocations,
+            s => s.FileName == "dotnet" && s.Arguments.SequenceEqual(["tool", "update", "azure.mcp", "--global"]));
+        var messages = ((BufferedReportWriter)harness.Context.Reports).Messages;
+        Assert.Contains(messages, m => m.Contains("azure.mcp@3.0.0-beta.15", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_McpVersionFileAlreadyInstalled_TreatsAsSuccess()
+    {
+        // Simulate dotnet tool update returning exit code 1 with "already installed" in stderr.
+        using var harness = CreateHarness(alreadyInstalledVersion: "3.0.0-beta.15");
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_McpVersionFileMissing_FallsBackToLatest()
+    {
+        // Pass null to suppress mcp-tool-version.txt creation.
+        using var harness = CreateHarness(mcpToolVersionFileContent: null);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        // Should fall back to bare dotnet tool update without --version
+        var bareInvocation = harness.ProcessRunner.Invocations.FirstOrDefault(
+            s => s.FileName == "dotnet" && s.Arguments.SequenceEqual(["tool", "update", "azure.mcp", "--global"]));
+        Assert.NotNull(bareInvocation);
+        var messages = ((BufferedReportWriter)harness.Context.Reports).Messages;
+        Assert.Contains(messages, m => m.Contains("mcp-tool-version.txt", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ReadMcpToolVersionAsync_ReturnsVersion_WhenFileExists()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"mcp-ver-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir, "mcp-tool-version.txt"), "3.0.0-beta.15\n");
+            var version = await BootstrapStep.ReadMcpToolVersionAsync(tempDir, CancellationToken.None);
+            Assert.Equal("3.0.0-beta.15", version);
+        }
+        finally { Directory.Delete(tempDir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task ReadMcpToolVersionAsync_ReturnsNull_WhenFileMissing()
+    {
+        var version = await BootstrapStep.ReadMcpToolVersionAsync(Path.GetTempPath() + $"\\nonexistent-{Guid.NewGuid():N}", CancellationToken.None);
+        Assert.Null(version);
+    }
+
+    [Fact]
+    public async Task ReadMcpToolVersionAsync_ReturnsNull_WhenFileEmpty()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"mcp-ver-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir, "mcp-tool-version.txt"), "");
+            var version = await BootstrapStep.ReadMcpToolVersionAsync(tempDir, CancellationToken.None);
+            Assert.Null(version);
+        }
+        finally { Directory.Delete(tempDir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task ReadMcpToolVersionAsync_ReturnsNull_WhenFileWhitespaceOnly()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"mcp-ver-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            File.WriteAllText(Path.Combine(tempDir, "mcp-tool-version.txt"), "   \n  \t  \n");
+            var version = await BootstrapStep.ReadMcpToolVersionAsync(tempDir, CancellationToken.None);
+            Assert.Null(version);
+        }
+        finally { Directory.Delete(tempDir, recursive: true); }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_EmitsNamespaceMappingJson_AfterSuccessfulBootstrap()
+    {
+        // Bootstrap with a brand mapping that includes the "compute" namespace from the test CLI output.
+        // The ScriptedProcessRunner returns name="compute list" for the tool — integration test asserts
+        // against the Name field (matching real production data where Name is the tool identifier).
+        using var harness = CreateHarness(
+            brandMappingJson: """[{"mcpServerName":"compute","brandName":"Azure Compute","shortName":"Compute","fileName":"azure-compute"}]""");
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        var mappingPath = Path.Combine(harness.Context.OutputPath, "namespace-mapping.json");
+        Assert.True(File.Exists(mappingPath), "namespace-mapping.json was not created in the output directory.");
+
+        // Validate that the compute namespace is present with the expected tool name.
+        // ScriptedProcessRunner returns name="compute list" — the emitter uses Name when non-empty.
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(mappingPath));
+        var root = doc.RootElement;
+        Assert.True(root.TryGetProperty("namespaces", out var namespaces));
+        Assert.True(namespaces.TryGetProperty("compute", out var computeNs));
+        var tools = computeNs.GetProperty("tools").EnumerateArray().Select(t => t.GetString()).ToArray();
+        Assert.Contains("compute list", tools);  // Name field from ScriptedProcessRunner
+
+        // unmatched_tools array must be present (may be empty when all tools are matched)
+        Assert.True(root.TryGetProperty("unmatched_tools", out var unmatchedTools));
+        Assert.Equal(0, unmatchedTools.GetArrayLength());
     }
 
     private static TestHarness CreateHarness(
@@ -308,18 +441,30 @@ public class BootstrapStepTests
         bool aiConfigured = true,
         ICliMetadataLoader? cliMetadataLoader = null,
         IReadOnlyList<string>? selectedNamespaces = null,
-        string? brandMappingJson = null)
+        string? brandMappingJson = null,
+        string? mcpToolVersionFileContent = "3.0.0-beta.15",
+        string? alreadyInstalledVersion = null)
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-bootstrap-tests-{Guid.NewGuid():N}");
         var mcpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
         Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
         Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "azure-mcp"));
-        Directory.CreateDirectory(Path.Combine(repoRoot, "test-npm-azure-mcp"));
+        Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "McpCliMetadata"));
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-cli-metadata"));
+        File.WriteAllText(Path.Combine(mcpToolsRoot, "McpCliMetadata", "McpCliMetadata.csproj"), "<Project />");
         File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
         File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), brandMappingJson ?? "[]");
         File.WriteAllText(Path.Combine(mcpToolsRoot, "azure-mcp", "azmcp-commands.md"), "# Commands");
+        if (mcpToolVersionFileContent is not null)
+        {
+            File.WriteAllText(Path.Combine(repoRoot, "mcp-tool-version.txt"), mcpToolVersionFileContent);
+        }
 
-        var processRunner = new ScriptedProcessRunner { FailNpmLatestInstall = failNpmLatestInstall };
+        var processRunner = new ScriptedProcessRunner
+        {
+            FailNpmLatestInstall = failNpmLatestInstall,
+            AlreadyInstalledVersion = alreadyInstalledVersion,
+        };
         var buildCoordinator = new RecordingBuildCoordinator();
         var aiCapabilityProbe = new RecordingAiCapabilityProbe(aiConfigured);
         var step = new BootstrapStep();
@@ -472,34 +617,59 @@ public class BootstrapStepTests
 
         public bool FailNpmLatestInstall { get; init; }
 
+        /// <summary>
+        /// When set, a versioned dotnet tool update for this exact version returns exit code 1
+        /// with "already installed" in stderr — simulating the tool already being at that version.
+        /// </summary>
+        public string? AlreadyInstalledVersion { get; init; }
+
         public List<ProcessSpec> Invocations { get; } = new();
 
         public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
         {
             Invocations.Add(spec);
 
-            if (spec.Arguments.SequenceEqual(["install", "@azure/mcp@latest", "--save"]))
+            // Versioned dotnet tool update: ["tool", "update", "azure.mcp", "--global", "--version", "<ver>"]
+            if (spec.FileName == "dotnet" &&
+                spec.Arguments.Count == 6 &&
+                spec.Arguments.Take(4).SequenceEqual(["tool", "update", "azure.mcp", "--global"]) &&
+                spec.Arguments[4] == "--version")
             {
+                var requestedVersion = spec.Arguments[5];
+                if (AlreadyInstalledVersion is not null && AlreadyInstalledVersion == requestedVersion)
+                {
+                    return ValueTask.FromResult(new ProcessExecutionResult(
+                        spec.FileName, spec.Arguments, spec.WorkingDirectory,
+                        1,
+                        string.Empty,
+                        $"Tool 'azure.mcp' is already installed.",
+                        TimeSpan.Zero));
+                }
                 return FailNpmLatestInstall
-                    ? ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, string.Empty, "npm ERR! 404", TimeSpan.Zero))
+                    ? ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, string.Empty, "error: failed to update azure.mcp", TimeSpan.Zero))
                     : ValueTask.FromResult(Success(spec));
             }
 
-            if (spec.Arguments.SequenceEqual(["install", "--silent"]))
+            // Bare dotnet tool update (fallback path when mcp-tool-version.txt is absent)
+            if (spec.FileName == "dotnet" && spec.Arguments.SequenceEqual(["tool", "update", "azure.mcp", "--global"]))
             {
+                return FailNpmLatestInstall
+                    ? ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, string.Empty, "error: failed to update azure.mcp", TimeSpan.Zero))
+                    : ValueTask.FromResult(Success(spec));
+            }
+
+            if (spec.FileName == "dotnet" && spec.Arguments.Any(arg => arg.EndsWith("McpCliMetadata.csproj", StringComparison.OrdinalIgnoreCase)))
+            {
+                var outputPath = spec.Arguments.Last();
+                var cliDir = Path.Combine(outputPath, "cli");
+                Directory.CreateDirectory(cliDir);
+                File.WriteAllText(Path.Combine(cliDir, "cli-version.json"), "{\"version\":\"1.2.3\"}");
+                File.WriteAllText(Path.Combine(cliDir, "cli-output.json"), CliOutputJson);
+                File.WriteAllText(Path.Combine(cliDir, "cli-namespace.json"), NamespaceJson);
                 return ValueTask.FromResult(Success(spec));
             }
 
-            var scriptName = spec.Arguments.LastOrDefault();
-            var standardOutput = scriptName switch
-            {
-                "get:version" => "1.2.3",
-                "get:tools-json" => CliOutputJson,
-                "get:tools-namespace" => NamespaceJson,
-                _ => string.Empty,
-            };
-
-            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, standardOutput, string.Empty, TimeSpan.Zero));
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero));
         }
 
         public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)

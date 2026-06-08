@@ -9,6 +9,23 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-21: Bug Fix Verification — PR #605 Merges #603, #604, #602
+
+**Session:** 8-agent PRD review cycle including bug verification.
+
+**Verified Fixes:**
+1. **#603:** ResolveFamilyName now uses decomposed namespace keys (e.g., `extension_azqr`) instead of CLI prefix
+2. **#604:** BrandMappingValidator now checks prefix-covered decomposed namespaces
+3. **#602:** ToolFamilyCleanupStep now falls back to tools-raw/ when tools/ empty or absent (enables --steps 1,4 --skip-deps)
+
+**Test Results:** 35/35 new tests passing across all three fixes (ToolFamilyCleanup, ResolveFamilyFileName, BrandMappingValidator)
+
+**Recommendation:** Close GitHub issues #604 and #602 immediately (PR #605 merged 2026-05-19). Issue #603 was internal fix, no public issue created.
+
+**Status:** All fixes verified, ready for issue closure
+
+---
+
 ### 2026-04-17: Morgan History Summarization (Archive Phase 1)
 
 **Scope:** Consolidated early-stage PR review work (2026-03-23 to 2026-03-25) and Acrolinx implementation into core principles. This is a HARD GATE summarization (file was 19.7 KB, now being reduced).
@@ -71,7 +88,7 @@
 
 ## Learnings
 
-### Issue #488: Architecture Simplification (2025-05-29)
+### Issue #488: Architecture Simplification (2026-05-29)
 
 **What:** Deleted CliAnalyzer (8 files, not in pipeline) and merged PostProcessVerifier into ToolFamilyCleanup as `--verify-only` mode.
 
@@ -104,4 +121,34 @@
 - `param-annotation-template.hbs` renders metadata flags inline with ternary emoji (✅/❌)
 
 **Test strategy:** Each test renders the actual .hbs file with controlled data, asserts backtick-wrapped raw names appear, and asserts NL-converted forms do NOT appear. If templates revert to NL names, tests fail immediately.
+## 2026-05-26 — Bug Fixes #603, #604, #602 Documented
+
+- **Event:** Completed namespace resolution fixes
+- **Status:** Three interconnected bugs fixed:
+  - #603: ResolveFamilyName uses CLI prefix instead of raw namespace key
+  - #604: BrandMappingValidator rejects prefix-covered namespaces
+  - #602: Step 4 fails when Step 3 is skipped (tools/ empty)
+- **Test Coverage:** 12/12 ToolFamilyCleanup tests, 6/6 ResolveFamilyFileName tests, 17/17 bootstrap brand mapping tests passing
+- **Branch:** squad/603-604-602-namespace-resolution-fixes
+- **Decision:** Bug fixes recorded in .squad/decisions.md
+
+### 2026-05-30: Empty Summary Validation & Per-Tool AI Refactor (PR #659)
+
+**Event:** Fixed blocker from rubber-duck review; completed per-tool AI call refactor.
+
+**Changes:**
+1. **Empty summary validation (blocker fix)**
+   - Modified `HorizontalArticleGenerator.cs`: Added post-AI validation check
+   - Made `AggregateAIData.cs` internal, added 5 unit tests in `AggregateAIDataTests.cs`
+   - Checks `ServiceShortDescription` and `ServiceOverview` non-empty; fails with clear error if empty
+   - Root cause: Empty-fallback path produced content-corrupted articles that passed all validation gates
+
+2. **Per-tool AI call refactor**
+   - Updated `GenerateAIContent` to call AI once per tool + once for namespace summary (instead of once per namespace with all tools)
+   - Eliminates 18k token overflow on large namespaces (storage namespace example: 18k → bounded to ~1 tool)
+   - Sage created corresponding per-tool prompts (`horizontal-article-tool-system-prompt.txt`, etc.)
+
+**Test Coverage:** 5 new unit tests, all passing
+
+**Status:** PR #659 merged to main (with --admin flag); branch feat/per-tool-ai-calls complete; issues #660 (deterministic ordering) and #661 (retry/backoff) filed for non-blocking findings
 

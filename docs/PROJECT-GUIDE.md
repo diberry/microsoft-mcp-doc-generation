@@ -128,6 +128,18 @@ When iterating on a single step whose prerequisites already exist from a prior r
 | 5 | Skills Relevance | Per-namespace | No | `skills-relevance/{namespace}-skills-relevance.md` |
 | 6 | Horizontal Articles | Per-namespace | Yes | `horizontal-articles/` |
 
+### Pipeline Observability
+
+The pipeline now emits tracing artifacts for observability:
+
+- Global pipeline traces are written to `generated/trace/`
+- Per-namespace traces are written to `generated-<namespace>/trace/`
+- Each trace folder contains `pipeline-trace.json`, `ai-interactions.json`, and `summary.md`
+
+Use these files to inspect step timing, failures, and AI prompt/response activity during debugging or PR review.
+
+**Important limitation:** The `PipelineRunner` tracer only sees the orchestrator process. Steps that shell out to standalone .NET programs are captured as step-level durations from the runner's perspective. Those standalone programs would need to emit their own trace files for full per-call observability.
+
 ### Running Individual Generators Directly
 
 Each generator is a standalone .NET console application. You can invoke them directly for testing or debugging, bypassing `start.sh`:

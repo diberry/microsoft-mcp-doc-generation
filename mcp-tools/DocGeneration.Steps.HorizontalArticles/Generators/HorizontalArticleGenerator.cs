@@ -4,6 +4,7 @@
 using System.Text.Json;
 using GenerativeAI;
 using CSharpGenerator.Models;
+using HorizontalArticleGenerator.Builders;
 using HorizontalArticleGenerator.Models;
 using TemplateEngine;
 using Shared;
@@ -31,31 +32,83 @@ public class HorizontalArticleGenerator
         return Math.Clamp(calculatedTokens, 8000, 24000);
     }
 
+    /// <summary>
+    /// Calculates the maximum token budget for per-tool AI calls or namespace summary calls.
+    /// Per-tool calls are small and bounded (~2000 tokens each).
+    /// Namespace summary calls use a compact tool list (command + description only), so a lower cap applies.
+    /// </summary>
+    internal static int CalculateMaxTokens(int toolCount, bool isPerToolCall)
+    {
+        if (isPerToolCall) return 2000;
+        // Namespace summary: compact list only; lower base and per-tool factor than full article
+        var calculatedTokens = 2000 + (toolCount * 150);
+        return Math.Clamp(calculatedTokens, 3000, 8000);
+    }
+
     // Extracted method for generating a single article
     private async Task<bool> GenerateSingleArticleAsync(StaticArticleData staticData, string outputDir, string progress)
     {
         try
         {
             Console.WriteLine($"{progress} Processing {staticData.ServiceBrandName}...");
-            // Generate AI content
-            var aiResponse = await GenerateAIContent(staticData);
+
             AIGeneratedArticleData? aiData = null;
-            bool parseFailed = false;
-            try
+
+            // Use per-tool + namespace-summary approach when new prompt files are present.
+            // Fall back to legacy single-call if Sage's prompt files haven't landed yet.
+            var toolSystemPromptPath = GetPromptPath(TOOL_SYSTEM_PROMPT_FILE);
+            var toolUserPromptPath   = GetPromptPath(TOOL_USER_PROMPT_FILE);
+            var namespaceUserPromptPath = GetPromptPath(NAMESPACE_USER_PROMPT_FILE);
+
+            if (!File.Exists(toolSystemPromptPath) || !File.Exists(toolUserPromptPath) || !File.Exists(namespaceUserPromptPath))
             {
-                aiData = ParseAIResponse(aiResponse);
+                Console.WriteLine($"{progress} ⚠️  Per-tool prompt files not found — using legacy single-call AI generation.");
+                string aiResponse;
+#pragma warning disable CS0618
+                aiResponse = await GenerateAIContent(staticData);
+#pragma warning restore CS0618
+                try
+                {
+                    aiData = ParseAIResponse(aiResponse);
+                }
+                catch (Exception jsonEx)
+                {
+                    Console.WriteLine($"{progress} ✗ Failed to parse AI response for {staticData.ServiceBrandName}: {jsonEx.Message}");
+                    var errorLog = Path.Combine(outputDir, $"error-{staticData.ServiceIdentifier}-airesponse.txt");
+                    await File.WriteAllTextAsync(errorLog, $"Raw AI response:\n{aiResponse}\n\nError: {jsonEx.Message}\n{jsonEx.StackTrace}", Encoding.UTF8);
+                    Console.WriteLine($"Raw AI response logged to: {errorLog}");
+                    Console.WriteLine();
+                    return false;
+                }
             }
-            catch (Exception jsonEx)
+            else
             {
-                Console.WriteLine($"{progress} ✗ Failed to parse AI response for {staticData.ServiceBrandName}: {jsonEx.Message}");
-                var errorLog = Path.Combine(outputDir, $"error-{staticData.ServiceIdentifier}-airesponse.txt");
-                await File.WriteAllTextAsync(errorLog, $"Raw AI response:\n{aiResponse}\n\nError: {jsonEx.Message}\n{jsonEx.StackTrace}", Encoding.UTF8);
-                Console.WriteLine($"Raw AI response logged to: {errorLog}");
-                Console.WriteLine();
-                parseFailed = true;
+                // Per-tool AI calls: one per tool, bounded token budget (~2000 tokens each)
+                Console.WriteLine($"{progress} Generating per-tool AI content ({staticData.Tools.Count} tools)...");
+                var perToolResults = new List<PerToolAIData>();
+                for (int i = 0; i < staticData.Tools.Count; i++)
+                {
+                    var tool = staticData.Tools[i];
+                    Console.WriteLine($"{progress} ({i + 1}/{staticData.Tools.Count}) Tool: {tool.Command}");
+                    var perToolData = await GenerateAIContentForTool(tool, staticData.ServiceBrandName, staticData.ServiceIdentifier, i);
+                    perToolResults.Add(perToolData);
+                }
+
+                // Namespace summary AI call: one call after all per-tool calls, compact tool list
+                Console.WriteLine($"{progress} Generating namespace summary...");
+                var summaryData = await GenerateNamespaceSummaryAIContent(staticData, perToolResults);
+                aiData = AggregateAIData(staticData, perToolResults, summaryData);
+
+                // Fail fast if namespace summary returned empty required fields (indicates failed AI call)
+                if (string.IsNullOrWhiteSpace(aiData.ServiceShortDescription) || string.IsNullOrWhiteSpace(aiData.ServiceOverview))
+                {
+                    Console.WriteLine($"{progress} ✗ Namespace summary returned empty required fields for {staticData.ServiceBrandName} — article generation failed.");
+                    return false;
+                }
             }
-            if (parseFailed || aiData == null) return false; // Skip this article
-            
+
+            if (aiData == null) return false;
+
             // Validate and transform AI-generated content via ArticleContentProcessor
             var processor = new ArticleContentProcessor(_transformationEngine);
             var validationResult = processor.Process(aiData, staticData.ServiceBrandName, staticData.ServiceIdentifier);
@@ -109,20 +162,50 @@ public class HorizontalArticleGenerator
         }
     }
     private static string DefaultOutputBase => Path.GetFullPath("../generated");
+
+    // Prompt and template file names (relative to project subdir)
+    private const string PROJECT_SUBDIR = "DocGeneration.Steps.HorizontalArticles";
+    private const string SYSTEM_PROMPT_FILE = "horizontal-article-system-prompt.txt";
+    private const string USER_PROMPT_FILE = "horizontal-article-user-prompt.txt";
+    private const string TEMPLATE_FILE = "horizontal-article-template.hbs";
+    private const string TOOL_SYSTEM_PROMPT_FILE = "horizontal-article-tool-system-prompt.txt";
+    private const string TOOL_USER_PROMPT_FILE = "horizontal-article-tool-user-prompt.txt";
+    private const string NAMESPACE_USER_PROMPT_FILE = "horizontal-article-namespace-user-prompt.txt";
+
     private readonly string _cliOutputPath;
     private readonly string _outputDir;
     private readonly string _promptOutputDir;
     private readonly string _outputBasePath;
-    private const string SYSTEM_PROMPT_PATH = "./DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-system-prompt.txt";
-    private const string USER_PROMPT_PATH = "./DocGeneration.Steps.HorizontalArticles/prompts/horizontal-article-user-prompt.txt";
-    private const string TEMPLATE_PATH = "./DocGeneration.Steps.HorizontalArticles/templates/horizontal-article-template.hbs";
-    
+
+    // When set, all prompt/template paths are resolved relative to this root (mcp-tools/).
+    // When null, falls back to CWD-relative resolution (correct when running as subprocess
+    // where the working directory is already set to mcp-tools/).
+    private readonly string? _mcpToolsRoot;
+
     private readonly GenerativeAIClient _aiClient;
     private readonly bool _useTextTransformation;
     private readonly bool _generateAllArticles;
     private readonly TransformationEngine? _transformationEngine;
 
-    public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, TransformationEngine? transformationEngine = null, string? outputBasePath = null)
+    /// <summary>
+    /// Resolves a prompt file path.  When <c>mcpToolsRoot</c> was supplied to the constructor
+    /// the path is anchored to that directory; otherwise it resolves from the current working
+    /// directory (the correct behaviour when running as a dotnet subprocess with CWD = mcp-tools/).
+    /// </summary>
+    internal string GetPromptPath(string fileName) =>
+        _mcpToolsRoot is not null
+            ? Path.Combine(_mcpToolsRoot, PROJECT_SUBDIR, "prompts", fileName)
+            : Path.GetFullPath(Path.Combine(".", PROJECT_SUBDIR, "prompts", fileName));
+
+    /// <summary>
+    /// Resolves a template file path using the same strategy as <see cref="GetPromptPath"/>.
+    /// </summary>
+    internal string GetTemplatePath(string fileName) =>
+        _mcpToolsRoot is not null
+            ? Path.Combine(_mcpToolsRoot, PROJECT_SUBDIR, "templates", fileName)
+            : Path.GetFullPath(Path.Combine(".", PROJECT_SUBDIR, "templates", fileName));
+
+    public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, TransformationEngine? transformationEngine = null, string? outputBasePath = null, string? mcpToolsRoot = null)
     {
         if (string.IsNullOrEmpty(options.ApiKey)) throw new InvalidOperationException("FOUNDRY_API_KEY not set");
         if (string.IsNullOrEmpty(options.Endpoint)) throw new InvalidOperationException("FOUNDRY_ENDPOINT not set");
@@ -132,6 +215,7 @@ public class HorizontalArticleGenerator
         _useTextTransformation = useTextTransformation;
         _generateAllArticles = generateAllArticles;
         _transformationEngine = transformationEngine;
+        _mcpToolsRoot = string.IsNullOrWhiteSpace(mcpToolsRoot) ? null : Path.GetFullPath(mcpToolsRoot);
         _outputBasePath = outputBasePath != null ? Path.GetFullPath(outputBasePath) : DefaultOutputBase;
         _cliOutputPath = Path.Combine(_outputBasePath, "cli", "cli-output.json");
         _outputDir = Path.Combine(_outputBasePath, "horizontal-articles");
@@ -191,30 +275,45 @@ public class HorizontalArticleGenerator
     /// </summary>
     public async Task GenerateSingleServiceArticle(string serviceArea)
     {
-        // Phase 1: Extract static data
-        var staticDataList = await ExtractStaticData();
-        
-        // Find the requested service
-        var targetService = staticDataList.FirstOrDefault(s => 
-            s.ServiceIdentifier.Equals(serviceArea, StringComparison.OrdinalIgnoreCase));
-        
-        if (targetService == null)
+        var outlineBuilder = new ArticleOutlineBuilder();
+        var outline = await outlineBuilder.BuildAsync(_outputBasePath, serviceArea, CancellationToken.None);
+        var hasToolEvidence = outline.Sections
+            .FirstOrDefault(section => section.Heading == "Tool overview")?
+            .EvidenceItems
+            .Any() ?? false;
+        if (!hasToolEvidence)
         {
             Console.Error.WriteLine($"✗ Service not found: {serviceArea}");
-            Console.Error.WriteLine($"Available services: {string.Join(", ", staticDataList.Select(s => s.ServiceIdentifier))}");
             return;
         }
-        
-        // Create output directory
+
         Directory.CreateDirectory(_outputDir);
-        
-        // Generate the article
-        bool result = await GenerateSingleArticleAsync(targetService, _outputDir, "[1/1]");
-        
+        bool result = await GenerateSingleArticleAsync(outline, _outputDir, "[1/1]", CancellationToken.None);
+
         if (!result)
         {
             Console.Error.WriteLine($"✗ Single service article generation failed for {serviceArea}");
         }
+    }
+
+    public async Task<string> GenerateArticleMarkdownAsync(ArticleOutlineContext outlineContext, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var staticData = await BuildStaticArticleDataAsync(outlineContext, cancellationToken);
+#pragma warning disable CS0618
+        var aiResponse = await GenerateAIContent(staticData);
+#pragma warning restore CS0618
+        var aiData = ParseAIResponse(aiResponse);
+        var processor = new ArticleContentProcessor(_transformationEngine);
+        var validationResult = processor.Process(aiData, staticData.ServiceBrandName, staticData.ServiceIdentifier);
+        if (validationResult.HasCriticalErrors)
+        {
+            throw new InvalidOperationException(string.Join(Environment.NewLine, validationResult.CriticalErrors));
+        }
+
+        var templateData = MergeData(staticData, aiData);
+        templateData.Skills = SkillsRelevanceReader.LoadRelevantSkills(_outputBasePath, staticData.ServiceIdentifier);
+        return await RenderArticleAsync(templateData);
     }
 
     /// <summary>
@@ -388,11 +487,12 @@ public class HorizontalArticleGenerator
     /// <summary>
     /// Phase 2: Generate AI content using prompts
     /// </summary>
+    [Obsolete("Use GenerateAIContentForTool + GenerateNamespaceSummaryAIContent instead. This single-call method causes token overflow on large namespaces.")]
     private async Task<string> GenerateAIContent(StaticArticleData staticData)
     {
         // Load prompts
-        var systemPromptPath = Path.GetFullPath(SYSTEM_PROMPT_PATH);
-        var userPromptPath = Path.GetFullPath(USER_PROMPT_PATH);
+        var systemPromptPath = GetPromptPath(SYSTEM_PROMPT_FILE);
+        var userPromptPath = GetPromptPath(USER_PROMPT_FILE);
         
         var systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
         systemPrompt = PromptTokenResolver.Resolve(systemPrompt, Path.Combine(AppContext.BaseDirectory, "data"));
@@ -467,6 +567,229 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         return response;
     }
     
+    /// <summary>
+    /// Calls AI once for a single tool to generate its short description, scenario, and capability.
+    /// Returns a static-data fallback if prompt files are not present (Sage may not have written them yet).
+    /// </summary>
+    private async Task<PerToolAIData> GenerateAIContentForTool(
+        HorizontalToolSummary tool,
+        string serviceBrandName,
+        string serviceIdentifier,
+        int toolIndex)
+    {
+        var systemPromptPath = GetPromptPath(TOOL_SYSTEM_PROMPT_FILE);
+        var userPromptPath   = GetPromptPath(TOOL_USER_PROMPT_FILE);
+
+        if (!File.Exists(systemPromptPath) || !File.Exists(userPromptPath))
+        {
+            Console.WriteLine($"    ⚠️  Per-tool prompt files not found; using static description as fallback for: {tool.Command}");
+            return new PerToolAIData { Command = tool.Command, ShortDescription = tool.Description };
+        }
+
+        try
+        {
+            var systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
+            systemPrompt = PromptTokenResolver.Resolve(systemPrompt, Path.Combine(AppContext.BaseDirectory, "data"));
+            var userPromptTemplate = await File.ReadAllTextAsync(userPromptPath);
+
+            var handlebars = HandlebarsDotNet.Handlebars.Create();
+            var userPromptCompiled = handlebars.Compile(userPromptTemplate);
+
+            var promptContext = new
+            {
+                serviceBrandName,
+                serviceIdentifier,
+                tool = new
+                {
+                    command = tool.Command,
+                    description = tool.Description,
+                    parameterCount = tool.ParameterCount,
+                    metadata = new
+                    {
+                        destructive = new { value = tool.Metadata.GetValueOrDefault("destructive", new MetadataValue()).Value },
+                        readOnly    = new { value = tool.Metadata.GetValueOrDefault("readOnly", new MetadataValue()).Value },
+                        secret      = new { value = tool.Metadata.GetValueOrDefault("secret", new MetadataValue()).Value }
+                    }
+                }
+            };
+
+            var userPrompt = userPromptCompiled(promptContext);
+
+            // Save prompt for debugging
+            Directory.CreateDirectory(_promptOutputDir);
+            var promptFileName = $"horizontal-article-{serviceIdentifier}-tool-{toolIndex:D2}-prompt.md";
+            var promptFilePath = Path.Combine(_promptOutputDir, promptFileName);
+            var promptContent = $"""
+# Per-Tool Prompt: {tool.Command} ({serviceBrandName})
+
+Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
+
+## System Prompt
+
+{systemPrompt}
+
+## User Prompt
+
+{userPrompt}
+""";
+            await File.WriteAllTextAsync(promptFilePath, promptContent, Encoding.UTF8);
+
+            var maxTokens = CalculateMaxTokens(1, isPerToolCall: true);
+            var response = await _aiClient.GetChatCompletionAsync(systemPrompt, userPrompt, maxTokens);
+
+            await File.AppendAllTextAsync(promptFilePath, $"""
+
+
+## AI Response
+
+```json
+{response}
+```
+""");
+
+            var jsonContent = ExtractJsonFromResponse(response);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var result = JsonSerializer.Deserialize<PerToolAIData>(jsonContent, options)
+                ?? new PerToolAIData { Command = tool.Command, ShortDescription = tool.Description };
+            result.Command = tool.Command; // Always set — JSON won't include it
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"    ⚠️  AI call failed for tool {tool.Command}: {ex.Message} — using static fallback.");
+            return new PerToolAIData { Command = tool.Command, ShortDescription = tool.Description };
+        }
+    }
+
+    /// <summary>
+    /// Calls AI once for the namespace-level summary after all per-tool calls complete.
+    /// Input is a compact list (command + description only) to keep the token count low.
+    /// Returns an empty summary if the namespace user prompt file is not present.
+    /// </summary>
+    private async Task<NamespaceSummaryAIData> GenerateNamespaceSummaryAIContent(
+        StaticArticleData staticData,
+        IReadOnlyList<PerToolAIData> perToolResults)
+    {
+        var systemPromptPath = GetPromptPath(SYSTEM_PROMPT_FILE);
+        var userPromptPath   = GetPromptPath(NAMESPACE_USER_PROMPT_FILE);
+
+        if (!File.Exists(userPromptPath))
+        {
+            Console.WriteLine($"    ⚠️  Namespace summary user prompt not found; using empty summary for: {staticData.ServiceBrandName}");
+            return new NamespaceSummaryAIData();
+        }
+
+        try
+        {
+            var systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
+            systemPrompt = PromptTokenResolver.Resolve(systemPrompt, Path.Combine(AppContext.BaseDirectory, "data"));
+            var userPromptTemplate = await File.ReadAllTextAsync(userPromptPath);
+
+            var handlebars = HandlebarsDotNet.Handlebars.Create();
+            var userPromptCompiled = handlebars.Compile(userPromptTemplate);
+
+            // Compact tool list: only command + description to stay within token budget
+            var promptContext = new
+            {
+                serviceBrandName   = staticData.ServiceBrandName,
+                serviceIdentifier  = staticData.ServiceIdentifier,
+                toolsReferenceLink = staticData.ToolsReferenceLink,
+                tools = staticData.Tools.Select(t => new { command = t.Command, description = t.Description })
+            };
+
+            var userPrompt = userPromptCompiled(promptContext);
+
+            // Save prompt for debugging
+            Directory.CreateDirectory(_promptOutputDir);
+            var promptFileName = $"horizontal-article-{staticData.ServiceIdentifier}-namespace-prompt.md";
+            var promptFilePath = Path.Combine(_promptOutputDir, promptFileName);
+            var promptContent = $"""
+# Namespace Summary Prompt: {staticData.ServiceBrandName}
+
+Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
+
+## System Prompt
+
+{systemPrompt}
+
+## User Prompt
+
+{userPrompt}
+""";
+            await File.WriteAllTextAsync(promptFilePath, promptContent, Encoding.UTF8);
+
+            var maxTokens = CalculateMaxTokens(staticData.Tools.Count, isPerToolCall: false);
+            var response = await _aiClient.GetChatCompletionAsync(systemPrompt, userPrompt, maxTokens);
+
+            await File.AppendAllTextAsync(promptFilePath, $"""
+
+
+## AI Response
+
+```json
+{response}
+```
+""");
+
+            var jsonContent = ExtractJsonFromResponse(response);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            };
+            return JsonSerializer.Deserialize<NamespaceSummaryAIData>(jsonContent, options)
+                ?? new NamespaceSummaryAIData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"    ⚠️  Namespace summary AI call failed for {staticData.ServiceBrandName}: {ex.Message} — using empty summary.");
+            return new NamespaceSummaryAIData();
+        }
+    }
+
+    /// <summary>
+    /// Aggregates per-tool AI results and namespace summary into a single AIGeneratedArticleData
+    /// for compatibility with the existing ArticleContentProcessor and MergeData pipeline.
+    /// </summary>
+    internal static AIGeneratedArticleData AggregateAIData(
+        StaticArticleData staticData,
+        IReadOnlyList<PerToolAIData> perToolResults,
+        NamespaceSummaryAIData summaryData)
+    {
+        return new AIGeneratedArticleData
+        {
+            // Namespace-level fields from summary call
+            ServiceShortDescription      = summaryData.ServiceShortDescription,
+            ServiceOverview              = summaryData.ServiceOverview,
+            ServiceSpecificPrerequisites = summaryData.ServiceSpecificPrerequisites,
+            RequiredRoles                = summaryData.RequiredRoles,
+            BestPractices                = summaryData.BestPractices,
+            ServiceDocLink               = summaryData.ServiceDocLink,
+            AdditionalLinks              = summaryData.AdditionalLinks,
+
+            // Capabilities: one entry per tool
+            Capabilities = perToolResults
+                .Where(p => !string.IsNullOrWhiteSpace(p.Capability))
+                .Select(p => p.Capability)
+                .ToList(),
+
+            // Scenarios: one scenario per tool that returned one
+            Scenarios = perToolResults
+                .Where(p => p.Scenario != null)
+                .Select(p => p.Scenario!)
+                .ToList(),
+
+            // Per-tool short descriptions mapped to ToolWithAIDescription
+            Tools = perToolResults.Select(p => new ToolWithAIDescription
+            {
+                Command          = p.Command,
+                ShortDescription = p.ShortDescription,
+                MoreInfoLink     = staticData.Tools
+                    .FirstOrDefault(t => t.Command == p.Command)?.MoreInfoLink ?? string.Empty
+            }).ToList()
+        };
+    }
+
     /// <summary>
     /// Parse AI response JSON
     /// </summary>
@@ -589,7 +912,15 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
     /// </summary>
     private async Task RenderAndSaveArticle(HorizontalArticleTemplateData templateData)
     {
-        var templatePath = Path.GetFullPath(TEMPLATE_PATH);
+        var filename = $"horizontal-article-{templateData.ServiceIdentifier}.md";
+        var outputPath = Path.Combine(_outputDir, filename);
+        var renderedContent = await RenderArticleAsync(templateData);
+        await File.WriteAllTextAsync(outputPath, renderedContent, Encoding.UTF8);
+    }
+
+    private async Task<string> RenderArticleAsync(HorizontalArticleTemplateData templateData)
+    {
+        var templatePath = GetTemplatePath(TEMPLATE_FILE);
         
         // Manually build dictionary with correct field names (including genai- prefix)
         var data = new Dictionary<string, object>
@@ -635,14 +966,93 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             }).ToList();
         }
         
-        var renderedContent = await HandlebarsTemplateEngine.ProcessTemplateAsync(templatePath, data);
-        
-        // Save to file
-        var filename = $"horizontal-article-{templateData.ServiceIdentifier}.md";
-        var outputPath = Path.Combine(_outputDir, filename);
-        
-        await File.WriteAllTextAsync(outputPath, renderedContent, Encoding.UTF8);
+        return await HandlebarsTemplateEngine.ProcessTemplateAsync(templatePath, data);
+    }
+
+    private async Task<bool> GenerateSingleArticleAsync(
+        ArticleOutlineContext outlineContext,
+        string outputDir,
+        string progress,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            Console.WriteLine($"{progress} Processing {outlineContext.ArticleTitle}...");
+            var renderedContent = await GenerateArticleMarkdownAsync(outlineContext, cancellationToken);
+            Directory.CreateDirectory(outputDir);
+            await File.WriteAllTextAsync(
+                Path.Combine(outputDir, $"horizontal-article-{outlineContext.ServiceIdentifier}.md"),
+                renderedContent,
+                Encoding.UTF8,
+                cancellationToken);
+            Console.WriteLine($"{progress} ✓ Generated: horizontal-article-{outlineContext.ServiceIdentifier}.md");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{progress} ✗ Failed for {outlineContext.ArticleTitle}: {ex.Message}");
+            var errorLog = Path.Combine(outputDir, $"error-{outlineContext.ServiceIdentifier}.txt");
+            await File.WriteAllTextAsync(errorLog, $"{ex.Message}{Environment.NewLine}{Environment.NewLine}{ex.StackTrace}", Encoding.UTF8, cancellationToken);
+            Console.WriteLine();
+            return false;
+        }
+    }
+
+    private async Task<StaticArticleData> BuildStaticArticleDataAsync(ArticleOutlineContext outlineContext, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var cliVersion = await CliVersionReader.ReadCliVersionAsync(_outputBasePath);
+        var tools = ExtractToolsFromOutline(outlineContext);
+
+        return new StaticArticleData
+        {
+            ServiceBrandName = outlineContext.ArticleTitle,
+            ServiceIdentifier = outlineContext.ServiceIdentifier,
+            GeneratedAt = DateTime.UtcNow.ToString("o"),
+            Version = cliVersion,
+            ToolsReferenceLink = outlineContext.Sections
+                .SelectMany(section => section.EvidenceItems)
+                .FirstOrDefault(item => item.StartsWith("xref:../tool-family/", StringComparison.OrdinalIgnoreCase))?
+                .Replace("xref:", string.Empty, StringComparison.OrdinalIgnoreCase)
+                ?? $"../tool-family/{outlineContext.ServiceIdentifier}.md",
+            Tools = tools
+        };
+    }
+
+    private static List<HorizontalToolSummary> ExtractToolsFromOutline(ArticleOutlineContext outlineContext)
+    {
+        var toolOverviewSection = outlineContext.Sections.FirstOrDefault(section => section.Heading == "Tool overview");
+        if (toolOverviewSection is null)
+        {
+            return [];
+        }
+
+        var tools = new List<HorizontalToolSummary>();
+        foreach (var evidenceItem in toolOverviewSection.EvidenceItems)
+        {
+            using var document = JsonDocument.Parse(evidenceItem);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("kind", out var kind) || !string.Equals(kind.GetString(), "tool", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            tools.Add(new HorizontalToolSummary
+            {
+                Command = root.GetProperty("command").GetString() ?? string.Empty,
+                Description = root.GetProperty("description").GetString() ?? string.Empty,
+                ParameterCount = root.TryGetProperty("parameterCount", out var parameterCount) ? parameterCount.GetInt32() : 0,
+                MoreInfoLink = root.TryGetProperty("moreInfoLink", out var moreInfoLink) ? moreInfoLink.GetString() ?? string.Empty : string.Empty,
+                Metadata = new Dictionary<string, MetadataValue>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["destructive"] = new MetadataValue { Value = root.TryGetProperty("destructive", out var destructive) && destructive.GetBoolean() },
+                    ["readOnly"] = new MetadataValue { Value = root.TryGetProperty("readOnly", out var readOnly) && readOnly.GetBoolean() },
+                    ["secret"] = new MetadataValue { Value = root.TryGetProperty("secret", out var secret) && secret.GetBoolean() }
+                }
+            });
+        }
+
+        return tools;
     }
 
 }
-

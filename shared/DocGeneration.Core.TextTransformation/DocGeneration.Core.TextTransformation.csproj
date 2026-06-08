@@ -6,7 +6,4 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>DocGeneration.Core.TextTransformation</AssemblyName>
   </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
 </Project>

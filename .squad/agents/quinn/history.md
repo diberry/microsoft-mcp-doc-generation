@@ -9,9 +9,27 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-21: DevOps Review — #611 & #574 CI Impact Assessment
+
+**Session:** 8-agent PRD review cycle including CI/DevOps assessment.
+
+**#611 CI Changes:**
+- Glob patterns: update `generated-*` to match timestamped dirs (YYYY-MM-DDTHH-MM-SSZ)
+- Artifact upload: CI workflows must use updated globs
+- Risk: low (straightforward pattern updates, no schema changes)
+
+**#574 CI Integration:**
+- 4 scripts need updates: generate-docs.yml, build-and-test.yml, orchestrator scripts, new validation-gate.yml
+- Gate can deploy warn-only, promoted to fail after 2-week clean baseline
+- Risk: low (no backward compatibility breaks)
+
+**Status:** CI safe for both issues; script audit required post-implementation
+
+---
+
 ### #195 — Generation Report Script (2026-03-24)
 - **PR:** #217
-- CLI metadata lives in `test-npm-azure-mcp/{version}/tools-list.json` (same schema as `cli-output.json`)
+- CLI metadata lives in `mcp-cli-metadata/{version}/tools-list.json` (same schema as `cli-output.json`)
 - Namespace JSON (`31-namespace.json`) has npm output prefix before JSON — any reader must handle that
 - 55 namespaces, 235 tools in beta.31 — up from the 52 referenced in older docs
 - Common params (7 total) are defined in `mcp-tools/data/common-parameters.json`

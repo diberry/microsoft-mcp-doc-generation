@@ -31,16 +31,16 @@ public class StepContractTests
     }
 
     [Fact]
-    public void AllSteps_IdsAreContiguousFromZeroToSix()
+    public void AllSteps_IdsAreContiguousFromZeroToEight()
     {
         var ids = _allSteps.Select(s => s.Id).OrderBy(id => id).ToArray();
-        Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6 }, ids);
+        Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 }, ids);
     }
 
     [Fact]
-    public void Registry_ReturnsExactly7Steps()
+    public void Registry_ReturnsExactly9Steps()
     {
-        Assert.Equal(7, _allSteps.Count);
+        Assert.Equal(9, _allSteps.Count);
     }
 
     // ── Step scope ──────────────────────────────────────────────────────
@@ -58,6 +58,7 @@ public class StepContractTests
     [InlineData(4)]
     [InlineData(5)]
     [InlineData(6)]
+    [InlineData(7)]
     public void NamespaceSteps_AreNamespaceScope(int stepId)
     {
         Assert.Equal(StepScope.Namespace, _registry.GetStep(stepId).Scope);
@@ -164,6 +165,7 @@ public class StepContractTests
     [InlineData(4)]
     [InlineData(5)]
     [InlineData(6)]
+    [InlineData(7)]
     public void EachStep_HasNonEmptyExpectedOutputs(int stepId)
     {
         var step = _registry.GetStep(stepId) as StepDefinition;
@@ -204,6 +206,7 @@ public class StepContractTests
     [InlineData(4)]
     [InlineData(5)]
     [InlineData(6)]
+    [InlineData(7)]
     public void EachStep_HasNonEmptyName(int stepId)
     {
         Assert.False(string.IsNullOrWhiteSpace(_registry.GetStep(stepId).Name));
@@ -235,6 +238,24 @@ public class StepContractTests
         Assert.IsType<HorizontalArticlesStep>(_registry.GetStep(6));
     }
 
+    [Fact]
+    public void Step7_IsArticleHealthValidatorStep()
+    {
+        Assert.IsType<ArticleHealthValidatorStep>(_registry.GetStep(7));
+    }
+
+    [Fact]
+    public void Step7_DependsOnStep4()
+    {
+        Assert.Contains(4, _registry.GetStep(7).DependsOn);
+    }
+
+    [Fact]
+    public void Step7_IsWarnOnly()
+    {
+        Assert.Equal(FailurePolicy.Warn, _registry.GetStep(7).FailurePolicy);
+    }
+
     // ── AI configuration requirements ───────────────────────────────────
 
     [Theory]
@@ -254,6 +275,7 @@ public class StepContractTests
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(5)]
+    [InlineData(7)]
     public void NonAiSteps_DoNotRequireAiConfiguration(int stepId)
     {
         var step = _registry.GetStep(stepId) as StepDefinition;
@@ -298,6 +320,7 @@ public class StepContractTests
     [InlineData(3)]
     [InlineData(5)]
     [InlineData(6)]
+    [InlineData(7)]
     public void OtherSteps_HaveNoRetries(int stepId)
     {
         Assert.Equal(0, _registry.GetStep(stepId).MaxRetries);

@@ -1,0 +1,287 @@
+name: Validation Gate
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 4 — PRD #574: CI gate for article health + coverage audit.
+#
+# Gate mode: warn (non-blocking) during rollout.
+# Promote to 'block' after 2 clean weeks by changing GATE_MODE below.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+env:
+  GATE_MODE: warn   # warn | block
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validation-gate:
+    name: validation-gate
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v5
+
+      # ── 2. .NET SDK (net9.0 for generator projects, net10.0 for pipeline runner) ──
+      - name: Setup .NET SDKs
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9  # v4
+        with:
+          dotnet-version: |
+            9.0.x
+            10.0.x
+          include-prerelease: true
+
+      # ── 3. Build pipeline runner (verifies ValidationStepBase + steps 7 and 8 compile) ──
+      - name: Restore solution dependencies
+        run: dotnet restore mcp-doc-generation.sln
+
+      - name: Build pipeline runner
+        run: dotnet build mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj --no-restore --configuration Release
+
+      # ── 4. Detect changed tool-family article files in the PR ─────────────────
+      - name: Detect changed article files
+        id: changed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const response = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            // Tool-family article files: generated namespace dirs or validation test fixtures
+            const articleFiles = response
+              .filter(f => f.filename.endsWith('.md') && f.status !== 'removed')
+              .filter(f =>
+                /^generated[^/]*\/tool-family\//.test(f.filename) ||
+                /mcp-tools\/validation\/tests\/fixtures\//.test(f.filename)
+              )
+              .map(f => f.filename);
+
+            console.log(`Changed tool-family articles: ${articleFiles.length}`);
+            articleFiles.forEach(f => console.log(`  + ${f}`));
+
+            core.setOutput('article-files', JSON.stringify(articleFiles));
+            core.setOutput('has-articles', String(articleFiles.length > 0));
+
+      # ── 5. Article health check ───────────────────────────────────────────────
+      #
+      # Runs Test-ArticleHealth.ps1 against:
+      #   a) Changed tool-family articles in the PR (if any), OR
+      #   b) Committed test fixtures as a smoke test (when no articles changed).
+      - name: Run article health check
+        id: health
+        shell: pwsh
+        run: |
+          $articleFilesJson = '${{ steps.changed.outputs.article-files }}'
+          $articleFiles = $articleFilesJson | ConvertFrom-Json
+
+          # Fall back to committed test fixtures when no article files changed in PR
+          $usedFixtures = $false
+          if ($articleFiles.Count -eq 0) {
+            Write-Host "No changed tool-family articles — running smoke test against committed fixtures."
+            $articleFiles = @(
+              Get-ChildItem "mcp-tools/validation/tests/fixtures" -Filter "*.md" -File -Recurse |
+              ForEach-Object { $_.FullName }
+            )
+            $usedFixtures = $true
+          }
+
+          # If fixtures fallback also yielded no files, mark as skipped
+          $noFilesAvailable = $false
+          if ($articleFiles.Count -eq 0) {
+            $usedFixtures     = $false
+            $noFilesAvailable = $true
+            Write-Host "No article files or fixtures found — validation will be skipped."
+          }
+
+          $anyFail = $false; $anyWarn = $false; $filesChecked = 0
+          $failCount = 0; $warnCount = 0; $passCount = 0
+
+          foreach ($filePath in $articleFiles) {
+            if (-not (Test-Path $filePath)) {
+              Write-Host "Skipping (not found in checkout): $filePath"
+              continue
+            }
+            $leaf   = [System.IO.Path]::GetFileNameWithoutExtension($filePath) -replace '[^a-zA-Z0-9-]', '_'
+            $outJson = "health-$leaf.json"
+
+            & ./mcp-tools/validation/Test-ArticleHealth.ps1 `
+              -ArticlePath $filePath `
+              -OutputJson  $outJson `
+              -ErrorAction Continue
+
+            $filesChecked++
+
+            if (Test-Path $outJson) {
+              $r = Get-Content $outJson -Raw | ConvertFrom-Json
+              $failCount += $r.summary.fail
+              $warnCount += $r.summary.warn
+              $passCount += $r.summary.pass
+              if ($r.verdict -eq 'fail') { $anyFail = $true }
+              elseif ($r.verdict -eq 'warn') { $anyWarn = $true }
+            }
+          }
+
+          $verdict = if ($anyFail) { 'fail' } elseif ($anyWarn) { 'warn' } else { 'pass' }
+
+          if ($filesChecked -eq 0) {
+            $verdict = 'warn'
+            Write-Host "No files available for validation — smoke test skipped."
+          }
+          $scope   = if ($noFilesAvailable) { 'no-files' } elseif ($usedFixtures) { 'fixtures' } else { 'pr-changed' }
+
+          Write-Host "Health verdict: $verdict  Files: $filesChecked  Pass: $passCount  Warn: $warnCount  Fail: $failCount"
+
+          Add-Content $env:GITHUB_OUTPUT "verdict=$verdict"
+          Add-Content $env:GITHUB_OUTPUT "files_checked=$filesChecked"
+          Add-Content $env:GITHUB_OUTPUT "pass_count=$passCount"
+          Add-Content $env:GITHUB_OUTPUT "warn_count=$warnCount"
+          Add-Content $env:GITHUB_OUTPUT "fail_count=$failCount"
+          Add-Content $env:GITHUB_OUTPUT "scope=$scope"
+
+      # ── 6. Coverage audit ─────────────────────────────────────────────────────
+      #
+      # Runs Scan-McpToolCoverage.ps1 against committed coverage test fixtures to
+      # verify the auditor is functional. In full pipeline runs, the C# CoverageAuditStep
+      # audits the actual generated namespace output.
+      - name: Run coverage audit
+        id: coverage
+        shell: pwsh
+        run: |
+          $toolsJson   = "mcp-tools/validation/tests/fixtures/coverage/tools-list-minimal.json"
+          $articlesDir = "mcp-tools/validation/tests/fixtures/coverage/articles"
+
+          if (-not (Test-Path $toolsJson) -or -not (Test-Path $articlesDir)) {
+            Write-Host "Coverage fixtures not found — audit skipped."
+            Add-Content $env:GITHUB_OUTPUT "verdict=skipped"
+            exit 0
+          }
+
+          $runId = [Guid]::NewGuid().ToString()
+
+          & ./mcp-tools/validation/Scan-McpToolCoverage.ps1 `
+            -ToolsJsonPath $toolsJson `
+            -ArticlesDir   $articlesDir `
+            -RunId         $runId `
+            -OutputJson    "coverage-result.json" `
+            -ErrorAction   Continue
+
+          $verdict = 'pass'
+          if (Test-Path "coverage-result.json") {
+            $r = Get-Content "coverage-result.json" -Raw | ConvertFrom-Json
+            if ($r.verdict) { $verdict = $r.verdict }
+          }
+
+          Write-Host "Coverage audit verdict: $verdict"
+          Add-Content $env:GITHUB_OUTPUT "verdict=$verdict"
+
+      # ── 7. Post PR comment with results ──────────────────────────────────────
+      - name: Post PR validation comment
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          HEALTH_VERDICT:   ${{ steps.health.outputs.verdict }}
+          HEALTH_FILES:     ${{ steps.health.outputs.files_checked }}
+          HEALTH_PASS:      ${{ steps.health.outputs.pass_count }}
+          HEALTH_WARN:      ${{ steps.health.outputs.warn_count }}
+          HEALTH_FAIL:      ${{ steps.health.outputs.fail_count }}
+          HEALTH_SCOPE:     ${{ steps.health.outputs.scope }}
+          COVERAGE_VERDICT: ${{ steps.coverage.outputs.verdict }}
+          GATE_MODE:        ${{ env.GATE_MODE }}
+        with:
+          script: |
+            const icon = v => ({pass:'✅', warn:'⚠️', fail:'❌', skipped:'⏭️'}[v] ?? '❓');
+
+            const health   = process.env.HEALTH_VERDICT   || 'skipped';
+            const coverage = process.env.COVERAGE_VERDICT || 'skipped';
+            const gateMode = process.env.GATE_MODE;
+            const files    = process.env.HEALTH_FILES || '0';
+            const pass     = process.env.HEALTH_PASS  || '0';
+            const warn     = process.env.HEALTH_WARN  || '0';
+            const fail     = process.env.HEALTH_FAIL  || '0';
+            const scope    = process.env.HEALTH_SCOPE || 'no-files';
+
+            const modeNote = gateMode === 'warn'
+              ? '> ⚠️ **Warn-only mode** — non-blocking. Will be promoted to blocking after 2 clean weeks.'
+              : '> 🚫 **Blocking mode** — failures will block merge.';
+
+            const scopeNote = scope === 'no-files'
+              ? `No article files or fixtures available — validation skipped.`
+              : scope === 'fixtures'
+              ? `No changed articles in PR — ran smoke test against committed fixtures.`
+              : `Checked ${files} changed article(s) from this PR.`;
+
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            const body = [
+              '## 🔍 Validation Gate',
+              '',
+              modeNote,
+              '',
+              '| Check | Verdict | Details |',
+              '|-------|---------|---------|',
+              `| Article Health | ${icon(health)} \`${health}\` | ${pass} pass · ${warn} warn · ${fail} fail · ${scopeNote} |`,
+              `| Coverage Audit | ${icon(coverage)} \`${coverage}\` | Fixture smoke test |`,
+              '',
+              `<sub>Gate mode: \`${gateMode}\` · [Run #${context.runNumber}](${runUrl})</sub>`,
+            ].join('\n');
+
+            const marker = '## 🔍 Validation Gate';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+            const bot = comments.find(c =>
+              c.user.login === 'github-actions[bot]' && c.body.includes(marker)
+            );
+
+            if (bot) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: bot.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body,
+              });
+            }
+
+      # ── 8. Gate decision ─────────────────────────────────────────────────────
+      #
+      # In warn mode: always passes — findings are visible-only.
+      # In block mode: fails if health or coverage verdict is 'fail'.
+      - name: Gate decision
+        if: always()
+        shell: bash
+        env:
+          HEALTH_VERDICT:   ${{ steps.health.outputs.verdict }}
+          COVERAGE_VERDICT: ${{ steps.coverage.outputs.verdict }}
+        run: |
+          echo "Gate mode      : $GATE_MODE"
+          echo "Health verdict : $HEALTH_VERDICT"
+          echo "Coverage verdict: $COVERAGE_VERDICT"
+
+          if [ "$GATE_MODE" = "block" ]; then
+            if [ "$HEALTH_VERDICT" = "fail" ] || [ "$COVERAGE_VERDICT" = "fail" ]; then
+              echo "❌ Blocking: validation failures detected (gate mode: block)."
+              exit 1
+            fi
+          fi
+
+          echo "✅ Validation gate passed (gate mode: $GATE_MODE)."

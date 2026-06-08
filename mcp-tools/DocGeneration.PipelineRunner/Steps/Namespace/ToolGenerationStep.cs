@@ -1,15 +1,25 @@
+using System.Text;
 using System.Text.RegularExpressions;
+using GenerativeAI;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Validation;
 using Shared;
+using Shared.Validation;
+using ToolGeneration_Improved.Models;
+using ToolGeneration_Improved.Services;
+using ToolGeneration_Improved.Validation;
 
 namespace PipelineRunner.Steps;
 
 public sealed class ToolGenerationStep : NamespaceStepBase
 {
     private const int DefaultMaxTokens = 8000;
+    internal const string ToolImproverOverrideKey = "ToolGenerationStep.ToolImproverOverride";
+    private static readonly ReducerRegistry Reducers = new();
+    private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
+    private static readonly TimeSpan ReducerImprovementTimeout = TimeSpan.FromMinutes(5);
 
     private static readonly Regex ComposedFailureRegex = new(
         @"Error processing (?<file>[^:]+\.md):",
@@ -18,6 +28,23 @@ public sealed class ToolGenerationStep : NamespaceStepBase
     private static readonly Regex ImprovedFailureRegex = new(
         @"Processing\s+(?<file>[^\s]+\.md)\.\.\.\s*✗",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    static ToolGenerationStep()
+    {
+        Reducers.Register(3, static async (ctx, ct) =>
+        {
+            if (ctx is not ToolGenerationReducerInput input)
+            {
+                throw new InvalidOperationException($"Reducer input for step 3 must be {nameof(ToolGenerationReducerInput)}.");
+            }
+
+            var reducer = new ToolGenerationReducer();
+            return await reducer.ReduceAsync(input.ComposedToolsDirectory, input.ToolFileName, input.MaxTokens, ct);
+        });
+
+        Reducers.RegisterValidator(new ToolGenerationContextValidator());
+        Reducers.RegisterValidator(new ToolGenerationBudgetValidator());
+    }
 
     public ToolGenerationStep()
         : base(
@@ -35,21 +62,52 @@ public sealed class ToolGenerationStep : NamespaceStepBase
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
     {
         var (_, cliOutput, _, matchingTools) = ResolveTarget(context);
+        var useReducerPath = Reducers.HasReducer(Id);
+
         _ = await CreateFilteredCliFileAsync(context, cliOutput, matchingTools, "pipeline-runner-step3", cancellationToken);
         var nameContext = await FileNameContext.CreateAsync();
-        var toolArtifacts = matchingTools
-            .Select(tool => ToolArtifacts.Create(tool.Command, context.OutputPath, nameContext))
-            .ToArray();
-
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
-        var rawToolsDirectory = Path.Combine(context.OutputPath, "tools-raw");
+        var step1Envelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 1, "generate-annotations-parameters-and-raw-tools");
+        var step2Envelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 2, "generate-example-prompts");
+        var rawToolsDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step1Envelope,
+            "tools-raw",
+            Path.Combine(context.OutputPath, "tools-raw"),
+            "step 1");
         var composedToolsDirectory = Path.Combine(context.OutputPath, "tools-composed");
         var improvedToolsDirectory = Path.Combine(context.OutputPath, "tools");
-        var annotationsDirectory = Path.Combine(context.OutputPath, "annotations");
-        var parametersDirectory = Path.Combine(context.OutputPath, "parameters");
-        var examplePromptsDirectory = Path.Combine(context.OutputPath, "example-prompts");
+        var annotationsDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step1Envelope,
+            "annotations",
+            Path.Combine(context.OutputPath, "annotations"),
+            "step 1");
+        var parametersDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step1Envelope,
+            "parameters",
+            Path.Combine(context.OutputPath, "parameters"),
+            "step 1");
+        var examplePromptsDirectory = ResolveUpstreamDirectory(
+            context.OutputPath,
+            step2Envelope,
+            "example-prompts",
+            Path.Combine(context.OutputPath, "example-prompts"),
+            "step 2");
+        var toolArtifacts = matchingTools
+            .Select(tool => ToolArtifacts.Create(
+                tool.Command,
+                rawToolsDirectory,
+                annotationsDirectory,
+                parametersDirectory,
+                examplePromptsDirectory,
+                composedToolsDirectory,
+                improvedToolsDirectory,
+                nameContext))
+            .ToArray();
 
         var prerequisiteIssues = GetPrerequisiteIssues(toolArtifacts);
         if (prerequisiteIssues.Count > 0)
@@ -129,28 +187,26 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
-        var improvedResult = await context.ProcessRunner.RunDotNetProjectAsync(
-            GetProjectPath(context, "DocGeneration.Steps.ToolGeneration.Improvements"),
-            [composedToolsDirectory, improvedToolsDirectory, DefaultMaxTokens.ToString()],
-            context.Request.SkipBuild,
-            context.McpToolsRoot,
-            cancellationToken);
-        processResults.Add(improvedResult);
-
-        var improvedIssues = GetImprovedOutputIssues(toolArtifacts);
-        if (!improvedResult.Succeeded || improvedIssues.Count > 0)
+        if (useReducerPath)
         {
-            if (!improvedResult.Succeeded)
+            var hadValidationFailure = false;
+            try
             {
-                AddProcessIssue(improvedResult, warnings, "AI-improved tool generation failed");
+                hadValidationFailure = await ImproveToolsWithReducerAsync(
+                    context,
+                    toolArtifacts,
+                    composedToolsDirectory,
+                    improvedToolsDirectory,
+                    warnings,
+                    cancellationToken);
             }
-
-            warnings.AddRange(improvedIssues.SelectMany(static issue => issue.Value));
-            var failedImprovedFiles = ParseFailingFiles(
-                string.Join(Environment.NewLine, [improvedResult.StandardOutput, improvedResult.StandardError]),
-                ImprovedFailureRegex);
-            if (!improvedResult.Succeeded && failedImprovedFiles.Count == 0)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                warnings.Add($"AI-improved tool generation failed: {ex.Message}");
                 artifactFailures.Add(CreateStepLevelFailure(
                     "DocGeneration.Steps.ToolGeneration.Improvements",
                     "Tool improvement failed before specific tools could be identified.",
@@ -159,30 +215,88 @@ public sealed class ToolGenerationStep : NamespaceStepBase
                 return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
             }
 
+            if (hadValidationFailure)
+            {
+                artifactFailures.Add(CreateStepLevelFailure(
+                    "DocGeneration.Steps.ToolGeneration.Improvements",
+                    "Pre-AI validation failed for one or more tools; composed content was used as fallback.",
+                    warnings,
+                    [composedToolsDirectory, improvedToolsDirectory]));
+            }
+        }
+        else
+        {
+            var improvedResult = await context.ProcessRunner.RunDotNetProjectAsync(
+                GetProjectPath(context, "DocGeneration.Steps.ToolGeneration.Improvements"),
+                [composedToolsDirectory, improvedToolsDirectory, DefaultMaxTokens.ToString()],
+                context.Request.SkipBuild,
+                context.McpToolsRoot,
+                cancellationToken);
+            processResults.Add(improvedResult);
+
+            var improvedIssues = GetImprovedOutputIssues(toolArtifacts);
+            if (!improvedResult.Succeeded || improvedIssues.Count > 0)
+            {
+                if (!improvedResult.Succeeded)
+                {
+                    AddProcessIssue(improvedResult, warnings, "AI-improved tool generation failed");
+                }
+
+                warnings.AddRange(improvedIssues.SelectMany(static issue => issue.Value));
+                var failedImprovedFiles = ParseFailingFiles(
+                    string.Join(Environment.NewLine, [improvedResult.StandardOutput, improvedResult.StandardError]),
+                    ImprovedFailureRegex);
+                if (!improvedResult.Succeeded && failedImprovedFiles.Count == 0)
+                {
+                    artifactFailures.Add(CreateStepLevelFailure(
+                        "DocGeneration.Steps.ToolGeneration.Improvements",
+                        "Tool improvement failed before specific tools could be identified.",
+                        warnings,
+                        [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
+                    return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+                }
+
+                artifactFailures.AddRange(toolArtifacts
+                    .Where(artifact => failedImprovedFiles.Contains(artifact.ToolFileName) || improvedIssues.ContainsKey(artifact.Command))
+                    .Select(artifact => CreateArtifactFailure(
+                        "tool",
+                        artifact.Command,
+                        "AI tool improvement failed for this tool.",
+                        warnings.Concat(improvedIssues.TryGetValue(artifact.Command, out var issueDetails) ? issueDetails : Array.Empty<string>()),
+                        artifact.GenerationPaths)));
+
+                if (artifactFailures.Count == 0)
+                {
+                    artifactFailures.Add(!improvedResult.Succeeded
+                        ? CreateStepLevelFailure(
+                            "DocGeneration.Steps.ToolGeneration.Improvements",
+                            "Tool improvement failed before specific tools could be identified.",
+                            warnings,
+                            [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory])
+                        : CreateArtifactFailure(
+                            "tool",
+                            GetCurrentNamespace(context),
+                            "Tool improvement failed before all final tool files were written.",
+                            warnings,
+                            [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
+                }
+
+                return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+            }
+        }
+
+        var reducerImprovedIssues = GetImprovedOutputIssues(toolArtifacts);
+        if (reducerImprovedIssues.Count > 0)
+        {
+            warnings.AddRange(reducerImprovedIssues.SelectMany(static issue => issue.Value));
             artifactFailures.AddRange(toolArtifacts
-                .Where(artifact => failedImprovedFiles.Contains(artifact.ToolFileName) || improvedIssues.ContainsKey(artifact.Command))
+                .Where(artifact => reducerImprovedIssues.ContainsKey(artifact.Command))
                 .Select(artifact => CreateArtifactFailure(
                     "tool",
                     artifact.Command,
                     "AI tool improvement failed for this tool.",
-                    warnings.Concat(improvedIssues.TryGetValue(artifact.Command, out var issueDetails) ? issueDetails : Array.Empty<string>()),
+                    warnings.Concat(reducerImprovedIssues.TryGetValue(artifact.Command, out var issueDetails) ? issueDetails : Array.Empty<string>()),
                     artifact.GenerationPaths)));
-
-            if (artifactFailures.Count == 0)
-            {
-                artifactFailures.Add(!improvedResult.Succeeded
-                    ? CreateStepLevelFailure(
-                        "DocGeneration.Steps.ToolGeneration.Improvements",
-                        "Tool improvement failed before specific tools could be identified.",
-                        warnings,
-                        [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory])
-                    : CreateArtifactFailure(
-                        "tool",
-                        GetCurrentNamespace(context),
-                        "Tool improvement failed before all final tool files were written.",
-                        warnings,
-                        [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
-            }
 
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
@@ -282,12 +396,134 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             .Where(static fileName => !string.IsNullOrWhiteSpace(fileName))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+    private static async Task<bool> ImproveToolsWithReducerAsync(
+        PipelineContext context,
+        IReadOnlyList<ToolArtifacts> toolArtifacts,
+        string composedToolsDirectory,
+        string improvedToolsDirectory,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(improvedToolsDirectory);
+
+        var reducer = Reducers.GetReducer(3);
+        if (reducer is null)
+        {
+            throw new InvalidOperationException("Reducer path was selected for step 3, but no reducer is registered.");
+        }
+
+        var improveToolAsync = await ResolveToolImproverAsync(context, cancellationToken);
+        var anyValidationFailed = false;
+
+        foreach (var artifact in toolArtifacts)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var reduction = (ToolGenerationContext)await reducer(
+                new ToolGenerationReducerInput(composedToolsDirectory, artifact.ToolFileName, DefaultMaxTokens),
+                cancellationToken);
+
+            var validationResult = await ReducerRegistry.AggregateAsync(Reducers.GetValidators<ToolGenerationContext>(), reduction, cancellationToken);
+            if (!validationResult.IsValid)
+            {
+                var errorSummary = string.Join("; ", validationResult.Errors.Select(static e => e.Message));
+                warnings.Add($"Pre-AI validation failed for '{artifact.ToolFileName}': {errorSummary}");
+                await File.WriteAllTextAsync(artifact.ImprovedToolPath, reduction.ComposedContent, Encoding.UTF8, cancellationToken);
+                anyValidationFailed = true;
+                continue;
+            }
+
+            try
+            {
+                using var toolCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                toolCts.CancelAfter(ReducerImprovementTimeout);
+
+                var improvedTool = await improveToolAsync(reduction, toolCts.Token);
+                await File.WriteAllTextAsync(artifact.ImprovedToolPath, improvedTool.ImprovedContent, Encoding.UTF8, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                await File.WriteAllTextAsync(artifact.ImprovedToolPath, reduction.ComposedContent, Encoding.UTF8, cancellationToken);
+            }
+            catch (ToolImprovementAiException)
+            {
+                await File.WriteAllTextAsync(artifact.ImprovedToolPath, reduction.ComposedContent, Encoding.UTF8, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                warnings.Add($"AI-improved tool generation failed for '{artifact.ToolFileName}': {ex.Message}");
+            }
+        }
+
+        return anyValidationFailed;
+    }
+
+    private static async Task<Func<ToolGenerationContext, CancellationToken, Task<ImprovedToolData>>> ResolveToolImproverAsync(
+        PipelineContext context,
+        CancellationToken cancellationToken)
+    {
+        if (context.Items.TryGetValue(ToolImproverOverrideKey, out var overrideValue))
+        {
+            if (overrideValue is Func<ToolGenerationContext, CancellationToken, Task<ImprovedToolData>> improver)
+            {
+                return improver;
+            }
+
+            throw new InvalidOperationException(
+                $"Context item '{ToolImproverOverrideKey}' must be {typeof(Func<ToolGenerationContext, CancellationToken, Task<ImprovedToolData>>).FullName}.");
+        }
+
+        var prompts = await LoadImprovementPromptsAsync(context.McpToolsRoot, cancellationToken);
+        var service = new ImprovedToolGeneratorService(new GenerativeAIClient(), prompts.SystemPrompt, prompts.UserPromptTemplate);
+        return (toolContext, ct) => service.ImproveToolAsync(toolContext, prompts.SystemPrompt, prompts.UserPromptTemplate, ct);
+    }
+
+    private static async Task<ImprovementPrompts> LoadImprovementPromptsAsync(string mcpToolsRoot, CancellationToken cancellationToken)
+    {
+        var projectRoot = Path.Combine(mcpToolsRoot, "DocGeneration.Steps.ToolGeneration.Improvements");
+        var promptsDirectory = Path.Combine(projectRoot, "prompts");
+        var dataDirectory = Path.Combine(mcpToolsRoot, "data");
+
+        var systemPromptPath = Path.Combine(promptsDirectory, "system-prompt.txt");
+        var userPromptTemplatePath = Path.Combine(promptsDirectory, "user-prompt-template.txt");
+
+        var systemPrompt = PromptTokenResolver.Resolve(
+            await File.ReadAllTextAsync(systemPromptPath, cancellationToken),
+            dataDirectory);
+        var userPromptTemplate = PromptTokenResolver.Resolve(
+            await File.ReadAllTextAsync(userPromptTemplatePath, cancellationToken),
+            dataDirectory);
+
+        return new ImprovementPrompts(systemPrompt, userPromptTemplate);
+    }
+
     private static ArtifactFailure CreateStepLevelFailure(
         string artifactName,
         string summary,
         IEnumerable<string> details,
         IEnumerable<string> relatedPaths)
         => ArtifactFailure.Create("pipeline step", artifactName, summary, details, relatedPaths);
+
+    private static string ResolveUpstreamDirectory(
+        string outputPath,
+        StepResultFile? envelope,
+        string relativeDirectory,
+        string fallbackPath,
+        string upstreamStep)
+    {
+        if (UpstreamArtifacts.TryResolveOutputDirectory(outputPath, envelope, relativeDirectory, out var resolvedPath))
+        {
+            Console.WriteLine(
+                $"INFO: Using {upstreamStep} envelope-based resolution for '{relativeDirectory}' at '{resolvedPath}'.");
+            return resolvedPath;
+        }
+
+        return fallbackPath;
+    }
 
     private sealed record ToolArtifacts(
         string Command,
@@ -303,18 +539,30 @@ public sealed class ToolGenerationStep : NamespaceStepBase
 
         public string[] GenerationPaths => [RawToolPath, ComposedToolPath, ImprovedToolPath, AnnotationPath, ParameterPath, ExamplePromptsPath];
 
-        public static ToolArtifacts Create(string command, string outputPath, FileNameContext nameContext)
+        public static ToolArtifacts Create(
+            string command,
+            string rawToolsDirectory,
+            string annotationsDirectory,
+            string parametersDirectory,
+            string examplePromptsDirectory,
+            string composedToolsDirectory,
+            string improvedToolsDirectory,
+            FileNameContext nameContext)
         {
             var toolFileName = ToolFileNameBuilder.BuildToolFileName(command, nameContext);
             return new ToolArtifacts(
                 command,
                 toolFileName,
-                Path.Combine(outputPath, "tools-raw", toolFileName),
-                Path.Combine(outputPath, "annotations", ToolFileNameBuilder.BuildAnnotationFileName(command, nameContext)),
-                Path.Combine(outputPath, "parameters", ToolFileNameBuilder.BuildParameterFileName(command, nameContext)),
-                Path.Combine(outputPath, "example-prompts", ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext)),
-                Path.Combine(outputPath, "tools-composed", toolFileName),
-                Path.Combine(outputPath, "tools", toolFileName));
+                Path.Combine(rawToolsDirectory, toolFileName),
+                Path.Combine(annotationsDirectory, ToolFileNameBuilder.BuildAnnotationFileName(command, nameContext)),
+                Path.Combine(parametersDirectory, ToolFileNameBuilder.BuildParameterFileName(command, nameContext)),
+                Path.Combine(examplePromptsDirectory, ToolFileNameBuilder.BuildExamplePromptsFileName(command, nameContext)),
+                Path.Combine(composedToolsDirectory, toolFileName),
+                Path.Combine(improvedToolsDirectory, toolFileName));
         }
     }
+
+    private sealed record ToolGenerationReducerInput(string ComposedToolsDirectory, string ToolFileName, int MaxTokens);
+
+    private sealed record ImprovementPrompts(string SystemPrompt, string UserPromptTemplate);
 }

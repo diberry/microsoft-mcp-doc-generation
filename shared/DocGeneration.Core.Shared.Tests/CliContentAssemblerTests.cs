@@ -49,13 +49,13 @@ public class CliContentAssemblerTests : IDisposable
     // ── AssembleCliContent (single tool) ─────────────────────────────
 
     [Fact]
-    public void AssembleCliContent_IncludesDescription()
+    public void AssembleCliContent_DoesNotIncludeDescription()
     {
         var tool = MakeTool(description: "Lists all storage accounts in the subscription.");
 
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        Assert.Contains("Lists all storage accounts in the subscription.", result);
+        Assert.DoesNotContain("Lists all storage accounts in the subscription.", result);
     }
 
     [Fact]
@@ -87,8 +87,7 @@ public class CliContentAssemblerTests : IDisposable
 
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        // Should only have the description, no parameter table
-        Assert.Contains("Lists all storage accounts in the subscription.", result);
+        Assert.Equal(string.Empty, result);
         Assert.DoesNotContain("| Parameter", result);
     }
 
@@ -287,9 +286,7 @@ public class CliContentAssemblerTests : IDisposable
 
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        // Should produce output (even if description is empty)
-        Assert.NotNull(result);
-        Assert.True(result.Length > 0);
+        Assert.Equal(string.Empty, result);
     }
 
     [Fact]
@@ -299,7 +296,7 @@ public class CliContentAssemblerTests : IDisposable
 
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        Assert.NotNull(result);
+        Assert.Equal(string.Empty, result);
     }
 
     [Fact]

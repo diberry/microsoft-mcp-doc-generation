@@ -5,12 +5,48 @@ using PipelineRunner.Services;
 using PipelineRunner.Steps;
 using PipelineRunner.Tests.Fixtures;
 using Shared;
+using ToolFamilyCleanup.Models;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
 
 public class ToolFamilyCleanupStepTests
 {
+    [Fact]
+    public async Task Step4_ReducerPath_UsesFamilyCleanupOverride_AndSkipsSubprocess()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            context.Items[ToolFamilyCleanupStep.FamilyCleanupOverrideKey] =
+                static (FamilyStructureContext structure, CancellationToken _) => Task.FromResult(
+                    new ToolFamilyCleanupStep.FamilyCleanupArtifacts(
+                        $"metadata for {structure.FamilyName}",
+                        "related content",
+                        $"# Final article{Environment.NewLine}{Environment.NewLine}{string.Join(Environment.NewLine + Environment.NewLine, structure.Sections.Select(section => section.SourceContent))}"));
+
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-disk-create.md"), "compute disk create");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+            var outputFileName = await ToolFileNameBuilder.ResolveFamilyFileNameAsync("compute");
+
+            Assert.True(result.Success, string.Join(" | ", result.Warnings));
+            Assert.Empty(processRunner.Invocations);
+            Assert.Equal("metadata for compute", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family-metadata", $"{outputFileName}-metadata.md")));
+            Assert.Equal("related content", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family-related", $"{outputFileName}-related.md")));
+            Assert.Contains("## Create disk", File.ReadAllText(Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md")));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
     [Fact]
     public async Task Step4_UsesIsolatedWorkspaceAndCopiesOutputsBackOnSuccess()
     {

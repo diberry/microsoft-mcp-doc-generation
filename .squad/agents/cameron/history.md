@@ -10,6 +10,26 @@
 
 ## Core Context
 
+### 2026-05-21: Test Strategy for Issue Triage — #611, #604, #602, #574
+
+**Session:** 8-agent PRD review cycle with comprehensive test planning.
+
+**Test Coverage Planned:**
+- **#611:** ~45 C# tests (timestamp generation, explicit-path bypass, glob matching)
+- **#574:** ~84 Pester tests (Phase 1 schema validation, Phase 2-3 integration, gate promotion)
+- **Total:** ~129 tests across full issue scope
+
+**Key Finding:** All 25 tests from PR #605 passing; no regressions observed
+
+**Quality Gates for #574:**
+1. Full test pass (`dotnet test mcp-doc-generation.sln`)
+2. Pipeline dry-run on 3 representative namespaces
+3. Regression baseline fingerprinting
+
+**Status:** Test designs ready; awaiting implementation
+
+---
+
 - Test strategy doc at `docs/test-strategy.md` (610 lines, authored by Parker, reviewed by full team)
 - Current test landscape: 1,149+ tests, but hollow middle tier (zero step contract tests, 1/10 templates tested)
 - Steps 3 and 6 have no post-validators — AD-021 flags this as critical

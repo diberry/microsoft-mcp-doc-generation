@@ -30,6 +30,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 source "$SCRIPT_DIR/bash-common.sh"
 
+# Pass --inspect and other flag-prefixed arguments directly to PipelineRunner
+if [[ $# -gt 0 && "$1" =~ ^- ]]; then
+    dotnet run --project "$ROOT_DIR/mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "$@"
+    exit $?
+fi
+
 if [[ $# -lt 1 ]]; then
 	echo "Usage: $0 <tool-family> [steps] [output-dir]"
 	echo "Example: $0 advisor"
@@ -40,6 +46,7 @@ fi
 
 TOOL_FAMILY="$(echo "$1" | strip_cr)"
 STEPS="${2:-1,2,3,4,5,6}"
+# TODO(future): derive default step ordering from mcp-tools/pipeline.config.json instead of hardcoding here
 OUTPUT_DIR="${3:-$ROOT_DIR/generated}"
 
 # Verify CLI metadata files exist

@@ -85,7 +85,7 @@ wait
 - **Prompt templates:** `mcp-tools/prompts/`
 - **Handlebars templates:** `mcp-tools/templates/`
 - **Configuration data:** `mcp-tools/data/`
-- **MCP CLI metadata extraction:** `test-npm-azure-mcp/`
+- **MCP CLI metadata extraction:** `mcp-cli-metadata/`
 - **Generated output:** `generated/` or `generated-<namespace>/`
 
 ### Legacy naming notes
@@ -203,7 +203,7 @@ microsoft-mcp-doc-generation/
 │   ├── reports/                 # Validation reports
 │   └── logs/                    # Generation logs
 │
-├── test-npm-azure-mcp/          # MCP CLI metadata extractor
+├── mcp-cli-metadata/          # MCP CLI metadata extractor
 └── start.sh                     # Main entry point
 ```
 
@@ -317,6 +317,7 @@ To modify AI-generated content quality or style:
 | [docs/GENERATION-SCRIPTS.md](docs/GENERATION-SCRIPTS.md) | Script execution order and dependencies |
 | [docs/GET-MCP-VERSION.md](docs/GET-MCP-VERSION.md) | Retrieving MCP version information |
 | [docs/ci-integration.md](docs/ci-integration.md) | CI pipeline structure, local dev commands, test inventory, debugging guide |
+| [docs/VALIDATION-RUNBOOK.md](docs/VALIDATION-RUNBOOK.md) | Manual validation workflow for repo-local article-health and coverage scripts |
 
 ### Quality & Testing
 
@@ -325,6 +326,7 @@ To modify AI-generated content quality or style:
 | [docs/test-strategy.md](docs/test-strategy.md) | Test strategy for the documentation pipeline |
 | [docs/FINGERPRINTING.md](docs/FINGERPRINTING.md) | Baseline fingerprinting tool — snapshot and diff generated output |
 | [docs/acrolinx-compliance-strategy.md](docs/acrolinx-compliance-strategy.md) | Acrolinx compliance strategy for tool-family articles |
+| [mcp-tools/validation/README.md](mcp-tools/validation/README.md) | Repo-local validation scripts, test fixtures, and manual execution commands |
 | [mcp-tools/DocGeneration.PromptRegression.Tests/README.md](mcp-tools/DocGeneration.PromptRegression.Tests/README.md) | Prompt regression testing — baselines, metrics, comparison |
 | [docs/prompt-versioning.md](docs/prompt-versioning.md) | Prompt versioning — SHA256 hashing, `PromptSnapshot`, `StepResultFile` v2 schema |
 
@@ -349,7 +351,7 @@ To modify AI-generated content quality or style:
 
 | Document | Description |
 |----------|-------------|
-| [test-npm-azure-mcp/README.md](test-npm-azure-mcp/README.md) | MCP CLI metadata extractor |
+| [mcp-cli-metadata/README.md](mcp-cli-metadata/README.md) | MCP CLI metadata extractor |
 
 ### Repository Configuration
 
@@ -361,9 +363,8 @@ To modify AI-generated content quality or style:
 ## Prerequisites
 
 ### Required
-- **Node.js + npm** - For MCP CLI metadata extraction
-- **PowerShell (pwsh)** - Optional for legacy/manual fallback scripts; the standard `start.sh` path no longer depends on PowerShell
-- **.NET SDK** - For C# generator projects (projects use .NET 9.0)
+- **.NET SDK** — For C# generator projects (projects use .NET 9.0) and CLI metadata extraction (`mcp-tools/McpCliMetadata/`, .NET 10)
+- **PowerShell (pwsh)** — For orchestration scripts (`preflight.ps1`, etc.)
 
 ### Optional (for AI-enhanced steps)
 - **Azure OpenAI** - For steps 2, 3, 4, and 6 (example prompts, improvements, assembly cleanup, horizontal articles)

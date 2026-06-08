@@ -41,7 +41,9 @@ public sealed class BootstrapStep : StepDefinition
         "tool-family",
     ];
 
-    public BootstrapStep()
+    private readonly INamespaceMappingEmitter _namespaceMappingEmitter;
+
+    public BootstrapStep(INamespaceMappingEmitter? namespaceMappingEmitter = null)
         : base(
             0,
             "Bootstrap pipeline",
@@ -59,8 +61,10 @@ public sealed class BootstrapStep : StepDefinition
                 "annotations",
                 "logs",
                 "tool-family",
+                "namespace-mapping.json",
             ])
     {
+        _namespaceMappingEmitter = namespaceMappingEmitter ?? new NamespaceMappingEmitter();
     }
 
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
@@ -109,84 +113,68 @@ public sealed class BootstrapStep : StepDefinition
                 cancellationToken);
 
             var cliDirectory = Path.Combine(context.OutputPath, "cli");
-            var testNpmDirectory = Path.Combine(context.RepoRoot, "test-npm-azure-mcp");
-            if (!Directory.Exists(testNpmDirectory))
+            var mcpCliMetadataProject = Path.Combine(context.McpToolsRoot, "McpCliMetadata", "McpCliMetadata.csproj");
+            if (!File.Exists(mcpCliMetadataProject))
             {
-                warnings.Add($"CLI metadata extractor directory was not found: {testNpmDirectory}");
+                warnings.Add($"CLI metadata project was not found: {mcpCliMetadataProject}");
                 return BuildResult(context, processResults, success: false, warnings);
             }
 
-            var npmExecutable = GetNpmExecutable();
 
             if (!context.Request.SkipNpmUpdate)
             {
-                context.Reports.Info("Updating @azure/mcp to latest version...");
-                var latestInstallResult = await context.ProcessRunner.RunAsync(
-                    new ProcessSpec(npmExecutable, ["install", "@azure/mcp@latest", "--save"], testNpmDirectory),
-                    cancellationToken);
-                processResults.Add(latestInstallResult);
-                if (!latestInstallResult.Succeeded)
+                var pinnedVersion = await ReadMcpToolVersionAsync(context.RepoRoot, cancellationToken);
+                if (pinnedVersion is not null)
                 {
-                    AddProcessIssue(latestInstallResult, warnings, "Failed to install latest @azure/mcp — use --skip-npm-update for offline or reproducible builds");
-                    return BuildResult(context, processResults, success: false, warnings);
-                }
+                    context.Reports.Info($"Installing azure.mcp@{pinnedVersion} from mcp-tool-version.txt...");
+                    var versionedInstallResult = await context.ProcessRunner.RunAsync(
+                        new ProcessSpec("dotnet", ["tool", "update", "azure.mcp", "--global", "--version", pinnedVersion], context.RepoRoot),
+                        cancellationToken);
+                    processResults.Add(versionedInstallResult);
 
-                context.Reports.Info("@azure/mcp updated to latest.");
+                    var combinedOutput = versionedInstallResult.StandardOutput + versionedInstallResult.StandardError;
+                    var alreadyAtVersion = !versionedInstallResult.Succeeded &&
+                        combinedOutput.Contains("already", StringComparison.OrdinalIgnoreCase);
+
+                    if (!versionedInstallResult.Succeeded && !alreadyAtVersion)
+                    {
+                        AddProcessIssue(versionedInstallResult, warnings, $"Failed to install azure.mcp@{pinnedVersion} — use --skip-tool-update for offline or reproducible builds");
+                        return BuildResult(context, processResults, success: false, warnings);
+                    }
+
+                    context.Reports.Info($"azure.mcp@{pinnedVersion} is ready.");
+                }
+                else
+                {
+                    context.Reports.Warning("mcp-tool-version.txt not found — updating azure.mcp to latest version (add mcp-tool-version.txt for reproducible builds).");
+                    var latestInstallResult = await context.ProcessRunner.RunAsync(
+                        new ProcessSpec("dotnet", ["tool", "update", "azure.mcp", "--global"], context.RepoRoot),
+                        cancellationToken);
+                    processResults.Add(latestInstallResult);
+                    if (!latestInstallResult.Succeeded)
+                    {
+                        AddProcessIssue(latestInstallResult, warnings, "Failed to update azure.mcp dotnet tool globally — use --skip-tool-update for offline or reproducible builds");
+                        return BuildResult(context, processResults, success: false, warnings);
+                    }
+
+                    context.Reports.Info("azure.mcp dotnet tool updated to latest.");
+                }
             }
             else
             {
-                context.Reports.Info("Skipping @azure/mcp latest update (--skip-npm-update).");
+                context.Reports.Info("Skipping azure.mcp dotnet tool update (--skip-npm-update).");
             }
 
-            var npmInstallResult = await context.ProcessRunner.RunAsync(
-                new ProcessSpec(npmExecutable, ["install", "--silent"], testNpmDirectory),
+            var metadataGenerationResult = await context.ProcessRunner.RunDotNetProjectAsync(
+                mcpCliMetadataProject,
+                [context.OutputPath],
+                noBuild: true,
+                context.RepoRoot,
                 cancellationToken);
-            processResults.Add(npmInstallResult);
-            if (!npmInstallResult.Succeeded)
+            processResults.Add(metadataGenerationResult);
+            if (!metadataGenerationResult.Succeeded)
             {
-                AddProcessIssue(npmInstallResult, warnings, "CLI metadata dependency installation failed");
-                return BuildResult(context, processResults, success: false, warnings);
-            }
-
-            var versionResult = await CaptureCommandOutputAsync(
-                context,
-                processResults,
-                testNpmDirectory,
-                cliDirectory,
-                "get:version",
-                "cli-version.json",
-                cancellationToken);
-            if (!versionResult.Succeeded)
-            {
-                AddProcessIssue(versionResult, warnings, "CLI version extraction failed");
-                return BuildResult(context, processResults, success: false, warnings);
-            }
-
-            var cliOutputResult = await CaptureCommandOutputAsync(
-                context,
-                processResults,
-                testNpmDirectory,
-                cliDirectory,
-                "get:tools-json",
-                "cli-output.json",
-                cancellationToken);
-            if (!cliOutputResult.Succeeded)
-            {
-                AddProcessIssue(cliOutputResult, warnings, "CLI tool metadata extraction failed");
-                return BuildResult(context, processResults, success: false, warnings);
-            }
-
-            var namespaceResult = await CaptureCommandOutputAsync(
-                context,
-                processResults,
-                testNpmDirectory,
-                cliDirectory,
-                "get:tools-namespace",
-                "cli-namespace.json",
-                cancellationToken);
-            if (!namespaceResult.Succeeded)
-            {
-                AddProcessIssue(namespaceResult, warnings, "CLI namespace metadata extraction failed");
+                AddProcessIssue(metadataGenerationResult, warnings, "CLI metadata extraction failed");
                 return BuildResult(context, processResults, success: false, warnings);
             }
 
@@ -335,10 +323,19 @@ public sealed class BootstrapStep : StepDefinition
                 }
             }
 
-            // Generate cli-tab-config.json so ToolFamilyCleanupStep can enable CLI tab generation.
-            // AllowedNamespaces is sourced from brand-to-server-mapping.json (the source of truth for
-            // which namespaces produce tool-family files), expanding merge group peers when needed.
             var brandMappingPath = Path.Combine(context.McpToolsRoot, "data", "brand-to-server-mapping.json");
+
+            // Load brand entries once for both the CLI tab config and the namespace mapping emitter.
+            // TODO(F5): ResolveCliTabNamespacesAsync also reads this file independently; consolidate
+            // to a single read to eliminate the inconsistency window if these diverge.
+            var brandEntries = await LoadBrandMappingEntriesAsync(brandMappingPath, cancellationToken);
+
+            // F3: warn visibly when brand-to-server-mapping.json produces no entries
+            if (brandEntries.Count == 0)
+            {
+                context.Reports.Warning("brand-to-server-mapping.json is empty or missing — namespace-mapping.json will contain no namespaces.");
+            }
+
             var namespacesForConfig = await ResolveCliTabNamespacesAsync(brandMappingPath, context.SelectedNamespaces, cancellationToken);
             var cliTabConfig = CliTabConfig.ForNamespaces([.. namespacesForConfig]);
             var cliTabConfigPath = Path.Combine(context.OutputPath, "cli-tab-config.json");
@@ -349,6 +346,22 @@ public sealed class BootstrapStep : StepDefinition
                 cancellationToken);
             context.Reports.Info($"Generated cli-tab-config.json with {cliTabConfig.AllowedNamespaces.Count} namespace(s).");
 
+            var unmatchedTools = await _namespaceMappingEmitter.EmitAsync(
+                brandEntries,
+                context.CliOutput!,
+                context.CliVersion!,
+                context.OutputPath,
+                cancellationToken);
+
+            // F1: warn when any tool was not matched to a namespace prefix
+            if (unmatchedTools.Count > 0)
+            {
+                context.Reports.Warning(
+                    $"namespace-mapping.json: {unmatchedTools.Count} tool(s) were not matched to any brand mapping namespace: {string.Join(", ", unmatchedTools)}");
+            }
+
+            context.Reports.Info("Emitted namespace-mapping.json.");
+
             CreateDirectories(context.OutputPath, BaseOutputDirectories);
             return BuildResult(context, processResults, success: true, warnings);
         }
@@ -357,6 +370,20 @@ public sealed class BootstrapStep : StepDefinition
             warnings.Add(ex.Message);
             return BuildResult(context, processResults, success: false, warnings);
         }
+    }
+
+    /// <summary>
+    /// Reads the pinned azure.mcp tool version from <c>mcp-tool-version.txt</c> in the repo root.
+    /// Returns <c>null</c> if the file does not exist, signalling a fallback to the latest version.
+    /// </summary>
+    internal static async ValueTask<string?> ReadMcpToolVersionAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        var versionFile = Path.Combine(repoRoot, "mcp-tool-version.txt");
+        if (!File.Exists(versionFile))
+            return null;
+        var content = await File.ReadAllTextAsync(versionFile, cancellationToken);
+        var trimmed = content.Trim();
+        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
     }
 
     private static bool NeedsAiConfiguration(PipelineContext context)
@@ -393,8 +420,31 @@ public sealed class BootstrapStep : StepDefinition
         }
     }
 
-    private static string GetNpmExecutable()
-        => OperatingSystem.IsWindows() ? "npm.cmd" : "npm";
+    /// <summary>
+    /// Loads <c>brand-to-server-mapping.json</c> from the given path as a list of <see cref="BrandMappingEntry"/>.
+    /// Returns an empty list if the file does not exist or contains malformed JSON.
+    /// </summary>
+    private static async Task<IReadOnlyList<BrandMappingEntry>> LoadBrandMappingEntriesAsync(
+        string brandMappingPath,
+        CancellationToken cancellationToken)
+    {
+        if (!File.Exists(brandMappingPath))
+        {
+            return [];
+        }
+
+        var json = await File.ReadAllTextAsync(brandMappingPath, cancellationToken);
+        try
+        {
+            return JsonSerializer.Deserialize<BrandMappingEntry[]>(
+                json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
 
     private static IReadOnlyList<string> GetRequiredArtifacts(string mcpToolsRoot, IReadOnlyList<IPipelineStep> plannedSteps)
     {
@@ -428,30 +478,6 @@ public sealed class BootstrapStep : StepDefinition
         return requiredProjects
             .Select(project => Path.Combine(mcpToolsRoot, project, "bin", "Release", targetFramework, $"{project}.dll"))
             .ToArray();
-    }
-
-    private static async ValueTask<ProcessExecutionResult> CaptureCommandOutputAsync(
-        PipelineContext context,
-        ICollection<ProcessExecutionResult> processResults,
-        string workingDirectory,
-        string outputDirectory,
-        string scriptName,
-        string outputFileName,
-        CancellationToken cancellationToken)
-    {
-        var result = await context.ProcessRunner.RunAsync(
-            new ProcessSpec(GetNpmExecutable(), ["run", "--silent", scriptName], workingDirectory),
-            cancellationToken);
-        processResults.Add(result);
-
-        if (result.Succeeded)
-        {
-            var outputPath = Path.Combine(outputDirectory, outputFileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-            await File.WriteAllTextAsync(outputPath, result.StandardOutput.Trim(), Encoding.UTF8, cancellationToken);
-        }
-
-        return result;
     }
 
     /// <summary>

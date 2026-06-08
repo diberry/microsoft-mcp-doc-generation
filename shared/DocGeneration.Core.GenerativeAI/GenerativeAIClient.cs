@@ -1,5 +1,7 @@
+using System.Diagnostics;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using DocGeneration.Core.Tracing;
 using Microsoft.Extensions.AI;
 using System.ClientModel;
 
@@ -9,18 +11,33 @@ public class GenerativeAIClient
 {
     private const int MaxRetries = 5;
     private readonly IChatClient _chatClient;
+    private readonly IPipelineTracer _tracer;
+    private readonly string? _modelName;
 
-    public GenerativeAIClient(GenerativeAIOptions? opts = null)
-        : this(CreateChatClient(opts ?? GenerativeAIOptions.LoadFromEnvironmentOrDotEnv()))
+    public GenerativeAIClient(GenerativeAIOptions? opts = null, IPipelineTracer? tracer = null)
+        : this(CreateConfiguredChatClient(opts), tracer)
     {
     }
 
-    public GenerativeAIClient(IChatClient chatClient)
+    private GenerativeAIClient((IChatClient ChatClient, string? ModelName) configuredClient, IPipelineTracer? tracer)
+        : this(configuredClient.ChatClient, tracer, configuredClient.ModelName)
+    {
+    }
+
+    public GenerativeAIClient(IChatClient chatClient, IPipelineTracer? tracer = null, string? modelName = null)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
+        _tracer = tracer ?? NullTracer.Instance;
+        _modelName = modelName;
     }
 
-    public async Task<string> GetChatCompletionAsync(string systemPrompt, string userPrompt, int maxTokens = 8000, CancellationToken ct = default)
+    public async Task<string> GetChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        int maxTokens = 8000,
+        CancellationToken ct = default,
+        string? toolOrNamespace = null,
+        string? operation = null)
     {
         var messages = new[]
         {
@@ -33,7 +50,9 @@ public class GenerativeAIClient
             MaxOutputTokens = maxTokens
         };
 
+        var sw = Stopwatch.StartNew();
         var response = await _chatClient.GetResponseAsync(messages, options, ct);
+        sw.Stop();
 
         if (response.FinishReason == Microsoft.Extensions.AI.ChatFinishReason.Length)
         {
@@ -44,7 +63,27 @@ public class GenerativeAIClient
                 $"Consider increasing maxTokens parameter.");
         }
 
-        return response.Messages.FirstOrDefault()?.Text ?? string.Empty;
+        var responseText = response.Messages.FirstOrDefault()?.Text ?? string.Empty;
+        _tracer.RecordAiCall(new AiInteractionRecord
+        {
+            SkillOrToolName = toolOrNamespace ?? "unknown",
+            Operation = operation ?? "GetChatCompletion",
+            SystemPrompt = systemPrompt,
+            UserPrompt = userPrompt,
+            ResponseContent = responseText,
+            Model = _modelName ?? "unknown",
+            TotalTokens = response.Usage?.TotalTokenCount is long totalTokenCount ? (int?)totalTokenCount : null,
+            DurationMs = sw.ElapsedMilliseconds,
+            RetryCount = 0
+        });
+
+        return responseText;
+    }
+
+    private static (IChatClient ChatClient, string? ModelName) CreateConfiguredChatClient(GenerativeAIOptions? opts)
+    {
+        var resolvedOptions = opts ?? GenerativeAIOptions.LoadFromEnvironmentOrDotEnv();
+        return (CreateChatClient(resolvedOptions), resolvedOptions.Deployment);
     }
 
     private static IChatClient CreateChatClient(GenerativeAIOptions opts)

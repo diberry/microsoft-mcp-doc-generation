@@ -2,6 +2,24 @@
 
 ## Learnings
 
+### 2026-05-21: Issue Triage & Architecture Review — #611, #574 Prioritization
+
+**Session:** 8-agent PRD review cycle with architecture assessment.
+
+**Findings:**
+1. Process.Start("pwsh") calls in #574 should use IProcessRunner abstraction (subprocess isolation)
+2. Steps 5-6 have implicit Bootstrap dependencies — recommend explicit `DependsOn` declarations
+3. Bootstrap ResetOutputDirectory destructive — recommend incremental mode for `--skip-deps`
+
+**Recommendations:**
+- #574 Phase 1-2: Use structured error contracts (JSON) instead of regex parsing
+- #611 should complete before #574 to enable clean CI workspace
+- IProcessRunner abstraction not urgent (tech debt, Phase 2+)
+
+**Status:** Architecture review documented; guidance ready for implementation
+
+---
+
 ### 2026-04-17: Skills Generation — Customer-Facing Page Design
 
 **Context:** Dina directed that generated skill doc pages must NOT duplicate SKILL.md (anthropic-spec agent instruction files). Pages must be customer-facing reference docs answering "what do I need to know to use this skill successfully?"

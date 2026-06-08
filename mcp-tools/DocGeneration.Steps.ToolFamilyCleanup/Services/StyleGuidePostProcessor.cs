@@ -34,6 +34,11 @@ public static class StyleGuidePostProcessor
         @"^#{1,6}\s.*$",
         RegexOptions.Compiled | RegexOptions.Multiline);
 
+    // Matches @mcpcli HTML comments that must not be modified by prose processors
+    private static readonly Regex McpCliCommentPattern = new(
+        @"<!--\s*@mcpcli\s+[^>]+?-->",
+        RegexOptions.Compiled);
+
     // ── A. Compound word rules (loaded once from JSON) ──────────────
 
     private static readonly List<(Regex Pattern, string Replacement)> CompoundWordRules = LoadCompoundWordRules();
@@ -134,6 +139,14 @@ public static class StyleGuidePostProcessor
         body = HeadingPattern.Replace(body, m =>
         {
             var key = $"\x00HD{placeholderIndex++}\x00";
+            placeholders[key] = m.Value;
+            return key;
+        });
+
+        // MC = McpCli comment (matches CB=CodeBlock, IC=InlineCode, HD=HeaDing convention)
+        body = McpCliCommentPattern.Replace(body, m =>
+        {
+            var key = $"\x00MC{placeholderIndex++}\x00";
             placeholders[key] = m.Value;
             return key;
         });

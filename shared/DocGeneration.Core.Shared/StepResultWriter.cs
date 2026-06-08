@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,6 +29,16 @@ public static class StepResultWriter
     /// </summary>
     public static void Write(string directory, StepResultFile result)
     {
+        if (result.OutputArtifacts is { Count: > 0 })
+        {
+            var duplicatePath = result.OutputArtifacts
+                .GroupBy(a => a.Path, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(g => g.Count() > 1)?.Key;
+
+            if (duplicatePath is not null)
+                throw new ArtifactPathCollisionException(duplicatePath);
+        }
+
         Directory.CreateDirectory(directory);
         var filePath = Path.Combine(directory, FileName);
         var json = JsonSerializer.Serialize(result, SerializerOptions);

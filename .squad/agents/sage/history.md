@@ -7,6 +7,25 @@
 
 ## Learnings
 
+### 2026-05-21: AI Risk Assessment — #574 Placeholder Token Detector
+
+**Session:** 8-agent PRD review cycle including AI validation findings.
+
+**Finding:** #574 tools-raw/ fallback has unresolved placeholders (e.g., `<<<TPL_LABEL_N>>>` tokens), risk level: medium.
+
+**Proposed Mitigation:**
+1. Implement placeholder token detector in #574 Phase 2 validation step
+2. Phase 1: warn-only on placeholder detection
+3. Phase 2: promote to fail-gate after clean baseline established
+
+**Pattern Detection:** Regex for `<<<\w+_\d+>>>` markers; warn on match; fail on promotion
+
+**Impact:** Enables safer AI output validation; improves content quality gates
+
+**Status:** Spec documented; ready for Phase 2 implementation
+
+---
+
 ### 2026-03-31: Skills Generation LLM Prompt Redesign — Agent-to-Customer Translation
 
 **Task:** Redesign the LLM rewrite step to transform SKILL.md (agent-internal anthropic-spec) into customer-facing documentation.
@@ -174,3 +193,16 @@
 **Summary:** This session's output from Sage on LLM rewrite prompt strategy for customer-facing skills documentation has been merged into the active decisions log. The comprehensive redesign with transformation rules, pattern recognition, and success criteria is now part of team knowledge for implementation phase.
 
 **Next:** Awaiting approval and implementation on 3–5 test skills before full rollout.
+
+### 2026-05-30: Per-Tool AI Prompts Created (PR #659 Support)
+
+**Event:** Created prompt artifacts supporting Morgan's per-tool AI call refactor.
+
+**Artifacts Created:**
+1. `horizontal-article-tool-system-prompt.txt` — System prompt for per-tool AI calls (bounded scope)
+2. `horizontal-article-tool-user-prompt.txt` — User prompt template for tool-specific content generation
+3. `horizontal-article-namespace-user-prompt.txt` — Namespace-level summary prompt (separate AI call)
+
+**Purpose:** Support refactored `GenerateAIContent` that calls AI once per tool + once for namespace summary. Per-tool scope bounds input to ~1 tool's data, eliminating 18k token overflow observed in namespace-level calls (storage namespace).
+
+**Status:** Artifacts complete and integrated; PR #659 merged to main

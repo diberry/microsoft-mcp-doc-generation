@@ -9,6 +9,25 @@
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
 
+### 2026-05-21: Issue Triage & PRD Review Cycle — All 8 Agents (AD-035 through AD-041)
+
+**Session:** Comprehensive issue triage for #611, #604, #602, #574 with full 8-agent review & consensus.
+
+**Key Outcome:** #604 and #602 already fixed in PR #605 (merged 2026-05-19) — recommendation to close immediately.
+
+**Prioritization:**
+1. #611 (P1, independent, 1-2 days, @copilot-suitable)
+2. #574 Phase 1 (P2, 1-2 days, namespace-mapping.json extraction)
+3. #574 Phases 2-5 (P2, multi-week, requires #611 completion)
+
+**All 8 agents approved:** Avery, Riley, Morgan, Quinn, Sage, Cameron, Parker, Reeve
+
+**Risk assessment:** #611 blast radius medium (directory naming); #574 blast radius large (validation gates)
+
+**Next:** Close #604/#602 on GitHub; assign #611 to @copilot with TDD acceptance criteria; design namespace-mapping.json schema
+
+---
+
 ### 2026-03-30: .NET Project Consolidation Plan — Team Review Complete (AD-027 through AD-034)
 
 **Session:** Orchestrated asynchronous review of consolidation plan across 8-member team.
@@ -17,7 +36,7 @@
 
 **Verdicts:**
 - ✅ Riley (Architect): APPROVE WITH CHANGES
-- ✅ Morgan (C# Dev): APPROVE WITH CHANGES  
+- ✅ Morgan (C# Dev): APPROVE WITH CHANGES
 - ✅ Cameron (Test Lead): APPROVE WITH CHANGES
 - ✅ Quinn (DevOps): APPROVED
 - ✅ Parker (QA): APPROVE WITH CONTINGENCIES
@@ -193,3 +212,11 @@ The `WrapExampleValues` space-detection heuristic (`IndexOf(' ')` to split value
 - `tool-complete-template.hbs` still uses `[!INCLUDE]` with different path pattern — separate rendering context, not affected.
 - CI `build-and-test` failures on both PRs are infrastructure-related (0 errors, all 204 tests pass, exit code 1 from orphan dotnet cleanup).
 - Three separate `StripFrontmatter` implementations exist across assemblies — tech debt to consolidate.
+## 2026-05-26 — PRD #574 Formalization Complete
+
+- **Event:** Formalized issue #574 into comprehensive 17-dimension PRD
+- **Status:** 6-round review cycle, 8/8 approval complete
+- **Artifact:** projects/azure-ai-tools/prds/2026-05-26T11-57-prd-574-validation-pipeline-integration.md
+- **Impact:** High blast-radius feature; integrated validation pipeline now has clear architecture, gate ownership, versioned contracts, and rollout criteria
+- **Decision:** Recorded in .squad/decisions.md as PRD approval landmark
+

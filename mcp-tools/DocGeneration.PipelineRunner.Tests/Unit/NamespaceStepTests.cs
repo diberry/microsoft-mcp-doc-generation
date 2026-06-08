@@ -1,4 +1,5 @@
 using System.Text.Json;
+using HorizontalArticleGenerator.Models;
 using PipelineRunner.Cli;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
@@ -6,6 +7,7 @@ using PipelineRunner.Services;
 using PipelineRunner.Steps;
 using PipelineRunner.Tests.Fixtures;
 using Shared;
+using ToolGeneration_Improved.Models;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -360,12 +362,11 @@ public class NamespaceStepTests
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Equal(2, runner.Invocations.Count);
+            Assert.Single(runner.Invocations);
             Assert.Contains(runner.Invocations[0].Arguments, argument => argument.EndsWith("DocGeneration.Steps.ToolGeneration.Composition.csproj", StringComparison.Ordinal));
             Assert.Contains(runner.Invocations[0].Arguments, argument => argument == Path.Combine(context.OutputPath, "tools-raw"));
             Assert.Contains(runner.Invocations[0].Arguments, argument => argument == Path.Combine(context.OutputPath, "example-prompts"));
-            Assert.Contains(runner.Invocations[1].Arguments, argument => argument.EndsWith("DocGeneration.Steps.ToolGeneration.Improvements.csproj", StringComparison.Ordinal));
-            Assert.Contains(runner.Invocations[1].Arguments, argument => argument == "8000");
+            Assert.Equal(2, Directory.GetFiles(Path.Combine(context.OutputPath, "tools"), "*.md").Length);
         }
         finally
         {
@@ -374,7 +375,7 @@ public class NamespaceStepTests
     }
 
     [Fact]
-    public async Task Step3_ToolGeneration_MissingImprovedToolCreatesArtifactFailure()
+    public async Task Step3_ToolGeneration_ReducerPathGeneratesMissingImprovedTool()
     {
         var testRoot = CreateTestRoot();
         try
@@ -389,10 +390,9 @@ public class NamespaceStepTests
             var step = new ToolGenerationStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-            Assert.False(result.Success);
-            Assert.Single(result.ArtifactFailures);
-            Assert.Equal("compute show", result.ArtifactFailures[0].ArtifactName);
-            Assert.Contains("improvement", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.True(result.Success);
+            Assert.Empty(result.ArtifactFailures);
+            Assert.Equal(2, Directory.GetFiles(Path.Combine(context.OutputPath, "tools"), "*.md").Length);
         }
         finally
         {
@@ -571,7 +571,7 @@ public class NamespaceStepTests
     }
 
     [Fact]
-    public async Task Step6_HorizontalArticles_UsesExpectedGeneratorArguments()
+    public async Task Step6_HorizontalArticles_UsesReducerOverride_AndWritesOutput()
     {
         var testRoot = CreateTestRoot();
         try
@@ -581,19 +581,35 @@ public class NamespaceStepTests
             context.Items["Namespace"] = "compute";
 
             SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), "{\"version\":\"1.2.3\"}");
-            SeedFile(Path.Combine(context.OutputPath, "horizontal-articles", "horizontal-article-compute.md"));
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                JsonSerializer.Serialize(new
+                {
+                    results = new[]
+                    {
+                        new { command = "compute list", name = "compute list", description = "List compute resources." },
+                        new { command = "compute show", name = "compute show", description = "Show compute resources." }
+                    }
+                }));
+
+            ArticleOutlineContext? capturedOutline = null;
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] =
+                (Func<ArticleOutlineContext, CancellationToken, Task<string>>)((outline, _) =>
+                {
+                    capturedOutline = outline;
+                    return Task.FromResult("# Horizontal article");
+                });
 
             var step = new HorizontalArticlesStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Single(runner.Invocations);
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument.EndsWith("DocGeneration.Steps.HorizontalArticles.csproj", StringComparison.Ordinal));
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--single-service");
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "compute");
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--output-path");
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == context.OutputPath);
-            Assert.Contains(runner.Invocations[0].Arguments, argument => argument == "--transform");
+            Assert.Empty(runner.Invocations);
+            Assert.NotNull(capturedOutline);
+            Assert.Equal("compute", capturedOutline!.ServiceIdentifier);
+            Assert.Equal(
+                "# Horizontal article",
+                File.ReadAllText(Path.Combine(context.OutputPath, "horizontal-articles", "horizontal-article-compute.md")));
         }
         finally
         {
@@ -608,7 +624,7 @@ public class NamespaceStepTests
         Directory.CreateDirectory(mcpToolsRoot);
         Directory.CreateDirectory(outputPath);
 
-        return new PipelineContext
+        var context = new PipelineContext
         {
             Request = new PipelineRequest("compute", [1], outputPath, SkipBuild: true, SkipValidation: skipValidation, DryRun: false),
             RepoRoot = testRoot,
@@ -626,6 +642,17 @@ public class NamespaceStepTests
             CliOutput = CreateSnapshot(toolCommands),
             SelectedNamespaces = ["compute"],
         };
+
+        context.Items[ToolGenerationStep.ToolImproverOverrideKey] =
+            static (ToolGenerationContext toolContext, CancellationToken _) => Task.FromResult(new ImprovedToolData
+            {
+                FileName = toolContext.ToolName,
+                OriginalContent = toolContext.ComposedContent,
+                ImprovedContent = toolContext.ComposedContent,
+                WasImproved = false
+            });
+
+        return context;
     }
 
     private static CliMetadataSnapshot CreateSnapshot(IReadOnlyList<string> toolCommands)

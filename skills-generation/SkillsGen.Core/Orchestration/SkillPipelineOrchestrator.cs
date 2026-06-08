@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using DocGeneration.Core.Tracing;
 using Microsoft.Extensions.Logging;
 using SkillsGen.Core.Assessment;
 using SkillsGen.Core.Cataloging;
@@ -31,6 +32,7 @@ public class SkillPipelineOrchestrator
     private readonly SourceOutlineCataloger _cataloger;
     private readonly SourceOutlineWriter _catalogWriter;
     private readonly Dictionary<string, SkillOutline> _outlineCatalog = [];
+    private readonly IPipelineTracer _tracer;
 
     public SkillPipelineOrchestrator(
         ISkillSourceFetcher fetcher,
@@ -44,7 +46,8 @@ public class SkillPipelineOrchestrator
         ISkillsLogger logger,
         string outputDir = "./generated-skills",
         bool dryRun = false,
-        bool force = false)
+        bool force = false,
+        IPipelineTracer? tracer = null)
     {
         _fetcher = fetcher;
         _parser = parser;
@@ -58,6 +61,7 @@ public class SkillPipelineOrchestrator
         _outputDir = outputDir;
         _dryRun = dryRun;
         _force = force;
+        _tracer = tracer ?? NullTracer.Instance;
         _cataloger = new SourceOutlineCataloger();
         _catalogWriter = new SourceOutlineWriter(Path.Combine(outputDir, "data"));
     }
@@ -68,26 +72,56 @@ public class SkillPipelineOrchestrator
 
         try
         {
-            // Fetch
-            var sources = await _fetcher.FetchAsync(skillName, ct);
-            if (sources == null)
+            SkillSourceFiles? sources;
+            using (var fetchStep = _tracer.StartStep("fetch", StepClassification.Deterministic, skillName, $"fetcher={_fetcher.GetType().Name}"))
             {
-                _logger.LogError(skillName, "Source files not found");
-                return CreateFailResult(skillName, sw, "Source files not found");
+                try
+                {
+                    sources = await _fetcher.FetchAsync(skillName, ct);
+                    if (sources == null)
+                    {
+                        fetchStep.Fail("Source files not found");
+                        _logger.LogError(skillName, "Source files not found");
+                        return CreateFailResult(skillName, sw, "Source files not found");
+                    }
+
+                    fetchStep.Complete($"fetched SKILL.md ({sources.SkillMarkdown.Length} bytes)");
+                }
+                catch (Exception ex)
+                {
+                    fetchStep.Fail(ex.Message);
+                    throw;
+                }
             }
 
-            // Catalog source outline (between fetch and parse)
-            var outline = _cataloger.Catalog(skillName, sources.SkillMarkdown);
+            var outline = ExecuteStep(
+                "catalog",
+                StepClassification.Deterministic,
+                skillName,
+                $"skillMarkdownLength={sources.SkillMarkdown.Length}",
+                () => _cataloger.Catalog(skillName, sources.SkillMarkdown),
+                result => $"cataloged {result.Headings.Count} heading(s); unmapped={result.UnmappedCount}");
             _outlineCatalog[skillName] = outline;
             EmitOutlineWarnings(skillName, outline);
 
-            // Parse
-            var skillData = _parser.Parse(skillName, sources.SkillMarkdown);
-            // Override display name from inventory if provided
-            if (!string.IsNullOrEmpty(displayName))
-                skillData = skillData with { DisplayName = displayName };
+            var parsed = ExecuteStep(
+                "parse",
+                StepClassification.Deterministic,
+                skillName,
+                $"skillMarkdownLength={sources.SkillMarkdown.Length}",
+                () =>
+                {
+                    var skillData = _parser.Parse(skillName, sources.SkillMarkdown);
+                    if (!string.IsNullOrEmpty(displayName))
+                        skillData = skillData with { DisplayName = displayName };
 
-            // Fetch and parse sub-skills if fetcher supports it
+                    return (SkillData: skillData, TriggerData: _triggerParser.Parse(sources.TriggersTestSource));
+                },
+                result => $"services={result.SkillData.Services.Count}, tools={result.SkillData.McpTools.Count}, triggers={result.TriggerData.ShouldTrigger.Count}");
+
+            var skillData = parsed.SkillData;
+            var triggerData = parsed.TriggerData;
+
             var subSkills = await FetchSubSkillsAsync(skillName, ct);
             if (subSkills.Count > 0)
             {
@@ -95,56 +129,97 @@ public class SkillPipelineOrchestrator
                 _logger.LogInfo($"  Found {subSkills.Count} sub-skill(s) for {skillName}");
             }
 
-            var triggerData = _triggerParser.Parse(sources.TriggersTestSource);
             _logger.LogParseResult(skillName, skillData.Services.Count, skillData.McpTools.Count, triggerData.ShouldTrigger.Count);
 
-            // Assess
-            var tierAssessment = _tierAssessor.Assess(skillData, triggerData);
+            var tierAssessment = ExecuteStep(
+                "assess",
+                StepClassification.Deterministic,
+                skillName,
+                $"services={skillData.Services.Count}, tools={skillData.McpTools.Count}, triggers={triggerData.ShouldTrigger.Count}",
+                () => _tierAssessor.Assess(skillData, triggerData),
+                result => $"tier={result.Tier}");
             _logger.LogTierAssessment(skillName, tierAssessment.Tier, tierAssessment.Rationale);
 
-            // LLM rewrite (optional)
             var llmSw = Stopwatch.StartNew();
-            var rewrittenDescription = await _llmRewriter.RewriteIntroAsync(skillName, skillData.Description, ct);
+            var rewrittenDescription = await ExecuteStepAsync(
+                "llm-rewrite-intro",
+                StepClassification.AI,
+                skillName,
+                $"descriptionLength={skillData.Description.Length}",
+                () => _llmRewriter.RewriteIntroAsync(skillName, skillData.Description, ct),
+                result => $"rewritten intro ({result.Length} chars)");
             llmSw.Stop();
             _logger.LogLlmCall(skillName, "RewriteIntro", llmSw.ElapsedMilliseconds);
 
             var updatedSkillData = skillData with { Description = rewrittenDescription };
 
-            // LLM workflow translation — SKIPPED (§7.1: workflow steps are excluded by §4.2 content policy)
             List<string>? translatedSteps = null;
 
-            // LLM "What it provides" synthesis (optional)
             var wipSw = Stopwatch.StartNew();
-            var whatItProvides = await _llmRewriter.SynthesizeWhatItProvidesAsync(skillName, updatedSkillData, ct);
+            var whatItProvides = await ExecuteStepAsync(
+                "llm-synthesize-what-it-provides",
+                StepClassification.AI,
+                skillName,
+                $"services={updatedSkillData.Services.Count}, useCases={updatedSkillData.UseFor.Count}",
+                () => _llmRewriter.SynthesizeWhatItProvidesAsync(skillName, updatedSkillData, ct),
+                result => string.IsNullOrWhiteSpace(result) ? "used fallback content" : $"synthesized summary ({result.Length} chars)");
             wipSw.Stop();
             _logger.LogLlmCall(skillName, "SynthesizeWhatItProvides", wipSw.ElapsedMilliseconds);
 
-            // Build prerequisites from skill data + source file analysis
             var prerequisites = BuildPrerequisites(skillData, sources.FileExtensions);
 
-            // Generate (with trigger post-processing)
-            var rendered = _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText, translatedSteps, whatItProvides, skillVersion);
+            var rendered = ExecuteStep(
+                "generate",
+                StepClassification.Deterministic,
+                skillName,
+                $"tier={tierAssessment.Tier}",
+                () => _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText, translatedSteps, whatItProvides, skillVersion),
+                result => $"generated markdown ({result.Length} chars)");
 
-            // Post-process
-            rendered = _postProcessor.Process(rendered);
+            rendered = ExecuteStep(
+                "post-process",
+                StepClassification.Deterministic,
+                skillName,
+                $"contentLength={rendered.Length}",
+                () => _postProcessor.Process(rendered),
+                result => $"post-processed markdown ({result.Length} chars)");
             var wordCount = rendered.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
             _logger.LogTemplateRender(skillName, wordCount);
 
-            // Validate
-            var validation = _validator.Validate(rendered, tierAssessment.Tier, updatedSkillData, triggerData);
+            var validation = ExecuteStep(
+                "validate",
+                StepClassification.Deterministic,
+                skillName,
+                $"tier={tierAssessment.Tier}",
+                () => _validator.Validate(rendered, tierAssessment.Tier, updatedSkillData, triggerData),
+                result => $"valid={result.IsValid}, errors={result.Errors.Count}, warnings={result.Warnings.Count}");
             _logger.LogValidation(skillName, validation.IsValid, validation.Errors.Count, validation.Warnings.Count);
 
-            // Write
-            string? outputPath = null;
-            if (!_dryRun && (validation.IsValid || _force))
-            {
-                outputPath = WriteOutput(skillName, rendered);
-            }
+            string? outputPath = ExecuteStep(
+                "write",
+                StepClassification.Deterministic,
+                skillName,
+                $"dryRun={_dryRun}, force={_force}, valid={validation.IsValid}",
+                () =>
+                {
+                    if (_dryRun)
+                        return null;
+
+                    if (!validation.IsValid && !_force)
+                        return null;
+
+                    return WriteOutput(skillName, rendered);
+                },
+                result => result switch
+                {
+                    null when _dryRun => "skipped write (dry run)",
+                    null => "skipped write (validation failed)",
+                    _ => $"wrote output to {result}"
+                });
 
             sw.Stop();
             var result = new SkillGenerationResult(skillName, tierAssessment.Tier, validation, outputPath, sw.ElapsedMilliseconds);
 
-            // Update manifest with this skill's result
             if (!_dryRun)
             {
                 UpdateManifestWithResult(result);
@@ -164,50 +239,102 @@ public class SkillPipelineOrchestrator
     {
         var totalSw = Stopwatch.StartNew();
         var results = new List<SkillGenerationResult>();
+        var traceOutputDir = Path.Combine(_outputDir, "trace");
 
-        for (int i = 0; i < skills.Count; i++)
+        try
         {
-            var skill = skills[i];
-            _logger.LogInfo($"[{i + 1}/{skills.Count}] {skill.Name} →");
-            var itemSw = Stopwatch.StartNew();
-
-            try
+            for (int i = 0; i < skills.Count; i++)
             {
-                var result = await ProcessSkillAsync(skill.Name, skill.DisplayName, skill.SkillVersion, ct);
-                results.Add(result);
+                var skill = skills[i];
+                _logger.LogInfo($"[{i + 1}/{skills.Count}] {skill.Name} →");
+                var itemSw = Stopwatch.StartNew();
 
-                var status = result.Validation.IsValid ? "✅ passed" : "❌ failed";
-                _logger.LogInfo($"  Tier {result.Tier} → {status} ({result.DurationMs}ms)");
+                try
+                {
+                    var result = await ProcessSkillAsync(skill.Name, skill.DisplayName, skill.SkillVersion, ct);
+                    results.Add(result);
+
+                    var status = result.Validation.IsValid ? "✅ passed" : "❌ failed";
+                    _logger.LogInfo($"  Tier {result.Tier} → {status} ({result.DurationMs}ms)");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(skill.Name, $"Batch processing failed: {ex.Message}", ex);
+                    itemSw.Stop();
+                    results.Add(CreateFailResult(skill.Name, itemSw, ex.Message));
+                }
+
+                if (i < skills.Count - 1)
+                    await Task.Delay(100, ct);
             }
-            catch (Exception ex)
+
+            totalSw.Stop();
+            var succeeded = results.Count(r => r.Validation.IsValid);
+            var failed = results.Count - succeeded;
+            _logger.LogBatchSummary(results.Count, succeeded, failed, totalSw.ElapsedMilliseconds);
+
+            var report = new SkillGenerationReport(
+                results, totalSw.ElapsedMilliseconds,
+                "1.0.0", "1.0.0", DateTime.UtcNow);
+
+            if (!_dryRun)
             {
-                _logger.LogError(skill.Name, $"Batch processing failed: {ex.Message}", ex);
-                itemSw.Stop();
-                results.Add(CreateFailResult(skill.Name, itemSw, ex.Message));
+                WriteManifest(report);
+                PersistOutlineCatalog();
+                EmitBatchOutlineSummary();
             }
 
-            // Brief delay between skills to avoid bursting the GitHub API
-            if (i < skills.Count - 1)
-                await Task.Delay(100, ct);
+            return report;
         }
-
-        totalSw.Stop();
-        var succeeded = results.Count(r => r.Validation.IsValid);
-        var failed = results.Count - succeeded;
-        _logger.LogBatchSummary(results.Count, succeeded, failed, totalSw.ElapsedMilliseconds);
-
-        var report = new SkillGenerationReport(
-            results, totalSw.ElapsedMilliseconds,
-            "1.0.0", "1.0.0", DateTime.UtcNow);
-
-        if (!_dryRun)
+        finally
         {
-            WriteManifest(report);
-            PersistOutlineCatalog();
-            EmitBatchOutlineSummary();
+            totalSw.Stop();
+            await _tracer.FlushAsync(traceOutputDir);
         }
+    }
 
-        return report;
+    private T ExecuteStep<T>(
+        string stepName,
+        StepClassification classification,
+        string skillName,
+        string? inputSummary,
+        Func<T> action,
+        Func<T, string?> outputSummary)
+    {
+        using var stepHandle = _tracer.StartStep(stepName, classification, skillName, inputSummary);
+        try
+        {
+            var result = action();
+            stepHandle.Complete(outputSummary(result));
+            return result;
+        }
+        catch (Exception ex)
+        {
+            stepHandle.Fail(ex.Message);
+            throw;
+        }
+    }
+
+    private async Task<T> ExecuteStepAsync<T>(
+        string stepName,
+        StepClassification classification,
+        string skillName,
+        string? inputSummary,
+        Func<Task<T>> action,
+        Func<T, string?> outputSummary)
+    {
+        using var stepHandle = _tracer.StartStep(stepName, classification, skillName, inputSummary);
+        try
+        {
+            var result = await action();
+            stepHandle.Complete(outputSummary(result));
+            return result;
+        }
+        catch (Exception ex)
+        {
+            stepHandle.Fail(ex.Message);
+            throw;
+        }
     }
 
     private static SkillPrerequisites BuildPrerequisites(SkillData skillData, HashSet<string> fileExtensions)

@@ -78,4 +78,45 @@ public class McpCliCommentPreservationTests
         var restored = ImprovedToolGeneratorService.RestoreMcpCliComment(aiOutput, comment);
         Assert.Contains("<!-- @mcpcli fileshares fileshare create -->", restored);
     }
+
+    [Fact]
+    public void RemoveMcpCliComment_RemovesFromContent()
+    {
+        var content = "# Title\n\n<!-- @mcpcli cosmos database-container-item-query -->\n\nDescription.";
+        var result = ImprovedToolGeneratorService.RemoveMcpCliComment(content);
+        Assert.DoesNotContain("@mcpcli", result);
+        Assert.Contains("# Title", result);
+        Assert.Contains("Description.", result);
+    }
+
+    [Fact]
+    public void RemoveMcpCliComment_NoComment_ReturnsUnchanged()
+    {
+        var content = "# Title\n\nDescription without comment.";
+        var result = ImprovedToolGeneratorService.RemoveMcpCliComment(content);
+        Assert.Equal(content, result);
+    }
+
+    [Fact]
+    public void RemoveThenRestore_McpCliComment_LandsAfterH1()
+    {
+        // Simulates the full protect/restore cycle:
+        //   remove → AI reorders content → restore pins comment after H1
+        var original = "# list\n\n<!-- @mcpcli monitor metrics list -->\n\nExample prompts include:\n- \"List metrics in workspace 'my-workspace'\"\n\n";
+        var comment = ImprovedToolGeneratorService.ExtractMcpCliComment(original);
+
+        // Simulate AI reordering: example-prompts section moved before the description
+        var aiReordered = "# list\n\nExample prompts include:\n- \"List metrics in workspace 'my-workspace'\"\n\nSome description added by AI.\n\n";
+
+        // Restore must pin the comment after H1 regardless of AI reordering
+        var restored = ImprovedToolGeneratorService.RestoreMcpCliComment(aiReordered, comment);
+
+        var h1Index = restored.IndexOf("# list", StringComparison.Ordinal);
+        var commentIndex = restored.IndexOf("@mcpcli", StringComparison.Ordinal);
+        var exampleIndex = restored.IndexOf("Example prompts include:", StringComparison.Ordinal);
+
+        Assert.True(h1Index >= 0, "H1 must be present");
+        Assert.True(commentIndex > h1Index, "Comment must be after H1");
+        Assert.True(commentIndex < exampleIndex, "Comment must be before 'Example prompts include:'");
+    }
 }

@@ -1,3 +1,4 @@
+using DocGeneration.Core.Tracing;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
@@ -35,12 +36,12 @@ public class SkillPipelineOrchestratorTests
             Substitute.For<ILogger<AcrolinxPostProcessor>>());
     }
 
-    private SkillPipelineOrchestrator CreateOrchestrator(bool dryRun = false, bool force = false)
+    private SkillPipelineOrchestrator CreateOrchestrator(bool dryRun = false, bool force = false, IPipelineTracer? tracer = null)
     {
         return new SkillPipelineOrchestrator(
             _fetcher, _parser, _triggerParser, _tierAssessor,
             _rewriter, _generator, _postProcessor, _validator,
-            _logger, _outputDir, dryRun, force);
+            _logger, _outputDir, dryRun, force, tracer);
     }
 
     private void SetupHappyPath()
@@ -194,5 +195,63 @@ public class SkillPipelineOrchestratorTests
 
         var manifestPath = Path.Combine(_outputDir, "generation-manifest.json");
         File.Exists(manifestPath).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ProcessSkillAsync_RecordsExpectedPipelineSteps()
+    {
+        SetupHappyPath();
+        var tracer = Substitute.For<IPipelineTracer>();
+        var stepHandle = Substitute.For<IStepHandle>();
+        tracer.StartStep(Arg.Any<string>(), Arg.Any<StepClassification>(), Arg.Any<string?>(), Arg.Any<string?>())
+            .Returns(stepHandle);
+        tracer.FlushAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        var orchestrator = CreateOrchestrator(tracer: tracer);
+
+        await orchestrator.ProcessSkillAsync("azure-test");
+
+        tracer.Received().StartStep("fetch", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("catalog", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("parse", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("assess", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("llm-rewrite-intro", StepClassification.AI, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("llm-synthesize-what-it-provides", StepClassification.AI, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("generate", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("post-process", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("validate", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("write", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
+        stepHandle.DidNotReceive().Fail(Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task ProcessBatchAsync_FlushesTraceOnCancellation()
+    {
+        SetupHappyPath();
+        var tracer = Substitute.For<IPipelineTracer>();
+        var stepHandle = Substitute.For<IStepHandle>();
+        tracer.StartStep(Arg.Any<string>(), Arg.Any<StepClassification>(), Arg.Any<string?>(), Arg.Any<string?>())
+            .Returns(stepHandle);
+        tracer.FlushAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+
+        using var cts = new CancellationTokenSource();
+        _fetcher.FetchAsync("azure-test", Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                cts.Cancel();
+                return Task.FromResult<SkillSourceFiles?>(
+                    new SkillSourceFiles("# Test", "const shouldTriggerPrompts = ['hello'];", "/test", null));
+            });
+
+        var orchestrator = CreateOrchestrator(tracer: tracer);
+        var skills = new List<SkillInventoryEntry>
+        {
+            new("azure-test", "Azure Test", "Test"),
+            new("azure-other", "Azure Other", "Test")
+        };
+
+        await FluentActions.Invoking(() => orchestrator.ProcessBatchAsync(skills, cts.Token))
+            .Should().ThrowAsync<OperationCanceledException>();
+
+        await tracer.Received(1).FlushAsync(Path.Combine(_outputDir, "trace"), Arg.Any<CancellationToken>());
     }
 }

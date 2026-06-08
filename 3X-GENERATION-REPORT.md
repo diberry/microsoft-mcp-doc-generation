@@ -16,7 +16,7 @@ Successfully ran the Azure MCP documentation generation pipeline against @azure/
 ## Environment Setup
 
 ✅ **Updated @azure/mcp to 3.0.0-beta.3**
-- Modified: `test-npm-azure-mcp/package.json`
+- Modified: `mcp-cli-metadata/package.json`
 - Changed: `"@azure/mcp": "^3.0.0-beta.1"` → `"@azure/mcp": "3.0.0-beta.3"`
 - Verification: `npm install` completed successfully with 0 vulnerabilities
 
@@ -233,7 +233,7 @@ Generated Content Structure:
 
 ## Files Modified
 
-- `test-npm-azure-mcp/package.json` - Updated @azure/mcp version
+- `mcp-cli-metadata/package.json` - Updated @azure/mcp version
 
 ## Output Generated
 
@@ -247,7 +247,7 @@ Generated Content Structure:
 
 ```bash
 # Update package
-cd test-npm-azure-mcp
+cd mcp-cli-metadata
 npm install
 
 # Build solution

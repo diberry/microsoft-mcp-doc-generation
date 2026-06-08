@@ -14,6 +14,7 @@ public static class CliTabWrapper
 {
     private static readonly Regex McpCliMarkerPattern = new(
         @"<!--\s*@mcpcli\s+(.+?)\s*-->", RegexOptions.Compiled);
+    private static readonly Regex NumberedListPattern = new(@"^\d+\.\s", RegexOptions.Compiled);
 
     // Matches the annotation block: "[Tool annotation hints](...):"\n\n"Destructive: ..."
     // The block starts with the link line and includes the values line that follows.
@@ -31,9 +32,30 @@ public static class CliTabWrapper
     /// <returns>Tab-wrapped content, or original content if no CLI available</returns>
     public static string WrapWithTabs(string mcpContent, string? cliContent)
     {
-        if (string.IsNullOrWhiteSpace(cliContent))
-            return mcpContent;
+        var (tabBlock, _) = WrapWithTabsAndExtractDescription(mcpContent, cliContent);
+        return tabBlock;
+    }
 
+    /// <summary>
+    /// Wraps tool content with CLI/MCP tabs and extracts the natural language description.
+    /// The description is the first paragraph before any parameter table, heading, or code block.
+    /// </summary>
+    /// <param name="mcpContent">MCP tool section content (without H2 heading)</param>
+    /// <param name="cliContent">CLI content block, or null/whitespace if unavailable</param>
+    /// <returns>Tuple of tab-wrapped content and the extracted description (null if none found)</returns>
+    public static (string TabBlock, string? Description) WrapWithTabsAndExtractDescription(string mcpContent, string? cliContent)
+    {
+        if (string.IsNullOrWhiteSpace(cliContent))
+            return (mcpContent, null);
+
+        var (mcpContentWithoutDescription, description) = ExtractDescription(mcpContent);
+        var strippedMcpContent = StripProseFromMcpContent(mcpContentWithoutDescription);
+        var cliContentWithoutDescription = StripMatchingDescriptionFromCli(cliContent, description);
+        return (BuildTabBlock(strippedMcpContent, cliContentWithoutDescription), description);
+    }
+
+    private static string BuildTabBlock(string mcpContent, string cliContent)
+    {
         // Extract and strip annotation block from MCP content
         var annotationBlock = ExtractAnnotationBlock(mcpContent);
         var mcpWithoutAnnotation = annotationBlock != null
@@ -42,13 +64,13 @@ public static class CliTabWrapper
 
         var sb = new StringBuilder();
 
-        // MCP Server tab
+        // MCP Server tab first
         sb.AppendLine("#### [MCP Server](#tab/mcp-server)");
         sb.AppendLine();
         sb.AppendLine(mcpWithoutAnnotation.TrimEnd());
         sb.AppendLine();
 
-        // CLI tab (no annotations inside)
+        // CLI tab second
         sb.AppendLine("#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         sb.AppendLine();
         sb.AppendLine(cliContent.TrimEnd());
@@ -65,6 +87,182 @@ public static class CliTabWrapper
         }
 
         return sb.ToString();
+    }
+
+    internal static (string ContentWithoutDescription, string? Description) ExtractDescription(string content)
+    {
+        var normalizedContent = content.ReplaceLineEndings("\n");
+        var lines = normalizedContent.Split('\n');
+        var (descriptionStart, descriptionEnd) = FindDescriptionRange(lines);
+        if (descriptionStart < 0)
+        {
+            return (content, null);
+        }
+
+        var description = string.Join(" ", lines[descriptionStart..descriptionEnd].Select(line => line.Trim())).Trim();
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return (content, null);
+        }
+
+        var remainderStart = descriptionEnd;
+        while (remainderStart < lines.Length && string.IsNullOrWhiteSpace(lines[remainderStart]))
+        {
+            remainderStart++;
+        }
+
+        var remainingLines = lines[..descriptionStart].ToList();
+        while (remainingLines.Count > 0 && string.IsNullOrWhiteSpace(remainingLines[^1]))
+        {
+            remainingLines.RemoveAt(remainingLines.Count - 1);
+        }
+
+        if (remainingLines.Count > 0 && remainderStart < lines.Length)
+        {
+            remainingLines.Add(string.Empty);
+        }
+
+        remainingLines.AddRange(lines[remainderStart..]);
+
+        return (string.Join("\n", remainingLines).TrimEnd(), description);
+    }
+
+    internal static string StripMatchingDescriptionFromCli(string cliContent, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return cliContent;
+        }
+
+        var normalizedContent = cliContent.ReplaceLineEndings("\n");
+        var lines = normalizedContent.Split('\n');
+        var (descriptionStart, descriptionEnd) = FindDescriptionRange(lines);
+        if (descriptionStart < 0)
+        {
+            return cliContent;
+        }
+
+        var cliDescription = string.Join(" ", lines[descriptionStart..descriptionEnd].Select(line => line.Trim())).Trim();
+        if (!string.Equals(cliDescription, description, StringComparison.Ordinal))
+        {
+            return cliContent;
+        }
+
+        var remainderStart = descriptionEnd;
+        while (remainderStart < lines.Length && string.IsNullOrWhiteSpace(lines[remainderStart]))
+        {
+            remainderStart++;
+        }
+
+        return string.Join("\n", lines[..descriptionStart].Concat(lines[remainderStart..])).TrimEnd();
+    }
+
+    internal static string StripProseFromMcpContent(string content)
+    {
+        var normalizedContent = content.ReplaceLineEndings("\n");
+        var lines = normalizedContent.Split('\n');
+
+        var markerIndex = Array.FindIndex(lines, IsMcpMarker);
+        var markerEnd = 0;
+        if (markerIndex >= 0)
+        {
+            markerEnd = markerIndex + 1;
+            while (markerEnd < lines.Length && string.IsNullOrWhiteSpace(lines[markerEnd]))
+            {
+                markerEnd++;
+            }
+        }
+
+        var keepStart = -1;
+        for (int i = markerEnd; i < lines.Length; i++)
+        {
+            if (IsMcpTabContentStart(lines[i]))
+            {
+                keepStart = i;
+                break;
+            }
+        }
+
+        if (keepStart < 0)
+        {
+            return content.TrimEnd();
+        }
+
+        var keptLines = new List<string>();
+        if (markerIndex >= 0)
+        {
+            keptLines.Add(lines[markerIndex]);
+            keptLines.Add(string.Empty);
+        }
+
+        keptLines.AddRange(lines[keepStart..]);
+        return string.Join("\n", keptLines).TrimEnd();
+    }
+
+    private static bool IsMcpMarker(string line)
+        => line.TrimStart().StartsWith("<!-- @mcpcli ", StringComparison.Ordinal);
+
+    private static bool IsMcpTabContentStart(string line)
+    {
+        var trimmed = line.TrimStart();
+        return trimmed.StartsWith("Example prompts", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("|", StringComparison.Ordinal)
+            || (IsBulletLine(trimmed) && trimmed.Contains('"'));
+    }
+
+    private static bool IsBulletLine(string line)
+        => line.StartsWith("- ", StringComparison.Ordinal)
+            || line.StartsWith("* ", StringComparison.Ordinal)
+            || line.StartsWith("+ ", StringComparison.Ordinal)
+            || NumberedListPattern.IsMatch(line);
+
+    private static (int Start, int End) FindDescriptionRange(string[] lines)
+    {
+        var descriptionStart = 0;
+
+        while (descriptionStart < lines.Length && string.IsNullOrWhiteSpace(lines[descriptionStart]))
+        {
+            descriptionStart++;
+        }
+
+        if (descriptionStart < lines.Length && IsMcpMarker(lines[descriptionStart]))
+        {
+            descriptionStart++;
+
+            while (descriptionStart < lines.Length && string.IsNullOrWhiteSpace(lines[descriptionStart]))
+            {
+                descriptionStart++;
+            }
+        }
+
+        if (descriptionStart >= lines.Length || IsDescriptionBoundary(lines[descriptionStart]))
+        {
+            return (-1, -1);
+        }
+
+        var descriptionEnd = descriptionStart;
+        while (descriptionEnd < lines.Length
+            && !string.IsNullOrWhiteSpace(lines[descriptionEnd])
+            && !IsDescriptionBoundary(lines[descriptionEnd]))
+        {
+            descriptionEnd++;
+        }
+
+        return (descriptionStart, descriptionEnd);
+    }
+
+    private static bool IsDescriptionBoundary(string line)
+    {
+        var trimmed = line.TrimStart();
+        return trimmed.StartsWith("|", StringComparison.Ordinal)
+            || trimmed.StartsWith("#", StringComparison.Ordinal)
+            || trimmed.StartsWith("{{", StringComparison.Ordinal)
+            || trimmed.StartsWith("[Tool annotation", StringComparison.Ordinal)
+            || trimmed.StartsWith("```", StringComparison.Ordinal)
+            || trimmed.StartsWith("- ", StringComparison.Ordinal)
+            || trimmed.StartsWith("* ", StringComparison.Ordinal)
+            || trimmed.StartsWith("+ ", StringComparison.Ordinal)
+            || NumberedListPattern.IsMatch(trimmed);
     }
 
     /// <summary>
@@ -170,8 +368,16 @@ public static class CliTabWrapper
             var normalizedCmd = CliJsonMapper.NormalizeCommand(command);
             if (cliContentByCommand.TryGetValue(normalizedCmd, out var cliContent))
             {
+                var (tabBlock, description) = WrapWithTabsAndExtractDescription(content, cliContent);
                 result.AppendLine(heading);
-                result.AppendLine(WrapWithTabs(content, cliContent));
+                if (!string.IsNullOrWhiteSpace(description))
+                {
+                    result.AppendLine();
+                    result.AppendLine(description);
+                    result.AppendLine();
+                }
+
+                result.AppendLine(tabBlock);
                 return;
             }
         }
