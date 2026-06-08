@@ -19,8 +19,12 @@ public class SkillPageValidator : ISkillPageValidator
     [
         "## MCP tools",
         "## Sub-skills",
-        "## Suggested workflow"
+        "## Suggested workflow",
+        "### Related tools"     // LLM-generated leak: internal tool table section (§4.2, Issue #684)
     ];
+
+    // §7.1: Internal MCP tool name prefix — must never appear in customer-facing content
+    private static readonly Regex McpToolNamePattern = new(@"Azure__", RegexOptions.IgnoreCase);
 
     // Known typo patterns in generated links
     private static readonly Regex[] BadLinkPatterns =
@@ -59,6 +63,12 @@ public class SkillPageValidator : ISkillPageValidator
             {
                 errors.Add($"POLICY: Prohibited section '{section}' found — implementation details must not appear in customer-facing articles (§4.2)");
             }
+        }
+
+        // POLICY: Internal MCP tool names (Azure__*) must never appear in customer-facing content (§4.2, Issue #684)
+        if (McpToolNamePattern.IsMatch(renderedContent))
+        {
+            errors.Add("POLICY: Internal MCP tool name pattern 'Azure__' detected — implementation details must not appear in customer-facing articles (§4.2)");
         }
 
         // PREREQ_COPILOT: GitHub Copilot listed as required tool

@@ -214,7 +214,7 @@ public class AzureOpenAiRewriter : ILlmRewriter
                     UserPrompt = userPrompt,
                     ResponseContent = result,
                     Model = _modelName,
-                    TotalTokens = response.Value.Usage?.TotalTokenCount is long totalTokenCount ? (int?)totalTokenCount : null,
+                    TotalTokens = response.Value.Usage?.TotalTokenCount is int totalTokenCount ? (int?)totalTokenCount : null,
                     DurationMs = sw.ElapsedMilliseconds,
                     RetryCount = attempt
                 });
