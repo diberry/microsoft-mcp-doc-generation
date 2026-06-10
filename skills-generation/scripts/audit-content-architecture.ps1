@@ -1,4 +1,4 @@
-# Usage: .\skills-generation\scripts\audit-content-architecture.ps1 [-InventoryPath <path>] [-ArticlesDir <path>] [-SourceDir <path>] [-ReportPath <path>] [-CI]
+# Usage: .\skills-generation\scripts\audit-content-architecture.ps1 [-InventoryPath <path>] [-ArticlesDir <path>] [-SourceDir <path>] [-ReportPath <path>] [-ContentRepo <owner/repo>] [-CI]
 <#
 .SYNOPSIS
     Audits generated skills content against the Skills Content Architecture model.
@@ -14,6 +14,8 @@ param(
     [string]$ArticlesDir,
     [string]$SourceDir,
     [string]$ReportPath,
+    [string]$ContentRepo = 'MicrosoftDocs/azure-dev-docs-pr',
+    [switch]$IncludePRs,
     [switch]$CI
 )
 
@@ -658,6 +660,64 @@ function Test-SourceSufficiency {
     }
 }
 
+# --- PR Content Fetching ---
+
+function Get-OpenSkillsPRs {
+    param([string]$Repo)
+
+    $prData = @{}
+    try {
+        $json = gh pr list --repo $Repo --search "skill" --state open --json number,title,headRefName,files --limit 50 2>$null
+        if (-not $json) { return $prData }
+        $prs = $json | ConvertFrom-Json
+        foreach ($pr in $prs) {
+            foreach ($f in $pr.files) {
+                if ($f.path -match 'articles/azure-skills/skills/(.+)\.md$') {
+                    $slug = $Matches[1]
+                    $prData[$slug] = [PSCustomObject]@{
+                        Number      = $pr.number
+                        Title       = $pr.title
+                        HeadRef     = $pr.headRefName
+                        FilePath    = $f.path
+                    }
+                    break
+                }
+            }
+        }
+    }
+    catch {
+        Write-Warning "Failed to fetch open PRs from $Repo : $_"
+    }
+    return $prData
+}
+
+function Get-PRArticleContent {
+    param(
+        [string]$Repo,
+        [int]$PRNumber,
+        [string]$FilePath
+    )
+
+    try {
+        # Get PR head branch info
+        $prJson = gh pr view $PRNumber --repo $Repo --json headRefName,headRepository,headRepositoryOwner 2>$null | ConvertFrom-Json
+        $headRef = $prJson.headRefName
+        $headOwner = $prJson.headRepositoryOwner.login
+        $headRepoName = $prJson.headRepository.name
+        # Fetch raw file content using the media type for raw content
+        $content = gh api "repos/$headOwner/$headRepoName/contents/$FilePath" --header "Accept: application/vnd.github.raw+json" --method GET --field "ref=$headRef" 2>$null
+        if ($content) {
+            return $content
+        }
+    }
+    catch {
+        Write-Warning "Failed to fetch PR #$PRNumber content: $_"
+    }
+    return $null
+}
+
+# --- Main Execution ---
+
 $resolvedInventoryPath = Resolve-ScriptRelativePath -Path $InventoryPath -DefaultRelativePath '..\data\skills-inventory.json'
 $resolvedArticlesDir = Resolve-ScriptRelativePath -Path $ArticlesDir -DefaultRelativePath '.\published-cache'
 $resolvedSourceDir = Resolve-ScriptRelativePath -Path $SourceDir -DefaultRelativePath '..\..\mcp-tools\skills-source'
@@ -685,6 +745,14 @@ if (-not (Test-Path -LiteralPath $reportDirectory)) {
 $inventory = Get-Content -Path $resolvedInventoryPath -Raw | ConvertFrom-Json
 $skills = @($inventory.skills)
 $sourceDirectories = @(Get-ChildItem -Path $resolvedSourceDir -Directory | Where-Object { $_.Name -ne 'sync-metadata.json' })
+
+# Fetch open PRs if requested
+$openPRs = @{}
+if ($IncludePRs) {
+    Write-Host "Fetching open skills PRs from $ContentRepo..." -ForegroundColor Cyan
+    $openPRs = Get-OpenSkillsPRs -Repo $ContentRepo
+    Write-Host "  Found $($openPRs.Count) skills with open PRs" -ForegroundColor Green
+}
 
 Write-Host "Running check A: Inventory Coverage" -ForegroundColor Cyan
 $inventoryCoverage = Test-InventoryCoverage -Skills $skills -ArticlesDirectory $resolvedArticlesDir -SourceDirectories $sourceDirectories
@@ -714,6 +782,27 @@ foreach ($skill in $skills) {
     $articlePath = Join-Path $resolvedArticlesDir ("{0}.md" -f $slug)
     $hasArticle = Test-Path -LiteralPath $articlePath
     $articleAnalysis = if ($hasArticle) { Get-ArticleAnalysis -Path $articlePath } else { $null }
+
+    # Check for PR content — overrides or supplements published article
+    $prInfo = $null
+    $articleSource = 'published'
+    if ($IncludePRs -and $openPRs.ContainsKey($slug)) {
+        $prInfo = $openPRs[$slug]
+        Write-Host ("  PR #{0} found: {1}" -f $prInfo.Number, $prInfo.Title) -ForegroundColor DarkYellow
+        $prContent = Get-PRArticleContent -Repo $ContentRepo -PRNumber $prInfo.Number -FilePath $prInfo.FilePath
+        if ($prContent) {
+            # PR content is clean markdown — use it for analysis (overrides published cache)
+            $prTempPath = Join-Path $env:TEMP ("audit-pr-{0}.md" -f $slug)
+            Set-Content -Path $prTempPath -Value $prContent -Encoding UTF8
+            $articleAnalysis = Get-ArticleAnalysis -Path $prTempPath
+            Remove-Item -Path $prTempPath -Force -ErrorAction SilentlyContinue
+            $hasArticle = $true
+            $articleSource = 'pr'
+        }
+        else {
+            Write-Warning "  Could not fetch PR content for $slug — falling back to published cache"
+        }
+    }
 
     $sourceResolution = Resolve-SourceDirectory -Skill $skill -SourceDirectories $sourceDirectories
     $sourceAnalysis = $null
@@ -796,7 +885,7 @@ foreach ($skill in $skills) {
         Skill         = $skillLabel
         Identity      = if ($identityResult.IsComplete) { '✓' } else { '✗' }
         Source        = if ($sourceSufficiency.Skipped) { '⏸️' } elseif ($sourceSufficiency.Passed) { '✓' } else { '⚠️' }
-        Article       = if ($hasArticle) { '✓' } else { '⏸️' }
+        Article       = if (-not $hasArticle) { '⏸️' } elseif ($articleSource -eq 'pr') { "✓ (PR #$($prInfo.Number))" } else { '✓' }
         Coverage      = if (-not $hasArticle) { '⏸️' } elseif ($coverageResult.Passed) { '✓' } else { '✗' }
         NoLeakage     = if (-not $hasArticle) { '⏸️' } elseif ($leakageResult.Passed) { '✓' } else { '⚠️' }
         Conditional   = if (-not $hasArticle) { '⏸️' } elseif ($conditionalResult.Passed) { '✓' } else { '✗' }
@@ -814,6 +903,10 @@ $reportLines = @()
 $reportLines += '# Skills Content Architecture Audit Report'
 $reportLines += ''
 $reportLines += ('Generated: {0}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss K'))
+if ($IncludePRs) {
+    $reportLines += ''
+    $reportLines += ('**Article sources:** Published cache + {0} open PRs from `{1}`' -f $openPRs.Count, $ContentRepo)
+}
 $reportLines += ''
 $reportLines += '## Summary'
 $reportLines += ''
