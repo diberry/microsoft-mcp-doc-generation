@@ -449,4 +449,104 @@ public class AcrolinxPostProcessorTests
         var result = processor.Process("Deploy ARM templates to provision resources.");
         result.Should().Contain("Azure Resource Manager (ARM)");
     }
+
+    // --- Issue #684: Leaked tool section / MCP tool name stripping ---
+
+    [Fact]
+    public void StripRelatedToolsSection_RemovesEntireSection()
+    {
+        var input = """
+            ## What it provides
+
+            The skill retrieves cost data.
+
+            ### Related tools
+
+            | Tool | Description |
+            |------|-------------|
+            | Azure__CostManagement_GetBudgets | Gets budgets |
+            | Azure__CostManagement_ListAlerts | Lists alerts |
+
+            ## Example prompts
+            """;
+
+        var result = AcrolinxPostProcessor.StripRelatedToolsSection(input);
+
+        result.Should().NotContain("### Related tools");
+        result.Should().NotContain("Azure__CostManagement_GetBudgets");
+        result.Should().Contain("## What it provides");
+        result.Should().Contain("## Example prompts");
+    }
+
+    [Fact]
+    public void StripRelatedToolsSection_NoSection_Unchanged()
+    {
+        var input = "## What it provides\n\nThe skill retrieves cost data.\n\n## Example prompts\n";
+        var result = AcrolinxPostProcessor.StripRelatedToolsSection(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void StripRelatedToolsSection_SectionAtEof_Removed()
+    {
+        var input = "## What it provides\n\nCost data.\n\n### Related tools\n\n| Azure__Billing_Get | Gets billing |";
+        var result = AcrolinxPostProcessor.StripRelatedToolsSection(input);
+        result.Should().NotContain("### Related tools");
+        result.Should().NotContain("Azure__Billing_Get");
+        result.Should().Contain("## What it provides");
+    }
+
+    [Fact]
+    public void StripMcpToolNameLines_RemovesLinesWithAzureDoubleUnderscore()
+    {
+        var input = "Normal content line.\nAzure__Monitor_GetMetrics returns metrics.\nAnother normal line.";
+        var result = AcrolinxPostProcessor.StripMcpToolNameLines(input);
+        result.Should().NotContain("Azure__Monitor_GetMetrics");
+        result.Should().Contain("Normal content line.");
+        result.Should().Contain("Another normal line.");
+    }
+
+    [Fact]
+    public void StripMcpToolNameLines_CaseInsensitive()
+    {
+        var input = "azure__storage_listblobs is an internal tool.\nClean line.";
+        var result = AcrolinxPostProcessor.StripMcpToolNameLines(input);
+        result.Should().NotContain("azure__storage_listblobs");
+        result.Should().Contain("Clean line.");
+    }
+
+    [Fact]
+    public void StripMcpToolNameLines_CleanContent_Unchanged()
+    {
+        var input = "The skill manages Azure Storage accounts.\nUse GitHub Copilot to interact.";
+        var result = AcrolinxPostProcessor.StripMcpToolNameLines(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void Process_StripsLeakedRelatedToolsSection()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var input = """
+            ## What it provides
+
+            The skill provides cost visibility.
+
+            ### Related tools
+
+            | Tool | Description |
+            |------|-------------|
+            | Azure__CostManagement_GetBudgets | Gets budgets |
+
+            ## Example prompts
+
+            - "Show my costs"
+            """;
+
+        var result = processor.Process(input);
+
+        result.Should().NotContain("### Related tools");
+        result.Should().NotContain("Azure__CostManagement_GetBudgets");
+        result.Should().Contain("## Example prompts");
+    }
 }

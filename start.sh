@@ -69,11 +69,7 @@ done
 
 RUNNER_ARGS=(--steps "$STEPS_ARG")
 if [[ -n "$NAMESPACE_ARG" ]]; then
-    OUTPUT_DIR="$ROOT_DIR/generated-$NAMESPACE_ARG"
-    RUNNER_ARGS+=(--namespace "$NAMESPACE_ARG" --output "$OUTPUT_DIR")
-else
-    OUTPUT_DIR="$ROOT_DIR/generated"
-    RUNNER_ARGS+=(--output "$OUTPUT_DIR")
+    RUNNER_ARGS+=(--namespace "$NAMESPACE_ARG")
 fi
 
 # Append extra flags

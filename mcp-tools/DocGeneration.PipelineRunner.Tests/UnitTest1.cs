@@ -42,18 +42,18 @@ public class PipelineRequestTests
 
     // ── Issue #666 regression: readable timestamp format ─────────────────────
     // Old format: "yyyyMMddTHHmmssfffZ" → .\\generated-compute-20260522T152517000Z (unreadable)
-    // New format: "yyyy-MM-dd-HHmmss"   → .\\generated-compute-2026-05-22-152517  (human-readable)
+    // New format: "yyyy-MM-dd-HH-mm-ss" → .\\generated-compute-2026-05-22-15-25-17 (human-readable)
     // The two tests below update the old assertions and the three that follow are new regressions.
 
     [Fact]
     public void GetDefaultOutputPath_SingleNamespace_UsesReadableTimestampFormat()
     {
-        // Regression for #666: dashes between date parts, no milliseconds, no Z suffix.
+        // Regression for #666: dashes between all date and time parts for maximum readability.
         var outputPath = PipelineRequest.GetDefaultOutputPath(
             "compute",
             new FixedTimeProvider(new DateTimeOffset(2026, 05, 22, 15, 25, 17, TimeSpan.Zero)));
 
-        Assert.Equal(".\\generated-compute-2026-05-22-152517", outputPath);
+        Assert.Equal(".\\generated-compute-2026-05-22-15-25-17", outputPath);
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class PipelineRequestTests
             null,
             new FixedTimeProvider(new DateTimeOffset(2026, 05, 22, 15, 25, 17, TimeSpan.Zero)));
 
-        Assert.Equal(".\\generated-2026-05-22-152517", outputPath);
+        Assert.Equal(".\\generated-2026-05-22-15-25-17", outputPath);
     }
 
     [Fact]
@@ -73,8 +73,8 @@ public class PipelineRequestTests
         // Pattern test — useful when exact timestamp is non-deterministic (no injected clock).
         var result = PipelineRequest.GetDefaultOutputPath("appconfig");
 
-        // yyyy-MM-dd-HHmmss: four-digit year, two-digit month, two-digit day, six-digit time
-        Assert.Matches(@"^\.\\generated-appconfig-\d{4}-\d{2}-\d{2}-\d{6}$", result);
+        // yyyy-MM-dd-HH-mm-ss: four-digit year, dashes, two-digit month, two-digit day, two-digit hour, two-digit minute, two-digit second
+        Assert.Matches(@"^\.\\generated-appconfig-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$", result);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class PipelineRequestTests
     {
         var result = PipelineRequest.GetDefaultOutputPath(null);
 
-        Assert.Matches(@"^\.\\generated-\d{4}-\d{2}-\d{2}-\d{6}$", result);
+        Assert.Matches(@"^\.\\generated-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$", result);
     }
 
     [Fact]
@@ -102,6 +102,6 @@ public class PipelineRequestTests
         // Blank/whitespace namespace is treated the same as null — no namespace segment in path.
         var result = PipelineRequest.GetDefaultOutputPath("   ");
 
-        Assert.Matches(@"^\.\\generated-\d{4}-\d{2}-\d{2}-\d{6}$", result);
+        Assert.Matches(@"^\.\\generated-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$", result);
     }
 }
