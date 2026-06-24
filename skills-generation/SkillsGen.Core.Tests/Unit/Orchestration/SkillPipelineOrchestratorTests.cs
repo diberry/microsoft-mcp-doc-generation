@@ -182,6 +182,31 @@ public class SkillPipelineOrchestratorTests
     }
 
     [Fact]
+    public async Task ProcessSkillAsync_PreservesSourceDescriptionWithoutLlmRewrite()
+    {
+        SetupHappyPath();
+        SkillData? generatedSkillData = null;
+        _generator.Generate(
+                Arg.Do<SkillData>(s => generatedSkillData = s),
+                Arg.Any<TriggerData>(),
+                Arg.Any<TierAssessment>(),
+                Arg.Any<SkillPrerequisites>(),
+                Arg.Any<Func<string, string>?>(),
+                Arg.Any<List<string>?>(),
+                Arg.Any<string?>(),
+                Arg.Any<string?>())
+            .Returns("---\ntitle: Test\ndescription: Test\n---\n\n# Test\n\n## Prerequisites\n\n- GitHub Copilot\n\n## When to use\n\n## What it provides\n\nContent here.");
+
+        var orchestrator = CreateOrchestrator();
+        await orchestrator.ProcessSkillAsync("azure-test");
+
+        generatedSkillData.Should().NotBeNull();
+        generatedSkillData!.Description.Should().Be("Test skill description.");
+        await _rewriter.DidNotReceive()
+            .RewriteIntroAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ProcessBatchAsync_WritesManifest()
     {
         SetupHappyPath();
@@ -214,7 +239,6 @@ public class SkillPipelineOrchestratorTests
         tracer.Received().StartStep("catalog", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("parse", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("assess", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
-        tracer.Received().StartStep("llm-rewrite-intro", StepClassification.AI, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("llm-synthesize-what-it-provides", StepClassification.AI, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("generate", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("post-process", StepClassification.Deterministic, "azure-test", Arg.Any<string>());

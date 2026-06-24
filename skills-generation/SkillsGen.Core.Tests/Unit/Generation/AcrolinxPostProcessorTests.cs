@@ -268,6 +268,25 @@ public class AcrolinxPostProcessorTests
     }
 
     [Fact]
+    public void Process_DoesNotRewriteFrontmatterDescription()
+    {
+        var processor = new AcrolinxPostProcessor(SampleReplacementsJson, null, _logger);
+        var input = """
+        ---
+        title: Azure skill for Test
+        description: Use Azure Active Directory to utilize role mappings.
+        ---
+
+        Configure Azure Active Directory and utilize role mappings.
+        """;
+
+        var result = processor.Process(input);
+
+        result.Should().Contain("description: Use Azure Active Directory to utilize role mappings.");
+        result.Should().Contain("Configure Microsoft Entra ID and use role mappings.");
+    }
+
+    [Fact]
     public void SplitFrontmatter_SeparatesCorrectly()
     {
         var input = "---\ntitle: Test\n---\n\nBody content.";
