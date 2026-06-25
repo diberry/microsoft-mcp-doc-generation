@@ -1,19 +1,17 @@
 using System.Diagnostics;
-using System.Net;
-using System.Text;
 using System.Text.Json;
-using Azure;
 using Azure.AI.OpenAI;
+using Azure.Identity;
 using DocGeneration.Core.Tracing;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using OpenAI.Chat;
 using SkillsGen.Core.Models;
 
 namespace SkillsGen.Core.Generation;
 
 public class AzureOpenAiRewriter : ILlmRewriter
 {
-    private readonly ChatClient _chatClient;
+    private readonly IChatClient _chatClient;
     private readonly ILogger<AzureOpenAiRewriter> _logger;
     private readonly IPipelineTracer _tracer;
     private readonly string _modelName;
@@ -21,9 +19,12 @@ public class AzureOpenAiRewriter : ILlmRewriter
     private readonly string _userPromptIntroTemplate;
     private readonly string _systemPromptKnowledge;
 
+    /// <summary>
+    /// Primary constructor. Takes an <see cref="IChatClient"/> (Microsoft.Extensions.AI)
+    /// so the rewriter is decoupled from the concrete SDK and credential type, and is unit-testable.
+    /// </summary>
     public AzureOpenAiRewriter(
-        string endpoint,
-        string apiKey,
+        IChatClient chatClient,
         string modelName,
         string systemPromptIntro,
         string userPromptIntroTemplate,
@@ -31,17 +32,37 @@ public class AzureOpenAiRewriter : ILlmRewriter
         ILogger<AzureOpenAiRewriter> logger,
         IPipelineTracer? tracer = null)
     {
+        _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
         _logger = logger;
         _tracer = tracer ?? NullTracer.Instance;
         _modelName = modelName;
-
-        var client = new AzureOpenAIClient(new Uri(endpoint), new AzureKeyCredential(apiKey));
-        _chatClient = client.GetChatClient(modelName);
 
         // Replace {{ACROLINX_RULES}} placeholder with actual rules
         _systemPromptIntro = systemPromptIntro.Replace("{{ACROLINX_RULES}}", acrolinxRules ?? "");
         _userPromptIntroTemplate = userPromptIntroTemplate;
         _systemPromptKnowledge = _systemPromptIntro; // Same system prompt for both (knowledge reuse)
+    }
+
+    /// <summary>
+    /// Builds a rewriter using keyless authentication only.
+    /// This repository NEVER uses API keys — auth is always managed identity /
+    /// <see cref="DefaultAzureCredential"/>. The chat client is created via
+    /// Microsoft.Extensions.AI (<c>AsIChatClient</c>), which also avoids the
+    /// Azure.AI.OpenAI/OpenAI binary mismatch that breaks the raw ChatClient path.
+    /// </summary>
+    public static AzureOpenAiRewriter CreateKeyless(
+        string endpoint,
+        string modelName,
+        string systemPromptIntro,
+        string userPromptIntroTemplate,
+        string? acrolinxRules,
+        ILogger<AzureOpenAiRewriter> logger,
+        IPipelineTracer? tracer = null)
+    {
+        var azureClient = new AzureOpenAIClient(new Uri(endpoint), new DefaultAzureCredential());
+        IChatClient chatClient = azureClient.GetChatClient(modelName).AsIChatClient();
+        return new AzureOpenAiRewriter(
+            chatClient, modelName, systemPromptIntro, userPromptIntroTemplate, acrolinxRules, logger, tracer);
     }
 
     public async Task<string> RewriteIntroAsync(string skillName, string rawDescription, CancellationToken ct = default)
@@ -183,14 +204,14 @@ public class AzureOpenAiRewriter : ILlmRewriter
         var sw = Stopwatch.StartNew();
         var messages = new List<ChatMessage>
         {
-            new SystemChatMessage(systemPrompt),
-            new UserChatMessage(userPrompt)
+            new(ChatRole.System, systemPrompt),
+            new(ChatRole.User, userPrompt)
         };
 
-        var options = new ChatCompletionOptions
+        var options = new ChatOptions
         {
             Temperature = 0.3f,
-            MaxOutputTokenCount = 500
+            MaxOutputTokens = 500
         };
 
         for (int attempt = 0; attempt <= MaxRetries; attempt++)
@@ -198,12 +219,12 @@ public class AzureOpenAiRewriter : ILlmRewriter
             try
             {
                 _logger.LogDebug("Calling Azure OpenAI with {PromptLength} char prompt (attempt {Attempt})", userPrompt.Length, attempt + 1);
-                var response = await _chatClient.CompleteChatAsync(messages, options, ct);
+                var response = await _chatClient.GetResponseAsync(messages, options, ct);
 
-                if (response.Value.Content.Count == 0)
+                var result = response.Messages.FirstOrDefault()?.Text ?? string.Empty;
+                if (string.IsNullOrEmpty(result))
                     throw new InvalidOperationException("Azure OpenAI returned empty content");
 
-                var result = response.Value.Content[0].Text;
                 _logger.LogDebug("Received {ResponseLength} char response", result.Length);
 
                 _tracer.RecordAiCall(new AiInteractionRecord
@@ -214,7 +235,7 @@ public class AzureOpenAiRewriter : ILlmRewriter
                     UserPrompt = userPrompt,
                     ResponseContent = result,
                     Model = _modelName,
-                    TotalTokens = response.Value.Usage?.TotalTokenCount is int totalTokenCount ? (int?)totalTokenCount : null,
+                    TotalTokens = response.Usage?.TotalTokenCount is long totalTokenCount ? (int?)totalTokenCount : null,
                     DurationMs = sw.ElapsedMilliseconds,
                     RetryCount = attempt
                 });

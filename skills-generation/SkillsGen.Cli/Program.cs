@@ -182,11 +182,12 @@ static (SkillPipelineOrchestrator Orchestrator, PipelineTracer Tracer) BuildOrch
     }
     else
     {
-        var apiKey = Environment.GetEnvironmentVariable("FOUNDRY_API_KEY");
         var endpoint = Environment.GetEnvironmentVariable("FOUNDRY_ENDPOINT");
         var modelName = Environment.GetEnvironmentVariable("FOUNDRY_MODEL_NAME") ?? "gpt-4o";
 
-        if (!string.IsNullOrEmpty(apiKey) && !string.IsNullOrEmpty(endpoint))
+        // Keyless only — this repo NEVER uses API keys. Auth is managed identity /
+        // DefaultAzureCredential (e.g. `az login` locally, managed identity in CI).
+        if (!string.IsNullOrEmpty(endpoint))
         {
             var acrolinxPath = Path.Combine(dataPath, "shared-acrolinx-rules.txt");
 
@@ -194,13 +195,13 @@ static (SkillPipelineOrchestrator Orchestrator, PipelineTracer Tracer) BuildOrch
             var userPrompt = File.Exists(userPromptPath) ? File.ReadAllText(userPromptPath) : "Write about {{skillName}}: {{description}}";
             var acrolinxRules = File.Exists(acrolinxPath) ? File.ReadAllText(acrolinxPath) : null;
 
-            rewriter = new AzureOpenAiRewriter(endpoint, apiKey, modelName,
+            rewriter = AzureOpenAiRewriter.CreateKeyless(endpoint, modelName,
                 systemPrompt, userPrompt, acrolinxRules,
                 loggerFactory.CreateLogger<AzureOpenAiRewriter>(), tracer);
         }
         else
         {
-            Console.WriteLine("[skills-gen] No AI credentials found, using no-op rewriter.");
+            Console.WriteLine("[skills-gen] No FOUNDRY_ENDPOINT found, using no-op rewriter.");
             rewriter = new NoOpRewriter();
         }
     }

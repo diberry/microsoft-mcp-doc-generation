@@ -1,127 +1,136 @@
 using FluentAssertions;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using SkillsGen.Core.Generation;
+using SkillsGen.Core.Models;
 using Xunit;
 
 namespace SkillsGen.Core.Tests.Unit.Generation;
 
 public class AzureOpenAiRewriterTests
 {
-    // We can't test the actual Azure OpenAI call without credentials,
-    // but we can test prompt construction and configuration loading.
+    // The rewriter goes through Microsoft.Extensions.AI's IChatClient abstraction
+    // (NOT the raw Azure.AI.OpenAI ChatClient). This keeps it unit-testable AND
+    // avoids the Azure.AI.OpenAI/OpenAI binary-mismatch MissingMethodException.
+    // Auth is keyless by policy — see CreateKeyless. No API keys anywhere.
+
+    private static IChatClient StubChatClient(string responseText)
+    {
+        var chatClient = Substitute.For<IChatClient>();
+        chatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText))));
+        return chatClient;
+    }
+
+    private static AzureOpenAiRewriter NewRewriter(IChatClient chatClient, string? acrolinxRules = null) =>
+        new(
+            chatClient,
+            "gpt-5-mini",
+            "System prompt. {{ACROLINX_RULES}}",
+            "Write for {{skillName}}: {{description}}",
+            acrolinxRules,
+            Substitute.For<ILogger<AzureOpenAiRewriter>>());
 
     [Fact]
-    public void Constructor_WithAcrolinxRules_ReplacesPlaceholder()
+    public void Constructor_WithInjectedChatClient_DoesNotThrow()
     {
-        // Verify that the prompt template is correctly configured
-        var systemPrompt = "System prompt. {{ACROLINX_RULES}}";
-        var userPrompt = "Write for {{skillName}}: {{description}}";
-        var acrolinxRules = "Use contractions. Use active voice.";
-
-        // We can't easily test the internal state, but we can verify
-        // the class constructs without throwing
-        var action = () =>
-        {
-            // This will throw because the endpoint isn't valid, but
-            // only after processing the prompts
-            try
-            {
-                new AzureOpenAiRewriter(
-                    "https://test.openai.azure.com/",
-                    "fake-key",
-                    "gpt-4o",
-                    systemPrompt,
-                    userPrompt,
-                    acrolinxRules,
-                    Substitute.For<ILogger<AzureOpenAiRewriter>>());
-            }
-            catch (UriFormatException)
-            {
-                // Expected — endpoint validation
-            }
-        };
-
-        // The constructor should not throw during prompt processing
-        action.Should().NotThrow();
+        var act = () => NewRewriter(StubChatClient("ok"), "Use contractions. Use active voice.");
+        act.Should().NotThrow();
     }
 
     [Fact]
-    public void Constructor_WithNullAcrolinxRules_ReplacesWithEmpty()
+    public void Constructor_WithNullChatClient_Throws()
     {
-        var systemPrompt = "Rules: {{ACROLINX_RULES}}";
-        var userPrompt = "{{skillName}}: {{description}}";
+        var act = () => new AzureOpenAiRewriter(
+            null!,
+            "gpt-5-mini",
+            "system",
+            "user",
+            null,
+            Substitute.For<ILogger<AzureOpenAiRewriter>>());
 
-        var action = () =>
-        {
-            try
-            {
-                new AzureOpenAiRewriter(
-                    "https://test.openai.azure.com/",
-                    "fake-key",
-                    "gpt-4o",
-                    systemPrompt,
-                    userPrompt,
-                    null,
-                    Substitute.For<ILogger<AzureOpenAiRewriter>>());
-            }
-            catch (UriFormatException)
-            {
-                // Expected
-            }
-        };
-
-        action.Should().NotThrow();
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
-    public async Task RewriteIntroAsync_WithInvalidEndpoint_ThrowsOnCall()
+    public async Task RewriteIntroAsync_ReturnsChatClientContent()
     {
-        var rewriter = new AzureOpenAiRewriter(
-            "https://test.openai.azure.com/",
-            "fake-key",
-            "gpt-4o",
-            "system prompt",
+        var rewriter = NewRewriter(StubChatClient("A clear customer-facing intro."));
+
+        var result = await rewriter.RewriteIntroAsync("python-appservice-deploy", "Deploy Python apps.");
+
+        result.Should().Be("A clear customer-facing intro.");
+    }
+
+    [Fact]
+    public async Task GenerateKnowledgeOverviewAsync_ReturnsChatClientContent()
+    {
+        var rewriter = NewRewriter(StubChatClient("Knowledge overview text."));
+
+        var result = await rewriter.GenerateKnowledgeOverviewAsync("python-appservice-deploy", "body");
+
+        result.Should().Be("Knowledge overview text.");
+    }
+
+    [Fact]
+    public async Task SynthesizeWhatItProvidesAsync_ReturnsChatClientContent()
+    {
+        var rewriter = NewRewriter(StubChatClient("It provides streamlined deployment."));
+        var skill = new SkillData
+        {
+            Name = "python-appservice-deploy",
+            DisplayName = "Python App Service Deploy",
+            Description = "Deploy Python apps to Azure App Service.",
+            UseFor = ["Deploying Python web apps"],
+            Services = [new ServiceEntry("Azure App Service", "when hosting web apps")]
+        };
+
+        var result = await rewriter.SynthesizeWhatItProvidesAsync("python-appservice-deploy", skill);
+
+        result.Should().Be("It provides streamlined deployment.");
+    }
+
+    [Fact]
+    public async Task TranslateWorkflowStepsAsync_ParsesJsonArrayResponse()
+    {
+        var rewriter = NewRewriter(StubChatClient("[\"You create the app.\", \"You deploy it.\"]"));
+
+        var result = await rewriter.TranslateWorkflowStepsAsync(
+            "python-appservice-deploy",
+            ["create app", "deploy"],
+            []);
+
+        result.Should().Equal("You create the app.", "You deploy it.");
+    }
+
+    [Fact]
+    public async Task TranslateWorkflowStepsAsync_EmptyInput_ReturnsEmpty()
+    {
+        var rewriter = NewRewriter(StubChatClient("ignored"));
+
+        var result = await rewriter.TranslateWorkflowStepsAsync("skill", [], []);
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CreateKeyless_BuildsRewriterWithoutApiKey()
+    {
+        // Policy: this repo NEVER uses API keys. CreateKeyless builds a
+        // DefaultAzureCredential-backed rewriter from endpoint + model only.
+        var rewriter = AzureOpenAiRewriter.CreateKeyless(
+            "https://oai-test.cognitiveservices.azure.com/",
+            "gpt-5-mini",
+            "system {{ACROLINX_RULES}}",
             "Write for {{skillName}}: {{description}}",
             null,
             Substitute.For<ILogger<AzureOpenAiRewriter>>());
 
-        // Should throw when actually calling the API
-        var act = async () => await rewriter.RewriteIntroAsync("test", "description");
-        await act.Should().ThrowAsync<Exception>();
-    }
-
-    [Fact]
-    public async Task GenerateKnowledgeOverviewAsync_WithInvalidEndpoint_ThrowsOnCall()
-    {
-        var rewriter = new AzureOpenAiRewriter(
-            "https://test.openai.azure.com/",
-            "fake-key",
-            "gpt-4o",
-            "system prompt",
-            "user prompt",
-            null,
-            Substitute.For<ILogger<AzureOpenAiRewriter>>());
-
-        var act = async () => await rewriter.GenerateKnowledgeOverviewAsync("test", "body");
-        await act.Should().ThrowAsync<Exception>();
-    }
-
-    [Fact]
-    public void IsRateLimitError_CanBeTestedViaRetryBehavior()
-    {
-        // Verify the static IsRateLimitError method exists and is used in retry logic
-        // by confirming the constructor accepts all required parameters for retry-enabled rewriter
-        var rewriter = new AzureOpenAiRewriter(
-            "https://test.openai.azure.com/",
-            "fake-key",
-            "gpt-4o",
-            "system prompt",
-            "Write for {{skillName}}: {{description}}",
-            null,
-            Substitute.For<ILogger<AzureOpenAiRewriter>>());
-
-        // The rewriter should exist with retry logic configured
         rewriter.Should().NotBeNull();
     }
 }
