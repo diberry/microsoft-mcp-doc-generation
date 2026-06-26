@@ -210,9 +210,14 @@ public class AzureOpenAiRewriter : ILlmRewriter
 
         var options = new ChatOptions
         {
-            Temperature = 0.3f,
-            MaxOutputTokens = 500
+            MaxOutputTokens = MaxOutputTokensFor(_modelName)
         };
+
+        // gpt-5 / o-series reasoning models only support the default temperature (1)
+        // and reject an explicit value (HTTP 400 unsupported_value). For all other
+        // models we pin a low temperature for deterministic, consistent rewrites.
+        if (SupportsCustomTemperature(_modelName))
+            options.Temperature = 0.3f;
 
         for (int attempt = 0; attempt <= MaxRetries; attempt++)
         {
@@ -260,9 +265,34 @@ public class AzureOpenAiRewriter : ILlmRewriter
         throw new InvalidOperationException("Exhausted all retry attempts");
     }
 
-    private static bool IsRateLimitError(Exception ex)
+    /// <summary>
+    /// Returns false for model families that only support the default temperature (1)
+    /// and reject an explicit value — currently the gpt-5 family and the o-series
+    /// reasoning models (o1/o3/o4). Returns true for all other models.
+    /// </summary>
+    internal static bool SupportsCustomTemperature(string? modelName)
     {
-        if (ex is Azure.RequestFailedException rfe && rfe.Status == 429)
+        if (string.IsNullOrWhiteSpace(modelName))
+            return true;
+
+        var m = modelName.Trim().ToLowerInvariant();
+        return !(m.StartsWith("gpt-5")
+            || m.StartsWith("o1")
+            || m.StartsWith("o3")
+            || m.StartsWith("o4"));
+    }
+
+    /// <summary>
+    /// Returns the output-token budget for a model. Reasoning models (gpt-5 family,
+    /// o-series) spend tokens on internal reasoning before producing visible output,
+    /// so a small cap leaves no room for the answer and yields empty content. Those
+    /// families get a larger budget; all other models keep the lean default.
+    /// </summary>
+    internal static int MaxOutputTokensFor(string? modelName)
+        => SupportsCustomTemperature(modelName) ? 500 : 4000;
+
+    private static bool IsRateLimitError(Exception ex)
+    {        if (ex is Azure.RequestFailedException rfe && rfe.Status == 429)
             return true;
 
         var message = ex.Message;

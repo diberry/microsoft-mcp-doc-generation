@@ -28,9 +28,12 @@ public class AzureOpenAiRewriterTests
     }
 
     private static AzureOpenAiRewriter NewRewriter(IChatClient chatClient, string? acrolinxRules = null) =>
+        NewRewriterWithModel(chatClient, "gpt-5-mini", acrolinxRules);
+
+    private static AzureOpenAiRewriter NewRewriterWithModel(IChatClient chatClient, string modelName, string? acrolinxRules = null) =>
         new(
             chatClient,
-            "gpt-5-mini",
+            modelName,
             "System prompt. {{ACROLINX_RULES}}",
             "Write for {{skillName}}: {{description}}",
             acrolinxRules,
@@ -146,6 +149,48 @@ public class AzureOpenAiRewriterTests
         var result = await rewriter.TranslateWorkflowStepsAsync("skill", [], []);
 
         result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CallLlm_WithGpt5Model_OmitsTemperature()
+    {
+        // gpt-5 / o-series reasoning models reject a custom temperature
+        // (HTTP 400 unsupported_value) — only the default (1) is allowed.
+        ChatOptions? captured = null;
+        var chatClient = Substitute.For<IChatClient>();
+        chatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Do<ChatOptions?>(o => captured = o),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok"))));
+        var rewriter = NewRewriterWithModel(chatClient, "gpt-5-mini");
+
+        await rewriter.RewriteIntroAsync("python-appservice-deploy", "Deploy Python apps.");
+
+        captured.Should().NotBeNull();
+        captured!.Temperature.Should().BeNull();
+        captured.MaxOutputTokens.Should().Be(4000);
+    }
+
+    [Fact]
+    public async Task CallLlm_WithGpt4Model_SetsTemperature()
+    {
+        ChatOptions? captured = null;
+        var chatClient = Substitute.For<IChatClient>();
+        chatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Do<ChatOptions?>(o => captured = o),
+                Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok"))));
+        var rewriter = NewRewriterWithModel(chatClient, "gpt-4o");
+
+        await rewriter.RewriteIntroAsync("python-appservice-deploy", "Deploy Python apps.");
+
+        captured.Should().NotBeNull();
+        captured!.Temperature.Should().Be(0.3f);
+        captured.MaxOutputTokens.Should().Be(500);
     }
 
     [Fact]
