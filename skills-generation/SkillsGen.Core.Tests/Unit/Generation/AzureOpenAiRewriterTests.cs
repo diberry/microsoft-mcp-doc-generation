@@ -129,6 +129,24 @@ public class AzureOpenAiRewriterTests
     }
 
     [Fact]
+    public async Task SynthesizeWhenToUseSummaryAsync_ReturnsChatClientContent()
+    {
+        var rewriter = NewRewriter(StubChatClient("Use it when deploying Python web apps to App Service."));
+        var skill = new SkillData
+        {
+            Name = "python-appservice-deploy",
+            DisplayName = "Python App Service Deploy",
+            Description = "Deploy Python apps to Azure App Service.",
+            UseFor = ["Deploying Python web apps"],
+            DoNotUseFor = ["Container Apps"]
+        };
+
+        var result = await rewriter.SynthesizeWhenToUseSummaryAsync("python-appservice-deploy", skill);
+
+        result.Should().Be("Use it when deploying Python web apps to App Service.");
+    }
+
+    [Fact]
     public async Task TranslateWorkflowStepsAsync_ParsesJsonArrayResponse()
     {
         var rewriter = NewRewriter(StubChatClient("[\"You create the app.\", \"You deploy it.\"]"));

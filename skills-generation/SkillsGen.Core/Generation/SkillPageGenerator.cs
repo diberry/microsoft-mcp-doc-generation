@@ -22,16 +22,16 @@ public class SkillPageGenerator : ISkillPageGenerator
         _compiledTemplate = handlebars.Compile(templateContent);
     }
 
-    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null, string? skillVersion = null)
+    public string Generate(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null, string? skillVersion = null, string? whenToUseSummary = null)
     {
-        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData, _logger, translatedWorkflowSteps, whatItProvides, skillVersion);
+        var context = BuildContext(skillData, triggerData, tierAssessment, prerequisites, triggerProcessor, _curatedData, _logger, translatedWorkflowSteps, whatItProvides, skillVersion, whenToUseSummary);
         var result = _compiledTemplate(context);
         return result;
     }
 
     private static readonly int MaxExamplePrompts = 8; // §7.3: Aligned to editorial standard per PR #8978
 
-    internal static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData, ILogger? logger = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null, string? skillVersion = null)
+    internal static object BuildContext(SkillData skillData, TriggerData triggerData, TierAssessment tierAssessment, SkillPrerequisites prerequisites, Func<string, string>? triggerProcessor, Dictionary<string, CuratedSkillData>? curatedData, ILogger? logger = null, List<string>? translatedWorkflowSteps = null, string? whatItProvides = null, string? skillVersion = null, string? whenToUseSummary = null)
     {
         // Look up curated data for this skill (null if not found)
         CuratedSkillData? curated = null;
@@ -95,6 +95,9 @@ public class SkillPageGenerator : ISkillPageGenerator
 
         // Build "What it provides" — priority: LLM synthesis > curated > mechanical fallback
         whatItProvides ??= curated?.WhatItProvides ?? BuildWhatItProvides(skillData);
+
+        // Build "When to use" H1 summary — priority: LLM synthesis > mechanical fallback
+        whenToUseSummary ??= BuildWhenToUseSummary(skillData);
 
         return new Dictionary<string, object?>
         {
@@ -179,6 +182,7 @@ public class SkillPageGenerator : ISkillPageGenerator
             ["hasDoNotUseFor"] = doNotUseForList.Count > 0,
             ["hasTriggers"] = examplePrompts.Count > 0,
             ["whatItProvides"] = whatItProvides,
+            ["whenToUseSummary"] = whenToUseSummary,
             ["hasRbacRoles"] = prerequisites.RbacRoles.Count > 0,
             ["hasToolPrereqs"] = prerequisites.Tools.Count > 0,
             ["hasResources"] = prerequisites.Resources.Count > 0,
@@ -326,8 +330,30 @@ public class SkillPageGenerator : ISkillPageGenerator
     }
 
     /// <summary>
-    /// Generates natural-language example prompts from UseFor items when triggers.test.ts is missing.
+    /// Builds a one-sentence "when to use" summary for the H1 paragraph from the skill's
+    /// UseFor items. This is the deterministic fallback used when LLM synthesis is unavailable;
+    /// it summarizes (does not duplicate) the detailed "When to use this skill" section.
     /// </summary>
+    internal static string BuildWhenToUseSummary(SkillData skillData)
+    {
+        if (skillData.UseFor.Count == 0)
+            return $"Use the {skillData.DisplayName} skill when you work with {skillData.DisplayName} in Azure.";
+
+        var items = skillData.UseFor
+            .Select(u => u.TrimEnd('.', ' '))
+            .Where(u => !string.IsNullOrWhiteSpace(u))
+            .Take(3)
+            .ToList();
+
+        var list = items.Count switch
+        {
+            1 => items[0],
+            2 => $"{items[0]} and {items[1]}",
+            _ => $"{string.Join(", ", items.Take(items.Count - 1))}, and {items[^1]}"
+        };
+
+        return $"Use this skill when you need to {list}.";
+    }
     internal static List<string> GenerateFallbackPrompts(List<string> useForItems, string displayName)
     {
         if (useForItems.Count == 0) return new List<string>();

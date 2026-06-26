@@ -120,6 +120,47 @@ public class AzureOpenAiRewriter : ILlmRewriter
         }
     }
 
+    public async Task<string?> SynthesizeWhenToUseSummaryAsync(string skillName, SkillData skillData, CancellationToken ct = default)
+    {
+        // §7.9: Only customer-facing data — no MCP tool names or workflow steps (§4.2)
+        var useCases = skillData.UseFor.Count > 0
+            ? string.Join("\n", skillData.UseFor.Select(u => $"  - {u}"))
+            : "N/A";
+
+        var notFor = skillData.DoNotUseFor.Count > 0
+            ? string.Join("\n", skillData.DoNotUseFor.Select(u => $"  - {u}"))
+            : "N/A";
+
+        var systemPrompt = "You are a technical writer for Microsoft Azure documentation. Write clear, customer-facing content.";
+        var userPrompt = $"""
+            Write a single sentence summarizing WHEN a customer should reach for the Azure skill "{skillName}".
+
+            Context:
+            - Description: {skillData.Description}
+            - Use cases:
+            {useCases}
+            - Not intended for:
+            {notFor}
+
+            Rules:
+            - Exactly one sentence
+            - Write from the customer's perspective (when THEY should use it)
+            - Be specific about the scenarios, not generic
+            - Do NOT restate the full bullet list — summarize it
+            - Do NOT use markdown formatting
+            """;
+
+        try
+        {
+            return await CallLlmAsync(skillName, "synthesize-when-to-use", systemPrompt, userPrompt, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SynthesizeWhenToUseSummary failed for {SkillName}, falling back to mechanical", skillName);
+            return null;
+        }
+    }
+
     public async Task<List<string>> TranslateWorkflowStepsAsync(string skillName, List<string> rawSteps, List<McpToolEntry> tools, CancellationToken ct = default)
     {
         if (rawSteps.Count == 0)

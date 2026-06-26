@@ -306,6 +306,44 @@ The skill provides knowledge about {{displayName}}.
     }
 
     [Fact]
+    public void Generate_AppendsWhenToUseSummary_ToH1Paragraph()
+    {
+        const string template = @"---
+title: Azure skill for {{displayName}}
+description: {{{description}}}
+---
+# Azure skill for {{displayName}}
+
+{{{description}}}{{#if whenToUseSummary}} {{{whenToUseSummary}}}{{/if}}
+{{#if hasUseFor}}
+
+## When to use this skill
+
+{{#each useFor}}
+- {{this}}
+{{/each}}
+{{/if}}
+";
+        var generator = CreateGenerator(template);
+        var skill = CreateTestSkillData();
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var summary = "Use this skill when you need to deploy Python apps to App Service.";
+        var result = generator.Generate(skill, triggers, tier, prereqs,
+            whenToUseSummary: summary);
+
+        // H1 paragraph = description intro + space + summary sentence (same paragraph)
+        result.Should().Contain($"Manage Azure Storage accounts and resources. {summary}");
+        // The frontmatter description stays the intro only (no summary appended)
+        result.Should().Contain("description: Manage Azure Storage accounts and resources.");
+        // The detailed When-to-use section is retained
+        result.Should().Contain("## When to use this skill");
+        result.Should().Contain("- Creating storage accounts");
+    }
+
+    [Fact]
     public void Generate_WithValidData_ContainsSkillName()
     {
         var generator = CreateGenerator();
@@ -1142,5 +1180,75 @@ public class BuildContextWhatItProvidesTests
         context.Should().NotBeNull();
         var mechanical = SkillPageGenerator.BuildWhatItProvides(skillData);
         context!["whatItProvides"].Should().Be(mechanical);
+    }
+}
+
+public class BuildContextWhenToUseSummaryTests
+{
+    [Fact]
+    public void BuildContext_UsesPassedInWhenToUseSummary_WhenNonNull()
+    {
+        var skillData = new SkillData
+        {
+            Name = "azure-storage",
+            DisplayName = "Azure Storage",
+            Description = "Test.",
+            UseFor = ["store blobs"]
+        };
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var llmSummary = "Use this skill when you need to store unstructured blob data in Azure.";
+        var context = SkillPageGenerator.BuildContext(
+            skillData, triggers, tier, prereqs,
+            triggerProcessor: null, curatedData: null, logger: null,
+            translatedWorkflowSteps: null, whatItProvides: null, skillVersion: null,
+            whenToUseSummary: llmSummary)
+            as IDictionary<string, object?>;
+
+        context.Should().NotBeNull();
+        context!["whenToUseSummary"].Should().Be(llmSummary);
+    }
+
+    [Fact]
+    public void BuildContext_FallsBackToMechanical_WhenWhenToUseSummaryIsNull()
+    {
+        var skillData = new SkillData
+        {
+            Name = "azure-keyvault",
+            DisplayName = "Azure Key Vault",
+            Description = "Test.",
+            UseFor = ["store secrets", "manage certificates"]
+        };
+        var triggers = new TriggerData([], [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var context = SkillPageGenerator.BuildContext(
+            skillData, triggers, tier, prereqs,
+            triggerProcessor: null, curatedData: null, logger: null,
+            translatedWorkflowSteps: null, whatItProvides: null, skillVersion: null,
+            whenToUseSummary: null)
+            as IDictionary<string, object?>;
+
+        context.Should().NotBeNull();
+        var mechanical = SkillPageGenerator.BuildWhenToUseSummary(skillData);
+        context!["whenToUseSummary"].Should().Be(mechanical);
+    }
+
+    [Fact]
+    public void BuildWhenToUseSummary_WithNoUseForItems_ReturnsGenericSentence()
+    {
+        var skillData = new SkillData
+        {
+            Name = "azure-thing",
+            DisplayName = "Azure Thing",
+            Description = "Test."
+        };
+
+        var summary = SkillPageGenerator.BuildWhenToUseSummary(skillData);
+
+        summary.Should().Be("Use the Azure Thing skill when you work with Azure Thing in Azure.");
     }
 }
