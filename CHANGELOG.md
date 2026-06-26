@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Generated-skills output folder is now stamped with the all-up Azure Skills version** — The output directory is suffixed with the overall `azure` plugin version read from `skills-source/plugin.json` (e.g. `--out ../generated-skills/` produces `../generated-skills-1.1.72/`). This is the package-wide Azure Skills version, NOT any individual skill's version. New `AzureSkillsVersionResolver` (`SkillsGen.Core/Versioning/`) resolves the version from `plugin.json` at the source path or its parent and applies the suffix; both `generate-skill` and `generate-skills` CLI handlers in `Program.cs` apply it after parsing `--source-path`. When `plugin.json` is missing or has no `version`, the folder name is left unchanged. 12 unit tests cover version resolution (present/parent/missing/malformed/null source) and suffix application (trailing slash/backslash/blank version).
+
 ### Fixed
 
 - **Skill frontmatter `description` is now lift-and-shift (verbatim) from source** — Merged the `preserve-frontmatter-description` work into this branch. The orchestrator no longer rewrites the skill description (the `llm-rewrite-intro` step is removed and `AcrolinxPostProcessor` no longer polishes the description), so the generated frontmatter `description` is taken straight from the source `SKILL.md` instead of being LLM-paraphrased. The keyless `SynthesizeWhatItProvides` LLM call is unaffected. Regression tests cover both the full and surgical flows.

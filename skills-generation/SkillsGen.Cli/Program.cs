@@ -11,6 +11,7 @@ using SkillsGen.Core.Orchestration;
 using SkillsGen.Core.Parsers;
 using SkillsGen.Core.PostProcessing;
 using SkillsGen.Core.Validation;
+using SkillsGen.Core.Versioning;
 
 var loggerFactory = LoggerFactory.Create(builder =>
 {
@@ -57,6 +58,13 @@ generateSkillCommand.SetHandler(async (context) =>
     var testsPath = context.ParseResult.GetValueForOption(testsPathOption);
     var dataPath = context.ParseResult.GetValueForOption(dataPathOption) ?? "./data/";
     var templatePath = context.ParseResult.GetValueForOption(templatePathOption) ?? "./templates/skill-page-template.hbs";
+
+    // Stamp the output folder with the all-up Azure Skills version (from plugin.json),
+    // e.g. ../generated-skills/ -> ../generated-skills-1.1.72. Not a per-skill version.
+    var azureSkillsVersion = AzureSkillsVersionResolver.ResolveVersion(sourcePath);
+    outputDir = AzureSkillsVersionResolver.ApplyVersionSuffix(outputDir, azureSkillsVersion);
+    if (azureSkillsVersion is not null)
+        Console.WriteLine($"[skills-gen] Azure Skills version {azureSkillsVersion} → output: {outputDir}");
 
     var (orchestrator, tracer) = BuildOrchestrator(loggerFactory, source, sourcePath, testsPath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
 
@@ -107,6 +115,13 @@ generateSkillsCommand.SetHandler(async (context) =>
     }
 
     Console.WriteLine($"[skills-gen] Found {skills.Count} skills in inventory.");
+
+    // Stamp the output folder with the all-up Azure Skills version (from plugin.json),
+    // e.g. ../generated-skills/ -> ../generated-skills-1.1.72. Not a per-skill version.
+    var azureSkillsVersion = AzureSkillsVersionResolver.ResolveVersion(sourcePath);
+    outputDir = AzureSkillsVersionResolver.ApplyVersionSuffix(outputDir, azureSkillsVersion);
+    if (azureSkillsVersion is not null)
+        Console.WriteLine($"[skills-gen] Azure Skills version {azureSkillsVersion} → output: {outputDir}");
 
     var (orchestrator, tracer) = BuildOrchestrator(loggerFactory, source, sourcePath, testsPath, dataPath, templatePath, outputDir, noLlm, dryRun, force);
 
