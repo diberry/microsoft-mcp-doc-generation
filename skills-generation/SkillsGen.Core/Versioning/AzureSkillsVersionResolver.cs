@@ -46,20 +46,31 @@ public static class AzureSkillsVersionResolver
     }
 
     /// <summary>
-    /// Appends <c>-{version}</c> to the final segment of <paramref name="outputDir"/>
-    /// (e.g. <c>../generated-skills/</c> → <c>../generated-skills-1.1.72</c>). Returns
-    /// <paramref name="outputDir"/> unchanged when <paramref name="version"/> is null or blank.
+    /// Appends <c>-{version}</c> and, when supplied, <c>-{yyyy-MM-dd-HHmmss}</c> to the
+    /// final segment of <paramref name="outputDir"/> (e.g. <c>../generated-skills/</c> →
+    /// <c>../generated-skills-1.1.72-2026-05-31-162525</c>), so each run lands in a
+    /// version- and time-stamped directory. When <paramref name="version"/> is null/blank
+    /// the version segment is omitted; when <paramref name="timestamp"/> is null the time
+    /// segment is omitted. Returns <paramref name="outputDir"/> unchanged when neither is
+    /// supplied.
     /// </summary>
-    public static string ApplyVersionSuffix(string outputDir, string? version)
+    public static string ApplyVersionSuffix(string outputDir, string? version, DateTimeOffset? timestamp = null)
     {
-        if (string.IsNullOrWhiteSpace(version))
+        var hasVersion = !string.IsNullOrWhiteSpace(version);
+        if (!hasVersion && timestamp is null)
             return outputDir;
 
         var trimmed = outputDir.TrimEnd('/', '\\');
         if (trimmed.Length == 0)
             return outputDir;
 
-        return $"{trimmed}-{version.Trim()}";
+        if (hasVersion)
+            trimmed = $"{trimmed}-{version!.Trim()}";
+
+        if (timestamp is { } ts)
+            trimmed = $"{trimmed}-{ts:yyyy-MM-dd-HHmmss}";
+
+        return trimmed;
     }
 
     private static IEnumerable<string> EnumeratePluginJsonCandidates(string sourcePath)
