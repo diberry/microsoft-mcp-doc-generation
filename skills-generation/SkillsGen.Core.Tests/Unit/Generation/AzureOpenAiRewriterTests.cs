@@ -68,6 +68,36 @@ public class AzureOpenAiRewriterTests
     }
 
     [Fact]
+    public async Task RewriteIntroAsync_RateLimitFromChatClient_RetriesThenReturnsContent()
+    {
+        var chatClient = Substitute.For<IChatClient>();
+        var callCount = 0;
+        var successResponse = new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok"));
+        chatClient
+            .GetResponseAsync(
+                Arg.Any<IEnumerable<ChatMessage>>(),
+                Arg.Any<ChatOptions?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                callCount++;
+                return callCount == 1
+                    ? Task.FromException<ChatResponse>(new Azure.RequestFailedException(429, "rate limited"))
+                    : Task.FromResult(successResponse);
+            });
+        var rewriter = NewRewriter(chatClient);
+
+        var result = await rewriter.RewriteIntroAsync("python-appservice-deploy", "Deploy Python apps.");
+
+        result.Should().Be("ok");
+        callCount.Should().Be(2);
+        await chatClient.Received(2).GetResponseAsync(
+            Arg.Any<IEnumerable<ChatMessage>>(),
+            Arg.Any<ChatOptions?>(),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task GenerateKnowledgeOverviewAsync_ReturnsChatClientContent()
     {
         var rewriter = NewRewriter(StubChatClient("Knowledge overview text."));

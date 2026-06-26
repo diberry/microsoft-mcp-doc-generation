@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Skills generation keyless rewriter docs and retry coverage** — Added a regression test proving a 429 from the injected `IChatClient` retries and succeeds, and removed the unused `FOUNDRY_USE_DEFAULT_CREDENTIAL` setting from the skills-generation README.
 - **Skills LLM rewrite restored — keyless auth and SDK path fix** — `AzureOpenAiRewriter` now goes through the `Microsoft.Extensions.AI` `IChatClient` abstraction (`AsIChatClient`) instead of the raw `Azure.AI.OpenAI` `ChatClient`. This fixes the `MissingMethodException: get_SerializedAdditionalRawData()` that was thrown before any network call (binary mismatch between `Azure.AI.OpenAI` 2.1.0 and the transitively-resolved `OpenAI` 2.9.1), which caused every AI-enhanced section to silently fall back to mechanical text. The rewriter's primary constructor now accepts an injected `IChatClient`, making it unit-testable. New tests in `AzureOpenAiRewriterTests` cover intro/knowledge/what-it-provides/workflow-step rewriting against a stubbed `IChatClient`.
 
 ### Changed

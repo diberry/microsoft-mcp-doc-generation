@@ -14,7 +14,6 @@ Requires a `.env` file in `skills-generation/` with Azure OpenAI configuration. 
 ```env
 FOUNDRY_ENDPOINT=<your-endpoint>
 FOUNDRY_MODEL_NAME=gpt-4o
-FOUNDRY_USE_DEFAULT_CREDENTIAL=true
 ```
 
 > The signed-in identity (or managed identity) needs the **Cognitive Services OpenAI User** role on the Azure OpenAI / Foundry resource.
