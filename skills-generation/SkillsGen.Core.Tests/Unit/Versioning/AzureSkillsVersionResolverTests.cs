@@ -39,6 +39,29 @@ public class AzureSkillsVersionResolverTests
         result.Should().Be("../generated-skills/");
     }
 
+    [Fact]
+    public void ApplyVersionSuffix_WithVersionAndTimestamp_AppendsBoth()
+    {
+        var ts = new DateTimeOffset(2026, 5, 31, 16, 25, 25, TimeSpan.Zero);
+        var result = AzureSkillsVersionResolver.ApplyVersionSuffix("../generated-skills/", "1.1.72", ts);
+        result.Should().Be("../generated-skills-1.1.72-2026-05-31-162525");
+    }
+
+    [Fact]
+    public void ApplyVersionSuffix_WithTimestampNoVersion_AppendsTimestampOnly()
+    {
+        var ts = new DateTimeOffset(2026, 5, 31, 16, 25, 25, TimeSpan.Zero);
+        var result = AzureSkillsVersionResolver.ApplyVersionSuffix("../generated-skills/", null, ts);
+        result.Should().Be("../generated-skills-2026-05-31-162525");
+    }
+
+    [Fact]
+    public void ApplyVersionSuffix_WithNoVersionNoTimestamp_ReturnsUnchanged()
+    {
+        var result = AzureSkillsVersionResolver.ApplyVersionSuffix("../generated-skills/", null, null);
+        result.Should().Be("../generated-skills/");
+    }
+
     // ResolveVersion — reads all-up azure-skills plugin.json -----------------
 
     [Fact]

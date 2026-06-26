@@ -19,6 +19,11 @@ public class NoOpRewriter : ILlmRewriter
         return Task.FromResult<string?>(SkillPageGenerator.BuildWhatItProvides(skillData));
     }
 
+    public Task<string?> SynthesizeWhenToUseSummaryAsync(string skillName, SkillData skillData, CancellationToken ct = default)
+    {
+        return Task.FromResult<string?>(SkillPageGenerator.BuildWhenToUseSummary(skillData));
+    }
+
     public Task<List<string>> TranslateWorkflowStepsAsync(string skillName, List<string> rawSteps, List<McpToolEntry> tools, CancellationToken ct = default)
     {
         return Task.FromResult(rawSteps);

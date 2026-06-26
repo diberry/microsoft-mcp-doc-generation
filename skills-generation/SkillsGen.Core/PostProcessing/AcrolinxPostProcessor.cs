@@ -150,6 +150,9 @@ public partial class AcrolinxPostProcessor
         // Final cleanup: remove consecutive duplicate sentences
         result = RemoveConsecutiveDuplicateSentences(result);
 
+        // Final cleanup: collapse multiple consecutive blank lines into a single blank line
+        result = CollapseBlankLines(result);
+
         return processedFrontmatter + result;
     }
 
@@ -672,6 +675,20 @@ public partial class AcrolinxPostProcessor
 
     [GeneratedRegex(@"^(Run|Execute|Use)\s+(.+?)\s+to\s+(.+?)(?:\.|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex GoalBeforeActionRegex();
+
+    [GeneratedRegex(@"(\r?\n)(?:[ \t]*\r?\n){2,}")]
+    private static partial Regex MultipleBlankLinesRegex();
+
+    /// <summary>
+    /// Collapses runs of two or more consecutive blank lines (lines that are empty or
+    /// whitespace-only) into a single blank line. Preserves the newline style (CRLF or LF)
+    /// of the first line break in each run. A single blank line between blocks is left intact.
+    /// </summary>
+    internal static string CollapseBlankLines(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        return MultipleBlankLinesRegex().Replace(input, "$1$1");
+    }
 
     [GeneratedRegex(@"\*\*(?<label>[^*:]+):\*\*\s?")]
     private static partial Regex BoldLabelColonRegex();

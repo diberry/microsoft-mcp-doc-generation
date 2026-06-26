@@ -236,6 +236,58 @@ public class AcrolinxPostProcessorTests
         result.Should().Be(input);
     }
 
+    // --- Collapse multiple blank lines tests ---
+
+    [Fact]
+    public void CollapseBlankLines_TripleNewline_CollapsedToSingleBlank()
+    {
+        var input = "Line A.\n\n\nLine B.";
+        var result = AcrolinxPostProcessor.CollapseBlankLines(input);
+        result.Should().Be("Line A.\n\nLine B.");
+    }
+
+    [Fact]
+    public void CollapseBlankLines_SingleBlankLine_Unchanged()
+    {
+        var input = "Line A.\n\nLine B.";
+        var result = AcrolinxPostProcessor.CollapseBlankLines(input);
+        result.Should().Be(input);
+    }
+
+    [Fact]
+    public void CollapseBlankLines_ManyBlankLines_CollapsedToSingleBlank()
+    {
+        var input = "Line A.\n\n\n\n\nLine B.";
+        var result = AcrolinxPostProcessor.CollapseBlankLines(input);
+        result.Should().Be("Line A.\n\nLine B.");
+    }
+
+    [Fact]
+    public void CollapseBlankLines_WhitespaceOnlyBlankLines_Collapsed()
+    {
+        var input = "Line A.\n   \n\t\nLine B.";
+        var result = AcrolinxPostProcessor.CollapseBlankLines(input);
+        result.Should().Be("Line A.\n\nLine B.");
+    }
+
+    [Fact]
+    public void CollapseBlankLines_CrlfTripleNewline_CollapsedAndPreservesCrlf()
+    {
+        var input = "Line A.\r\n\r\n\r\nLine B.";
+        var result = AcrolinxPostProcessor.CollapseBlankLines(input);
+        result.Should().Be("Line A.\r\n\r\nLine B.");
+    }
+
+    [Fact]
+    public void Process_CollapsesMultipleBlankLines()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var result = processor.Process("# Title\n\n\n\nSome body text.\n\n\nMore text.");
+        result.Should().NotContain("\n\n\n");
+        result.Should().Contain("Some body text.");
+        result.Should().Contain("More text.");
+    }
+
     // --- Integration: Process applies all new features ---
 
     [Fact]

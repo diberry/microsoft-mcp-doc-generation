@@ -82,4 +82,22 @@ public class NoOpRewriterTests
 
         result.Should().Be(mechanical);
     }
+
+    [Fact]
+    public async Task SynthesizeWhenToUseSummaryAsync_MatchesMechanicalOutput()
+    {
+        var skillData = new SkillData
+        {
+            Name = "azure-keyvault",
+            DisplayName = "Azure Key Vault",
+            Description = "Manage secrets and certificates.",
+            UseFor = ["store secrets", "manage certificates"],
+            DoNotUseFor = ["large blobs"]
+        };
+
+        var result = await _rewriter.SynthesizeWhenToUseSummaryAsync("azure-keyvault", skillData);
+        var mechanical = SkillPageGenerator.BuildWhenToUseSummary(skillData);
+
+        result.Should().Be(mechanical);
+    }
 }

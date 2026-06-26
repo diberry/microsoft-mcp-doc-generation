@@ -1086,7 +1086,37 @@ public partial class SkillMarkdownParser : ISkillParser
     /// Converts a skill slug like "azure-deploy" to a display name like "Azure Deploy".
     /// Handles special cases: "ai" → "AI", "sdk" → "SDK", "rbac" → "RBAC", etc.
     /// </summary>
-    private static string DeriveDisplayName(string slug)
+    /// <summary>
+    /// Canonical Azure product-name fragments keyed by the mashed, lowercase slug token
+    /// that mechanical title-casing would otherwise mangle. Applied per token in
+    /// <see cref="DeriveDisplayName"/> so derived display names match the real product
+    /// spelling (e.g. "appservice" → "App Service") for SEO and brand correctness.
+    /// </summary>
+    private static readonly Dictionary<string, string> ProductNameMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["appservice"] = "App Service",
+        ["appinsights"] = "Application Insights",
+        ["appconfig"] = "App Configuration",
+        ["cosmosdb"] = "Cosmos DB",
+        ["keyvault"] = "Key Vault",
+        ["servicebus"] = "Service Bus",
+        ["eventhub"] = "Event Hub",
+        ["eventhubs"] = "Event Hubs",
+        ["eventgrid"] = "Event Grid",
+        ["webapp"] = "Web App",
+        ["webapps"] = "Web Apps",
+        ["functionapp"] = "Function App",
+        ["functionapps"] = "Function Apps",
+        ["logicapps"] = "Logic Apps",
+        ["loadbalancer"] = "Load Balancer",
+        ["frontdoor"] = "Front Door",
+        ["postgresql"] = "PostgreSQL",
+        ["mysql"] = "MySQL",
+        ["openai"] = "OpenAI",
+        ["signalr"] = "SignalR",
+    };
+
+    internal static string DeriveDisplayName(string slug)
     {
         var acronyms = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             { "ai", "sdk", "rbac", "mcp", "api", "cli", "sql", "smb", "aks",
@@ -1094,7 +1124,8 @@ public partial class SkillMarkdownParser : ISkillParser
 
         var words = slug.Split('-', StringSplitOptions.RemoveEmptyEntries);
         var result = words.Select(w =>
-            acronyms.Contains(w) ? w.ToUpperInvariant()
+            ProductNameMap.TryGetValue(w, out var product) ? product
+            : acronyms.Contains(w) ? w.ToUpperInvariant()
             : char.ToUpper(w[0]) + w[1..]
         );
         return string.Join(" ", result);
