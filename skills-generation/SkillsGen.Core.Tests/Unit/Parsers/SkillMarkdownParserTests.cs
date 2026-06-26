@@ -156,8 +156,13 @@ public class SkillMarkdownParserTests
     [InlineData("azure-hosted-copilot-sdk", "Azure Hosted Copilot SDK")]
     [InlineData("entra-app-registration", "Entra App Registration")]
     [InlineData("microsoft-foundry", "Microsoft Foundry")]
-    [InlineData("appinsights-instrumentation", "Appinsights Instrumentation")]
+    [InlineData("appinsights-instrumentation", "Application Insights Instrumentation")]
     [InlineData("azure-rbac", "Azure RBAC")]
+    [InlineData("python-appservice-deploy", "Python App Service Deploy")]
+    [InlineData("cosmosdb-vector-search", "Cosmos DB Vector Search")]
+    [InlineData("keyvault-secrets", "Key Vault Secrets")]
+    [InlineData("postgresql-flexible-server", "PostgreSQL Flexible Server")]
+    [InlineData("azure-openai-chat", "Azure OpenAI Chat")]
     public void Parse_DerivesDisplayNameFromSlug(string slug, string expectedDisplayName)
     {
         var content = $"---\nname: {slug}\ndescription: Test\n---\n\nBody content.\n";
