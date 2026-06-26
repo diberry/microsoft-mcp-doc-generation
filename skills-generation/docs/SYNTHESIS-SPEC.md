@@ -434,17 +434,17 @@ All generated prose must follow these rules:
 
 ### 4.5 LLM Pipeline Rules (Polish & Synthesis)
 
-> **Pipeline philosophy:** Lift-and-shift first, LLM polish second. The upstream SKILL.md is
+> **Pipeline philosophy:** Lift-and-shift first, selective LLM synthesis second. The upstream SKILL.md is
 > the source of truth for all factual content. The parser extracts it deterministically. The
-> template renders it structurally. The LLM refines prose for clarity and Microsoft voice —
-> it never generates structural content or invents facts.
+> template renders it structurally. Frontmatter `description` is preserved verbatim from source
+> (no rewrite/polish), and LLM calls must not mutate that field.
 
 #### 4.5.1 Pipeline Approach
 
-The pipeline follows a **lift-and-shift-then-polish** model:
+The pipeline follows a **lift-and-shift with targeted synthesis** model:
 
 1. **Step 1 — Deterministic extraction:** The parser extracts all factual content from SKILL.md (structure, prompts, prerequisites, services, body content). The template renders it into the target article layout.
-2. **Step 2 — LLM polish layer:** The LLM is applied ONLY to refine extracted prose for clarity, style, and Microsoft voice compliance. It is NOT a content generator — it refines what was extracted, it does not invent.
+2. **Step 2 — LLM synthesis layer:** The LLM is applied only where explicitly allowed (for example, "What it provides"). It is NOT a content generator — it may synthesize from extracted inputs but must not invent facts or rewrite preserved source metadata.
 
 See §1.5 for the complete source-to-content mapping and classification of which source sections are deterministic lift vs LLM synthesis.
 
@@ -452,7 +452,7 @@ See §1.5 for the complete source-to-content mapping and classification of which
 
 | Method | Purpose | Default State | Classification | Notes |
 |--------|---------|---------------|----------------|-------|
-| `RewriteIntroAsync` | Polish intro paragraph (2-3 sentences, max 60 words) | ON | LLM polish | Rewrites extracted description for customer voice |
+| `RewriteIntroAsync` | Intro rewrite helper (currently not used in generation flow) | OFF | LLM polish | Frontmatter description is preserved verbatim from source |
 | `GenerateKnowledgeOverviewAsync` | Polish knowledge overview | ON | LLM polish | Summarizes extracted body content |
 | `SynthesizeWhatItProvidesAsync` | Polish "What it provides" summary | ON (with fallback chain) | LLM synthesis | Priority: LLM synthesis → curated JSON → mechanical build |
 | `TranslateWorkflowStepsAsync` | Rewrite workflow steps | **OFF by default** | LLM polish | Implementation detail per §4.2 content policy; enable only if workflow section is re-included |
@@ -526,7 +526,7 @@ The complete pipeline executes in this order:
 5. **Resolve inventory** — Match skill to `skills-inventory.json` for display name, category, version (§3.2-3.3)
 6. **Load curated overrides** — Apply `skill-what-it-provides.json`, `skill-example-prompts.json`, `skill-related-links.json` (§3.1)
 7. **Assess tier** — Score Q1-Q5, determine Tier 1 vs Tier 2, set conditional flags (§3.4)
-8. **LLM rewrite** — Polish intro, knowledge overview, "What it provides" synthesis; workflow translation OFF by default (§4.5)
+8. **LLM synthesis** — Synthesize "What it provides"; intro rewrite is disabled to preserve source description; workflow translation OFF by default (§4.5)
 9. **Build context** — Assemble `SkillPageContext` with all resolved data, apply priority chains (§4.7-4.8)
 10. **Render template** — Handlebars template produces markdown article (§4.1)
 11. **Post-process** — Acrolinx fixes: contractions, acronyms, URL normalization, sentence splitting (§5)
@@ -537,7 +537,7 @@ The complete pipeline executes in this order:
 
 ## 5. Post-Processing
 
-All post-processing is applied after template rendering, operating on the full rendered markdown. Frontmatter is separated, processed minimally (static replacements only), then rejoined.
+All post-processing is applied after template rendering, operating on the full rendered markdown. Frontmatter is separated, preserved verbatim, and then rejoined with the transformed body.
 
 > **Reference:** `SkillsGen.Core/PostProcessing/AcrolinxPostProcessor.cs`
 
@@ -546,7 +546,7 @@ All post-processing is applied after template rendering, operating on the full r
 | Step | Operation | Scope |
 |------|-----------|-------|
 | 0 | Split frontmatter from body | — |
-| 0a | Apply static text replacements to frontmatter description | Frontmatter only |
+| 0a | Preserve frontmatter unchanged (including `description`) | Frontmatter only |
 | 1 | Wrap bare skill names in backticks | Body (skip headings/frontmatter lines) |
 | 2 | Static text replacements | Body (backtick-protected) |
 | 3 | Contractions | Body (backtick-protected) |

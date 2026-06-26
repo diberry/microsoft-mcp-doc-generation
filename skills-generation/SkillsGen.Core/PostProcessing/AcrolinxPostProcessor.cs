@@ -84,13 +84,8 @@ public partial class AcrolinxPostProcessor
         // Separate frontmatter from body — only post-process the body
         var (frontmatter, body) = SplitFrontmatter(content);
 
-        // Apply key static replacements to frontmatter description too
+        // Preserve source frontmatter verbatim (no semantic rewrites of description metadata).
         var processedFrontmatter = frontmatter;
-        foreach (var replacement in _replacements)
-        {
-            var pattern = $@"\b{Regex.Escape(replacement.Parameter)}\b";
-            processedFrontmatter = Regex.Replace(processedFrontmatter, pattern, replacement.NaturalLanguage, RegexOptions.None);
-        }
 
         var result = body;
 
