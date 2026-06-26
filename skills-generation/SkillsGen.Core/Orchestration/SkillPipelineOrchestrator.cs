@@ -140,9 +140,18 @@ public class SkillPipelineOrchestrator
                 result => $"tier={result.Tier}");
             _logger.LogTierAssessment(skillName, tierAssessment.Tier, tierAssessment.Rationale);
 
-            // Keep skill description as strict lift-and-shift from source SKILL.md frontmatter.
-            // Do not rewrite/polish this field so generated frontmatter description remains verbatim.
-            var updatedSkillData = skillData;
+            var llmSw = Stopwatch.StartNew();
+            var rewrittenDescription = await ExecuteStepAsync(
+                "llm-rewrite-intro",
+                StepClassification.AI,
+                skillName,
+                $"descriptionLength={skillData.Description.Length}",
+                () => _llmRewriter.RewriteIntroAsync(skillName, skillData.Description, ct),
+                result => $"rewritten intro ({result.Length} chars)");
+            llmSw.Stop();
+            _logger.LogLlmCall(skillName, "RewriteIntro", llmSw.ElapsedMilliseconds);
+
+            var updatedSkillData = skillData with { Description = rewrittenDescription };
 
             List<string>? translatedSteps = null;
 
