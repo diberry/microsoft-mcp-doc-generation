@@ -19,6 +19,12 @@ internal sealed class ProcessRunner : IProcessRunner
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
+            // azmcp emits UTF-8. Without an explicit encoding, the redirected streams
+            // are decoded using the console's code page (e.g. CP437 on Windows), which
+            // corrupts non-ASCII characters such as the U+2192 arrow used in tool
+            // descriptions. Force UTF-8 so output round-trips faithfully.
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8,
         };
 
         using var process = Process.Start(psi)
