@@ -83,7 +83,8 @@ public class CliParameterGeneratorTests: IDisposable
         var file = Directory.GetFiles(_outputDir, "*.md").Single();
         var content = await File.ReadAllTextAsync(file);
         Assert.Contains("| Parameter |", content);
-        Assert.Contains("`--resource-group`", content);
+        Assert.Contains("`resource-group`", content);
+        Assert.DoesNotContain("`--resource-group`", content);
     }
 
     [Fact]
@@ -112,10 +113,11 @@ public class CliParameterGeneratorTests: IDisposable
 
         var file = Directory.GetFiles(_outputDir, "*.md").Single();
         var content = await File.ReadAllTextAsync(file);
-        Assert.Contains("`--resource-group`", content);
+        Assert.Contains("`resource-group`", content);
         // --subscription is a global switch and should be filtered out
         Assert.DoesNotContain("`--subscription`", content);
-        Assert.Contains("`--output`", content);
+        Assert.Contains("`output`", content);
+        Assert.DoesNotContain("`--output`", content);
     }
 
     [Fact]
