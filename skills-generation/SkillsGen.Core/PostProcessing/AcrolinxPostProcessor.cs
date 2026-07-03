@@ -94,6 +94,10 @@ public partial class AcrolinxPostProcessor
 
         var result = body;
 
+        // 0. Strip leaked implementation details before other transforms (Issue #684)
+        result = StripRelatedToolsSection(result);
+        result = StripMcpToolNameLines(result);
+
         // 1. Wrap bare skill names FIRST — backticked content is then protected
         result = WrapBareSkillNames(result);
 
@@ -145,6 +149,9 @@ public partial class AcrolinxPostProcessor
 
         // Final cleanup: remove consecutive duplicate sentences
         result = RemoveConsecutiveDuplicateSentences(result);
+
+        // Final cleanup: collapse multiple consecutive blank lines into a single blank line
+        result = CollapseBlankLines(result);
 
         return processedFrontmatter + result;
     }
@@ -669,8 +676,49 @@ public partial class AcrolinxPostProcessor
     [GeneratedRegex(@"^(Run|Execute|Use)\s+(.+?)\s+to\s+(.+?)(?:\.|$)", RegexOptions.IgnoreCase | RegexOptions.Multiline)]
     private static partial Regex GoalBeforeActionRegex();
 
+    [GeneratedRegex(@"(\r?\n)(?:[ \t]*\r?\n){2,}")]
+    private static partial Regex MultipleBlankLinesRegex();
+
+    /// <summary>
+    /// Collapses runs of two or more consecutive blank lines (lines that are empty or
+    /// whitespace-only) into a single blank line. Preserves the newline style (CRLF or LF)
+    /// of the first line break in each run. A single blank line between blocks is left intact.
+    /// </summary>
+    internal static string CollapseBlankLines(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return input;
+        return MultipleBlankLinesRegex().Replace(input, "$1$1");
+    }
+
     [GeneratedRegex(@"\*\*(?<label>[^*:]+):\*\*\s?")]
     private static partial Regex BoldLabelColonRegex();
+
+    /// <summary>
+    /// Strips any '### Related tools' section (heading + body until next heading or EOF).
+    /// Prevents LLM-injected implementation-detail tables from reaching customer-facing output (Issue #684).
+    /// </summary>
+    internal static string StripRelatedToolsSection(string content)
+    {
+        // Match the heading line (and any leading blank line) through to the next heading or EOF
+        return Regex.Replace(
+            content,
+            @"\n*###\s+Related tools\b.*?(?=\n##|\z)",
+            "",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+    }
+
+    /// <summary>
+    /// Strips any line that contains an internal MCP tool name (Azure__ prefix).
+    /// Acts as a safety net after StripRelatedToolsSection (Issue #684).
+    /// </summary>
+    internal static string StripMcpToolNameLines(string content)
+    {
+        return Regex.Replace(
+            content,
+            @"^[^\n]*Azure__[^\n]*\r?\n?",
+            "",
+            RegexOptions.Multiline | RegexOptions.IgnoreCase);
+    }
 
     private record TextReplacement(string Parameter, string NaturalLanguage);
     private record AcronymEntry(string Acronym, string Expansion, string? ContextPattern = null, string? ExpandedForm = null);

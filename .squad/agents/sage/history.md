@@ -193,3 +193,16 @@
 **Summary:** This session's output from Sage on LLM rewrite prompt strategy for customer-facing skills documentation has been merged into the active decisions log. The comprehensive redesign with transformation rules, pattern recognition, and success criteria is now part of team knowledge for implementation phase.
 
 **Next:** Awaiting approval and implementation on 3–5 test skills before full rollout.
+
+### 2026-05-30: Per-Tool AI Prompts Created (PR #659 Support)
+
+**Event:** Created prompt artifacts supporting Morgan's per-tool AI call refactor.
+
+**Artifacts Created:**
+1. `horizontal-article-tool-system-prompt.txt` — System prompt for per-tool AI calls (bounded scope)
+2. `horizontal-article-tool-user-prompt.txt` — User prompt template for tool-specific content generation
+3. `horizontal-article-namespace-user-prompt.txt` — Namespace-level summary prompt (separate AI call)
+
+**Purpose:** Support refactored `GenerateAIContent` that calls AI once per tool + once for namespace summary. Per-tool scope bounds input to ~1 tool's data, eliminating 18k token overflow observed in namespace-level calls (storage namespace).
+
+**Status:** Artifacts complete and integrated; PR #659 merged to main

@@ -5,6 +5,7 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Registry;
 using PipelineRunner.Services;
 using PipelineRunner.Tests.Fixtures;
+using Shared;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -113,6 +114,144 @@ public class PipelineRunnerGlobalScopeTests
             Directory.Delete(repoRoot, recursive: true);
         }
     }
+
+    [Fact]
+    public async Task RunAsync_ReplayMode_UsesReplayWorkspaceAndExecutesOnlyTargetStep()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-replay-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
+
+        try
+        {
+            var replayOutput = Path.Combine(repoRoot, "runs", "run-123");
+            CreateReplayMetadata(replayOutput, ["compute"]);
+            WriteStepEnvelope(replayOutput, 1, "generate-annotations-parameters-and-raw-tools");
+            WriteStepEnvelope(replayOutput, 2, "generate-example-prompts");
+
+            var replayStep = new ReplayRecordingStep();
+            var runner = new global::PipelineRunner.PipelineRunner(
+                new StepRegistry([
+                    new ReplayDependencyStep(1, "Generate annotations parameters and raw tools"),
+                    new ReplayDependencyStep(2, "Generate example prompts"),
+                    replayStep,
+                ]),
+                new PipelineContextFactory(
+                    new RecordingProcessRunner(),
+                    new WorkspaceManager(),
+                    new CliMetadataLoader(),
+                    new TargetMatcher(),
+                    new StubFilteredCliWriter(),
+                    new StubBuildCoordinator(),
+                    new StubAiCapabilityProbe(),
+                    new BufferedReportWriter(),
+                    repoRoot));
+
+            var request = new PipelineRequest(
+                "compute",
+                [],
+                ".\\generated",
+                SkipBuild: true,
+                SkipValidation: false,
+                DryRun: false,
+                Replay: true,
+                ReplayFromRunId: "run-123",
+                ReplayStepName: "compose-and-improve-tool-files");
+
+            var exitCode = await runner.RunAsync(request, CancellationToken.None);
+
+            Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
+            Assert.Equal(1, replayStep.Executions);
+            Assert.Equal(Path.GetFullPath(replayOutput), replayStep.LastOutputPath);
+        }
+        finally
+        {
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_ReplayMode_MissingUpstreamEnvelope_ReturnsFatalExitCode()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-replay-missing-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(repoRoot, "mcp-tools", "scripts"));
+        File.WriteAllText(Path.Combine(repoRoot, "mcp-doc-generation.sln"), string.Empty);
+
+        var originalError = Console.Error;
+        using var errorWriter = new StringWriter();
+        Console.SetError(errorWriter);
+
+        try
+        {
+            var replayOutput = Path.Combine(repoRoot, "runs", "run-123");
+            CreateReplayMetadata(replayOutput, ["compute"]);
+
+            var runner = new global::PipelineRunner.PipelineRunner(
+                new StepRegistry([
+                    new ReplayDependencyStep(1, "Generate annotations parameters and raw tools"),
+                    new ReplayDependencyStep(2, "Generate example prompts"),
+                    new ReplayRecordingStep(),
+                ]),
+                new PipelineContextFactory(
+                    new RecordingProcessRunner(),
+                    new WorkspaceManager(),
+                    new CliMetadataLoader(),
+                    new TargetMatcher(),
+                    new StubFilteredCliWriter(),
+                    new StubBuildCoordinator(),
+                    new StubAiCapabilityProbe(),
+                    new BufferedReportWriter(),
+                    repoRoot));
+
+            var request = new PipelineRequest(
+                "compute",
+                [],
+                ".\\generated",
+                SkipBuild: true,
+                SkipValidation: false,
+                DryRun: false,
+                Replay: true,
+                ReplayFromRunId: "run-123",
+                ReplayStepName: "compose-and-improve-tool-files");
+
+            var exitCode = await runner.RunAsync(request, CancellationToken.None);
+
+            Assert.Equal(global::PipelineRunner.PipelineRunner.FatalExitCode, exitCode);
+            Assert.Contains("upstream artifact not found:", errorWriter.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            Console.SetError(originalError);
+            Directory.Delete(repoRoot, recursive: true);
+        }
+    }
+
+    private static void CreateReplayMetadata(string outputPath, IReadOnlyList<string> namespaces)
+    {
+        var cliDirectory = Path.Combine(outputPath, "cli");
+        Directory.CreateDirectory(cliDirectory);
+        File.WriteAllText(Path.Combine(cliDirectory, "cli-output.json"), """{"results":[{"command":"compute list","name":"compute list","description":"desc"}]}""");
+        File.WriteAllText(Path.Combine(cliDirectory, "cli-version.json"), """{"version":"1.2.3"}""");
+        var namespaceJson = JsonSerializer.Serialize(new
+        {
+            results = namespaces.Select(name => new { name }),
+        });
+        File.WriteAllText(
+            Path.Combine(cliDirectory, "cli-namespace.json"),
+            namespaceJson);
+    }
+
+    private static void WriteStepEnvelope(string outputPath, int stepId, string stepSlug)
+    {
+        StepResultWriter.Write(Path.Combine(outputPath, $"step-{stepId}-{stepSlug}"), new StepResultFile
+        {
+            SchemaVersion = "1.0",
+            Status = StepResultStatus.Success,
+            Step = $"Step {stepId}",
+            StepName = $"step-{stepId}-{stepSlug}",
+        });
+    }
+
     private sealed class RecordingStep : StepDefinition
     {
         private readonly List<string> _executionOrder;
@@ -133,6 +272,28 @@ public class PipelineRunnerGlobalScopeTests
                 : $"namespace:{context.Items["Namespace"]}");
             return ValueTask.FromResult(StepResult.DryRun(Array.Empty<string>()));
         }
+    }
+
+    private sealed class ReplayRecordingStep()
+        : StepDefinition(3, "Compose and improve tool files", StepScope.Namespace, FailurePolicy.Fatal, dependsOn: [1, 2], requiresCliOutput: false, requiresCliVersion: false)
+    {
+        public int Executions { get; private set; }
+
+        public string? LastOutputPath { get; private set; }
+
+        public override ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
+        {
+            Executions++;
+            LastOutputPath = context.OutputPath;
+            return ValueTask.FromResult(StepResult.DryRun(Array.Empty<string>()));
+        }
+    }
+
+    private sealed class ReplayDependencyStep(int id, string name)
+        : StepDefinition(id, name, StepScope.Namespace, FailurePolicy.Fatal, requiresCliOutput: false, requiresCliVersion: false)
+    {
+        public override ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
+            => ValueTask.FromResult(StepResult.DryRun(Array.Empty<string>()));
     }
 
     private sealed class StaticCliMetadataLoader : ICliMetadataLoader

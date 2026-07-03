@@ -9,13 +9,14 @@ Generates customer-facing markdown documentation for Azure Skills used in GitHub
 ./start-azure-skills.sh
 ```
 
-Requires a `.env` file in `skills-generation/` with Azure OpenAI credentials:
+Requires a `.env` file in `skills-generation/` with Azure OpenAI configuration. Authentication is **keyless** — this repository never uses API keys. Sign in with `az login` (or run under a managed identity in CI); `DefaultAzureCredential` handles the rest:
 
 ```env
-FOUNDRY_API_KEY=<your-key>
 FOUNDRY_ENDPOINT=<your-endpoint>
 FOUNDRY_MODEL_NAME=gpt-4o
 ```
+
+> The signed-in identity (or managed identity) needs the **Cognitive Services OpenAI User** role on the Azure OpenAI / Foundry resource.
 
 ## Architecture
 

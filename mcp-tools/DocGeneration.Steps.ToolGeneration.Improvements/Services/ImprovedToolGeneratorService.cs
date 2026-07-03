@@ -9,6 +9,23 @@ using System.Text;
 
 namespace ToolGeneration_Improved.Services;
 
+public enum ToolImprovementFailureKind
+{
+    AiFailure,
+    Truncated
+}
+
+public sealed class ToolImprovementAiException : Exception
+{
+    public ToolImprovementAiException(ToolImprovementFailureKind kind, string message, Exception innerException)
+        : base(message, innerException)
+    {
+        Kind = kind;
+    }
+
+    public ToolImprovementFailureKind Kind { get; }
+}
+
 /// <summary>
 /// Service that improves tool documentation using AI based on Microsoft content guidelines
 /// </summary>
@@ -119,11 +136,11 @@ public class ImprovedToolGeneratorService
         int skippedCount = 0;
         int errorCount = 0;
         int timedOutCount = 0;
+        var reducer = new ToolGenerationReducer();
 
         for (int i = 0; i < composedFiles.Length; i++)
         {
-            var composedFilePath = composedFiles[i];
-            var fileName = Path.GetFileName(composedFilePath);
+            var fileName = Path.GetFileName(composedFiles[i]);
             var progress = $"[{i + 1}/{composedFiles.Length}]";
 
             // Check if pipeline cancellation was requested before starting this tool
@@ -131,31 +148,16 @@ public class ImprovedToolGeneratorService
 
             Console.Write($"  {progress} Processing {fileName}...");
 
-            // Load composed file content (outside try — file read failures are hard errors)
-            var originalContent = await File.ReadAllTextAsync(composedFilePath, pipelineCancellationToken);
+            var toolContext = await reducer.ReduceAsync(composedToolsDir, fileName, maxTokens, pipelineCancellationToken);
 
-            // Pre-processing (deterministic, should not fail — errors here are real bugs)
-            var requiredParameters = ExtractRequiredParameters(originalContent);
-            var frozenContent = ProtectExamplePromptSections(originalContent, out var sectionMap);
-            frozenContent = ProtectParameterTable(frozenContent, out var paramTableMap);
-            var mcpCliComment = ExtractMcpCliComment(originalContent);
-            var protectedContent = ProtectTemplateLabels(frozenContent, out var labelMap);
-            var userPrompt = string.Format(_userPromptTemplate, protectedContent);
-            userPrompt = AppendRequiredParameterPreservationInstruction(userPrompt, requiredParameters);
-
-            // AI call — this is the section that may hang/fail/timeout
-            string improvedContent;
             try
             {
                 using var toolCts = CancellationTokenSource.CreateLinkedTokenSource(pipelineCancellationToken);
                 toolCts.CancelAfter(timeout);
-                var toolCt = toolCts.Token;
 
-                improvedContent = await _aiClient.GetChatCompletionAsync(
-                    _systemPrompt,
-                    userPrompt,
-                    maxTokens,
-                    toolCt);
+                var improvedTool = await ImproveToolAsync(toolContext, _systemPrompt, _userPromptTemplate, toolCts.Token);
+                var outputPath = Path.Combine(outputDir, fileName);
+                await File.WriteAllTextAsync(outputPath, improvedTool.ImprovedContent, Encoding.UTF8, pipelineCancellationToken);
             }
             catch (OperationCanceledException) when (pipelineCancellationToken.IsCancellationRequested)
             {
@@ -168,62 +170,26 @@ public class ImprovedToolGeneratorService
                 // Per-tool timeout — save original composed content as fallback
                 Console.WriteLine($" ⏱ Timed out after {timeout.TotalMinutes:F0}m — saving original");
                 timedOutCount++;
-                await SaveFallbackContent(originalContent, outputDir, fileName);
+                await SaveFallbackContent(toolContext.ComposedContent, outputDir, fileName);
                 continue;
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("truncated"))
+            catch (ToolImprovementAiException ex) when (ex.Kind == ToolImprovementFailureKind.Truncated)
             {
                 Console.WriteLine($" ⚠ Truncated - saving original");
                 Console.WriteLine($"      {ex.Message}");
                 skippedCount++;
-                await SaveFallbackContent(originalContent, outputDir, fileName);
+                await SaveFallbackContent(toolContext.ComposedContent, outputDir, fileName);
                 continue;
             }
-            catch (Exception ex)
+            catch (ToolImprovementAiException ex)
             {
                 // AI-specific failure (network, server error, etc.) — save original as fallback
                 Console.WriteLine($" ⚠ AI error — saving original");
-                Console.WriteLine($"      {ex.GetType().Name}: {ex.Message}");
+                Console.WriteLine($"      {ex.InnerException?.GetType().Name ?? ex.GetType().Name}: {ex.Message}");
                 skippedCount++;
-                await SaveFallbackContent(originalContent, outputDir, fileName);
+                await SaveFallbackContent(toolContext.ComposedContent, outputDir, fileName);
                 continue;
             }
-
-            // Post-processing (deterministic — errors here are real bugs, not swallowed)
-            var restoredContent = RestoreTemplateLabels(improvedContent, labelMap);
-            restoredContent = NormalizeTemplateLabels(restoredContent);
-            restoredContent = RestoreExamplePromptSections(restoredContent, sectionMap);
-            restoredContent = RestoreParameterTable(restoredContent, paramTableMap);
-            restoredContent = RestoreMcpCliComment(restoredContent, mcpCliComment);
-
-            // Validate no leaked placeholder tokens remain
-            var leakedTokens = ValidateRestoredContent(restoredContent);
-            if (leakedTokens.Count > 0)
-            {
-                Console.WriteLine($" ⚠ Leaked tokens detected: {string.Join(", ", leakedTokens)}");
-                Console.WriteLine($"      Falling back to original content");
-                restoredContent = originalContent;
-            }
-            else if (requiredParameters.Count > 0)
-            {
-                var missingRequiredParameters = FindMissingRequiredParameters(restoredContent, requiredParameters);
-                if (missingRequiredParameters.Count > 0)
-                {
-                    Console.WriteLine($" ⚠ Missing required parameters after AI: {string.Join(", ", missingRequiredParameters.Select(parameter => parameter.DisplayName))}");
-                    restoredContent = ReinjectMissingRequiredParameters(restoredContent, originalContent, missingRequiredParameters);
-
-                    var remainingMissingParameters = FindMissingRequiredParameters(restoredContent, requiredParameters);
-                    if (remainingMissingParameters.Count > 0)
-                    {
-                        Console.WriteLine($"      Reinjection incomplete; falling back to original content");
-                        restoredContent = originalContent;
-                    }
-                }
-            }
-
-            // Save improved content
-            var outputPath = Path.Combine(outputDir, fileName);
-            await File.WriteAllTextAsync(outputPath, restoredContent, Encoding.UTF8);
 
             successCount++;
             Console.WriteLine(" ✓");
@@ -254,6 +220,82 @@ public class ImprovedToolGeneratorService
         }
 
         return errorCount > 0 ? 1 : 0;
+    }
+
+    public async Task<ImprovedToolData> ImproveToolAsync(
+        ToolGenerationContext context,
+        string systemPrompt,
+        string userPromptTemplate,
+        CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentException.ThrowIfNullOrWhiteSpace(systemPrompt);
+        ArgumentException.ThrowIfNullOrWhiteSpace(userPromptTemplate);
+
+        var requiredParameters = ExtractRequiredParameters(context.ComposedContent);
+        var frozenContent = ProtectExamplePromptSections(context.ComposedContent, out var sectionMap);
+        frozenContent = ProtectParameterTable(frozenContent, out var paramTableMap);
+        var mcpCliComment = ExtractMcpCliComment(context.ComposedContent);
+        frozenContent = RemoveMcpCliComment(frozenContent);
+        var protectedContent = ProtectTemplateLabels(frozenContent, out var labelMap);
+        var userPrompt = string.Format(userPromptTemplate, protectedContent);
+        userPrompt = AppendRequiredParameterPreservationInstruction(userPrompt, requiredParameters);
+
+        string improvedContent;
+        try
+        {
+            improvedContent = await _aiClient.GetChatCompletionAsync(
+                systemPrompt,
+                userPrompt,
+                context.MaxTokens,
+                ct);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("truncated", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ToolImprovementAiException(ToolImprovementFailureKind.Truncated, ex.Message, ex);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            throw new ToolImprovementAiException(ToolImprovementFailureKind.AiFailure, ex.Message, ex);
+        }
+
+        var restoredContent = RestoreTemplateLabels(improvedContent, labelMap);
+        restoredContent = NormalizeTemplateLabels(restoredContent);
+        restoredContent = RestoreExamplePromptSections(restoredContent, sectionMap);
+        restoredContent = RestoreParameterTable(restoredContent, paramTableMap);
+        restoredContent = RestoreMcpCliComment(restoredContent, mcpCliComment);
+
+        string? errorMessage = null;
+        var leakedTokens = ValidateRestoredContent(restoredContent);
+        if (leakedTokens.Count > 0)
+        {
+            errorMessage = $"Leaked tokens detected: {string.Join(", ", leakedTokens)}";
+            restoredContent = context.ComposedContent;
+        }
+        else if (requiredParameters.Count > 0)
+        {
+            var missingRequiredParameters = FindMissingRequiredParameters(restoredContent, requiredParameters);
+            if (missingRequiredParameters.Count > 0)
+            {
+                restoredContent = ReinjectMissingRequiredParameters(restoredContent, context.ComposedContent, missingRequiredParameters);
+
+                var remainingMissingParameters = FindMissingRequiredParameters(restoredContent, requiredParameters);
+                if (remainingMissingParameters.Count > 0)
+                {
+                    errorMessage = $"Missing required parameters after reinjection: {string.Join(", ", remainingMissingParameters.Select(parameter => parameter.DisplayName))}";
+                    restoredContent = context.ComposedContent;
+                }
+            }
+        }
+
+        return new ImprovedToolData
+        {
+            FileName = context.ToolName,
+            OriginalContent = context.ComposedContent,
+            ImprovedContent = restoredContent,
+            WasImproved = !string.Equals(restoredContent, context.ComposedContent, StringComparison.Ordinal),
+            ErrorMessage = errorMessage
+        };
     }
 
     /// <summary>
@@ -568,6 +610,17 @@ public class ImprovedToolGeneratorService
     {
         var match = McpCliCommentRegex.Match(content);
         return match.Success ? match.Value : null;
+    }
+
+    /// <summary>
+    /// Removes the @mcpcli command comment from content so the AI cannot move it.
+    /// Always used with <see cref="RestoreMcpCliComment"/> to reinject at the correct position.
+    /// </summary>
+    internal static string RemoveMcpCliComment(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+            return content;
+        return McpCliCommentRegex.Replace(content, string.Empty);
     }
 
     /// <summary>

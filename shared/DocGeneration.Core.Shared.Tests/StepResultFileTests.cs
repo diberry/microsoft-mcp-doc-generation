@@ -159,4 +159,188 @@ public class StepResultFileTests
         Assert.Single(roundTripped.Warnings);
         Assert.Single(roundTripped.Errors);
     }
+
+    // ── Phase 1 Point 3: Envelope extension field tests ──────────────────────
+
+    [Fact]
+    public void NewEnvelopeFields_DefaultToNull()
+    {
+        var result = new StepResultFile();
+
+        Assert.Null(result.SchemaVersion);
+        Assert.Null(result.StepName);
+        Assert.Null(result.InputArtifacts);
+        Assert.Null(result.OutputArtifacts);
+        Assert.Null(result.ValidationStatus);
+        Assert.Null(result.TokenUsageEnvelope);
+        Assert.Null(result.PromptArchivePath);
+        Assert.Null(result.DurationMs);
+        Assert.Null(result.Timestamp);
+    }
+
+    [Theory]
+    [InlineData(ValidationStatus.Passed, "passed")]
+    [InlineData(ValidationStatus.Failed, "failed")]
+    [InlineData(ValidationStatus.Skipped, "skipped")]
+    public void ValidationStatus_Serializes_AsLowerCaseString(ValidationStatus status, string expected)
+    {
+        var result = new StepResultFile { ValidationStatus = status };
+        var json = JsonSerializer.Serialize(result);
+
+        Assert.Contains($"\"{expected}\"", json);
+    }
+
+    [Theory]
+    [InlineData("passed", ValidationStatus.Passed)]
+    [InlineData("failed", ValidationStatus.Failed)]
+    [InlineData("skipped", ValidationStatus.Skipped)]
+    public void ValidationStatus_Deserializes_FromLowerCaseString(string jsonValue, ValidationStatus expected)
+    {
+        var json = $$"""{"version":1,"status":"success","step":"","namespace":"","outputFileCount":0,"warnings":[],"errors":[],"duration":"","validationStatus":"{{jsonValue}}"}""";
+        var result = JsonSerializer.Deserialize<StepResultFile>(json);
+
+        Assert.NotNull(result);
+        Assert.Equal(expected, result!.ValidationStatus);
+    }
+
+    [Fact]
+    public void ArtifactReference_RoundTrips()
+    {
+        var artifact = new ArtifactReference
+        {
+            Path = "output/keyvault-list.md",
+            Sha256 = "abc123def456"
+        };
+
+        var json = JsonSerializer.Serialize(artifact);
+        var roundTripped = JsonSerializer.Deserialize<ArtifactReference>(json);
+
+        Assert.NotNull(roundTripped);
+        Assert.Equal("output/keyvault-list.md", roundTripped!.Path);
+        Assert.Equal("abc123def456", roundTripped.Sha256);
+    }
+
+    [Fact]
+    public void ArtifactReference_SerializesWithExpectedPropertyNames()
+    {
+        var artifact = new ArtifactReference { Path = "foo.md", Sha256 = "aabbcc" };
+        var json = JsonSerializer.Serialize(artifact);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.True(doc.RootElement.TryGetProperty("path", out _));
+        Assert.True(doc.RootElement.TryGetProperty("sha256", out _));
+    }
+
+    [Fact]
+    public void TokenUsageEnvelope_RoundTrips()
+    {
+        var envelope = new TokenUsageEnvelope { PromptTokens = 800, CompletionTokens = 400 };
+
+        var json = JsonSerializer.Serialize(envelope);
+        var roundTripped = JsonSerializer.Deserialize<TokenUsageEnvelope>(json);
+
+        Assert.NotNull(roundTripped);
+        Assert.Equal(800, roundTripped!.PromptTokens);
+        Assert.Equal(400, roundTripped.CompletionTokens);
+    }
+
+    [Fact]
+    public void AllNineNewFields_SerializeAndDeserialize_Correctly()
+    {
+        var original = new StepResultFile
+        {
+            SchemaVersion = "1.0",
+            StepName = "step-3-tool-generation",
+            InputArtifacts = new List<ArtifactReference>
+            {
+                new() { Path = "input/cosmos-data.json", Sha256 = "deadbeef" }
+            },
+            OutputArtifacts = new List<ArtifactReference>
+            {
+                new() { Path = "output/cosmos-create.md", Sha256 = "cafebabe" }
+            },
+            ValidationStatus = ValidationStatus.Passed,
+            TokenUsageEnvelope = new TokenUsageEnvelope { PromptTokens = 1000, CompletionTokens = 500 },
+            PromptArchivePath = "archives/step-3-prompts.zip",
+            DurationMs = 135_000L,
+            Timestamp = "2026-05-29T09:35:22Z"
+        };
+
+        var json = JsonSerializer.Serialize(original);
+        var result = JsonSerializer.Deserialize<StepResultFile>(json);
+
+        Assert.NotNull(result);
+        Assert.Equal("1.0", result!.SchemaVersion);
+        Assert.Equal("step-3-tool-generation", result.StepName);
+        Assert.NotNull(result.InputArtifacts);
+        Assert.Single(result.InputArtifacts!);
+        Assert.Equal("input/cosmos-data.json", result.InputArtifacts[0].Path);
+        Assert.Equal("deadbeef", result.InputArtifacts[0].Sha256);
+        Assert.NotNull(result.OutputArtifacts);
+        Assert.Single(result.OutputArtifacts!);
+        Assert.Equal("output/cosmos-create.md", result.OutputArtifacts[0].Path);
+        Assert.Equal(ValidationStatus.Passed, result.ValidationStatus);
+        Assert.NotNull(result.TokenUsageEnvelope);
+        Assert.Equal(1000, result.TokenUsageEnvelope!.PromptTokens);
+        Assert.Equal(500, result.TokenUsageEnvelope.CompletionTokens);
+        Assert.Equal("archives/step-3-prompts.zip", result.PromptArchivePath);
+        Assert.Equal(135_000L, result.DurationMs);
+        Assert.Equal("2026-05-29T09:35:22Z", result.Timestamp);
+    }
+
+    [Fact]
+    public void LegacyJson_WithoutNewEnvelopeFields_DeserializesSuccessfully()
+    {
+        // Simulates an existing step-result.json written before Phase 1 Point 3 changes
+        var legacyJson = """
+        {
+          "version": 1,
+          "status": "success",
+          "step": "Step 1 - Annotations",
+          "namespace": "storage",
+          "outputFileCount": 3,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:01:00.000"
+        }
+        """;
+
+        var result = JsonSerializer.Deserialize<StepResultFile>(legacyJson);
+
+        Assert.NotNull(result);
+        Assert.Equal(StepResultStatus.Success, result!.Status);
+        // All new fields should be null — no exception, full backward compatibility
+        Assert.Null(result.SchemaVersion);
+        Assert.Null(result.StepName);
+        Assert.Null(result.InputArtifacts);
+        Assert.Null(result.OutputArtifacts);
+        Assert.Null(result.ValidationStatus);
+        Assert.Null(result.TokenUsageEnvelope);
+        Assert.Null(result.PromptArchivePath);
+        Assert.Null(result.DurationMs);
+        Assert.Null(result.Timestamp);
+    }
+
+    [Fact]
+    public void NullEnvelopeFields_SerializeAsJsonNull()
+    {
+        var result = new StepResultFile { Status = StepResultStatus.Success };
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+        var json = JsonSerializer.Serialize(result, options);
+
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        // New nullable fields present as null, not absent
+        Assert.True(root.TryGetProperty("schemaVersion", out var sv));
+        Assert.Equal(JsonValueKind.Null, sv.ValueKind);
+        Assert.True(root.TryGetProperty("durationMs", out var dm));
+        Assert.Equal(JsonValueKind.Null, dm.ValueKind);
+        Assert.True(root.TryGetProperty("timestamp", out var ts));
+        Assert.Equal(JsonValueKind.Null, ts.ValueKind);
+    }
 }

@@ -7,9 +7,6 @@
     <AssemblyName>DocGeneration.Tools.Fingerprint</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
-  <ItemGroup>
     <InternalsVisibleTo Include="DocGeneration.Tools.Fingerprint.Tests" />
   </ItemGroup>
 </Project>

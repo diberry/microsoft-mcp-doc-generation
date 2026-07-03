@@ -166,6 +166,17 @@ public class SkillPipelineOrchestrator
             wipSw.Stop();
             _logger.LogLlmCall(skillName, "SynthesizeWhatItProvides", wipSw.ElapsedMilliseconds);
 
+            var wtuSw = Stopwatch.StartNew();
+            var whenToUseSummary = await ExecuteStepAsync(
+                "llm-synthesize-when-to-use",
+                StepClassification.AI,
+                skillName,
+                $"useFor={updatedSkillData.UseFor.Count}, doNotUseFor={updatedSkillData.DoNotUseFor.Count}",
+                () => _llmRewriter.SynthesizeWhenToUseSummaryAsync(skillName, updatedSkillData, ct),
+                result => string.IsNullOrWhiteSpace(result) ? "used fallback summary" : $"synthesized when-to-use summary ({result.Length} chars)");
+            wtuSw.Stop();
+            _logger.LogLlmCall(skillName, "SynthesizeWhenToUse", wtuSw.ElapsedMilliseconds);
+
             var prerequisites = BuildPrerequisites(skillData, sources.FileExtensions);
 
             var rendered = ExecuteStep(
@@ -173,7 +184,7 @@ public class SkillPipelineOrchestrator
                 StepClassification.Deterministic,
                 skillName,
                 $"tier={tierAssessment.Tier}",
-                () => _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText, translatedSteps, whatItProvides, skillVersion),
+                () => _pageGenerator.Generate(updatedSkillData, triggerData, tierAssessment, prerequisites, _postProcessor.ProcessText, translatedSteps, whatItProvides, skillVersion, whenToUseSummary),
                 result => $"generated markdown ({result.Length} chars)");
 
             rendered = ExecuteStep(

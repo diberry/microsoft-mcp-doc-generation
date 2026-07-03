@@ -1,5 +1,10 @@
 namespace PipelineRunner.Cli;
 
+/// <summary>
+/// Validated, immutable request object produced by <see cref="PipelineCli"/> and consumed by
+/// <see cref="PipelineRunner"/>. Carries all resolved options for a single pipeline invocation,
+/// including replay mode (<see cref="Replay"/>) and inspect mode (<see cref="Inspect"/>) flags.
+/// </summary>
 public sealed record PipelineRequest(
     string? Namespace,
     IReadOnlyList<int> Steps,
@@ -13,7 +18,13 @@ public sealed record PipelineRequest(
     bool SkipChangelogGate = false,
     bool RunFingerprintGate = false,
     bool RunPromptRegressionGate = false,
-    bool SkipNpmUpdate = false)
+    bool SkipNpmUpdate = false,
+    bool Replay = false,
+    string? ReplayFromRunId = null,
+    string? ReplayStepName = null,
+    bool Inspect = false,
+    string? InspectShow = null,
+    bool WriteJsonOutput = false)
 {
     /// <summary>
     /// Default upstream branch for fetching files from the microsoft/mcp repository.
@@ -54,9 +65,10 @@ public sealed record PipelineRequest(
 
     public static string GetDefaultOutputPath(string? targetNamespace, TimeProvider? timeProvider = null)
     {
-        // Millisecond precision keeps default paths readable while making same-moment collisions vanishingly unlikely.
+        // Human-readable timestamp format (yyyy-MM-dd-HH-mm-ss) keeps default paths easy to sort and identify.
+        // Hyphens separate all components for improved readability while maintaining sort stability.
         // Callers can still pass --output explicitly when they need a fully caller-controlled path.
-        var timestamp = (timeProvider ?? TimeProvider.System).GetUtcNow().ToString("yyyyMMddTHHmmssfffZ");
+        var timestamp = (timeProvider ?? TimeProvider.System).GetUtcNow().ToString("yyyy-MM-dd-HH-mm-ss");
         return string.IsNullOrWhiteSpace(targetNamespace)
             ? $".\\generated-{timestamp}"
             : $".\\generated-{targetNamespace.Trim()}-{timestamp}";
@@ -104,17 +116,38 @@ public sealed record PipelineRequest(
             errors.Add("OutputPath is required.");
         }
 
-        if (Steps.Count == 0)
+        if (Replay)
+        {
+            if (string.IsNullOrWhiteSpace(ReplayFromRunId))
+            {
+                errors.Add("--from is required when --replay is set.");
+            }
+
+            if (string.IsNullOrWhiteSpace(ReplayStepName))
+            {
+                errors.Add("--step-name is required when --replay is set.");
+            }
+        }
+        else if (Inspect)
+        {
+            if (string.IsNullOrWhiteSpace(ReplayStepName))
+            {
+                errors.Add("--step-name is required when --inspect is set.");
+            }
+        }
+        else if (Steps.Count == 0)
         {
             errors.Add("At least one step must be selected.");
         }
 
-        var duplicates = Steps
-            .GroupBy(step => step)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .OrderBy(value => value)
-            .ToArray();
+        var duplicates = Replay || Inspect
+            ? Array.Empty<int>()
+            : Steps
+                .GroupBy(step => step)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .OrderBy(value => value)
+                .ToArray();
 
         if (duplicates.Length > 0)
         {
@@ -122,11 +155,13 @@ public sealed record PipelineRequest(
         }
 
         var allowedSteps = validStepIds ?? AllValidSteps;
-        var invalidSteps = Steps
-            .Where(step => !allowedSteps.Contains(step))
-            .Distinct()
-            .OrderBy(value => value)
-            .ToArray();
+        var invalidSteps = Replay || Inspect
+            ? Array.Empty<int>()
+            : Steps
+                .Where(step => !allowedSteps.Contains(step))
+                .Distinct()
+                .OrderBy(value => value)
+                .ToArray();
 
         if (invalidSteps.Length > 0)
         {

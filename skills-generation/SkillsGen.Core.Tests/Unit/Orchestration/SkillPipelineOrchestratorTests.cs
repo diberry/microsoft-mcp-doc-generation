@@ -216,6 +216,7 @@ public class SkillPipelineOrchestratorTests
         tracer.Received().StartStep("assess", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("llm-rewrite-intro", StepClassification.AI, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("llm-synthesize-what-it-provides", StepClassification.AI, "azure-test", Arg.Any<string>());
+        tracer.Received().StartStep("llm-synthesize-when-to-use", StepClassification.AI, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("generate", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("post-process", StepClassification.Deterministic, "azure-test", Arg.Any<string>());
         tracer.Received().StartStep("validate", StepClassification.Deterministic, "azure-test", Arg.Any<string>());

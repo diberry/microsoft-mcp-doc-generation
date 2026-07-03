@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pipeline Configuration Matrix",
+  "description": "Defines the ordered set of pipeline steps, their artifact contracts, and execution commands for the MCP documentation generation pipeline.",
+  "type": "array",
+  "items": {
+    "$ref": "#/definitions/PipelineStep"
+  },
+  "definitions": {
+    "PipelineStep": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "schemaVersion",
+        "scope",
+        "dependencies",
+        "inputArtifacts",
+        "outputArtifacts",
+        "outputMultiplicity",
+        "localCommand",
+        "ciCommand"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Unique integer identifier matching the step's Id property in the C# registry."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable step name matching the step's Name property in the C# registry."
+        },
+        "schemaVersion": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+$",
+          "description": "Version of the pipeline.config.json schema this entry conforms to (e.g. '1.0')."
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["global", "namespace"],
+          "description": "Execution scope: 'global' runs once per pipeline invocation; 'namespace' runs once per target namespace."
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "uniqueItems": true,
+          "description": "Step IDs that must complete successfully before this step can run."
+        },
+        "inputArtifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Glob patterns or paths describing files this step reads. Use '{namespace}' as a placeholder for per-namespace paths."
+        },
+        "outputArtifacts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Glob patterns or paths describing files this step produces. Use '{namespace}' as a placeholder for per-namespace paths."
+        },
+        "outputMultiplicity": {
+          "type": "string",
+          "enum": ["single", "per-tool", "per-namespace"],
+          "description": "How many output units this step produces: 'single' (once globally), 'per-tool' (one per MCP tool), or 'per-namespace' (one per target namespace)."
+        },
+        "localCommand": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Command to run this step in a local development environment. Use '<namespace>' as a placeholder for the target namespace."
+        },
+        "ciCommand": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Command to run this step in CI. Use '<namespace>' as a placeholder for the target namespace."
+        }
+      }
+    }
+  }
+}

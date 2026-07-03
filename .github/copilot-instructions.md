@@ -392,6 +392,8 @@ pwsh ./Debug-MultiPageDocs.ps1  # Prepare environment
 
 **Reviewer checklist:** Would this test FAIL if the fix were reverted? If not, it's not a real test.
 
+**Bug diagnosis rule — verbatim error required:** When diagnosing a test failure in a PRD or issue, you MUST quote the actual test-runner assertion error verbatim (copy-paste from `dotnet test` output). Log-line observations (pipeline console output, counts, timing) are corroborating evidence only — they are NOT sufficient to establish root cause. Building a root cause analysis from log lines without reading the actual `Assert.*` failure message will produce a wrong diagnosis and a fix that does not resolve the test. Before writing any diagnosis, run `dotnet test` and paste the first failing assertion error.
+
 ## ⚠️ CRITICAL: Never Merge PRs — Team Review Required
 
 **NEVER merge a PR. Only the user (Dina) merges PRs after full team review.**
@@ -512,7 +514,6 @@ Versions defined in `Directory.Packages.props`, NOT in individual `.csproj` file
    - PowerShell: Create separate `.ps1` files for distinct functionality (e.g., `validate-env.ps1`, `preflight.ps1`)
    - Bash: Create separate `.sh` files for reusable scripts
    - C#: Create separate projects or packages in `mcp-tools/` (e.g., `GenerativeAI`, `Shared`)
-   - Node.js: Create separate npm packages when appropriate
    - Benefits: Testability, reusability, maintainability, clear separation of concerns
    - Example: Environment validation extracted to `validate-env.ps1` instead of inline in preflight script
 8. **Cross-platform (bash ↔ PowerShell)**: See "Cross-Platform Script Interop" section below

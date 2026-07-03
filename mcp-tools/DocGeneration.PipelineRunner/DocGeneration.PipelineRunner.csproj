@@ -14,6 +14,9 @@
     <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
     <ProjectReference Include="..\..\shared\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
     <ProjectReference Include="..\..\shared\DocGeneration.Core.Tracing\DocGeneration.Core.Tracing.csproj" />
+    <ProjectReference Include="..\DocGeneration.Steps.HorizontalArticles\DocGeneration.Steps.HorizontalArticles.csproj" />
+    <ProjectReference Include="..\DocGeneration.Steps.ToolFamilyCleanup\DocGeneration.Steps.ToolFamilyCleanup.csproj" />
+    <ProjectReference Include="..\DocGeneration.Steps.ToolGeneration.Improvements\DocGeneration.Steps.ToolGeneration.Improvements.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />

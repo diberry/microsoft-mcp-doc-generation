@@ -23,7 +23,7 @@ public class CliTabWrapperTests
         Assert.Contains("| Parameter | Required |", result);
         Assert.DoesNotContain("List storage accounts.", result);
         Assert.Contains(cliContent.TrimEnd(), result);
-        AssertCliTabBeforeMcpTab(result);
+        AssertMcpTabBeforeCliTab(result);
         Assert.Contains("---", result);
     }
 
@@ -55,7 +55,7 @@ public class CliTabWrapperTests
 
         Assert.Contains("#tab/mcp-server", result);
         Assert.Contains("#tab/azure-mcp-cli", result);
-        AssertCliTabBeforeMcpTab(result);
+        AssertMcpTabBeforeCliTab(result);
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class CliTabWrapperTests
 
         Assert.Equal(description, extractedDescription);
         Assert.Equal(0, CountOccurrences(tabBlock, description));
-        AssertCliTabBeforeMcpTab(tabBlock);
+        AssertMcpTabBeforeCliTab(tabBlock);
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(article, cliContent).ReplaceLineEndings("\n");
 
-        Assert.Contains("## List accounts\n\nList storage accounts in a subscription.\n\n#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
+        Assert.Contains("## List accounts\n\nList storage accounts in a subscription.\n\n#### [MCP Server](#tab/mcp-server)", result);
     }
 
     [Fact]
@@ -140,8 +140,8 @@ public class CliTabWrapperTests
 
         var result = CliTabWrapper.ApplyTabsToFamilyArticle(article, cliContent).ReplaceLineEndings("\n");
 
-        Assert.DoesNotContain("## List accounts\n\n\n#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
-        Assert.Contains("## List accounts\n#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
+        Assert.DoesNotContain("## List accounts\n\n\n#### [MCP Server](#tab/mcp-server)", result);
+        Assert.Contains("## List accounts\n#### [MCP Server](#tab/mcp-server)", result);
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class CliTabWrapperTests
         Assert.Null(description);
         Assert.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", tabBlock);
         Assert.Contains("#### [MCP Server](#tab/mcp-server)", tabBlock);
-        AssertCliTabBeforeMcpTab(tabBlock);
+        AssertMcpTabBeforeCliTab(tabBlock);
     }
 
     [Fact]
@@ -185,7 +185,7 @@ public class CliTabWrapperTests
         var normalized = result.ReplaceLineEndings("\n");
 
         Assert.Contains(description, normalized);
-        Assert.Contains($"\n\n{description}\n\n#### [Azure MCP CLI](#tab/azure-mcp-cli)", normalized);
+        Assert.Contains($"\n\n{description}\n\n#### [MCP Server](#tab/mcp-server)", normalized);
         Assert.DoesNotContain($"{description}\n\n```bash", CliTabWrapper.WrapWithTabsAndExtractDescription(mcpContent, cliContent).TabBlock);
     }
 
@@ -376,7 +376,7 @@ public class CliTabWrapperTests
         Assert.Contains("#### [MCP Server](#tab/mcp-server)", result);
         Assert.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
         Assert.Contains("az storage account list", result);
-        AssertCliTabBeforeMcpTab(result);
+        AssertMcpTabBeforeCliTab(result);
     }
 
     [Fact]
@@ -395,7 +395,7 @@ public class CliTabWrapperTests
 
         var cliTabCount = CountOccurrences(result, "#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         Assert.Equal(2, cliTabCount);
-        AssertCliTabBeforeMcpTab(result);
+        AssertMcpTabBeforeCliTab(result);
     }
 
     [Fact]
@@ -451,7 +451,7 @@ public class CliTabWrapperTests
 
         Assert.Contains("#### [MCP Server](#tab/mcp-server)", result);
         Assert.Contains("cli content for list", result);
-        AssertCliTabBeforeMcpTab(result);
+        AssertMcpTabBeforeCliTab(result);
     }
 
     [Fact]
@@ -576,10 +576,10 @@ public class CliTabWrapperTests
 
         Assert.True(annotationPos > terminatorPos, "Annotation should be after --- terminator");
 
-        var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
         var mcpTabStart = result.IndexOf("#### [MCP Server](#tab/mcp-server)", StringComparison.Ordinal);
-        var cliTabContent = result.Substring(cliTabStart, mcpTabStart - cliTabStart);
-        var mcpTabContent = result.Substring(mcpTabStart, terminatorPos - mcpTabStart);
+        var cliTabStart = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
+        var mcpTabContent = result.Substring(mcpTabStart, cliTabStart - mcpTabStart);
+        var cliTabContent = result.Substring(cliTabStart, terminatorPos - cliTabStart);
 
         Assert.DoesNotContain("[Tool annotation hints]", cliTabContent);
         Assert.DoesNotContain("[Tool annotation hints]", mcpTabContent);
@@ -622,11 +622,27 @@ public class CliTabWrapperTests
         Assert.True(annotationPos > separatorPos, "Annotation should be after --- separator");
     }
 
-    private static void AssertCliTabBeforeMcpTab(string text)
+    [Fact]
+    public void WrapWithTabs_McpServerTabAppearsBeforeCliTab()
+    {
+        var mcpContent = "| Parameter | Required |\n|---|---|\n| Subscription | Yes |";
+        var cliContent = "```bash\naz storage account create --name myaccount\n```";
+
+        var result = CliTabWrapper.WrapWithTabs(mcpContent, cliContent);
+
+        var mcpIdx = result.IndexOf("#### [MCP Server](#tab/mcp-server)", StringComparison.Ordinal);
+        var cliIdx = result.IndexOf("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal);
+
+        Assert.True(mcpIdx >= 0, "MCP Server tab must be present");
+        Assert.True(cliIdx >= 0, "CLI tab must be present");
+        Assert.True(mcpIdx < cliIdx, "MCP Server tab must appear before CLI tab");
+    }
+
+    private static void AssertMcpTabBeforeCliTab(string text)
     {
         Assert.True(
-            text.IndexOf("#tab/azure-mcp-cli", StringComparison.Ordinal) <
-            text.IndexOf("#tab/mcp-server", StringComparison.Ordinal));
+            text.IndexOf("#tab/mcp-server", StringComparison.Ordinal) <
+            text.IndexOf("#tab/azure-mcp-cli", StringComparison.Ordinal));
     }
 
     private static int CountOccurrences(string text, string pattern)

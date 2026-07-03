@@ -25,6 +25,57 @@ public enum StepResultStatus
 }
 
 /// <summary>
+/// Validation outcome for a step's output artifacts.
+/// Serializes as lowercase strings in JSON (e.g., "passed", "failed", "skipped").
+/// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ValidationStatus>))]
+public enum ValidationStatus
+{
+    /// <summary>All validation checks passed.</summary>
+    [JsonStringEnumMemberName("passed")]
+    Passed,
+
+    /// <summary>One or more validation checks failed.</summary>
+    [JsonStringEnumMemberName("failed")]
+    Failed,
+
+    /// <summary>Validation was not applicable or was skipped.</summary>
+    [JsonStringEnumMemberName("skipped")]
+    Skipped
+}
+
+/// <summary>
+/// A reference to an artifact with its file path and content hash.
+/// Used for input/output artifact tracking in the step envelope.
+/// </summary>
+public sealed class ArtifactReference
+{
+    /// <summary>Relative or absolute path to the artifact file.</summary>
+    [JsonPropertyName("path")]
+    public string Path { get; set; } = "";
+
+    /// <summary>SHA-256 hex digest of the artifact content.</summary>
+    [JsonPropertyName("sha256")]
+    public string Sha256 { get; set; } = "";
+}
+
+/// <summary>
+/// Lightweight token usage summary for a single step execution.
+/// Distinct from <see cref="TokenUsageSummary"/> which aggregates multiple per-tool calls.
+/// Null for deterministic (non-AI) steps.
+/// </summary>
+public sealed class TokenUsageEnvelope
+{
+    /// <summary>Total prompt tokens consumed across all AI calls in this step.</summary>
+    [JsonPropertyName("promptTokens")]
+    public int PromptTokens { get; set; }
+
+    /// <summary>Total completion tokens produced across all AI calls in this step.</summary>
+    [JsonPropertyName("completionTokens")]
+    public int CompletionTokens { get; set; }
+}
+
+/// <summary>
 /// Structured result written by generator processes as step-result.json.
 /// Replaces regex-based subprocess error detection with a typed contract.
 ///
@@ -41,6 +92,10 @@ public enum StepResultStatus
 ///   "promptSnapshots": [{ "fileName": "...", "contentHash": "...", "sizeBytes": 1024 }],
 ///   "tokenUsage": { "totalPromptTokens": 500, "totalCompletionTokens": 200, ... }
 /// }
+///
+/// Envelope extension (Phase 1 Point 3) adds: schemaVersion, stepName, inputArtifacts,
+/// outputArtifacts, validationStatus, tokenUsageEnvelope, promptArchivePath, durationMs, timestamp.
+/// All new fields are nullable/optional for full backward compatibility with legacy v0 files.
 /// </summary>
 public class StepResultFile
 {
@@ -89,6 +144,59 @@ public class StepResultFile
     /// </summary>
     [JsonPropertyName("tokenUsage")]
     public TokenUsageSummary? TokenUsage { get; set; }
+
+    // ── Phase 1 Point 3: Envelope extension fields ────────────────────────────
+
+    /// <summary>
+    /// Semantic schema version string (e.g., "1.0"). Separate from the integer <see cref="Version"/> field.
+    /// Absent (null) in legacy v0 files — treated as legacy without error.
+    /// Present and unrecognized → <see cref="StepResultSchemaException"/> is thrown on read.
+    /// </summary>
+    [JsonPropertyName("schemaVersion")]
+    public string? SchemaVersion { get; set; }
+
+    /// <summary>Canonical step name for cross-step lookups (e.g., "step-3-tool-generation").</summary>
+    [JsonPropertyName("stepName")]
+    public string? StepName { get; set; }
+
+    /// <summary>
+    /// Input artifacts consumed by this step, each with a path and SHA-256 hash.
+    /// Null when not tracked (legacy steps or deterministic steps without artifact tracking).
+    /// </summary>
+    [JsonPropertyName("inputArtifacts")]
+    public List<ArtifactReference>? InputArtifacts { get; set; }
+
+    /// <summary>
+    /// Output artifacts produced by this step, each with a path and SHA-256 hash.
+    /// Null when not tracked.
+    /// </summary>
+    [JsonPropertyName("outputArtifacts")]
+    public List<ArtifactReference>? OutputArtifacts { get; set; }
+
+    /// <summary>
+    /// Result of post-step validation. Null when validation was not run.
+    /// </summary>
+    [JsonPropertyName("validationStatus")]
+    public ValidationStatus? ValidationStatus { get; set; }
+
+    /// <summary>
+    /// Lightweight token usage envelope for this step. Null for deterministic (non-AI) steps.
+    /// Distinct from <see cref="TokenUsage"/> which carries per-tool call detail.
+    /// </summary>
+    [JsonPropertyName("tokenUsageEnvelope")]
+    public TokenUsageEnvelope? TokenUsageEnvelope { get; set; }
+
+    /// <summary>Path to the archived prompt package for this step. Null for deterministic steps.</summary>
+    [JsonPropertyName("promptArchivePath")]
+    public string? PromptArchivePath { get; set; }
+
+    /// <summary>Wall-clock duration in milliseconds. Complements the <see cref="Duration"/> string field.</summary>
+    [JsonPropertyName("durationMs")]
+    public long? DurationMs { get; set; }
+
+    /// <summary>Step completion timestamp in ISO 8601 format (e.g., "2026-05-29T09:35:22Z").</summary>
+    [JsonPropertyName("timestamp")]
+    public string? Timestamp { get; set; }
 
     /// <summary>
     /// Serialization-friendly record for prompt file metadata.

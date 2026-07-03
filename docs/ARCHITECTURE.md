@@ -2,6 +2,10 @@
 
 The Azure MCP Documentation Generator is a typed .NET pipeline that transforms raw Azure MCP CLI metadata into 800+ publication-ready markdown files across 52 Azure service namespaces.
 
+## Pipeline Authority
+
+The runner is the pipeline definition; the GitHub Actions workflow is a CI host.
+
 ## System Overview
 
 ```
@@ -36,11 +40,11 @@ The Azure MCP Documentation Generator is a typed .NET pipeline that transforms r
 Raw CLI metadata flows through each step, transformed into richer content at each stage:
 
 ```
-npm (Azure MCP package)
+dotnet run --project mcp-tools/McpCliMetadata (Azure MCP package)
   │
   ▼
 Step 0: Bootstrap ─────────────────────────────────────────────────
-  │  • npm install + extract CLI metadata → cli-output.json
+  │  • dotnet run McpCliMetadata → cli-output.json, cli-namespace.json, cli-version.json
   │  • Build .NET solution
   │  • Brand mapping validation → reports/
   │  • E2E test prompt parsing → e2e-test-prompts/
@@ -69,6 +73,10 @@ Step 3: Tool Composition + AI Improvements ────────────�
   ▼
 Step 4: Tool Family Assembly (AI + Retry + Validation) ────────────
   │  • tools/*.md → tool-family/{namespace}.md (one article per service)
+  │  • `FamilyStructureBuilder` deterministically emits
+  │    `FamilyStructureContext` (family name, section order, headings,
+  │    source content, schema version) before AI metadata generation
+  │  • H2 headings come from bootstrap `h2-headings/*.json`
   │  • AI generates: frontmatter, intro, related content
   │  • Post-processing: MCP acronym expansion, frontmatter enrichment,
   │    duplicate example stripping
@@ -88,6 +96,9 @@ Step 6: Horizontal Articles (AI) ───────────────�
   │  • One overview article per namespace: capabilities, scenarios,
   │    prerequisites, RBAC roles, best practices
   │  • ArticleContentProcessor validates and transforms AI output
+  │  • Prompt/template paths are resolved via HorizontalArticleGenerator(
+  │    mcpToolsRoot: context.McpToolsRoot) — always anchored to mcp-tools/
+  │    regardless of the process working directory
   │
   ▼
 Step 7: Article Health Validation (non-blocking) ──────────────────
@@ -105,6 +116,7 @@ Final Output ──────────────────────�
   ├── annotations/*.md                   ← Include files
   ├── parameters/*.md                    ← Include files
   ├── example-prompts/*.md               ← Include files
+  ├── observability/{stepId}-{slug}/     ← 5-file step observability contract
   └── reports/                           ← Validation reports
 
 Post-Assembly: Multi-Namespace Merge (AD-011) ────────────────────
@@ -168,8 +180,19 @@ The pipeline migrated from PowerShell scripts to a typed C# orchestrator. This p
 - **Integrated retry logic** for AI-dependent steps
 - **Post-validation framework** (`IPostValidator`) attached to specific steps
 - **Isolated workspaces** via `WorkspaceManager` for parallel execution
+- **Per-step execution envelopes** written to `{output}/step-<id>-<slug>/step-result.json` after each wrapper completes so downstream automation can inspect normalized status, outputs, validation state, and timing without reading step-specific logs
+- **Per-step observability bundles** written to `{output}/observability/{stepId}-{slug}/` with `summary.md`, `step-result.json`, `validation.json`, `prompt-preview.txt` (or `prompt-preview-na.txt`), and `metrics.json`; missing files log warnings so instrumentation gaps are visible without breaking the pipeline
 
 Legacy PowerShell scripts remain in `mcp-tools/scripts/` as fallback.
+
+### Behavioral Equivalence CI Gate
+
+`DocGeneration.Tools.Fingerprint` also maintains advisor golden manifests for behavioral-equivalence checks:
+
+- Deterministic outputs (`annotations/`, `parameters/`, `h2-headings/`, `cli/`, `reports/`, `logs/`, `common-general/`, and root files) are compared by SHA-256.
+- AI outputs (`tools/`, `tool-family/`, `horizontal-articles/`, `example-prompts/`, `e2e-test-prompts/`) are compared structurally by required top-level keys and H2/section-count tolerance (±1).
+
+The `golden-diff` workflow job regenerates advisor output and verifies it against `mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/GoldenSnapshot/advisor/golden-manifest.json`.
 
 ### Isolated Workspaces (Step 4)
 
@@ -386,7 +409,7 @@ microsoft-mcp-doc-generation/
 ├── skills-generation/                # Skills documentation pipeline
 ├── docs/                             # Documentation
 ├── generated-validated-*/            # Validated pipeline output
-└── mcp-cli-metadata/               # npm project for CLI extraction
+└── mcp-cli-metadata/               # CLI metadata version snapshots
 ```
 
 ## Pipeline Observability
@@ -400,6 +423,10 @@ Both pipelines emit structured trace files after every run to `{output-dir}/trac
 | `summary.md` | Human-readable run summary with step table and AI statistics |
 
 Tracing is always-on (no opt-in flag), uses in-memory collection during execution, and flushes once at the end of each run. The `NullTracer` pattern ensures zero overhead when the tracer is not wired (e.g., in unit tests).
+
+PipelineRunner also writes a shared `step-result.json` envelope for every selected step under `{output-dir}/step-<id>-<slug>/`. Dry runs emit the same envelope with placeholder values, and missing envelopes abort the run for fatal steps while warn-only steps continue.
+
+In addition, every executed step now gets an observability directory at `{output-dir}/observability/{stepId}-{slug}/`. The runner writes `summary.md`, `validation.json`, and `metrics.json`, writes `prompt-preview-na.txt` for deterministic steps, and checks for the full 5-file contract (`prompt-preview.txt` for AI/hybrid steps). Missing contract files are surfaced as warnings so partial instrumentation is visible during rollout.
 
 ### Trace Architecture
 
@@ -418,3 +445,147 @@ shared/DocGeneration.Core.Tracing/
 
 - **Skills pipeline:** Fresh tracer created per `ProcessBatchAsync()` run, flushed in `finally` block
 - **MCP pipeline:** Fresh tracer created per namespace iteration, flushed to `generated-{namespace}/trace/`
+
+---
+
+## Key Concepts
+
+These terms are introduced by the pipeline manageability work (Points 1–17) and used throughout new code and comments.
+
+| Term | Definition |
+|------|------------|
+| **LLM** | Large Language Model — the Azure OpenAI model invoked by AI stages (Steps 2, 3, 4, and 6). Configured via `FOUNDRY_MODEL_NAME` and related environment variables. |
+| **step envelope** | The `StepResultFile` JSON artifact written by every step to its workspace directory after execution. Contains schema version, input/output artifacts, validation status, token usage, and timing. |
+| **frozen artifact** | A `step-result.json` from a prior pipeline run stored in a versioned run directory. Used by `--replay` to re-run a single step against fixed upstream outputs without re-running predecessors. |
+| **reducer** | A deterministic class that extracts only the inputs one AI stage needs from the upstream envelopes, producing a compact typed context object. No LLM call; runs before the pre-AI gate. See `ToolGenerationReducer`. |
+| **builder** | Synonym for reducer in the `ToolFamilyCleanup` and `HorizontalArticles` contexts; additionally generates structural scaffolding (headings, section order, skeleton) so the AI stage handles prose only. See `FamilyStructureBuilder`, `ArticleOutlineBuilder`. |
+| **seam validator** | An `IPreAiValidator<TContext>` implementation that gates an AI stage. Runs after the reducer but before the LLM call; can block the call by returning `isValid: false`. See `ToolGenerationBudgetValidator`, `ArticleOutlineBudgetValidator`. |
+| **pre-AI gate** | The point in `PipelineRunner` where all registered seam validators for a stage are invoked before any LLM call is dispatched. When a seam validator fails, the stage is skipped and `validationStatus: failed` is written to the step envelope. |
+| **workspace directory** | The per-run, per-step scratch directory managed by `WorkspaceManager`. Path: `{outputPath}/step-{stepId}-{stepSlug}/`. Step wrappers read upstream inputs from and write the step envelope to this directory. |
+| **step wrapper** | A class in `DocGeneration.PipelineRunner/Steps/Namespace/` that implements `IPipelineStep` and orchestrates one pipeline stage — invoking the reducer, running the pre-AI gate, dispatching the LLM call, and writing the step envelope. |
+| **replay mode** | CLI mode (`--replay`) that loads frozen step envelopes from a past run directory and re-executes only the target step against those fixed inputs, without re-running predecessors. Entry point: `RunReplayAsync`. |
+| **inspect mode** | CLI mode (`--inspect`) that runs the reducer for a named step against the current workspace inputs and prints a prompt budget summary — without invoking the LLM. A pre-flight check, not a debugging tool. Entry point: `RunInspectAsync`. |
+
+---
+
+## Developer Loop
+
+Three common workflows for working with the pipeline locally.
+
+### 1. Fresh full run
+
+Run all steps for all namespaces:
+
+```bash
+./start.sh
+# Equivalent:
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- --output ./generated
+```
+
+Run specific steps for a single namespace (e.g., only `advisor`):
+
+```bash
+./start.sh advisor 1,2,3
+# Equivalent:
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- \
+  --namespace advisor --steps 1,2,3 --output ./generated-advisor
+```
+
+Skip dependency validation (useful when re-running a single step that you know has all inputs):
+
+```bash
+./start.sh advisor 4 --skip-deps
+```
+
+---
+
+### 2. Replay a single step
+
+After a full run, re-run only `tool-generation` using frozen inputs from a previous run:
+
+```bash
+./start.sh --replay --step tool-generation --from 20240501T120000Z --namespace advisor
+# Equivalent:
+dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- \
+  --replay --step tool-generation --from 20240501T120000Z \
+  --namespace advisor --output ./generated-advisor
+```
+
+Replay loads the frozen `step-result.json` envelopes from `--from` run directory and passes
+them directly to the step executor, skipping all predecessors. No LLM calls are made for
+deterministic steps; AI stages still invoke the LLM but against fixed upstream context.
+
+---
+
+### 3. Inspect prompt budget before running
+
+Use `--inspect` before making prompt changes to verify you have enough headroom. No LLM call is made; the reducer runs deterministically against the current workspace.
+
+**Example 1 — Check horizontal-articles budget before editing the system prompt:**
+
+```bash
+# Check how many tokens the advisor namespace will consume at Step 6.
+# Use this BEFORE editing horizontal-article-system-prompt.txt to confirm headroom.
+./start.sh --inspect --step horizontal-articles --namespace advisor \
+  --show prompt-budget --output ./generated-advisor
+# Prints: step | namespace | estimatedTokens | budget | headroom | topItems (top-5 sections)
+# Exits 0 if within budget (≤ 150,000 tokens); exits 1 if over budget.
+```
+
+**Example 2 — Check tool-generation budget and export results to JSON (CI pre-flight):**
+
+```bash
+# Export the budget table as JSON so CI can parse the results.
+# --output is required to enable JSON file writing; without it only stdout is printed.
+./start.sh --inspect --step tool-generation --namespace advisor \
+  --show prompt-budget --output ./generated-advisor
+# Creates ./generated-advisor/inspect-budget.json:
+#   { "model": "gpt-4.1-mini", "rows": [{ "step", "namespace", "estimatedTokens",
+#     "budget", "headroom", "topItems" }, ...] }
+# Exits 0 if all tools within 100k budget; exits 1 if any tool exceeds budget.
+```
+
+**Example 3 — Verify headroom before and after a prompt change (tool-family-cleanup):**
+
+```bash
+# Before editing the tool-family cleanup prompt, capture the baseline budget:
+./start.sh --inspect --step tool-family-cleanup --namespace compute \
+  --show prompt-budget --output ./generated-compute
+# Note the headroom value in the output (budget = 150,000 tokens).
+
+# Make your prompt change, then re-run inspect to confirm headroom is still positive:
+./start.sh --inspect --step tool-family-cleanup --namespace compute \
+  --show prompt-budget --output ./generated-compute
+# If headroom < 0, the prompt is too large — trim before running the full pipeline.
+```
+
+**Example 4 — Run `--inspect` in CI as a gate before dispatching a full LLM run:**
+
+```bash
+# Use in a CI job to block the LLM step if the prompt would exceed budget.
+# FOUNDRY_MODEL_NAME is shown in inspect output for traceability.
+FOUNDRY_MODEL_NAME=gpt-4.1-mini \
+  dotnet run --project mcp-tools/DocGeneration.PipelineRunner -- \
+  --inspect --step horizontal-articles --namespace advisor \
+  --show prompt-budget --output ./generated-advisor
+# Exit code 0 = within budget → proceed to full run
+# Exit code 1 = over budget → fail CI, notify author to trim the prompt
+```
+
+Exit code 0 = all items within budget; exit code 1 = at least one item exceeds budget.
+JSON is written to `{output}/inspect-budget.json` only when `--output` is explicitly provided.
+
+---
+
+## Enforcement Model
+
+All enforcement decisions across the pipeline follow a four-tier model.
+
+| Level | Condition | Response |
+|-------|-----------|----------|
+| **Fatal** | `step-result.json` absent after a non-warn-only step completes | Runner logs FATAL and aborts the pipeline. |
+| **Validation skip** | Pre-AI seam validator returns `isValid: false` | Stage is skipped; `validationStatus: failed` written to step envelope; pipeline continues to next independent step. |
+| **Warning** | Observability files (`summary.md`, `metrics.json`, etc.) missing after a step | Logged as WARNING; pipeline continues. |
+| **Phase-gated** | `StepRegistry` in-memory registry diverges from `pipeline.config.json` | Phase 1: WARNING; Phase 2 and beyond: throws `StepRegistryConfigMismatchException`. |
+
+`SkillsRelevanceStep` is **warn-only by design**: its `step-result.json` is required, but a `validationStatus: failed` in that file does not abort the pipeline.

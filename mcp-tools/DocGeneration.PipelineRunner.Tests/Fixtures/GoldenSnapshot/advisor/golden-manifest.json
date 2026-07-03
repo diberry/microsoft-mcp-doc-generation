@@ -1,0 +1,394 @@
+{
+  "version": "1.0",
+  "namespace": "advisor",
+  "capturedAt": "2026-05-30T05:07:07.1731253Z",
+  "deterministicFiles": {
+    "annotations/azure-advisor-recommendation-list-annotations.md": {
+      "sha256": "8e83484339115c7f51cb13205f58f13e71a4ac684cecd846a073994b2c5b2789",
+      "sizeBytes": 432
+    },
+    "cli-tab-config.json": {
+      "sha256": "84722d04d459b218c2d4d94317e5ebc2ac14cb2b1ec65aa97de791939c4f7cdc",
+      "sizeBytes": 53
+    },
+    "cli/azmcp-commands.json": {
+      "sha256": "24690c295c274ecd1654cec67f2d84b7464f208974687dae5be22238f3818ed6",
+      "sizeBytes": 1949618
+    },
+    "cli/cli-namespace.json": {
+      "sha256": "b59b53bb2f4e16b51b902f8c7721e4a5e8dc42b66d6dbe1601c58d337bacc504",
+      "sizeBytes": 24089
+    },
+    "cli/cli-output-enriched.json": {
+      "sha256": "e75dfd8f561419e2e4a0a1da0f7f917f73af72312c02d955a872bfb935b39a88",
+      "sizeBytes": 2694874
+    },
+    "cli/cli-output.json": {
+      "sha256": "6c25e62dfa46251fe5fe92e1b9adb91fa8352cf6dee48f045bf3544a85561317",
+      "sizeBytes": 1469214
+    },
+    "cli/cli-version.json": {
+      "sha256": "b998c8f19d6239e81514c9237bb99cf683c1f60beca3f92a351489757c4779c0",
+      "sizeBytes": 73
+    },
+    "h2-headings/acr.json": {
+      "sha256": "1023838ef69cd1bfe98c67fb7a75d19dca252208cec02adae2dac97eccd9ddd5",
+      "sizeBytes": 112
+    },
+    "h2-headings/advisor.json": {
+      "sha256": "c970672aff1f764518bef79be72633c59edd29b1d2026014fa86766da235b0b3",
+      "sizeBytes": 63
+    },
+    "h2-headings/aks.json": {
+      "sha256": "10ce92d613a202083053617936cb11101b9c50f4e43dadef24e025a426f38dc1",
+      "sizeBytes": 83
+    },
+    "h2-headings/appconfig.json": {
+      "sha256": "6f3b9619c81c8c9a6a760f2a33d5a5e65d114d55e19000759d1db902f445688d",
+      "sizeBytes": 233
+    },
+    "h2-headings/applens.json": {
+      "sha256": "fba85549f4bb67d426095e87d8a3def1d7020c388caf6891a8cb8053441b2a44",
+      "sizeBytes": 59
+    },
+    "h2-headings/applicationinsights.json": {
+      "sha256": "a2e31edd5bf5ac1a3270260228702a813b3eccf5a021dd1f8dfc7be928818cac",
+      "sizeBytes": 75
+    },
+    "h2-headings/appservice.json": {
+      "sha256": "09239ef3f10092e9af60fca498967cd7ef34d241101488d1fdb096159670abab",
+      "sizeBytes": 535
+    },
+    "h2-headings/azurebackup.json": {
+      "sha256": "f91a1be63da88358e26d22665924f1aa8119430e1c82db0079d30c48e8f81003",
+      "sizeBytes": 1121
+    },
+    "h2-headings/azuremigrate.json": {
+      "sha256": "01270bb10bd23beb38f14ed433bec82b7a2b54749529a39502c96c41d1e402b0",
+      "sizeBytes": 170
+    },
+    "h2-headings/azureterraform.json": {
+      "sha256": "2e9b93459a405987d2c6068736ea9387f7c0253deb1f77cc10396a65ccb27f5f",
+      "sizeBytes": 540
+    },
+    "h2-headings/azureterraformbestpractices.json": {
+      "sha256": "47f547a0c3e86de52b35e23c58bd62afe8e8e874ad497751cf691c26f044329d",
+      "sizeBytes": 74
+    },
+    "h2-headings/bicepschema.json": {
+      "sha256": "a666a3a9c0f7e861602549ffa32ad47f1df3615137a3e0c8e8a85018af4db13e",
+      "sizeBytes": 57
+    },
+    "h2-headings/cloudarchitect.json": {
+      "sha256": "c45f9ef989884683f3c57f60afdfd2ceb3155ea87aa59743103197aa07089c58",
+      "sizeBytes": 48
+    },
+    "h2-headings/communication.json": {
+      "sha256": "d9ab01cd3c39005bdd07500be74b1a9c8f8cdf631b56e2fbcc7d57cd1334818f",
+      "sizeBytes": 92
+    },
+    "h2-headings/compute.json": {
+      "sha256": "f4052f8bafcf7edcebb6b2b39bfc056a2268c2f7a27213c3b9162f4443609abc",
+      "sizeBytes": 660
+    },
+    "h2-headings/confidentialledger.json": {
+      "sha256": "e6d6bc1cbd7698409d9f4da63bbaa4d109f4e26172e035e2f03bba6ea003138d",
+      "sizeBytes": 116
+    },
+    "h2-headings/containerapps.json": {
+      "sha256": "06af66a051bc1bbdddc43ff5735ff37068795c274cbc7e2da23a3ca267136e2f",
+      "sizeBytes": 59
+    },
+    "h2-headings/cosmos.json": {
+      "sha256": "a0207b992fe0731007a175bb63420babdae2467142a8ff60bcdc421696ecedba",
+      "sizeBytes": 126
+    },
+    "h2-headings/datadog.json": {
+      "sha256": "216b11960a0db991843ae5214aac6e70bf630244450b4e43dc57881f86161cf4",
+      "sizeBytes": 71
+    },
+    "h2-headings/deploy.json": {
+      "sha256": "317d254386baccb49531b04c64da267f1e2f722a08a3b7e2e650a1eea72819f1",
+      "sizeBytes": 281
+    },
+    "h2-headings/deviceregistry.json": {
+      "sha256": "235d46fc3f8670cadc2a6c0811016b94129b30f72c341c3c853d22361ce02082",
+      "sizeBytes": 60
+    },
+    "h2-headings/eventgrid.json": {
+      "sha256": "a4e34c5cc239ae5049a387e4e4232594f60b04bbdb499aaae846b2dd9a206349",
+      "sizeBytes": 151
+    },
+    "h2-headings/eventhubs.json": {
+      "sha256": "1a5e31e0f259259afa0945077f4d24b8fe9ed634b9f7345ebd606b33e431b9d4",
+      "sizeBytes": 546
+    },
+    "h2-headings/extension.json": {
+      "sha256": "1248ee90baacdbfc90f5c974f73058187134264dd8bbf49c52c79e30f2705d75",
+      "sizeBytes": 140
+    },
+    "h2-headings/fileshares.json": {
+      "sha256": "c5fccc618972ebbd41b2423fbaabfd1e83e037fbf1b1947e5abfc6df2b4cb096",
+      "sizeBytes": 870
+    },
+    "h2-headings/foundryextensions.json": {
+      "sha256": "43fa944dce7bc1af4ca89fa0cf6c37f0a236a912bf8182ccc722c3f2c88de87d",
+      "sizeBytes": 510
+    },
+    "h2-headings/functionapp.json": {
+      "sha256": "b42c2b7beed8c4450fe0d7f5b9e2c28655c1cce4596f31235b40d24733e9a090",
+      "sizeBytes": 55
+    },
+    "h2-headings/functions.json": {
+      "sha256": "76c5d230d7c2a9caecb9bf03e9f0d0dc9f9772d93d0062ccab79be6bb7afe8a8",
+      "sizeBytes": 141
+    },
+    "h2-headings/get.json": {
+      "sha256": "74a9f11a57805b0d8be06784c7b0a1cbf7e86f18258f311cc9be15e815988150",
+      "sizeBytes": 136
+    },
+    "h2-headings/grafana.json": {
+      "sha256": "32147ddcdf0e9f5efdcdb9a361b4f058cce22d3f402ffa20e3314b1112f44328",
+      "sizeBytes": 60
+    },
+    "h2-headings/group.json": {
+      "sha256": "02d7e57677b0fa565aea5990672728922b3e9462a7d196c2be6e3c8408b6b870",
+      "sizeBytes": 102
+    },
+    "h2-headings/keyvault.json": {
+      "sha256": "914a64f83f81b7ad8c7f2d4af60a19d120dc1cb6ff13b01fbaa379e8389131c4",
+      "sizeBytes": 384
+    },
+    "h2-headings/kusto.json": {
+      "sha256": "2672e9a956ce2c8aa170349f888a44825d7ac33b935319f3515b7b1059435911",
+      "sizeBytes": 290
+    },
+    "h2-headings/loadtesting.json": {
+      "sha256": "b5a43ae3d7c8cbacb853a35a6527a96c71b76797050c2daba7f2306b2363e5ff",
+      "sizeBytes": 324
+    },
+    "h2-headings/managedlustre.json": {
+      "sha256": "67dc4e721e47cf8a674321e93db13b23c5a22a8c69248a423a992c515a07497c",
+      "sizeBytes": 1318
+    },
+    "h2-headings/marketplace.json": {
+      "sha256": "3bc50e4a2700cffba37a276e799faab1f4f0dd7df4ade6f576aff5e71db6aa50",
+      "sizeBytes": 98
+    },
+    "h2-headings/monitor.json": {
+      "sha256": "455d5b2cd7f7c3d49e305e2d248449440981521c0ffa79f6e823beac137ee58d",
+      "sizeBytes": 1044
+    },
+    "h2-headings/mysql.json": {
+      "sha256": "78b901f5aabc24a05e161d7e9bfb3b75290131837184983571071ee974bf8a20",
+      "sizeBytes": 300
+    },
+    "h2-headings/policy.json": {
+      "sha256": "906fbadccf462f26e75a7a3aa0e96b69c83b20f6e335648971614a1472bcec0c",
+      "sizeBytes": 54
+    },
+    "h2-headings/postgres.json": {
+      "sha256": "d48a48714e189695fa9c8681ec298c7caa5ed182f6cb5ba2f440d7ab246d70b9",
+      "sizeBytes": 323
+    },
+    "h2-headings/pricing.json": {
+      "sha256": "c7c7151fd750f4a0f23591212bf7d431dd742e632f86ff0a529f9c46b2b94246",
+      "sizeBytes": 52
+    },
+    "h2-headings/quota.json": {
+      "sha256": "3b6b057b7480ebd5b5cd7fa37d379a43f749c84fa0eeb0fcaff9927b2976ab95",
+      "sizeBytes": 111
+    },
+    "h2-headings/redis.json": {
+      "sha256": "f8c54d402ac2475feeacd62aa137937fe193033dc8207bdaa52c7c124ae11ef9",
+      "sizeBytes": 105
+    },
+    "h2-headings/resourcehealth.json": {
+      "sha256": "6ddedc3afb3fededf08d41d39dc19708941abed6aefe2d23e47b99bdd1b1745f",
+      "sizeBytes": 139
+    },
+    "h2-headings/role.json": {
+      "sha256": "d07730231a63d345fff45c6746bbb1077da42f87af466f13dfa6379541dcacb1",
+      "sizeBytes": 52
+    },
+    "h2-headings/search.json": {
+      "sha256": "b4f8a8441cdc1ddcb263e55d27e5b070c77b2ad5ed5c3a769ddc1311fa36a283",
+      "sizeBytes": 300
+    },
+    "h2-headings/servicebus.json": {
+      "sha256": "63b5c2000ffd6a2f33eae57f37986b5019a4b4c9e136964fdecc7c4c9fb3e583",
+      "sizeBytes": 176
+    },
+    "h2-headings/servicefabric.json": {
+      "sha256": "b47d034a94ce1c8a744cdd618edca026ccf31d9c7dd9cd47e55a605831db1ea5",
+      "sizeBytes": 164
+    },
+    "h2-headings/signalr.json": {
+      "sha256": "1fc1edf7ebbe7d30605924be5f01e12f0df77b249956c9e4f6d75a0bd7718f81",
+      "sizeBytes": 48
+    },
+    "h2-headings/speech.json": {
+      "sha256": "edee6b803899db6bd5c2791806559c99181ffdde37ce7ffefe73e5db4c7105f0",
+      "sizeBytes": 132
+    },
+    "h2-headings/sql.json": {
+      "sha256": "0492872976be7a4864bca3bd2fa2126ff5e6ae590b7537c211f5761e915430a5",
+      "sizeBytes": 595
+    },
+    "h2-headings/sreagent.json": {
+      "sha256": "ebbef809a9300d55f6274f0442abd41345b63993f0c1b3a1c1179694a3aa519b",
+      "sizeBytes": 3095
+    },
+    "h2-headings/storage.json": {
+      "sha256": "7e681afd8734e409ef1152d5817c8b992d46c486daf7a6567c316857da10038e",
+      "sizeBytes": 325
+    },
+    "h2-headings/storagesync.json": {
+      "sha256": "7ec9a8565d614498f62aba07ddc4816d2433240435a40494871d590fb06998fc",
+      "sizeBytes": 1090
+    },
+    "h2-headings/subscription.json": {
+      "sha256": "04f26ecc30d25c530d18845f4ebd478fcd67d25ecdc794f4bc59b8ed18a63dd3",
+      "sizeBytes": 65
+    },
+    "h2-headings/virtualdesktop.json": {
+      "sha256": "c48b36727cf9f494774de17d471fab413e9ebe55c348d694e48450007e1f2d43",
+      "sizeBytes": 195
+    },
+    "h2-headings/wellarchitectedframework.json": {
+      "sha256": "aa6f66b268dc5bfe52bea827d55b8e4289f2277708aee3c0ea3d83c4f4562f41",
+      "sizeBytes": 74
+    },
+    "h2-headings/workbooks.json": {
+      "sha256": "c5ab37c98ddca73780d586860d404763abeea990af9087bdb32a89a33b30b021",
+      "sizeBytes": 267
+    },
+    "logs/annotations-generator.log": {
+      "sha256": "eda83e8c7f3666d2128a6cf0b5983625066da757be80fd3880d27e54595f1b43",
+      "sizeBytes": 2434
+    },
+    "logs/composed-tool-generator.log": {
+      "sha256": "957f183e3bff326535f24287b594c6e4dd3915ab1121e81c46d09da5708c2632",
+      "sizeBytes": 539
+    },
+    "logs/debug.log": {
+      "sha256": "0c35c1a222389ac4a6b7e650917a6575408dd817a1e9f221e6eaab8cbf25654f",
+      "sizeBytes": 3837
+    },
+    "logs/example-commands-generator.log": {
+      "sha256": "878fcfc838f7a35c1ca2fc43077892c6463cf914de1e8868f7e5a93cba1e136e",
+      "sizeBytes": 2439
+    },
+    "logs/example-prompt-e2e-coverage.log": {
+      "sha256": "3fe97c31451face4b4b5df5ed5c3ec456c3b81de7c5d79e6d78023802d06ad55",
+      "sizeBytes": 615
+    },
+    "logs/example-prompts.log": {
+      "sha256": "9acbba55a58ceeda3233d82ec563d192aa03354ba690aa66f2a43ed734716119",
+      "sizeBytes": 2929
+    },
+    "logs/horizontal-article-generator.log": {
+      "sha256": "834124519c925e108e4a21fbd368840077b36193b7c6bbfa03831815c4a3a91e",
+      "sizeBytes": 188
+    },
+    "logs/parameter-cli-generator.log": {
+      "sha256": "33d2d8ab441c2a5e820f941ef24ca7cc4db3afd3421563fe7f467ea7c469dd68",
+      "sizeBytes": 2436
+    },
+    "logs/parameters-generator.log": {
+      "sha256": "e7c163737a63ec413f4cd483e2d458c1041cc29ad9e38a909242eec1bd5db38d",
+      "sizeBytes": 2434
+    },
+    "logs/raw-tool-generator.log": {
+      "sha256": "7f3b7f7835464c46206d94b726050db15b5421ca54c251b132b348e0a1d517d4",
+      "sizeBytes": 539
+    },
+    "logs/skills-relevance.log": {
+      "sha256": "1c11ac8abb84baa4b0683bf3f9309e2a6c9196addf380c30ca5729b055a35ad0",
+      "sizeBytes": 538
+    },
+    "namespace-mapping.json": {
+      "sha256": "b1749f11bfde8f38c231518f81f7d5d8106b02f4e8871986f5e4fede72663c75",
+      "sizeBytes": 19295
+    },
+    "parameters/azure-advisor-recommendation-list-parameters.md": {
+      "sha256": "3a8d8e4a3b8ba4d07c5e4c7482daf304d4d983a92887cae770047355f8d98171",
+      "sizeBytes": 361
+    },
+    "parameters/azure-advisor-recommendation-list-params.json": {
+      "sha256": "1b7a6afb58ce9d1ab0dd41e566d637dbc98647399002c198af5943c6f362a794",
+      "sizeBytes": 5
+    },
+    "reports/brand-mapping-suggestions.json": {
+      "sha256": "e89a1b7512ce1c012c3c8ed74383d55bd521d898ce5da268ed1e254cb69806aa",
+      "sizeBytes": 160
+    },
+    "reports/tool-family-validation-advisor.txt": {
+      "sha256": "41aca81bdec9170e51b1dd8de37d37e746111a15951f2fddb3695b633cb86f68",
+      "sizeBytes": 581
+    }
+  },
+  "aiFiles": {
+    "e2e-test-prompts/parsed.json": {
+      "sizeBytes": 130366,
+      "sectionCount": 61,
+      "requiredKeys": [
+        "sections",
+        "title",
+        "totalPrompts",
+        "totalSections",
+        "totalTools"
+      ]
+    },
+    "example-prompts/azure-advisor-recommendation-list-example-prompts.md": {
+      "sizeBytes": 427,
+      "sectionCount": 0,
+      "requiredKeys": [
+        "ms.date",
+        "ms.topic"
+      ]
+    },
+    "horizontal-articles/horizontal-article-advisor.md": {
+      "sizeBytes": 5135,
+      "sectionCount": 7,
+      "requiredKeys": [
+        "author",
+        "content_well_notification",
+        "description",
+        "ms.author",
+        "ms.custom",
+        "ms.date",
+        "ms.reviewer",
+        "ms.service",
+        "ms.topic",
+        "title"
+      ]
+    },
+    "tool-family/azure-advisor.md": {
+      "sizeBytes": 2229,
+      "sectionCount": 2,
+      "requiredKeys": [
+        "author",
+        "content_well_notification",
+        "description",
+        "ms.author",
+        "ms.custom",
+        "ms.date",
+        "ms.reviewer",
+        "ms.service",
+        "ms.topic",
+        "title",
+        "tool_count"
+      ]
+    },
+    "tools/azure-advisor-recommendation-list.md": {
+      "sizeBytes": 870,
+      "sectionCount": 0,
+      "requiredKeys": [
+        "generated",
+        "ms.date",
+        "ms.topic"
+      ]
+    }
+  }
+}

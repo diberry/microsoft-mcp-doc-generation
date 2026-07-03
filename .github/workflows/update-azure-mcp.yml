@@ -115,14 +115,6 @@ jobs:
             echo "✅ Snapshot created: $VERSION_DIR/tools-list.json ($TOOL_COUNT tools)"
           fi
 
-      - name: Generate CLI examples
-        if: steps.cli-snapshot.outputs.is_new == 'true'
-        working-directory: ./mcp-cli-metadata
-        run: |
-          echo "Generating CLI example commands..."
-          node generate-cli-examples.js
-          echo "✅ CLI examples generated in version folder"
-
       - name: Diff against previous version
         if: steps.cli-snapshot.outputs.is_new == 'true'
         id: diff-check
@@ -249,17 +241,6 @@ jobs:
           else
             echo "breaking=false" >> $GITHUB_OUTPUT
             echo "✅ No major version change"
-          fi
-
-      - name: Run npm audit
-        if: steps.version-check.outputs.needs_update == 'true'
-        working-directory: ./mcp-cli-metadata
-        run: |
-          echo "Running npm audit..."
-          npm install --ignore-scripts
-          if ! npm audit --audit-level=high; then
-            echo "::error::High-severity vulnerabilities detected in @azure/mcp"
-            exit 1
           fi
 
       - name: Block breaking changes from auto-commit

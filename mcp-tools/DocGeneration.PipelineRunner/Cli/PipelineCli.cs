@@ -24,6 +24,11 @@ public static class PipelineCli
         rootCommand.AddOption(options.RunFingerprintGate);
         rootCommand.AddOption(options.RunPromptRegressionGate);
         rootCommand.AddOption(options.SkipNpmUpdate);
+        rootCommand.AddOption(options.Replay);
+        rootCommand.AddOption(options.From);
+        rootCommand.AddOption(options.StepName);
+        rootCommand.AddOption(options.Inspect);
+        rootCommand.AddOption(options.Show);
         return rootCommand;
     }
 
@@ -37,6 +42,9 @@ public static class PipelineCli
         var options = BuildOptions();
         var rootCommand = CreateCommandWith(options);
         var parseResult = rootCommand.Parse(args);
+        var replay = parseResult.GetValueForOption(options.Replay);
+        var inspect = parseResult.GetValueForOption(options.Inspect);
+        var outputExplicit = parseResult.GetValueForOption(options.Output);
 
         if (parseResult.Errors.Count > 0)
         {
@@ -44,12 +52,15 @@ public static class PipelineCli
         }
 
         var namespaceValue = parseResult.GetValueForOption(options.Namespace);
-        var outputValue = parseResult.GetValueForOption(options.Output) ?? PipelineRequest.GetDefaultOutputPath(namespaceValue);
-        var stepsCsv = parseResult.GetValueForOption(options.Steps) ?? string.Join(',', PipelineRequest.DefaultSteps);
-
-        if (!PipelineRequest.TryParseSteps(stepsCsv, out var steps, out var stepError))
+        var outputValue = outputExplicit ?? PipelineRequest.GetDefaultOutputPath(namespaceValue);
+        IReadOnlyList<int> steps = Array.Empty<int>();
+        if (!replay && !inspect)
         {
-            return new PipelineParseResult(null, [stepError ?? "Invalid step list."], HelpRequested: false);
+            var stepsCsv = parseResult.GetValueForOption(options.Steps) ?? string.Join(',', PipelineRequest.DefaultSteps);
+            if (!PipelineRequest.TryParseSteps(stepsCsv, out steps, out var stepError))
+            {
+                return new PipelineParseResult(null, [stepError ?? "Invalid step list."], HelpRequested: false);
+            }
         }
 
         var request = new PipelineRequest(
@@ -65,7 +76,13 @@ public static class PipelineCli
             parseResult.GetValueForOption(options.SkipChangelogGate),
             parseResult.GetValueForOption(options.RunFingerprintGate),
             parseResult.GetValueForOption(options.RunPromptRegressionGate),
-            parseResult.GetValueForOption(options.SkipNpmUpdate));
+            parseResult.GetValueForOption(options.SkipNpmUpdate),
+            replay,
+            parseResult.GetValueForOption(options.From),
+            parseResult.GetValueForOption(options.StepName),
+            inspect,
+            parseResult.GetValueForOption(options.Show),
+            WriteJsonOutput: inspect && outputExplicit is not null);
 
         var validationErrors = request.Validate();
         return validationErrors.Count > 0
@@ -123,6 +140,11 @@ public static class PipelineCli
         rootCommand.AddOption(options.RunFingerprintGate);
         rootCommand.AddOption(options.RunPromptRegressionGate);
         rootCommand.AddOption(options.SkipNpmUpdate);
+        rootCommand.AddOption(options.Replay);
+        rootCommand.AddOption(options.From);
+        rootCommand.AddOption(options.StepName);
+        rootCommand.AddOption(options.Inspect);
+        rootCommand.AddOption(options.Show);
         return rootCommand;
     }
 
@@ -130,7 +152,7 @@ public static class PipelineCli
         => new(
             new Option<string?>("--namespace", "Namespace/service area to process. Omit to process all namespaces."),
             new Option<string>("--steps", () => string.Join(',', PipelineRequest.DefaultSteps), "Comma-separated list of step identifiers to run."),
-            new Option<string?>("--output", "Output directory. Defaults to .\\generated-<timestamp> or .\\generated-<namespace>-<timestamp>."),
+            new Option<string?>("--output", "Output directory. Defaults to .\\generated-<yyyy-MM-dd-HH-mm-ss> or .\\generated-<namespace>-<yyyy-MM-dd-HH-mm-ss>."),
             new Option<bool>("--skip-build", "Skip build work and require existing Release outputs."),
             new Option<bool>("--skip-validation", "Skip validation checks executed by the typed runner."),
             new Option<bool>("--skip-env-validation", "Skip Azure OpenAI environment validation during bootstrap."),
@@ -140,7 +162,12 @@ public static class PipelineCli
             new Option<bool>("--skip-changelog-gate", "Skip the CHANGELOG gate check and process all namespaces regardless of CHANGELOG entries."),
             new Option<bool>("--run-fingerprint-gate", "After pipeline steps, compare output fingerprints against fingerprint-baseline.json. Fails on quality regressions."),
             new Option<bool>("--run-prompt-regression-gate", "After pipeline steps, run the DocGeneration.PromptRegression.Tests suite to verify prompt templates are unaffected."),
-            new Option<bool>("--skip-npm-update", "Skip updating @azure/mcp to latest before installing. Use for offline runs or reproducible builds."));
+            new Option<bool>("--skip-npm-update", "Skip updating @azure/mcp to latest before installing. Use for offline runs or reproducible builds."),
+            new Option<bool>("--replay", "Replay a single step against frozen upstream outputs from a prior run."),
+            new Option<string?>("--from", "Run ID to replay from. Expected under .\\runs\\<run-id>\\."),
+            new Option<string?>(["--step-name", "--step"], "Step slug to inspect or replay (for example: tool-generation or horizontal-articles)."),
+            new Option<bool>("--inspect", "Run the reducer for the named step against the current workspace and print a prompt budget table. No LLM call is made."),
+            new Option<string?>("--show", "What to display in inspect mode. Supported value: prompt-budget."));
 
     private sealed record CliOptions(
         Option<string?> Namespace,
@@ -155,5 +182,10 @@ public static class PipelineCli
         Option<bool> SkipChangelogGate,
         Option<bool> RunFingerprintGate,
         Option<bool> RunPromptRegressionGate,
-        Option<bool> SkipNpmUpdate);
+        Option<bool> SkipNpmUpdate,
+        Option<bool> Replay,
+        Option<string?> From,
+        Option<string?> StepName,
+        Option<bool> Inspect,
+        Option<string?> Show);
 }

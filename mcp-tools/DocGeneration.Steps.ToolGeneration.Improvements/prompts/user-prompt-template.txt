@@ -18,4 +18,16 @@ Focus on:
 10. **Convert any `--switch-name` references in description text to natural language** (e.g., `--resource-group` → "resource group") unless the switch name is a parameter keyword in the parameter table
 11. **Remove LLM-specific tool-calling guidance** from descriptions — strip "Use this tool when...", "Do not use this tool to...", "equivalent to `az ...`", tool disambiguation hints, and parameter-passing instructions aimed at AI agents. Rewrite to focus on what a human user can accomplish.
 12. **Backtick formatting consistency** — If a term in the tool description also appears in the parameter descriptions table enclosed in single backticks, apply the same backtick formatting to that term in the description text (e.g., if the parameter table uses `resource-group` in backticks, the description must also use `resource-group` with backticks)
+
+## Tone Consistency Heuristics
+
+Apply these heuristics to every tool description to ensure consistency across the documentation set:
+
+- **Active voice first**: Lead with the verb action, not the subject. "Lists all storage accounts" not "Storage accounts are listed by this tool."
+- **Lead with the action**: Start the description with what the tool does, not the service name. "Lists diagnostic detectors for an app" not "Azure App Service diagnostic detectors are available through this tool."
+- **No service-level context**: Avoid repeating context that belongs in the family overview. Per-tool descriptions should describe what THIS tool does, not re-explain what Azure Storage (or any service) is.
+- **Apply contractions**: Use contracted forms ("doesn't", "can't", "isn't", "it's") for a natural, conversational tone consistent with Microsoft Learn style.
+- **Consistent MCP expansion**: If "MCP" appears and has not yet been expanded in the body text, expand it as "Microsoft Model Context Protocol (MCP)". Do not expand again after the first use.
+- **Wrap example values**: In "(for example, ...)" patterns, wrap each value in backticks: "(for example, `myserver.database.windows.net`)".
+
 Return only the improved markdown content, maintaining the same structure and format.
