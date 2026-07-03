@@ -1,10 +1,23 @@
 using DocGeneration.McpCliMetadata;
+using System.Text;
 using Xunit;
 
 namespace DocGeneration.McpCliMetadata.Tests;
 
 public class AzmcpRunnerTests
 {
+    [Fact]
+    public void CreateStartInfo_ConfiguresUtf8RedirectEncodings()
+    {
+        var startInfo = ProcessRunner.CreateStartInfo("azmcp", "tools list");
+
+        Assert.True(startInfo.RedirectStandardOutput);
+        Assert.True(startInfo.RedirectStandardError);
+        Assert.False(startInfo.UseShellExecute);
+        Assert.Equal(Encoding.UTF8, startInfo.StandardOutputEncoding);
+        Assert.Equal(Encoding.UTF8, startInfo.StandardErrorEncoding);
+    }
+
     [Fact]
     public async Task GetVersionAsync_ReturnsVersion()
     {
