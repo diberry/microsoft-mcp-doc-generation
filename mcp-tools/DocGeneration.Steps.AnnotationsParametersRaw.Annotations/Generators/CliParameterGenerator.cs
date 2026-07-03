@@ -31,10 +31,24 @@ public class CliParameterGenerator
             var outputFile = Path.Combine(outputDir, fileName);
 
             var filtered = GlobalSwitchFilter.FilterOutGlobal(tool.Switches);
+            var switches = filtered
+                .Select(sw => new
+                {
+                    sw.Name,
+                    DisplayName = CliParameterDisplayNameFormatter.StripCliPrefix(sw.Name),
+                    sw.Description,
+                    sw.Type,
+                    sw.IsRequired,
+                    sw.Default,
+                    sw.ShortAlias,
+                    sw.ValuePlaceholder,
+                    sw.AllowedValues
+                })
+                .ToList();
             var templateData = new Dictionary<string, object>
             {
-                ["hasParameters"] = filtered.Count > 0,
-                ["switches"] = filtered,
+                ["hasParameters"] = switches.Count > 0,
+                ["switches"] = switches,
                 ["command"] = command,
                 ["generatedAt"] = generatedAt,
                 ["version"] = cliVersion

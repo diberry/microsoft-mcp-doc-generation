@@ -48,7 +48,8 @@ public static class CliContentAssembler
                 {
                     var desc = EscapePipe(sw.Description);
                     var required = sw.IsRequired == true ? "Yes" : "No";
-                    sb.AppendLine($"| `{sw.Name}` | {sw.Type} | {required} | {desc} |");
+                    var displayName = CliParameterDisplayNameFormatter.StripCliPrefix(sw.Name);
+                    sb.AppendLine($"| `{displayName}` | {sw.Type} | {required} | {desc} |");
                 }
             }
             sb.AppendLine();

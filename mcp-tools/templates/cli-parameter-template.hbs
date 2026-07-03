@@ -2,7 +2,7 @@
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 {{#each switches}}
-| `{{Name}}` | {{Type}} | {{#if IsRequired}}Yes{{else}}No{{/if}} | {{{escapeTableCell Description}}} |
+| `{{DisplayName}}` | {{Type}} | {{#if IsRequired}}Yes{{else}}No{{/if}} | {{{escapeTableCell Description}}} |
 {{/each}}
 {{else}}
 This tool has no CLI parameters.

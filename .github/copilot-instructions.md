@@ -105,6 +105,7 @@ Other configs:
   - `--subscription` (scoping param — filtered when optional, kept when required)
 - **Exception**: Common parameters that are **required** for a specific tool are kept in the table
 - The count matches what users see in the parameter tables in the generated `.md` files
+- In generated `articles/azure-mcp-server/tools/*.md` parameter tables, the parameter **name** cell must use a backticked display name without a leading CLI switch prefix: use `` `agent` `` or `` `resource-group` ``, not `` `--agent` `` or `` `--resource-group` ``. Raw CLI switch names with `--` are retained only for CLI examples, metadata matching, and validation.
 - **Filtering occurs in**:
   - `ParameterGenerator.cs` - For parameter include files (line ~110)
   - `PageGenerator.cs` - For area pages (line ~130)

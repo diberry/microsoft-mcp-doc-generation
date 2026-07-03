@@ -100,8 +100,10 @@ public class CliContentAssemblerTests : IDisposable
         var result = CliContentAssembler.AssembleCliContent(tool);
 
         Assert.Contains("| Parameter | Type | Required | Description |", result);
-        Assert.Contains("`--resource-group`", result);
-        Assert.Contains("`--location`", result);
+        Assert.Contains("`resource-group`", result);
+        Assert.Contains("`location`", result);
+        Assert.DoesNotContain("`--resource-group`", result);
+        Assert.DoesNotContain("`--location`", result);
     }
 
     [Fact]
@@ -126,8 +128,8 @@ public class CliContentAssemblerTests : IDisposable
 
         var result = CliContentAssembler.AssembleCliContent(tool);
 
-        Assert.Contains("`--my-custom-flag`", result);
-        Assert.Contains("`--another-param`", result);
+        Assert.Contains("`my-custom-flag`", result);
+        Assert.Contains("`another-param`", result);
         // Ensure these come from the model, not hardcoded
         Assert.DoesNotContain("--subscription", result);
     }
@@ -144,7 +146,7 @@ public class CliContentAssemblerTests : IDisposable
 
         // Default column removed — default values should NOT appear in the table
         Assert.DoesNotContain("eastus", result);
-        Assert.Contains("`--region`", result);
+        Assert.Contains("`region`", result);
     }
 
     [Fact]
@@ -230,7 +232,8 @@ public class CliContentAssemblerTests : IDisposable
         var content = result.Values.First();
         // Should have inline parameter table since no include files
         Assert.Contains("| Parameter | Type | Required | Description |", content);
-        Assert.Contains("`--resource-group`", content);
+        Assert.Contains("`resource-group`", content);
+        Assert.DoesNotContain("`--resource-group`", content);
     }
 
     // ── Pipe character escaping ───────────────────────────────────────
@@ -262,7 +265,7 @@ public class CliContentAssemblerTests : IDisposable
 
         // Default column removed — pipe default value should NOT appear
         Assert.DoesNotContain("| Default", result);
-        Assert.Contains("`--sep`", result);
+        Assert.Contains("`sep`", result);
     }
 
     [Fact]
@@ -310,7 +313,8 @@ public class CliContentAssemblerTests : IDisposable
         var result = CliContentAssembler.AssembleCliContent(tool);
 
         // Empty description renders but doesn't break the table
-        Assert.Contains("`--flag`", result);
+        Assert.Contains("`flag`", result);
+        Assert.DoesNotContain("`--flag`", result);
         Assert.Contains("| boolean |", result);
     }
 }
