@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 
 namespace DocGeneration.McpCliMetadata;
 
@@ -13,19 +14,7 @@ internal sealed class ProcessRunner : IProcessRunner
 {
     public async Task<ProcessRunResult> RunAsync(string fileName, string arguments, CancellationToken cancellationToken = default)
     {
-        var psi = new ProcessStartInfo(fileName, arguments)
-        {
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            // azmcp emits UTF-8. Without an explicit encoding, the redirected streams
-            // are decoded using the console's code page (e.g. CP437 on Windows), which
-            // corrupts non-ASCII characters such as the U+2192 arrow used in tool
-            // descriptions. Force UTF-8 so output round-trips faithfully.
-            StandardOutputEncoding = System.Text.Encoding.UTF8,
-            StandardErrorEncoding = System.Text.Encoding.UTF8,
-        };
+        var psi = CreateStartInfo(fileName, arguments);
 
         using var process = Process.Start(psi)
             ?? throw new InvalidOperationException($"Failed to start process: {fileName}");
@@ -38,6 +27,23 @@ internal sealed class ProcessRunner : IProcessRunner
         await process.WaitForExitAsync(cancellationToken);
 
         return new ProcessRunResult(process.ExitCode, await outputTask, await errorTask);
+    }
+
+    internal static ProcessStartInfo CreateStartInfo(string fileName, string arguments)
+    {
+        return new ProcessStartInfo(fileName, arguments)
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            // azmcp emits UTF-8. Without an explicit encoding, the redirected streams
+            // are decoded using the console's code page (e.g. CP437 on Windows), which
+            // corrupts non-ASCII characters such as the U+2192 arrow used in tool
+            // descriptions. Force UTF-8 so output round-trips faithfully.
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
     }
 }
 
