@@ -10,4 +10,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="DocGeneration.McpCliMetadata.Tests" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
+    <ProjectReference Include="..\DocGeneration.PipelineRunner\DocGeneration.PipelineRunner.csproj" />
+  </ItemGroup>
 </Project>

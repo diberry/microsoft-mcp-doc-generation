@@ -1,0 +1,832 @@
+﻿{
+  "generated_at": "2026-07-03T16:24:09.6454675Z",
+  "source_version": "3.0.0-beta.21\u002B76f73ff9c7a9a9cf5012710e1d2c1007b87724bb",
+  "namespace_count": 62,
+  "tool_count": 329,
+  "namespaces": {
+    "azureterraformbestpractices": {
+      "display_name": "Azure Terraform Best Practices",
+      "file_name": "azure-terraform-best-practices",
+      "short_name": "Terraform",
+      "merge_group": null,
+      "tools": [
+        "get"
+      ]
+    },
+    "wellarchitectedframework": {
+      "display_name": "Azure Well-Architected Framework",
+      "file_name": "azure-well-architected-framework",
+      "short_name": "Well-Architected Framework",
+      "merge_group": null,
+      "tools": [
+        "get"
+      ]
+    },
+    "get_azure_bestpractices": {
+      "display_name": "Azure Best Practices",
+      "file_name": "azure-best-practices",
+      "short_name": "Best Practices",
+      "merge_group": null,
+      "tools": [
+        "ai_app",
+        "get"
+      ]
+    },
+    "extension_cli_generate": {
+      "display_name": "Azure CLI Extension",
+      "file_name": "azure-cli-extension-generate",
+      "short_name": "CLI Extension",
+      "merge_group": "azure-cli-extension",
+      "tools": [
+        "generate"
+      ]
+    },
+    "extension_cli_install": {
+      "display_name": "Azure CLI Extension",
+      "file_name": "azure-cli-extension-install",
+      "short_name": "CLI Extension",
+      "merge_group": "azure-cli-extension",
+      "tools": [
+        "install"
+      ]
+    },
+    "applicationinsights": {
+      "display_name": "Azure Application Insights",
+      "file_name": "azure-application-insights",
+      "short_name": "Application Insights",
+      "merge_group": null,
+      "tools": [
+        "list"
+      ]
+    },
+    "confidentialledger": {
+      "display_name": "Azure Confidential Ledger",
+      "file_name": "azure-confidential-ledger",
+      "short_name": "Confidential Ledger",
+      "merge_group": null,
+      "tools": [
+        "append",
+        "get"
+      ]
+    },
+    "foundryextensions": {
+      "display_name": "Microsoft Foundry Extensions",
+      "file_name": "microsoft-foundry-extensions",
+      "short_name": "Foundry Extensions",
+      "merge_group": null,
+      "tools": [
+        "chat-completions-create",
+        "create-completion",
+        "embeddings-create",
+        "get",
+        "list",
+        "models-list",
+        "schema"
+      ]
+    },
+    "azureterraform": {
+      "display_name": "Azure Terraform",
+      "file_name": "azure-azureterraform",
+      "short_name": "Terraform",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "get",
+        "get",
+        "list",
+        "plan",
+        "query",
+        "resource",
+        "resourcegroup",
+        "versions",
+        "workspace"
+      ]
+    },
+    "cloudarchitect": {
+      "display_name": "Azure Cloud Architect",
+      "file_name": "azure-cloud-architect",
+      "short_name": "Cloud Architect",
+      "merge_group": null,
+      "tools": [
+        "design"
+      ]
+    },
+    "deviceregistry": {
+      "display_name": "Azure Device Registry",
+      "file_name": "azure-device-registry",
+      "short_name": "Device Registry",
+      "merge_group": null,
+      "tools": [
+        "list"
+      ]
+    },
+    "extension_azqr": {
+      "display_name": "Azure Compliance Quick Review",
+      "file_name": "azure-compliance-quick-review",
+      "short_name": "Compliance Quick Review",
+      "merge_group": null,
+      "tools": [
+        "azqr"
+      ]
+    },
+    "resourcehealth": {
+      "display_name": "Azure Resource Health",
+      "file_name": "azure-resource-health",
+      "short_name": "Resource Health",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "list"
+      ]
+    },
+    "virtualdesktop": {
+      "display_name": "Azure Virtual Desktop",
+      "file_name": "azure-virtual-desktop",
+      "short_name": "Virtual Desktop",
+      "merge_group": null,
+      "tools": [
+        "list",
+        "list",
+        "user-list"
+      ]
+    },
+    "containerapps": {
+      "display_name": "Azure Container Apps",
+      "file_name": "azure-container-apps",
+      "short_name": "Container Apps",
+      "merge_group": null,
+      "tools": [
+        "list"
+      ]
+    },
+    "communication": {
+      "display_name": "Azure Communication Services",
+      "file_name": "azure-communication-services",
+      "short_name": "Communication Services",
+      "merge_group": null,
+      "tools": [
+        "send",
+        "send"
+      ]
+    },
+    "managedlustre": {
+      "display_name": "Azure Managed Lustre",
+      "file_name": "azure-managed-lustre",
+      "short_name": "Managed Lustre",
+      "merge_group": null,
+      "tools": [
+        "ask",
+        "cancel",
+        "cancel",
+        "cancel",
+        "create",
+        "create",
+        "create",
+        "create",
+        "delete",
+        "delete",
+        "delete",
+        "get",
+        "get",
+        "get",
+        "get",
+        "list",
+        "update",
+        "validate"
+      ]
+    },
+    "servicefabric": {
+      "display_name": "Azure Service Fabric",
+      "file_name": "azure-service-fabric",
+      "short_name": "Service Fabric",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "restart"
+      ]
+    },
+    "azuremigrate": {
+      "display_name": "Azure Migrate",
+      "file_name": "azure-migrate",
+      "short_name": "Migrate",
+      "merge_group": null,
+      "tools": [
+        "getguidance",
+        "request"
+      ]
+    },
+    "subscription": {
+      "display_name": "Azure Subscription",
+      "file_name": "azure-subscription",
+      "short_name": "Subscription",
+      "merge_group": null,
+      "tools": [
+        "list"
+      ]
+    },
+    "azurebackup": {
+      "display_name": "Azure Backup",
+      "file_name": "azure-backup",
+      "short_name": "Backup",
+      "merge_group": null,
+      "tools": [
+        "configure-encryption",
+        "configure-mua",
+        "create",
+        "create",
+        "enable-crr",
+        "find-unprotected",
+        "get",
+        "get",
+        "get",
+        "get",
+        "get",
+        "immutability",
+        "list",
+        "protect",
+        "soft-delete",
+        "status",
+        "undelete",
+        "update",
+        "update"
+      ]
+    },
+    "bicepschema": {
+      "display_name": "Azure Bicep Schema",
+      "file_name": "azure-bicep-schema",
+      "short_name": "Bicep",
+      "merge_group": null,
+      "tools": [
+        "get"
+      ]
+    },
+    "functionapp": {
+      "display_name": "Azure Functions",
+      "file_name": "azure-functions",
+      "short_name": "Functions",
+      "merge_group": "azure-functions",
+      "tools": [
+        "get"
+      ]
+    },
+    "loadtesting": {
+      "display_name": "Azure Load Testing",
+      "file_name": "azure-load-testing",
+      "short_name": "Load Testing",
+      "merge_group": null,
+      "tools": [
+        "create",
+        "create",
+        "createorupdate",
+        "get",
+        "get",
+        "list"
+      ]
+    },
+    "marketplace": {
+      "display_name": "Azure Marketplace",
+      "file_name": "azure-marketplace",
+      "short_name": "Marketplace",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "list"
+      ]
+    },
+    "storagesync": {
+      "display_name": "Azure Storage Sync",
+      "file_name": "azure-storage-sync",
+      "short_name": "Storage Sync",
+      "merge_group": null,
+      "tools": [
+        "changedetection",
+        "create",
+        "create",
+        "create",
+        "create",
+        "delete",
+        "delete",
+        "delete",
+        "delete",
+        "get",
+        "get",
+        "get",
+        "get",
+        "get",
+        "unregister",
+        "update",
+        "update",
+        "update"
+      ]
+    },
+    "appservice": {
+      "display_name": "Azure App Service",
+      "file_name": "azure-app-service",
+      "short_name": "App Service",
+      "merge_group": null,
+      "tools": [
+        "add",
+        "change-state",
+        "diagnose",
+        "get",
+        "get",
+        "get-appsettings",
+        "list",
+        "update-appsettings"
+      ]
+    },
+    "fileshares": {
+      "display_name": "Azure File Shares",
+      "file_name": "azure-fileshares",
+      "short_name": "File Shares",
+      "merge_group": null,
+      "tools": [
+        "check-name-availability",
+        "create",
+        "create",
+        "delete",
+        "delete",
+        "get",
+        "get",
+        "get",
+        "limits",
+        "rec",
+        "update",
+        "update",
+        "update",
+        "usage"
+      ]
+    },
+    "servicebus": {
+      "display_name": "Azure Service Bus",
+      "file_name": "azure-service-bus",
+      "short_name": "Service Bus",
+      "merge_group": null,
+      "tools": [
+        "details",
+        "details",
+        "details"
+      ]
+    },
+    "appconfig": {
+      "display_name": "Azure App Configuration",
+      "file_name": "azure-app-configuration",
+      "short_name": "App Config",
+      "merge_group": null,
+      "tools": [
+        "delete",
+        "get",
+        "list",
+        "set",
+        "set"
+      ]
+    },
+    "eventgrid": {
+      "display_name": "Azure Event Grid",
+      "file_name": "azure-event-grid",
+      "short_name": "Event Grid",
+      "merge_group": null,
+      "tools": [
+        "list",
+        "list",
+        "publish"
+      ]
+    },
+    "eventhubs": {
+      "display_name": "Azure Event Hubs",
+      "file_name": "azure-event-hubs",
+      "short_name": "Event Hubs",
+      "merge_group": null,
+      "tools": [
+        "delete",
+        "delete",
+        "delete",
+        "get",
+        "get",
+        "get",
+        "update",
+        "update",
+        "update"
+      ]
+    },
+    "functions": {
+      "display_name": "Azure Functions",
+      "file_name": "azure-functions-development",
+      "short_name": "Functions",
+      "merge_group": "azure-functions",
+      "tools": [
+        "get",
+        "get",
+        "list"
+      ]
+    },
+    "workbooks": {
+      "display_name": "Azure Workbooks",
+      "file_name": "azure-workbooks",
+      "short_name": "Workbooks",
+      "merge_group": "azure-monitor",
+      "tools": [
+        "create",
+        "delete",
+        "list",
+        "show",
+        "update"
+      ]
+    },
+    "keyvault": {
+      "display_name": "Azure Key Vault",
+      "file_name": "azure-key-vault",
+      "short_name": "Key Vault",
+      "merge_group": null,
+      "tools": [
+        "create",
+        "create",
+        "create",
+        "get",
+        "get",
+        "get",
+        "get",
+        "import"
+      ]
+    },
+    "postgres": {
+      "display_name": "Azure Database for PostgreSQL",
+      "file_name": "azure-database-for-postgresql",
+      "short_name": "PostgreSQL",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "get",
+        "get",
+        "list",
+        "query",
+        "set"
+      ]
+    },
+    "sreagent": {
+      "display_name": "Azure Sreagent",
+      "file_name": "azure-sreagent",
+      "short_name": "Sreagent",
+      "merge_group": null,
+      "tools": [
+        "activate",
+        "apply",
+        "create",
+        "create",
+        "create",
+        "create",
+        "create",
+        "create",
+        "create",
+        "create_kusto",
+        "create_mcp",
+        "deactivate",
+        "delete",
+        "delete",
+        "delete",
+        "delete",
+        "delete",
+        "delete",
+        "delete",
+        "generate",
+        "get",
+        "get",
+        "get",
+        "get",
+        "get",
+        "get",
+        "get",
+        "get",
+        "investigate",
+        "investigate_yolo",
+        "list",
+        "list",
+        "list",
+        "list",
+        "list",
+        "list",
+        "list",
+        "list",
+        "list",
+        "list",
+        "memories_add",
+        "memories_delete",
+        "memories_list",
+        "memories_reindex",
+        "memories_search",
+        "pause",
+        "plan",
+        "plans_create",
+        "plans_list",
+        "resume",
+        "send_message",
+        "setup_pagerduty",
+        "setup_servicenow",
+        "test",
+        "validate"
+      ]
+    },
+    "advisor": {
+      "display_name": "Azure Advisor",
+      "file_name": "azure-advisor",
+      "short_name": "Advisor",
+      "merge_group": null,
+      "tools": [
+        "apply",
+        "list",
+        "list",
+        "summary"
+      ]
+    },
+    "applens": {
+      "display_name": "Azure AppLens",
+      "file_name": "azure-applens",
+      "short_name": "AppLens",
+      "merge_group": null,
+      "tools": [
+        "diagnose"
+      ]
+    },
+    "compute": {
+      "display_name": "Azure Compute",
+      "file_name": "azure-compute",
+      "short_name": "Compute",
+      "merge_group": null,
+      "tools": [
+        "create",
+        "create",
+        "create",
+        "delete",
+        "delete",
+        "delete",
+        "get",
+        "get",
+        "get",
+        "power-state",
+        "update",
+        "update",
+        "update"
+      ]
+    },
+    "datadog": {
+      "display_name": "Azure Datadog",
+      "file_name": "azure-datadog",
+      "short_name": "Datadog",
+      "merge_group": null,
+      "tools": [
+        "list"
+      ]
+    },
+    "foundry": {
+      "display_name": "Microsoft Foundry",
+      "file_name": "microsoft-foundry",
+      "short_name": "Foundry",
+      "merge_group": null,
+      "tools": []
+    },
+    "grafana": {
+      "display_name": "Azure Managed Grafana",
+      "file_name": "azure-managed-grafana",
+      "short_name": "Grafana",
+      "merge_group": null,
+      "tools": [
+        "list"
+      ]
+    },
+    "monitor": {
+      "display_name": "Azure Monitor",
+      "file_name": "azure-monitor",
+      "short_name": "Monitor",
+      "merge_group": "azure-monitor",
+      "tools": [
+        "createorupdate",
+        "definitions",
+        "get",
+        "get",
+        "get-learning-resource",
+        "list",
+        "list",
+        "list",
+        "list",
+        "orchestrator-next",
+        "orchestrator-start",
+        "query",
+        "query",
+        "query",
+        "send-brownfield-analysis",
+        "send-enhancement-select"
+      ]
+    },
+    "pricing": {
+      "display_name": "Azure Pricing",
+      "file_name": "azure-pricing",
+      "short_name": "Pricing",
+      "merge_group": null,
+      "tools": [
+        "get"
+      ]
+    },
+    "signalr": {
+      "display_name": "Azure SignalR Service",
+      "file_name": "azure-signalr-service",
+      "short_name": "SignalR",
+      "merge_group": null,
+      "tools": [
+        "get"
+      ]
+    },
+    "storage": {
+      "display_name": "Azure Storage",
+      "file_name": "azure-storage",
+      "short_name": "Storage",
+      "merge_group": null,
+      "tools": [
+        "create",
+        "create",
+        "get",
+        "get",
+        "get",
+        "list",
+        "upload"
+      ]
+    },
+    "cosmos": {
+      "display_name": "Azure Cosmos DB",
+      "file_name": "azure-cosmos-db",
+      "short_name": "Cosmos DB",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "infer",
+        "list",
+        "list-recent",
+        "query",
+        "text-search",
+        "vector-search"
+      ]
+    },
+    "deploy": {
+      "display_name": "Azure Deploy",
+      "file_name": "azure-deploy",
+      "short_name": "Deploy",
+      "merge_group": null,
+      "tools": [
+        "generate",
+        "get",
+        "get",
+        "get",
+        "get"
+      ]
+    },
+    "policy": {
+      "display_name": "Azure Policy",
+      "file_name": "azure-policy",
+      "short_name": "Policy",
+      "merge_group": null,
+      "tools": [
+        "list"
+      ]
+    },
+    "search": {
+      "display_name": "Azure AI Search",
+      "file_name": "azure-ai-search",
+      "short_name": "AI Search",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "get",
+        "get",
+        "list",
+        "query",
+        "retrieve"
+      ]
+    },
+    "speech": {
+      "display_name": "Azure Speech in Foundry",
+      "file_name": "azure-ai-services-speech",
+      "short_name": "Speech",
+      "merge_group": null,
+      "tools": [
+        "recognize",
+        "synthesize"
+      ]
+    },
+    "group": {
+      "display_name": "Azure Resource Group",
+      "file_name": "azure-resource-group",
+      "short_name": "Resource Group",
+      "merge_group": null,
+      "tools": [
+        "list",
+        "list"
+      ]
+    },
+    "kusto": {
+      "display_name": "Azure Data Explorer",
+      "file_name": "azure-data-explorer",
+      "short_name": "Data Explorer (Kusto)",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "list",
+        "list",
+        "list",
+        "query",
+        "sample",
+        "schema"
+      ]
+    },
+    "mysql": {
+      "display_name": "Azure Database for MySQL",
+      "file_name": "azure-database-for-mysql",
+      "short_name": "MySQL",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "get",
+        "get",
+        "list",
+        "query",
+        "set"
+      ]
+    },
+    "quota": {
+      "display_name": "Azure Quota",
+      "file_name": "azure-quota",
+      "short_name": "Quota",
+      "merge_group": null,
+      "tools": [
+        "check",
+        "list"
+      ]
+    },
+    "redis": {
+      "display_name": "Azure Managed Redis",
+      "file_name": "azure-managed-redis",
+      "short_name": "Redis",
+      "merge_group": null,
+      "tools": [
+        "create",
+        "list"
+      ]
+    },
+    "role": {
+      "display_name": "Azure Role-Based Access Control",
+      "file_name": "azure-role-based-access-control",
+      "short_name": "RBAC",
+      "merge_group": null,
+      "tools": [
+        "list"
+      ]
+    },
+    "acr": {
+      "display_name": "Azure Container Registry",
+      "file_name": "azure-container-registry",
+      "short_name": "ACR",
+      "merge_group": null,
+      "tools": [
+        "list",
+        "list"
+      ]
+    },
+    "aks": {
+      "display_name": "Azure Kubernetes Service",
+      "file_name": "azure-kubernetes-service",
+      "short_name": "AKS",
+      "merge_group": null,
+      "tools": [
+        "get",
+        "get"
+      ]
+    },
+    "get": {
+      "display_name": "Azure Get",
+      "file_name": "azure-get",
+      "short_name": "Get",
+      "merge_group": null,
+      "tools": []
+    },
+    "sql": {
+      "display_name": "Azure SQL Database",
+      "file_name": "azure-sql-database",
+      "short_name": "SQL",
+      "merge_group": null,
+      "tools": [
+        "create",
+        "create",
+        "create",
+        "delete",
+        "delete",
+        "delete",
+        "get",
+        "get",
+        "list",
+        "list",
+        "list",
+        "rename",
+        "update"
+      ]
+    }
+  },
+  "unmatched_tools": []
+}
