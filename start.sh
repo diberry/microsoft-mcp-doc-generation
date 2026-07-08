@@ -32,17 +32,33 @@ EXTRA_ARGS=()
 
 ENV_SOURCE="$SCRIPT_DIR/.env"
 ENV_TARGET="$SCRIPT_DIR/mcp-tools/.env"
+ENV_MISSING=0
+
+ensure_dotnet() {
+    if command -v dotnet >/dev/null 2>&1; then
+        return
+    fi
+
+    echo "[start] ERROR: dotnet was not found in PATH." >&2
+    if [[ "${OS:-}" == "Windows_NT" ]] || [[ "$(uname -s)" =~ (MINGW|MSYS|CYGWIN) ]]; then
+        echo "[start] Windows bash detected. If dotnet is installed, restart your shell after install and verify with: dotnet --info" >&2
+        echo "[start] If dotnet is not installed, install .NET SDK from https://dotnet.microsoft.com/download" >&2
+    fi
+    exit 127
+}
 
 if [[ -f "$ENV_SOURCE" ]]; then
     cp "$ENV_SOURCE" "$ENV_TARGET"
     echo "[start] Copied .env → mcp-tools/.env"
 else
-    echo "[start] ERROR: .env not found at repo root. Create .env with FOUNDRY_API_KEY, FOUNDRY_ENDPOINT, FOUNDRY_MODEL_NAME." >&2
-    exit 1
+    ENV_MISSING=1
+    echo "[start] WARNING: .env not found at repo root. Continuing without env copy for credential-free/metadata-only runs." >&2
+    echo "[start] INFO: Model-backed steps still require FOUNDRY_API_KEY, FOUNDRY_ENDPOINT, and FOUNDRY_MODEL_NAME (or an equivalent provisioned Azure environment)." >&2
 fi
 
 # If first arg starts with -, pass all args through directly to DocGeneration.PipelineRunner
 if [[ $# -gt 0 && "$1" =~ ^- ]]; then
+    ensure_dotnet
     dotnet run --project "$ROOT_DIR/mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "$@"
     exit $?
 fi
@@ -80,8 +96,13 @@ echo "Start: Documentation Generation Orchestrator"
 echo "==================================================================="
 echo ""
 
+ensure_dotnet
 dotnet run --project "$ROOT_DIR/mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" -- "${RUNNER_ARGS[@]}"
 PIPELINE_EXIT=$?
+
+if [[ $PIPELINE_EXIT -ne 0 && $ENV_MISSING -eq 1 ]]; then
+    echo "[start] HINT: This run started without .env. If model-backed steps were included, configure FOUNDRY_* values or provision Azure/AZD before retrying." >&2
+fi
 
 # Post-assembly: merge multi-namespace articles (AD-011)
 # Only runs when tool-family articles exist for merge group members
