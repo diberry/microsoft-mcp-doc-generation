@@ -344,6 +344,16 @@
     "composition": "standalone"
   },
   {
+    "brandName": "Azure Resilience",
+    "mcpServerName": "resilience",
+    "shortName": "Resilience",
+    "fileName": "azure-resilience",
+    "composition": "standalone",
+    "mergeGroup": null,
+    "mergeOrder": null,
+    "mergeRole": null
+  },
+  {
     "brandName": "Azure Resource Health",
     "mcpServerName": "resourcehealth",
     "shortName": "Resource Health",

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text;
 using Shared;
 
 namespace PipelineRunner.Services;
@@ -32,8 +33,9 @@ public sealed class CliMetadataLoader : ICliMetadataLoader
             throw new FileNotFoundException("CLI output metadata file was not found.", cliOutputPath);
         }
 
-        await using var stream = File.OpenRead(cliOutputPath);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var rawJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
+        var sanitizedJson = StripInvalidControlCharacters(rawJson);
+        using var document = JsonDocument.Parse(sanitizedJson);
 
         var rawRoot = document.RootElement.Clone();
         var tools = rawRoot.GetProperty("results")
@@ -101,4 +103,59 @@ public sealed class CliMetadataLoader : ICliMetadataLoader
 
     private static string GetNamespacePath(string outputPath)
         => Path.Combine(NormalizeOutputPath(outputPath), "cli", "cli-namespace.json");
+
+    private static string StripInvalidControlCharacters(string json)
+    {
+        if (string.IsNullOrEmpty(json))
+        {
+            return json;
+        }
+
+        var sb = new StringBuilder(json.Length);
+        var inString = false;
+        var escaping = false;
+
+        foreach (var ch in json)
+        {
+            if (inString)
+            {
+                if (escaping)
+                {
+                    sb.Append(ch);
+                    escaping = false;
+                    continue;
+                }
+
+                if (ch == '\\')
+                {
+                    sb.Append(ch);
+                    escaping = true;
+                    continue;
+                }
+
+                if (ch == '"')
+                {
+                    sb.Append(ch);
+                    inString = false;
+                    continue;
+                }
+
+                if (char.IsControl(ch))
+                {
+                    continue;
+                }
+
+                sb.Append(ch);
+                continue;
+            }
+
+            sb.Append(ch);
+            if (ch == '"')
+            {
+                inString = true;
+            }
+        }
+
+        return sb.ToString();
+    }
 }
