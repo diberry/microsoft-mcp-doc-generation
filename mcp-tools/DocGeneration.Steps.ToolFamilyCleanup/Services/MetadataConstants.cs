@@ -12,7 +12,7 @@ public static class MetadataConstants
 {
     // Publishing metadata
     public const string Author = "diberry";
-    public const string Reviewer = "mbaldwin";
+    public const string Reviewer = "";
     public const string AiUsage = "ai-generated";
     public const string ContentWellValue = "AI-contribution";
     public const string MsCustom = "build-2025";

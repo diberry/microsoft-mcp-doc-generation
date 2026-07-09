@@ -174,7 +174,7 @@ public class FrontmatterPipelineIntegrationTests
 
         var result = stitcher.Stitch(familyContent);
 
-        Assert.Contains("ms.reviewer: mbaldwin", result);
+        Assert.Contains("ms.reviewer:", result);
     }
 
     // ── All enriched fields are inside frontmatter delimiters ───────

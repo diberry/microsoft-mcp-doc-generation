@@ -50,7 +50,7 @@ This document analyzes why `horizontal-article-keyvault.md` (the generated outpu
 ```yaml
 author: diberry
 ms.author: diberry
-ms.reviewer: mbaldwin
+ms.reviewer:
 ms.service: azure-mcp-server      # Not the service identifier
 content_well_notification: 
   - AI-contribution

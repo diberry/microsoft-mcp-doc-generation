@@ -74,7 +74,7 @@ public class FrontmatterEnricher
         // Inject missing fields (using MetadataConstants)
         InjectIfMissing(lines, "author", $"author: {MetadataConstants.Author}");
         InjectIfMissing(lines, "ms.author", $"ms.author: {MetadataConstants.Author}");
-        InjectIfMissing(lines, "ms.reviewer", $"ms.reviewer: {MetadataConstants.Reviewer}");
+        InjectIfMissing(lines, "ms.reviewer", string.IsNullOrEmpty(MetadataConstants.Reviewer) ? "ms.reviewer:" : $"ms.reviewer: {MetadataConstants.Reviewer}");
         InjectIfMissing(lines, "ms.date", $"ms.date: {_clock():MM/dd/yyyy}");
         InjectIfMissing(lines, "ai-usage", $"ai-usage: {MetadataConstants.AiUsage}");
         InjectIfMissing(lines, "ms.custom", $"ms.custom: {MetadataConstants.MsCustom}");
