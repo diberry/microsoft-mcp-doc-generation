@@ -78,10 +78,14 @@ public class FamilyFileStitcher
         // 5a. Post-processing: strip engineering-authored example patterns (#278)
         markdown = EngineeringExampleStripper.Strip(markdown);
 
-        // 6. Post-processing: ensure blank line between annotation link and values (#151)
+        // 6. Post-processing: convert old inline annotation format to 3-row table format
+        // Must run BEFORE AnnotationSpaceFixer to ensure blank line is in place.
+        markdown = AnnotationTableFixer.Fix(markdown);
+
+        // 6a. Post-processing: ensure blank line between annotation link and table/values (#151)
         markdown = AnnotationSpaceFixer.Fix(markdown);
 
-        // 6a. Post-processing: strip trailing pipe from annotation value lines (#281)
+        // 6b. Post-processing: strip trailing pipe from annotation value lines (#281)
         markdown = AnnotationTrailingPipeFixer.Fix(markdown);
 
         // 7. Post-processing: convert future tense to present tense (#145, #215)

@@ -79,7 +79,9 @@ Step 4: Tool Family Assembly (AI + Retry + Validation) ────────�
   │  • H2 headings come from bootstrap `h2-headings/*.json`
   │  • AI generates: frontmatter, intro, related content
   │  • Post-processing: MCP acronym expansion, frontmatter enrichment,
-  │    duplicate example stripping
+  │    duplicate example stripping, annotation table normalization
+  │    (`AnnotationTableFixer` converts any inline annotation lines to
+  │    the 3-row markdown table format deterministically)
   │  • Post-assembly validator checks: tool count, cross-references,
   │    parameter coverage, branding
   │  • Retries up to 2x on validation failure

@@ -162,6 +162,12 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
                 brandingIssues.AddRange(GetBrandingIssues(articleContent));
 
+                var annotationFormatIssues = GetAnnotationFormatIssues(articleContent);
+                foreach (var issue in annotationFormatIssues)
+                {
+                    blockingIssues.Add(issue);
+                }
+
                 var relatedToolsIssues = GetRelatedToolsCompletenessIssues(article.RelatedSectionText, sections, toolFiles);
                 foreach (var issue in relatedToolsIssues)
                 {
@@ -645,6 +651,52 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             .Where(section => section.MarkerCount != 1)
             .Select(section => $"⚠️ {section.ToolKey}: expected 1 annotation marker, found {section.MarkerCount}")
             .ToArray();
+
+    private static readonly Regex InlineAnnotationLineRegex = new(
+        @"(?m)^\s*Destructive\s*:\s*(✅|❌)\s*\|",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex AnnotationLinkRegex = new(
+        @"\[Tool annotation hints\]\(index\.md#tool-annotations-for-azure-mcp-server\):",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex AnnotationTableSeparatorRegex = new(
+        @"\|:-----------:\|:----------:\|:----------:\|:---------:\|:------:\|:--------------:\|",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>
+    /// Returns blocking issues if any annotation block uses the old inline format
+    /// instead of the required 3-row markdown table format.
+    /// Fails if: any line matches "Destructive: ✅|❌ |" (inline values line).
+    /// Fails if: annotation links exist but the table separator "|:-----------:|" is absent.
+    /// </summary>
+    private static IReadOnlyList<string> GetAnnotationFormatIssues(string articleContent)
+    {
+        var issues = new List<string>();
+        var normalized = articleContent.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        // Guard 1: No inline annotation value lines allowed.
+        if (InlineAnnotationLineRegex.IsMatch(normalized))
+        {
+            issues.Add(
+                "Annotation block uses old inline format (\"Destructive: ✅ | ...\"). " +
+                "Annotations must use the 3-row markdown table format with header, " +
+                "centered-alignment separator (|:-----------:|), and values rows.");
+        }
+
+        // Guard 2: Every annotation link must be followed by the table format.
+        var annotationLinkCount = AnnotationLinkRegex.Matches(normalized).Count;
+        var tableSeparatorCount = AnnotationTableSeparatorRegex.Matches(normalized).Count;
+        if (annotationLinkCount > 0 && tableSeparatorCount < annotationLinkCount)
+        {
+            issues.Add(
+                $"Annotation table format incomplete: found {annotationLinkCount} annotation block(s) " +
+                $"but only {tableSeparatorCount} table separator row(s) " +
+                "(|:-----------:|:----------:|...). Each annotation block must have a 3-row table.");
+        }
+
+        return issues;
+    }
 
     private static IReadOnlyList<string> GetBrandingIssues(string articleContent)
     {

@@ -1,4 +1,4 @@
----
+﻿---
 
 title: Azure MCP Server tools for Azure AppLens
 description: Use Azure MCP Server tools to manage diagnostics and troubleshooting for Azure App Service resources with natural language prompts from your IDE.
@@ -46,7 +46,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Related content
 
