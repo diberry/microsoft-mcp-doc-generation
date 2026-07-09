@@ -225,7 +225,7 @@ if (-not $UseDefaultCredential) {
     Write-Host "  API Key: ****$(if ($apiKey.Length -gt 4) { $apiKey.Substring($apiKey.Length - 4) } else { '????' })" -ForegroundColor Green
 }
 else {
-    Write-Host "  ✅ Using DefaultAzureCredential (managed identity / az login). FOUNDRY_API_KEY is omitted from .env. Ensure the signed-in identity has the 'Cognitive Services OpenAI User' role on the Foundry endpoint." -ForegroundColor Green
+    Write-Host "  ✅ Using DefaultAzureCredential (managed identity / az login) — keyless is the intended, fully-supported auth path for this pipeline. FOUNDRY_API_KEY is deliberately omitted from .env; the whole pipeline (bootstrap probe, Step 4 tool-family reducer, and Step 6 horizontal articles included) resolves keyless config from .env. Ensure the signed-in identity has the 'Cognitive Services OpenAI User' role on the Foundry endpoint." -ForegroundColor Green
 }
 
 # ── Build .env content ───────────────────────────────────────────────────────────

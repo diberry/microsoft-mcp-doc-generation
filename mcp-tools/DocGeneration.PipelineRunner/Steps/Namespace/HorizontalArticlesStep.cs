@@ -198,7 +198,7 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
         }
 
         var generator = new HorizontalArticleGeneratorClass(
-            GenerativeAIOptions.LoadFromEnvironmentOrDotEnv(),
+            ResolveGenerativeAIOptions(context.McpToolsRoot),
             useTextTransformation: transformationEngine is not null,
             generateAllArticles: false,
             transformationEngine,
@@ -206,6 +206,14 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             mcpToolsRoot: context.McpToolsRoot);
         return generator.GenerateArticleMarkdownAsync;
     }
+
+    /// <summary>
+    /// Resolves the generative AI options for horizontal article generation, anchored to the
+    /// mcp-tools root so keyless (DefaultAzureCredential) configuration in <c>.env</c> is loaded
+    /// regardless of the current working directory. Keyless is the intended, supported design.
+    /// </summary>
+    internal static GenerativeAIOptions ResolveGenerativeAIOptions(string mcpToolsRoot)
+        => GenerativeAIOptions.LoadFromEnvironmentOrDotEnv(mcpToolsRoot);
 
     private static ArtifactFailure CreateHorizontalFailure(PipelineContext context, string currentNamespace, IEnumerable<string> details)
     {
