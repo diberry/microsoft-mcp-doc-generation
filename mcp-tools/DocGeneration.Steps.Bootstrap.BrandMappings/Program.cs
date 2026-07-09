@@ -105,10 +105,7 @@ internal class Program
             Console.WriteLine();
 
             var aiOptions = GenerativeAIOptions.LoadFromEnvironmentOrDotEnv();
-            var missingVars = new List<string>();
-            if (string.IsNullOrEmpty(aiOptions.ApiKey)) missingVars.Add("FOUNDRY_API_KEY");
-            if (string.IsNullOrEmpty(aiOptions.Endpoint)) missingVars.Add("FOUNDRY_ENDPOINT");
-            if (string.IsNullOrEmpty(aiOptions.Deployment)) missingVars.Add("FOUNDRY_MODEL_NAME");
+            var missingVars = ValidateAIOptions(aiOptions);
 
             if (missingVars.Any())
             {
@@ -217,6 +214,17 @@ internal class Program
             Console.Error.WriteLine(ex.StackTrace);
             return 1;
         }
+    }
+
+    internal static List<string> ValidateAIOptions(GenerativeAIOptions options)
+    {
+        var missingVars = new List<string>();
+        // Keyless (DefaultAzureCredential) is the intended, supported auth path: the API key is
+        // only required when default credential is not enabled.
+        if (!options.UseDefaultCredential && string.IsNullOrEmpty(options.ApiKey)) missingVars.Add("FOUNDRY_API_KEY");
+        if (string.IsNullOrEmpty(options.Endpoint)) missingVars.Add("FOUNDRY_ENDPOINT");
+        if (string.IsNullOrEmpty(options.Deployment)) missingVars.Add("FOUNDRY_MODEL_NAME");
+        return missingVars;
     }
 
     private static (string cliOutputPath, string brandMappingPath, string outputPath) ParseArguments(string[] args)

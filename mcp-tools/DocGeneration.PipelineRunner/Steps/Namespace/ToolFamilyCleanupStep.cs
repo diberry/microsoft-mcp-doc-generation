@@ -677,7 +677,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             warnings.Add($"CLI version file not found at '{cliVersionPath}'. Tool-family cleanup will use 'unknown'.");
         }
 
-        var cleanupGenerator = new CleanupGenerator(new GenerativeAIOptions(), new CleanupConfiguration());
+        var cleanupGenerator = new CleanupGenerator(ResolveGenerativeAIOptions(context.McpToolsRoot), new CleanupConfiguration());
         return async (structure, ct) =>
         {
             ct.ThrowIfCancellationRequested();
@@ -685,6 +685,16 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             return new FamilyCleanupArtifacts(artifacts.Metadata, artifacts.RelatedContent, artifacts.FinalContent);
         };
     }
+
+    /// <summary>
+    /// Resolves the generative AI options for the tool-family reducer, anchored to the
+    /// mcp-tools root so keyless (DefaultAzureCredential) configuration in <c>.env</c> is
+    /// loaded regardless of the current working directory. The reducer runs with an isolated
+    /// working directory, so an empty <see cref="GenerativeAIOptions"/> would leave the endpoint
+    /// and deployment unset and break the keyless path. Keyless is the intended, supported design.
+    /// </summary>
+    internal static GenerativeAIOptions ResolveGenerativeAIOptions(string mcpToolsRoot)
+        => GenerativeAIOptions.LoadFromEnvironmentOrDotEnv(mcpToolsRoot);
 
     private static void WriteFamilyArtifacts(string outputPath, string outputFileName, FamilyCleanupArtifacts artifacts)
     {
