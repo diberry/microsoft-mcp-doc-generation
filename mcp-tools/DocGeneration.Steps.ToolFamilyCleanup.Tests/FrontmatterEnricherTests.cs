@@ -42,7 +42,7 @@ tool_count: 5
         Assert.Contains("content_well_notification:", result);
         Assert.Contains("  - AI-contribution", result);
         Assert.Contains("ms.custom: build-2025", result);
-        Assert.Contains("ms.reviewer: mbaldwin", result);
+        Assert.Contains("ms.reviewer:", result);
     }
 
     [Fact]
@@ -163,7 +163,7 @@ tool_count: 5
         var enricher = new FrontmatterEnricher(FixedClock);
         var result = enricher.Enrich(markdown);
 
-        Assert.Contains("ms.reviewer: mbaldwin", result);
+        Assert.Contains("ms.reviewer:", result);
     }
 
     [Fact]
@@ -171,7 +171,7 @@ tool_count: 5
     {
         var markdown = @"---
 title: Azure MCP Server tools for Key Vault
-ms.reviewer: mbaldwin
+ms.reviewer:
 ms.service: azure-mcp-server
 ---
 
@@ -180,7 +180,7 @@ ms.service: azure-mcp-server
         var enricher = new FrontmatterEnricher(FixedClock);
         var result = enricher.Enrich(markdown);
 
-        var count = CountOccurrences(result, "ms.reviewer: mbaldwin");
+        var count = CountOccurrences(result, "ms.reviewer:");
         Assert.Equal(1, count);
     }
 
@@ -306,7 +306,8 @@ ms.service: azure-mcp-server
         // Verify all constants from MetadataConstants are used
         Assert.Contains($"author: {MetadataConstants.Author}", result);
         Assert.Contains($"ms.author: {MetadataConstants.Author}", result);
-        Assert.Contains($"ms.reviewer: {MetadataConstants.Reviewer}", result);
+        Assert.Contains("ms.reviewer:", result.Split('\n').Select(line => line.TrimEnd('\r')));
+        Assert.DoesNotContain("ms.reviewer: ", result);
         Assert.Contains($"ai-usage: {MetadataConstants.AiUsage}", result);
         Assert.Contains(MetadataConstants.ContentWellValue, result);
         Assert.Contains($"ms.custom: {MetadataConstants.MsCustom}", result);

@@ -22,7 +22,7 @@ public class MetadataConstantsTests
     [Fact]
     public void Reviewer_IsCorrect()
     {
-        Assert.Equal("mbaldwin", MetadataConstants.Reviewer);
+        Assert.Equal("", MetadataConstants.Reviewer);
     }
 
     [Fact]
