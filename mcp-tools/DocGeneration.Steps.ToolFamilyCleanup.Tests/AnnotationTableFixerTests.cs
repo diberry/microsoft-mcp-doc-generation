@@ -76,6 +76,37 @@ public class AnnotationTableFixerTests
     }
 
     [Fact]
+    public void Fix_InlineFormat_PartialFields_LeftUnconverted()
+    {
+        // Only 2 fields — a partial inline annotation must NOT be silently defaulted to ❌.
+        // The fixer must leave the line unconverted so the post-assembly validator blocks it.
+        var partial = "Destructive: ❌ | Idempotent: ✅";
+        var input = MakeInlineDoc(partial);
+
+        var result = AnnotationTableFixer.Fix(input);
+
+        // Table separator must NOT appear (no silent conversion from partial input)
+        Assert.DoesNotContain("|:-----------:|", result);
+        // Original partial inline text must be preserved in output
+        Assert.Contains(partial, result);
+    }
+
+    [Fact]
+    public void Fix_InlineFormat_AllSixFields_StillConverts()
+    {
+        // Guard against over-correction: a complete 6-field inline line must still convert
+        // after the ST1 fail-safe change. Ensures the new null-return path is never triggered
+        // for valid full-field input.
+        var inline = "Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ✅";
+        var input = MakeInlineDoc(inline);
+
+        var result = AnnotationTableFixer.Fix(input);
+
+        Assert.Contains(AnnotationTableFixer.SeparatorRow, result);
+        Assert.DoesNotMatch(@"(?m)^\s*Destructive:\s*(✅|❌)", result);
+    }
+
+    [Fact]
     public void Fix_InlineFormat_ProducesExactly3TableRows()
     {
         var inline = "Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌";
@@ -234,6 +265,7 @@ public class AnnotationTableFixerTests
     {
         var rows = AnnotationTableFixer.ConvertInlineToTable(inlineLine);
 
+        Assert.NotNull(rows); // full 6-field input must always produce a table
         Assert.Equal(3, rows.Length);
         Assert.Equal(AnnotationTableFixer.HeaderRow, rows[0]);
         Assert.Equal(AnnotationTableFixer.SeparatorRow, rows[1]);

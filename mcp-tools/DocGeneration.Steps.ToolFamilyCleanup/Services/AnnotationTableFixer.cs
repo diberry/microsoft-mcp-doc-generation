@@ -83,14 +83,27 @@ public static class AnnotationTableFixer
 
                     if (InlineAnnotationRegex.IsMatch(nextLine))
                     {
-                        // Convert inline → table.
-                        // Emit exactly one blank line (AnnotationSpaceFixer will enforce it anyway).
-                        result.Add("");
-                        foreach (var row in ConvertInlineToTable(nextLine.Trim()))
+                        // Fail-safe: only convert when ALL 6 fields are present and valid.
+                        // If incomplete, restore blanks and leave the inline line unchanged so
+                        // the post-assembly validator can catch and block the bad annotation.
+                        var tableRows = ConvertInlineToTable(nextLine.Trim());
+                        if (tableRows != null)
                         {
-                            result.Add(row);
+                            // Convert inline → table.
+                            // Emit exactly one blank line (AnnotationSpaceFixer will enforce it anyway).
+                            result.Add("");
+                            foreach (var row in tableRows)
+                            {
+                                result.Add(row);
+                            }
+                            i++; // consume the inline line
                         }
-                        i++; // consume the inline line
+                        else
+                        {
+                            // Incomplete inline annotation — leave it unconverted.
+                            result.AddRange(blanks);
+                            // Do NOT advance i; outer loop emits the inline line as-is.
+                        }
                     }
                     else if (TableHeaderRegex.IsMatch(nextLine))
                     {
@@ -121,12 +134,19 @@ public static class AnnotationTableFixer
 
     /// <summary>
     /// Converts an inline annotation line to the 3-row markdown table.
-    /// Returns exactly 3 strings: header row, separator row, values row.
+    /// Returns exactly 3 strings (header, separator, values) when all 6 fields are present
+    /// with valid ✅/❌ values, or <see langword="null"/> when the annotation is incomplete.
+    /// Returning null is the fail-safe: callers must leave the line unconverted so the
+    /// post-assembly validator can detect and block the partial annotation — no silent ❌ defaulting.
     /// </summary>
-    internal static string[] ConvertInlineToTable(string inlineLine)
+    internal static string[]? ConvertInlineToTable(string inlineLine)
     {
         var values = ParseInlineAnnotation(inlineLine);
-        var cells = FieldNames.Select(f => values.TryGetValue(f, out var v) ? v : "❌");
+        // Conversion requires ALL 6 fields. If fewer are present, signal "cannot convert"
+        // so the caller passes the line through unchanged and the validator blocks it.
+        if (values.Count < FieldNames.Length)
+            return null;
+        var cells = FieldNames.Select(f => values[f]);
         var valueRow = "| " + string.Join(" | ", cells) + " |";
         return [HeaderRow, SeparatorRow, valueRow];
     }

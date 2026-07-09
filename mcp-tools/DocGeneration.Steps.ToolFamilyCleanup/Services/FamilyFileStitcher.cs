@@ -79,7 +79,12 @@ public class FamilyFileStitcher
         markdown = EngineeringExampleStripper.Strip(markdown);
 
         // 6. Post-processing: convert old inline annotation format to 3-row table format
-        // Must run BEFORE AnnotationSpaceFixer to ensure blank line is in place.
+        // AnnotationTableFixer MUST run before AnnotationSpaceFixer (step 6a).
+        // Its position after EngineeringExampleStripper (step 5a) is immaterial because
+        // the stripper only targets "Example:" / "Example prompt:" / "### Examples" blocks
+        // and does NOT touch annotation blocks (Destructive/Idempotent/… lines or tables).
+        // VerifyOnlyProcessor omits EngineeringExampleStripper entirely; since the stripper
+        // has no effect on annotations, both assembly paths are equivalent for annotation processing.
         markdown = AnnotationTableFixer.Fix(markdown);
 
         // 6a. Post-processing: ensure blank line between annotation link and table/values (#151)

@@ -667,16 +667,38 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     /// <summary>
     /// Returns blocking issues if any annotation block uses the old inline format
     /// instead of the required 3-row markdown table format.
-    /// Fails if: any line matches "Destructive: ✅|❌ |" (inline values line).
+    /// Fails if: any line immediately after an annotation-hints link matches the old inline format.
     /// Fails if: annotation links exist but the table separator "|:-----------:|" is absent.
+    /// Guard 1 is scoped to annotation block context (lines following the annotation-hints link)
+    /// to avoid false positives from prose examples of the old format embedded elsewhere in the
+    /// article. Generated tool-family content does not embed old-format examples in prose, so this
+    /// scoping is low-risk and defensive only.
     /// </summary>
     private static IReadOnlyList<string> GetAnnotationFormatIssues(string articleContent)
     {
         var issues = new List<string>();
         var normalized = articleContent.Replace("\r\n", "\n", StringComparison.Ordinal);
 
-        // Guard 1: No inline annotation value lines allowed.
-        if (InlineAnnotationLineRegex.IsMatch(normalized))
+        // Guard 1: No inline annotation value lines allowed in annotation blocks.
+        // Scoped to lines that follow an annotation-hints link line to avoid flagging
+        // prose examples of the old format that may appear elsewhere in the document.
+        var checkLines = normalized.Split('\n');
+        bool foundInlineInAnnotationBlock = false;
+        for (int lineIdx = 0; lineIdx < checkLines.Length && !foundInlineInAnnotationBlock; lineIdx++)
+        {
+            if (!AnnotationLinkRegex.IsMatch(checkLines[lineIdx]))
+                continue;
+            // Scan the next few lines (up to 4) — the inline/table content comes immediately after.
+            for (int j = lineIdx + 1; j < checkLines.Length && j <= lineIdx + 4; j++)
+            {
+                if (string.IsNullOrWhiteSpace(checkLines[j]))
+                    continue;
+                if (InlineAnnotationLineRegex.IsMatch(checkLines[j]))
+                    foundInlineInAnnotationBlock = true;
+                break; // First non-blank line after the link is the format indicator
+            }
+        }
+        if (foundInlineInAnnotationBlock)
         {
             issues.Add(
                 "Annotation block uses old inline format (\"Destructive: ✅ | ...\"). " +
