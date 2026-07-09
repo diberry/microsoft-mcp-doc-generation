@@ -194,10 +194,12 @@ internal class Program
         return null;
     }
 
-    private static List<string> ValidateAIOptions(GenerativeAIOptions options)
+    internal static List<string> ValidateAIOptions(GenerativeAIOptions options)
     {
         var missing = new List<string>();
-        if (string.IsNullOrEmpty(options.ApiKey)) missing.Add("FOUNDRY_API_KEY");
+        // Keyless (DefaultAzureCredential) is the intended, supported auth path: the API key is
+        // only required when default credential is not enabled.
+        if (!options.UseDefaultCredential && string.IsNullOrEmpty(options.ApiKey)) missing.Add("FOUNDRY_API_KEY");
         if (string.IsNullOrEmpty(options.Endpoint)) missing.Add("FOUNDRY_ENDPOINT");
         if (string.IsNullOrEmpty(options.Deployment)) missing.Add("TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME");
         return missing;
