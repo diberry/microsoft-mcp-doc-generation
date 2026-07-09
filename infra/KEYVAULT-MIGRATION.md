@@ -6,6 +6,8 @@
 The infrastructure no longer outputs FOUNDRY_API_KEY as a plain-text Bicep output.
 The API key is now stored in Azure Key Vault. Applications retrieve it via DefaultAzureCredential.
 
+The pipeline bootstrap AI probe (`AiCapabilityProbe`) honors `FOUNDRY_USE_DEFAULT_CREDENTIAL`: when it is truthy, only `FOUNDRY_ENDPOINT` and `FOUNDRY_MODEL_NAME` are required and `FOUNDRY_API_KEY` may be omitted from `.env`.
+
 ### How to migrate
 1. No code changes needed if you use DefaultAzureCredential.
 2. New env vars from azd up: FOUNDRY_USE_DEFAULT_CREDENTIAL=true, KEYVAULT_URI, KEYVAULT_SECRET_NAME
