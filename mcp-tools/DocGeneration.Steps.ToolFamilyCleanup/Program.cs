@@ -201,7 +201,7 @@ internal class Program
         // only required when default credential is not enabled.
         if (!options.UseDefaultCredential && string.IsNullOrEmpty(options.ApiKey)) missing.Add("FOUNDRY_API_KEY");
         if (string.IsNullOrEmpty(options.Endpoint)) missing.Add("FOUNDRY_ENDPOINT");
-        if (string.IsNullOrEmpty(options.Deployment)) missing.Add("TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME");
+        if (string.IsNullOrEmpty(options.Deployment)) missing.Add("FOUNDRY_MODEL_NAME");
         return missing;
     }
 
@@ -236,7 +236,7 @@ internal class Program
         Console.WriteLine("Environment variables (or .env file):");
         Console.WriteLine("  FOUNDRY_API_KEY            Azure OpenAI API key (not needed for --verify-only)");
         Console.WriteLine("  FOUNDRY_ENDPOINT           Azure OpenAI endpoint URL (not needed for --verify-only)");
-        Console.WriteLine("  TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME         Azure OpenAI deployment/model name (not needed for --verify-only)");
+        Console.WriteLine("  FOUNDRY_MODEL_NAME         Azure OpenAI deployment/model name (not needed for --verify-only)");
         Console.WriteLine();
         Console.WriteLine("Examples:");
         Console.WriteLine("  ToolFamilyCleanup                    # Single-phase with defaults");

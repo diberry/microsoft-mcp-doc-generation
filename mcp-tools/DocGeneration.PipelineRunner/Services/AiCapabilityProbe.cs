@@ -1,87 +1,42 @@
 namespace PipelineRunner.Services;
 
+using GenerativeAI;
+
 public sealed class AiCapabilityProbe : IAiCapabilityProbe
 {
     private const string ApiKey = "FOUNDRY_API_KEY";
     private const string Endpoint = "FOUNDRY_ENDPOINT";
     private const string ModelName = "FOUNDRY_MODEL_NAME";
-    private const string UseDefaultCredential = "FOUNDRY_USE_DEFAULT_CREDENTIAL";
 
-    // Keys read from the process environment so that either auth mode can be detected.
-    private static readonly string[] KnownKeys =
-    [
-        ApiKey,
-        Endpoint,
-        ModelName,
-        UseDefaultCredential,
-    ];
-
-    public async ValueTask<AiCapabilityResult> ProbeAsync(string mcpToolsRoot, CancellationToken cancellationToken)
+    public ValueTask<AiCapabilityResult> ProbeAsync(string mcpToolsRoot, CancellationToken cancellationToken)
     {
-        var envFilePath = Path.Combine(mcpToolsRoot, ".env");
-        var envValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var key in KnownKeys)
-        {
-            var envValue = Environment.GetEnvironmentVariable(key);
-            if (!string.IsNullOrWhiteSpace(envValue))
-            {
-                envValues[key] = envValue;
-            }
-        }
-
-        if (File.Exists(envFilePath))
-        {
-            var lines = await File.ReadAllLinesAsync(envFilePath, cancellationToken);
-            foreach (var rawLine in lines)
-            {
-                var line = rawLine.Trim();
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
-                {
-                    continue;
-                }
-
-                var separatorIndex = line.IndexOf('=');
-                if (separatorIndex <= 0)
-                {
-                    continue;
-                }
-
-                var key = line[..separatorIndex].Trim();
-                var value = line[(separatorIndex + 1)..].Trim().Trim('"');
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    envValues[key] = value;
-                }
-            }
-        }
-
-        var useDefaultCredential = ParseBoolean(
-            envValues.TryGetValue(UseDefaultCredential, out var flag) ? flag : null);
+        // Delegate .env parsing and process-env-vs-.env precedence to the shared loader so the
+        // probe stays byte-for-byte consistent with the runtime AI client
+        // (GenerativeAIOptions/GenerativeAIClient). The loader strips both single and double
+        // quotes and treats the process environment as authoritative. Previously the probe
+        // duplicated a simpler parser that stripped only double quotes and let .env override
+        // process env, which disagreed with the loader for single-quoted values and for
+        // conflicting variables.
+        var options = GenerativeAIOptions.LoadFromEnvironmentOrDotEnv(mcpToolsRoot);
 
         // When default-credential auth is enabled the API key is optional; only the endpoint and
-        // model name are required. Otherwise the API key remains mandatory. Mirrors the runtime
-        // AI client (GenerativeAIOptions/GenerativeAIClient) so the probe never blocks a valid
-        // default-credential configuration.
-        var requiredKeys = useDefaultCredential
-            ? new[] { Endpoint, ModelName }
-            : new[] { ApiKey, Endpoint, ModelName };
-
-        var missing = requiredKeys.Where(key => !envValues.ContainsKey(key)).ToArray();
-        return new AiCapabilityResult(missing.Length == 0, missing);
-    }
-
-    // Mirrors ParseBoolean in GenerativeAIOptions: truthy = "1"/"true"/"yes"/"on" (case-insensitive).
-    private static bool ParseBoolean(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
+        // model name are required. Otherwise the API key remains mandatory.
+        var missing = new List<string>();
+        if (!options.UseDefaultCredential && string.IsNullOrWhiteSpace(options.ApiKey))
         {
-            return false;
+            missing.Add(ApiKey);
         }
 
-        return value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
-               value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-               value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-               value.Equals("on", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(options.Endpoint))
+        {
+            missing.Add(Endpoint);
+        }
+
+        if (string.IsNullOrWhiteSpace(options.Deployment))
+        {
+            missing.Add(ModelName);
+        }
+
+        return ValueTask.FromResult(new AiCapabilityResult(missing.Count == 0, missing));
     }
 }

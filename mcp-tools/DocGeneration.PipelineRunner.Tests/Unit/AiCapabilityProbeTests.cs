@@ -1,4 +1,5 @@
 using PipelineRunner.Services;
+using GenerativeAI;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -97,6 +98,50 @@ public sealed class AiCapabilityProbeTests
 
         Assert.False(result.IsConfigured);
         Assert.Contains("FOUNDRY_API_KEY", result.MissingKeys);
+    }
+
+    [Fact]
+    public async Task ProbeAsync_SingleQuotedDefaultCredentialFlag_IsConfigured()
+    {
+        // The shared loader (GenerativeAIOptions.ParseDotEnv) strips BOTH single and double quotes.
+        // The probe must honor a single-quoted flag value identically; otherwise a keyless config
+        // written with single quotes (FOUNDRY_USE_DEFAULT_CREDENTIAL='true') would be misread as
+        // unconfigured and the API key would be wrongly required.
+        using var env = new TempEnvFile(
+            "FOUNDRY_USE_DEFAULT_CREDENTIAL='true'",
+            "FOUNDRY_ENDPOINT='https://speech-foundry.openai.azure.com/'",
+            "FOUNDRY_MODEL_NAME='gpt-4o'");
+
+        var result = await Probe(env);
+
+        Assert.True(result.IsConfigured);
+        Assert.Empty(result.MissingKeys);
+    }
+
+    [Fact]
+    public async Task ProbeAsync_ProcessEnvConflictsWithDotEnv_ResolvesSameAsSharedLoader()
+    {
+        // Process env enables keyless; .env disables it. The probe must resolve this the SAME way
+        // as the shared runtime loader (GenerativeAIOptions), which treats the process environment
+        // as authoritative. Previously the probe let .env override process env, disagreeing with
+        // the loader for conflicting variables.
+        using var env = new TempEnvFile(
+            "FOUNDRY_USE_DEFAULT_CREDENTIAL=false",
+            "FOUNDRY_ENDPOINT=https://monitor-foundry.openai.azure.com/",
+            "FOUNDRY_MODEL_NAME=gpt-4o");
+        Environment.SetEnvironmentVariable("FOUNDRY_USE_DEFAULT_CREDENTIAL", "true");
+
+        var probeResult = await Probe(env);
+
+        var loader = GenerativeAIOptions.LoadFromEnvironmentOrDotEnv(env.McpToolsRoot);
+        var loaderConfigured = loader.UseDefaultCredential
+            ? !string.IsNullOrWhiteSpace(loader.Endpoint) && !string.IsNullOrWhiteSpace(loader.Deployment)
+            : !string.IsNullOrWhiteSpace(loader.ApiKey)
+                && !string.IsNullOrWhiteSpace(loader.Endpoint)
+                && !string.IsNullOrWhiteSpace(loader.Deployment);
+
+        Assert.Equal(loaderConfigured, probeResult.IsConfigured);
+        Assert.True(probeResult.IsConfigured);
     }
 
     private static async Task<AiCapabilityResult> Probe(TempEnvFile env)

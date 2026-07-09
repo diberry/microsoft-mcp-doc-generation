@@ -7,6 +7,9 @@
     <RootNamespace>DocGeneration.Steps.Bootstrap.BrandMappings</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="DocGeneration.Steps.Bootstrap.BrandMappings.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\shared\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
     <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
   </ItemGroup>
