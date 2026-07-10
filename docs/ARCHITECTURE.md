@@ -85,6 +85,10 @@ Step 4: Tool Family Assembly (AI + Retry + Validation) ────────�
   │  • Post-assembly validator checks: tool count, cross-references,
   │    parameter coverage, branding
   │  • Retries up to 2x on validation failure
+  │  • CLI-variant emission (`CliVariantWriter`): always writes TWO
+  │    per-namespace files — canonical `tool-family/{namespace}.md`
+  │    (plain MCP, no CLI tabs) and `tool-family/{namespace}-cli.md`
+  │    (CLI tabs when available, else an exact copy of the canonical)
   │  Runs in isolated temp workspace for parallel safety
   │
   ▼
@@ -113,7 +117,8 @@ Step 7: Article Health Validation (non-blocking) ──────────�
   ▼
 Final Output ──────────────────────────────────────────────────────
   generated-{namespace}/
-  ├── tool-family/{namespace}.md         ← Primary deliverable
+  ├── tool-family/{namespace}.md         ← Primary deliverable (plain, no CLI tabs)
+  ├── tool-family/{namespace}-cli.md     ← CLI-tab variant (always emitted)
   ├── horizontal-articles/{namespace}.md ← Overview article
   ├── annotations/*.md                   ← Include files
   ├── parameters/*.md                    ← Include files
@@ -209,6 +214,28 @@ After Step 4 generates a tool-family article, `ToolFamilyPostAssemblyValidator` 
 - **Branding consistency** — no "CosmosDB", "this command", etc.
 
 If validation fails, Step 4 retries (up to 2 attempts) since AI output is non-deterministic.
+
+### CLI-Tab Variant Emission (Step 4)
+
+After a tool-family article is assembled and validated, Step 4 always emits **two**
+per-namespace files via `CliVariantWriter`:
+
+- **`tool-family/{namespace}.md`** — the canonical article, plain MCP content with **no**
+  CLI tabs. This file is never modified by the CLI-tab step.
+- **`tool-family/{namespace}-cli.md`** — the CLI-tab variant. When CLI tabs are enabled for
+  the namespace (`cli-tab-config.json`) and CLI content is available, `Shared.CliTabWrapper`
+  injects `# [Azure CLI]`/`# [Azure MCP]` tabs keyed off the `<!-- @mcpcli {command} -->`
+  markers. When CLI tabs are disabled or no CLI data exists, the variant is written as an
+  **exact copy** of the canonical article — guaranteeing exactly two files per namespace.
+
+Both the in-process (reducer) and subprocess-fallback generation paths route through the same
+`ApplyCliTabWrappingAsync` → `CliVariantWriter.WriteVariantsAsync` logic, so the two-file
+guarantee holds regardless of path. CLI-variant write failures are non-fatal (added as
+warnings), so they never fail the pipeline.
+
+> **Known gap (follow-up):** the multi-namespace merge (`merge-namespaces.sh` /
+> `NamespaceMerger`) currently merges only the canonical `{name}.md`; the `-cli.md` variants
+> are not merged for merge-group namespaces.
 
 ### Deterministic Post-Processing
 
