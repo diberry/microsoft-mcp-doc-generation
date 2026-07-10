@@ -42,7 +42,7 @@ internal class Program
             }
 
             var cliJson = await File.ReadAllTextAsync(cliOutputPath);
-            var sanitizedCliJson = StripInvalidControlCharacters(cliJson);
+            var sanitizedCliJson = JsonControlCharacterSanitizer.StripInvalidControlCharacters(cliJson);
             var cliOutput = JsonSerializer.Deserialize<CliOutput>(sanitizedCliJson);
             if (cliOutput?.Results == null || cliOutput.Results.Count == 0)
             {
@@ -380,61 +380,6 @@ internal class Program
 
         await File.WriteAllTextAsync(outputPath, json, Encoding.UTF8);
         Console.WriteLine($"Suggestions saved to: {Path.GetFullPath(outputPath)}");
-    }
-
-    private static string StripInvalidControlCharacters(string json)
-    {
-        if (string.IsNullOrEmpty(json))
-        {
-            return json;
-        }
-
-        var sb = new StringBuilder(json.Length);
-        var inString = false;
-        var escaping = false;
-
-        foreach (var ch in json)
-        {
-            if (inString)
-            {
-                if (escaping)
-                {
-                    sb.Append(ch);
-                    escaping = false;
-                    continue;
-                }
-
-                if (ch == '\\')
-                {
-                    sb.Append(ch);
-                    escaping = true;
-                    continue;
-                }
-
-                if (ch == '"')
-                {
-                    sb.Append(ch);
-                    inString = false;
-                    continue;
-                }
-
-                if (char.IsControl(ch))
-                {
-                    continue;
-                }
-
-                sb.Append(ch);
-                continue;
-            }
-
-            sb.Append(ch);
-            if (ch == '"')
-            {
-                inString = true;
-            }
-        }
-
-        return sb.ToString();
     }
 }
 

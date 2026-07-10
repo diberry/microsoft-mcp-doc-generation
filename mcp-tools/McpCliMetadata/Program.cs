@@ -1,6 +1,5 @@
 using DocGeneration.McpCliMetadata;
 using System.Text.Json;
-using System.Text;
 using PipelineRunner.Services;
 using Shared;
 
@@ -59,7 +58,7 @@ try
         {
             // Parse CLI output JSON to extract tools. Some CLI builds can emit
             // stray control chars in string fields; strip them before parsing.
-            var sanitizedToolsJson = StripInvalidControlCharacters(toolsJson);
+            var sanitizedToolsJson = JsonControlCharacterSanitizer.StripInvalidControlCharacters(toolsJson);
             var jsonDoc = JsonDocument.Parse(sanitizedToolsJson);
             var results = jsonDoc.RootElement.GetProperty("results");
             var tools = new List<CliTool>();
@@ -124,57 +123,3 @@ static string FindMcpToolsRoot(string startPath)
     return Path.GetFullPath(Path.Combine(startPath, "..", "..", "mcp-tools"));
 }
 
-static string StripInvalidControlCharacters(string json)
-{
-    if (string.IsNullOrEmpty(json))
-    {
-        return json;
-    }
-
-    var sb = new StringBuilder(json.Length);
-    var inString = false;
-    var escaping = false;
-
-    foreach (var ch in json)
-    {
-        if (inString)
-        {
-            if (escaping)
-            {
-                sb.Append(ch);
-                escaping = false;
-                continue;
-            }
-
-            if (ch == '\\')
-            {
-                sb.Append(ch);
-                escaping = true;
-                continue;
-            }
-
-            if (ch == '"')
-            {
-                sb.Append(ch);
-                inString = false;
-                continue;
-            }
-
-            if (char.IsControl(ch))
-            {
-                continue;
-            }
-
-            sb.Append(ch);
-            continue;
-        }
-
-        sb.Append(ch);
-        if (ch == '"')
-        {
-            inString = true;
-        }
-    }
-
-    return sb.ToString();
-}

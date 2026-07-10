@@ -440,7 +440,7 @@ microsoft-mcp-doc-generation/
 ├── shared/
 │   ├── DocGeneration.Core.Tracing/   # Pipeline observability (trace AI + steps)
 │   ├── DocGeneration.Core.GenerativeAI/ # Shared AI client
-│   ├── DocGeneration.Core.Shared/    # Shared utilities
+│   ├── DocGeneration.Core.Shared/    # Shared utilities (incl. JsonControlCharacterSanitizer — the single sanitizer all CLI-JSON parse sites use to strip stray control chars like 0x1A before parsing)
 │   └── shared.slnx                   # Shared libraries solution
 ├── skills-generation/                # Skills documentation pipeline
 ├── docs/                             # Documentation

@@ -51,7 +51,8 @@ public static class CliJsonMapper
     {
         try
         {
-            using var doc = JsonDocument.Parse(json);
+            var sanitized = JsonControlCharacterSanitizer.StripInvalidControlCharacters(json);
+            using var doc = JsonDocument.Parse(sanitized);
             // Clone so it survives disposal
             return doc.RootElement.Clone();
         }

@@ -126,6 +126,7 @@ internal static class Program
     private static async Task<T?> DeserializeAsync<T>(string path)
     {
         var json = await File.ReadAllTextAsync(path);
-        return JsonSerializer.Deserialize<T>(json, JsonOptions);
+        var sanitized = Shared.JsonControlCharacterSanitizer.StripInvalidControlCharacters(json);
+        return JsonSerializer.Deserialize<T>(sanitized, JsonOptions);
     }
 }
