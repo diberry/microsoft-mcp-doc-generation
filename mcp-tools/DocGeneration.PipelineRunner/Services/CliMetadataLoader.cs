@@ -79,8 +79,9 @@ public sealed class CliMetadataLoader : ICliMetadataLoader
             throw new FileNotFoundException("CLI namespace metadata file was not found.", namespacePath);
         }
 
-        await using var stream = File.OpenRead(namespacePath);
-        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var namespaceRawJson = await File.ReadAllTextAsync(namespacePath, cancellationToken);
+        var namespaceJson = JsonControlCharacterSanitizer.StripInvalidControlCharacters(namespaceRawJson);
+        using var document = JsonDocument.Parse(namespaceJson);
         var namespaces = document.RootElement.GetProperty("results")
             .EnumerateArray()
             .Select(entry => entry.GetProperty("name").GetString())

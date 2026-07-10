@@ -193,6 +193,29 @@ public sealed class ArticleOutlineBuilderTests : IDisposable
         Assert.Equal("myservice", result.ServiceIdentifier);
     }
 
+    [Fact]
+    public async Task BuildAsync_WithRawControlCharInCliOutput_DoesNotThrow()
+    {
+        // Upstream CLI metadata can contain a raw (unescaped) 0x1A control
+        // char inside a description. Written as raw file bytes (not via
+        // JsonSerializer, which would escape it), this reproduces the
+        // '0x1A is invalid within a JSON string' parse crash.
+        var cliDirectory = Path.Combine(_testRoot, "cli");
+        Directory.CreateDirectory(cliDirectory);
+        var rawJson =
+            "{\"results\":[{\"command\":\"monitor workspace list\"," +
+            "\"name\":\"monitor workspace list\"," +
+            "\"description\":\"List Log\u001A Analytics workspaces.\"}]}";
+        await File.WriteAllTextAsync(Path.Combine(cliDirectory, "cli-output.json"), rawJson);
+
+        var builder = new ArticleOutlineBuilder();
+
+        var result = await builder.BuildAsync(_testRoot, "monitor", CancellationToken.None);
+
+        var toolOverview = result.Sections.Single(section => section.Heading == "Tool overview");
+        Assert.NotEmpty(toolOverview.EvidenceItems);
+    }
+
     private async Task WriteCliOutputAsync(CliOutput cliOutput)
     {
         var cliDirectory = Path.Combine(_testRoot, "cli");

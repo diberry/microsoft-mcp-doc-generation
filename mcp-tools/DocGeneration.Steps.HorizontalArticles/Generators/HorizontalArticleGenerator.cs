@@ -331,7 +331,8 @@ public class HorizontalArticleGenerator
         }
 
         var jsonContent = await File.ReadAllTextAsync(cliOutputPath);
-        var cliData = JsonSerializer.Deserialize<CliOutput>(jsonContent, new JsonSerializerOptions
+        var sanitizedContent = Shared.JsonControlCharacterSanitizer.StripInvalidControlCharacters(jsonContent);
+        var cliData = JsonSerializer.Deserialize<CliOutput>(sanitizedContent, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
