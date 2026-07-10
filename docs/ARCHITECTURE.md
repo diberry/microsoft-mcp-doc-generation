@@ -233,9 +233,15 @@ Both the in-process (reducer) and subprocess-fallback generation paths route thr
 guarantee holds regardless of path. CLI-variant write failures are non-fatal (added as
 warnings), so they never fail the pipeline.
 
-> **Known gap (follow-up):** the multi-namespace merge (`merge-namespaces.sh` /
-> `NamespaceMerger`) currently merges only the canonical `{name}.md`; the `-cli.md` variants
-> are not merged for merge-group namespaces.
+> **Multi-namespace merge covers both variants:** the multi-namespace merge
+> (`merge-namespaces.sh`) merges the `-cli.md` variant under the **same rules** as the
+> canonical article — for each merge group it produces `{primary}-cli.md` from the members'
+> `{member}-cli.md` files (primary frontmatter/overview/related + all members' tool sections
+> in order + updated `tool_count`), preserving the `# [Azure CLI]`/`# [Azure MCP]` tab
+> markers. The canonical merge is required (a missing member article skips the whole group);
+> the `-cli.md` merge is best-effort and never blocks the canonical merge. The typed
+> `NamespaceMerger.Merge` contract is variant-agnostic and is regression-locked by a
+> `NamespaceMergerTests` CLI-tab test.
 
 ### Deterministic Post-Processing
 
