@@ -33,8 +33,7 @@ public sealed class CliMetadataLoader : ICliMetadataLoader
         }
 
         var rawJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
-        var sanitizedJson = JsonControlCharacterSanitizer.StripInvalidControlCharacters(rawJson);
-        using var document = JsonDocument.Parse(sanitizedJson);
+        using var document = JsonDocument.Parse(rawJson);
 
         var rawRoot = document.RootElement.Clone();
         var tools = rawRoot.GetProperty("results")
@@ -79,8 +78,7 @@ public sealed class CliMetadataLoader : ICliMetadataLoader
             throw new FileNotFoundException("CLI namespace metadata file was not found.", namespacePath);
         }
 
-        var namespaceRawJson = await File.ReadAllTextAsync(namespacePath, cancellationToken);
-        var namespaceJson = JsonControlCharacterSanitizer.StripInvalidControlCharacters(namespaceRawJson);
+        var namespaceJson = await File.ReadAllTextAsync(namespacePath, cancellationToken);
         using var document = JsonDocument.Parse(namespaceJson);
         var namespaces = document.RootElement.GetProperty("results")
             .EnumerateArray()

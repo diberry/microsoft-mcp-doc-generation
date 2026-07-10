@@ -68,8 +68,7 @@ public sealed class ArticleOutlineBuilder
         }
 
         var cliRawJson = await File.ReadAllTextAsync(cliOutputPath, ct);
-        var cliSanitizedJson = Shared.JsonControlCharacterSanitizer.StripInvalidControlCharacters(cliRawJson);
-        var cliOutput = JsonSerializer.Deserialize<CliOutput>(cliSanitizedJson, JsonOptions);
+        var cliOutput = JsonSerializer.Deserialize<CliOutput>(cliRawJson, JsonOptions);
         if (cliOutput?.Results is null)
         {
             return [];

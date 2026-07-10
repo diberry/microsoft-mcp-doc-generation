@@ -109,8 +109,7 @@ public class RawToolGeneratorService
         try
         {
             var json = await File.ReadAllTextAsync(filePath);
-            var sanitized = Shared.JsonControlCharacterSanitizer.StripInvalidControlCharacters(json);
-            return System.Text.Json.JsonSerializer.Deserialize<CliOutput>(sanitized, new System.Text.Json.JsonSerializerOptions
+            return System.Text.Json.JsonSerializer.Deserialize<CliOutput>(json, new System.Text.Json.JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });

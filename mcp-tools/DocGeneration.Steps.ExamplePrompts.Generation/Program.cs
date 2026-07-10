@@ -148,8 +148,7 @@ internal static class Program
         try
         {
             var json = await File.ReadAllTextAsync(cliOutputFile);
-            var sanitized = Shared.JsonControlCharacterSanitizer.StripInvalidControlCharacters(json);
-            cliOutput = JsonSerializer.Deserialize<CliOutput>(sanitized, new JsonSerializerOptions 
+            cliOutput = JsonSerializer.Deserialize<CliOutput>(json, new JsonSerializerOptions
             { 
                 PropertyNameCaseInsensitive = true 
             });

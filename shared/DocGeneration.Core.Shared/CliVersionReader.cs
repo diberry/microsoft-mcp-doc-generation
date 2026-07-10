@@ -41,8 +41,7 @@ public static class CliVersionReader
             try
             {
                 // Try to parse as JSON
-                using var jsonDoc = JsonDocument.Parse(
-                    JsonControlCharacterSanitizer.StripInvalidControlCharacters(versionContent));
+                using var jsonDoc = JsonDocument.Parse(versionContent);
                 var root = jsonDoc.RootElement;
                 
                 // Try both lowercase and uppercase "version" property

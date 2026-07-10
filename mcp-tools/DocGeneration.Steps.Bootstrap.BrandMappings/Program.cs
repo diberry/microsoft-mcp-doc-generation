@@ -42,8 +42,7 @@ internal class Program
             }
 
             var cliJson = await File.ReadAllTextAsync(cliOutputPath);
-            var sanitizedCliJson = JsonControlCharacterSanitizer.StripInvalidControlCharacters(cliJson);
-            var cliOutput = JsonSerializer.Deserialize<CliOutput>(sanitizedCliJson);
+            var cliOutput = JsonSerializer.Deserialize<CliOutput>(cliJson);
             if (cliOutput?.Results == null || cliOutput.Results.Count == 0)
             {
                 Console.Error.WriteLine("Error: CLI output contains no tools.");

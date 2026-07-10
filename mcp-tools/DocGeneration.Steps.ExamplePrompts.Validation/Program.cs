@@ -94,8 +94,7 @@ internal static class Program
         }
 
         var cliRawJson = await File.ReadAllTextAsync(cliOutputFile);
-        var cliJson = System.Text.Json.JsonDocument.Parse(
-            JsonControlCharacterSanitizer.StripInvalidControlCharacters(cliRawJson));
+        var cliJson = System.Text.Json.JsonDocument.Parse(cliRawJson);
         var allTools = cliJson.RootElement.GetProperty("results").EnumerateArray().ToList();
         
         // Filter by tool command if specified

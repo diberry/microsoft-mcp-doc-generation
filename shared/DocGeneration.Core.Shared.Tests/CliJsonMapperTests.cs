@@ -76,25 +76,6 @@ public class CliJsonMapperTests
         }
         """;
 
-    // ── Control-character sanitization regression ──────────────────
-
-    [Fact]
-    public void MapFromCliOutput_WithRawControlCharInDescription_DoesNotThrow()
-    {
-        // Upstream azure.mcp beta emitted a raw 0x1A (SUB) inside a tool
-        // description. System.Text.Json rejects raw control chars, so the
-        // mapper must sanitize before parsing.
-        var json =
-            "{\"results\":[{\"command\":\"monitor workspace list\",\"name\":\"list\"," +
-            "\"description\":\"List Log\u001A Analytics workspaces.\",\"option\":[]}]}";
-
-        var result = CliJsonMapper.MapFromCliOutput(json);
-
-        Assert.Single(result);
-        var tool = result["monitor workspace list"];
-        Assert.Equal("List Log Analytics workspaces.", tool.Description);
-    }
-
     // ── MapFromCliOutput tests ──────────────────────────────────────
 
     [Fact]

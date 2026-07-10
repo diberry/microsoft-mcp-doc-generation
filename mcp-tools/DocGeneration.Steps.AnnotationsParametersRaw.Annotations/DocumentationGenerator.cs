@@ -63,8 +63,7 @@ public static class DocumentationGenerator
 
         // Read CLI output
         var cliOutputJson = await File.ReadAllTextAsync(cliOutputFile);
-        var sanitizedCliOutputJson = Shared.JsonControlCharacterSanitizer.StripInvalidControlCharacters(cliOutputJson);
-        var cliOutput = JsonSerializer.Deserialize<CliOutput>(sanitizedCliOutputJson, new JsonSerializerOptions
+        var cliOutput = JsonSerializer.Deserialize<CliOutput>(cliOutputJson, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
