@@ -202,4 +202,108 @@ public class NamespaceMergerTests
         Assert.True(primaryIdx < secondaryIdx, "Primary tools should come before secondary");
         Assert.True(secondaryIdx < relatedIdx, "Secondary tools should come before Related content");
     }
+
+    // ── CLI-tab variant follows the SAME merge rules ────────────────
+    // The {namespace}-cli.md variant has the same article structure as the
+    // canonical article — only the tool H2 bodies additionally contain
+    // `#### [Azure MCP CLI]`/`#### [MCP Server]` tab markers (the real emitter
+    // format; see docs/output-format.md and CliTabValidator). Because those
+    // markers are H4-level (`#### [`) they are NOT H2 boundaries, so
+    // NamespaceMerger.Merge must merge the CLI variant exactly like the plain
+    // article: primary header/overview/related, all members' tool sections in
+    // order, updated tool_count, and every tab marker preserved intact.
+
+    private static string CliTabTool(string heading, string command, string cliCmd, string mcpBody) =>
+        string.Join("\n", new[]
+        {
+            $"## {heading}",
+            "",
+            "#### [Azure MCP CLI](#tab/azure-mcp-cli)",
+            "",
+            $"<!-- @mcpcli {command} -->",
+            "```azurecli",
+            cliCmd,
+            "```",
+            "",
+            "#### [MCP Server](#tab/mcp-server)",
+            "",
+            mcpBody,
+            "",
+            "---"
+        });
+
+    [Fact]
+    public void Merge_CliVariant_MergesToolSectionsAndPreservesTabMarkers()
+    {
+        // Varied services per the universal-design principle (Key Vault + Cosmos DB).
+        var primary = BuildArticle("Azure Key Vault", "keyvault", 1,
+            "Key Vault overview.",
+            new[]
+            {
+                CliTabTool("Get secret", "keyvault secret get",
+                    "az keyvault secret show --vault-name v --name s", "Retrieves a secret via MCP.")
+            },
+            "- [Key Vault docs](/azure/key-vault/)");
+
+        var secondary = BuildArticle("Azure Cosmos DB", "cosmos", 1,
+            "Cosmos overview.",
+            new[]
+            {
+                CliTabTool("List databases", "cosmos database list",
+                    "az cosmosdb sql database list --account-name a", "Lists databases via MCP.")
+            },
+            "- [Cosmos docs](/azure/cosmos-db/)");
+
+        var config = new List<BrandMapping>
+        {
+            new() { McpServerName = "keyvault", FileName = "azure-key-vault",
+                     MergeGroup = "azure-keyvault", MergeOrder = 1, MergeRole = "primary" },
+            new() { McpServerName = "cosmos", FileName = "azure-cosmos-db",
+                     MergeGroup = "azure-keyvault", MergeOrder = 2, MergeRole = "secondary" }
+        };
+
+        var articles = new Dictionary<string, string>
+        {
+            ["keyvault"] = primary,
+            ["cosmos"] = secondary
+        };
+
+        var result = NamespaceMerger.Merge(articles, config);
+
+        Assert.Single(result);
+        var merged = result["azure-keyvault"];
+
+        // Primary header/overview + primary related only.
+        Assert.Contains("# Azure MCP Server tools for Azure Key Vault", merged);
+        Assert.Contains("Key Vault overview.", merged);
+        Assert.DoesNotContain("Cosmos overview.", merged);
+        Assert.Contains("Key Vault docs", merged);
+
+        // Both tool sections merged in order, secondary after primary.
+        Assert.True(merged.IndexOf("## Get secret", StringComparison.Ordinal)
+                  < merged.IndexOf("## List databases", StringComparison.Ordinal));
+
+        // tool_count updated to combined total (1 + 1).
+        Assert.Contains("tool_count: 2", merged);
+
+        // Tab markers from BOTH namespaces preserved through the merge.
+        Assert.Equal(2, CountOccurrences(merged, "#### [Azure MCP CLI](#tab/azure-mcp-cli)"));
+        Assert.Equal(2, CountOccurrences(merged, "#### [MCP Server](#tab/mcp-server)"));
+        Assert.Contains("<!-- @mcpcli keyvault secret get -->", merged);
+        Assert.Contains("<!-- @mcpcli cosmos database list -->", merged);
+        Assert.Contains("az keyvault secret show", merged);
+        Assert.Contains("az cosmosdb sql database list", merged);
+    }
+
+    private static int CountOccurrences(string haystack, string needle)
+    {
+        var count = 0;
+        var idx = 0;
+        while ((idx = haystack.IndexOf(needle, idx, StringComparison.Ordinal)) >= 0)
+        {
+            count++;
+            idx += needle.Length;
+        }
+        return count;
+    }
 }

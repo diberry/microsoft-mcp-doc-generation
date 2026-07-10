@@ -98,48 +98,75 @@ for (const [groupName, members] of groups) {
         continue;
     }
 
-    // Load articles from the most recent generated-{ns}*/tool-family/{ns}.md directory.
-    const articles = {};
-    const generatedDirs = {};
-    let missing = false;
-    for (const m of members) {
-        const generatedDir = resolveGeneratedDir(m.ns);
-        const articlePath = generatedDir ? path.join(generatedDir, 'tool-family', m.ns + '.md') : null;
-        if (articlePath && fs.existsSync(articlePath)) {
-            generatedDirs[m.ns] = generatedDir;
-            articles[m.ns] = fs.readFileSync(articlePath, 'utf8');
-        } else {
-            console.log('  Skipping group ' + groupName + ': ' + m.ns + '.md not found');
-            missing = true;
-            break;
+    // Loads {ns}{suffix}.md for every member. Returns {missing, missingNs, articles, generatedDirs}.
+    function loadVariant(suffix) {
+        const articles = {};
+        const generatedDirs = {};
+        for (const m of members) {
+            const generatedDir = resolveGeneratedDir(m.ns);
+            const articlePath = generatedDir ? path.join(generatedDir, 'tool-family', m.ns + suffix + '.md') : null;
+            if (articlePath && fs.existsSync(articlePath)) {
+                generatedDirs[m.ns] = generatedDir;
+                articles[m.ns] = fs.readFileSync(articlePath, 'utf8');
+            } else {
+                return { missing: true, missingNs: m.ns };
+            }
         }
-    }
-    if (missing) continue;
-
-    // Merge: primary header + all tools (in order) + primary related content
-    const primaryParsed = parseArticle(articles[primary.ns]);
-    let allTools = [...primaryParsed.tools];
-    for (const m of members) {
-        if (m.role === 'primary') continue;
-        const parsed = parseArticle(articles[m.ns]);
-        allTools = allTools.concat(parsed.tools);
+        return { missing: false, articles, generatedDirs };
     }
 
-    const totalTools = allTools.length;
-    const updatedHeader = primaryParsed.header.replace(/tool_count:\s*\d+/, 'tool_count: ' + totalTools);
-    const merged = updatedHeader + '\n' + allTools.join('\n\n') + '\n\n## Related content\n\n' + primaryParsed.related + '\n';
-
-    const outputPath = path.join(generatedDirs[primary.ns], 'tool-family', primary.ns + '.md');
-    const toolCounts = members.map(m => m.ns + ':' + parseArticle(articles[m.ns]).tools.length).join(' + ');
-
-    if (dryRun) {
-        console.log('  DRY RUN: Would merge ' + members.map(m => m.ns).join(' + ') + ' -> ' + primary.ns + '.md');
-        console.log('           ' + totalTools + ' tools (' + toolCounts + ')');
-    } else {
-        fs.writeFileSync(outputPath, merged);
-        console.log('  Merged: ' + members.map(m => m.ns).join(' + ') + ' -> ' + primary.ns + '.md');
-        console.log('          ' + totalTools + ' tools (' + toolCounts + ')');
+    // Merge: primary header + all tools (in order) + primary related content.
+    // Identical rules for the plain and -cli variants.
+    function buildMerged(articles) {
+        const primaryParsed = parseArticle(articles[primary.ns]);
+        let allTools = [...primaryParsed.tools];
+        for (const m of members) {
+            if (m.role === 'primary') continue;
+            allTools = allTools.concat(parseArticle(articles[m.ns]).tools);
+        }
+        const totalTools = allTools.length;
+        const updatedHeader = primaryParsed.header.replace(/tool_count:\s*\d+/, 'tool_count: ' + totalTools);
+        const merged = updatedHeader + '\n' + allTools.join('\n\n') + '\n\n## Related content\n\n' + primaryParsed.related + '\n';
+        const toolCounts = members.map(m => m.ns + ':' + parseArticle(articles[m.ns]).tools.length).join(' + ');
+        return { merged, totalTools, toolCounts };
     }
+
+    // Merges one variant and writes {primary.ns}{suffix}.md. suffix '' = canonical, '-cli' = CLI-tab variant.
+    // required=true (canonical): a write error propagates and aborts (fail-fast). required=false (-cli):
+    // best-effort — a write error is caught and logged so it never blocks the canonical merge.
+    function mergeVariant(suffix, required) {
+        const loaded = loadVariant(suffix);
+        if (loaded.missing) {
+            const label = suffix === '' ? '' : ' ' + suffix.replace(/^-/, '') + ' variant for';
+            console.log('  Skipping' + label + ' group ' + groupName + ': ' + loaded.missingNs + suffix + '.md not found');
+            return required ? false : true;
+        }
+        const { merged, totalTools, toolCounts } = buildMerged(loaded.articles);
+        const outputPath = path.join(loaded.generatedDirs[primary.ns], 'tool-family', primary.ns + suffix + '.md');
+        const memberLabel = members.map(m => m.ns + suffix).join(' + ');
+        if (dryRun) {
+            console.log('  DRY RUN: Would merge ' + memberLabel + ' -> ' + primary.ns + suffix + '.md');
+            console.log('           ' + totalTools + ' tools (' + toolCounts + ')');
+        } else {
+            try {
+                fs.writeFileSync(outputPath, merged);
+            } catch (err) {
+                if (required) throw err;
+                console.log('  WARNING: Skipping ' + suffix.replace(/^-/, '') + ' variant for group ' + groupName + ': write failed (' + err.message + ')');
+                return true;
+            }
+            console.log('  Merged: ' + memberLabel + ' -> ' + primary.ns + suffix + '.md');
+            console.log('          ' + totalTools + ' tools (' + toolCounts + ')');
+        }
+        return true;
+    }
+
+    // Canonical (plain, no CLI tabs) — required. If missing, skip the whole group.
+    if (!mergeVariant('', true)) continue;
+
+    // CLI-tab variant — must follow the same merge rules. Best-effort: skip with a
+    // notice if any member's -cli.md is absent (never blocks the canonical merge).
+    mergeVariant('-cli', false);
 }
 console.log('');
 "
