@@ -19,6 +19,12 @@ public class VerifyOnlyProcessor
         ("AcronymExpander",        AcronymExpander.ExpandAll),
         ("FrontmatterEnricher",    FrontmatterEnricher.EnrichWithDefaults),
         ("DuplicateExampleStripper", DuplicateExampleStripper.Strip),
+        // AnnotationTableFixer MUST run before AnnotationSpaceFixer.
+        // EngineeringExampleStripper is intentionally absent from this verify-only path —
+        // it is a full-pipeline post-processor. Since it does not touch annotation blocks
+        // (Destructive/Idempotent/… lines or tables), its absence here does not affect
+        // annotation processing; this path is equivalent to FamilyFileStitcher for annotations.
+        ("AnnotationTableFixer",   AnnotationTableFixer.Fix),
         ("AnnotationSpaceFixer",   AnnotationSpaceFixer.Fix),
         ("PresentTenseFixer",      PresentTenseFixer.Fix),
         ("ContractionFixer",       ContractionFixer.Fix),
@@ -166,6 +172,7 @@ public class VerifyOnlyProcessor
             "AcronymExpander" => " (acronym expansions)",
             "FrontmatterEnricher" => " (frontmatter fields added)",
             "DuplicateExampleStripper" => " (duplicate examples removed)",
+            "AnnotationTableFixer" => " (inline annotation converted to table)",
             "AnnotationSpaceFixer" => " (annotation spacing fixed)",
             "PresentTenseFixer" => " (future→present tense)",
             "ContractionFixer" => " (contractions applied)",

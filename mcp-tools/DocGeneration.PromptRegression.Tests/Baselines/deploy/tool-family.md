@@ -1,4 +1,4 @@
----
+﻿---
 
 title: Azure MCP Server tools for Azure Deploy
 description: Use Azure MCP Server tools to manage deployments and deployment pipelines for Azure applications and infrastructure with natural language prompts from your IDE.
@@ -46,7 +46,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get app logs
 
@@ -69,7 +71,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get iac rules
 
@@ -98,7 +102,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get pipeline guidance
 
@@ -123,7 +129,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 Example: "Generate a GitHub Actions pipeline that provisions infrastructure and deploys a Node.js app to Azure App Service. Set Deploy option to 'provision-and-deploy', Pipeline platform to 'github-actions', and Is azd project to 'false'."
 
@@ -154,7 +162,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Related content
 

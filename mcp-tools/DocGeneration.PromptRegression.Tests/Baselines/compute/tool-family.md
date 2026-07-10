@@ -1,4 +1,4 @@
----
+﻿---
 
 title: Azure MCP Server tools for Azure Virtual Machines
 description: Use Azure MCP Server tools to manage compute resources such as virtual machines, managed disks, and virtual machine scale sets with natural language prompts from your IDE.
@@ -84,7 +84,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## Create virtual machine
 
@@ -131,7 +133,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ✅ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 
 ## Create virtual machine scale set
 
@@ -168,7 +172,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ✅ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 
 ## Delete compute disk
 
@@ -190,7 +196,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ✅ | Open World: ❌ | Read Only: ❌ | Secret: ✅ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
 
 ## Delete virtual machine
 
@@ -216,7 +224,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ✅ | Open World: ❌ | Read Only: ❌ | Secret: ✅ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
 
 ## Delete virtual machine scale set
 
@@ -240,7 +250,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ✅ | Open World: ❌ | Read Only: ❌ | Secret: ✅ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
 
 ## Get compute disk
 
@@ -265,7 +277,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌ |
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get virtual machine
 
@@ -299,7 +313,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get virtual machine scale set
 
@@ -332,7 +348,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Update compute disk
 
@@ -377,7 +395,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ✅ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 
 ## Update virtual machine
 
@@ -405,7 +425,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ✅ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 
 ## Update virtual machine scale set
 
@@ -435,7 +457,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ✅ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 
 ## Related content
 

@@ -189,9 +189,13 @@ public class ParameterTemplateRegressionTests
         Assert.Contains("**Location**", result);
         Assert.Contains("**SKU**", result);
 
-        // Metadata renders correctly
-        Assert.Contains("Destructive: ❌", result);
-        Assert.Contains("ReadOnly: ✅", result);
+        // Metadata renders as table format (not old inline format)
+        Assert.Contains("| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |", result);
+        Assert.Contains("|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|", result);
+        // destructive=false → ❌, readOnly=true → ✅ (others absent → ❌)
+        Assert.Contains("| ❌ |", result);
+        Assert.Contains("| ✅ |", result);
+        Assert.DoesNotContain("Destructive: ❌", result);
     }
 
     // ── common-tools.hbs ────────────────────────────────────────────────

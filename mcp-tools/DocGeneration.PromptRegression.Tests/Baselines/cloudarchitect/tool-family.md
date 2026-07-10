@@ -1,4 +1,4 @@
----
+﻿---
 
 title: Azure MCP Server tools for Azure Cloud Architect
 description: Use Azure MCP Server tools to manage cloud architecture design, generate diagrams and templates, validate architectures against best practices, and estimate costs with natural language prompts from your IDE.
@@ -197,7 +197,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Related content
 

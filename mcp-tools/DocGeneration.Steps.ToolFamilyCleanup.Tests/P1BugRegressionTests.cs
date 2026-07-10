@@ -40,15 +40,17 @@ public class P1BugRegressionTests
         // Act
         var result = stitcher.Stitch(familyContent);
 
-        // Assert — AnnotationSpaceFixer (step 7 in pipeline) should insert blank line
-        Assert.Contains("server):\n\nDestructive:", result);
+        // Assert — AnnotationTableFixer converts inline to table and inserts blank line;
+        // the result must have the blank line + table header (not the old inline format).
+        Assert.Contains("server):\n\n| Destructive |", result);
         Assert.DoesNotContain("server):\nDestructive:", result);
+        Assert.DoesNotContain("server):\n\nDestructive:", result);
     }
 
     [Fact]
     public void Stitch_InlineAnnotations_AlreadyHasBlankLine_PreservedIdempotently()
     {
-        // Arrange — correct format: blank line already present
+        // Arrange — inline format with blank line present; AnnotationTableFixer converts to table.
         var familyContent = BuildFamilyContentSingleTool(
             "keyvault", "Secret list", "keyvault secret list",
             BuildToolSectionWithAnnotation(
@@ -63,9 +65,10 @@ public class P1BugRegressionTests
         // Act
         var result = stitcher.Stitch(familyContent);
 
-        // Assert — no triple newline introduced (idempotent)
-        Assert.Contains("server):\n\nDestructive:", result);
-        Assert.DoesNotContain("server):\n\n\nDestructive:", result);
+        // Assert — converted to table format; no triple newline; no inline remains
+        Assert.Contains("server):\n\n| Destructive |", result);
+        Assert.DoesNotContain("server):\n\n\n| Destructive |", result);
+        Assert.DoesNotContain("Destructive: ❌", result);
     }
 
     [Fact]
@@ -128,10 +131,9 @@ public class P1BugRegressionTests
 
         // Assert — output should NOT contain [!INCLUDE] for annotations
         Assert.DoesNotContain("[!INCLUDE", result);
-        // Assert — output SHOULD contain inline annotation values
-        Assert.Contains("Destructive: ❌", result);
-        Assert.Contains("Idempotent: ✅", result);
-        Assert.Contains("Read Only: ✅", result);
+        // Assert — output SHOULD contain table-format annotation header
+        Assert.Contains("| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |", result);
+        Assert.Contains("|:-----------:|", result);
     }
 
     // ── Bug #192: Duplicate @mcpcli markers ─────────────────────────────
@@ -427,9 +429,11 @@ public class P1BugRegressionTests
         // Assert Bug #193: No [!INCLUDE] in annotation sections
         Assert.DoesNotContain("[!INCLUDE", result);
 
-        // Assert Bug #191: Blank line between annotation link and values
+        // Assert Bug #191: Annotation link followed by table format (not inline)
+        // AnnotationTableFixer converts inline → table and inserts blank line.
         Assert.DoesNotContain("server):\nDestructive:", result);
-        Assert.Contains("server):\n\nDestructive:", result);
+        Assert.DoesNotContain("server):\n\nDestructive:", result);
+        Assert.Contains("server):\n\n| Destructive |", result);
 
         // Assert Bug #192: Exactly 2 @mcpcli markers (one per tool)
         var markerCount = Regex.Matches(result, @"<!-- @mcpcli .+? -->").Count;

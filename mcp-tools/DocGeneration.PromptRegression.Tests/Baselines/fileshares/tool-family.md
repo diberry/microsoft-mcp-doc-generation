@@ -1,4 +1,4 @@
----
+﻿---
 
 title: Azure MCP Server tools for Azure File Shares
 description: Use Azure MCP Server tools to manage Azure File Shares (managed SMB and NFS file shares on Azure Files) with natural language prompts from your IDE.
@@ -47,7 +47,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 
 ## Create fileshare
@@ -85,7 +87,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## Create fileshare snapshot
 
@@ -109,7 +113,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌ |
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## Delete fileshare
 
@@ -130,7 +136,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 Examples
 
@@ -160,7 +168,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## Get fileshare
 
@@ -184,7 +194,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get fileshare private endpoint connection
 
@@ -208,7 +220,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get fileshare snapshot
 
@@ -231,7 +245,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get fileshares limits
 
@@ -256,7 +272,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Get fileshares recommendations
 
@@ -282,7 +300,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Update fileshare private endpoint connection
 
@@ -310,7 +330,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## Update fileshare snapshot
 
@@ -333,7 +355,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 
 
@@ -368,7 +392,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ✅ | Idempotent: ❌ | Open World: ❌ | Read Only: ❌ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## Get fileshares usage
 
@@ -391,7 +417,9 @@ Example prompts include:
 
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 
 ## Related content
 

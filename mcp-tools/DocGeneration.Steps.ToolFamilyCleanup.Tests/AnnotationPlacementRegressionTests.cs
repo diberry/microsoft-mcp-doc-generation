@@ -142,51 +142,74 @@ public class AnnotationPlacementRegressionTests
         Assert.DoesNotContain("[Tool annotation hints]", content);
     }
 
-    // ── R-AP6: Annotation content uses emoji-pair format ─────────────────
+    // ── R-AP6: Annotation content uses 3-row markdown table format ───────
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
-    public void R_AP6_AnnotationContentUsesEmojiPairFormat()
+    public void R_AP6_AnnotationContentUsesTableFormat()
     {
         var content = LoadFixture("ValidToolFamily.md");
 
-        // Find annotation value lines (lines after the annotation link)
-        var annotationMatches = Regex.Matches(content,
-            @"\[Tool annotation hints\]\(index\.md#tool-annotations-for-azure-mcp-server\):\r?\n\r?\n(.+)",
+        // Each annotation block must contain the header row
+        var headerMatches = Regex.Matches(content,
+            @"\| Destructive \| Idempotent \| Open World \| Read Only \| Secret \| Local Required \|",
             RegexOptions.Multiline);
+        Assert.NotEmpty(headerMatches);
 
-        Assert.NotEmpty(annotationMatches);
-        foreach (Match match in annotationMatches)
-        {
-            var valueLine = match.Groups[1].Value.TrimEnd('\r');
-            // Must contain pipe-separated emoji pairs like "Key: ✅ | Key: ❌"
-            Assert.Matches(@"^(\w[\w\s]*:\s[✅❌]\s*\|\s*)*\w[\w\s]*:\s[✅❌]$", valueLine);
-        }
+        // Each annotation block must contain the centered-alignment separator row
+        var separatorMatches = Regex.Matches(content,
+            @"\|:-----------:\|:----------:\|:----------:\|:---------:\|:------:\|:--------------:\|",
+            RegexOptions.Multiline);
+        Assert.NotEmpty(separatorMatches);
+
+        // Values rows must use only ✅ or ❌ cells (no "Key: emoji" inline pairs)
+        var valueRowMatches = Regex.Matches(content,
+            @"^\|\s*(✅|❌)\s*\|",
+            RegexOptions.Multiline);
+        Assert.NotEmpty(valueRowMatches);
     }
 
     [Fact]
     [Trait("Category", "RegressionProtection")]
     [Trait("Category", "RequiresGeneration")]
-    public void R_AP6_AnnotationContentUsesEmojiPairFormat_RealFile()
+    public void R_AP6_AnnotationContentUsesTableFormat_RealFile()
     {
         var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
         if (content == null) return;
 
-        var annotationMatches = Regex.Matches(content,
-            @"\[Tool annotation hints\]\(index\.md#tool-annotations-for-azure-mcp-server\):\r?\n\r?\n(.+)",
-            RegexOptions.Multiline);
+        // Must contain the table separator with centered alignment colons
+        Assert.Matches(
+            @"\|:-----------:\|:----------:\|:----------:\|:---------:\|:------:\|:--------------:\|",
+            content);
+    }
 
-        Assert.NotEmpty(annotationMatches);
-        foreach (Match match in annotationMatches)
-        {
-            var valueLine = match.Groups[1].Value.TrimEnd('\r');
-            // Each pair: "Key: ✅" or "Key: ❌" separated by " | "
-            var pairs = valueLine.Split('|').Select(p => p.Trim()).ToArray();
-            foreach (var pair in pairs)
-            {
-                Assert.Matches(@"^[\w\s]+:\s[✅❌]$", pair);
-            }
-        }
+    // ── R-AP7: Old inline format MUST NOT appear in any assembled article ─
+
+    [Fact]
+    [Trait("Category", "RegressionProtection")]
+    public void R_AP7_NoInlineAnnotationFormatInFixture()
+    {
+        var content = LoadFixture("ValidToolFamily.md");
+
+        // The old inline format is a line starting with "Destructive: ✅" or "Destructive: ❌"
+        // followed by pipe-separated "Key: emoji" pairs.
+        // This guard FAILS if that format ever appears in assembled output.
+        Assert.DoesNotMatch(
+            @"(?m)^\s*Destructive:\s*(✅|❌)\s*\|",
+            content);
+    }
+
+    [Fact]
+    [Trait("Category", "RegressionProtection")]
+    [Trait("Category", "RequiresGeneration")]
+    public void R_AP7_NoInlineAnnotationFormat_RealFile()
+    {
+        var content = LoadRealGeneratedFile("generated-azurebackup", "tool-family", "azure-backup.md");
+        if (content == null) return;
+
+        Assert.DoesNotMatch(
+            @"(?m)^\s*Destructive:\s*(✅|❌)\s*\|",
+            content);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

@@ -128,14 +128,18 @@ Format:
 - Include examples in parentheses with backticks in description
 
 #### Tool Annotation Include
-After the parameter table (or after examples if no parameters):
+After the parameter table (or after examples if no parameters), annotation blocks MUST use the 3-row markdown table format:
 ```markdown
 [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
 
-[!INCLUDE [tool-name](../includes/tools/annotations/tool-name-annotations.md)]
+| Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+|:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+| ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
 ```
 
-**Path Correction**: Use `../includes/tools/annotations/` (not `../annotations/`)
+**REQUIRED TABLE FORMAT**: Always preserve the 3-row table structure — header row, centered-alignment separator row (`|:-----------:|`), and values row with ✅ or ❌ cells. Do NOT flatten to the old inline format (`Destructive: ❌ | Idempotent: ✅ | ...`).
+
+**Path Correction**: If using `[!INCLUDE]` directives, use `../includes/tools/annotations/` (not `../annotations/`)
 
 **Important**: Do not add `---` separators between tools. Tools should flow directly from one to the next.
 
