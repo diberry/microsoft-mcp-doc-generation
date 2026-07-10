@@ -224,9 +224,10 @@ per-namespace files via `CliVariantWriter`:
   CLI tabs. This file is never modified by the CLI-tab step.
 - **`tool-family/{namespace}-cli.md`** — the CLI-tab variant. When CLI tabs are enabled for
   the namespace (`cli-tab-config.json`) and CLI content is available, `Shared.CliTabWrapper`
-  injects `# [Azure CLI]`/`# [Azure MCP]` tabs keyed off the `<!-- @mcpcli {command} -->`
-  markers. When CLI tabs are disabled or no CLI data exists, the variant is written as an
-  **exact copy** of the canonical article — guaranteeing exactly two files per namespace.
+  injects `#### [Azure MCP CLI]`/`#### [MCP Server]` tabs keyed off the
+  `<!-- @mcpcli {command} -->` markers. When CLI tabs are disabled or no CLI data exists, the
+  variant is written as an **exact copy** of the canonical article — guaranteeing exactly two
+  files per namespace.
 
 Both the in-process (reducer) and subprocess-fallback generation paths route through the same
 `ApplyCliTabWrappingAsync` → `CliVariantWriter.WriteVariantsAsync` logic, so the two-file
@@ -237,9 +238,9 @@ warnings), so they never fail the pipeline.
 > (`merge-namespaces.sh`) merges the `-cli.md` variant under the **same rules** as the
 > canonical article — for each merge group it produces `{primary}-cli.md` from the members'
 > `{member}-cli.md` files (primary frontmatter/overview/related + all members' tool sections
-> in order + updated `tool_count`), preserving the `# [Azure CLI]`/`# [Azure MCP]` tab
-> markers. The canonical merge is required (a missing member article skips the whole group);
-> the `-cli.md` merge is best-effort and never blocks the canonical merge. The typed
+> in order + updated `tool_count`), preserving the `#### [Azure MCP CLI]`/`#### [MCP Server]`
+> tab markers. The canonical merge is required (a missing member article skips the whole
+> group); the `-cli.md` merge is best-effort and never blocks the canonical merge. The typed
 > `NamespaceMerger.Merge` contract is variant-agnostic and is regression-locked by a
 > `NamespaceMergerTests` CLI-tab test.
 

@@ -132,6 +132,8 @@ for (const [groupName, members] of groups) {
     }
 
     // Merges one variant and writes {primary.ns}{suffix}.md. suffix '' = canonical, '-cli' = CLI-tab variant.
+    // required=true (canonical): a write error propagates and aborts (fail-fast). required=false (-cli):
+    // best-effort — a write error is caught and logged so it never blocks the canonical merge.
     function mergeVariant(suffix, required) {
         const loaded = loadVariant(suffix);
         if (loaded.missing) {
@@ -146,7 +148,13 @@ for (const [groupName, members] of groups) {
             console.log('  DRY RUN: Would merge ' + memberLabel + ' -> ' + primary.ns + suffix + '.md');
             console.log('           ' + totalTools + ' tools (' + toolCounts + ')');
         } else {
-            fs.writeFileSync(outputPath, merged);
+            try {
+                fs.writeFileSync(outputPath, merged);
+            } catch (err) {
+                if (required) throw err;
+                console.log('  WARNING: Skipping ' + suffix.replace(/^-/, '') + ' variant for group ' + groupName + ': write failed (' + err.message + ')');
+                return true;
+            }
             console.log('  Merged: ' + memberLabel + ' -> ' + primary.ns + suffix + '.md');
             console.log('          ' + totalTools + ' tools (' + toolCounts + ')');
         }

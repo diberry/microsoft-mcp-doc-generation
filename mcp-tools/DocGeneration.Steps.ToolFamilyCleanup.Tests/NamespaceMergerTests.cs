@@ -206,25 +206,26 @@ public class NamespaceMergerTests
     // ── CLI-tab variant follows the SAME merge rules ────────────────
     // The {namespace}-cli.md variant has the same article structure as the
     // canonical article — only the tool H2 bodies additionally contain
-    // `# [Azure CLI]`/`# [Azure MCP]` tab markers. Because those markers are
-    // H1-level (`# [`) they are NOT H2 boundaries, so NamespaceMerger.Merge
-    // must merge the CLI variant exactly like the plain article: primary
-    // header/overview/related, all members' tool sections in order, updated
-    // tool_count, and every tab marker preserved intact.
+    // `#### [Azure MCP CLI]`/`#### [MCP Server]` tab markers (the real emitter
+    // format; see docs/output-format.md and CliTabValidator). Because those
+    // markers are H4-level (`#### [`) they are NOT H2 boundaries, so
+    // NamespaceMerger.Merge must merge the CLI variant exactly like the plain
+    // article: primary header/overview/related, all members' tool sections in
+    // order, updated tool_count, and every tab marker preserved intact.
 
     private static string CliTabTool(string heading, string command, string cliCmd, string mcpBody) =>
         string.Join("\n", new[]
         {
             $"## {heading}",
             "",
-            "# [Azure CLI](#tab/azure-cli)",
+            "#### [Azure MCP CLI](#tab/azure-mcp-cli)",
             "",
             $"<!-- @mcpcli {command} -->",
             "```azurecli",
             cliCmd,
             "```",
             "",
-            "# [Azure MCP](#tab/azure-mcp)",
+            "#### [MCP Server](#tab/mcp-server)",
             "",
             mcpBody,
             "",
@@ -286,8 +287,8 @@ public class NamespaceMergerTests
         Assert.Contains("tool_count: 2", merged);
 
         // Tab markers from BOTH namespaces preserved through the merge.
-        Assert.Equal(2, CountOccurrences(merged, "# [Azure CLI](#tab/azure-cli)"));
-        Assert.Equal(2, CountOccurrences(merged, "# [Azure MCP](#tab/azure-mcp)"));
+        Assert.Equal(2, CountOccurrences(merged, "#### [Azure MCP CLI](#tab/azure-mcp-cli)"));
+        Assert.Equal(2, CountOccurrences(merged, "#### [MCP Server](#tab/mcp-server)"));
         Assert.Contains("<!-- @mcpcli keyvault secret get -->", merged);
         Assert.Contains("<!-- @mcpcli cosmos database list -->", merged);
         Assert.Contains("az keyvault secret show", merged);
