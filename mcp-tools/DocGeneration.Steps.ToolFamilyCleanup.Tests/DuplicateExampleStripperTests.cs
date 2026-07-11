@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Linq;
 using ToolFamilyCleanup.Services;
 using Xunit;
 
@@ -122,6 +123,78 @@ Example prompts include:
 
         Assert.DoesNotContain("> Example:", result);
         Assert.DoesNotContain("Examples:", result);
+        Assert.Contains("Example prompts include:", result);
+    }
+
+    // ── Bare "Examples" (no colon, no heading) — issue #709 ─────────
+
+    [Fact]
+    public void Strip_RemovesBareExamplesBlockWithoutColon()
+    {
+        // Cosmos DB — bare "Examples" line (no colon, no ###) followed by bullets.
+        var content = @"Lists the containers in an Azure Cosmos DB database account.
+
+Examples
+
+- List all containers in database 'inventory'.
+- Get throughput for container 'orders' in database 'inventory'.
+
+Example prompts include:
+
+- ""List containers in my Cosmos DB account.""";
+
+        var result = DuplicateExampleStripper.Strip(content);
+
+        Assert.DoesNotContain("List all containers in database", result);
+        Assert.DoesNotContain("Get throughput for container", result);
+        Assert.Contains("Lists the containers in an Azure Cosmos DB", result);
+        Assert.Contains("Example prompts include:", result);
+        Assert.Contains("\"List containers in my Cosmos DB account.\"", result);
+    }
+
+    [Fact]
+    public void Strip_RemovesBareExamplesBlockBeforeParamsComment()
+    {
+        // Key Vault — exact leaked shape from issue #709: bare "Examples" + bullets
+        // sitting directly before the <!-- Required parameters --> annotation comment.
+        var content = @"Gets a secret from an Azure Key Vault.
+
+Examples
+
+- Get secret 'db-password' from vault 'contoso-kv'.
+- Get the latest version of secret 'api-key' from vault 'prod-kv'.
+
+<!-- Required parameters: 2 - 'Vault', 'Secret' -->
+
+Example prompts include:
+
+- ""Get secret 'db-password' from my key vault.""";
+
+        var result = DuplicateExampleStripper.Strip(content);
+
+        Assert.DoesNotContain("Get secret 'db-password' from vault", result);
+        Assert.DoesNotContain("Get the latest version of secret", result);
+        // The bare "Examples" header line is gone.
+        Assert.DoesNotContain("Examples", result.Split('\n').Select(l => l.Trim()));
+        // Structural anchors preserved.
+        Assert.Contains("<!-- Required parameters: 2 - 'Vault', 'Secret' -->", result);
+        Assert.Contains("Example prompts include:", result);
+    }
+
+    [Fact]
+    public void Strip_PreservesExamplesWordInProse()
+    {
+        // "Examples" appears as a word with text following on the same line — legit prose,
+        // must NOT be stripped (no false positive).
+        var content = @"Examples of supported regions include eastus and westus.
+
+Example prompts include:
+
+- ""List supported regions.""";
+
+        var result = DuplicateExampleStripper.Strip(content);
+
+        Assert.Contains("Examples of supported regions include eastus and westus.", result);
         Assert.Contains("Example prompts include:", result);
     }
 

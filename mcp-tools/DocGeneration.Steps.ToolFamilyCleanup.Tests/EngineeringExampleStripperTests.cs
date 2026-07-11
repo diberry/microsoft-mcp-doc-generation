@@ -185,6 +185,65 @@ Example prompts include:";
         Assert.Contains("<!-- Required parameters: 1 -->", result);
     }
 
+    // ── "For example," prose leak — issue #709 ──────────────────────
+
+    [Fact]
+    public void Strip_RemovesForExampleLineBeforeParamsComment()
+    {
+        // Azure Monitor — leaked "For example, ..." example command sitting directly
+        // before the <!-- Required parameters --> annotation comment.
+        var content = @"Gets the metric definitions for an Azure Monitor resource. Provide a resource ID to scope the query.
+
+For example, get metric definitions for resource 'vm-app-01' in resource group 'rg-prod'.
+
+<!-- Required parameters: 1 - 'Resource ID' -->
+
+Example prompts include:
+
+- ""List metric definitions for my virtual machine.""";
+
+        var result = EngineeringExampleStripper.Strip(content);
+
+        Assert.DoesNotContain("For example, get metric definitions", result);
+        Assert.Contains("Gets the metric definitions for an Azure Monitor resource.", result);
+        Assert.Contains("<!-- Required parameters: 1 - 'Resource ID' -->", result);
+        Assert.Contains("Example prompts include:", result);
+    }
+
+    [Fact]
+    public void Strip_RemovesForExampleLineWithQuotedIdentifiers()
+    {
+        // Azure Kubernetes Service — another leaked "For example," variant before params comment.
+        var content = @"Gets a managed cluster in Azure Kubernetes Service (AKS).
+
+For example, get the cluster named 'prod-aks' in resource group 'rg-aks'.
+
+<!-- Required parameters: 2 - 'Resource group', 'Cluster' -->";
+
+        var result = EngineeringExampleStripper.Strip(content);
+
+        Assert.DoesNotContain("For example, get the cluster named", result);
+        Assert.Contains("Gets a managed cluster in Azure Kubernetes Service", result);
+        Assert.Contains("<!-- Required parameters: 2 - 'Resource group', 'Cluster' -->", result);
+    }
+
+    [Fact]
+    public void Strip_PreservesForExampleProseNotBeforeParamsComment()
+    {
+        // Azure SQL — legit "For example," explanatory prose NOT followed by a params
+        // comment must be preserved (no false positive). Guards the anchored pattern.
+        var content = @"You can scope the query to a single database or an entire server. For example, you can list all databases on a server to compare their service tiers before scaling.
+
+Example prompts include:
+
+- ""List databases on my SQL server.""";
+
+        var result = EngineeringExampleStripper.Strip(content);
+
+        Assert.Contains("For example, you can list all databases on a server", result);
+        Assert.Contains("Example prompts include:", result);
+    }
+
     // ── Preservation tests (no false positives) ─────────────────────
 
     [Fact]
