@@ -15,6 +15,7 @@ namespace PipelineRunner.Steps;
 public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 {
     public const string FamilyCleanupOverrideKey = "ToolFamilyCleanupStep.FamilyCleanupOverride";
+    public const string PreAiValidatorOverrideKey = "ToolFamilyCleanupStep.PreAiValidatorOverride";
 
     private static readonly ReducerRegistry Reducers = new();
     private static readonly UpstreamArtifactResolver UpstreamArtifacts = new();
@@ -564,7 +565,21 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             new FamilyStructureReducerInput(toolsDirectory, familyName, h2HeadingsDirectory),
             cancellationToken);
 
-        var validationResult = await ReducerRegistry.AggregateAsync(Reducers.GetValidators<FamilyStructureContext>(), structure, cancellationToken);
+        var validators = Reducers.GetValidators<FamilyStructureContext>();
+        if (context.Items.TryGetValue(PreAiValidatorOverrideKey, out var validatorOverride))
+        {
+            if (validatorOverride is IPreAiValidator<FamilyStructureContext> extraValidator)
+            {
+                validators = validators.Append(extraValidator);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Context item '{PreAiValidatorOverrideKey}' must be {typeof(IPreAiValidator<FamilyStructureContext>).FullName}.");
+            }
+        }
+
+        var validationResult = await ReducerRegistry.AggregateAsync(validators, structure, cancellationToken);
         if (!validationResult.IsValid)
         {
             return (null, validationResult.Errors);

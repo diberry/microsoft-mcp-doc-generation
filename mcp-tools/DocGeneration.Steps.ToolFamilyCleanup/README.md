@@ -59,6 +59,7 @@ pwsh ./GenerateDocGeneration.Steps.ToolFamilyCleanup-multifile.ps1
 **How It Works:**
 1. **Phase 1**: Reads individual tool files from `./generated/tools/` and groups by family
 2. **Phase 1.5**: `FamilyStructureBuilder` loads deterministic H2 headings, establishes canonical section order, and emits `FamilyStructureContext`
+   - PipelineRunner tests can inject an additional `IPreAiValidator<FamilyStructureContext>` through `ToolFamilyCleanupStep.PreAiValidatorOverrideKey`; production leaves this unset.
 3. **Phase 2**: Generates metadata (frontmatter + H1 + intro) using AI per family
 4. **Phase 3**: Generates deterministic related content per family
 5. **Phase 4**: Stitches sections together with metadata/related content (no AI)
