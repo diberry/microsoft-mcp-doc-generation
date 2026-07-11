@@ -69,6 +69,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
+        var preAiValidatorResults = new List<ValidatorResult>();
         var step1Envelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 1, "generate-annotations-parameters-and-raw-tools");
         var step2Envelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 2, "generate-example-prompts");
         var rawToolsDirectory = ResolveUpstreamDirectory(
@@ -198,6 +199,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
                     composedToolsDirectory,
                     improvedToolsDirectory,
                     warnings,
+                    preAiValidatorResults,
                     cancellationToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -212,7 +214,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
                     "Tool improvement failed before specific tools could be identified.",
                     warnings,
                     [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
-                return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+                return BuildResult(context, processResults, false, warnings, validatorResults: preAiValidatorResults, artifactFailures: artifactFailures);
             }
 
             if (hadValidationFailure)
@@ -253,7 +255,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
                         "Tool improvement failed before specific tools could be identified.",
                         warnings,
                         [composedToolsDirectory, improvedToolsDirectory, annotationsDirectory, parametersDirectory, examplePromptsDirectory]));
-                    return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+                    return BuildResult(context, processResults, false, warnings, validatorResults: preAiValidatorResults, artifactFailures: artifactFailures);
                 }
 
                 artifactFailures.AddRange(toolArtifacts
@@ -320,7 +322,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             }
         }
 
-        return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
+        return BuildResult(context, processResults, true, warnings, validatorResults: preAiValidatorResults, artifactFailures: artifactFailures);
     }
 
     private static Dictionary<string, List<string>> GetPrerequisiteIssues(IEnumerable<ToolArtifacts> toolArtifacts)
@@ -402,6 +404,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
         string composedToolsDirectory,
         string improvedToolsDirectory,
         List<string> warnings,
+        List<ValidatorResult> preAiValidatorResults,
         CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(improvedToolsDirectory);
@@ -428,6 +431,7 @@ public sealed class ToolGenerationStep : NamespaceStepBase
             {
                 var errorSummary = string.Join("; ", validationResult.Errors.Select(static e => e.Message));
                 warnings.Add($"Pre-AI validation failed for '{artifact.ToolFileName}': {errorSummary}");
+                preAiValidatorResults.Add(new ValidatorResult("pre-ai-validation", false, [errorSummary]));
                 await File.WriteAllTextAsync(artifact.ImprovedToolPath, reduction.ComposedContent, Encoding.UTF8, cancellationToken);
                 anyValidationFailed = true;
                 continue;

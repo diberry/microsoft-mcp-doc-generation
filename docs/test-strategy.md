@@ -162,15 +162,23 @@ public void Template_RendersWith_ExpectedOutput()
 | 0 (Bootstrap) | `cli/` | metadata, brand mappings | None | ❌ |
 | 1 (AnnotationsParametersRaw) | `cli/`, metadata | `annotations/`, `parameters/`, `tools-raw/` | None | ❌ |
 | 2 (ExamplePrompts) | `cli/`, annotations, parameters | `example-prompts/` | None | ❌ |
-| 3 (ToolGeneration) | tools-raw, annotations, parameters, example-prompts | `tools-composed/`, `tools/` | None | ❌ |
-| 4 (ToolFamilyCleanup) | `tools/` | `tool-family/`, `tool-family-metadata/`, `tool-family-related/` | ⚠️ Partial (post-assembly validator) | 🟡 |
+| 3 (ToolGeneration) | tools-raw, annotations, parameters, example-prompts | `tools-composed/`, `tools/` | ⚠️ Partial (real pre-AI gate) | 🟡 |
+| 4 (ToolFamilyCleanup) | `tools/` | `tool-family/`, `tool-family-metadata/`, `tool-family-related/` | ⚠️ Partial (post-assembly validator, real pre-AI gate) | 🟡 |
 | 5 (SkillsRelevance) | `tools/` | `skills-relevance/` | None | ❌ |
-| 6 (HorizontalArticles) | `tools/` | `horizontal-articles/` | None | ❌ |
+| 6 (HorizontalArticles) | `tools/` | `horizontal-articles/` | ⚠️ Partial (real pre-AI gate) | 🟡 |
 
 **What contract tests should verify:**
 1. Given valid step N inputs on disk → step N produces expected output files
 2. Given corrupted/missing step N-1 outputs → step N fails with clear error (not silent degradation)
 3. Output file structure matches the schema expected by step N+1
+
+### 3.3.1 Real-step pre-AI gate tests
+
+`DocGeneration.PipelineRunner.Tests/Unit/PreAiGateRealStepTests.cs` covers the production step-internal pre-AI validation gates for steps 3, 4, and 6. These tests execute the real step classes directly and assert that gate failures produce a failing `pre-ai-validation` `ValidatorResult` and skip the AI renderer/cleanup override:
+
+- Step 3 (`ToolGenerationStep`) uses oversized Storage composed content to fail the real `ToolGenerationBudgetValidator`.
+- Step 4 (`ToolFamilyCleanupStep`) uses a Key Vault tool family plus an injectable `IPreAiValidator<FamilyStructureContext>` seam to prove the real aggregation call is wired, and separately verifies `FamilyStructureContextValidator` registration.
+- Step 6 (`HorizontalArticlesStep`) uses oversized Monitor CLI descriptions that flow into `ArticleOutlineBuilder` evidence and fail the real `ArticleOutlineBudgetValidator`.
 
 ### 3.4 Cross-Namespace Regression Tests
 
