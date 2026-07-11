@@ -186,6 +186,43 @@ public class HorizontalArticleGenerator
     private readonly bool _useTextTransformation;
     private readonly bool _generateAllArticles;
     private readonly TransformationEngine? _transformationEngine;
+    private readonly int _aiMaxAttempts;
+    private readonly Func<int, TimeSpan> _aiRetryDelay;
+
+    /// <summary>Default exponential backoff for AI retries: 1s, 2s, 4s, … (#661).</summary>
+    private static TimeSpan DefaultAiRetryDelay(int attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt - 1));
+
+    /// <summary>
+    /// Retries <paramref name="operation"/> up to <paramref name="maxAttempts"/> times, awaiting
+    /// <paramref name="delay"/> between attempts. The final attempt is not caught, so its exception
+    /// propagates to the caller (which then applies its static fallback). Fixes #661.
+    /// </summary>
+    internal static async Task<T> WithRetry<T>(Func<Task<T>> operation, int maxAttempts, Func<int, TimeSpan> delay)
+    {
+        for (int attempt = 1; attempt < maxAttempts; attempt++)
+        {
+            try
+            {
+                return await operation();
+            }
+            catch
+            {
+                await Task.Delay(delay(attempt));
+            }
+        }
+
+        return await operation(); // final attempt — let it throw
+    }
+
+    /// <summary>
+    /// Invokes the AI chat completion with transient-failure retry/backoff (#661). Callers wrap this
+    /// in their own try/catch so that, once all retries are exhausted, they fall back to static content.
+    /// </summary>
+    internal Task<string> CallAiWithRetryAsync(string systemPrompt, string userPrompt, int maxTokens)
+        => WithRetry(
+            () => _aiClient.GetChatCompletionAsync(systemPrompt, userPrompt, maxTokens),
+            _aiMaxAttempts,
+            _aiRetryDelay);
 
     /// <summary>
     /// Resolves a prompt file path.  When <c>mcpToolsRoot</c> was supplied to the constructor
@@ -220,6 +257,33 @@ public class HorizontalArticleGenerator
         _cliOutputPath = Path.Combine(_outputBasePath, "cli", "cli-output.json");
         _outputDir = Path.Combine(_outputBasePath, "horizontal-articles");
         _promptOutputDir = Path.Combine(_outputBasePath, "horizontal-article-prompts");
+        _aiMaxAttempts = 3;
+        _aiRetryDelay = DefaultAiRetryDelay;
+    }
+
+    /// <summary>
+    /// Test-only constructor that injects a pre-built <see cref="GenerativeAIClient"/> and retry
+    /// configuration, bypassing environment-variable validation. Used to exercise the #661 retry
+    /// seam deterministically (a fake <c>IChatClient</c> + zero backoff delay).
+    /// </summary>
+    internal HorizontalArticleGenerator(
+        GenerativeAIClient aiClient,
+        string? outputBasePath,
+        string? mcpToolsRoot,
+        int aiMaxAttempts,
+        Func<int, TimeSpan>? aiRetryDelay)
+    {
+        _aiClient = aiClient ?? throw new ArgumentNullException(nameof(aiClient));
+        _useTextTransformation = false;
+        _generateAllArticles = false;
+        _transformationEngine = null;
+        _mcpToolsRoot = string.IsNullOrWhiteSpace(mcpToolsRoot) ? null : Path.GetFullPath(mcpToolsRoot);
+        _outputBasePath = outputBasePath != null ? Path.GetFullPath(outputBasePath) : DefaultOutputBase;
+        _cliOutputPath = Path.Combine(_outputBasePath, "cli", "cli-output.json");
+        _outputDir = Path.Combine(_outputBasePath, "horizontal-articles");
+        _promptOutputDir = Path.Combine(_outputBasePath, "horizontal-article-prompts");
+        _aiMaxAttempts = aiMaxAttempts;
+        _aiRetryDelay = aiRetryDelay ?? DefaultAiRetryDelay;
     }
     
     /// <summary>
@@ -554,8 +618,8 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         // Calculate token limit based on tool count
         var maxTokens = CalculateMaxTokens(staticData.Tools.Count);
 
-        // Call AI client
-        var response = await _aiClient.GetChatCompletionAsync(
+        // Call AI client (with transient-failure retry/backoff — #661)
+        var response = await CallAiWithRetryAsync(
             systemPrompt,
             userPrompt,
             maxTokens
@@ -579,7 +643,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
     /// Calls AI once for a single tool to generate its short description, scenario, and capability.
     /// Returns a static-data fallback if prompt files are not present (Sage may not have written them yet).
     /// </summary>
-    private async Task<PerToolAIData> GenerateAIContentForTool(
+    internal async Task<PerToolAIData> GenerateAIContentForTool(
         HorizontalToolSummary tool,
         string serviceBrandName,
         string serviceIdentifier,
@@ -643,7 +707,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             await File.WriteAllTextAsync(promptFilePath, promptContent, Encoding.UTF8);
 
             var maxTokens = CalculateMaxTokens(1, isPerToolCall: true);
-            var response = await _aiClient.GetChatCompletionAsync(systemPrompt, userPrompt, maxTokens);
+            var response = await CallAiWithRetryAsync(systemPrompt, userPrompt, maxTokens);
 
             await File.AppendAllTextAsync(promptFilePath, $"""
 
@@ -727,7 +791,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             await File.WriteAllTextAsync(promptFilePath, promptContent, Encoding.UTF8);
 
             var maxTokens = CalculateMaxTokens(staticData.Tools.Count, isPerToolCall: false);
-            var response = await _aiClient.GetChatCompletionAsync(systemPrompt, userPrompt, maxTokens);
+            var response = await CallAiWithRetryAsync(systemPrompt, userPrompt, maxTokens);
 
             await File.AppendAllTextAsync(promptFilePath, $"""
 
