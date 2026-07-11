@@ -31,7 +31,12 @@ public class PreAiValidationGateObservabilityTests
     public async Task TryRunPreAiGateAsync_ValidatorFailure_IsRecordedInStepEnvelope()
     {
         var repoRoot = CreateRepoRoot("pre-ai-gate-observability");
-        const string outputRelativePath = ".\\generated-compute";
+        // Plain relative path (no ".\\" prefix): the runner normalizes separators via
+        // PipelineContextFactory.NormalizePathSeparators, but this test computes the
+        // expected path with a raw Path.Combine. A backslash prefix stays literal on
+        // Linux (where '\\' is a filename char), diverging from the runner's resolved
+        // path and breaking the test cross-platform. See PipelineContextFactory.cs.
+        const string outputRelativePath = "generated-compute";
 
         try
         {
@@ -94,7 +99,9 @@ public class PreAiValidationGateObservabilityTests
     public async Task RunAsync_AdvisorNamespace_ValidatorsFireForAllThreeSteps()
     {
         var repoRoot = CreateRepoRoot("advisor-e2e-smoke");
-        const string outputRelativePath = ".\\generated-advisor";
+        // Plain relative path (no ".\\" prefix) for cross-platform correctness — see the
+        // companion note in TryRunPreAiGateAsync_ValidatorFailure_IsRecordedInStepEnvelope.
+        const string outputRelativePath = "generated-advisor";
 
         try
         {

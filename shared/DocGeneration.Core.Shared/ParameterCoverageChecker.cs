@@ -219,17 +219,6 @@ public static class ParameterCoverageChecker
                 }
             }
 
-            if (!covered && totalRequiredParameters == 1 && placeholders.Length == 0)
-            {
-                if (Regex.IsMatch(trimmedPrompt, "'[^'<>{}\\[\\]]+'")
-                    || Regex.IsMatch(trimmedPrompt, "`[^`<>{}\\[\\]]+`")
-                    || Regex.IsMatch(trimmedPrompt, "https?://\\S+"))
-                {
-                    covered = true;
-                    break;
-                }
-            }
-
             // Fallback for single-word resource identifier params with low param count
             if (!covered && words.Length == 1 && totalRequiredParameters <= 2 && placeholders.Length == 0)
             {

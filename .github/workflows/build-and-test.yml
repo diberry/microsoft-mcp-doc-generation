@@ -45,7 +45,11 @@ jobs:
         run: dotnet build mcp-doc-generation.sln --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test mcp-doc-generation.sln --no-build --configuration Release --verbosity normal
+        # The fast PR gate runs deterministic unit/contract tests only. Environment-dependent
+        # categories (E2E, Smoke/SmokeTest, RequiresGeneration) require real generation output
+        # or a full pipeline run and are covered by a separate generation-dependent job.
+        # Tracking: https://github.com/diberry/microsoft-mcp-doc-generation/issues/710
+        run: dotnet test mcp-doc-generation.sln --no-build --configuration Release --verbosity normal --filter "Category!=E2E&Category!=Smoke&Category!=SmokeTest&Category!=RequiresGeneration"
 
   pester-tests:
     runs-on: ubuntu-latest
