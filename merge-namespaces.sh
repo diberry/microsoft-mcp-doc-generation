@@ -9,21 +9,25 @@
 #   ./merge-namespaces.sh --dry-run          # Show what would be merged without writing
 #
 # Called automatically by start.sh after all namespace processing completes.
+#
+# Test seams (used only by the automated smoke test — production leaves them unset):
+#   MERGE_ROOT_DIR   Override the repository root that is scanned for generated-* dirs.
+#   MERGE_BRAND_MAP  Override the path to brand-to-server-mapping.json.
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="${MERGE_ROOT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 DRY_RUN="${1:-false}"
 if [[ "$DRY_RUN" == "--dry-run" ]]; then DRY_RUN="true"; fi
 
 cd "$ROOT_DIR"
-DRY_RUN_FLAG="$DRY_RUN" node -e "
+DRY_RUN_FLAG="$DRY_RUN" BRAND_MAP_PATH="${MERGE_BRAND_MAP:-}" node -e "
 const fs = require('fs');
 const path = require('path');
 
 const rootDir = process.cwd();
 const dryRun = process.env.DRY_RUN_FLAG === 'true';
-const brandPath = path.join(rootDir, 'mcp-tools', 'data', 'brand-to-server-mapping.json');
+const brandPath = process.env.BRAND_MAP_PATH || path.join(rootDir, 'mcp-tools', 'data', 'brand-to-server-mapping.json');
 const mappings = JSON.parse(fs.readFileSync(brandPath, 'utf8'));
 
 // Find merge groups

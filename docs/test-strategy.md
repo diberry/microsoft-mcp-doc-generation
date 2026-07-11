@@ -513,7 +513,10 @@ Zero step contract tests exist. No test verifies that Step N's output is valid i
 
 ### 9.6 Merge Infrastructure Tests
 
-`NamespaceMerger` has tests in `ToolFamilyCleanup.Tests/NamespaceMergerTests.cs`, but:
+The **shipping** merge (`merge-namespaces.sh`, bash + inline-Node — the one `start.sh` actually runs) is covered by an automated smoke test (`mcp-tools/validation/tests/merge-namespaces-smoke.sh`, wrapped by `MergeNamespaces.Tests.ps1` in the `pester-tests` CI job). It builds a two-namespace merge-group fixture and asserts AD-011 rules for both the canonical and `-cli` variants (#706).
+
+The typed twin `NamespaceMerger` has tests in `ToolFamilyCleanup.Tests/NamespaceMergerTests.cs`, but:
+- It is **not wired into the pipeline** (the bash script is the production path)
 - Only 1 merge group exists (`monitor` + `workbooks`)
 - Edge cases untested: 3+ namespace merge, conflicting frontmatter, missing primary
 
