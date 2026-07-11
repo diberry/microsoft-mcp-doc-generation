@@ -185,7 +185,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 var toneMarkerWarnings = GetToneMarkerWarnings(articleContent);
                 warningIssues.AddRange(toneMarkerWarnings);
 
-                var boilerplateWarnings = GetBoilerplateRedundancyWarnings();
+                var boilerplateWarnings = GetBoilerplateRedundancyWarnings(sections);
                 warningIssues.AddRange(boilerplateWarnings);
 
                 var relatedSectionWarnings = GetRelatedSectionHeaderWarnings(article.HasRelatedSection);
@@ -434,7 +434,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 alternateExampleHeader,
                 examplePrompts,
                 requiredParameters,
-                parameterRows.Count));
+                parameterRows.Count,
+                ExtractDescriptionParagraphs(sectionLines)));
         }
 
         return new ParsedArticle(frontmatter, sections, hasRelatedSection, relatedSectionText);
@@ -1065,12 +1066,151 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         return warnings.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private static IReadOnlyList<string> GetBoilerplateRedundancyWarnings()
+    private static IReadOnlyList<string> GetBoilerplateRedundancyWarnings(IReadOnlyList<ArticleSection> sections)
+        => DetectBoilerplateRedundancyWarnings(
+            sections.Select(section => (section.Heading, section.DescriptionParagraphs)).ToArray());
+
+    // Minimum word count for a prose paragraph to be considered "boilerplate" — short
+    // shared phrases (single clauses, generic labels) are excluded to avoid false positives.
+    private const int BoilerplateMinWordCount = 8;
+
+    private static readonly Regex BoilerplateWhitespaceRegex =
+        new(@"\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex ExampleHeaderLineRegex =
+        new("^(?i)(example prompts|example commands|usage examples|examples|try this|to .* use commands like)[^:]*:",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex OrderedListItemRegex =
+        new(@"^\d+\.\s", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    // Detects copy-pasted boilerplate description prose repeated verbatim across two or
+    // more tool sections in the same assembled article (#662). Warn-only and
+    // service-agnostic: it compares normalized prose paragraphs by content only, with no
+    // knowledge of any specific Azure service, tool, or product name.
+    internal static IReadOnlyList<string> DetectBoilerplateRedundancyWarnings(
+        IReadOnlyList<(string Heading, IReadOnlyList<string> Paragraphs)> sectionParagraphs)
     {
-        // Placeholder: boilerplate redundancy check not yet implemented.
-        // Tracked in #662 — always returns empty for now.
-        return Array.Empty<string>();
+        var headingsByParagraph = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var sampleByParagraph = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var (heading, paragraphs) in sectionParagraphs)
+        {
+            var countedInThisSection = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var paragraph in paragraphs)
+            {
+                var normalized = NormalizeProse(paragraph);
+                if (normalized.Length == 0 || CountWords(normalized) < BoilerplateMinWordCount)
+                {
+                    continue;
+                }
+
+                // Count each tool section at most once per distinct paragraph so a section
+                // that repeats a line internally isn't mistaken for cross-section redundancy.
+                if (!countedInThisSection.Add(normalized))
+                {
+                    continue;
+                }
+
+                if (!headingsByParagraph.TryGetValue(normalized, out var headings))
+                {
+                    headings = new List<string>();
+                    headingsByParagraph[normalized] = headings;
+                    sampleByParagraph[normalized] = paragraph.Trim();
+                }
+
+                if (!headings.Contains(heading))
+                {
+                    headings.Add(heading);
+                }
+            }
+        }
+
+        var warnings = new List<string>();
+        foreach (var pair in headingsByParagraph)
+        {
+            var headings = pair.Value;
+            if (headings.Count < 2)
+            {
+                continue;
+            }
+
+            var snippet = sampleByParagraph[pair.Key];
+            if (snippet.Length > 80)
+            {
+                snippet = string.Concat(snippet.AsSpan(0, 80), "…");
+            }
+
+            warnings.Add(
+                $"⚠️ Boilerplate redundancy: identical description repeated across {headings.Count} tool sections ({string.Join(", ", headings)}): [{snippet}]");
+        }
+
+        return warnings;
     }
+
+    // Extracts the natural-language description paragraphs from a tool section's lines,
+    // excluding structural elements (headings, tab markers, HTML/marker comments, tables,
+    // list items, code fences, includes, blockquotes, horizontal rules, example headers).
+    // Consecutive prose lines separated by blank/structural lines form distinct paragraphs.
+    internal static IReadOnlyList<string> ExtractDescriptionParagraphs(IReadOnlyList<string> sectionLines)
+    {
+        var paragraphs = new List<string>();
+        var current = new List<string>();
+
+        void Flush()
+        {
+            if (current.Count > 0)
+            {
+                paragraphs.Add(string.Join(" ", current));
+                current.Clear();
+            }
+        }
+
+        // Start at index 1 to skip the section's own "## Heading" line.
+        for (var i = 1; i < sectionLines.Count; i++)
+        {
+            var trimmed = sectionLines[i].Trim();
+            if (trimmed.Length == 0 || !IsProseLine(trimmed))
+            {
+                Flush();
+                continue;
+            }
+
+            current.Add(trimmed);
+        }
+
+        Flush();
+        return paragraphs;
+    }
+
+    private static bool IsProseLine(string trimmed)
+    {
+        if (trimmed.StartsWith("<!--", StringComparison.Ordinal)
+            || trimmed.StartsWith('|')
+            || trimmed.StartsWith('#')
+            || trimmed.StartsWith('>')
+            || trimmed.StartsWith("```", StringComparison.Ordinal)
+            || trimmed.StartsWith("---", StringComparison.Ordinal)
+            || trimmed.StartsWith("[!INCLUDE", StringComparison.OrdinalIgnoreCase)
+            || trimmed.StartsWith("- ", StringComparison.Ordinal)
+            || trimmed.StartsWith("* ", StringComparison.Ordinal)
+            || trimmed.StartsWith("+ ", StringComparison.Ordinal)
+            || OrderedListItemRegex.IsMatch(trimmed)
+            || ExampleHeaderLineRegex.IsMatch(trimmed))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static string NormalizeProse(string paragraph)
+        => BoilerplateWhitespaceRegex.Replace(paragraph, " ").Trim().ToLowerInvariant();
+
+    private static int CountWords(string normalized)
+        => normalized.Length == 0
+            ? 0
+            : normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
 
     private static IReadOnlyList<string> GetRelatedSectionHeaderWarnings(bool hasRelatedSection)
         => hasRelatedSection
@@ -1157,7 +1297,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         string? AlternateExampleHeader,
         IReadOnlyList<string> ExamplePrompts,
         IReadOnlyList<string> RequiredParameters,
-        int TotalParameterCount);
+        int TotalParameterCount,
+        IReadOnlyList<string> DescriptionParagraphs);
 
     private sealed record ParsedArticle(
         string Frontmatter,
