@@ -1,7 +1,9 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
+using PipelineRunner.Services;
 using Shared;
 
 namespace PipelineRunner.Validation;
@@ -164,6 +166,12 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
                 var annotationFormatIssues = GetAnnotationFormatIssues(articleContent);
                 foreach (var issue in annotationFormatIssues)
+                {
+                    blockingIssues.Add(issue);
+                }
+
+                var expectedAnnotationValues = BuildExpectedAnnotationValues(context);
+                foreach (var issue in AnnotationValueValidator.GetValueMismatchIssues(articleContent, expectedAnnotationValues))
                 {
                     blockingIssues.Add(issue);
                 }
@@ -719,6 +727,56 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
         return issues;
     }
+
+    /// <summary>
+    /// Builds the expected annotation values (per command) from the CLI <c>tools list</c>
+    /// metadata carried on <see cref="PipelineContext.CliOutput"/>. Each tool maps to six
+    /// booleans in <see cref="AnnotationValueValidator.ColumnFields"/> order. A field that is
+    /// absent from the metadata defaults to <see langword="false"/> (❌), matching the annotation
+    /// template's rendering, so missing fields never produce false-positive mismatches.
+    /// Returns an empty map when no CLI snapshot is available (value validation then no-ops).
+    /// </summary>
+    private static Dictionary<string, bool[]> BuildExpectedAnnotationValues(PipelineContext context)
+    {
+        var result = new Dictionary<string, bool[]>(StringComparer.OrdinalIgnoreCase);
+        var snapshot = context.CliOutput;
+        if (snapshot is null)
+        {
+            return result;
+        }
+
+        foreach (var tool in snapshot.Tools)
+        {
+            if (string.IsNullOrWhiteSpace(tool.Command))
+            {
+                continue;
+            }
+
+            var values = new bool[AnnotationValueValidator.ColumnFields.Length];
+            if (tool.Raw.ValueKind == JsonValueKind.Object
+                && tool.Raw.TryGetProperty("metadata", out var metadata)
+                && metadata.ValueKind == JsonValueKind.Object)
+            {
+                values[0] = ReadMetadataFlag(metadata, "destructive");
+                values[1] = ReadMetadataFlag(metadata, "idempotent");
+                values[2] = ReadMetadataFlag(metadata, "openWorld");
+                values[3] = ReadMetadataFlag(metadata, "readOnly");
+                values[4] = ReadMetadataFlag(metadata, "secret");
+                values[5] = ReadMetadataFlag(metadata, "localRequired");
+            }
+
+            var key = Regex.Replace(tool.Command.Trim(), @"\s+", " ");
+            result[key] = values;
+        }
+
+        return result;
+    }
+
+    private static bool ReadMetadataFlag(JsonElement metadata, string field)
+        => metadata.TryGetProperty(field, out var flag)
+            && flag.ValueKind == JsonValueKind.Object
+            && flag.TryGetProperty("value", out var value)
+            && value.ValueKind == JsonValueKind.True;
 
     private static IReadOnlyList<string> GetBrandingIssues(string articleContent)
     {
