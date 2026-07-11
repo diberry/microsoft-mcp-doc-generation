@@ -28,6 +28,7 @@
   "testresource": "test-resource",
   "testrun": "test-run",
   "tts": "operation-text-speech",
+  "usageplan": "usage-plan",
   "webtests": "web-tests",
   "azureaibestpractices": "azure-ai-best-practices"
 }

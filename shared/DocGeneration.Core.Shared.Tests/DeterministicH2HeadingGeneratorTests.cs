@@ -314,6 +314,62 @@ public class DeterministicH2HeadingGeneratorTests
         Assert.Contains("virtual", heading);
     }
 
+    // ─── Bug #708: Concatenated resource tokens split via compound-words.json ─
+    // These tests load the REAL compound-words.json so they FAIL if the
+    // "usageplan" -> "usage-plan" mapping is reverted (per AD-010).
+
+    [Fact]
+    public async Task CompoundWordsConfig_ContainsUsageplanMapping()
+    {
+        var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
+        Assert.True(compoundWords.ContainsKey("usageplan"),
+            "compound-words.json must map 'usageplan' so H2 headings split it into 'usage plan'.");
+        Assert.Equal("usage-plan", compoundWords["usageplan"]);
+    }
+
+    [Fact]
+    public async Task GenerateHeading_SplitsUsageplanToken_UsingRealConfig()
+    {
+        var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
+        // "resilience usageplan get" → resource token "usageplan" must render as "usage plan(s)"
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "resilience usageplan get", "Get or list usage plans", compoundWords);
+        Assert.Contains("usage plan", heading, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("usageplan", heading, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GenerateHeading_UsageplanEnrollmentSibling_RendersConsistently()
+    {
+        var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
+        // Multi-segment resource "usageplan enrollment" must render as "usage plan enrollment"
+        var heading = DeterministicH2HeadingGenerator.GenerateHeading(
+            "resilience usageplan enrollment get", "Get or list enrollments", compoundWords);
+        Assert.Contains("usage plan enrollment", heading, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("usageplan", heading, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void GenerateHeading_CompoundSplit_IsConfigDriven_NotServiceSpecific()
+    {
+        // Universal-design guard: the split mechanism works for ANY configured token,
+        // not just usageplan. Varied services: Cosmos DB, Key Vault, Monitor.
+        var compoundWords = new Dictionary<string, string>
+        {
+            ["backuppolicy"] = "backup-policy",
+            ["hostpool"] = "host-pool",
+        };
+        var h1 = DeterministicH2HeadingGenerator.GenerateHeading(
+            "backup backuppolicy get", "Get backup policies", compoundWords);
+        Assert.Contains("backup policy", h1, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("backuppolicy", h1, StringComparison.OrdinalIgnoreCase);
+
+        var h2 = DeterministicH2HeadingGenerator.GenerateHeading(
+            "desktopvirtualization hostpool get", "Get host pools", compoundWords);
+        Assert.Contains("host pool", h2, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("hostpool", h2, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void GenerateHeadings_AllOutputsSentenceCase()
     {
