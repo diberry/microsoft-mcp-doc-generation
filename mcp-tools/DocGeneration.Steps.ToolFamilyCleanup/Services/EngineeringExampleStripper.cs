@@ -50,6 +50,16 @@ public static class EngineeringExampleStripper
         @"(?<=\S[.!?])[ \t]+Example prompt:(?! include).+$",
         RegexOptions.Multiline | RegexOptions.Compiled);
 
+    // Pattern 4: standalone "For example, ..." example line that leaks from Step 3 engineering
+    // descriptions (#709). Only stripped when it sits directly before the auto-generated
+    // "<!-- Required parameters ... -->" annotation comment — the structural marker of the end
+    // of a leaked example inside a tool description block. The trailing lookahead ensures legit
+    // explanatory prose ("For example, you can ...") that is NOT followed by the params comment
+    // is preserved (no false positive).
+    private static readonly Regex ForExampleBeforeParamsPattern = new(
+        @"^For example,.*\r?\n(?:[ \t]*\r?\n)*(?=<!-- Required parameters)",
+        RegexOptions.Multiline | RegexOptions.Compiled);
+
     /// <summary>
     /// Strips engineering-authored example patterns from content.
     /// Preserves "Example prompts include:" canonical blocks.
@@ -77,6 +87,9 @@ public static class EngineeringExampleStripper
 
         // Remove standalone "Example: ..." lines
         result = StandaloneExampleLinePattern.Replace(result, "");
+
+        // Remove standalone "For example, ..." leak lines that sit before the params comment (#709)
+        result = ForExampleBeforeParamsPattern.Replace(result, "");
 
         // Clean up excessive blank lines left by removals (3+ → 2)
         result = Regex.Replace(result, @"\n{3,}", "\n\n");

@@ -31,6 +31,14 @@ public static class DuplicateExampleStripper
         @"^(?<!#+ )Examples:\s*\n(?:- .+\n?)+",
         RegexOptions.Multiline | RegexOptions.Compiled);
 
+    // Pattern 2b: bare "Examples" header WITHOUT a colon and WITHOUT a "###"/"##" heading,
+    // followed by a blank line and bullet items. This is the leak variant from #709 that
+    // slipped past RawExamplesBlockPattern (which requires a colon). Anchored on a line that
+    // is exactly "Examples" so prose like "Examples of supported regions ..." is preserved.
+    private static readonly Regex BareExamplesBlockPattern = new(
+        @"^Examples[ \t]*\r?\n(?:[ \t]*\r?\n)*(?:- .+\r?\n?)+",
+        RegexOptions.Multiline | RegexOptions.Compiled);
+
     // Pattern 3: "Example prompts:" (without "include") followed by bullet items
     // Must NOT match "Example prompts include:"
     private static readonly Regex ExamplePromptsNoIncludePattern = new(
@@ -55,6 +63,9 @@ public static class DuplicateExampleStripper
 
         // Remove raw "Examples:" bullet lists
         result = RawExamplesBlockPattern.Replace(result, "");
+
+        // Remove bare "Examples" (no colon) bullet lists (#709)
+        result = BareExamplesBlockPattern.Replace(result, "");
 
         // Remove "Example prompts:" (without "include") bullet lists
         result = ExamplePromptsNoIncludePattern.Replace(result, "");
