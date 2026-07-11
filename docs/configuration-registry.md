@@ -8,7 +8,7 @@
 |------|---------|-------------------|------------------|-------------|-------------|
 | `brand-to-server-mapping.json` | Maps MCP namespace → Azure brand name, short name, filename, merge config | `DataFileLoader`, `ToolFileNameBuilder`, `CleanupGenerator`, `BootstrapStep` | 0 (Bootstrap), 1, 3, 4, 6 | ~52 entries | Yes |
 | `common-parameters.json` | Shared CLI parameters filtered from per-tool tables (auth, retry, subscription) | `DataFileLoader`, `DocumentationGenerator` | 1 (Annotations) | 9 entries | Yes |
-| `compound-words.json` | Concatenated CLI tokens → hyphenated forms for filename generation | `DataFileLoader`, `ToolFileNameBuilder` | 0, 1 | ~23 entries | Yes |
+| `compound-words.json` | Concatenated CLI tokens → hyphenated forms, used for both include-filename generation and H2 heading display-text splitting | `DataFileLoader`, `ToolFileNameBuilder`, `DeterministicH2HeadingGenerator` | 0, 1, 4 | ~31 entries | Yes |
 | `stop-words.json` | Words removed from generated include filenames | `DataFileLoader`, `ToolFileNameBuilder` | 0, 1 | 5 entries | Yes |
 | `nl-parameters.json` | CLI parameter names → human-readable text | `TextCleanup`, `Config` | 1 (Annotations) | 4 entries | Yes |
 | `nl-parameter-identifiers.json` | Single-word identifiers → "X name" expansions | `TextCleanup` (auto-discovered) | 1 (Annotations) | ~19 entries | No |
