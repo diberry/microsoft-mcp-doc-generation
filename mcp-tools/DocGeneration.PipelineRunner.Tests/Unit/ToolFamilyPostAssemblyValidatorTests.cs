@@ -1231,6 +1231,142 @@ public class ToolFamilyPostAssemblyValidatorTests
         - Link
         """;
 
+    // ── #695 Part 2: annotation VALUE validation against CLI metadata (wiring) ──
+
+    [Fact]
+    public async Task ValidateAsync_AnnotationValueContradictsCliMetadata_Blocks()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithAnnotationTables());
+
+            // Article shows "compute show" Read Only ✅, but CLI metadata says readOnly=false (❌).
+            context.CliOutput = BuildCliOutput(
+                ("compute list", false, true, false, true, false, false),
+                ("compute show", false, true, false, false, false, false));
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(
+                result.Warnings,
+                w => w.Contains("compute show", StringComparison.Ordinal)
+                    && w.Contains("Read Only", StringComparison.Ordinal)
+                    && w.Contains("mismatch", StringComparison.Ordinal));
+            // The matching tool must NOT be flagged.
+            Assert.DoesNotContain(
+                result.Warnings,
+                w => w.Contains("compute list", StringComparison.Ordinal) && w.Contains("mismatch", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_AnnotationValuesMatchCliMetadata_NoValueMismatchAndPasses()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithAnnotationTables());
+
+            // CLI metadata matches the article tables exactly for both tools.
+            context.CliOutput = BuildCliOutput(
+                ("compute list", false, true, false, true, false, false),
+                ("compute show", false, true, false, true, false, false));
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("mismatch", StringComparison.Ordinal));
+            Assert.True(result.Success);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static CliMetadataSnapshot BuildCliOutput(
+        params (string Command, bool Destructive, bool Idempotent, bool OpenWorld, bool ReadOnly, bool Secret, bool LocalRequired)[] tools)
+    {
+        var cliTools = new List<CliTool>();
+        foreach (var t in tools)
+        {
+            var json = $$"""
+            {
+              "command": "{{t.Command}}",
+              "name": "{{t.Command}}",
+              "metadata": {
+                "destructive": { "value": {{(t.Destructive ? "true" : "false")}} },
+                "idempotent": { "value": {{(t.Idempotent ? "true" : "false")}} },
+                "openWorld": { "value": {{(t.OpenWorld ? "true" : "false")}} },
+                "readOnly": { "value": {{(t.ReadOnly ? "true" : "false")}} },
+                "secret": { "value": {{(t.Secret ? "true" : "false")}} },
+                "localRequired": { "value": {{(t.LocalRequired ? "true" : "false")}} }
+              }
+            }
+            """;
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            cliTools.Add(new CliTool(t.Command, t.Command, null, doc.RootElement.Clone()));
+        }
+
+        using var rootDoc = System.Text.Json.JsonDocument.Parse("{}");
+        return new CliMetadataSnapshot("cli-output.json", rootDoc.RootElement.Clone(), cliTools);
+    }
+
+    private static string ArticleWithAnnotationTables()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - List resources where resource group name is 'rg-one' in location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+
+        | Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+        |:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+        | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
+
+        ## Show virtual machine
+        <!-- @mcpcli compute show -->
+        Example prompts include:
+        - Show the VM named 'vm-one' in resource group 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+        | resource group name | No |
+
+        [Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):
+
+        | Destructive | Idempotent | Open World | Read Only | Secret | Local Required |
+        |:-----------:|:----------:|:----------:|:---------:|:------:|:--------------:|
+        | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ |
+
+        ## Related content
+        - Link
+        """;
+
     private sealed class FakeStep : IPipelineStep
     {
         public int Id => 4;
