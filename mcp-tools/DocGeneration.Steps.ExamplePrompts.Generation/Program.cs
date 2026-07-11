@@ -148,7 +148,7 @@ internal static class Program
         try
         {
             var json = await File.ReadAllTextAsync(cliOutputFile);
-            cliOutput = JsonSerializer.Deserialize<CliOutput>(json, new JsonSerializerOptions 
+            cliOutput = JsonSerializer.Deserialize<CliOutput>(json, new JsonSerializerOptions
             { 
                 PropertyNameCaseInsensitive = true 
             });

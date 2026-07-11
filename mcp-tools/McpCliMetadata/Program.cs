@@ -1,8 +1,6 @@
 using DocGeneration.McpCliMetadata;
 using System.Text.Json;
-using System.Text;
 using PipelineRunner.Services;
-using Shared;
 
 if (args.Length < 1)
 {
@@ -21,17 +19,19 @@ try
     Console.WriteLine("Extracting CLI version...");
     var version = await runner.GetVersionAsync();
     var versionJson = JsonSerializer.Serialize(new { version });
-    await File.WriteAllTextAsync(Path.Combine(cliDir, "cli-version.json"), versionJson);
-    Console.WriteLine($"✓ CLI version: {version}");
 
     Console.WriteLine("Extracting tool metadata...");
     var toolsJson = await runner.GetToolsJsonAsync();
-    await File.WriteAllTextAsync(Path.Combine(cliDir, "cli-output.json"), toolsJson);
-    Console.WriteLine("✓ Tool metadata written to cli-output.json");
 
     Console.WriteLine("Extracting namespace metadata...");
     var namespaceJson = await runner.GetNamespaceJsonAsync();
-    await File.WriteAllTextAsync(Path.Combine(cliDir, "cli-namespace.json"), namespaceJson);
+
+    // Single source-side sanitization point: strip any raw control chars the
+    // upstream azmcp CLI can emit inside JSON strings BEFORE writing to disk, so
+    // every downstream reader receives valid JSON and never needs to sanitize.
+    await CliMetadataWriter.WriteArtifactsAsync(cliDir, versionJson, toolsJson, namespaceJson);
+    Console.WriteLine($"✓ CLI version: {version}");
+    Console.WriteLine("✓ Tool metadata written to cli-output.json");
     Console.WriteLine("✓ Namespace metadata written to cli-namespace.json");
 
     // Generate namespace-mapping.json for content-impact analysis
@@ -57,9 +57,9 @@ try
         }
         else
         {
-            // Parse CLI output JSON to extract tools. Some CLI builds can emit
-            // stray control chars in string fields; strip them before parsing.
-            var sanitizedToolsJson = StripInvalidControlCharacters(toolsJson);
+            // Reuse the same source-side sanitizer for the in-memory mapping parse
+            // so this matches exactly what was written to cli-output.json.
+            var sanitizedToolsJson = CliMetadataWriter.Sanitize(toolsJson);
             var jsonDoc = JsonDocument.Parse(sanitizedToolsJson);
             var results = jsonDoc.RootElement.GetProperty("results");
             var tools = new List<CliTool>();
@@ -124,57 +124,3 @@ static string FindMcpToolsRoot(string startPath)
     return Path.GetFullPath(Path.Combine(startPath, "..", "..", "mcp-tools"));
 }
 
-static string StripInvalidControlCharacters(string json)
-{
-    if (string.IsNullOrEmpty(json))
-    {
-        return json;
-    }
-
-    var sb = new StringBuilder(json.Length);
-    var inString = false;
-    var escaping = false;
-
-    foreach (var ch in json)
-    {
-        if (inString)
-        {
-            if (escaping)
-            {
-                sb.Append(ch);
-                escaping = false;
-                continue;
-            }
-
-            if (ch == '\\')
-            {
-                sb.Append(ch);
-                escaping = true;
-                continue;
-            }
-
-            if (ch == '"')
-            {
-                sb.Append(ch);
-                inString = false;
-                continue;
-            }
-
-            if (char.IsControl(ch))
-            {
-                continue;
-            }
-
-            sb.Append(ch);
-            continue;
-        }
-
-        sb.Append(ch);
-        if (ch == '"')
-        {
-            inString = true;
-        }
-    }
-
-    return sb.ToString();
-}
