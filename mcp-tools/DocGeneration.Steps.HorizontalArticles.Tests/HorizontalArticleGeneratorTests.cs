@@ -57,6 +57,41 @@ public class HorizontalArticleGeneratorTests : IDisposable
         Assert.Equal("../tool-family/compute.md", staticData[0].ToolsReferenceLink);
     }
 
+    [Fact]
+    public async Task ExtractStaticData_OrdersToolsManagementPlaneFirstThenAlphabetical()
+    {
+        // Arrange: CLI order deliberately interleaves data-plane and management-plane
+        // tools so that a stable, deterministic ordering pass is observable (#660).
+        await WriteCliOutputAsync(new CliOutput
+        {
+            Results =
+            [
+                new Tool { Name = "list", Command = "storage blob list", Description = "List blobs.", Area = "storage", Option = [] },
+                new Tool { Name = "create", Command = "storage account create", Description = "Create a storage account.", Area = "storage", Option = [] },
+                new Tool { Name = "get", Command = "storage blob get", Description = "Get a blob.", Area = "storage", Option = [] },
+                new Tool { Name = "delete", Command = "storage account delete", Description = "Delete a storage account.", Area = "storage", Option = [] }
+            ]
+        });
+
+        var generator = CreateGenerator();
+
+        // Act
+        var staticData = await InvokeExtractStaticDataAsync(generator);
+
+        // Assert: management plane first (alphabetical by command), then data plane (alphabetical).
+        Assert.Equal(1, staticData.Count);
+        var commands = staticData[0].Tools.Select(t => t.Command).ToList();
+        Assert.Equal(
+            new[]
+            {
+                "storage account create",
+                "storage account delete",
+                "storage blob get",
+                "storage blob list"
+            },
+            commands);
+    }
+
     // ─── Step 6 prompt-path resolution tests ──────────────────────────────────
 
     [Fact]

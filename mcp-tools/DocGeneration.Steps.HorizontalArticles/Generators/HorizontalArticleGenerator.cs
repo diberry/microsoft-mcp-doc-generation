@@ -437,6 +437,14 @@ public class HorizontalArticleGenerator
             }
         }
 
+        // Apply deterministic management-plane-first tool ordering (#660) so the
+        // per-tool AI loop and AggregateAIData receive tools in a stable, readable
+        // order regardless of the order they appear in the CLI metadata.
+        foreach (var data in serviceDataList)
+        {
+            data.Tools = DeterministicHorizontalHelpers.OrderToolsByPlane(data.Tools);
+        }
+
         return serviceDataList.OrderBy(s => s.ServiceBrandName).ToList();
     }
     
