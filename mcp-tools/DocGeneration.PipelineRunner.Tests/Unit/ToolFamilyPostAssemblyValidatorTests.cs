@@ -566,6 +566,120 @@ public class ToolFamilyPostAssemblyValidatorTests
         - Link
         """;
 
+    [Fact]
+    public async Task ValidateAsync_DuplicateDescriptionAcrossToolSections_ReturnsBoilerplateWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithDuplicateDescriptions());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, warning =>
+                warning.StartsWith("⚠️ Boilerplate redundancy", StringComparison.Ordinal)
+                && warning.Contains("List virtual machines", StringComparison.Ordinal)
+                && warning.Contains("Show virtual machine", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_DistinctDescriptions_NoBoilerplateWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-show.md"), "compute show");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithDistinctDescriptions());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning =>
+                warning.StartsWith("⚠️ Boilerplate redundancy", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static string ArticleWithDuplicateDescriptions()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        This tool operates on Azure compute resources and returns a structured response for the caller.
+        Example prompts include:
+        - List resources where resource group name is 'rg-one' in location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## Show virtual machine
+        <!-- @mcpcli compute show -->
+        This tool operates on Azure compute resources and returns a structured response for the caller.
+        Example prompts include:
+        - Show the VM named 'vm-one' in resource group 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+        | resource group name | No |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string ArticleWithDistinctDescriptions()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 2
+        ---
+        # Compute tools
+
+        ## List virtual machines
+        <!-- @mcpcli compute list -->
+        Lists the virtual machines in the given resource group and location for the subscription.
+        Example prompts include:
+        - List resources where resource group name is 'rg-one' in location 'eastus'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group name | Yes |
+        | location | No |
+
+        ## Show virtual machine
+        <!-- @mcpcli compute show -->
+        Shows the configuration and power state of a single named virtual machine instance.
+        Example prompts include:
+        - Show the VM named 'vm-one' in resource group 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vm name | Yes |
+        | resource group name | No |
+
+        ## Related content
+        - Link
+        """;
+
     private static string BacktickPlaceholderContent()
         => """
         ---
