@@ -74,10 +74,26 @@ public sealed class StepRegistry
             var json = File.ReadAllText(configPath);
             using var doc = JsonDocument.Parse(json);
 
-            var configIds = doc.RootElement
-                .EnumerateArray()
-                .Select(el => el.GetProperty("id").GetInt32())
-                .ToHashSet();
+            var configIds = new HashSet<int>();
+            var entryIndex = -1;
+            foreach (var el in doc.RootElement.EnumerateArray())
+            {
+                entryIndex++;
+
+                if (!el.TryGetProperty("id", out var idElement))
+                {
+                    output.WriteLine($"[WARN] pipeline.config.json entry #{entryIndex} is missing the required 'id' field. Skipping this entry during step registry validation.");
+                    continue;
+                }
+
+                if (idElement.ValueKind != JsonValueKind.Number || !idElement.TryGetInt32(out var id))
+                {
+                    output.WriteLine($"[WARN] pipeline.config.json entry #{entryIndex} has a non-integer 'id' value ('{idElement.GetRawText()}'). Skipping this entry during step registry validation.");
+                    continue;
+                }
+
+                configIds.Add(id);
+            }
 
             var registryIds = registry.GetAllSteps()
                 .Select(step => step.Id)

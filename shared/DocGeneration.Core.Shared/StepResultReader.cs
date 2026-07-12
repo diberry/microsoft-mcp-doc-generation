@@ -13,8 +13,9 @@ namespace Shared;
 public static class StepResultReader
 {
     /// <summary>
-    /// The only recognized semantic schema version. Files with any other non-null
+    /// The only recognized semantic schema version. Files with any other non-empty
     /// <c>schemaVersion</c> value trigger a <see cref="StepResultSchemaException"/>.
+    /// Null/absent or empty/whitespace values are treated as legacy v0 and never throw.
     /// </summary>
     private const string RecognizedSchemaVersion = "1.0";
 
@@ -39,7 +40,8 @@ public static class StepResultReader
     /// </summary>
     /// <exception cref="StepResultSchemaException">
     /// Thrown when the file contains a <c>schemaVersion</c> field with an unrecognized value.
-    /// Files without <c>schemaVersion</c> are treated as legacy v0 and never throw.
+    /// Files without <c>schemaVersion</c> (or with an empty/whitespace value) are treated as
+    /// legacy v0 and never throw.
     /// </exception>
     public static bool TryRead(string directory, out StepResultFile? result)
     {
@@ -106,12 +108,13 @@ public static class StepResultReader
 
     /// <summary>
     /// Validates the schema version string from a deserialized file.
-    /// Null/absent is allowed (legacy v0). Only unrecognized non-null values throw.
+    /// Null/absent OR empty/whitespace is treated as "not declared" (legacy v0) and never
+    /// throws. Only a non-empty, unrecognized value throws.
     /// </summary>
     private static void ValidateSchemaVersion(string? schemaVersion)
     {
-        if (schemaVersion is null)
-            return; // Legacy v0 — backward compatible, no exception.
+        if (string.IsNullOrWhiteSpace(schemaVersion))
+            return; // Not declared (null/absent or empty) — legacy v0, backward compatible.
 
         if (schemaVersion == RecognizedSchemaVersion)
             return; // Known version — all good.

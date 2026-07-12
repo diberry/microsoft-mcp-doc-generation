@@ -215,6 +215,86 @@ public class StepResultReaderTests : IDisposable
     }
 
     [Fact]
+    public void TryRead_EmptyStringSchemaVersion_TreatedAsLegacy_Succeeds()
+    {
+        // #638 item 1: an empty schemaVersion is "not declared" — must fall back to legacy v0
+        // (like null), not throw StepResultSchemaException.
+        var filePath = Path.Combine(_testDir, "step-result.json");
+        File.WriteAllText(filePath, """
+        {
+          "version": 1,
+          "schemaVersion": "",
+          "status": "success",
+          "step": "Step 3",
+          "namespace": "storage",
+          "outputFileCount": 3,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:01:00.000"
+        }
+        """);
+
+        var found = StepResultReader.TryRead(_testDir, out var result);
+
+        Assert.True(found);
+        Assert.NotNull(result);
+        Assert.Equal(StepResultStatus.Success, result!.Status);
+        Assert.Equal(string.Empty, result.SchemaVersion);
+    }
+
+    [Fact]
+    public void TryRead_WhitespaceSchemaVersion_TreatedAsLegacy_Succeeds()
+    {
+        // Whitespace-only schemaVersion is equally "not declared" — no exception.
+        var filePath = Path.Combine(_testDir, "step-result.json");
+        File.WriteAllText(filePath, """
+        {
+          "version": 1,
+          "schemaVersion": "   ",
+          "status": "success",
+          "step": "Step 4",
+          "namespace": "keyvault",
+          "outputFileCount": 1,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:00:10.000"
+        }
+        """);
+
+        var found = StepResultReader.TryRead(_testDir, out var result);
+
+        Assert.True(found);
+        Assert.NotNull(result);
+        Assert.Equal(StepResultStatus.Success, result!.Status);
+    }
+
+    [Fact]
+    public async Task ReadAsync_EmptyStringSchemaVersion_TreatedAsLegacy_Succeeds()
+    {
+        var stepName = "step-empty-schema";
+        var stepDir = Path.Combine(_testDir, stepName);
+        Directory.CreateDirectory(stepDir);
+        File.WriteAllText(Path.Combine(stepDir, "step-result.json"), """
+        {
+          "version": 1,
+          "schemaVersion": "",
+          "status": "success",
+          "step": "Step 6",
+          "namespace": "cosmos",
+          "outputFileCount": 2,
+          "warnings": [],
+          "errors": [],
+          "duration": "00:00:20.000"
+        }
+        """);
+
+        var result = await StepResultReader.ReadAsync(stepName, _testDir);
+
+        Assert.NotNull(result);
+        Assert.Equal(StepResultStatus.Success, result.Status);
+    }
+
+    [Fact]
     public void TryRead_UnrecognizedSchemaVersion_ThrowsStepResultSchemaException()
     {
         var filePath = Path.Combine(_testDir, "step-result.json");

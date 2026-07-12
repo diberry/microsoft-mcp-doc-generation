@@ -99,6 +99,16 @@ public sealed class TokenUsageEnvelope
 /// </summary>
 public class StepResultFile
 {
+    // Two version fields intentionally coexist (see #638 item 6):
+    //   • Version (int)        — legacy CONTENT-shape revision of this file, incremented as
+    //                            generator output grew (v1 base, v2 added promptSnapshots,
+    //                            v3 added tokenUsage). Predates the typed envelope.
+    //   • SchemaVersion (string) — semantic ENVELOPE schema version ("1.0") introduced in the
+    //                            Phase 1 Point 3 envelope extension and validated by
+    //                            StepResultReader. Null/empty means "legacy, no envelope".
+    // They are not redundant: Version tracks the historical field set; SchemaVersion gates the
+    // envelope contract. Keep both until the legacy integer scheme is fully retired.
+
     /// <summary>Schema version for forward compatibility. v2: added promptSnapshots. v3: added tokenUsage.</summary>
     [JsonPropertyName("version")]
     public int Version { get; set; } = 1;
