@@ -225,6 +225,48 @@ public class StepRegistryTests
         Assert.Null(exception);
     }
 
+    [Fact]
+    public void ValidateAgainstConfig_ConfigEntryMissingId_EmitsWarningAndDoesNotThrow()
+    {
+        // #638 item 2: a config entry missing the required 'id' must not crash with an
+        // uncaught KeyNotFoundException. Emit a clear WARN naming the malformed entry and
+        // still validate the well-formed entries.
+        var registry = new StepRegistry([new FakeStep(1, "step-one")]);
+        var configJson = """[{"name":"no-id"},{"id":1,"name":"step-one"}]""";
+        var configPath = WriteTempConfig(configJson);
+        var writer = new StringWriter();
+
+        var exception = Record.Exception(() =>
+            StepRegistry.ValidateAgainstConfig(registry, configPath, writer));
+
+        Assert.Null(exception);
+        var output = writer.ToString();
+        Assert.Contains("[WARN]", output);
+        Assert.Contains("id", output, StringComparison.OrdinalIgnoreCase);
+        // The valid entry (id 1) matches the registry, so no divergence warning for it.
+        Assert.DoesNotContain("registry but not in pipeline.config.json", output);
+        Assert.DoesNotContain("pipeline.config.json but not in registry", output);
+    }
+
+    [Fact]
+    public void ValidateAgainstConfig_ConfigEntryIdNotInteger_EmitsWarningAndDoesNotThrow()
+    {
+        // A non-integer 'id' (GetInt32 would throw InvalidOperationException) must also be
+        // handled gracefully rather than propagating an uncaught exception.
+        var registry = new StepRegistry([new FakeStep(2, "step-two")]);
+        var configJson = """[{"id":"not-an-int","name":"bad"},{"id":2,"name":"step-two"}]""";
+        var configPath = WriteTempConfig(configJson);
+        var writer = new StringWriter();
+
+        var exception = Record.Exception(() =>
+            StepRegistry.ValidateAgainstConfig(registry, configPath, writer));
+
+        Assert.Null(exception);
+        var output = writer.ToString();
+        Assert.Contains("[WARN]", output);
+        Assert.Contains("id", output, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string WriteTempConfig(string json)
     {
         var path = Path.Combine(Path.GetTempPath(), $"pipeline-config-test-{Guid.NewGuid():N}.json");

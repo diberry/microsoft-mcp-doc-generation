@@ -3,6 +3,7 @@
   "title": "Pipeline Configuration Matrix",
   "description": "Defines the ordered set of pipeline steps, their artifact contracts, and execution commands for the MCP documentation generation pipeline.",
   "type": "array",
+  "$comment": "Migration path (item #638): the per-step 'additionalProperties: false' is intentional — it makes StepRegistry drift detection fail loudly when a step entry gains an unexpected field. When a future schema version adds a new field, do NOT relax that flag. Instead: (1) bump each entry's 'schemaVersion' (e.g. '1.0' -> '1.1'), (2) add the new field under 'properties', and (3) add it to 'required' only if every entry must supply it (otherwise leave it optional). This keeps forward changes explicit and reviewable.",
   "items": {
     "$ref": "#/definitions/PipelineStep"
   },
