@@ -469,7 +469,7 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Single(data.AdditionalLinks);
         Assert.Equal("Partitioning Guide", data.AdditionalLinks[0].Title);
         Assert.Contains(result.Corrections, c => c.Contains("fabricated URL pattern"));
     }
@@ -487,7 +487,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.Equal(2, data.AdditionalLinks.Count);
+        Assert.Collection(
+            data.AdditionalLinks,
+            link => Assert.Equal("Best Practices", link.Title),
+            link => Assert.Equal("Security Guide", link.Title));
     }
 
     [Fact]
@@ -517,7 +520,7 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Single(data.AdditionalLinks);
         Assert.Equal("Quickstart", data.AdditionalLinks[0].Title);
         Assert.Contains(result.Corrections, c => c.Contains("Removed duplicate additional link"));
     }
@@ -535,7 +538,7 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Single(data.AdditionalLinks);
         Assert.Equal("Best Practices", data.AdditionalLinks[0].Title);
         Assert.Contains(result.Corrections, c => c.Contains("Removed duplicate additional link"));
     }
@@ -552,7 +555,7 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Single(data.AdditionalLinks);
     }
 
     [Fact]
@@ -568,7 +571,10 @@ public class ArticleContentProcessorValidationTests
 
         _processor.Validate(data, "Test");
 
-        Assert.Equal(2, data.AdditionalLinks.Count);
+        Assert.Collection(
+            data.AdditionalLinks,
+            link => Assert.Equal("Partitioning Best Practices", link.Title),
+            link => Assert.Equal("Request Units", link.Title));
     }
 
     [Fact]
@@ -586,7 +592,7 @@ public class ArticleContentProcessorValidationTests
         var result = _processor.Validate(data, "Test");
 
         // The fabricated /docs link should be removed
-        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Single(data.AdditionalLinks);
         Assert.Equal("Voice Gallery", data.AdditionalLinks[0].Title);
         Assert.Contains(result.Corrections, c => c.Contains("fabricated URL pattern") || c.Contains("Removed duplicate"));
     }
@@ -667,7 +673,7 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Single(data.AdditionalLinks);
         Assert.Equal("Metrics Overview", data.AdditionalLinks[0].Title);
         Assert.Contains(result.Corrections, c => c.Contains("Removed link with empty URL"));
     }
@@ -685,7 +691,7 @@ public class ArticleContentProcessorValidationTests
 
         var result = _processor.Validate(data, "Test");
 
-        Assert.Equal(1, data.AdditionalLinks.Count);
+        Assert.Single(data.AdditionalLinks);
         Assert.Equal("Cluster Security", data.AdditionalLinks[0].Title);
         Assert.Contains(result.Corrections, c => c.Contains("Removed link with empty URL"));
     }

@@ -34,15 +34,15 @@ trap 'rm -rf "$TMP"' EXIT
 # ── Brand mapping with one merge group: alpha (primary) + beta (secondary) ──
 cat > "$TMP/brand-map.json" <<'JSON'
 [
-  { "mcpServerName": "alpha", "mergeGroup": "smoke-group", "mergeOrder": 1, "mergeRole": "primary" },
-  { "mcpServerName": "beta",  "mergeGroup": "smoke-group", "mergeOrder": 2, "mergeRole": "secondary" }
+  { "mcpServerName": "alpha", "fileName": "azure-alpha", "mergeGroup": "smoke-group", "mergeOrder": 1, "mergeRole": "primary" },
+  { "mcpServerName": "beta",  "fileName": "azure-beta",  "mergeGroup": "smoke-group", "mergeOrder": 2, "mergeRole": "secondary" }
 ]
 JSON
 
 mkdir -p "$TMP/generated-alpha/tool-family" "$TMP/generated-beta/tool-family"
 
 # ── Canonical (plain) variant fixtures ──
-cat > "$TMP/generated-alpha/tool-family/alpha.md" <<'MD'
+cat > "$TMP/generated-alpha/tool-family/azure-alpha.md" <<'MD'
 ---
 title: Alpha tools
 tool_count: 1
@@ -60,7 +60,7 @@ Alpha tool one body.
 - Alpha related link
 MD
 
-cat > "$TMP/generated-beta/tool-family/beta.md" <<'MD'
+cat > "$TMP/generated-beta/tool-family/azure-beta.md" <<'MD'
 ---
 title: Beta tools
 tool_count: 2
@@ -83,7 +83,7 @@ Beta tool two body.
 MD
 
 # ── CLI-tab variant fixtures (tab markers must survive the merge) ──
-cat > "$TMP/generated-alpha/tool-family/alpha-cli.md" <<'MD'
+cat > "$TMP/generated-alpha/tool-family/azure-alpha-cli.md" <<'MD'
 ---
 title: Alpha tools
 tool_count: 1
@@ -104,7 +104,7 @@ alpha mcp content
 - Alpha related link
 MD
 
-cat > "$TMP/generated-beta/tool-family/beta-cli.md" <<'MD'
+cat > "$TMP/generated-beta/tool-family/azure-beta-cli.md" <<'MD'
 ---
 title: Beta tools
 tool_count: 2
@@ -136,8 +136,8 @@ MD
 MERGE_ROOT_DIR="$TMP" MERGE_BRAND_MAP="$TMP/brand-map.json" bash "$MERGE_SCRIPT" \
     || fail "merge-namespaces.sh exited non-zero"
 
-CANON="$TMP/generated-alpha/tool-family/alpha.md"
-CLI="$TMP/generated-alpha/tool-family/alpha-cli.md"
+CANON="$TMP/generated-alpha/tool-family/azure-alpha.md"
+CLI="$TMP/generated-alpha/tool-family/azure-alpha-cli.md"
 
 [[ -f "$CANON" ]] || fail "merged canonical article not written: $CANON"
 [[ -f "$CLI" ]]   || fail "merged -cli article not written: $CLI"

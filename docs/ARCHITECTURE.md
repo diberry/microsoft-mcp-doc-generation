@@ -263,6 +263,8 @@ These are reliable, testable fixes that compensate for AI inconsistency.
 
 Some Azure services span multiple MCP namespaces but publish as a single article (e.g., `monitor` + `workbooks` → `monitor.md`). Rather than threading multi-namespace awareness through all 6 pipeline steps, a **post-assembly merge** runs after all namespaces complete:
 
+Merge member articles are resolved by each mapping's `fileName` value, not by the raw MCP namespace. For example, the `monitor` namespace writes `azure-monitor.md` and the `workbooks` namespace writes `azure-workbooks.md`; the merge writes the combined article back to the primary mapped filename, `azure-monitor.md`.
+
 1. Each namespace generates independently through Steps 1-6
 2. `merge-namespaces.sh` reads merge group config from `brand-to-server-mapping.json`
 3. Grouped namespaces are combined using three optional fields:

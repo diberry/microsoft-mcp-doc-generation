@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Multi-namespace merge now honors mapped article filenames** — `merge-namespaces.sh` now reads each merge member's `fileName` from `brand-to-server-mapping.json` when loading and writing canonical and `-cli` tool-family articles, instead of assuming article filenames match MCP namespace names. This lets merge groups such as `monitor` + `workbooks` merge `azure-monitor.md` + `azure-workbooks.md` into the combined `azure-monitor.md`. The shipping merge smoke test now uses mapped filenames that differ from namespace names so the regression is covered.
+
 - **Step 4 preserves rewritten example prompt blocks** — `DuplicateExampleStripper` now canonicalizes a tool section's only bare `Examples` / `Examples:` / `Example prompts:` bullet block back to `Example prompts include:` instead of deleting it as a duplicate. This prevents `ToolFamilyPostAssemblyValidator` failures such as `instrumentation-get-learning-resource: no example prompt header found` when Step 3 rewrites the generated example-prompt header. Regression coverage uses the real Azure Monitor instrumentation learning-resource shape and keeps duplicate removal unchanged when the canonical block is already present.
 
 - **Keyless verification follow-up** — Renamed new keyless test files to the repository `ValidateAIOptionsKeylessTests` convention, added constructor-level horizontal article auth regression coverage, and made `verify-keyless` print per-suite plus overall PASS/FAIL labels.
