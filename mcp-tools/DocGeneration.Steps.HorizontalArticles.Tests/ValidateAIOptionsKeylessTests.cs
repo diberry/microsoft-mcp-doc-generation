@@ -3,6 +3,7 @@
 
 using GenerativeAI;
 using HorizontalArticleGenerator;
+using HorizontalArticleGeneratorClass = HorizontalArticleGenerator.Generators.HorizontalArticleGenerator;
 using Xunit;
 
 namespace DocGeneration.Steps.HorizontalArticles.Tests;
@@ -14,6 +15,7 @@ namespace DocGeneration.Steps.HorizontalArticles.Tests;
 /// deployment, and API version are required. When default credential is disabled, the API key
 /// stays required.
 /// </summary>
+[Trait("Category", "Keyless")]
 public sealed class ValidateAIOptionsKeylessTests
 {
     [Fact]
@@ -31,6 +33,23 @@ public sealed class ValidateAIOptionsKeylessTests
 
         Assert.DoesNotContain("FOUNDRY_API_KEY", missing);
         Assert.Empty(missing);
+    }
+
+    [Fact]
+    public void HorizontalArticleGenerator_DefaultCredentialWithoutApiKey_Constructs()
+    {
+        var options = new GenerativeAIOptions
+        {
+            UseDefaultCredential = true,
+            ApiKey = "",
+            Endpoint = "https://oai-ha-keyless.cognitiveservices.azure.com/",
+            Deployment = "gpt-5-mini",
+            ApiVersion = "2024-10-01-preview",
+        };
+
+        var generator = new HorizontalArticleGeneratorClass(options);
+
+        Assert.NotNull(generator);
     }
 
     [Fact]

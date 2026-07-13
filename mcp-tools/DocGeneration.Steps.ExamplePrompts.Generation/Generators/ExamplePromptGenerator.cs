@@ -18,6 +18,11 @@ public sealed class ExamplePromptGenerator
     private readonly string _userPromptTemplate;
 
     public ExamplePromptGenerator()
+        : this(null, null)
+    {
+    }
+
+    internal ExamplePromptGenerator(GenerativeAIOptions? options, string? promptsDirectory)
     {
         Console.WriteLine("\n┌─────────────────────────────────────────────┐");
         Console.WriteLine("│  Initializing Standalone Example Generator  │");
@@ -25,11 +30,11 @@ public sealed class ExamplePromptGenerator
 
         try
         {
-            _openAIClient = new GenerativeAIClient();
+            _openAIClient = options is null ? new GenerativeAIClient() : new GenerativeAIClient(options);
             Console.WriteLine("  ✅ Azure OpenAI client initialized");
 
             // Use embedded prompts from package folder
-            var promptsDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "prompts");
+            var promptsDir = promptsDirectory ?? Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "prompts");
             var systemPromptPath = Path.Combine(promptsDir, "system-prompt-example-prompt.txt");
             var userPromptPath = Path.Combine(promptsDir, "user-prompt-example-prompt.txt");
 

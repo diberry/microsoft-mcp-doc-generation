@@ -10,6 +10,7 @@ namespace PipelineRunner.Tests.Unit;
 /// <c>.env</c> file and clear the relevant process environment variables so the probe reads
 /// only the file, keeping assertions deterministic across machines and CI.
 /// </summary>
+[Trait("Category", "Keyless")]
 public sealed class AiCapabilityProbeTests
 {
     private static readonly string[] FoundryEnvKeys =

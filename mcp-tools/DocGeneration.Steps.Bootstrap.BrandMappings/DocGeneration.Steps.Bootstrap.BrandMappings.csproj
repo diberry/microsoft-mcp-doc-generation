@@ -14,9 +14,6 @@
     <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
-  <ItemGroup>
     <None Update="prompts\*.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

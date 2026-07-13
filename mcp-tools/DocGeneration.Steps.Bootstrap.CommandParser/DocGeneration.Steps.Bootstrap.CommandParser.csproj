@@ -11,7 +11,6 @@
     <InternalsVisibleTo Include="DocGeneration.Steps.Bootstrap.CommandParser.Tests" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Text.Json" />
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 </Project>

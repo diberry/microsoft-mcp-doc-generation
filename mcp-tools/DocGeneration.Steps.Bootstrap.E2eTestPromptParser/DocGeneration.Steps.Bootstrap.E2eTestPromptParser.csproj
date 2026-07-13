@@ -7,9 +7,6 @@
     <RootNamespace>DocGeneration.Steps.Bootstrap.E2eTestPromptParser</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Text.Json" />
-  </ItemGroup>
-  <ItemGroup>
     <None Update="config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

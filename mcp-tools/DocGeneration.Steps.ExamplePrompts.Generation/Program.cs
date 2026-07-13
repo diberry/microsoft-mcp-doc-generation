@@ -4,6 +4,7 @@ using ExamplePromptGeneratorStandalone.Generators;
 using ExamplePromptGeneratorStandalone.Models;
 using ExamplePromptGeneratorStandalone.Sanitizers;
 using ExamplePromptGeneratorStandalone.Utilities;
+using GenerativeAI;
 using TemplateEngine;
 using Shared;
 
@@ -11,6 +12,16 @@ namespace ExamplePromptGeneratorStandalone;
 
 internal static class Program
 {
+    internal static List<string> ValidateAIOptions(GenerativeAIOptions options)
+    {
+        var missing = new List<string>();
+        if (!options.UseDefaultCredential && string.IsNullOrEmpty(options.ApiKey)) missing.Add("FOUNDRY_API_KEY");
+        if (string.IsNullOrEmpty(options.Endpoint)) missing.Add("FOUNDRY_ENDPOINT");
+        if (string.IsNullOrEmpty(options.Deployment)) missing.Add("FOUNDRY_MODEL_NAME");
+        if (string.IsNullOrEmpty(options.ApiVersion)) missing.Add("FOUNDRY_MODEL_API_VERSION");
+        return missing;
+    }
+
     private static async Task<int> Main(string[] args)
     {
         Console.WriteLine("╔═════════════════════════════════════════════╗");
