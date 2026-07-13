@@ -108,6 +108,18 @@ Describe "Read-ToolsList — shape handling" {
         @($tools).Count | Should -Be 6
     }
 
+    It "reads a bare top-level array tools-list.json" {
+        $bareArrayPath = Join-Path $script:FixtureDir "tools-list-array.json"
+        $script:SampleTools | ConvertTo-Json -Depth 6 | Set-Content -Path $bareArrayPath -Encoding utf8
+
+        $tools = Read-ToolsList -Path $bareArrayPath
+
+        @($tools).Count | Should -Be 6
+        # Real tool objects must be returned — not an array of $nulls from member enumeration.
+        ($tools | Where-Object { $null -ne $_.command }).Count | Should -Be 6
+        (Get-ToolCounts -Tools $tools).Total | Should -Be 6
+    }
+
     It "throws when the file does not exist" {
         { Read-ToolsList -Path (Join-Path $script:FixtureDir "missing.json") } | Should -Throw
     }

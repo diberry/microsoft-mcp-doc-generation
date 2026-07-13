@@ -111,12 +111,15 @@ function Read-ToolsList {
 
     $json = Get-Content -Path $Path -Raw | ConvertFrom-Json
 
-    if ($null -ne $json.results) {
-        return @($json.results)
-    }
-
+    # Check the bare-array shape first: for a top-level array, probing `$json.results`
+    # triggers PowerShell member enumeration and returns an array of $nulls (one per
+    # element) rather than $null, which would otherwise mask the array case.
     if ($json -is [System.Array]) {
         return @($json)
+    }
+
+    if ($null -ne $json.results) {
+        return @($json.results)
     }
 
     throw "Unrecognized tools-list.json shape: expected a 'results' array or a top-level array of tools."
