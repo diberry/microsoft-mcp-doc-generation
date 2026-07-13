@@ -17,10 +17,29 @@ BeforeAll {
         }
     }
 
-    # Load the namespace mapping hashtable from the script
-    $mapMatch = [regex]::Match($scriptContent, '(?s)(\$namespaceToFile\s*=\s*@\{.*?\n\})')
-    if ($mapMatch.Success) {
-        Invoke-Expression $mapMatch.Value
+    # Load the namespace mapping — now reads from JSON or falls back to inline
+    # First try loading from config/namespace-mapping.json
+    $scriptDir = Split-Path -Parent $PSScriptRoot
+    $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
+    $namespaceMappingPath = Join-Path $repoRoot "config\namespace-mapping.json"
+    
+    if (Test-Path $namespaceMappingPath) {
+        try {
+            $namespaceToFile = Get-Content $namespaceMappingPath -Raw | ConvertFrom-Json -AsHashtable
+        }
+        catch {
+            Write-Warning "Failed to load namespace mapping from JSON, using fallback"
+            $namespaceToFile = @{}
+        }
+    }
+    
+    # Fallback to inline mapping if JSON not loaded
+    if (-not $namespaceToFile -or $namespaceToFile.Count -eq 0) {
+        # Extract the fallback hashtable from the script
+        $mapMatch = [regex]::Match($scriptContent, '(?s)if \(\$namespaceToFile\.Count -eq 0\) \{[^}]*(\$namespaceToFile = @\{.*?\n    \})')
+        if ($mapMatch.Success) {
+            Invoke-Expression $mapMatch.Groups[1].Value
+        }
     }
 
     # Load exclusion lists
@@ -447,3 +466,56 @@ Describe "Scan-McpToolCoverage — missing required parameter reporting" {
         $tool.params.missing | Should -Not -Contain "--vault-name"
     }
 }
+
+# ════════════════════════════════════════════════════════════════════
+# 8. Namespace Mapping — JSON-based configuration (#582)
+# ════════════════════════════════════════════════════════════════════
+
+Describe "Namespace mapping — JSON-based configuration" {
+
+    It "loads namespace mapping from config/namespace-mapping.json when file exists" {
+        # Create a temporary repo structure with config/namespace-mapping.json
+        $tempRepo = Join-Path $TestDrive "repo-$(New-Guid)"
+        $configDir = Join-Path $tempRepo "config"
+        New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+        
+        $testMapping = @{
+            storage = "azure-storage.md"
+            keyvault = "azure-key-vault.md"
+            cosmos = "azure-cosmos-db.md"
+        } | ConvertTo-Json
+        
+        $mappingPath = Join-Path $configDir "namespace-mapping.json"
+        Set-Content -Path $mappingPath -Value $testMapping
+        
+        # Simulate the loading logic from the script
+        $repoRoot = $tempRepo
+        $namespaceMappingPath = Join-Path $repoRoot "config\namespace-mapping.json"
+        
+        $namespaceToFile = Get-Content $namespaceMappingPath -Raw | ConvertFrom-Json -AsHashtable
+        
+        $namespaceToFile["storage"] | Should -Be "azure-storage.md"
+        $namespaceToFile["keyvault"] | Should -Be "azure-key-vault.md"
+        $namespaceToFile["cosmos"] | Should -Be "azure-cosmos-db.md"
+        $namespaceToFile.Count | Should -Be 3
+    }
+
+    It "validates real-world namespace mapping structure" {
+        # Verify the actual config/namespace-mapping.json in the repo
+        $scriptDir = Split-Path -Parent $PSScriptRoot
+        $repoRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
+        $namespaceMappingPath = Join-Path $repoRoot "config\namespace-mapping.json"
+        
+        if (Test-Path $namespaceMappingPath) {
+            $mapping = Get-Content $namespaceMappingPath -Raw | ConvertFrom-Json -AsHashtable
+            
+            # Spot-check key entries
+            $mapping["storage"] | Should -Be "azure-storage.md"
+            $mapping["keyvault"] | Should -Be "azure-key-vault.md"
+            $mapping["appconfig"] | Should -Be "app-configuration.md"
+            $mapping["group"] | Should -Be "resource-group.md"
+            $mapping.Count | Should -BeGreaterThan 50
+        }
+    }
+}
+
