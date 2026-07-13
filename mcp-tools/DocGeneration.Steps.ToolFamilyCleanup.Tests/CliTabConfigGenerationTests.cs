@@ -20,6 +20,7 @@ public class CliTabConfigGenerationTests
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     private static string RepoRoot => RegressionTestHelpers.RepoRoot;
+    private static string GeneratedOutputRoot => RegressionTestHelpers.GeneratedOutputRoot;
 
     // ── R-CG1: Config is deterministically generated from mapping ────────
 
@@ -69,20 +70,23 @@ public class CliTabConfigGenerationTests
 
         // Check that generated output directories exist for namespaces we've generated
         // (not all namespaces may have been generated in test environment, but those that exist must be valid)
-        var generatedDirs = Directory.GetDirectories(RepoRoot, "generated-*")
+        var generatedNamespaceNames = Directory.Exists(GeneratedOutputRoot)
+            ? Directory.GetDirectories(GeneratedOutputRoot, "generated-*")
+            : Array.Empty<string>();
+        generatedNamespaceNames = generatedNamespaceNames
             .Select(TryExtractNamespace)
             .Where(d => d is not null && !d.Contains("-old-") && !d.Contains("-prev"))
             .Cast<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+            .ToArray();
 
         // At minimum, azurebackup must exist (our primary test namespace)
         // In CI where no generation has run, skip gracefully
-        if (generatedDirs.Count == 0) return;
-        Assert.Contains("azurebackup", generatedDirs);
+        if (generatedNamespaceNames.Length == 0) return;
+        Assert.Contains("azurebackup", generatedNamespaceNames);
 
         // Every generated directory must correspond to a known namespace
-        foreach (var genNs in generatedDirs)
+        foreach (var genNs in generatedNamespaceNames)
         {
             Assert.True(namespaces.Contains(genNs),
                 $"Generated directory 'generated-{genNs}' has no matching namespace in brand-to-server-mapping.json");
@@ -149,7 +153,10 @@ public class CliTabConfigGenerationTests
 
     private static string? FindLatestGeneratedDirectory(string namespaceName)
     {
-        return Directory.GetDirectories(RepoRoot, $"generated-{namespaceName}*")
+        if (!Directory.Exists(GeneratedOutputRoot))
+            return null;
+
+        return Directory.GetDirectories(GeneratedOutputRoot, $"generated-{namespaceName}*")
             .Where(path => string.Equals(TryExtractNamespace(path), namespaceName, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(GetGeneratedDirectorySortKey)
             .ThenByDescending(Directory.GetLastWriteTimeUtc)

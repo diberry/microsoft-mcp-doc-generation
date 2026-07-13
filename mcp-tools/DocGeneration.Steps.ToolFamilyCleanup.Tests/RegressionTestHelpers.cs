@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.RegularExpressions;
+using DocGeneration.TestInfrastructure;
 using Xunit;
 
 namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
@@ -17,6 +18,7 @@ internal static class RegressionTestHelpers
 
     public static string RepoRoot => _repoRoot.Value;
     public static string FixturesDir => _fixturesDir.Value;
+    public static string GeneratedOutputRoot => OutputArtifactLocator.GetOutputRoot();
 
     public static string LoadFixture(string filename)
     {
@@ -27,7 +29,7 @@ internal static class RegressionTestHelpers
 
     public static string LoadRealGeneratedFile(params string[] pathParts)
     {
-        var path = Path.Combine(new[] { RepoRoot }.Concat(pathParts).ToArray());
+        var path = ResolveGeneratedPath(pathParts);
         Assert.True(File.Exists(path), $"Generated file not found: {path}. Run generation first.");
         return File.ReadAllText(path);
     }
@@ -38,8 +40,16 @@ internal static class RegressionTestHelpers
     /// </summary>
     public static string? TryLoadRealGeneratedFile(params string[] pathParts)
     {
-        var path = Path.Combine(new[] { RepoRoot }.Concat(pathParts).ToArray());
+        var path = ResolveGeneratedPath(pathParts);
         return File.Exists(path) ? File.ReadAllText(path) : null;
+    }
+
+    public static string ResolveGeneratedPath(params string[] pathParts)
+    {
+        var root = pathParts.Length > 0 && pathParts[0].StartsWith("generated-", StringComparison.OrdinalIgnoreCase)
+            ? GeneratedOutputRoot
+            : RepoRoot;
+        return Path.Combine(new[] { root }.Concat(pathParts).ToArray());
     }
 
     /// <summary>

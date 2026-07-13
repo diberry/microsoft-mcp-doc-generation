@@ -9,7 +9,7 @@ namespace DocGeneration.E2E.Tests;
 /// Unit tests for OutputStructureValidator logic, using temp directories
 /// with known good/bad inputs to verify validator correctness.
 /// </summary>
-[Trait("Category", "E2E")]
+[Trait("Category", "Unit")]
 public class OutputStructureValidatorTests : IDisposable
 {
     private readonly string _testRoot;
