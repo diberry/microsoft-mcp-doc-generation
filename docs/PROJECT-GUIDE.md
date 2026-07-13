@@ -232,6 +232,21 @@ dotnet test PipelineRunner.Tests/PipelineRunner.Tests.csproj
 dotnet test CSharpGenerator.Tests/CSharpGenerator.Tests.csproj
 ```
 
+Run the keyless auth contract for every generative-AI entry point:
+
+```bash
+dotnet test mcp-doc-generation.sln --filter Category=Keyless
+dotnet test skills-generation/skills-generation.slnx --filter Category=Keyless
+```
+
+Or run both with one helper command:
+
+```bash
+./verify-keyless.sh
+# or
+pwsh -File ./verify-keyless.ps1
+```
+
 **Test structure:**
 - `PipelineRunner.Tests/Unit/` — Pipeline orchestration logic
 - `PipelineRunner.Tests/Integration/` — End-to-end step execution
@@ -241,7 +256,7 @@ dotnet test CSharpGenerator.Tests/CSharpGenerator.Tests.csproj
 
 #### Error: "Missing required AI configuration"
 
-**Cause:** `FOUNDRY_API_KEY` or `FOUNDRY_ENDPOINT` not set in `.env`  
+**Cause:** `FOUNDRY_USE_DEFAULT_CREDENTIAL=true`, `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME`, or `FOUNDRY_MODEL_API_VERSION` is missing in `.env`
 **Solution:**
 ```bash
 # Verify .env exists in mcp-tools/
@@ -249,7 +264,7 @@ cat mcp-tools/.env | grep FOUNDRY
 
 # If missing, copy from sample
 cp mcp-tools/sample.env mcp-tools/.env
-# Edit .env and add your credentials
+# Edit .env and add keyless Azure AI settings. Do not add or require FOUNDRY_API_KEY.
 ```
 
 #### Error: "429 Too Many Requests" (Rate Limiting)

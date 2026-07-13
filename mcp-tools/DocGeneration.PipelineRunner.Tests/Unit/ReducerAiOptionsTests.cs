@@ -15,6 +15,7 @@ namespace PipelineRunner.Tests.Unit;
 /// The tests write a temp <c>.env</c> and clear the FOUNDRY_* process environment variables so
 /// resolution reads only the file, keeping assertions deterministic across machines and CI.
 /// </summary>
+[Trait("Category", "Keyless")]
 public sealed class ReducerAiOptionsTests
 {
     private static readonly string[] FoundryEnvKeys =

@@ -212,6 +212,7 @@ public class AzureOpenAiRewriterTests
     }
 
     [Fact]
+    [Trait("Category", "Keyless")]
     public void CreateKeyless_BuildsRewriterWithoutApiKey()
     {
         // Policy: this repo NEVER uses API keys. CreateKeyless builds a

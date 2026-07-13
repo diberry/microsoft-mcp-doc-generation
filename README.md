@@ -75,7 +75,24 @@ wait
 | 5 | Generate GitHub Copilot skills relevance reports (supplementary, non-fatal) | `skills-relevance/{namespace}-skills-relevance.md` | No |
 | 6 | Generate horizontal articles | `horizontal-articles/horizontal-article-{namespace}.md` | Yes |
 
-**Note**: Steps 2, 3, 4, and 6 require Azure AI Services (Foundry-compatible) credentials configured in `mcp-tools/.env`. See [mcp-tools/scripts/README.md](mcp-tools/scripts/README.md) for details.
+**Note**: Steps 2, 3, 4, and 6 require Azure AI Services (Foundry-compatible) keyless configuration in `mcp-tools/.env`. Use `FOUNDRY_USE_DEFAULT_CREDENTIAL=true` with endpoint, model name, and API version. `FOUNDRY_API_KEY` is not required or supported for repo generation workflows. See [mcp-tools/scripts/README.md](mcp-tools/scripts/README.md) for details.
+
+### Verify keyless AI configuration
+
+Run the keyless guard tests before changing any generative-AI entry point:
+
+```bash
+dotnet test mcp-doc-generation.sln --filter Category=Keyless
+dotnet test skills-generation/skills-generation.slnx --filter Category=Keyless
+```
+
+Or run both with the helper:
+
+```bash
+./verify-keyless.sh
+# or
+pwsh -File ./verify-keyless.ps1
+```
 
 ## Key Paths
 
@@ -97,7 +114,7 @@ wait
 **Example `.env` configuration**:
 
 ```ini
-FOUNDRY_API_KEY="your-api-key-here"
+FOUNDRY_USE_DEFAULT_CREDENTIAL="true"
 FOUNDRY_ENDPOINT="https://your-resource.openai.azure.com/"
 FOUNDRY_MODEL_NAME="gpt-4o-mini"
 FOUNDRY_MODEL_API_VERSION="2025-01-01-preview"

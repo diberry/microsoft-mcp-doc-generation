@@ -12,6 +12,7 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Tests;
 /// must NOT be required when <c>FOUNDRY_USE_DEFAULT_CREDENTIAL</c> is enabled — only the endpoint
 /// and deployment are required. When default credential is disabled, the API key stays required.
 /// </summary>
+[Trait("Category", "Keyless")]
 public sealed class ValidateAIOptionsKeylessTests
 {
     [Fact]

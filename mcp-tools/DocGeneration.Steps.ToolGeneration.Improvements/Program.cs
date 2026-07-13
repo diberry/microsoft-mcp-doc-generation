@@ -9,6 +9,16 @@ namespace ToolGeneration_Improved;
 
 internal class Program
 {
+    internal static List<string> ValidateAIOptions(GenerativeAIOptions options)
+    {
+        var missing = new List<string>();
+        if (!options.UseDefaultCredential && string.IsNullOrEmpty(options.ApiKey)) missing.Add("FOUNDRY_API_KEY");
+        if (string.IsNullOrEmpty(options.Endpoint)) missing.Add("FOUNDRY_ENDPOINT");
+        if (string.IsNullOrEmpty(options.Deployment)) missing.Add("FOUNDRY_MODEL_NAME");
+        if (string.IsNullOrEmpty(options.ApiVersion)) missing.Add("FOUNDRY_MODEL_API_VERSION");
+        return missing;
+    }
+
     private static async Task<int> Main(string[] args)
     {
         Console.WriteLine("ImprovedToolGenerator - Apply AI-based improvements to tool documentation");
@@ -25,9 +35,10 @@ internal class Program
             Console.Error.WriteLine("  max-tokens           Optional max tokens for AI response (default: 8000)");
             Console.Error.WriteLine();
             Console.Error.WriteLine("Environment Variables Required:");
-            Console.Error.WriteLine("  FOUNDRY_API_KEY      Azure OpenAI API key");
+            Console.Error.WriteLine("  FOUNDRY_USE_DEFAULT_CREDENTIAL  Set to true for keyless Azure auth");
             Console.Error.WriteLine("  FOUNDRY_ENDPOINT     Azure OpenAI endpoint");
             Console.Error.WriteLine("  FOUNDRY_MODEL_NAME   Azure OpenAI deployment/model name");
+            Console.Error.WriteLine("  FOUNDRY_MODEL_API_VERSION Azure OpenAI API version");
             Console.Error.WriteLine();
             Console.Error.WriteLine("Example:");
             Console.Error.WriteLine("  ImprovedToolGenerator \\");

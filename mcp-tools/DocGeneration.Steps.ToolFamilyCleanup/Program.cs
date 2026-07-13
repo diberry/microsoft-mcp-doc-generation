@@ -234,7 +234,7 @@ internal class Program
         Console.WriteLine("  -h, --help                 Display this help message");
         Console.WriteLine();
         Console.WriteLine("Environment variables (or .env file):");
-        Console.WriteLine("  FOUNDRY_API_KEY            Azure OpenAI API key (not needed for --verify-only)");
+        Console.WriteLine("  FOUNDRY_USE_DEFAULT_CREDENTIAL  Set to true for keyless Azure auth (not needed for --verify-only)");
         Console.WriteLine("  FOUNDRY_ENDPOINT           Azure OpenAI endpoint URL (not needed for --verify-only)");
         Console.WriteLine("  FOUNDRY_MODEL_NAME         Azure OpenAI deployment/model name (not needed for --verify-only)");
         Console.WriteLine();
