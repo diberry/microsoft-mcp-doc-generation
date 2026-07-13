@@ -252,7 +252,7 @@ The `FamilyFileStitcher.Stitch()` method chains 9 deterministic fixes after AI a
 3. Related content assembly (append related content section)
 4. `PostProcessor.ExpandMcpAcronym()` — expand "MCP" on first body mention
 5. `FrontmatterEnricher.Enrich()` — inject required Microsoft Learn fields
-6. `DuplicateExampleStripper.Strip()` — remove non-canonical example blocks
+6. `DuplicateExampleStripper.Strip()` — remove duplicate non-canonical example blocks, or canonicalize a section's only example-prompt block back to `Example prompts include:`
 7. `AnnotationSpaceFixer.Fix()` — blank line between annotation link and values
 8. `ContractionFixer.Fix()` — "does not" → "doesn't", etc. (backtick-aware)
 9. `ExampleValueBackticker.Fix()` — wrap bare values in `(for example, VALUE)` with backticks

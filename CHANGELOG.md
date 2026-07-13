@@ -37,6 +37,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Step 4 preserves rewritten example prompt blocks** — `DuplicateExampleStripper` now canonicalizes a tool section's only bare `Examples` / `Examples:` / `Example prompts:` bullet block back to `Example prompts include:` instead of deleting it as a duplicate. This prevents `ToolFamilyPostAssemblyValidator` failures such as `instrumentation-get-learning-resource: no example prompt header found` when Step 3 rewrites the generated example-prompt header. Regression coverage uses the real Azure Monitor instrumentation learning-resource shape and keeps duplicate removal unchanged when the canonical block is already present.
+
 - **Keyless verification follow-up** — Renamed new keyless test files to the repository `ValidateAIOptionsKeylessTests` convention, added constructor-level horizontal article auth regression coverage, and made `verify-keyless` print per-suite plus overall PASS/FAIL labels.
 
 - **Horizontal article generation no longer rejects keyless auth** — `HorizontalArticleGenerator` now requires `FOUNDRY_API_KEY` only when `FOUNDRY_USE_DEFAULT_CREDENTIAL` is not enabled, matching the Step 6 program validation and the shared `GenerativeAIClient` keyless path. A regression test fails with the previous `FOUNDRY_API_KEY not set` constructor exception.

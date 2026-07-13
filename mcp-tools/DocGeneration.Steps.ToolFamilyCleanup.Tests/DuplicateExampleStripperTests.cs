@@ -198,6 +198,34 @@ Example prompts include:
         Assert.Contains("Example prompts include:", result);
     }
 
+    [Fact]
+    public void Strip_CanonicalizesBareExamplesBlockWhenCanonicalHeaderIsMissing()
+    {
+        // Real Step 3 failure shape for monitor instrumentation get-learning-resource:
+        // the AI rewrote the canonical "Example prompts include:" heading to bare "Examples".
+        var content = @"## Instrumentation: Get learning resource
+
+<!-- @mcpcli monitor instrumentation get-learning-resource -->
+
+Lists all available learning resources for Azure Monitor instrumentation, or retrieves the content of a specific resource by `path`.
+
+Examples
+
+- ""List all learning resource paths for Azure Monitor.""
+- ""Get the content for learning resource with path 'docs/instrumentation/aspnetcore'.""
+
+| Parameter |  Required or optional | Description |
+|-----------------------|----------------------|-------------|
+| **Path** |  Optional | Learning resource path. |";
+
+        var result = DuplicateExampleStripper.Strip(content);
+
+        Assert.Contains("Example prompts include:", result);
+        Assert.Contains("List all learning resource paths for Azure Monitor.", result);
+        Assert.Contains("docs/instrumentation/aspnetcore", result);
+        Assert.DoesNotContain("Examples\n", result);
+    }
+
     // ── Edge cases ──────────────────────────────────────────────────
 
     [Fact]
