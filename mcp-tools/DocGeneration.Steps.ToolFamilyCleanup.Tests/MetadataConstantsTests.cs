@@ -80,6 +80,16 @@ public class MetadataConstantsTests
     }
 
     [Fact]
+    public void SourceMetadataConstants_AreCorrect()
+    {
+        Assert.Equal("mcp-tool-version.txt", MetadataConstants.McpToolVersionFileName);
+        Assert.Equal("tracked-version.txt", MetadataConstants.TrackedVersionFileName);
+        Assert.Equal("version", MetadataConstants.VersionPropertyName);
+        Assert.Equal("option", MetadataConstants.OptionPropertyName);
+        Assert.Equal("mcp-cli.version", MetadataConstants.McpCliVersionFrontmatterName);
+    }
+
+    [Fact]
     public void TitleTemplate_FormatsCorrectly()
     {
         var result = string.Format(MetadataConstants.TitleTemplate, MetadataConstants.ProductName, "Azure Storage");

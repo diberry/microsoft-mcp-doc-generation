@@ -90,6 +90,96 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
     }
 
     [Fact]
+    public async Task ValidateAsync_Fails_WhenSourceFolderIsUnavailableInsteadOfFallingBackToCliVersion()
+    {
+        var context = CreateContext(
+            sourceTools:
+            [
+                SourceTool("appconfig kv list", "--name")
+            ],
+            articleTools:
+            [
+                ("List settings", "appconfig kv list", ["name"]),
+            ],
+            frontmatterVersion: "3.0.0-beta.14",
+            namespaceName: "appconfig",
+            cliOutputPath: Path.Combine(_root, "generated-appconfig", "cli", "cli-output.json"),
+            seedConfiguredSource: false);
+
+        var result = await ValidateAsync(context);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, warning => warning.Contains("source metadata folder for configured target version '3.0.0-beta.14' was not found", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Fails_WithClearMessage_WhenSourceNamespaceHasNoTools()
+    {
+        var context = CreateContext(
+            sourceTools: [],
+            articleTools:
+            [
+                ("List empty resources", "emptyservice resource list", ["name"])
+            ],
+            frontmatterVersion: "3.0.0-beta.14",
+            namespaceName: "emptyservice");
+
+        var result = await ValidateAsync(context);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, warning => warning.Contains("No tools found matching 'emptyservice'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Fails_WhenSourceToolIsOmittedFromArticle()
+    {
+        var context = CreateContext(
+            sourceTools:
+            [
+                SourceTool("redis cache list", "--name"),
+                SourceTool("redis cache show", "--name")
+            ],
+            articleTools:
+            [
+                ("List caches", "redis cache list", ["name"]),
+            ],
+            frontmatterVersion: "3.0.0-beta.14",
+            namespaceName: "redis");
+
+        var result = await ValidateAsync(context);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, warning => warning.Contains("source tool(s) missing from article markers", StringComparison.Ordinal));
+        Assert.Contains(result.Warnings, warning => warning.Contains("redis cache show", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Passes_ForMergedMultiNamespaceArticle_WhenAllSourceToolsAreDocumented()
+    {
+        var sourceTools = Enumerable.Range(1, 11)
+            .Select(index => SourceTool($"observability metric tool{index}", "--name"))
+            .Concat(Enumerable.Range(1, 11).Select(index => SourceTool($"insights workbook tool{index}", "--name")))
+            .ToArray();
+        var articleTools = sourceTools
+            .Select(tool =>
+            {
+                var command = tool.GetProperty("command").GetString()!;
+                return ($"Run {command}", command, (IReadOnlyList<string>)["name"]);
+            })
+            .ToArray();
+
+        var context = CreateContext(
+            sourceTools: sourceTools,
+            articleTools: articleTools,
+            frontmatterVersion: "3.0.0-beta.14",
+            namespaceName: "observability");
+
+        var result = await ValidateAsync(context);
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
+    }
+
+    [Fact]
     public async Task ValidateAsync_Passes_WhenArticleMatchesSourceJsonAndVersion()
     {
         var context = CreateContext(
@@ -119,11 +209,14 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
         IReadOnlyList<JsonElement> sourceTools,
         IReadOnlyList<(string Heading, string Command, IReadOnlyList<string> Parameters)> articleTools,
         string frontmatterVersion,
-        string namespaceName = "storage")
+        string namespaceName = "storage",
+        string? cliOutputPath = null,
+        bool seedConfiguredSource = true)
     {
         var outputPath = Path.Combine(_root, $"generated-{namespaceName}");
         Directory.CreateDirectory(Path.Combine(outputPath, "tools"));
         Directory.CreateDirectory(Path.Combine(outputPath, "tool-family"));
+        File.WriteAllText(Path.Combine(_root, "mcp-tool-version.txt"), "3.0.0-beta.14");
 
         var cliTools = sourceTools
             .Select(tool => new CliTool(
@@ -134,14 +227,28 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
             .ToArray();
 
         using var document = JsonDocument.Parse($$"""{"version":"3.0.0-beta.14","results":[{{string.Join(",", sourceTools.Select(t => t.GetRawText()))}}]}""");
+        if (seedConfiguredSource)
+        {
+            var sourceDirectory = Path.Combine(_root, "mcp-cli-metadata", "3.0.0-beta.14+abcdef");
+            Directory.CreateDirectory(sourceDirectory);
+            File.WriteAllText(Path.Combine(sourceDirectory, "cli-output.json"), document.RootElement.GetRawText());
+        }
+        else
+        {
+            Directory.CreateDirectory(Path.Combine(_root, "mcp-cli-metadata"));
+        }
+
         var cliOutput = new CliMetadataSnapshot(
-            Path.Combine(_root, "mcp-cli-metadata", "3.0.0-beta.14+abcdef", "tools-list.json"),
+            cliOutputPath ?? Path.Combine(_root, "mcp-cli-metadata", "3.0.0-beta.14+abcdef", "tools-list.json"),
             document.RootElement.Clone(),
             cliTools);
 
         foreach (var articleTool in articleTools)
         {
-            var fileName = $"{articleTool.Command.Replace(' ', '-')}.md";
+            var normalizedCommand = articleTool.Command.Replace(' ', '-');
+            var fileName = articleTool.Command.StartsWith($"{namespaceName} ", StringComparison.OrdinalIgnoreCase)
+                ? $"{normalizedCommand}.md"
+                : $"{namespaceName}-{normalizedCommand}.md";
             File.WriteAllText(
                 Path.Combine(outputPath, "tools", fileName),
                 $"---\n---\n# {articleTool.Heading}\n\n<!-- @mcpcli {articleTool.Command} -->\n");

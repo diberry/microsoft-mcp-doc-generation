@@ -341,7 +341,7 @@ This workflow complements `build-and-test.yml`: the standard CI workflow proves 
 
 ### Source Version Verification Gate
 
-Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` runs `SourceVersionVerificationGate` unless `--skip-validation` is set. The gate compares the configured target version in `mcp-tool-version.txt` with the loaded `cli-version.json`, the `version` field in CLI output JSON, and any versioned `mcp-cli-metadata/<version+hash>/` source folder inferred from the source metadata path. A mismatch fails the run before AI generation can use metadata from the wrong Azure MCP version.
+Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` runs `SourceVersionVerificationGate` unless `--skip-validation` is set. When `mcp-tool-version.txt` pins a target version, the gate resolves the versioned source snapshot under `mcp-cli-metadata/<version+hash>/` and compares that source folder version with `cli-version.json`, the `version` fields in generated and source CLI JSON, and the configured target. A missing or mismatched source snapshot fails the run before AI generation can use metadata from the wrong Azure MCP version.
 
 ---
 

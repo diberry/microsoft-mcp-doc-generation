@@ -28,12 +28,13 @@ public sealed class VersionVerificationGateTests : IDisposable
     public async Task ValidateAsync_Fails_WhenConfiguredVersionDoesNotMatchCliVersion()
     {
         var context = CreateContext(configuredVersion: "3.0.0-beta.14", cliVersion: "2.0.2");
+        SeedSourceMetadata("3.0.0-beta.14+abcdef", """{"version":"3.0.0-beta.14","results":[]}""");
 
         var result = await SourceVersionVerificationGate.ValidateAsync(context, CancellationToken.None);
 
         Assert.False(result.Success);
         Assert.Contains(result.Warnings, warning => warning.Contains("configured target version '3.0.0-beta.14'", StringComparison.Ordinal));
-        Assert.Contains(result.Warnings, warning => warning.Contains("CLI metadata version '2.0.2'", StringComparison.Ordinal));
+        Assert.Contains(result.Warnings, warning => warning.Contains("CLI version file '2.0.2'", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -51,12 +52,69 @@ public sealed class VersionVerificationGateTests : IDisposable
     }
 
     [Fact]
+    public async Task ValidateAsync_Fails_WhenGeneratedCliOutputMatchesButConfiguredSourceFolderIsWrong()
+    {
+        var context = CreateContext(
+            configuredVersion: "3.0.0-beta.14",
+            cliVersion: "3.0.0-beta.14");
+        SeedSourceMetadata("2.0.2+abcdef", """{"version":"3.0.0-beta.14","results":[]}""");
+
+        var result = await SourceVersionVerificationGate.ValidateAsync(context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, warning => warning.Contains("source metadata folder version '2.0.2'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Fails_WhenConfiguredSourceFolderIsUnavailable()
+    {
+        var context = CreateContext(
+            configuredVersion: "3.0.0-beta.14",
+            cliVersion: "3.0.0-beta.14");
+        Directory.CreateDirectory(Path.Combine(_root, "mcp-cli-metadata"));
+
+        var result = await SourceVersionVerificationGate.ValidateAsync(context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, warning => warning.Contains("source metadata folder for configured target version '3.0.0-beta.14' was not found", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Fails_WhenConfiguredSourceJsonIsEmpty()
+    {
+        var context = CreateContext(
+            configuredVersion: "3.0.0-beta.14",
+            cliVersion: "3.0.0-beta.14");
+        SeedSourceMetadata("3.0.0-beta.14+abcdef", "");
+
+        var result = await SourceVersionVerificationGate.ValidateAsync(context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, warning => warning.Contains("source CLI JSON is empty", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Fails_WhenConfiguredSourceJsonIsMissing()
+    {
+        var context = CreateContext(
+            configuredVersion: "3.0.0-beta.14",
+            cliVersion: "3.0.0-beta.14");
+        Directory.CreateDirectory(Path.Combine(_root, "mcp-cli-metadata", "3.0.0-beta.14+abcdef"));
+
+        var result = await SourceVersionVerificationGate.ValidateAsync(context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains(result.Warnings, warning => warning.Contains("source CLI JSON was not found", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task ValidateAsync_Passes_WhenConfiguredCliAndSourceFolderVersionsMatch()
     {
         var context = CreateContext(
             configuredVersion: "3.0.0-beta.14",
             cliVersion: "3.0.0-beta.14",
             cliOutputPath: Path.Combine(_root, "mcp-cli-metadata", "3.0.0-beta.14+abcdef", "tools-list.json"));
+        SeedSourceMetadata("3.0.0-beta.14+abcdef", """{"version":"3.0.0-beta.14","results":[]}""");
 
         var result = await SourceVersionVerificationGate.ValidateAsync(context, CancellationToken.None);
 
@@ -90,6 +148,13 @@ public sealed class VersionVerificationGateTests : IDisposable
             CliOutput = snapshot,
             SelectedNamespaces = ["storage"],
         };
+    }
+
+    private void SeedSourceMetadata(string folderName, string json)
+    {
+        var directory = Path.Combine(_root, "mcp-cli-metadata", folderName);
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "cli-output.json"), json);
     }
 
     private static CliMetadataSnapshot CreateSnapshot(string filePath)

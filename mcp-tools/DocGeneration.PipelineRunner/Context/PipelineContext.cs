@@ -41,6 +41,8 @@ public sealed class PipelineContext
 
     public CliMetadataSnapshot? CliOutput { get; set; }
 
+    public CliMetadataSnapshot? SourceCliOutput { get; set; }
+
     public bool AiConfigured { get; set; }
 
     public IReadOnlyList<IPipelineStep> PlannedSteps { get; set; } = Array.Empty<IPipelineStep>();

@@ -5,6 +5,7 @@ using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using Shared;
+using ToolFamilyCleanup.Services;
 
 namespace PipelineRunner.Validation;
 
@@ -620,26 +621,54 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             ? namespaceName
             : familyName;
 
-        IReadOnlyList<CliTool> sourceTools;
-        try
+        var sourceSnapshot = context.SourceCliOutput;
+        if (sourceSnapshot is null)
         {
-            sourceTools = context.TargetMatcher.FindMatches(context.CliOutput.Tools, sourceNamespace);
-        }
-        catch (InvalidOperationException ex)
-        {
-            issues.Add($"Source CLI JSON check failed: {ex.Message}");
-            return issues;
+            var configuredVersion = SourceVersionVerificationGate.ResolveConfiguredVersion(context.RepoRoot);
+            if (string.IsNullOrWhiteSpace(configuredVersion))
+            {
+                return issues;
+            }
+
+            var sourceResolution = SourceCliMetadataResolver.ResolveAsync(context.RepoRoot, configuredVersion, CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
+            if (!sourceResolution.Success)
+            {
+                issues.Add($"Source CLI JSON check failed: {sourceResolution.Error}");
+                return issues;
+            }
+
+            sourceSnapshot = sourceResolution.Snapshot!;
+            context.SourceCliOutput = sourceSnapshot;
         }
 
-        var articleVersion = GetFrontmatterValue(article.Frontmatter, "mcp-cli.version");
-        var sourceVersion = SourceVersionVerificationGate.ExtractVersionFromSourcePath(context.CliOutput.FilePath)
-            ?? SourceVersionVerificationGate.ExtractVersionFromCliOutput(context.CliOutput.RawRoot)
-            ?? (articleVersion is not null ? context.CliVersion : null);
+        var articleVersion = GetFrontmatterValue(article.Frontmatter, MetadataConstants.McpCliVersionFrontmatterName);
+        var sourceVersion = SourceVersionVerificationGate.ExtractVersionFromSourcePath(sourceSnapshot.FilePath);
         if (!string.IsNullOrWhiteSpace(sourceVersion)
             && !string.Equals(sourceVersion, "unknown", StringComparison.OrdinalIgnoreCase)
             && !string.Equals(articleVersion, sourceVersion, StringComparison.OrdinalIgnoreCase))
         {
             issues.Add($"Version stamp check failed (frontmatter mcp-cli.version: {articleVersion ?? "missing"}, source version: {sourceVersion}).");
+        }
+
+        var sourceJsonVersion = SourceVersionVerificationGate.ExtractVersionFromCliOutput(sourceSnapshot.RawRoot);
+        if (!string.IsNullOrWhiteSpace(sourceVersion)
+            && !string.IsNullOrWhiteSpace(sourceJsonVersion)
+            && !string.Equals(sourceVersion, sourceJsonVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            issues.Add($"Source CLI JSON version check failed: source metadata folder version '{sourceVersion}' != source CLI JSON version '{sourceJsonVersion}'.");
+        }
+
+        IReadOnlyList<CliTool> sourceTools;
+        try
+        {
+            sourceTools = ResolveSourceToolsForArticle(context, sourceNamespace, article, sourceSnapshot);
+        }
+        catch (InvalidOperationException ex)
+        {
+            issues.Add($"Source CLI JSON check failed: {ex.Message}");
+            return issues;
         }
 
         if (frontmatterToolCount is not null && frontmatterToolCount != sourceTools.Count)
@@ -688,18 +717,18 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 continue;
             }
 
-            if (!sourceTool.Raw.TryGetProperty("option", out var optionsProperty) || optionsProperty.ValueKind != JsonValueKind.Array)
+            if (!sourceTool.Raw.TryGetProperty(MetadataConstants.OptionPropertyName, out var optionsProperty) || optionsProperty.ValueKind != JsonValueKind.Array)
             {
                 continue;
             }
 
-            var sourceParameters = GetSourceParameters(optionsProperty);
+            var sourceParameters = SourceVerificationHelpers.GetSourceParameters(optionsProperty);
             var sourceParameterNames = sourceParameters
                 .Select(parameter => parameter.NormalizedName)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var documentedParameters = section.ParameterRows
-                .Select(row => NormalizeParameterName(row.ParameterName))
+                .Select(row => SourceVerificationHelpers.NormalizeParameterName(row.ParameterName))
                 .Where(parameter => !string.IsNullOrWhiteSpace(parameter))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
@@ -727,52 +756,34 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         return issues;
     }
 
-    private static IReadOnlyList<SourceParameter> GetSourceParameters(JsonElement options)
+    private static IReadOnlyList<CliTool> ResolveSourceToolsForArticle(
+        PipelineContext context,
+        string sourceNamespace,
+        ParsedArticle article,
+        CliMetadataSnapshot sourceSnapshot)
     {
-        var parameters = new List<SourceParameter>();
-        foreach (var option in options.EnumerateArray())
+        var roots = article.Sections
+                .SelectMany(section => section.Commands)
+                .Select(NormalizeToolCommand)
+                .Select(command => command.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
+                .Append(sourceNamespace)
+                .Where(root => !string.IsNullOrWhiteSpace(root))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+        var tools = new Dictionary<string, CliTool>(StringComparer.OrdinalIgnoreCase);
+        foreach (var root in roots)
         {
-            if (!option.TryGetProperty("name", out var nameProperty) || nameProperty.ValueKind != JsonValueKind.String)
-            {
-                continue;
-            }
-
-            var normalizedName = NormalizeParameterName(nameProperty.GetString() ?? string.Empty);
-            if (string.IsNullOrWhiteSpace(normalizedName))
-            {
-                continue;
-            }
-
-            parameters.Add(new SourceParameter(normalizedName, IsSourceParameterRequired(option)));
+                var matches = context.TargetMatcher.FindMatches(sourceSnapshot.Tools, root!);
+                foreach (var match in matches)
+                {
+                    tools.TryAdd(NormalizeToolCommand(match.Command), match);
+                }
         }
 
-        return parameters;
-    }
-
-    private static bool IsSourceParameterRequired(JsonElement option)
-    {
-        if (!option.TryGetProperty("required", out var requiredProperty))
-        {
-            return false;
-        }
-
-        return requiredProperty.ValueKind switch
-        {
-            JsonValueKind.True => true,
-            JsonValueKind.String => Regex.IsMatch(requiredProperty.GetString() ?? string.Empty, "(?i)^(true|yes|required)$"),
-            _ => false,
-        };
-    }
-
-    private static string NormalizeParameterName(string parameterName)
-    {
-        var normalized = ParameterCoverageChecker.RemoveMarkup(parameterName)
-            .Trim()
-            .TrimStart('-')
-            .ToLowerInvariant();
-        normalized = Regex.Replace(normalized, "[\\s_]+", "-");
-        normalized = Regex.Replace(normalized, "[^a-z0-9\\-]+", "-");
-        return normalized.Trim('-');
+        return tools.Values
+                .OrderBy(tool => NormalizeToolCommand(tool.Command), StringComparer.OrdinalIgnoreCase)
+                .ToArray();
     }
 
     private static IReadOnlyList<string> GetRequiredParameterIssues(IEnumerable<ArticleSection> sections)
@@ -1435,9 +1446,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     }
 
     private static string NormalizeToolCommand(string command)
-        => string.IsNullOrWhiteSpace(command)
-            ? command
-            : command.Replace("\r", string.Empty, StringComparison.Ordinal).Trim().Replace('_', ' ');
+        => SourceVerificationHelpers.NormalizeToolCommand(command);
 
     private static IReadOnlyList<string> GetMcpCliCommands(string text)
         => McpCliRegex.Matches(text.Replace("\r\n", "\n", StringComparison.Ordinal))
@@ -1461,7 +1470,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private sealed record NamespaceToolFile(string Name, string FullName, string ToolKey, string? CommandText);
 
-    private sealed record SourceParameter(string NormalizedName, bool Required);
+
 
     private sealed record ParameterRow(string ParameterName, string RequiredValue, bool IsRequired);
 
