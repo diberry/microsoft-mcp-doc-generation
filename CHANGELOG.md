@@ -37,6 +37,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Example-prompt validation now recognizes singular placeholders for plural ID parameters** — `ParameterCoverageChecker` now treats singular word variants such as `id` as matching plural required-parameter words such as `ids` when validating placeholders. This allows prompts like `<workbook_resource_id>` to satisfy the required `workbook-ids` parameter while still treating placeholder use separately from concrete-value coverage. A shared regression test covers the Azure Workbooks delete shape.
+
+- **Multi-namespace merge now honors mapped article filenames** — `merge-namespaces.sh` now reads each merge member's `fileName` from `brand-to-server-mapping.json` when loading and writing canonical and `-cli` tool-family articles, instead of assuming article filenames match MCP namespace names. This lets merge groups such as `monitor` + `workbooks` merge `azure-monitor.md` + `azure-workbooks.md` into the combined `azure-monitor.md`. The shipping merge smoke test now uses mapped filenames that differ from namespace names so the regression is covered.
+
+- **Step 4 preserves rewritten example prompt blocks** — `DuplicateExampleStripper` now canonicalizes a tool section's only bare `Examples` / `Examples:` / `Example prompts:` bullet block back to `Example prompts include:` instead of deleting it as a duplicate. This prevents `ToolFamilyPostAssemblyValidator` failures such as `instrumentation-get-learning-resource: no example prompt header found` when Step 3 rewrites the generated example-prompt header. Regression coverage uses the real Azure Monitor instrumentation learning-resource shape and keeps duplicate removal unchanged when the canonical block is already present.
+
 - **Keyless verification follow-up** — Renamed new keyless test files to the repository `ValidateAIOptionsKeylessTests` convention, added constructor-level horizontal article auth regression coverage, and made `verify-keyless` print per-suite plus overall PASS/FAIL labels.
 
 - **Horizontal article generation no longer rejects keyless auth** — `HorizontalArticleGenerator` now requires `FOUNDRY_API_KEY` only when `FOUNDRY_USE_DEFAULT_CREDENTIAL` is not enabled, matching the Step 6 program validation and the shared `GenerativeAIClient` keyless path. A regression test fails with the previous `FOUNDRY_API_KEY not set` constructor exception.

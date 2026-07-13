@@ -129,7 +129,7 @@ public static class ParameterCoverageChecker
                 var requiredWordMatches = Math.Min(Math.Max(words.Length, 1), 2);
                 if (placeholderSlug == slug
                     || placeholderSlug.Contains(slug, StringComparison.Ordinal)
-                    || words.Count(word => placeholderSlug.Contains(word, StringComparison.Ordinal)) >= requiredWordMatches)
+                    || CountRequiredWordMatches(words, word => placeholderSlug.Contains(word, StringComparison.Ordinal)) >= requiredWordMatches)
                 {
                     placeholderDetected = true;
                 }
@@ -142,7 +142,7 @@ public static class ParameterCoverageChecker
                     var innerTokens = Regex.Split(inner.ToLowerInvariant(), "[^a-z0-9]+")
                         .Where(t => t.Length > 0)
                         .ToArray();
-                    if (words.Count(word => innerTokens.Contains(word, StringComparer.Ordinal))
+                    if (CountRequiredWordMatches(words, word => innerTokens.Contains(word, StringComparer.Ordinal))
                         >= requiredWordMatches)
                     {
                         placeholderDetected = true;
@@ -267,6 +267,23 @@ public static class ParameterCoverageChecker
         clean = Regex.Replace(clean, "<[^>]+>", string.Empty);
         clean = Regex.Replace(clean, "\\s+", " ");
         return clean.Trim();
+    }
+
+    private static int CountRequiredWordMatches(IReadOnlyList<string> requiredWords, Func<string, bool> matches)
+        => requiredWords.Count(word => GetWordVariants(word).Any(matches));
+
+    private static IEnumerable<string> GetWordVariants(string word)
+    {
+        yield return word;
+
+        if (string.Equals(word, "ids", StringComparison.Ordinal))
+        {
+            yield return "id";
+        }
+        else if (word.Length > 3 && word.EndsWith('s'))
+        {
+            yield return word[..^1];
+        }
     }
 }
 

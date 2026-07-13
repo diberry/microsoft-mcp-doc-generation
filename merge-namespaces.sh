@@ -37,6 +37,7 @@ for (const m of mappings) {
     if (!grouped[m.mergeGroup]) grouped[m.mergeGroup] = [];
     grouped[m.mergeGroup].push({
         ns: m.mcpServerName,
+        fileName: m.fileName || m.mcpServerName,
         order: m.mergeOrder || 99,
         role: m.mergeRole || 'secondary'
     });
@@ -108,12 +109,12 @@ for (const [groupName, members] of groups) {
         const generatedDirs = {};
         for (const m of members) {
             const generatedDir = resolveGeneratedDir(m.ns);
-            const articlePath = generatedDir ? path.join(generatedDir, 'tool-family', m.ns + suffix + '.md') : null;
+            const articlePath = generatedDir ? path.join(generatedDir, 'tool-family', m.fileName + suffix + '.md') : null;
             if (articlePath && fs.existsSync(articlePath)) {
                 generatedDirs[m.ns] = generatedDir;
                 articles[m.ns] = fs.readFileSync(articlePath, 'utf8');
             } else {
-                return { missing: true, missingNs: m.ns };
+                return { missing: true, missingNs: m.ns, missingFile: (m.fileName + suffix + '.md') };
             }
         }
         return { missing: false, articles, generatedDirs };
@@ -142,14 +143,14 @@ for (const [groupName, members] of groups) {
         const loaded = loadVariant(suffix);
         if (loaded.missing) {
             const label = suffix === '' ? '' : ' ' + suffix.replace(/^-/, '') + ' variant for';
-            console.log('  Skipping' + label + ' group ' + groupName + ': ' + loaded.missingNs + suffix + '.md not found');
+            console.log('  Skipping' + label + ' group ' + groupName + ': ' + loaded.missingFile + ' not found for ' + loaded.missingNs);
             return required ? false : true;
         }
         const { merged, totalTools, toolCounts } = buildMerged(loaded.articles);
-        const outputPath = path.join(loaded.generatedDirs[primary.ns], 'tool-family', primary.ns + suffix + '.md');
-        const memberLabel = members.map(m => m.ns + suffix).join(' + ');
+        const outputPath = path.join(loaded.generatedDirs[primary.ns], 'tool-family', primary.fileName + suffix + '.md');
+        const memberLabel = members.map(m => m.fileName + suffix).join(' + ');
         if (dryRun) {
-            console.log('  DRY RUN: Would merge ' + memberLabel + ' -> ' + primary.ns + suffix + '.md');
+            console.log('  DRY RUN: Would merge ' + memberLabel + ' -> ' + primary.fileName + suffix + '.md');
             console.log('           ' + totalTools + ' tools (' + toolCounts + ')');
         } else {
             try {
@@ -159,7 +160,7 @@ for (const [groupName, members] of groups) {
                 console.log('  WARNING: Skipping ' + suffix.replace(/^-/, '') + ' variant for group ' + groupName + ': write failed (' + err.message + ')');
                 return true;
             }
-            console.log('  Merged: ' + memberLabel + ' -> ' + primary.ns + suffix + '.md');
+            console.log('  Merged: ' + memberLabel + ' -> ' + primary.fileName + suffix + '.md');
             console.log('          ' + totalTools + ' tools (' + toolCounts + ')');
         }
         return true;

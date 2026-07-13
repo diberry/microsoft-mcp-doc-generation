@@ -4,6 +4,7 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Services;
 using PipelineRunner.Validation;
 using PipelineRunner.Tests.Fixtures;
+using ToolFamilyCleanup.Services;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -313,6 +314,57 @@ public class ToolFamilyPostAssemblyValidatorTests
             Assert.Contains(result.Warnings, warning =>
                 warning.Contains("list", StringComparison.OrdinalIgnoreCase)
                 && warning.Contains("no example prompt header", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_BareExamplesBlock_AfterDuplicateExampleStripper_NoExampleHeaderWarning()
+    {
+        // Regression test (reviewer: Sam — PR #725):
+        // Proves that after DuplicateExampleStripper.Strip() recovers the canonical header
+        // from a bare "Examples" block (the Step 3 AI-rewrite failure shape), the
+        // post-assembly validator does NOT report "no example prompt header found".
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+
+            // Raw content: Step 3 AI downgraded "Example prompts include:" to bare "Examples"
+            // (no colon, no heading marker). Validator would emit "no example prompt header
+            // found" on this raw content. Strip() must recover it first.
+            var rawContent = """
+                ---
+                title: Compute tools
+                tool_count: 1
+                ---
+                # Compute tools
+
+                ## List virtual machines
+                <!-- @mcpcli compute list -->
+                Lists virtual machines in the subscription.
+
+                Examples
+
+                - "List all virtual machines in resource group 'rg-prod'."
+                - "Show all virtual machines in location 'eastus'."
+
+                ## Related content
+                - Link
+                """;
+
+            var strippedContent = DuplicateExampleStripper.Strip(rawContent);
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), strippedContent);
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.DoesNotContain(result.Warnings, warning =>
+                warning.Contains("no example prompt header found", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {

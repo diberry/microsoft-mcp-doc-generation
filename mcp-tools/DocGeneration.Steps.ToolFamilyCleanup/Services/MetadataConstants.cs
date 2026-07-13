@@ -26,4 +26,8 @@ public static class MetadataConstants
 
     // Content paths
     public const string IncludeParameterConsideration = "[!INCLUDE [tip-about-params](../includes/tools/parameter-consideration.md)]";
+
+    // Step 4 canonical example-prompt header — single source of truth used by
+    // DuplicateExampleStripper and SectionContainsCanonicalExampleHeader.
+    public const string CanonicalExampleHeader = "Example prompts include:";
 }
