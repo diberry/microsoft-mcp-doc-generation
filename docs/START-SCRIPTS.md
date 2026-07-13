@@ -170,6 +170,22 @@ After all namespaces complete, `start.sh` automatically calls `merge-namespaces.
 
 Namespaces without `mergeGroup` config are standalone — the merge step is a no-op for them.
 
+## Utility Scripts
+
+### Tool counter (`scripts/count-tools.ps1`)
+
+Audits a `tools-list.json` (Azure MCP CLI metadata) by counting tools and grouping them by service/namespace. The service is the first token of each tool's `command` (e.g. `acr registry list` → `acr`). Use it to compare tool counts across metadata versions and validate coverage in documentation PRs.
+
+```powershell
+# Top 10 services by tool count (default)
+./scripts/count-tools.ps1 -FilePath ./mcp-cli-metadata/3.0.0-beta.6/tools-list.json
+
+# Show every service
+./scripts/count-tools.ps1 -FilePath ./tools-list.json -Top 0
+```
+
+Output: total tool count, a per-service breakdown table (descending by count), and the structured `{ Total, ByService }` object emitted to the pipeline for programmatic use. It accepts both the results-wrapped shape (`{ "results": [ … ] }`) and a bare top-level array, and errors clearly on a missing or unrecognized file.
+
 ## Exit Codes
 
 | Code | Meaning |
