@@ -252,7 +252,7 @@ The `FamilyFileStitcher.Stitch()` method chains 9 deterministic fixes after AI a
 3. Related content assembly (append related content section)
 4. `PostProcessor.ExpandMcpAcronym()` — expand "MCP" on first body mention
 5. `FrontmatterEnricher.Enrich()` — inject required Microsoft Learn fields
-6. `DuplicateExampleStripper.Strip()` — remove non-canonical example blocks
+6. `DuplicateExampleStripper.Strip()` — remove duplicate non-canonical example blocks, or canonicalize a section's only example-prompt block back to `Example prompts include:`
 7. `AnnotationSpaceFixer.Fix()` — blank line between annotation link and values
 8. `ContractionFixer.Fix()` — "does not" → "doesn't", etc. (backtick-aware)
 9. `ExampleValueBackticker.Fix()` — wrap bare values in `(for example, VALUE)` with backticks
@@ -262,6 +262,8 @@ These are reliable, testable fixes that compensate for AI inconsistency.
 ### Multi-Namespace Merge (AD-011)
 
 Some Azure services span multiple MCP namespaces but publish as a single article (e.g., `monitor` + `workbooks` → `monitor.md`). Rather than threading multi-namespace awareness through all 6 pipeline steps, a **post-assembly merge** runs after all namespaces complete:
+
+Merge member articles are resolved by each mapping's `fileName` value, not by the raw MCP namespace. For example, the `monitor` namespace writes `azure-monitor.md` and the `workbooks` namespace writes `azure-workbooks.md`; the merge writes the combined article back to the primary mapped filename, `azure-monitor.md`.
 
 1. Each namespace generates independently through Steps 1-6
 2. `merge-namespaces.sh` reads merge group config from `brand-to-server-mapping.json`

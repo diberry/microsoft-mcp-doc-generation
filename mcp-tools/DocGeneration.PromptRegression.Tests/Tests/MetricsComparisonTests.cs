@@ -135,10 +135,8 @@ public class MetricsComparisonTests
         Assert.True(comparison.SectionDelta < 0);
     }
 
-    [Theory]
-    [InlineData(0.06, true)]
-    [InlineData(0.04, false)]
-    public void HasImprovements_ContractionRateThreshold_RespectsBoundary(double delta, bool expected)
+    [Fact]
+    public void HasImprovements_ContractionRateThreshold_RespectsBoundary()
     {
         // Build metrics with controlled contraction rates to test the 0.05 threshold
         var baselineContent = "# Test\n\nYou do not need this. It is not required. They are not available. We do not support it.";

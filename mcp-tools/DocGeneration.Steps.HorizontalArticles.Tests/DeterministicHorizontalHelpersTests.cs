@@ -278,7 +278,7 @@ public class DeterministicHorizontalHelpersTests
         };
 
         var caps = DeterministicHorizontalHelpers.PreComputeCapabilities(tools);
-        Assert.Equal(1, caps.Count);
+        Assert.Single(caps);
         Assert.Equal("First description", caps["storage list"]);
     }
 

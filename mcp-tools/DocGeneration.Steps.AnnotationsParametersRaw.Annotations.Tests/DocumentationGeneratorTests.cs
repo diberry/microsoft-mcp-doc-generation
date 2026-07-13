@@ -346,7 +346,7 @@ public class DocumentationGeneratorTests
         Assert.Equal(3, transformed.Tools.Count);
         Assert.Single(transformed.Areas); // only "storage"
         Assert.True(transformed.Areas.ContainsKey("storage"));
-        Assert.Single(transformed.Tools.Where(t => t.Area != null));
+        Assert.Single(transformed.Tools, t => t.Area != null);
     }
 
     [Fact]

@@ -61,18 +61,62 @@ public static class DuplicateExampleStripper
         // Remove blockquote examples ("> Example: ...")
         result = BlockquoteExamplePattern.Replace(result, "");
 
-        // Remove raw "Examples:" bullet lists
-        result = RawExamplesBlockPattern.Replace(result, "");
+        // Root cause: Step 3 (AI rewrite) can downgrade "Example prompts include:" to a
+        // bare "Examples" or variant header. The replacements below are an intentional
+        // DEFENSIVE canonicalization in Step 4, not the primary fix.
+        result = RawExamplesBlockPattern.Replace(
+            result,
+            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Examples:\s*", MetadataConstants.CanonicalExampleHeader));
 
-        // Remove bare "Examples" (no colon) bullet lists (#709)
-        result = BareExamplesBlockPattern.Replace(result, "");
+        // Remove bare "Examples" (no colon) bullet lists (#709), unless this is the
+        // section's only example-prompt block.
+        result = BareExamplesBlockPattern.Replace(
+            result,
+            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Examples[ \t]*", MetadataConstants.CanonicalExampleHeader));
 
-        // Remove "Example prompts:" (without "include") bullet lists
-        result = ExamplePromptsNoIncludePattern.Replace(result, "");
+        // Remove "Example prompts:" (without "include") bullet lists when duplicate;
+        // otherwise normalize to the canonical label.
+        result = ExamplePromptsNoIncludePattern.Replace(
+            result,
+            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Example prompts:(?! include)\s*", MetadataConstants.CanonicalExampleHeader));
 
         // Clean up excessive blank lines left by removals (3+ → 2)
         result = Regex.Replace(result, @"\n{3,}", "\n\n");
 
         return result;
     }
+
+    private static string CanonicalizeOrRemoveExampleBlock(
+        string fullContent,
+        Match match,
+        string headingPattern,
+        string canonicalHeading)
+    {
+        return SectionContainsCanonicalExampleHeader(fullContent, match.Index)
+            ? string.Empty
+            : Regex.Replace(
+                match.Value,
+                headingPattern,
+                canonicalHeading + Environment.NewLine,
+                RegexOptions.IgnoreCase);
+    }
+
+    private static bool SectionContainsCanonicalExampleHeader(string content, int matchIndex)
+    {
+        var sectionStart = FindPreviousH2Start(content, matchIndex);
+        var sectionEnd = FindNextH2Start(content, matchIndex);
+        var sectionLength = sectionEnd < 0 ? content.Length - sectionStart : sectionEnd - sectionStart;
+        var section = content.Substring(sectionStart, sectionLength);
+
+        return section.Contains(MetadataConstants.CanonicalExampleHeader, StringComparison.Ordinal);
+    }
+
+    private static int FindPreviousH2Start(string content, int index)
+    {
+        var previous = content.LastIndexOf("\n## ", Math.Max(0, index), StringComparison.Ordinal);
+        return previous < 0 ? 0 : previous + 1;
+    }
+
+    private static int FindNextH2Start(string content, int index)
+        => content.IndexOf("\n## ", index + 1, StringComparison.Ordinal);
 }

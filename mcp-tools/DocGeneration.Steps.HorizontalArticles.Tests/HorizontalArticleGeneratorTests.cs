@@ -53,7 +53,7 @@ public class HorizontalArticleGeneratorTests : IDisposable
 
         var staticData = await InvokeExtractStaticDataAsync(generator);
 
-        Assert.Equal(1, staticData.Count);
+        Assert.Single(staticData);
         Assert.Equal("../tool-family/compute.md", staticData[0].ToolsReferenceLink);
     }
 
@@ -79,7 +79,7 @@ public class HorizontalArticleGeneratorTests : IDisposable
         var staticData = await InvokeExtractStaticDataAsync(generator);
 
         // Assert: management plane first (alphabetical by command), then data plane (alphabetical).
-        Assert.Equal(1, staticData.Count);
+        Assert.Single(staticData);
         var commands = staticData[0].Tools.Select(t => t.Command).ToList();
         Assert.Equal(
             new[]
