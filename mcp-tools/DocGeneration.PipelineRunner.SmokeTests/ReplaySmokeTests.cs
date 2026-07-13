@@ -6,6 +6,7 @@ using PipelineRunner.Context;
 using PipelineRunner.Registry;
 using PipelineRunner.Services;
 using Shared;
+using ToolGeneration_Improved.Models;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -92,7 +93,8 @@ public sealed class ReplaySmokeTests
                 new SmokeStubBuildCoordinator(),
                 new SmokeStubAiCapabilityProbe(),
                 new ConsoleReportWriter(TextWriter.Null, TextWriter.Null),
-                testRoot);
+                testRoot,
+                ConfigureSmokeContext);
 
             var runner = new global::PipelineRunner.PipelineRunner(
                 stepRegistry,
@@ -151,6 +153,18 @@ public sealed class ReplaySmokeTests
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static void ConfigureSmokeContext(PipelineContext context)
+    {
+        context.Items["ToolGenerationStep.ToolImproverOverride"] =
+            static (ToolGenerationContext toolContext, CancellationToken _) => Task.FromResult(new ImprovedToolData
+            {
+                FileName = toolContext.ToolName,
+                OriginalContent = toolContext.ComposedContent,
+                ImprovedContent = toolContext.ComposedContent,
+                WasImproved = false
+            });
+    }
 
     private static async Task SeedCliMetadataAsync(string runDir, string[] commands)
     {
