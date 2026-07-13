@@ -6,6 +6,7 @@ using PipelineRunner.Contracts;
 using PipelineRunner.Context;
 using PipelineRunner.Registry;
 using PipelineRunner.Services;
+using PipelineRunner.Validation;
 using Shared;
 using Shared.Validation;
 using System.Security.Cryptography;
@@ -169,6 +170,12 @@ public sealed class PipelineRunner
 
         context.CliOutput ??= await context.CliMetadataLoader.LoadCliOutputAsync(context.OutputPath, cancellationToken);
         context.CliVersion ??= await context.CliMetadataLoader.LoadCliVersionAsync(context.OutputPath, cancellationToken);
+
+        var sourceVersionGateExitCode = await RunSourceVersionGateAsync(context, cancellationToken);
+        if (sourceVersionGateExitCode != SuccessExitCode)
+        {
+            return CompleteRun(context, warnings, criticalFailures, sourceVersionGateExitCode);
+        }
 
         var availableNamespaces = await context.CliMetadataLoader.LoadNamespacesAsync(context.OutputPath, cancellationToken);
         var brandEntries = await _brandMappingLoader.LoadAsync(context.McpToolsRoot, cancellationToken);
@@ -579,6 +586,12 @@ public sealed class PipelineRunner
         context.CliOutput ??= await context.CliMetadataLoader.LoadCliOutputAsync(context.OutputPath, cancellationToken);
         context.CliVersion ??= await context.CliMetadataLoader.LoadCliVersionAsync(context.OutputPath, cancellationToken);
 
+        var sourceVersionGateExitCode = await RunSourceVersionGateAsync(context, cancellationToken);
+        if (sourceVersionGateExitCode != SuccessExitCode)
+        {
+            return CompleteRun(context, warnings, criticalFailures, sourceVersionGateExitCode);
+        }
+
         var availableNamespaces = await context.CliMetadataLoader.LoadNamespacesAsync(context.OutputPath, cancellationToken);
         var brandEntries = await _brandMappingLoader.LoadAsync(context.McpToolsRoot, cancellationToken);
         if (!ResolveNamespaces(context, availableNamespaces, brandEntries, out var resolvedNamespaces, out var namespaceError))
@@ -649,6 +662,29 @@ public sealed class PipelineRunner
         }
 
         return SuccessExitCode;
+    }
+
+    private static async Task<int> RunSourceVersionGateAsync(PipelineContext context, CancellationToken cancellationToken)
+    {
+        if (context.Request.SkipValidation)
+        {
+            return SuccessExitCode;
+        }
+
+        context.Reports.Info("Running source version verification gate...");
+        var result = await SourceVersionVerificationGate.ValidateAsync(context, cancellationToken);
+        if (result.Success)
+        {
+            context.Reports.Info("  ✅ Source version verification passed.");
+            return SuccessExitCode;
+        }
+
+        foreach (var warning in result.Warnings)
+        {
+            context.Reports.Error(warning);
+        }
+
+        return FatalExitCode;
     }
 
     public static int MapBootstrapExitCode(int exitCode)

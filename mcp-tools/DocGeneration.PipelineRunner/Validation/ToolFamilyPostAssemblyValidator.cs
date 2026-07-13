@@ -182,6 +182,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     blockingIssues.Add(issue);
                 }
 
+                foreach (var issue in GetSourceVerificationIssues(context, familyName, article, frontmatterToolCount))
+                {
+                    blockingIssues.Add(issue);
+                }
+
                 var toneMarkerWarnings = GetToneMarkerWarnings(articleContent);
                 warningIssues.AddRange(toneMarkerWarnings);
 
@@ -435,6 +440,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 examplePrompts,
                 requiredParameters,
                 parameterRows.Count,
+                parameterRows,
                 ExtractDescriptionParagraphs(sectionLines)));
         }
 
@@ -597,6 +603,177 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     private static Dictionary<string, List<ArticleSection>> GroupByToolKey(IEnumerable<ArticleSection> sections)
         => sections.GroupBy(section => section.ToolKey, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+
+    private static IReadOnlyList<string> GetSourceVerificationIssues(
+        PipelineContext context,
+        string familyName,
+        ParsedArticle article,
+        int? frontmatterToolCount)
+    {
+        var issues = new List<string>();
+        if (context.CliOutput is null)
+        {
+            return issues;
+        }
+
+        var sourceNamespace = context.Items.TryGetValue("Namespace", out var namespaceValue) && namespaceValue is string namespaceName
+            ? namespaceName
+            : familyName;
+
+        IReadOnlyList<CliTool> sourceTools;
+        try
+        {
+            sourceTools = context.TargetMatcher.FindMatches(context.CliOutput.Tools, sourceNamespace);
+        }
+        catch (InvalidOperationException ex)
+        {
+            issues.Add($"Source CLI JSON check failed: {ex.Message}");
+            return issues;
+        }
+
+        var articleVersion = GetFrontmatterValue(article.Frontmatter, "mcp-cli.version");
+        var sourceVersion = SourceVersionVerificationGate.ExtractVersionFromSourcePath(context.CliOutput.FilePath)
+            ?? SourceVersionVerificationGate.ExtractVersionFromCliOutput(context.CliOutput.RawRoot)
+            ?? (articleVersion is not null ? context.CliVersion : null);
+        if (!string.IsNullOrWhiteSpace(sourceVersion)
+            && !string.Equals(sourceVersion, "unknown", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(articleVersion, sourceVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            issues.Add($"Version stamp check failed (frontmatter mcp-cli.version: {articleVersion ?? "missing"}, source version: {sourceVersion}).");
+        }
+
+        if (frontmatterToolCount is not null && frontmatterToolCount != sourceTools.Count)
+        {
+            issues.Add($"Source tool count check failed (frontmatter tool_count: {frontmatterToolCount}, source CLI JSON tools: {sourceTools.Count}).");
+        }
+
+        var sourceCommands = sourceTools
+            .Select(tool => NormalizeToolCommand(tool.Command))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var articleCommands = article.Sections
+            .SelectMany(section => section.Commands)
+            .Select(NormalizeToolCommand)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var missingArticleCommands = sourceCommands
+            .Except(articleCommands, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(command => command, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var extraArticleCommands = articleCommands
+            .Except(sourceCommands, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(command => command, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (missingArticleCommands.Length > 0)
+        {
+            issues.Add($"Source CLI JSON check failed: source tool(s) missing from article markers: {string.Join(", ", missingArticleCommands.Select(command => $"'{command}'"))}.");
+        }
+
+        if (extraArticleCommands.Length > 0)
+        {
+            issues.Add($"Source CLI JSON check failed: article marker(s) are not present in source CLI JSON: {string.Join(", ", extraArticleCommands.Select(command => $"'{command}'"))}.");
+        }
+
+        var sectionsByCommand = article.Sections
+            .SelectMany(section => section.Commands.Select(command => new { Command = NormalizeToolCommand(command), Section = section }))
+            .GroupBy(entry => entry.Command, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Section, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var sourceTool in sourceTools)
+        {
+            var normalizedCommand = NormalizeToolCommand(sourceTool.Command);
+            if (!sectionsByCommand.TryGetValue(normalizedCommand, out var section))
+            {
+                continue;
+            }
+
+            if (!sourceTool.Raw.TryGetProperty("option", out var optionsProperty) || optionsProperty.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            var sourceParameters = GetSourceParameters(optionsProperty);
+            var sourceParameterNames = sourceParameters
+                .Select(parameter => parameter.NormalizedName)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var documentedParameters = section.ParameterRows
+                .Select(row => NormalizeParameterName(row.ParameterName))
+                .Where(parameter => !string.IsNullOrWhiteSpace(parameter))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            var extraParameters = documentedParameters
+                .Except(sourceParameterNames, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(parameter => parameter, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (extraParameters.Length > 0)
+            {
+                issues.Add($"Source CLI JSON check failed for '{normalizedCommand}': parameter(s) documented but not present in source CLI JSON: {string.Join(", ", extraParameters.Select(parameter => $"'{parameter}'"))}.");
+            }
+
+            var missingRequiredParameters = sourceParameters
+                .Where(parameter => parameter.Required)
+                .Select(parameter => parameter.NormalizedName)
+                .Except(documentedParameters, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(parameter => parameter, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (missingRequiredParameters.Length > 0)
+            {
+                issues.Add($"Source CLI JSON check failed for '{normalizedCommand}': required source parameter(s) missing from article: {string.Join(", ", missingRequiredParameters.Select(parameter => $"'{parameter}'"))}.");
+            }
+        }
+
+        return issues;
+    }
+
+    private static IReadOnlyList<SourceParameter> GetSourceParameters(JsonElement options)
+    {
+        var parameters = new List<SourceParameter>();
+        foreach (var option in options.EnumerateArray())
+        {
+            if (!option.TryGetProperty("name", out var nameProperty) || nameProperty.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var normalizedName = NormalizeParameterName(nameProperty.GetString() ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(normalizedName))
+            {
+                continue;
+            }
+
+            parameters.Add(new SourceParameter(normalizedName, IsSourceParameterRequired(option)));
+        }
+
+        return parameters;
+    }
+
+    private static bool IsSourceParameterRequired(JsonElement option)
+    {
+        if (!option.TryGetProperty("required", out var requiredProperty))
+        {
+            return false;
+        }
+
+        return requiredProperty.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.String => Regex.IsMatch(requiredProperty.GetString() ?? string.Empty, "(?i)^(true|yes|required)$"),
+            _ => false,
+        };
+    }
+
+    private static string NormalizeParameterName(string parameterName)
+    {
+        var normalized = ParameterCoverageChecker.RemoveMarkup(parameterName)
+            .Trim()
+            .TrimStart('-')
+            .ToLowerInvariant();
+        normalized = Regex.Replace(normalized, "[\\s_]+", "-");
+        normalized = Regex.Replace(normalized, "[^a-z0-9\\-]+", "-");
+        return normalized.Trim('-');
+    }
 
     private static IReadOnlyList<string> GetRequiredParameterIssues(IEnumerable<ArticleSection> sections)
     {
@@ -1284,6 +1461,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private sealed record NamespaceToolFile(string Name, string FullName, string ToolKey, string? CommandText);
 
+    private sealed record SourceParameter(string NormalizedName, bool Required);
+
     private sealed record ParameterRow(string ParameterName, string RequiredValue, bool IsRequired);
 
     private sealed record ArticleSection(
@@ -1298,6 +1477,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         IReadOnlyList<string> ExamplePrompts,
         IReadOnlyList<string> RequiredParameters,
         int TotalParameterCount,
+        IReadOnlyList<ParameterRow> ParameterRows,
         IReadOnlyList<string> DescriptionParagraphs);
 
     private sealed record ParsedArticle(
