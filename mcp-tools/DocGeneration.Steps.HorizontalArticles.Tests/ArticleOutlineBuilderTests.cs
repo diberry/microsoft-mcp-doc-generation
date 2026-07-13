@@ -30,8 +30,8 @@ public sealed class ArticleOutlineBuilderTests : IDisposable
                     Description = "Create virtual machines.",
                     Option =
                     [
-                        new Option { Name = "name" },
-                        new Option { Name = "subscription-id" }
+                        new Option { Name = "--name" },
+                        new Option { Name = "--subscription" }
                     ],
                     Metadata = new ToolMetadata
                     {
@@ -47,7 +47,7 @@ public sealed class ArticleOutlineBuilderTests : IDisposable
                     Description = "List virtual machines.",
                     Option =
                     [
-                        new Option { Name = "resource-group" }
+                        new Option { Name = "--resource-group" }
                     ],
                     Metadata = new ToolMetadata
                     {
@@ -126,8 +126,8 @@ public sealed class ArticleOutlineBuilderTests : IDisposable
                     Description = "Create virtual machines.",
                     Option =
                     [
-                        new Option { Name = "name" },
-                        new Option { Name = "auth-method" }
+                        new Option { Name = "--name" },
+                        new Option { Name = "--auth-method" }
                     ],
                     Metadata = new ToolMetadata
                     {
@@ -191,6 +191,61 @@ public sealed class ArticleOutlineBuilderTests : IDisposable
 
         Assert.Equal("Myservice", result.ArticleTitle);
         Assert.Equal("myservice", result.ServiceIdentifier);
+    }
+
+    [Fact]
+    public async Task BuildAsync_FiltersCanonicalCommonParameters_FromParameterCount()
+    {
+        // Real CLI output uses "--"-prefixed option names. Common parameters must be filtered
+        // using the canonical names from common-parameters.json, leaving only tool-specific params.
+        await WriteCliOutputAsync(new CliOutput
+        {
+            Results =
+            [
+                new Tool
+                {
+                    Command = "acr registry list",
+                    Name = "acr registry list",
+                    Description = "List container registries.",
+                    Option =
+                    [
+                        new Option { Name = "--tenant" },
+                        new Option { Name = "--subscription" },
+                        new Option { Name = "--resource-group" },
+                        new Option { Name = "--retry-delay" },
+                        new Option { Name = "--learn" },
+                        new Option { Name = "--registry" }
+                    ]
+                }
+            ]
+        });
+
+        var builder = new ArticleOutlineBuilder();
+
+        var result = await builder.BuildAsync(_testRoot, "acr", CancellationToken.None);
+
+        var toolOverview = result.Sections.Single(section => section.Heading == "Tool overview");
+        using var tool = JsonDocument.Parse(toolOverview.EvidenceItems.Single());
+        // Only "--registry" is tool-specific; the five common parameters are filtered out.
+        Assert.Equal(1, tool.RootElement.GetProperty("parameterCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task BuildAsync_MalformedCliOutput_ReturnsStandardOutlineWithoutThrowing()
+    {
+        var cliDirectory = Path.Combine(_testRoot, "cli");
+        Directory.CreateDirectory(cliDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(cliDirectory, "cli-output.json"),
+            "{ \"results\": [ { \"command\": \"acr registry list\"  <<< not valid json");
+
+        var builder = new ArticleOutlineBuilder();
+
+        var result = await builder.BuildAsync(_testRoot, "acr", CancellationToken.None);
+
+        Assert.Equal("acr", result.ServiceIdentifier);
+        Assert.Equal(5, result.Sections.Count);
+        Assert.Empty(result.Sections.Single(section => section.Heading == "Tool overview").EvidenceItems);
     }
 
     private async Task WriteCliOutputAsync(CliOutput cliOutput)

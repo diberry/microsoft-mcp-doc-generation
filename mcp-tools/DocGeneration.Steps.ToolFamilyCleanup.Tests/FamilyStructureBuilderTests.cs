@@ -166,6 +166,85 @@ public sealed class FamilyStructureBuilderTests : IDisposable
         Assert.DoesNotContain(result.Sections, s => s.Heading == "List accounts");
     }
 
+    [Fact]
+    public async Task BuildAsync_NonExistentDirectory_ReturnsEmptySections()
+    {
+        var toolsDirectory = Path.Combine(_testRoot, "does-not-exist");
+
+        var builder = new FamilyStructureBuilder();
+
+        var result = await builder.BuildAsync(toolsDirectory, "compute", h2HeadingsDirectory: null, CancellationToken.None);
+
+        Assert.Equal("compute", result.FamilyName);
+        Assert.Empty(result.Sections);
+    }
+
+    [Fact]
+    public async Task BuildAsync_EmptyFamilyGroup_ReturnsEmptySections_WhenNoFileMatchesFamily()
+    {
+        // The directory contains tool files, but none belong to the requested family.
+        var toolsDirectory = Path.Combine(_testRoot, "no-match-tools");
+        Directory.CreateDirectory(toolsDirectory);
+
+        await File.WriteAllTextAsync(
+            Path.Combine(toolsDirectory, "storage-account-list.md"),
+            """
+            ---
+            ---
+            # List accounts
+
+            <!-- @mcpcli storage account list -->
+
+            Lists accounts.
+            """);
+        await File.WriteAllTextAsync(
+            Path.Combine(toolsDirectory, "keyvault-secret-get.md"),
+            """
+            ---
+            ---
+            # Get secret
+
+            <!-- @mcpcli keyvault secret get -->
+
+            Gets a secret.
+            """);
+
+        var builder = new FamilyStructureBuilder();
+
+        var result = await builder.BuildAsync(toolsDirectory, "cosmos", h2HeadingsDirectory: null, CancellationToken.None);
+
+        Assert.Equal("cosmos", result.FamilyName);
+        Assert.Empty(result.Sections);
+    }
+
+    [Fact]
+    public async Task BuildAsync_SingleToolNamespace_ProducesSingleSection()
+    {
+        var toolsDirectory = Path.Combine(_testRoot, "single-tool");
+        Directory.CreateDirectory(toolsDirectory);
+
+        await File.WriteAllTextAsync(
+            Path.Combine(toolsDirectory, "monitor-metrics-query.md"),
+            """
+            ---
+            ---
+            # Query metrics
+
+            <!-- @mcpcli monitor metrics query -->
+
+            Queries metrics.
+            """);
+
+        var builder = new FamilyStructureBuilder();
+
+        var result = await builder.BuildAsync(toolsDirectory, "monitor", h2HeadingsDirectory: null, CancellationToken.None);
+
+        Assert.Equal("monitor", result.FamilyName);
+        Assert.Single(result.Sections);
+        Assert.Equal(["monitor metrics query"], result.Sections[0].ToolNames);
+        Assert.StartsWith("## ", result.Sections[0].SourceContent.ReplaceLineEndings());
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_testRoot))
