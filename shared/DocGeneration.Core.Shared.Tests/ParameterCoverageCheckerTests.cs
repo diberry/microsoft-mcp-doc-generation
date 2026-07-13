@@ -112,6 +112,19 @@ public class ParameterCoverageCheckerTests
     }
 
     [Fact]
+    public void PluralIdParameter_WithConcreteValue_ReturnsCovered()
+    {
+        // Complementary positive case (reviewer: Statler — PR #725):
+        // workbook-ids with real quoted values must be Covered=true, PlaceholderDetected=false.
+        // Proves the plural-ID/singular-placeholder fix did not over-suppress real coverage.
+        var prompts = new[] { "Get workbook 'my-workbook-001' from the workspace." };
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "workbook-ids", 1);
+
+        Assert.True(result.Covered);
+        Assert.False(result.PlaceholderDetected);
+    }
+
+    [Fact]
     public void NoMatch_ReturnsCoveredFalse()
     {
         var prompts = new[] { "List all virtual machines in the region" };

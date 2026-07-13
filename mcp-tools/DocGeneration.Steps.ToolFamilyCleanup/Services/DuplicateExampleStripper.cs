@@ -61,24 +61,24 @@ public static class DuplicateExampleStripper
         // Remove blockquote examples ("> Example: ...")
         result = BlockquoteExamplePattern.Replace(result, "");
 
-        // Remove raw "Examples:" bullet lists when they duplicate the canonical block.
-        // If an AI step rewrote the canonical heading, restore it instead of dropping
-        // the only example prompts for the tool section.
+        // Root cause: Step 3 (AI rewrite) can downgrade "Example prompts include:" to a
+        // bare "Examples" or variant header. The replacements below are an intentional
+        // DEFENSIVE canonicalization in Step 4, not the primary fix.
         result = RawExamplesBlockPattern.Replace(
             result,
-            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Examples:\s*", "Example prompts include:"));
+            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Examples:\s*", MetadataConstants.CanonicalExampleHeader));
 
         // Remove bare "Examples" (no colon) bullet lists (#709), unless this is the
         // section's only example-prompt block.
         result = BareExamplesBlockPattern.Replace(
             result,
-            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Examples[ \t]*", "Example prompts include:"));
+            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Examples[ \t]*", MetadataConstants.CanonicalExampleHeader));
 
         // Remove "Example prompts:" (without "include") bullet lists when duplicate;
         // otherwise normalize to the canonical label.
         result = ExamplePromptsNoIncludePattern.Replace(
             result,
-            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Example prompts:(?! include)\s*", "Example prompts include:"));
+            match => CanonicalizeOrRemoveExampleBlock(result, match, @"^Example prompts:(?! include)\s*", MetadataConstants.CanonicalExampleHeader));
 
         // Clean up excessive blank lines left by removals (3+ → 2)
         result = Regex.Replace(result, @"\n{3,}", "\n\n");
@@ -108,7 +108,7 @@ public static class DuplicateExampleStripper
         var sectionLength = sectionEnd < 0 ? content.Length - sectionStart : sectionEnd - sectionStart;
         var section = content.Substring(sectionStart, sectionLength);
 
-        return section.Contains("Example prompts include:", StringComparison.Ordinal);
+        return section.Contains(MetadataConstants.CanonicalExampleHeader, StringComparison.Ordinal);
     }
 
     private static int FindPreviousH2Start(string content, int index)
