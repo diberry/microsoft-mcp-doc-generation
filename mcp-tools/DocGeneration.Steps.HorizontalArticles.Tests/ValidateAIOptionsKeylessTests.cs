@@ -19,7 +19,7 @@ namespace DocGeneration.Steps.HorizontalArticles.Tests;
 public sealed class ValidateAIOptionsKeylessTests
 {
     [Fact]
-    public void ValidateAIOptions_DefaultCredentialWithoutApiKey_DoesNotRequireApiKey()
+    public void Keyless_DefaultCredential_DoesNotRequireApiKey()
     {
         var options = new GenerativeAIOptions
         {
@@ -36,7 +36,7 @@ public sealed class ValidateAIOptionsKeylessTests
     }
 
     [Fact]
-    public void HorizontalArticleGenerator_DefaultCredentialWithoutApiKey_Constructs()
+    public void Keyless_DefaultCredential_ConstructsGeneratorWithoutApiKey()
     {
         var options = new GenerativeAIOptions
         {
@@ -53,7 +53,23 @@ public sealed class ValidateAIOptionsKeylessTests
     }
 
     [Fact]
-    public void ValidateAIOptions_NoDefaultCredentialAndNoApiKey_RequiresApiKey()
+    public void NonKeyless_MissingApiKey_ConstructorThrows()
+    {
+        var options = new GenerativeAIOptions
+        {
+            UseDefaultCredential = false,
+            ApiKey = "",
+            Endpoint = "https://oai-ha-keyed.cognitiveservices.azure.com/",
+            Deployment = "gpt-5-mini",
+            ApiVersion = "2024-10-01-preview",
+        };
+
+        var exception = Assert.Throws<InvalidOperationException>(() => new HorizontalArticleGeneratorClass(options));
+        Assert.Contains("FOUNDRY_API_KEY", exception.Message);
+    }
+
+    [Fact]
+    public void NonKeyless_MissingApiKey_RequiresApiKey()
     {
         var options = new GenerativeAIOptions
         {

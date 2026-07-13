@@ -8,10 +8,10 @@ using Xunit;
 namespace DocGeneration.Steps.ToolGeneration.Improvements.Tests;
 
 [Trait("Category", "Keyless")]
-public sealed class KeylessAuthTests
+public sealed class ValidateAIOptionsKeylessTests
 {
     [Fact]
-    public void ValidateAIOptions_DefaultCredentialWithoutApiKey_DoesNotRequireApiKey()
+    public void Keyless_DefaultCredential_DoesNotRequireApiKey()
     {
         var options = CreateKeylessOptions();
 
@@ -22,7 +22,7 @@ public sealed class KeylessAuthTests
     }
 
     [Fact]
-    public void ImprovedToolGeneratorService_DefaultCredentialWithoutApiKey_Constructs()
+    public void Keyless_DefaultCredential_ConstructsServiceWithoutApiKey()
     {
         var options = CreateKeylessOptions();
         var client = new GenerativeAIClient(options);
@@ -33,7 +33,7 @@ public sealed class KeylessAuthTests
     }
 
     [Fact]
-    public void ValidateAIOptions_NoDefaultCredentialAndNoApiKey_RequiresApiKey()
+    public void NonKeyless_MissingApiKey_RequiresApiKey()
     {
         var options = CreateKeylessOptions();
         options.UseDefaultCredential = false;
