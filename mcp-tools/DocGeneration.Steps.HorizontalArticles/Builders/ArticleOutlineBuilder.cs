@@ -22,24 +22,6 @@ public sealed class ArticleOutlineBuilder
         PropertyNameCaseInsensitive = true
     };
 
-    private static readonly HashSet<string> CommonParameters = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "subscription-id",
-        "resource-group",
-        "output",
-        "verbose",
-        "help",
-        "debug",
-        "only-show-errors",
-        "tenant",
-        "auth-method",
-        "retry-delay",
-        "retry-max-delay",
-        "retry-max-retries",
-        "retry-mode",
-        "retry-network-timeout"
-    };
-
     public async Task<ArticleOutlineContext> BuildAsync(string outputPath, string serviceNamespace, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
@@ -50,7 +32,8 @@ public sealed class ArticleOutlineBuilder
         var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
         var brandMapping = ResolveBrandMapping(brandMappings, normalizedNamespace);
         var toolFamilyFileName = ResolveToolFamilyFileName(brandMapping, normalizedNamespace);
-        var tools = await LoadToolsAsync(outputPath, normalizedNamespace, ct);
+        var commonParameterNames = await LoadCommonParameterNamesAsync();
+        var tools = await LoadToolsAsync(outputPath, normalizedNamespace, commonParameterNames, ct);
         var sections = BuildSections(toolFamilyFileName, tools);
 
         return new ArticleOutlineContext(
@@ -59,7 +42,21 @@ public sealed class ArticleOutlineBuilder
             normalizedNamespace);
     }
 
-    private static async Task<IReadOnlyList<OutlineTool>> LoadToolsAsync(string outputPath, string serviceNamespace, CancellationToken ct)
+    /// <summary>
+    /// Loads the canonical common (infrastructure) parameter names from common-parameters.json.
+    /// Names are stored with the CLI switch prefix (e.g. "--subscription") to match the option
+    /// names emitted in cli-output.json, so this is the single source of truth for filtering.
+    /// </summary>
+    private static async Task<HashSet<string>> LoadCommonParameterNamesAsync()
+    {
+        var definitions = await DataFileLoader.LoadCommonParametersAsync();
+        return definitions
+            .Select(definition => definition.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static async Task<IReadOnlyList<OutlineTool>> LoadToolsAsync(string outputPath, string serviceNamespace, HashSet<string> commonParameterNames, CancellationToken ct)
     {
         var cliOutputPath = Path.Combine(outputPath, "cli", "cli-output.json");
         if (!File.Exists(cliOutputPath))
@@ -68,7 +65,20 @@ public sealed class ArticleOutlineBuilder
         }
 
         var cliRawJson = await File.ReadAllTextAsync(cliOutputPath, ct);
-        var cliOutput = JsonSerializer.Deserialize<CliOutput>(cliRawJson, JsonOptions);
+
+        CliOutput? cliOutput;
+        try
+        {
+            cliOutput = JsonSerializer.Deserialize<CliOutput>(cliRawJson, JsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            // A corrupt cli-output.json must not crash the pipeline; fall back to an empty
+            // tool set so the standard outline (with an empty Tool overview) is still produced.
+            LogFileHelper.WriteDebug($"ArticleOutlineBuilder: failed to parse '{cliOutputPath}': {ex.Message}");
+            return [];
+        }
+
         if (cliOutput?.Results is null)
         {
             return [];
@@ -76,7 +86,7 @@ public sealed class ArticleOutlineBuilder
 
         var tools = cliOutput.Results
             .Where(tool => IsMatchingNamespace(tool, serviceNamespace))
-            .Select(CreateOutlineTool)
+            .Select(tool => CreateOutlineTool(tool, commonParameterNames))
             .ToList();
 
         if (tools.Count == 0)
@@ -175,11 +185,12 @@ public sealed class ArticleOutlineBuilder
         ];
     }
 
-    private static OutlineTool CreateOutlineTool(Tool tool)
+    private static OutlineTool CreateOutlineTool(Tool tool, HashSet<string> commonParameterNames)
     {
         var command = (tool.Command ?? tool.Name ?? string.Empty).Trim();
         var description = (tool.Description ?? string.Empty).Trim();
-        var parameterCount = tool.Option?.Count(option => !CommonParameters.Contains(option.Name ?? string.Empty)) ?? 0;
+        var parameterCount = tool.Option?.Count(option =>
+            !string.IsNullOrEmpty(option.Name) && !commonParameterNames.Contains(option.Name)) ?? 0;
 
         return new OutlineTool(
             command,
