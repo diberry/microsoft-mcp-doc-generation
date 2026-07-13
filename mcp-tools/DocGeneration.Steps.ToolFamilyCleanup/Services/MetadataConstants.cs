@@ -27,6 +27,17 @@ public static class MetadataConstants
     // Content paths
     public const string IncludeParameterConsideration = "[!INCLUDE [tip-about-params](../includes/tools/parameter-consideration.md)]";
 
+    // CLI source metadata
+    public const string McpToolVersionFileName = "mcp-tool-version.txt";
+    public const string TrackedVersionFileName = "tracked-version.txt";
+    public const string McpCliMetadataDirectoryName = "mcp-cli-metadata";
+    public const string CliOutputFileName = "cli-output.json";
+    public const string ToolsListFileName = "tools-list.json";
+    public const string VersionPropertyName = "version";
+    public const string ResultsPropertyName = "results";
+    public const string OptionPropertyName = "option";
+    public const string McpCliVersionFrontmatterName = "mcp-cli.version";
+
     // Step 4 canonical example-prompt header — single source of truth used by
     // DuplicateExampleStripper and SectionContainsCanonicalExampleHeader.
     public const string CanonicalExampleHeader = "Example prompts include:";

@@ -210,6 +210,7 @@ Step 4 runs in a temporary directory (`pipeline-runner-step4-{guid}`) to enable 
 After Step 4 generates a tool-family article, `ToolFamilyPostAssemblyValidator` checks:
 - **Tool count integrity** — frontmatter `tool_count` matches H2 sections and tool files
 - **Cross-reference check** — every tool file has a matching article section
+- **Source JSON consistency** — article `@mcpcli` markers, frontmatter `mcp-cli.version`, `tool_count`, documented parameter names, and required source parameters match the loaded CLI metadata for the namespace
 - **Required parameter coverage** — example prompts mention all required parameters
 - **Branding consistency** — no "CosmosDB", "this command", etc.
 
@@ -335,6 +336,12 @@ GitHub Actions enforces the regression gates through `.github/workflows/pipeline
 3. `ai-regression` — runs only when the classifier marks the PR as AI-involved; fork PRs fail with a trusted-run-required message, while trusted PRs run fingerprint + prompt regression gates and upload prompt regression artifacts.
 
 This workflow complements `build-and-test.yml`: the standard CI workflow proves the code builds and tests, while the regression workflow proves pipeline output changes are understood before merge.
+
+---
+
+### Source Version Verification Gate
+
+Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` runs `SourceVersionVerificationGate` unless `--skip-validation` is set. When `mcp-tool-version.txt` pins a target version, the gate resolves the versioned source snapshot under `mcp-cli-metadata/<version+hash>/` and compares that source folder version with `cli-version.json`, the `version` fields in generated and source CLI JSON, and the configured target. A missing or mismatched source snapshot fails the run before AI generation can use metadata from the wrong Azure MCP version.
 
 ---
 
