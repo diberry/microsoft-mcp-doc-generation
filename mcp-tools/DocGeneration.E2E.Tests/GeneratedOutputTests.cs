@@ -9,7 +9,7 @@ namespace DocGeneration.E2E.Tests;
 /// <summary>
 /// E2E integration tests that validate the structure and content of already-generated
 /// pipeline output. These tests do NOT run the pipeline — they validate existing
-/// generated-* directories in the repo root.
+/// generated-* directories in the configured generated-output root.
 ///
 /// Tests skip gracefully when no generated output exists (e.g., in CI without prior generation).
 /// </summary>
@@ -24,17 +24,7 @@ public class GeneratedOutputTests
     /// </summary>
     public static IEnumerable<object[]> GetGeneratedNamespaces()
     {
-        string repoRoot;
-        try
-        {
-            repoRoot = ProjectRootFinder.FindSolutionRoot();
-        }
-        catch (InvalidOperationException)
-        {
-            yield break;
-        }
-
-        var dirs = Directory.GetDirectories(repoRoot, "generated-*");
+        var dirs = OutputArtifactLocator.GetNamespaceDirectories();
         foreach (var dir in dirs.OrderBy(d => d))
         {
             var dirName = Path.GetFileName(dir);
@@ -52,8 +42,7 @@ public class GeneratedOutputTests
 
     private static string GetOutputPath(string namespaceDirName)
     {
-        var repoRoot = ProjectRootFinder.FindSolutionRoot();
-        return Path.Combine(repoRoot, namespaceDirName);
+        return Path.Combine(OutputArtifactLocator.GetOutputRoot(), namespaceDirName);
     }
 
     [Fact]
@@ -193,8 +182,9 @@ public class GeneratedOutputTests
             namespaces.Count > 0
                 ? $"Found {namespaces.Count} generated namespace(s): " +
                   string.Join(", ", namespaces.Select(n => n[0]))
-                : "No generated-* directories found in repo root. " +
+                : "No generated-* directories found in the generated-output root. " +
                   "E2E validation requires prior pipeline execution. " +
-                  "Run './start.sh <namespace>' to generate output first.");
+                  "Run './start.sh <namespace> --output <isolated-root>/generated-<namespace>' " +
+                  $"or set {OutputArtifactLocator.OutputRootEnvironmentVariable} to the parent directory first.");
     }
 }

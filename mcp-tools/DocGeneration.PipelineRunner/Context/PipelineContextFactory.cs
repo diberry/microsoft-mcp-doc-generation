@@ -14,6 +14,7 @@ public sealed class PipelineContextFactory
     private readonly IAiCapabilityProbe _aiCapabilityProbe;
     private readonly IReportWriter _reportWriter;
     private readonly string? _repoRootOverride;
+    private readonly Action<PipelineContext>? _configureContext;
 
     public PipelineContextFactory(
         IProcessRunner processRunner,
@@ -24,7 +25,8 @@ public sealed class PipelineContextFactory
         IBuildCoordinator buildCoordinator,
         IAiCapabilityProbe aiCapabilityProbe,
         IReportWriter reportWriter,
-        string? repoRootOverride = null)
+        string? repoRootOverride = null,
+        Action<PipelineContext>? configureContext = null)
     {
         _processRunner = processRunner;
         _workspaceManager = workspaceManager;
@@ -35,6 +37,7 @@ public sealed class PipelineContextFactory
         _aiCapabilityProbe = aiCapabilityProbe;
         _reportWriter = reportWriter;
         _repoRootOverride = repoRootOverride;
+        _configureContext = configureContext;
     }
 
     public async ValueTask<PipelineContext> CreateAsync(PipelineRequest request, CancellationToken cancellationToken)
@@ -78,6 +81,8 @@ public sealed class PipelineContextFactory
             context.CliOutput = await _cliMetadataLoader.LoadCliOutputAsync(outputPath, cancellationToken);
             context.CliVersion = await _cliMetadataLoader.LoadCliVersionAsync(outputPath, cancellationToken);
         }
+
+        _configureContext?.Invoke(context);
 
         return context;
     }
