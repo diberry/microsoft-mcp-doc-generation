@@ -531,6 +531,31 @@ public class CliTabWrapperTests
     // ── Annotation placement — after --- separator ─────────────
 
     [Fact]
+    public void ExtractAnnotationBlock_LegacyInlineAnnotation_ReturnsCompleteBlock()
+    {
+        var content = "Description.\n\n" +
+            "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\n\n" +
+            "Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌";
+
+        var result = Shared.CliTabWrapper.ExtractAnnotationBlock(content);
+
+        Assert.Equal(
+            "[Tool annotation hints](index.md#tool-annotations-for-azure-mcp-server):\n\n" +
+            "Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅ | Secret: ❌ | Local Required: ❌",
+            result);
+    }
+
+    [Fact]
+    public void ExtractAnnotationBlock_UnrelatedProseWithAnnotationWord_ReturnsNull()
+    {
+        const string content = "This tool is not destructive, and this sentence is just prose.";
+
+        var result = Shared.CliTabWrapper.ExtractAnnotationBlock(content);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void WrapWithTabs_AnnotationInMcpContent_PlacedOnceAfterSeparator()
     {
         var mcpContent = "List storage accounts.\n\n" +

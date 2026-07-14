@@ -16,8 +16,13 @@ public static class CliTabWrapper
         @"<!--\s*@mcpcli\s+(.+?)\s*-->", RegexOptions.Compiled);
     private static readonly Regex NumberedListPattern = new(@"^\d+\.\s", RegexOptions.Compiled);
 
-    // Matches the annotation block for both current markdown-table hints and legacy inline hints.
-    // The block starts with the link line and includes the complete table or values line that follows.
+    // Matches one complete annotation block. The required prefix is the
+    // "[Tool annotation hints](...):" link line followed by a blank line.
+    // After that prefix, either supported body shape may follow:
+    // - current table form: header row containing an annotation column, separator row, and values row
+    // - legacy inline form: one single line containing annotation labels and values
+    // The label check anchors extraction to real annotation content and avoids treating unrelated
+    // prose that only contains words such as "Destructive" as an annotation block.
     private static readonly Regex AnnotationBlockPattern = new(
         @"(\[Tool annotation hints\]\([^\)]+\):\s*\n\s*\n(?:\|[^\n]*(?:Destructive|Idempotent|Read Only)[^\n]*\|\s*\n\|[ :\-\|]+\|\s*\n\|[^\n]*\|(?:\s*\n)?|[^\n]*(?:Destructive|Idempotent|Read Only)[^\n]*))",
         RegexOptions.Compiled);

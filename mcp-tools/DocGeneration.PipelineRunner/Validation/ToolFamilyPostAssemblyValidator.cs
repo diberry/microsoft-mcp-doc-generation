@@ -648,7 +648,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         }
 
         var articleVersion = GetFrontmatterValue(article.Frontmatter, MetadataConstants.McpCliVersionFrontmatterName);
-        var normalizedArticleVersion = NormalizeVersionForComparison(articleVersion);
+        var normalizedArticleVersion = SemverVersionNormalizer.StripBuildMetadata(articleVersion);
         var sourceVersion = SourceVersionVerificationGate.ExtractVersionFromSourcePath(sourceSnapshot.FilePath);
         if (!string.IsNullOrWhiteSpace(sourceVersion)
             && !string.Equals(sourceVersion, "unknown", StringComparison.OrdinalIgnoreCase)
@@ -759,20 +759,6 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         }
 
         return issues;
-    }
-
-    private static string? NormalizeVersionForComparison(string? version)
-    {
-        if (string.IsNullOrWhiteSpace(version))
-        {
-            return null;
-        }
-
-        var trimmed = version.Trim();
-        var buildMetadataIndex = trimmed.IndexOf('+', StringComparison.Ordinal);
-        return buildMetadataIndex >= 0
-            ? trimmed[..buildMetadataIndex]
-            : trimmed;
     }
 
     private static IReadOnlyList<CliTool> ResolveSourceToolsForArticle(

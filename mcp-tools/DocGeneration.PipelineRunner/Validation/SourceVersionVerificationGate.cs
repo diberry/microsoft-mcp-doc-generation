@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
+using Shared;
 using ToolFamilyCleanup.Services;
 
 namespace PipelineRunner.Validation;
@@ -20,7 +21,7 @@ public static partial class SourceVersionVerificationGate
             return new ValidatorResult(Name, true, issues);
         }
 
-        var cliVersion = NormalizeVersion(context.CliVersion);
+        var cliVersion = SemverVersionNormalizer.StripBuildMetadata(context.CliVersion);
         var sourceResolution = await ResolveSourceSnapshotAsync(context, configuredVersion, cancellationToken);
         CliMetadataSnapshot? sourceSnapshot = null;
         string? sourceFolderVersion = null;
@@ -123,14 +124,14 @@ public static partial class SourceVersionVerificationGate
         }
 
         var content = await File.ReadAllTextAsync(versionPath, cancellationToken);
-        return NormalizeVersion(content);
+        return SemverVersionNormalizer.StripBuildMetadata(content);
     }
 
     public static string? ResolveConfiguredVersion(string repoRoot)
     {
         var versionPath = GetConfiguredVersionPath(repoRoot);
         return File.Exists(versionPath)
-            ? NormalizeVersion(File.ReadAllText(versionPath))
+            ? SemverVersionNormalizer.StripBuildMetadata(File.ReadAllText(versionPath))
             : null;
     }
 
@@ -150,22 +151,8 @@ public static partial class SourceVersionVerificationGate
         }
 
         return versionProperty.ValueKind == JsonValueKind.String
-            ? NormalizeVersion(versionProperty.GetString())
+            ? SemverVersionNormalizer.StripBuildMetadata(versionProperty.GetString())
             : null;
-    }
-
-    private static string? NormalizeVersion(string? version)
-    {
-        if (string.IsNullOrWhiteSpace(version))
-        {
-            return null;
-        }
-
-        var trimmed = version.Trim();
-        var buildMetadataIndex = trimmed.IndexOf('+', StringComparison.Ordinal);
-        return buildMetadataIndex >= 0
-            ? trimmed[..buildMetadataIndex]
-            : trimmed;
     }
 
     private static async ValueTask<SourceCliMetadataResolution> ResolveSourceSnapshotAsync(
