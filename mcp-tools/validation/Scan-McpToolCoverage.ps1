@@ -74,66 +74,95 @@ $commonParams = @(
 )
 
 # ─── Namespace → filename mapping ────────────────────────────────────────────
-# TODO(PRD #574, Phase 3): Replace this hardcoded map with generated/namespace-mapping.json
-# consumption once CoverageAuditStep becomes pipeline-owned.
-$namespaceToFile = @{
-    'appconfig'         = 'app-configuration.md'
-    'applicationinsights' = 'application-insights.md'
-    'group'             = 'resource-group.md'
-    'speech'            = 'ai-services-speech.md'
-    'subscription'      = 'subscription.md'
-    'kusto'             = 'azure-data-explorer.md'
-    'datadog'           = 'azure-native-isv.md'
-    'foundryextensions' = 'azure-foundry.md'
-    'functionapp'       = 'azure-functions.md'
-    'get'               = 'azure-best-practices.md'
-    'acr'               = 'azure-container-registry.md'
-    'advisor'           = 'azure-advisor.md'
-    'aks'               = 'azure-kubernetes.md'
-    'applens'           = 'azure-app-lens.md'
-    'appservice'        = 'azure-app-service.md'
-    'azurebackup'       = 'azure-backup.md'
-    'azuremigrate'      = 'azure-migrate.md'
-    'azureterraform'    = 'azure-terraform.md'
-    'azureterraformbestpractices' = 'azure-terraform-best-practices.md'
-    'bicepschema'       = 'azure-bicep-schema.md'
-    'cloudarchitect'    = 'azure-cloud-architect.md'
-    'communication'     = 'azure-communication.md'
-    'compute'           = 'azure-compute.md'
-    'confidentialledger' = 'azure-confidential-ledger.md'
-    'containerapps'     = 'azure-container-apps.md'
-    'cosmos'            = 'azure-cosmos-db.md'
-    'deploy'            = 'azure-deploy.md'
-    'deviceregistry'    = 'azure-device-registry.md'
-    'eventgrid'         = 'azure-event-grid.md'
-    'eventhubs'         = 'azure-event-hubs.md'
-    'extension'         = 'azure-mcp-tool.md'
-    'fileshares'        = 'azure-file-shares.md'
-    'functions'         = 'azure-functions.md'
-    'grafana'           = 'azure-grafana.md'
-    'keyvault'          = 'azure-key-vault.md'
-    'loadtesting'       = 'azure-load-testing.md'
-    'managedlustre'     = 'azure-managed-lustre.md'
-    'marketplace'       = 'azure-marketplace.md'
-    'monitor'           = 'azure-monitor.md'
-    'mysql'             = 'azure-mysql.md'
-    'policy'            = 'azure-policy.md'
-    'postgres'          = 'azure-database-postgresql.md'
-    'pricing'           = 'azure-pricing.md'
-    'quota'             = 'azure-quotas.md'
-    'redis'             = 'azure-redis.md'
-    'resourcehealth'    = 'azure-resource-health.md'
-    'role'              = 'azure-rbac.md'
-    'search'            = 'azure-ai-search.md'
-    'servicebus'        = 'azure-service-bus.md'
-    'servicefabric'     = 'azure-service-fabric.md'
-    'signalr'           = 'azure-signalr.md'
-    'sql'               = 'azure-sql.md'
-    'storage'           = 'azure-storage.md'
-    'storagesync'       = 'azure-file-sync.md'
-    'virtualdesktop'    = 'azure-virtual-desktop.md'
-    'wellarchitectedframework' = 'azure-well-architected-framework.md'
-    'workbooks'         = 'azure-workbooks.md'
+# Load from config/namespace-mapping.json (Phase 1 of #574)
+# Fallback to inline mapping if file not found (for backward compatibility during transition)
+$scriptDir = Split-Path -Parent $PSScriptRoot
+$repoRoot = Split-Path -Parent $scriptDir
+$namespaceMappingPath = Join-Path $repoRoot "config\namespace-mapping.json"
+
+# Track load success separately from entry count: fall back ONLY on missing file
+# or parse failure, NOT on a validly-parsed (even if empty) file. An empty JSON {}
+# is valid and should not trigger fallback — it means no mappings are configured.
+$loadedFromJson = $false
+
+if (Test-Path $namespaceMappingPath) {
+    try {
+        $namespaceToFile = Get-Content $namespaceMappingPath -Raw | ConvertFrom-Json -AsHashtable
+        $loadedFromJson = $true
+        Write-Verbose "Loaded namespace mapping from $namespaceMappingPath ($($namespaceToFile.Count) entries)"
+    }
+    catch {
+        Write-Warning "Failed to parse namespace mapping from $namespaceMappingPath : $_. Using fallback mapping."
+        $namespaceToFile = @{}
+    }
+}
+else {
+    Write-Warning "Namespace mapping file not found at $namespaceMappingPath. Using fallback mapping."
+    $namespaceToFile = @{}
+}
+
+# Fallback inline mapping (used if JSON file not found or failed to load)
+# TODO(#574, Phase 3): Remove fallback once all consumers migrate to JSON-based approach
+if (-not $loadedFromJson) {
+    $namespaceToFile = @{
+        'appconfig'         = 'app-configuration.md'
+        'applicationinsights' = 'application-insights.md'
+        'group'             = 'resource-group.md'
+        'speech'            = 'ai-services-speech.md'
+        'subscription'      = 'subscription.md'
+        'kusto'             = 'azure-data-explorer.md'
+        'datadog'           = 'azure-native-isv.md'
+        'foundryextensions' = 'azure-foundry.md'
+        'functionapp'       = 'azure-functions.md'
+        'get'               = 'azure-best-practices.md'
+        'acr'               = 'azure-container-registry.md'
+        'advisor'           = 'azure-advisor.md'
+        'aks'               = 'azure-kubernetes.md'
+        'applens'           = 'azure-app-lens.md'
+        'appservice'        = 'azure-app-service.md'
+        'azurebackup'       = 'azure-backup.md'
+        'azuremigrate'      = 'azure-migrate.md'
+        'azureterraform'    = 'azure-terraform.md'
+        'azureterraformbestpractices' = 'azure-terraform-best-practices.md'
+        'bicepschema'       = 'azure-bicep-schema.md'
+        'cloudarchitect'    = 'azure-cloud-architect.md'
+        'communication'     = 'azure-communication.md'
+        'compute'           = 'azure-compute.md'
+        'confidentialledger' = 'azure-confidential-ledger.md'
+        'containerapps'     = 'azure-container-apps.md'
+        'cosmos'            = 'azure-cosmos-db.md'
+        'deploy'            = 'azure-deploy.md'
+        'deviceregistry'    = 'azure-device-registry.md'
+        'eventgrid'         = 'azure-event-grid.md'
+        'eventhubs'         = 'azure-event-hubs.md'
+        'extension'         = 'azure-mcp-tool.md'
+        'fileshares'        = 'azure-file-shares.md'
+        'functions'         = 'azure-functions.md'
+        'grafana'           = 'azure-grafana.md'
+        'keyvault'          = 'azure-key-vault.md'
+        'loadtesting'       = 'azure-load-testing.md'
+        'managedlustre'     = 'azure-managed-lustre.md'
+        'marketplace'       = 'azure-marketplace.md'
+        'monitor'           = 'azure-monitor.md'
+        'mysql'             = 'azure-mysql.md'
+        'policy'            = 'azure-policy.md'
+        'postgres'          = 'azure-database-postgresql.md'
+        'pricing'           = 'azure-pricing.md'
+        'quota'             = 'azure-quotas.md'
+        'redis'             = 'azure-redis.md'
+        'resourcehealth'    = 'azure-resource-health.md'
+        'role'              = 'azure-rbac.md'
+        'search'            = 'azure-ai-search.md'
+        'servicebus'        = 'azure-service-bus.md'
+        'servicefabric'     = 'azure-service-fabric.md'
+        'signalr'           = 'azure-signalr.md'
+        'sql'               = 'azure-sql.md'
+        'storage'           = 'azure-storage.md'
+        'storagesync'       = 'azure-file-sync.md'
+        'virtualdesktop'    = 'azure-virtual-desktop.md'
+        'wellarchitectedframework' = 'azure-well-architected-framework.md'
+        'workbooks'         = 'azure-workbooks.md'
+    }
 }
 
 # ─── Load open PR data ────────────────────────────────────────────────────────
