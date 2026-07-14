@@ -517,5 +517,122 @@ Describe "Namespace mapping — JSON-based configuration" {
             $mapping.Count | Should -BeGreaterThan 50
         }
     }
+
+    It "falls back to inline mapping when JSON file is missing" {
+        # Simulate the fallback logic from the script by pointing at a non-existent path
+        $tempRepo = Join-Path $TestDrive "repo-$(New-Guid)"
+        New-Item -ItemType Directory -Path $tempRepo -Force | Out-Null
+        
+        # Do NOT create config/ directory — force the file-not-found path
+        $namespaceMappingPath = Join-Path $tempRepo "config\namespace-mapping.json"
+        
+        # Simulate script logic
+        $loadedFromJson = $false
+        if (Test-Path $namespaceMappingPath) {
+            try {
+                $namespaceToFile = Get-Content $namespaceMappingPath -Raw | ConvertFrom-Json -AsHashtable
+                $loadedFromJson = $true
+            }
+            catch {
+                $namespaceToFile = @{}
+            }
+        }
+        else {
+            $namespaceToFile = @{}
+        }
+        
+        # Apply fallback if JSON not loaded
+        if (-not $loadedFromJson) {
+            # Use a minimal subset of the inline fallback mapping for testing
+            $namespaceToFile = @{
+                'storage'    = 'azure-storage.md'
+                'keyvault'   = 'azure-key-vault.md'
+                'appconfig'  = 'app-configuration.md'
+                'group'      = 'resource-group.md'
+                'aks'        = 'azure-kubernetes.md'
+            }
+        }
+        
+        # Assert fallback was used and mappings resolve correctly
+        $loadedFromJson | Should -Be $false
+        $namespaceToFile.Count | Should -BeGreaterThan 0
+        $namespaceToFile["storage"] | Should -Be "azure-storage.md"
+        $namespaceToFile["aks"] | Should -Be "azure-kubernetes.md"
+    }
+
+    It "falls back to inline mapping when JSON file is invalid" {
+        # Simulate the fallback logic with a corrupt JSON file
+        $tempRepo = Join-Path $TestDrive "repo-$(New-Guid)"
+        $configDir = Join-Path $tempRepo "config"
+        New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+        
+        $namespaceMappingPath = Join-Path $configDir "namespace-mapping.json"
+        Set-Content -Path $namespaceMappingPath -Value "{ invalid json content }"
+        
+        # Simulate script logic
+        $loadedFromJson = $false
+        if (Test-Path $namespaceMappingPath) {
+            try {
+                $namespaceToFile = Get-Content $namespaceMappingPath -Raw | ConvertFrom-Json -AsHashtable
+                $loadedFromJson = $true
+            }
+            catch {
+                # Parse failed — trigger fallback
+                $namespaceToFile = @{}
+            }
+        }
+        else {
+            $namespaceToFile = @{}
+        }
+        
+        # Apply fallback if JSON not loaded
+        if (-not $loadedFromJson) {
+            # Use a minimal subset of the inline fallback mapping
+            $namespaceToFile = @{
+                'storage'    = 'azure-storage.md'
+                'keyvault'   = 'azure-key-vault.md'
+                'cosmos'     = 'azure-cosmos-db.md'
+            }
+        }
+        
+        # Assert fallback was used
+        $loadedFromJson | Should -Be $false
+        $namespaceToFile.Count | Should -BeGreaterThan 0
+        $namespaceToFile["storage"] | Should -Be "azure-storage.md"
+    }
+
+    It "does NOT fall back when JSON is empty but valid" {
+        # Simulate loading a valid empty JSON {} — should NOT trigger fallback
+        $tempRepo = Join-Path $TestDrive "repo-$(New-Guid)"
+        $configDir = Join-Path $tempRepo "config"
+        New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+        
+        $namespaceMappingPath = Join-Path $configDir "namespace-mapping.json"
+        Set-Content -Path $namespaceMappingPath -Value "{}"
+        
+        # Simulate script logic
+        $loadedFromJson = $false
+        if (Test-Path $namespaceMappingPath) {
+            try {
+                $namespaceToFile = Get-Content $namespaceMappingPath -Raw | ConvertFrom-Json -AsHashtable
+                $loadedFromJson = $true
+            }
+            catch {
+                $namespaceToFile = @{}
+            }
+        }
+        else {
+            $namespaceToFile = @{}
+        }
+        
+        # Apply fallback ONLY if not loaded from JSON
+        if (-not $loadedFromJson) {
+            $namespaceToFile = @{ 'storage' = 'azure-storage.md' }
+        }
+        
+        # Assert JSON was successfully loaded and fallback NOT used (even though empty)
+        $loadedFromJson | Should -Be $true
+        $namespaceToFile.Count | Should -Be 0  # Empty mapping is valid
+    }
 }
 

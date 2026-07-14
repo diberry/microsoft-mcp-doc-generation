@@ -80,13 +80,19 @@ $scriptDir = Split-Path -Parent $PSScriptRoot
 $repoRoot = Split-Path -Parent $scriptDir
 $namespaceMappingPath = Join-Path $repoRoot "config\namespace-mapping.json"
 
+# Track load success separately from entry count: fall back ONLY on missing file
+# or parse failure, NOT on a validly-parsed (even if empty) file. An empty JSON {}
+# is valid and should not trigger fallback — it means no mappings are configured.
+$loadedFromJson = $false
+
 if (Test-Path $namespaceMappingPath) {
     try {
         $namespaceToFile = Get-Content $namespaceMappingPath -Raw | ConvertFrom-Json -AsHashtable
+        $loadedFromJson = $true
         Write-Verbose "Loaded namespace mapping from $namespaceMappingPath ($($namespaceToFile.Count) entries)"
     }
     catch {
-        Write-Warning "Failed to load namespace mapping from $namespaceMappingPath : $_. Using fallback mapping."
+        Write-Warning "Failed to parse namespace mapping from $namespaceMappingPath : $_. Using fallback mapping."
         $namespaceToFile = @{}
     }
 }
@@ -97,7 +103,7 @@ else {
 
 # Fallback inline mapping (used if JSON file not found or failed to load)
 # TODO(#574, Phase 3): Remove fallback once all consumers migrate to JSON-based approach
-if ($namespaceToFile.Count -eq 0) {
+if (-not $loadedFromJson) {
     $namespaceToFile = @{
         'appconfig'         = 'app-configuration.md'
         'applicationinsights' = 'application-insights.md'

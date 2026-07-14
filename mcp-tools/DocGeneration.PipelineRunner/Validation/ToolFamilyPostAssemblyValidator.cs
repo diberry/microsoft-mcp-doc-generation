@@ -67,7 +67,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
             if (blockingIssues.Count == 0)
             {
-                var prefixes = await GetNamespaceFilePrefixesAsync(familyName, cancellationToken);
+                var prefixes = await GetNamespaceFilePrefixesAsync(context.RepoRoot, familyName, cancellationToken);
                 toolFiles = await GetNamespaceToolFilesAsync(toolsDirectory, familyName, prefixes, cancellationToken);
                 toolFileCount = toolFiles.Length;
                 if (toolFileCount == 0)
@@ -278,15 +278,19 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         return familyName;
     }
 
-    private static async Task<IReadOnlyList<string>> GetNamespaceFilePrefixesAsync(string namespaceName, CancellationToken cancellationToken)
+    private static async Task<IReadOnlyList<string>> GetNamespaceFilePrefixesAsync(string repoRoot, string namespaceName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var prefixes = new List<string> { namespaceName.ToLowerInvariant() };
-        var brandMappings = await DataFileLoader.LoadBrandMappingsAsync();
-        if (brandMappings.TryGetValue(namespaceName, out var mapping) && !string.IsNullOrWhiteSpace(mapping.FileName))
+
+        // Load namespace→filename mappings from config/namespace-mapping.json (issue #582)
+        var loader = new NamespaceMappingLoader();
+        var namespaceMappings = await loader.LoadAsync(repoRoot, cancellationToken);
+        if (namespaceMappings.TryGetValue(namespaceName, out var fileName) && !string.IsNullOrWhiteSpace(fileName))
         {
-            var mappedPrefix = mapping.FileName.Trim().ToLowerInvariant();
+            // Strip .md extension to get file prefix (e.g., "azure-storage.md" → "azure-storage")
+            var mappedPrefix = Path.GetFileNameWithoutExtension(fileName).Trim().ToLowerInvariant();
             prefixes.Add(mappedPrefix);
             if (!mappedPrefix.StartsWith("azure-", StringComparison.OrdinalIgnoreCase))
             {
