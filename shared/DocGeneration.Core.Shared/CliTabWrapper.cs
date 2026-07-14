@@ -16,10 +16,15 @@ public static class CliTabWrapper
         @"<!--\s*@mcpcli\s+(.+?)\s*-->", RegexOptions.Compiled);
     private static readonly Regex NumberedListPattern = new(@"^\d+\.\s", RegexOptions.Compiled);
 
-    // Matches the annotation block: "[Tool annotation hints](...):"\n\n"Destructive: ..."
-    // The block starts with the link line and includes the values line that follows.
+    // Matches one complete annotation block. The required prefix is the
+    // "[Tool annotation hints](...):" link line followed by a blank line.
+    // After that prefix, either supported body shape may follow:
+    // - current table form: header row containing an annotation column, separator row, and values row
+    // - legacy inline form: one single line containing annotation labels and values
+    // The label check anchors extraction to real annotation content and avoids treating unrelated
+    // prose that only contains words such as "Destructive" as an annotation block.
     private static readonly Regex AnnotationBlockPattern = new(
-        @"(\[Tool annotation hints\]\([^\)]+\):\s*\n\s*\n[^\n]*(?:Destructive|Idempotent|Read Only)[^\n]*)",
+        @"(\[Tool annotation hints\]\([^\)]+\):\s*\n\s*\n(?:\|[^\n]*(?:Destructive|Idempotent|Read Only)[^\n]*\|\s*\n\|[ :\-\|]+\|\s*\n\|[^\n]*\|(?:\s*\n)?|[^\n]*(?:Destructive|Idempotent|Read Only)[^\n]*))",
         RegexOptions.Compiled);
 
     /// <summary>
@@ -64,16 +69,15 @@ public static class CliTabWrapper
 
         var sb = new StringBuilder();
 
-        // MCP Server tab first
-        sb.AppendLine("#### [MCP Server](#tab/mcp-server)");
-        sb.AppendLine();
-        sb.AppendLine(mcpWithoutAnnotation.TrimEnd());
-        sb.AppendLine();
-
-        // CLI tab second
+        // CLI tab first, then MCP Server tab, matching Learn tab ordering validation.
         sb.AppendLine("#### [Azure MCP CLI](#tab/azure-mcp-cli)");
         sb.AppendLine();
         sb.AppendLine(cliContent.TrimEnd());
+        sb.AppendLine();
+
+        sb.AppendLine("#### [MCP Server](#tab/mcp-server)");
+        sb.AppendLine();
+        sb.AppendLine(mcpWithoutAnnotation.TrimEnd());
         sb.AppendLine();
 
         // Tab group terminator
@@ -273,7 +277,11 @@ public static class CliTabWrapper
     internal static string? ExtractAnnotationBlock(string content)
     {
         var match = AnnotationBlockPattern.Match(content);
-        return match.Success ? match.Groups[1].Value.TrimEnd() : null;
+        return match.Success
+            ? string.Join(
+                "\n",
+                match.Groups[1].Value.TrimEnd().ReplaceLineEndings("\n").Split('\n').Select(line => line.TrimEnd()))
+            : null;
     }
 
     /// <summary>

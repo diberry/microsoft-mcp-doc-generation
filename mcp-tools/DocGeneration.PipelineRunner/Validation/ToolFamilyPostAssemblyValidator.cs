@@ -648,10 +648,11 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         }
 
         var articleVersion = GetFrontmatterValue(article.Frontmatter, MetadataConstants.McpCliVersionFrontmatterName);
+        var normalizedArticleVersion = SemverVersionNormalizer.StripBuildMetadata(articleVersion);
         var sourceVersion = SourceVersionVerificationGate.ExtractVersionFromSourcePath(sourceSnapshot.FilePath);
         if (!string.IsNullOrWhiteSpace(sourceVersion)
             && !string.Equals(sourceVersion, "unknown", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(articleVersion, sourceVersion, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(normalizedArticleVersion, sourceVersion, StringComparison.OrdinalIgnoreCase))
         {
             issues.Add($"Version stamp check failed (frontmatter mcp-cli.version: {articleVersion ?? "missing"}, source version: {sourceVersion}).");
         }

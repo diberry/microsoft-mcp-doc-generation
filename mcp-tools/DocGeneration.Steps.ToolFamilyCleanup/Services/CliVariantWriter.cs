@@ -7,10 +7,10 @@ namespace DocGeneration.Steps.ToolFamilyCleanup.Services;
 
 /// <summary>
 /// Emits the two per-namespace tool-family variants:
-///   • the canonical article (<c>{name}.md</c>) — plain MCP content, NO CLI tabs.
-///   • the CLI variant (<c>{name}-cli.md</c>) — CLI tabs applied when available.
+///   • the canonical article (<c>{name}.md</c>) — CLI tabs applied when available.
+///   • the CLI variant (<c>{name}-cli.md</c>) — same tabbed content, or a plain copy when tabs are unavailable.
 ///
-/// The canonical article is never modified by this writer. The CLI variant is
+/// The canonical article is updated with tabbed content when CLI data is available. The CLI variant is
 /// ALWAYS written when the canonical article exists, even when a namespace has no
 /// CLI content or CLI tabs are disabled — in those cases the variant is an exact
 /// copy of the canonical article. This guarantees exactly two files per namespace.
@@ -65,8 +65,8 @@ public static class CliVariantWriter
     }
 
     /// <summary>
-    /// Writes the CLI variant (<c>{name}-cli.md</c>) beside the canonical article, leaving the
-    /// canonical article untouched. No-op when the canonical article does not exist.
+    /// Writes tabbed content to the canonical article when available, and writes the CLI variant
+    /// (<c>{name}-cli.md</c>) beside it. No-op when the canonical article does not exist.
     /// </summary>
     /// <param name="canonicalArticlePath">Path to the canonical <c>{name}.md</c> article.</param>
     /// <param name="assembledContent">Assembled CLI content keyed by command, or <c>null</c> when none.</param>
@@ -89,6 +89,11 @@ public static class CliVariantWriter
         var plainMarkdown = await File.ReadAllTextAsync(canonicalArticlePath, cancellationToken);
         var variantPath = ResolveVariantPath(canonicalArticlePath);
         var variantContent = BuildVariantContent(plainMarkdown, assembledContent, namespaceAllowed);
+
+        if (!string.Equals(plainMarkdown, variantContent, StringComparison.Ordinal))
+        {
+            await File.WriteAllTextAsync(canonicalArticlePath, variantContent, Encoding.UTF8, cancellationToken);
+        }
 
         await File.WriteAllTextAsync(variantPath, variantContent, Encoding.UTF8, cancellationToken);
         return variantPath;

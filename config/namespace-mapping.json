@@ -44,6 +44,7 @@
   "pricing": "azure-pricing.md",
   "quota": "azure-quotas.md",
   "redis": "azure-redis.md",
+  "resilience": "azure-resilience.md",
   "resourcehealth": "azure-resource-health.md",
   "role": "azure-rbac.md",
   "search": "azure-ai-search.md",
