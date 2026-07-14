@@ -1463,6 +1463,49 @@ public class ToolFamilyPostAssemblyValidatorTests
         }
     }
 
+    [Fact]
+    public async Task ValidateAsync_ConsumesNamespaceMappingJson_MatchesToolsByMappedPrefix()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+
+            // Stage config/namespace-mapping.json with a distinctive entry that fallback heuristics
+            // (ai-compute, azure-compute) would NOT produce: "compute" → "custom-distinctive-name.md"
+            var configDir = Path.Combine(testRoot, "config");
+            Directory.CreateDirectory(configDir);
+            var namespaceMappingPath = Path.Combine(configDir, "namespace-mapping.json");
+            File.WriteAllText(namespaceMappingPath, """
+                {
+                  "compute": "custom-distinctive-name.md"
+                }
+                """);
+
+            // Seed tool files using the JSON-mapped prefix (custom-distinctive-name-*)
+            // NOT the fallback prefixes (compute-*, ai-compute-*, azure-compute-*)
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "custom-distinctive-name-list.md"), "compute list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "custom-distinctive-name-show.md"), "compute show");
+
+            // Seed the tool-family article with matching @mcpcli markers
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ValidArticleContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            // Assert: If the validator consumed namespace-mapping.json, it found the tools
+            // with "custom-distinctive-name-*" prefix and validation passed.
+            // If it only used fallback heuristics (compute, ai-compute, azure-compute),
+            // it would NOT find the tools and validation would fail with "No tool files found".
+            Assert.True(result.Success, $"Validation failed. Warnings: {string.Join("; ", result.Warnings)}");
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("No tool files found", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
     private static CliMetadataSnapshot BuildCliOutput(
         params (string Command, bool Destructive, bool Idempotent, bool OpenWorld, bool ReadOnly, bool Secret, bool LocalRequired)[] tools)
     {
