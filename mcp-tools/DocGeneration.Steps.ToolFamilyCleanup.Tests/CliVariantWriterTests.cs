@@ -115,7 +115,7 @@ public class CliVariantWriterTests
     // ── WriteVariantsAsync (two-file guarantee) ───────────────────
 
     [Fact]
-    public async Task WriteVariantsAsync_AllowedWithData_WritesTabbedVariant_LeavesCanonicalPlain()
+    public async Task WriteVariantsAsync_AllowedWithData_WritesTabbedCanonicalAndVariant()
     {
         var dir = CreateTempDir();
         try
@@ -130,13 +130,14 @@ public class CliVariantWriterTests
             var variantPath = await CliVariantWriter.WriteVariantsAsync(canonical, assembled, namespaceAllowed: true);
 
             Assert.Equal(Path.Combine(dir, "aks-cli.md"), variantPath);
-            // Canonical must remain plain — never overwritten with tabs.
+            // Canonical is the publishable article and must contain CLI tabs.
             var canonicalAfter = await File.ReadAllTextAsync(canonical);
-            Assert.Equal(PlainArticle, canonicalAfter);
-            Assert.DoesNotContain(CliTabHeader, canonicalAfter);
-            // Variant must contain CLI tabs.
+            Assert.Contains(CliTabHeader, canonicalAfter);
+            Assert.Contains(McpTabHeader, canonicalAfter);
+            // Variant mirrors the tabbed canonical article.
             var variant = await File.ReadAllTextAsync(variantPath!);
             Assert.Contains(CliTabHeader, variant);
+            Assert.Equal(canonicalAfter, variant);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }

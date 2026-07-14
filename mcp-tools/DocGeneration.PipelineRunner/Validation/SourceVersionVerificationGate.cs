@@ -161,7 +161,11 @@ public static partial class SourceVersionVerificationGate
             return null;
         }
 
-        return version.Trim();
+        var trimmed = version.Trim();
+        var buildMetadataIndex = trimmed.IndexOf('+', StringComparison.Ordinal);
+        return buildMetadataIndex >= 0
+            ? trimmed[..buildMetadataIndex]
+            : trimmed;
     }
 
     private static async ValueTask<SourceCliMetadataResolution> ResolveSourceSnapshotAsync(

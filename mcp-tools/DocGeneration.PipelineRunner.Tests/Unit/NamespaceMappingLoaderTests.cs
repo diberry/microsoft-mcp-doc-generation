@@ -161,6 +161,20 @@ public sealed class NamespaceMappingLoaderTests
         }
     }
 
+    [Fact]
+    public async Task LoadAsync_RepositoryConfig_IncludesResilienceMapping()
+    {
+        // Arrange - config/namespace-mapping.json is the post-assembly validation source of truth.
+        var repoRoot = FindRepositoryRoot();
+        var loader = new NamespaceMappingLoader();
+
+        // Act
+        var mapping = await loader.LoadAsync(repoRoot, CancellationToken.None);
+
+        // Assert
+        Assert.Equal("azure-resilience.md", mapping["resilience"]);
+    }
+
     private static string CreateTempRepoWithNamespaceMapping()
     {
         var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
@@ -252,5 +266,22 @@ public sealed class NamespaceMappingLoaderTests
 
         File.WriteAllText(Path.Combine(configDir, "namespace-mapping.json"), json);
         return tempDir;
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            var configPath = Path.Combine(current.FullName, "config", "namespace-mapping.json");
+            if (File.Exists(configPath))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repository root containing config/namespace-mapping.json.");
     }
 }

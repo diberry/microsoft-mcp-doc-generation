@@ -121,6 +121,20 @@ public sealed class VersionVerificationGateTests : IDisposable
         Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
     }
 
+    [Fact]
+    public async Task ValidateAsync_Passes_WhenCliVersionIncludesBuildMetadata()
+    {
+        var context = CreateContext(
+            configuredVersion: "3.0.0-beta.14",
+            cliVersion: "3.0.0-beta.14+abcdef123456",
+            cliOutputPath: Path.Combine(_root, "mcp-cli-metadata", "3.0.0-beta.14+abcdef123456", "tools-list.json"));
+        SeedSourceMetadata("3.0.0-beta.14+abcdef123456", """{"version":"3.0.0-beta.14+abcdef123456","results":[]}""");
+
+        var result = await SourceVersionVerificationGate.ValidateAsync(context, CancellationToken.None);
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
+    }
+
     private PipelineContext CreateContext(string configuredVersion, string cliVersion, string? cliOutputPath = null)
     {
         Directory.CreateDirectory(_root);

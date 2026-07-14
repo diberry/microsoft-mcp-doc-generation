@@ -199,6 +199,26 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
         Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
     }
 
+    [Fact]
+    public async Task ValidateAsync_Passes_WhenArticleVersionIncludesBuildMetadata()
+    {
+        var context = CreateContext(
+            sourceTools:
+            [
+                SourceTool("servicebus queue list", "--namespace")
+            ],
+            articleTools:
+            [
+                ("List queues", "servicebus queue list", ["namespace"]),
+            ],
+            frontmatterVersion: "3.0.0-beta.14+abcdef123456",
+            namespaceName: "servicebus");
+
+        var result = await ValidateAsync(context);
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
+    }
+
     private async Task<ValidatorResult> ValidateAsync(PipelineContext context)
     {
         var validator = new ToolFamilyPostAssemblyValidator();
