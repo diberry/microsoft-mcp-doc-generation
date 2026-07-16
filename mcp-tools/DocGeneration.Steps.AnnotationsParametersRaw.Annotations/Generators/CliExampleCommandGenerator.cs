@@ -55,10 +55,9 @@ public static class CliExampleCommandGenerator
         sb.AppendLine();
         sb.AppendLine("```console");
 
-        // Get non-global switches, required first then optional
-        var toolSwitches = tool.Switches
-            .Where(s => !IsGlobalSwitch(s.Name))
-            .OrderByDescending(s => s.IsRequired == true)
+        // Get non-global switches, required first then optional.
+        var toolSwitches = ParameterSorting
+            .SortByRequiredThenName(tool.Switches.Where(s => !IsGlobalSwitch(s.Name)))
             .ToList();
 
         if (toolSwitches.Count > 0)

@@ -43,6 +43,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Azure MCP CLI examples and parameter tables now share required-first parameter ordering (#740)** — Step 1 now uses one stable required-first parameter ordering rule for generated CLI example command flags and parameter table rows: all required parameters appear before optional parameters, while preserving source metadata order within each group. This prevents optional flags from appearing before required flags and keeps the CLI example order aligned with the parameter table order.
+
 - **Example-prompt validation now recognizes singular placeholders for plural ID parameters** — `ParameterCoverageChecker` now treats singular word variants such as `id` as matching plural required-parameter words such as `ids` when validating placeholders. This allows prompts like `<workbook_resource_id>` to satisfy the required `workbook-ids` parameter while still treating placeholder use separately from concrete-value coverage. A shared regression test covers the Azure Workbooks delete shape.
 
 - **Multi-namespace merge now honors mapped article filenames** — `merge-namespaces.sh` now reads each merge member's `fileName` from `brand-to-server-mapping.json` when loading and writing canonical and `-cli` tool-family articles, instead of assuming article filenames match MCP namespace names. This lets merge groups such as `monitor` + `workbooks` merge `azure-monitor.md` + `azure-workbooks.md` into the combined `azure-monitor.md`. The shipping merge smoke test now uses mapped filenames that differ from namespace names so the regression is covered.
