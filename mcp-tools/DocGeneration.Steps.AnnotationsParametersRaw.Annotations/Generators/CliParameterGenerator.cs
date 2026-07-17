@@ -31,7 +31,7 @@ public class CliParameterGenerator
             var outputFile = Path.Combine(outputDir, fileName);
 
             var filtered = GlobalSwitchFilter.FilterOutGlobal(tool.Switches);
-            var switches = filtered
+            var switches = ParameterSorting.SortByRequiredThenName(filtered)
                 .Select(sw => new
                 {
                     sw.Name,

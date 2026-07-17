@@ -294,7 +294,7 @@ public static class DocumentationGenerator
                 // Add area property to tool for compatibility
                 tool.Area = area;
 
-                // Sort parameters once: required first, then alphabetical by name.
+                // Sort parameters once: required first, preserving source order within each group.
                 // All downstream generators inherit this order.
                 if (tool.Option != null)
                 {

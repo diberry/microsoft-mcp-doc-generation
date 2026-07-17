@@ -56,6 +56,9 @@ Step 1: Annotations + Parameters + Raw Tools ───────────�
   │  • cli-output.json → annotations/*.md (tool metadata flags)
   │  • cli-output.json → parameters/*.md (parameter tables)
   │  • cli-output.json → tools-raw/*.md (raw tool markdown)
+  │  • Parameter tables and CLI example command flags use the same
+  │    stable required-first order: required parameters first, then
+  │    optional parameters, preserving source order within each group
   │  Uses: Handlebars templates, static-text-replacement.json
   │
   ▼

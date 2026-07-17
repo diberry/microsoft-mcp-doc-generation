@@ -87,6 +87,22 @@ public class CliExampleCommandGeneratorTests : IDisposable
     }
 
     [Fact]
+    public void BuildExampleCommandContent_RequiredFirst_PreservesRelativeOrderWithinGroups()
+    {
+        var tool = MakeTool("storage account create",
+            new CliSwitch("--optional-b", "Optional B", "string"),
+            new CliSwitch("--required-b", "Required B", "string", IsRequired: true),
+            new CliSwitch("--optional-a", "Optional A", "string"),
+            new CliSwitch("--required-a", "Required A", "string", IsRequired: true));
+
+        var content = CliExampleCommandGenerator.BuildExampleCommandContent("storage account create", tool);
+
+        Assert.True(content.IndexOf("--required-b", StringComparison.Ordinal) < content.IndexOf("--required-a", StringComparison.Ordinal));
+        Assert.True(content.IndexOf("--required-a", StringComparison.Ordinal) < content.IndexOf("[--optional-b", StringComparison.Ordinal));
+        Assert.True(content.IndexOf("[--optional-b", StringComparison.Ordinal) < content.IndexOf("[--optional-a", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void BuildExampleCommandContent_OnlyGlobalSwitches_ShowsBareCommand()
     {
         var tool = MakeTool("storage account list",

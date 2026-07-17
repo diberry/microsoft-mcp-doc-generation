@@ -154,6 +154,26 @@ public class CliParameterGeneratorTests: IDisposable
     }
 
     [Fact]
+    public async Task GenerateParameterCliFiles_OrdersRequiredFirst_PreservingRelativeOrderWithinGroups()
+    {
+        var tools = MakeSingleTool("storage account create",
+            new CliSwitch("--optional-b", "Optional B", "string"),
+            new CliSwitch("--required-b", "Required B", "string", IsRequired: true),
+            new CliSwitch("--optional-a", "Optional A", "string"),
+            new CliSwitch("--required-a", "Required A", "string", IsRequired: true));
+
+        await CliParameterGenerator
+            .GenerateParameterCliFilesAsync(tools, _templateFile, _outputDir, _ctx, "1.0.0", DateTime.UtcNow);
+
+        var file = Directory.GetFiles(_outputDir, "*.md").Single();
+        var content = await File.ReadAllTextAsync(file);
+
+        Assert.True(content.IndexOf("`required-b`", StringComparison.Ordinal) < content.IndexOf("`required-a`", StringComparison.Ordinal));
+        Assert.True(content.IndexOf("`required-a`", StringComparison.Ordinal) < content.IndexOf("`optional-b`", StringComparison.Ordinal));
+        Assert.True(content.IndexOf("`optional-b`", StringComparison.Ordinal) < content.IndexOf("`optional-a`", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task GenerateParameterCliFiles_IncludesFrontmatter()
     {
         var genDate = new DateTime(2025, 6, 15, 0, 0, 0, DateTimeKind.Utc);
