@@ -330,7 +330,150 @@ Describe "Scan-McpToolCoverage — JSON output structure" {
 }
 
 # ════════════════════════════════════════════════════════════════════
-# 6. Edge Cases
+# 6. Phantom Parameter Detection (Issue #742)
+# ════════════════════════════════════════════════════════════════════
+
+Describe "Phantom parameter detection — Issue #742" {
+    BeforeAll {
+        $healthmodelsJson = Join-Path $FixturesDir "tools-list-healthmodels.json"
+        $phantomArticlesDir = Join-Path $FixturesDir "articles-phantom"
+
+        $jsonOut = Join-Path $FixturesDir "scan-phantom-output.json"
+        if (Test-Path $jsonOut) { Remove-Item $jsonOut }
+
+        & pwsh -NoProfile -File $ScriptPath `
+            -ToolsJsonPath $healthmodelsJson `
+            -ArticlesDir $phantomArticlesDir `
+            -Namespace "monitor" `
+            -OutputJson $jsonOut 2>&1 | Out-Null
+
+        $script:phantomReport = if (Test-Path $jsonOut) {
+            Get-Content $jsonOut -Raw | ConvertFrom-Json
+        } else { $null }
+    }
+
+    AfterAll {
+        $jsonOut = Join-Path $FixturesDir "scan-phantom-output.json"
+        Remove-Item $jsonOut -ErrorAction SilentlyContinue
+    }
+
+    It "detects phantom param 'Health model name' (should be 'Health model')" {
+        $script:phantomReport | Should -Not -BeNull
+        $ns = $script:phantomReport.namespaces | Where-Object { $_.namespace -eq "monitor" }
+        $getTool = $ns.tool_details | Where-Object { $_.command -eq "monitor healthmodels get" -and $_.documented -eq $true }
+        
+        # Should have phantom_params property
+        $getTool.PSObject.Properties['phantom_params'] | Should -Not -BeNull
+        @($getTool.phantom_params).Count | Should -BeGreaterThan 0
+        
+        # The phantom param message should include the incorrect name and suggestion
+        $phantomMsg = $getTool.phantom_params | Where-Object { $_ -like "*Health model name*" }
+        $phantomMsg | Should -Not -BeNullOrEmpty
+        $phantomMsg | Should -Match "should be.*Health model"
+    }
+
+    It "does NOT flag correct params as phantom (negative case)" {
+        # This test uses articles-phantom dir which has the phantom case
+        # The negative case will be tested via the mismatch fixture which has correct names
+        # Just verify phantom detection doesn't false-positive on Resource group which IS correct
+        $ns = $script:phantomReport.namespaces | Where-Object { $_.namespace -eq "monitor" }
+        $getTool = $ns.tool_details | Where-Object { 
+            $_.command -eq "monitor healthmodels get" -and 
+            $_.documented -eq $true
+        }
+        
+        # Resource group is correct (not flagged), Health model name is phantom (flagged)
+        if ($getTool.PSObject.Properties['phantom_params']) {
+            # Should NOT contain "Resource group" alone (only "Health model name")
+            $rgPhantom = $getTool.phantom_params | Where-Object { $_ -eq "Resource group" }
+            $rgPhantom | Should -BeNullOrEmpty
+        }
+    }
+
+    It "does NOT flag optional common params absent from NL table (convention compliance)" {
+        # monitor healthmodels list has ONLY optional --resource-group (filtered per convention)
+        # The scanner should NOT flag this as a missing or phantom param
+        $ns = $script:phantomReport.namespaces | Where-Object { $_.namespace -eq "monitor" }
+        $listTool = $ns.tool_details | Where-Object { $_.command -eq "monitor healthmodels list" }
+        
+        # Should be documented
+        $listTool.documented | Should -Be $true
+        
+        # Should have zero params missing (optional --resource-group is legitimately excluded)
+        @($listTool.params.missing).Count | Should -Be 0
+        
+        # Should have zero phantom params (no params documented, which is correct)
+        if ($listTool.PSObject.Properties['phantom_params']) {
+            @($listTool.phantom_params).Count | Should -Be 0
+        }
+    }
+}
+
+# ════════════════════════════════════════════════════════════════════
+# 7. Required/Optional Mismatch Detection (Issue #742)
+# ════════════════════════════════════════════════════════════════════
+
+Describe "Required/optional mismatch detection — Issue #742" {
+    BeforeAll {
+        $healthmodelsJson = Join-Path $FixturesDir "tools-list-healthmodels.json"
+        $mismatchArticlesDir = Join-Path $FixturesDir "articles-mismatch"
+
+        $jsonOut = Join-Path $FixturesDir "scan-mismatch-output.json"
+        if (Test-Path $jsonOut) { Remove-Item $jsonOut }
+
+        & pwsh -NoProfile -File $ScriptPath `
+            -ToolsJsonPath $healthmodelsJson `
+            -ArticlesDir $mismatchArticlesDir `
+            -Namespace "monitor" `
+            -OutputJson $jsonOut 2>&1 | Out-Null
+
+        $script:mismatchReport = if (Test-Path $jsonOut) {
+            Get-Content $jsonOut -Raw | ConvertFrom-Json
+        } else { $null }
+    }
+
+    AfterAll {
+        $jsonOut = Join-Path $FixturesDir "scan-mismatch-output.json"
+        Remove-Item $jsonOut -ErrorAction SilentlyContinue
+    }
+
+    It "detects req/opt mismatch for Resource group (source=required, doc=optional)" {
+        $script:mismatchReport | Should -Not -BeNull
+        $ns = $script:mismatchReport.namespaces | Where-Object { $_.namespace -eq "monitor" }
+        $getTool = $ns.tool_details | Where-Object { 
+            $_.command -eq "monitor healthmodels get" -and 
+            $_.documented -eq $true
+        }
+        
+        # Should have req_opt_mismatches property
+        $getTool.PSObject.Properties['req_opt_mismatches'] | Should -Not -BeNull
+        @($getTool.req_opt_mismatches).Count | Should -BeGreaterThan 0
+        
+        # Find the Resource group mismatch
+        $rgMismatch = $getTool.req_opt_mismatches | Where-Object { $_.param -like "*Resource group*" }
+        $rgMismatch | Should -Not -BeNullOrEmpty
+        $rgMismatch.source_required | Should -Be $true
+        $rgMismatch.doc_required | Should -Be $false
+    }
+
+    It "does NOT flag correct required param as mismatch (negative case)" {
+        # Health model is correctly marked Required in both source and doc
+        $ns = $script:mismatchReport.namespaces | Where-Object { $_.namespace -eq "monitor" }
+        $getTool = $ns.tool_details | Where-Object { 
+            $_.command -eq "monitor healthmodels get" -and 
+            $_.documented -eq $true
+        }
+        
+        # If req_opt_mismatches exists, it should NOT contain "Health model"
+        if ($getTool.PSObject.Properties['req_opt_mismatches']) {
+            $hmMismatch = $getTool.req_opt_mismatches | Where-Object { $_.param -eq "Health model" }
+            $hmMismatch | Should -BeNullOrEmpty
+        }
+    }
+}
+
+# ════════════════════════════════════════════════════════════════════
+# 8. Edge Cases
 # ════════════════════════════════════════════════════════════════════
 
 Describe "Edge cases — empty tools-list.json" {
