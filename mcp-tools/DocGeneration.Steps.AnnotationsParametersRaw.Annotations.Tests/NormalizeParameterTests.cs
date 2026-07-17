@@ -323,12 +323,14 @@ public class NormalizeParameterTests
     [InlineData("knowledge-base", "Knowledge base name")]
     [InlineData("knowledge-source", "Knowledge source name")]
     [InlineData("webtest-resource", "Web test resource name")]
-    [InlineData("health-model", "Health model name")]
     [InlineData("network-security-group", "Network security group name")]
     [InlineData("public-ip-address", "Public IP address name")]
     [InlineData("virtual-network", "Virtual network name")]
     public void NormalizeParameter_BareResourceIdentifier_AppendsNameSuffix(string input, string expected)
     {
+        // Issue #742: Removed "health-model" from this test.
+        // "health-model" is NOT a bare resource identifier - it's already descriptive
+        // and should normalize to "Health model" via standard hyphen-splitting rules.
         var result = _normalizer.NormalizeParameter(input);
         Assert.Equal(expected, result);
     }
@@ -343,12 +345,15 @@ public class NormalizeParameterTests
     [InlineData("--knowledge-base", "Knowledge base name")]
     [InlineData("--knowledge-source", "Knowledge source name")]
     [InlineData("--webtest-resource", "Web test resource name")]
-    [InlineData("--health-model", "Health model name")]
     [InlineData("--network-security-group", "Network security group name")]
     [InlineData("--public-ip-address", "Public IP address name")]
     [InlineData("--virtual-network", "Virtual network name")]
     public void NormalizeParameter_BareResourceIdentifierWithPrefix_AppendsNameSuffix(string input, string expected)
     {
+        // Issue #742: Removed --health-model from this test.
+        // "health-model" is NOT a bare resource identifier - it's already descriptive
+        // and should normalize to "Health model" via standard hyphen-splitting rules,
+        // NOT via identifier mapping which adds " name" suffix.
         var result = _normalizer.NormalizeParameter(input);
         Assert.Equal(expected, result);
     }
@@ -380,5 +385,32 @@ public class NormalizeParameterTests
         // because it is checked first (Issue #270 / PR #317 overlap detection).
         var result = _normalizer.NormalizeParameter("database");
         Assert.Equal("Database name", result);
+    }
+
+    // ── Issue #742: Healthmodels Parameter Generation Regression Tests ──────
+
+    [Theory]
+    [InlineData("health-model", "Health model")]
+    [InlineData("--health-model", "Health model")]
+    public void NormalizeParameter_HealthModel_NoNameSuffix(string input, string expected)
+    {
+        // Issue #742: --health-model was incorrectly mapped to "Health model name"
+        // via nl-parameter-identifiers.json. It should normalize to "Health model"
+        // using standard hyphen-splitting rules, NOT via identifier mapping.
+        // The identifier mapping is for bare resource-type identifiers (database, secret, etc.)
+        // that need " name" suffix for clarity. "health-model" is already descriptive.
+        var result = _normalizer.NormalizeParameter(input);
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("resource-group", "Resource group")]
+    [InlineData("--resource-group", "Resource group")]
+    public void NormalizeParameter_ResourceGroup_NoNameSuffix(string input, string expected)
+    {
+        // Issue #742: Verify --resource-group normalizes correctly without " name" suffix.
+        // This is a common parameter that appears in many tools and must be normalized consistently.
+        var result = _normalizer.NormalizeParameter(input);
+        Assert.Equal(expected, result);
     }
 }

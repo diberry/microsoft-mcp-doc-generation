@@ -7,7 +7,6 @@
   { "Parameter": "database", "NaturalLanguage": "Database name" },
   { "Parameter": "deployment", "NaturalLanguage": "Deployment name" },
   { "Parameter": "entity", "NaturalLanguage": "Entity name" },
-  { "Parameter": "health-model", "NaturalLanguage": "Health model name" },
   { "Parameter": "index", "NaturalLanguage": "Index name" },
   { "Parameter": "key", "NaturalLanguage": "Key name" },
   { "Parameter": "knowledge-base", "NaturalLanguage": "Knowledge base name" },
