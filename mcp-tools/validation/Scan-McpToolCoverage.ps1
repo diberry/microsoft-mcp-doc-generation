@@ -261,6 +261,34 @@ function Get-DocumentedParameters {
     return $paramMatches | ForEach-Object { $_.Groups[1].Value.Trim() }
 }
 
+# ─── Parse parameter table with Required/Optional status (Issue #742) ─────────
+function Get-DocumentedParametersWithStatus {
+    param([string]$Content, [string]$ToolCommand)
+
+    # Find the tool section by its marker (supports both formats)
+    $markerPattern = "<!--\s*(?:@mcpcli\s+)?" + [regex]::Escape($ToolCommand) + "\s*-->"
+    $markerMatch = [regex]::Match($Content, $markerPattern)
+    if (-not $markerMatch.Success) { return @() }
+
+    # Get content from marker to next ## heading (or end of file)
+    $startIdx = $markerMatch.Index
+    $nextH2 = [regex]::Match($Content.Substring($startIdx + $markerMatch.Length), '(?m)^## ')
+    $endIdx = if ($nextH2.Success) { $startIdx + $markerMatch.Length + $nextH2.Index } else { $Content.Length }
+    $section = $Content.Substring($startIdx, $endIdx - $startIdx)
+
+    # Parse parameter table rows: | **ParamName** | Required or optional | Description |
+    # Match format: | **Name** | Required/Optional | Desc |
+    $rowMatches = [regex]::Matches($section, '\|\s*\*\*(.+?)\*\*\s*\|\s*(Required|Optional)(?:\s*\*)?')
+    $params = @()
+    foreach ($match in $rowMatches) {
+        $params += @{
+            name = $match.Groups[1].Value.Trim()
+            required = $match.Groups[2].Value.Trim() -eq 'Required'
+        }
+    }
+    return $params
+}
+
 # ─── Parse annotation line for a tool section ────────────────────────────────
 function Get-DocumentedAnnotations {
     param([string]$Content, [string]$ToolCommand)
@@ -472,6 +500,119 @@ foreach ($ns in $namespaces) {
                     $toolDetail.params.missing += $ep.cli_name
                     $report.summary.params_missing++
                 }
+            }
+
+            # ── Extra/Phantom Parameter Check (Issue #742) ──
+            # Validate that documented params use the correct display names
+            # For each documented param, check if its name matches the strict normalization
+            # of its source parameter (accounting for fuzzy matches)
+            $phantomParams = @()
+            
+            foreach ($dp in $docParams) {
+                $dpTrim = $dp.Trim()
+                
+                # Get the source param this doc param was matched to (if any)
+                $matchedSrcParam = $null
+                if ($matchedDocParams.ContainsKey($dp)) {
+                    $matchedSrcParam = $matchedDocParams[$dp]
+                }
+                
+                if ($matchedSrcParam) {
+                    # This doc param was matched to a source param
+                    # Check if the display name is correct according to strict normalization
+                    $srcName = $matchedSrcParam -replace '^--', ''
+                    $words = $srcName -split '-'
+                    # Capitalize first letter of each word
+                    for ($i = 0; $i -lt $words.Length; $i++) {
+                        if ($words[$i].Length -gt 0) {
+                            $words[$i] = $words[$i].Substring(0,1).ToUpper() + $words[$i].Substring(1)
+                        }
+                    }
+                    # Lowercase non-first words (simplified - ignoring acronyms for scanner purposes)
+                    for ($i = 1; $i -lt $words.Length; $i++) {
+                        $words[$i] = $words[$i].ToLower()
+                    }
+                    $expectedName = $words -join ' '
+                    
+                    # Compare (case-insensitive, whitespace-normalized)
+                    if (($expectedName -replace '\s+', ' ') -ine ($dpTrim -replace '\s+', ' ')) {
+                        $phantomParams += "$dp (should be: $expectedName, matched to: $matchedSrcParam)"
+                    }
+                } else {
+                    # This doc param wasn't matched to any source param - it's completely phantom
+                    # But first check if it might be a common param that should have been excluded
+                    $isLegitCommon = $false
+                    foreach ($srcOpt in $tool.option) {
+                        if (-not $srcOpt.name) { continue }
+                        if ($alwaysExcludeParams -contains $srcOpt.name) { continue }
+                        if ($commonParams -contains $srcOpt.name) {
+                            $isReq = $srcOpt.PSObject.Properties['required'] -and $srcOpt.required -eq $true
+                            if ($isReq) {
+                                # Normalize and check if it matches this doc param
+                                $srcName = $srcOpt.name -replace '^--', ''
+                                $words = $srcName -split '-'
+                                for ($i = 0; $i -lt $words.Length; $i++) {
+                                    if ($words[$i].Length -gt 0) {
+                                        $words[$i] = $words[$i].Substring(0,1).ToUpper() + $words[$i].Substring(1)
+                                    }
+                                }
+                                for ($i = 1; $i -lt $words.Length; $i++) {
+                                    $words[$i] = $words[$i].ToLower()
+                                }
+                                $expectedName = $words -join ' '
+                                if (($expectedName -replace '\s+', ' ') -ieq ($dpTrim -replace '\s+', ' ')) {
+                                    $isLegitCommon = $true
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (-not $isLegitCommon) {
+                        $phantomParams += "$dp (no source param found)"
+                    }
+                }
+            }
+            
+            if ($phantomParams.Count -gt 0) {
+                $toolDetail['phantom_params'] = $phantomParams
+            }
+
+            # ── Required/Optional Mismatch Check (Issue #742) ──
+            # Compare required/optional status between source and documented
+            $docParamsWithStatus = Get-DocumentedParametersWithStatus -Content $content -ToolCommand $toolCmd
+            $reqOptMismatches = @()
+            
+            foreach ($dps in $docParamsWithStatus) {
+                # Find the corresponding source param by matching the documented name
+                $matchingSourceParam = $null
+                foreach ($ep in $expectedParams) {
+                    $epDisplayNorm = $ep.display_name -replace '\s+', ' '
+                    $dpsNameNorm = $dps.name -replace '\s+', ' '
+                    if ($epDisplayNorm -ieq $dpsNameNorm) {
+                        $matchingSourceParam = $ep
+                        break
+                    }
+                }
+                
+                if ($matchingSourceParam) {
+                    # Get source required status
+                    $sourceOpt = $tool.option | Where-Object { $_.name -eq $matchingSourceParam.cli_name }
+                    if ($sourceOpt) {
+                        $sourceRequired = $sourceOpt.PSObject.Properties['required'] -and $sourceOpt.required -eq $true
+                        if ($sourceRequired -ne $dps.required) {
+                            $reqOptMismatches += @{
+                                param = $dps.name
+                                source_required = $sourceRequired
+                                doc_required = $dps.required
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if ($reqOptMismatches.Count -gt 0) {
+                $toolDetail['req_opt_mismatches'] = $reqOptMismatches
             }
 
             # ── Annotation check ──

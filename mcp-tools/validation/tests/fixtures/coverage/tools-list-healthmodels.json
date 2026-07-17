@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "command": "monitor healthmodels get",
+      "name": "monitor_healthmodels_get",
+      "option": [
+        { "name": "--health-model", "required": true },
+        { "name": "--resource-group", "required": true },
+        { "name": "--subscription", "required": false },
+        { "name": "--tenant", "required": false }
+      ],
+      "metadata": {
+        "annotations": {
+          "destructive": { "value": false },
+          "idempotent": { "value": true },
+          "openWorld": { "value": false },
+          "readOnly": { "value": true },
+          "secret": { "value": false },
+          "localRequired": { "value": false }
+        },
+        "destructive": { "value": false },
+        "idempotent": { "value": true },
+        "openWorld": { "value": false },
+        "readOnly": { "value": true },
+        "secret": { "value": false },
+        "localRequired": { "value": false }
+      }
+    },
+    {
+      "command": "monitor healthmodels list",
+      "name": "monitor_healthmodels_list",
+      "option": [
+        { "name": "--resource-group", "required": false },
+        { "name": "--subscription", "required": false },
+        { "name": "--tenant", "required": false }
+      ],
+      "metadata": {
+        "annotations": {
+          "destructive": { "value": false },
+          "idempotent": { "value": true },
+          "openWorld": { "value": false },
+          "readOnly": { "value": true },
+          "secret": { "value": false },
+          "localRequired": { "value": false }
+        },
+        "destructive": { "value": false },
+        "idempotent": { "value": true },
+        "openWorld": { "value": false },
+        "readOnly": { "value": true },
+        "secret": { "value": false },
+        "localRequired": { "value": false }
+      }
+    }
+  ]
+}
