@@ -89,10 +89,10 @@ jobs:
           $usedFixtures = $false
           if ($articleFiles.Count -eq 0) {
             Write-Host "No changed tool-family articles — running smoke test against committed fixtures."
-            $articleFiles = @(
-              Get-ChildItem "mcp-tools/validation/tests/fixtures" -Filter "*.md" -File -Recurse |
-              ForEach-Object { $_.FullName }
-            )
+            $articleFiles = @(& ./mcp-tools/validation/Get-ArticleHealthSmokeFixtures.ps1)
+            if ($LASTEXITCODE -ne 0) {
+              throw "Article Health smoke fixture selection failed with exit code $LASTEXITCODE."
+            }
             $usedFixtures = $true
           }
 
@@ -120,6 +120,8 @@ jobs:
               -OutputJson  $outJson `
               -ErrorAction Continue
 
+            $healthExitCode = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
             $filesChecked++
 
             if (Test-Path $outJson) {
@@ -129,6 +131,11 @@ jobs:
               $passCount += $r.summary.pass
               if ($r.verdict -eq 'fail') { $anyFail = $true }
               elseif ($r.verdict -eq 'warn') { $anyWarn = $true }
+              if ($healthExitCode -ne 0) {
+                Write-Host "Article health reported findings for $filePath (exit code $healthExitCode); gate decision step will apply $env:GATE_MODE mode."
+              }
+            } else {
+              throw "Article Health did not produce expected output JSON for $filePath."
             }
           }
 
@@ -148,6 +155,8 @@ jobs:
           Add-Content $env:GITHUB_OUTPUT "warn_count=$warnCount"
           Add-Content $env:GITHUB_OUTPUT "fail_count=$failCount"
           Add-Content $env:GITHUB_OUTPUT "scope=$scope"
+
+          $global:LASTEXITCODE = 0
 
       # ── 6. Coverage audit ─────────────────────────────────────────────────────
       #
