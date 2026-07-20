@@ -43,6 +43,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Parameter requiredness now strictly follows CLI metadata booleans (#732)** — Step 1 parameter table generation now preserves default wording in descriptions as descriptive text only while deriving the `Required or optional` column exclusively from each option's `required` boolean. This prevents required parameters whose descriptions mention defaults from being treated as optional.
+
 - **Azure MCP CLI examples and parameter tables now share required-first parameter ordering (#740)** — Step 1 now uses one stable required-first parameter ordering rule for generated CLI example command flags and parameter table rows: all required parameters appear before optional parameters, while preserving source metadata order within each group. This prevents optional flags from appearing before required flags and keeps the CLI example order aligned with the parameter table order.
 
 - **Example-prompt validation now recognizes singular placeholders for plural ID parameters** — `ParameterCoverageChecker` now treats singular word variants such as `id` as matching plural required-parameter words such as `ids` when validating placeholders. This allows prompts like `<workbook_resource_id>` to satisfy the required `workbook-ids` parameter while still treating placeholder use separately from concrete-value coverage. A shared regression test covers the Azure Workbooks delete shape.
