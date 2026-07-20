@@ -43,6 +43,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Resource-group parameter boilerplate now follows demonstrative-noun style guidance (#733)** — The shared `--resource-group` description now says "This name is a logical container for Azure resources" instead of "This is a logical container...", and the static text replacement fallback applies the same correction during generation.
+
 - **Azure MCP CLI examples and parameter tables now share required-first parameter ordering (#740)** — Step 1 now uses one stable required-first parameter ordering rule for generated CLI example command flags and parameter table rows: all required parameters appear before optional parameters, while preserving source metadata order within each group. This prevents optional flags from appearing before required flags and keeps the CLI example order aligned with the parameter table order.
 
 - **Example-prompt validation now recognizes singular placeholders for plural ID parameters** — `ParameterCoverageChecker` now treats singular word variants such as `id` as matching plural required-parameter words such as `ids` when validating placeholders. This allows prompts like `<workbook_resource_id>` to satisfy the required `workbook-ids` parameter while still treating placeholder use separately from concrete-value coverage. A shared regression test covers the Azure Workbooks delete shape.
