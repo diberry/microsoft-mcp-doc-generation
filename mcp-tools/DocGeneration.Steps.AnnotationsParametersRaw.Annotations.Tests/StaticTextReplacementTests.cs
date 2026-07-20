@@ -104,17 +104,17 @@ public class StaticTextReplacementTests : IClassFixture<TransformationEngineFixt
         var result = _normalizer.ReplaceStaticText(input);
 
         // Assert — should add noun "resource group" after "This"
-        Assert.Contains("This resource group is a logical container", result);
+        Assert.Contains("This name is a logical container", result);
         Assert.DoesNotContain("This is a logical container", result);
     }
 
     [Theory]
     [InlineData(
         "The name of the Azure resource group. This is a logical container for Azure resources.",
-        "The name of the Azure resource group. This resource group is a logical container for Azure resources.")]
+        "The name of the Azure resource group. This name is a logical container for Azure resources.")]
     [InlineData(
         "This is a logical container for resources in your subscription.",
-        "This resource group is a logical container for resources in your subscription.")]
+        "This name is a logical container for resources in your subscription.")]
     public void ReplaceStaticText_DemonstrativePronoun_VariousContexts(string input, string expected)
     {
         // Act
@@ -128,13 +128,13 @@ public class StaticTextReplacementTests : IClassFixture<TransformationEngineFixt
     public void ReplaceStaticText_DemonstrativePronoun_NotReplacedWhenAlreadyFixed()
     {
         // Already-fixed text should pass through unchanged
-        var input = "This resource group is a logical container for Azure resources.";
+        var input = "This name is a logical container for Azure resources.";
 
         // Act
         var result = _normalizer.ReplaceStaticText(input);
 
         // Assert — no double-replacement
-        Assert.Equal("This resource group is a logical container for Azure resources.", result);
+        Assert.Equal("This name is a logical container for Azure resources.", result);
     }
 
     // ── Acrolinx Wordy/Informal Phrase Replacements (#215) ──────────
