@@ -59,6 +59,9 @@ Step 1: Annotations + Parameters + Raw Tools ───────────�
   │  • Parameter tables and CLI example command flags use the same
   │    stable required-first order: required parameters first, then
   │    optional parameters, preserving source order within each group
+  │  • The "Required or optional" column is derived only from the
+  │    cli-output.json required boolean; description/default wording is
+  │    preserved as descriptive text and never changes requiredness
   │  Uses: Handlebars templates, static-text-replacement.json
   │
   ▼

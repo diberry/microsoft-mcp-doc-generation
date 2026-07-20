@@ -121,6 +121,36 @@ public class ParameterGeneratorTests
         Assert.Equal("Provide vault name.", parameter.Description);
     }
 
+    [Fact]
+    public void BuildParameterManifest_RequiredBooleanControlsRequiredText_WhenDescriptionMentionsDefault()
+    {
+        var options = new List<Option>
+        {
+            new()
+            {
+                Name = "--auth-type",
+                Required = true,
+                Description = "The authentication type to use. Default is MicrosoftEntra."
+            },
+            new()
+            {
+                Name = "--backup-mode",
+                Required = false,
+                Description = "The backup mode to use. Default is incremental."
+            }
+        };
+        var conditionals = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var manifest = ParameterGenerator.BuildParameterManifest(options, conditionals);
+
+        Assert.Equal("Required", manifest[0].RequiredText);
+        Assert.True(manifest[0].Required);
+        Assert.Contains("Default is MicrosoftEntra.", manifest[0].Description);
+        Assert.Equal("Optional", manifest[1].RequiredText);
+        Assert.False(manifest[1].Required);
+        Assert.Contains("Default is incremental.", manifest[1].Description);
+    }
+
     // ── Common Parameter Filtering (#147) ──────────────────────────
 
     [Fact]
