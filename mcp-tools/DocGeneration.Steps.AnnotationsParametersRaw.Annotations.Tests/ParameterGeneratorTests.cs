@@ -168,6 +168,20 @@ public class ParameterGeneratorTests
     }
 
     [Fact]
+    public void CommonParameters_ResourceGroupDescriptionUsesDemonstrativeNoun()
+    {
+        var commonParamsPath = Path.Combine(
+            FindProjectRoot(), "mcp-tools", "data", "common-parameters.json");
+        var json = File.ReadAllText(commonParamsPath);
+        var commonParams = System.Text.Json.JsonSerializer.Deserialize<List<CommonParam>>(json,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        var resourceGroup = Assert.Single(commonParams!, p => p.Name == "--resource-group");
+        Assert.DoesNotContain("This is a logical container", resourceGroup.Description);
+        Assert.Contains("This name is a logical container", resourceGroup.Description);
+    }
+
+    [Fact]
     public void CommonParameters_IncludeSubscription()
     {
         // subscription is a scoping parameter that must be in common-parameters.json

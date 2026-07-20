@@ -860,7 +860,7 @@ pwsh ./mcp-tools/scripts/lint-vale.ps1 -TargetDir ./generated-advisor/
 
 **CI integration:** The `vale-lint` job in `.github/workflows/build-and-test.yml` runs Vale on PRs (non-blocking, `continue-on-error: true`).
 
-**Feeding findings back:** Common Vale findings should be added to `mcp-tools/data/static-text-replacement.json` so the pipeline auto-corrects them during generation.
+**Feeding findings back:** Common Vale findings should be added to `mcp-tools/data/static-text-replacement.json` so the pipeline auto-corrects them during generation. When a finding comes from shared parameter boilerplate, update the source description in `mcp-tools/data/common-parameters.json` too; for example, avoid bare demonstratives such as "This is..." by writing a noun phrase such as "This name is...".
 
 ### Future: Architecture Modernization
 
