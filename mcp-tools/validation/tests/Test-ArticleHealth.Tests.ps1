@@ -2,7 +2,9 @@
 
 BeforeAll {
     $ScriptPath  = Join-Path $PSScriptRoot "..\Test-ArticleHealth.ps1"
+    $SmokeFixtureScriptPath = Join-Path $PSScriptRoot "..\Get-ArticleHealthSmokeFixtures.ps1"
     $FixturesDir = Join-Path $PSScriptRoot "fixtures"
+    $WorkflowPath = Join-Path $PSScriptRoot "..\..\..\.github\workflows\validation-gate.yml"
 
     # Dot-source the internal Test-File function for unit testing
     . {
@@ -22,6 +24,42 @@ BeforeAll {
     $funcMatch = [regex]::Match($scriptContent, '(?s)(function Test-File \{.*?\n\})')
     if ($funcMatch.Success) {
         Invoke-Expression $funcMatch.Value
+    }
+}
+
+Describe "Article Health smoke fixture selection" {
+    It "selects only healthy smoke fixtures and excludes negative and coverage fixtures" {
+        Test-Path $SmokeFixtureScriptPath | Should -Be $true
+
+        $selected = @(& pwsh -NoProfile -File $SmokeFixtureScriptPath -FixturesDir $FixturesDir)
+
+        $selected | Should -Not -BeNullOrEmpty
+        $selected.Count | Should -Be 1
+        Split-Path $selected[0] -Leaf | Should -Be "valid-article.md"
+        $selected | Should -Not -Match "\\bad-[^\\]+\.md$"
+        $selected | Should -Not -Match "\\bare-reviewer\.md$"
+        $selected | Should -Not -Match "\\coverage\\"
+
+        $jsonPath = Join-Path $PSScriptRoot "health-smoke-output.json"
+        if (Test-Path $jsonPath) { Remove-Item $jsonPath }
+
+        & pwsh -NoProfile -File $ScriptPath -ArticlePath $selected[0] -OutputJson $jsonPath 2>&1 | Out-Null
+        $LASTEXITCODE | Should -Be 0
+
+        $json = Get-Content $jsonPath -Raw | ConvertFrom-Json
+        $json.verdict | Should -Be "pass"
+        $json.summary.fail | Should -Be 0
+
+        Remove-Item $jsonPath -ErrorAction SilentlyContinue
+    }
+
+    It "workflow fallback validates selected files instead of treating null LASTEXITCODE as failure" {
+        $workflow = Get-Content $WorkflowPath -Raw
+
+        $workflow | Should -Match "Get-ArticleHealthSmokeFixtures\.ps1"
+        $workflow | Should -Not -Match "\$LASTEXITCODE\s+-ne\s+0"
+        $workflow | Should -Match "Article Health smoke fixture selection returned no files"
+        $workflow | Should -Match "Article Health smoke fixture not found"
     }
 }
 

@@ -116,6 +116,10 @@ Step 7: Article Health Validation (non-blocking) ──────────�
   │  • Gate mode: "warn" (advisory) or "block" (fail pipeline)
   │  • Configured via mcp-tools/data/validation-gate-config.json
   │  • Depends on Step 4; warn-only — failures don't stop the pipeline
+  │  • PR validation-gate smoke fallback uses
+  │    Get-ArticleHealthSmokeFixtures.ps1, an explicit healthy-fixture
+  │    allowlist, so negative health fixtures and coverage fixtures stay
+  │    in their dedicated tests instead of becoming baseline gate failures
   │
   ▼
 Final Output ──────────────────────────────────────────────────────
