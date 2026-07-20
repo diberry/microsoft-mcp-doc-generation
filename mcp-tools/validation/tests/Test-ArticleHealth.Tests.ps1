@@ -4,6 +4,7 @@ BeforeAll {
     $ScriptPath  = Join-Path $PSScriptRoot "..\Test-ArticleHealth.ps1"
     $SmokeFixtureScriptPath = Join-Path $PSScriptRoot "..\Get-ArticleHealthSmokeFixtures.ps1"
     $FixturesDir = Join-Path $PSScriptRoot "fixtures"
+    $WorkflowPath = Join-Path $PSScriptRoot "..\..\..\.github\workflows\validation-gate.yml"
 
     # Dot-source the internal Test-File function for unit testing
     . {
@@ -50,6 +51,15 @@ Describe "Article Health smoke fixture selection" {
         $json.summary.fail | Should -Be 0
 
         Remove-Item $jsonPath -ErrorAction SilentlyContinue
+    }
+
+    It "workflow fallback validates selected files instead of treating null LASTEXITCODE as failure" {
+        $workflow = Get-Content $WorkflowPath -Raw
+
+        $workflow | Should -Match "Get-ArticleHealthSmokeFixtures\.ps1"
+        $workflow | Should -Not -Match "\$LASTEXITCODE\s+-ne\s+0"
+        $workflow | Should -Match "Article Health smoke fixture selection returned no files"
+        $workflow | Should -Match "Article Health smoke fixture not found"
     }
 }
 

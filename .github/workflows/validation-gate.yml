@@ -90,8 +90,12 @@ jobs:
           if ($articleFiles.Count -eq 0) {
             Write-Host "No changed tool-family articles — running smoke test against committed fixtures."
             $articleFiles = @(& ./mcp-tools/validation/Get-ArticleHealthSmokeFixtures.ps1)
-            if ($LASTEXITCODE -ne 0) {
-              throw "Article Health smoke fixture selection failed with exit code $LASTEXITCODE."
+            if ($articleFiles.Count -eq 0) {
+              throw "Article Health smoke fixture selection returned no files."
+            }
+            $missingSmokeFixtures = @($articleFiles | Where-Object { -not (Test-Path $_) })
+            if ($missingSmokeFixtures.Count -gt 0) {
+              throw "Article Health smoke fixture not found: $($missingSmokeFixtures -join ', ')"
             }
             $usedFixtures = $true
           }
