@@ -8,6 +8,7 @@
     <RootNamespace>DocGeneration.McpCliMetadata</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="GenerateMapping.cs" />
     <InternalsVisibleTo Include="DocGeneration.McpCliMetadata.Tests" />
   </ItemGroup>
   <ItemGroup>

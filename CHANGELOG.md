@@ -43,6 +43,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **McpCliMetadata build no longer fails when the local mapping backfill scratch file is present** — The project file now excludes the stray `GenerateMapping.cs` helper from compilation, preserving `Program.cs` as the only executable top-level entry point and eliminating CS8802 during local generator builds.
+
 - **Parameter requiredness now strictly follows CLI metadata booleans (#732)** — Step 1 parameter table generation now preserves default wording in descriptions as descriptive text only while deriving the `Required or optional` column exclusively from each option's `required` boolean. This prevents required parameters whose descriptions mention defaults from being treated as optional.
 - **Validation Gate Article Health smoke tests no longer sweep negative or coverage fixtures (#739)** — Code/metadata-only PRs now run Article Health against an explicit healthy smoke-fixture allowlist instead of recursively checking every committed fixture under `mcp-tools/validation/tests/fixtures`. Intentional negative health fixtures and coverage-auditor fixtures remain covered by their dedicated Pester tests, but they no longer create baseline Article Health failures that prevent the warn-mode gate decision from running. The workflow validates the selected smoke fixture paths instead of relying on helper-script exit-code plumbing, captures Article Health's per-file exit code, and relies on the verdict outputs plus warn/block gate decision step while still failing if the health script does not produce its expected JSON output.
 
