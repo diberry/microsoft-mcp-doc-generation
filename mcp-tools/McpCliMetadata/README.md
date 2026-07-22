@@ -27,6 +27,8 @@ The `azmcp` binary must be available on `PATH` as a prerequisite.
 - **`IProcessRunner`** — abstraction over `Process.Start` (enables unit testing with fakes)
 - **`Program.cs`** — entry point; accepts output directory as argument
 
+`Program.cs` is the only compiled executable entry point. Local backfill or scratch helpers must not add additional top-level statements to this project.
+
 ## Testing
 
 ```bash
