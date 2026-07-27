@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "echo-content-impact@1.0.0",
+  "title": "Echo content impact result",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "TIMESTAMP": {
+      "type": "string"
+    },
+    "FILE_TIMESTAMP": {
+      "type": "string"
+    },
+    "VERSION_LIST": {
+      "type": "array"
+    },
+    "VERSIONS_ANALYZED": {
+      "type": "array"
+    },
+    "ANALYSES": {
+      "type": "array"
+    },
+    "WORK_ITEMS_BY_VERSION": {
+      "type": "array"
+    },
+    "VALIDATION_RESULTS": {
+      "type": "array"
+    },
+    "H2_STRUCTURE_SUMMARY": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    },
+    "PUBLISH_STATUS": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "NAMESPACE_COUNT": {
+      "type": "integer"
+    },
+    "NEW_NAMESPACE_COUNT": {
+      "type": "integer"
+    },
+    "CHANGED_NAMESPACE_COUNT": {
+      "type": "integer"
+    },
+    "UNCHANGED_NAMESPACE_COUNT": {
+      "type": "integer"
+    },
+    "NEW_NAMESPACES": {
+      "type": "array"
+    },
+    "CHANGED_NAMESPACES": {
+      "type": "array"
+    },
+    "UNCHANGED_NAMESPACES": {
+      "type": "array"
+    },
+    "IMPACT_MATRIX": {
+      "type": "array"
+    },
+    "REPORT_PATH": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "JSON_PATH": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "BACKFILL": {
+      "type": "boolean"
+    },
+    "DRY_RUN": {
+      "type": "boolean"
+    },
+    "ADO_ITEM_ID": {},
+    "ADO_TARGET_VERSION": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ADO_UPDATE_STATUS": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nextStep": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "TIMESTAMP",
+    "VERSION_LIST",
+    "WORK_ITEMS_BY_VERSION",
+    "REPORT_PATH",
+    "JSON_PATH"
+  ]
+}

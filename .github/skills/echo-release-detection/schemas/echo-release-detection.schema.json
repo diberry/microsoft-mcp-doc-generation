@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "echo-release-detection@1.0.0",
+  "title": "Echo release detection result",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "TIMESTAMP": {
+      "type": "string"
+    },
+    "FILE_TIMESTAMP": {
+      "type": "string"
+    },
+    "NEW_VERSIONS": {
+      "type": "array"
+    },
+    "NEW_VERSIONS_COUNT": {
+      "type": "integer"
+    },
+    "ADO_WORK_ITEM_ID": {},
+    "VERSION_DETAILS": {
+      "type": "array"
+    },
+    "RELEASE_CONTEXT": {
+      "type": "array"
+    },
+    "CONTEXT_VERSIONS": {
+      "type": "array"
+    },
+    "LATEST_UPSTREAM_VERSION": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "VERSION_STATUS": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "LATEST_METADATA_VERSION": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "DETECTED_VERSION_COUNT": {
+      "type": "integer"
+    },
+    "METADATA_VERSIONS": {
+      "type": "array"
+    },
+    "REPORT_PATH": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "JSON_PATH": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nextStep": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "TIMESTAMP",
+    "NEW_VERSIONS",
+    "NEW_VERSIONS_COUNT",
+    "REPORT_PATH",
+    "JSON_PATH"
+  ]
+}

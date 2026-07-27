@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "approved-pr-codeowners@1.0.0",
+  "title": "Approved PR CODEOWNERS result",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "stage": {
+      "type": "string",
+      "enum": [
+        "raw-collection",
+        "findings",
+        "alias-resolution",
+        "render"
+      ]
+    },
+    "version": {
+      "type": "integer"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "me": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "repo": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "codeowners": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    },
+    "prs": {
+      "type": "array"
+    },
+    "dina_login": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "codeowners_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "approved_prs": {
+      "type": "array"
+    },
+    "skipped": {
+      "type": "array"
+    },
+    "unresolved_aliases": {
+      "type": "array"
+    },
+    "artifactPaths": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "stage",
+    "run_id"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "target_repo": "MicrosoftDocs/azure-dev-docs-pr",
+  "search_limit": 1000,
+  "approval_comment_regex": "\\b(?:LGTM|looks\\s+good\\s+to\\s+me)\\b",
+  "codeowners_paths": [
+    ".github/CODEOWNERS",
+    "CODEOWNERS",
+    "docs/CODEOWNERS"
+  ],
+  "unresolved_retry_days": 7,
+  "upn_domain": "microsoft.com",
+  "data_dir": "projects/project-dina/data",
+  "runs_subdir": "approved-pr-runs"
+}

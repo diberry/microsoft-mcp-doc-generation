@@ -1,0 +1,12 @@
+{
+  "agents": {
+    "echo": {
+      "persistent_name": "Echo",
+      "role": "Azure MCP Content SME (founding)",
+      "universe": "Star Wars",
+      "created_at": "2026-07-27T15:26:50-07:00",
+      "legacy_named": false,
+      "status": "active"
+    }
+  }
+}

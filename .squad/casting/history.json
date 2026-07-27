@@ -1,0 +1,19 @@
+{
+  "universe_usage_history": [
+    {
+      "universe": "Star Wars",
+      "assigned_at": "2026-07-27T15:26:50-07:00",
+      "assignment_id": "squad-azure-skills-2026-07-27"
+    }
+  ],
+  "assignment_cast_snapshots": {
+    "squad-azure-skills-2026-07-27": {
+      "universe": "Star Wars",
+      "created_at": "2026-07-27T15:26:50-07:00",
+      "cast": {
+        "echo": "Echo"
+      },
+      "notes": "Founding SME. Universe selected because both 'Echo' (clone trooper) and 'Finn' (echo-finn-approved-pr-codeowners skill) are Star Wars characters."
+    }
+  }
+}

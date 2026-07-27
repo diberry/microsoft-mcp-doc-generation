@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "echo-metadata-generation@1.0.0",
+  "title": "Echo metadata generation result",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "TIMESTAMP": {
+      "type": "string"
+    },
+    "FILE_TIMESTAMP": {
+      "type": "string"
+    },
+    "VERSION_LIST": {
+      "type": "array"
+    },
+    "PR_DETAILS": {
+      "type": "array"
+    },
+    "MERGED_COUNT": {
+      "type": "integer"
+    },
+    "PENDING_COUNT": {
+      "type": "integer"
+    },
+    "GENERATED_COUNT": {
+      "type": "integer"
+    },
+    "ASSET_INVENTORY": {
+      "type": "array"
+    },
+    "MARKDOWN_ASSET_COUNT": {
+      "type": "integer"
+    },
+    "SCRIPT_ASSET_COUNT": {
+      "type": "integer"
+    },
+    "CATALOG_STATUS": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "CATALOG_SKILLS_PRESENT": {
+      "type": "array"
+    },
+    "CATALOG_SKILLS_ADDED": {
+      "type": "array"
+    },
+    "README_PATH": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "CATALOG_PATH": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "GENERATION_SCRIPT": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "REPORT_PATH": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "JSON_PATH": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "nextStep": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "TIMESTAMP",
+    "VERSION_LIST",
+    "PR_DETAILS",
+    "REPORT_PATH",
+    "JSON_PATH"
+  ]
+}
