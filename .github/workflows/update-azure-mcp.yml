@@ -288,40 +288,47 @@ jobs:
             git add "mcp-cli-metadata/${{ steps.diff-check.outputs.diff_file }}"
           fi
           
-          # Create commit message
-          COMMIT_MSG="chore(deps): update @azure/mcp to ${{ steps.version-check.outputs.latest_version }}
-
-Automated update from nightly version check workflow.
-
-- Package: @azure/mcp
-- Previous Version: ${{ steps.version-check.outputs.current_version }}
-- New Version: ${{ steps.version-check.outputs.latest_version }}
-- CLI Version: ${{ steps.cli-snapshot.outputs.cli_version }}"
+          # Create commit message file (built line-by-line so the YAML
+          # block scalar is never broken by column-0 continuation lines)
+          COMMIT_MSG_FILE="$(mktemp)"
+          {
+            printf '%s\n' "chore(deps): update @azure/mcp to ${{ steps.version-check.outputs.latest_version }}"
+            printf '\n'
+            printf '%s\n' "Automated update from nightly version check workflow."
+            printf '\n'
+            printf '%s\n' "- Package: @azure/mcp"
+            printf '%s\n' "- Previous Version: ${{ steps.version-check.outputs.current_version }}"
+            printf '%s\n' "- New Version: ${{ steps.version-check.outputs.latest_version }}"
+            printf '%s\n' "- CLI Version: ${{ steps.cli-snapshot.outputs.cli_version }}"
+          } > "$COMMIT_MSG_FILE"
 
           if [ "${{ steps.cli-snapshot.outputs.is_new }}" == "true" ]; then
-            COMMIT_MSG="$COMMIT_MSG
-
-Files updated:
-- mcp-cli-metadata/tracked-version.txt
-- mcp-cli-metadata/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json (new)"
+            {
+              printf '\n'
+              printf '%s\n' "Files updated:"
+              printf '%s\n' "- mcp-cli-metadata/tracked-version.txt"
+              printf '%s\n' "- mcp-cli-metadata/${{ steps.cli-snapshot.outputs.cli_version }}/tools-list.json (new)"
+            } >> "$COMMIT_MSG_FILE"
           else
-            COMMIT_MSG="$COMMIT_MSG
-
-Files updated:
-- mcp-cli-metadata/tracked-version.txt"
+            {
+              printf '\n'
+              printf '%s\n' "Files updated:"
+              printf '%s\n' "- mcp-cli-metadata/tracked-version.txt"
+            } >> "$COMMIT_MSG_FILE"
           fi
 
           if [ -n "${{ steps.diff-check.outputs.previous_version }}" ]; then
-            COMMIT_MSG="$COMMIT_MSG
-
-CLI diff: ${{ steps.diff-check.outputs.previous_version }} → ${{ steps.cli-snapshot.outputs.cli_version }}
-- Lines changed: ${{ steps.diff-check.outputs.lines_changed }}
-- Added: ${{ steps.diff-check.outputs.lines_added }}
-- Removed: ${{ steps.diff-check.outputs.lines_removed }}"
+            {
+              printf '\n'
+              printf '%s\n' "CLI diff: ${{ steps.diff-check.outputs.previous_version }} → ${{ steps.cli-snapshot.outputs.cli_version }}"
+              printf '%s\n' "- Lines changed: ${{ steps.diff-check.outputs.lines_changed }}"
+              printf '%s\n' "- Added: ${{ steps.diff-check.outputs.lines_added }}"
+              printf '%s\n' "- Removed: ${{ steps.diff-check.outputs.lines_removed }}"
+            } >> "$COMMIT_MSG_FILE"
           fi
 
           # Commit with error handling
-          if ! git commit -m "$COMMIT_MSG"; then
+          if ! git commit -F "$COMMIT_MSG_FILE"; then
             echo "::error::Failed to create commit - check if there are any changes to commit"
             exit 1
           fi
