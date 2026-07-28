@@ -22,6 +22,12 @@
 | Reeve | Documentation Engineer | `.squad/agents/reeve/charter.md` | ✅ Active |
 | Scribe | Session Logger | `.squad/agents/scribe/charter.md` | 📋 Silent |
 
+> **Standing roster, not a ceiling.** These nine are the permanent team. The Coordinator may
+> hire additional specialists **at-will** — as disposable *guests* for a single task/review, or
+> as *standing* members for recurring needs — when the roster lacks required expertise. Hires are
+> tracked in `.squad/casting-registry.json`; see "Hiring New Agents" in `.github/agents/squad.agent.md`.
+> **Scribe ≠ Reeve:** Scribe keeps team memory (decisions, history, wisdom); Reeve writes product docs.
+
 ## Coding Agent
 
 <!-- copilot-auto-assign: false -->

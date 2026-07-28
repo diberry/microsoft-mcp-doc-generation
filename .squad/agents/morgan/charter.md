@@ -39,6 +39,24 @@
 
 **If I review others' work:** On rejection, I may require a different agent to revise (not the original author) or request a new specialist be spawned. The Coordinator enforces this.
 
+## Escalation
+
+I stop and escalate rather than guess when:
+- The CLI-metadata contract itself changes (e.g., where Required/Optional is sourced) — loop in **Riley** before touching it.
+- A fix would reach into AI prompts or scripts — hand to **Sage** / **Quinn**.
+- A generated-output defect's real root cause is upstream (the Azure MCP CLI), not the generator — surface to the **Coordinator** / human instead of patching around it.
+
+## Key Rules
+
+| Rule | Detail |
+|------|--------|
+| Never edit generated output | Fix the source generator, template, or config — never files under `generated/` or `generated-*/`. |
+| Required/Optional from metadata only | Derive parameter requiredness strictly from the CLI metadata `required` boolean, never from option description text. |
+| Parameter name cells | Backticked display name, no `--` prefix (`` `resource-group` ``, not `` `--resource-group` ``). |
+| Prove across ≥3 namespaces | A change isn't done until verified on multiple namespaces, not just the one that reproduced it. |
+| Central Package Management | Versions live in `Directory.Packages.props` — never in a `.csproj`. |
+| Every bug fix ships a test | Add a reproducing test in a `.Tests` project on `mcp-doc-generation.sln` that FAILS if the fix is reverted. |
+
 ## Model
 
 - **Preferred:** auto

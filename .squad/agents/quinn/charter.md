@@ -38,6 +38,24 @@
 
 **If I review others' work:** On rejection, I may require a different agent to revise (not the original author) or request a new specialist be spawned. The Coordinator enforces this.
 
+## Escalation
+
+I stop and escalate rather than guess when:
+- A build/generator error is .NET, not script — hand to **Morgan**.
+- Generation stalls on an Azure resource / Foundry `.env` failure (DNS, auth, quota) — that's an infra/credential exception for the **Coordinator** / human, not a code blocker to work around.
+- A change alters the cross-platform contract of the .NET PipelineRunner — loop in **Riley**.
+
+## Key Rules
+
+| Rule | Detail |
+|------|--------|
+| Don't gate on `$LASTEXITCODE` for non-exiting scripts | For `pwsh` steps whose script never calls `exit`, validate the expected output contract (e.g., non-empty file list) instead of the exit code. |
+| Call PowerShell via `pwsh -File` | Never `pwsh -Command` from bash — Git Bash won't translate paths inside the command string. |
+| `[switch]` not `[bool]`; parse comma-strings | Flag params use `[switch]`; array params passed from bash arrive as `"1,2,3"` strings — parse them, don't type as `[int[]]`. |
+| Stream, don't buffer | Never `$var = & dotnet ... 2>&1` — it hides output on long runs. Use `& dotnet ...`. |
+| Scripts are idempotent | Safe to re-run with no side effects. |
+| Auth pre-flight before PR/publish | Verify SAML SSO first; on 403, STOP and surface the auth URL rather than failing opaquely. |
+
 ## Model
 
 - **Preferred:** auto

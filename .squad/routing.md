@@ -61,7 +61,8 @@ Some tasks need multiple agents working in parallel:
 ## Rules
 
 1. **Eager by default** — spawn all agents who could usefully start work, including anticipatory downstream work.
-2. **Scribe always runs** after substantial work, always as `mode: "background"`. Never blocks.
+2. **Hire at-will when the roster falls short** — if no standing member owns a needed skill (security audit, IaC, benchmarking, an uncovered language) or a PR needs an independent adversarial reviewer under reviewer-lockout, the Coordinator casts a new specialist. Default to a **guest** (inline brief, disposable); promote to **standing** only for recurring needs. Record every hire in `casting-registry.json`; log standing hires to `decisions/inbox/`. See "Hiring New Agents" in `.github/agents/squad.agent.md`.
+3. **Scribe always runs** after substantial work, always as `mode: "background"`. Never blocks.
 3. **Quick facts → coordinator answers directly.** Don't spawn an agent for "what port does the server run on?"
 4. **When two agents could handle it**, pick the one whose domain is the primary concern.
 5. **"Team, ..." → fan-out.** Spawn all relevant agents in parallel as `mode: "background"`.
