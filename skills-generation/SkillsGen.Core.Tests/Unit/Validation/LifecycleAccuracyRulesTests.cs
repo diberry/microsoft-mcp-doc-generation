@@ -175,6 +175,18 @@ public class LifecycleAccuracyRulesTests
         hits.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("- **PowerShell** (v7.4+)—Install: `winget install Microsoft.PowerShell`")]
+    [InlineData("Requires .NET 9.0 or later and Node.js v20.")]
+    [InlineData("Install Azure CLI version 2.60 or newer.")]
+    public void FindInternalJargon_PrerequisiteRuntimeVersion_NotFlagged(string body)
+    {
+        // Runtime/tool prerequisite versions are legitimate user-facing content — only the
+        // skill's own version string is jargon (#735).
+        var hits = LifecycleAccuracyRules.FindInternalJargon(body);
+        hits.Should().BeEmpty();
+    }
+
     // ---------- #737: Title fidelity ----------
 
     [Fact]

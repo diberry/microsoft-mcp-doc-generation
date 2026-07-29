@@ -141,8 +141,11 @@ public static class LifecycleAccuracyRules
         new(@"\bskill-version\b", RegexOptions.IgnoreCase),
         // ML-training acronyms — case-sensitive to avoid matching unrelated lowercase text.
         new(@"\b(SFT|DPO|RFT)\b"),
-        // Version strings do not belong in body prose (frontmatter ms.custom only).
-        new(@"\bv\d+\.\d+(\.\d+)?\b"),
+        // The skill's OWN version string must not appear in body prose (it belongs in the
+        // ms.custom frontmatter only). Anchored to "skill" context so legitimate runtime/tool
+        // prerequisite versions (e.g. "PowerShell v7.4+", ".NET 9.0") are not false-positives.
+        new(@"\bv?\d+\.\d+(\.\d+)?\s+of\s+the\s+skill\b", RegexOptions.IgnoreCase),
+        new(@"\bskill\s+v\d+\.\d+(\.\d+)?\b", RegexOptions.IgnoreCase),
     ];
 
     /// <summary>
