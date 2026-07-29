@@ -559,4 +559,36 @@ public class ParameterCoverageCheckerTests
 
         Assert.True(result.Covered);
     }
+
+    [Fact]
+    public void EnumParam_AllowedValueSegmentInsideUnrelatedWord_ReturnsFalse()
+    {
+        // Word-boundary guard: SQL option 'sql_servers' yields the generic candidate 'server'.
+        // The prompt word "observer" *contains* "server" as a substring but is unrelated — a raw
+        // substring scan of the collapsed prompt would wrongly mark the enum param covered, masking
+        // a genuine miss. N-gram (whole-word) matching must keep this UNCOVERED.
+        var prompts = new[] { "Set up an observer for diagnostic logs" };
+        const string description =
+            "The Azure resource type to target. Available options: 'sql_servers', 'storage_storageaccounts'.";
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "Resource name", 1, description);
+
+        Assert.False(result.Covered,
+            "Enum candidate 'server' must not match inside the unrelated word 'observer' (word-boundary matching)");
+    }
+
+    [Fact]
+    public void EnumParam_ResourceTypeNamedAsWholeWord_ReturnsCovered()
+    {
+        // Positive counterpart to the boundary guard: when the prompt names the resource type as a
+        // real word ("servers"), the same 'sql_servers' option is legitimately covered.
+        var prompts = new[] { "Apply recommendations to my SQL servers" };
+        const string description =
+            "The Azure resource type to target. Available options: 'sql_servers', 'storage_storageaccounts'.";
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "Resource name", 1, description);
+
+        Assert.True(result.Covered,
+            "Prompt naming the resource type 'servers' as a whole word should cover option 'sql_servers'");
+    }
 }

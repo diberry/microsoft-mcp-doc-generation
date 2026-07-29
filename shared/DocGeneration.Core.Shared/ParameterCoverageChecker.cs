@@ -268,8 +268,8 @@ public static class ParameterCoverageChecker
                         continue;
                     }
 
-                    var collapsedPrompt = Regex.Replace(examplePrompt.ToLowerInvariant(), "[^a-z0-9]+", string.Empty);
-                    if (PromptReferencesAllowedValue(collapsedPrompt, allowedValues))
+                    var promptTokenNGrams = BuildPromptTokenNGrams(examplePrompt);
+                    if (PromptReferencesAllowedValue(promptTokenNGrams, allowedValues))
                     {
                         covered = true;
                         break;
@@ -318,13 +318,39 @@ public static class ParameterCoverageChecker
         return values;
     }
 
-    private static bool PromptReferencesAllowedValue(string collapsedPrompt, IReadOnlyList<string> allowedValues)
+    /// <summary>
+    /// Builds the set of concatenated adjacent-token n-grams (1..maxN words) for a prompt, each
+    /// reduced to lowercase alphanumerics. Enum matching compares candidates against these n-grams by
+    /// equality, which enforces word boundaries: a multi-word display value ("Storage Account" →
+    /// "storageaccount") still matches, but a generic segment ("server") can no longer match inside an
+    /// unrelated word ("observer") the way a raw substring scan of the fully collapsed prompt would.
+    /// </summary>
+    private static HashSet<string> BuildPromptTokenNGrams(string prompt, int maxN = 4)
+    {
+        var tokens = Regex.Split(prompt.ToLowerInvariant(), "[^a-z0-9]+")
+            .Where(token => token.Length > 0)
+            .ToArray();
+        var nGrams = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < tokens.Length; i++)
+        {
+            var accumulated = string.Empty;
+            for (var n = 0; n < maxN && i + n < tokens.Length; n++)
+            {
+                accumulated += tokens[i + n];
+                nGrams.Add(accumulated);
+            }
+        }
+
+        return nGrams;
+    }
+
+    private static bool PromptReferencesAllowedValue(IReadOnlyCollection<string> promptTokenNGrams, IReadOnlyList<string> allowedValues)
     {
         foreach (var value in allowedValues)
         {
             foreach (var candidate in GetEnumMatchCandidates(value))
             {
-                if (candidate.Length >= 5 && collapsedPrompt.Contains(candidate, StringComparison.Ordinal))
+                if (candidate.Length >= 5 && promptTokenNGrams.Contains(candidate))
                 {
                     return true;
                 }
@@ -335,11 +361,13 @@ public static class ParameterCoverageChecker
     }
 
     /// <summary>
-    /// Produces substring candidates for an allowed enum value. Azure resource-type options follow a
+    /// Produces match candidates for an allowed enum value. Azure resource-type options follow a
     /// "provider_resourcetype" convention (e.g. "storage_storageaccounts"), so both the whole collapsed
     /// value and the final segment (the resource type) are yielded, each with a de-pluralized form.
     /// Generic leading provider segments (e.g. "storage", "web") are intentionally excluded to limit
-    /// incidental matches. Candidates shorter than five characters are dropped by the caller.
+    /// incidental matches. Candidates shorter than five characters are dropped by the caller. Candidates
+    /// are matched against prompt token n-grams by equality (see <see cref="BuildPromptTokenNGrams"/>),
+    /// so they align to word boundaries rather than matching as raw substrings.
     /// </summary>
     private static IEnumerable<string> GetEnumMatchCandidates(string value)
     {
