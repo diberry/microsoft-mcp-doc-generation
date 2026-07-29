@@ -22,6 +22,68 @@ internal static class SourceVerificationHelpers
         return normalized.Trim('-');
     }
 
+    public static IReadOnlyDictionary<string, string> LoadNaturalLanguageReverseMap(string? mcpToolsRoot)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(mcpToolsRoot))
+        {
+            return map;
+        }
+
+        var path = Path.Combine(mcpToolsRoot, "data", "nl-parameter-identifiers.json");
+        if (!File.Exists(path))
+        {
+            return map;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return map;
+            }
+
+            foreach (var entry in document.RootElement.EnumerateArray())
+            {
+                if (!entry.TryGetProperty("Parameter", out var parameterProperty)
+                    || parameterProperty.ValueKind != JsonValueKind.String
+                    || !entry.TryGetProperty("NaturalLanguage", out var naturalLanguageProperty)
+                    || naturalLanguageProperty.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                var cliName = NormalizeParameterName(parameterProperty.GetString() ?? string.Empty);
+                var displaySlug = NormalizeParameterName(naturalLanguageProperty.GetString() ?? string.Empty);
+                if (string.IsNullOrWhiteSpace(cliName) || string.IsNullOrWhiteSpace(displaySlug))
+                {
+                    continue;
+                }
+
+                map[displaySlug] = cliName;
+            }
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return map;
+    }
+
+    // Reverse-map a documented display slug (e.g. "resource-name") back to its canonical CLI name
+    // (e.g. "resource") only when that CLI name is actually present in the tool's source parameters.
+    // The per-tool guard prevents mis-rewriting a raw CLI option whose name happens to collide with a
+    // display slug: the rewrite applies only if it resolves to a real source parameter.
+    public static string ResolveDocumentedParameterName(
+        string normalizedName,
+        IReadOnlyDictionary<string, string> reverseMap,
+        ISet<string> sourceParameterNames)
+        => reverseMap.TryGetValue(normalizedName, out var cliName) && sourceParameterNames.Contains(cliName)
+            ? cliName
+            : normalizedName;
+
     public static IReadOnlyList<SourceParameter> GetSourceParameters(JsonElement options)
     {
         var parameters = new List<SourceParameter>();
