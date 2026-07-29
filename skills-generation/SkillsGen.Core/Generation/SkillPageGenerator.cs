@@ -46,6 +46,15 @@ public class SkillPageGenerator : ISkillPageGenerator
 
         // Naturalize the bullet points — convert keyword fragments into sentences
         var useForList = NaturalizeItems(rawUseFor, skillData.DisplayName);
+        // Guard the content contract: "When to use this skill" must have >= 1 bullet.
+        // NaturalizeItems drops interrogative fragments (they belong in Example Prompts), so a
+        // skill with no UseFor items whose trigger-prompt fallback is entirely questions could
+        // otherwise naturalize down to zero bullets. Fall back to a deterministic declarative
+        // scenario so the section is never empty.
+        if (useForList.Count == 0)
+            useForList = NaturalizeItems(
+                new List<string> { $"Manage and configure {skillData.DisplayName} resources in Azure" },
+                skillData.DisplayName);
         // Cap at 10 items max to keep the section focused
         if (useForList.Count > 10)
             useForList = useForList.Take(10).ToList();

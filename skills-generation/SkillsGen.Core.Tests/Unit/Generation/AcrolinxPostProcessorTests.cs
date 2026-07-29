@@ -99,6 +99,40 @@ public class AcrolinxPostProcessorTests
     }
 
     [Fact]
+    public void Process_CollapsesDuplicateCommas_ProducesExactSingleComma()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var result = processor.Process("Supports blobs, , and queues.");
+
+        // Exact expected output, not just an absence assertion.
+        result.Should().Contain("Supports blobs, and queues.");
+    }
+
+    [Fact]
+    public void Process_DoesNotAlterCommaPeriodInsideBacktickCodeSpan()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        // The ",." sequence inside a code span is legitimate code and must be preserved,
+        // while an identical artifact in the surrounding prose is still collapsed.
+        var result = processor.Process("Run `az resource list --query [0],. --output table` next,. then verify.");
+
+        result.Should().Contain("`az resource list --query [0],. --output table`");
+        result.Should().Contain("table` next. then verify.");
+    }
+
+    [Fact]
+    public void Process_DoesNotMergeSeparateLinesAcrossNewline()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        // A trailing comma on one line and a period starting the next must NOT be merged:
+        // the punctuation cleanup only collapses within a single line (horizontal whitespace).
+        var result = processor.Process("- Scan repos,\n\n. Ready to deploy.");
+
+        result.Should().Contain("Scan repos,");
+        result.Should().NotContain("repos. Ready");
+    }
+
+    [Fact]
     public void Process_AppliesContractions()
     {
         var processor = new AcrolinxPostProcessor(null, null, _logger);

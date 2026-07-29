@@ -154,6 +154,8 @@ public class NaturalizeItemsTests
     [InlineData("What's blocking my deployment")]
     [InlineData("Are my dependencies compatible")]
     [InlineData("Should I enable diagnostics")]
+    [InlineData("How do I deploy my app to Azure")]
+    [InlineData("Which region should I choose")]
     public void NaturalizeItems_InterrogativeItems_Dropped(string interrogative)
     {
         var result = SkillPageGenerator.NaturalizeItems([interrogative], "Test");
@@ -1216,6 +1218,50 @@ public class BuildContextWhatItProvidesTests
         context.Should().NotBeNull();
         var mechanical = SkillPageGenerator.BuildWhatItProvides(skillData);
         context!["whatItProvides"].Should().Be(mechanical);
+    }
+}
+
+public class BuildContextWhenToUseInterrogativeFallbackTests
+{
+    [Fact]
+    public void BuildContext_EmptyUseForWithAllInterrogativeTriggers_StillProducesWhenToUseBullets()
+    {
+        // Regression (Riley P1): when UseFor is empty, BuildContext falls back to ShouldTrigger.
+        // If every trigger is an interrogative prompt, NaturalizeItems drops them all, which would
+        // leave "When to use" with ZERO bullets — violating the >=1-bullet content contract.
+        // The empty-guard must re-run with a declarative fallback so useFor is never empty.
+        var skillData = new SkillData
+        {
+            Name = "azure-cosmos-db",
+            DisplayName = "Azure Cosmos DB",
+            Description = "Work with Cosmos DB.",
+            UseFor = [], // empty — forces fallback to ShouldTrigger
+            Services = [new ServiceEntry("Cosmos DB", "Globally distributed database")],
+            McpTools = [new McpToolEntry("cosmos_query", "cosmos query", "Query a Cosmos DB container")]
+        };
+        var allInterrogativeTriggers = new List<string>
+        {
+            "How do I connect to my Cosmos DB account",
+            "Which consistency level should I pick",
+            "Is my container partitioned correctly",
+            "Do I need to provision throughput"
+        };
+        var triggers = new TriggerData(allInterrogativeTriggers, [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var context = SkillPageGenerator.BuildContext(
+            skillData, triggers, tier, prereqs,
+            triggerProcessor: null, curatedData: null, logger: null,
+            translatedWorkflowSteps: null, whatItProvides: null)
+            as IDictionary<string, object?>;
+
+        context.Should().NotBeNull();
+        var useFor = context!["useFor"] as List<string>;
+        useFor.Should().NotBeNullOrEmpty("the empty-guard must supply a declarative fallback bullet");
+        ((bool)context["hasUseFor"]!).Should().BeTrue();
+        useFor!.Should().NotContain(b => b.TrimEnd().EndsWith("?"),
+            "fallback bullets must be declarative, never interrogative");
     }
 }
 
