@@ -49,6 +49,13 @@
     "composition": "standalone"
   },
   {
+    "brandName": "Azure IoT Hub",
+    "mcpServerName": "iothub",
+    "shortName": "IoT Hub",
+    "fileName": "azure-iot-hub",
+    "composition": "standalone"
+  },
+  {
     "brandName": "Azure App Service",
     "mcpServerName": "appservice",
     "shortName": "App Service",
@@ -453,6 +460,13 @@
     "mergeGroup": "azure-monitor",
     "mergeOrder": 2,
     "mergeRole": "secondary"
+  },
+  {
+    "brandName": "Azure Insights",
+    "mcpServerName": "insights",
+    "shortName": "Insights",
+    "fileName": "azure-insights",
+    "composition": "standalone"
   },
   {
     "brandName": "Azure Sreagent",
