@@ -21,4 +21,17 @@ Rules:
 - All list items in "When to use" MUST be bulleted (use "- " prefix)
 - Prerequisite labels must NOT have colons after the bold: write "**Azure CLI** Install version 2.60+" NOT "**Azure CLI:** Install version 2.60+"
 
+Lifecycle-phase accuracy (Issue #734):
+- Attribute actions to the correct lifecycle phase. A skill that authors or prepares infrastructure (generates Bicep/Terraform and a deployment plan) does NOT itself provision, create, or deploy live Azure resources — those actions belong to a later deploy phase/skill.
+- For an authoring/preparation or validation skill, do NOT write that the skill "provisions resources", "creates resource groups", "sets up managed identity", or "deploys" anything. Instead describe what it generates or validates (for example, "generates the infrastructure as code" or "validates the deployment plan").
+- When you must reference provisioning from an authoring skill, defer it explicitly: "Provisioning happens later, in the azure-deploy skill." Do not claim the current skill performs it.
+
+User-facing phrasing (Issue #735):
+- Describe capabilities in terms of the customer's goal, not internal implementation. NEVER use internal, build-pipeline, protocol, or ML-training jargon in customer-facing prose.
+- Forbidden implementation terms include (non-exhaustive): "Docker build", "ACR push", "container start", "agent.yaml", "invocations_ws", "duplex WebSocket", "out-of-band", "SFT", "DPO", "RFT", "grader calibration", "checkpoint selection", "dataset versioning", "skill-version", and literal version strings (for example "v1.2"). Replace these with what the customer achieves.
+
+Title and taxonomy fidelity (Issue #737):
+- The article title MUST be exactly "Azure skill for {display name}" using the skill's real display name from the source data. Do NOT paraphrase, abbreviate, reword, or invent an alternate title.
+- Use the exact Azure service and product names from the source data. Do NOT substitute a similar-sounding service, generalize a specific service to its category, or invent provider/service names not present in the source.
+
 {{ACROLINX_RULES}}

@@ -919,4 +919,194 @@ public class SkillPageValidatorTests
 
         result.Errors.Should().NotContain(e => e.Contains("Azure__"));
     }
+
+    // ---------- #737 TITLE_MISMATCH (warn-level) ----------
+
+    [Fact]
+    public void Validate_ParaphrasedTitle_WarnsTitleMismatch()
+    {
+        var content = """
+            ---
+            title: Managing storage the easy way
+            description: Work with Azure Storage accounts and resources.
+            ---
+
+            # Azure skill for Azure Storage
+
+            Work with Azure Storage accounts and resources for blob containers and file shares.
+
+            ## Prerequisites
+
+            - GitHub Copilot with Azure extension
+
+            ### When to use this skill
+
+            Use this skill when managing storage accounts and blob containers and queues and tables.
+
+            ## What it provides
+
+            Knowledge about storage services, blob operations, file shares, queues, and table storage.
+
+            ## Example prompts
+
+            - "How do I create a storage account?"
+
+            ## Related content
+
+            - [Azure Storage documentation](/azure/storage)
+            """;
+        var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().Contain(w => w.Contains("TITLE_MISMATCH"));
+    }
+
+    [Fact]
+    public void Validate_CanonicalTitle_NoTitleMismatchWarning()
+    {
+        var result = _validator.Validate(
+            CreateValidTier1Content(), 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().NotContain(w => w.Contains("TITLE_MISMATCH"));
+    }
+
+    // ---------- #734 PHASE_VERB (warn-level) ----------
+
+    [Fact]
+    public void Validate_AuthorPhaseClaimsProvisioning_WarnsPhaseVerb()
+    {
+        var skill = new SkillData
+        {
+            Name = "azure-prepare",
+            DisplayName = "Azure Prepare",
+            Description = "Generates Bicep infrastructure and provisions the resources for you.",
+            RawBody = "This skill generates infrastructure as code and a deployment plan."
+        };
+        var content = """
+            ---
+            title: Azure skill for Azure Prepare
+            description: Generates Bicep infrastructure and provisions the resources for you.
+            ---
+
+            # Azure skill for Azure Prepare
+
+            This skill provisions your Azure resources and creates resource groups automatically.
+
+            ## Prerequisites
+
+            - GitHub Copilot with Azure extension
+
+            ### When to use this skill
+
+            Use this skill when preparing an application for deployment to Azure.
+
+            ## What it provides
+
+            It provisions the infrastructure and sets up managed identity for the app.
+
+            ## Example prompts
+
+            - "Prepare my app for Azure"
+
+            ## Related content
+
+            - [Azure Developer CLI](/azure/developer/azure-developer-cli)
+            """;
+        var result = _validator.Validate(content, 2, skill, new TriggerData([], [], null));
+
+        result.Warnings.Should().Contain(w => w.Contains("PHASE_VERB"));
+    }
+
+    [Fact]
+    public void Validate_AuthorPhaseSanctionedDeferral_NoPhaseVerbWarning()
+    {
+        var skill = new SkillData
+        {
+            Name = "azure-prepare",
+            DisplayName = "Azure Prepare",
+            Description = "Generates Bicep infrastructure and a deployment plan.",
+            RawBody = "This skill generates infrastructure as code. Provisioning happens later, in the azure-deploy skill."
+        };
+        var content = """
+            ---
+            title: Azure skill for Azure Prepare
+            description: Generates Bicep infrastructure and a deployment plan.
+            ---
+
+            # Azure skill for Azure Prepare
+
+            This skill generates the Bicep templates that define your resources.
+
+            ## Prerequisites
+
+            - GitHub Copilot with Azure extension
+
+            ### When to use this skill
+
+            Use this skill when preparing an application for deployment to Azure.
+
+            ## What it provides
+
+            It generates infrastructure as code. Provisioning happens later, in the azure-deploy skill.
+
+            ## Example prompts
+
+            - "Prepare my app for Azure"
+
+            ## Related content
+
+            - [Azure Developer CLI](/azure/developer/azure-developer-cli)
+            """;
+        var result = _validator.Validate(content, 2, skill, new TriggerData([], [], null));
+
+        result.Warnings.Should().NotContain(w => w.Contains("PHASE_VERB"));
+    }
+
+    // ---------- #735 INTERNAL_JARGON (warn-level) ----------
+
+    [Fact]
+    public void Validate_BodyContainsInternalJargon_WarnsJargon()
+    {
+        var content = """
+            ---
+            title: Azure skill for Azure Storage
+            description: Work with Azure Storage accounts and resources.
+            ---
+
+            # Azure skill for Azure Storage
+
+            This skill runs a Docker build and then performs an ACR push to your registry.
+
+            ## Prerequisites
+
+            - GitHub Copilot with Azure extension
+
+            ### When to use this skill
+
+            Use this skill when managing storage accounts and blob containers and queues and tables.
+
+            ## What it provides
+
+            Knowledge about storage services, blob operations, file shares, queues, and table storage.
+
+            ## Example prompts
+
+            - "How do I create a storage account?"
+
+            ## Related content
+
+            - [Azure Storage documentation](/azure/storage)
+            """;
+        var result = _validator.Validate(content, 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().Contain(w => w.Contains("INTERNAL_JARGON"));
+    }
+
+    [Fact]
+    public void Validate_CleanBody_NoJargonWarning()
+    {
+        var result = _validator.Validate(
+            CreateValidTier1Content(), 1, CreateSkillData(), new TriggerData([], [], null));
+
+        result.Warnings.Should().NotContain(w => w.Contains("INTERNAL_JARGON"));
+    }
 }

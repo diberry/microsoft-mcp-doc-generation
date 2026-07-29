@@ -197,6 +197,39 @@ public class SkillPageValidator : ISkillPageValidator
             warnings.Add("PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items");
         }
 
+        // #737 TITLE_MISMATCH: Frontmatter title must match canonical "Azure skill for {DisplayName}"
+        var titleValue = ExtractFrontmatterField(renderedContent, "title");
+        if (titleValue != null &&
+            !LifecycleAccuracyRules.IsTitleCanonical(titleValue, skillData.DisplayName, out var expectedTitle))
+        {
+            warnings.Add($"TITLE_MISMATCH: Title '{titleValue}' does not match canonical '{expectedTitle}' — skill name must not be paraphrased or reformatted (#737)");
+        }
+
+        // #734 PHASE_VERB: Authoring/validate-phase skills must not attribute provisioning/creation
+        // actions to themselves in the description, intro, or "What it provides" sections.
+        var phase = LifecycleAccuracyRules.DetectPhase(skillData);
+        if (phase is SkillLifecyclePhase.Author or SkillLifecyclePhase.Validate)
+        {
+            var descriptionValue = ExtractFrontmatterField(renderedContent, "description") ?? "";
+            var introParagraph = ExtractIntroParagraph(renderedContent);
+            var whatItProvides = ExtractSectionBody(renderedContent, "What it provides");
+            var phaseProse = string.Join("\n", new[] { descriptionValue, introParagraph, whatItProvides });
+
+            var phaseVerbHits = LifecycleAccuracyRules.FindForbiddenPhaseVerbs(phaseProse, phase);
+            foreach (var hit in phaseVerbHits.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                warnings.Add($"PHASE_VERB: {phase}-phase skill claims provisioning/creation action \"{hit}\" — this phase generates or validates IaC; provisioning happens in the deploy phase (#734)");
+            }
+        }
+
+        // #735 INTERNAL_JARGON: Internal build/protocol/ML-pipeline tokens must not leak into prose.
+        var body = StripFrontmatter(renderedContent);
+        var jargonHits = LifecycleAccuracyRules.FindInternalJargon(body);
+        foreach (var hit in jargonHits.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            warnings.Add($"INTERNAL_JARGON: Internal/implementation token \"{hit}\" found in article body — use user-facing capability phrasing (#735)");
+        }
+
         var sectionCount = Regex.Matches(renderedContent, @"^## ", RegexOptions.Multiline).Count;
 
         return new SkillValidationResult(errors.Count == 0, errors, warnings, wordCount, sectionCount);
@@ -212,5 +245,46 @@ public class SkillPageValidator : ISkillPageValidator
         body = Regex.Replace(body, @"[#*|`\[\]\(\)\-]", " ");
         // Count words
         return body.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    /// <summary>Removes the leading YAML frontmatter block, returning the article body.</summary>
+    private static string StripFrontmatter(string content)
+    {
+        var trimmed = content.TrimStart();
+        if (!trimmed.StartsWith("---")) return content;
+        var match = Regex.Match(content, @"^\s*---\s*\n.*?\n---\s*\n?", RegexOptions.Singleline);
+        return match.Success ? content[match.Length..] : content;
+    }
+
+    /// <summary>Extracts a single-line frontmatter field value (unquoted), or null if absent.</summary>
+    private static string? ExtractFrontmatterField(string content, string field)
+    {
+        var fm = Regex.Match(content, @"^\s*---\s*\n(.*?)\n---", RegexOptions.Singleline);
+        if (!fm.Success) return null;
+        var line = Regex.Match(fm.Groups[1].Value,
+            $@"(?im)^\s*{Regex.Escape(field)}\s*:\s*(.+?)\s*$");
+        if (!line.Success) return null;
+        return line.Groups[1].Value.Trim().Trim('"', '\'');
+    }
+
+    /// <summary>Returns the first prose paragraph after the H1 heading (the article intro).</summary>
+    private static string ExtractIntroParagraph(string content)
+    {
+        var body = StripFrontmatter(content);
+        var h1 = Regex.Match(body, @"^#\s+.+$", RegexOptions.Multiline);
+        if (!h1.Success) return "";
+        var afterH1 = body[(h1.Index + h1.Length)..].TrimStart('\r', '\n', ' ');
+        // First paragraph = up to the next blank line or heading.
+        var para = Regex.Match(afterH1, @"^(.+?)(\n\s*\n|\n#{1,6}\s|\z)", RegexOptions.Singleline);
+        return para.Success ? para.Groups[1].Value.Trim() : afterH1.Trim();
+    }
+
+    /// <summary>Returns the body text of a "## {sectionTitle}" section (up to the next H2), or empty.</summary>
+    private static string ExtractSectionBody(string content, string sectionTitle)
+    {
+        var match = Regex.Match(content,
+            $@"(?im)^##\s+{Regex.Escape(sectionTitle)}\s*\n(.*?)(?=\n##[^#]|\z)",
+            RegexOptions.Singleline);
+        return match.Success ? match.Groups[1].Value.Trim() : "";
     }
 }

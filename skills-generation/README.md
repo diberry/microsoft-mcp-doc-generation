@@ -29,8 +29,10 @@ SkillPipelineOrchestrator
   ├── Rewrite    → AzureOpenAiRewriter (LLM intro polish)
   ├── Generate   → SkillPageGenerator (Handlebars template)
   ├── Post-proc  → AcrolinxPostProcessor (contractions, URLs, acronyms)
-  └── Validate   → SkillPageValidator (sections, frontmatter, word count)
+  └── Validate   → SkillPageValidator (sections, frontmatter, word count, lifecycle-accuracy lints)
 ```
+
+**Lifecycle-accuracy lints** (`LifecycleAccuracyRules`, warn-only, service-agnostic): `PHASE_VERB` flags authoring/validation-phase skills that claim to provision or create live resources (#734), `INTERNAL_JARGON` flags internal build/protocol/ML-training tokens in customer prose (#735), and `TITLE_MISMATCH` flags titles that deviate from `Azure skill for {display name}` (#737).
 
 **Tier assessment** scores each skill on 5 questions (Q1–Q5) covering service count, use-for scenarios, trigger prompts, description depth, and Azure service references. Tier 1 (score ≥ 4) gets comprehensive articles; Tier 2 gets essential-only articles.
 
