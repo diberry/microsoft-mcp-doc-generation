@@ -575,6 +575,54 @@ public class ToolFamilyPostAssemblyValidatorTests
         }
     }
 
+    [Fact]
+    public async Task ValidateAsync_RequiredEnumParam_PromptReferencesAllowedValue_NotBlocking()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), RequiredEnumParamContent());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            // The required 'resource' param is a closed enum of resource TYPES. The example prompt
+            // references the allowed value 'storage_storageaccounts' by its display name ("Storage
+            // Account") without ever using the word "resource". Enum-aware coverage must treat this
+            // as covered so the tool is NOT flagged as missing a required parameter.
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning =>
+                warning.Contains("missing 'resource'", StringComparison.OrdinalIgnoreCase)
+                && warning.Contains("example prompt", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static string RequiredEnumParamContent()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## Apply recommendation
+        <!-- @mcpcli compute list -->
+        Example prompts include:
+        - Apply the recommended configuration for my Storage Account
+        | Parameter | Required | Description |
+        | --- | --- | --- |
+        | resource | Yes | The resource type. Available options: 'aad_domainservices', 'storage_storageaccounts', 'sql_servers'. |
+
+        ## Related content
+        - Link
+        """;
+
     private static string DescriptivePlaceholderContent()
         => """
         ---

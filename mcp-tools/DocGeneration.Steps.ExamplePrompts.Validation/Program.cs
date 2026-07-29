@@ -216,7 +216,27 @@ internal static class Program
                 .Select(name => name.TrimStart('-').Trim()) // Strip CLI switch prefix (--name → name)
                 .ToList();
 
-            var result = codeValidator.ValidatePrompts(prompts, requiredParamNames);
+            var descriptionsByParameter = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var o in requiredParams)
+            {
+                if (!o.TryGetProperty("name", out var nameElem))
+                    continue;
+                var pName = nameElem.GetString();
+                if (string.IsNullOrWhiteSpace(pName))
+                    continue;
+                pName = pName.TrimStart('-').Trim();
+
+                if (o.TryGetProperty("description", out var descElem) && descElem.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    var desc = descElem.GetString();
+                    if (!string.IsNullOrWhiteSpace(desc))
+                    {
+                        descriptionsByParameter[pName] = desc;
+                    }
+                }
+            }
+
+            var result = codeValidator.ValidatePrompts(prompts, requiredParamNames, descriptionsByParameter);
             validated++;
 
             var reportBuilder = new StringBuilder()

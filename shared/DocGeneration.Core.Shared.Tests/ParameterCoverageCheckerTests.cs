@@ -418,4 +418,145 @@ public class ParameterCoverageCheckerTests
         var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "account", 1);
         Assert.False(result.Covered, "Prompt with only domain term 'store' but no 'account' word should not be covered");
     }
+
+    // ── Enum-aware coverage (closed "Available options" value sets) ──
+    // Some required parameters take a value from a closed enum whose display name (e.g.
+    // "Resource name") differs from the option values (e.g. 'storage_storageaccounts').
+    // Authoritative prompts reference a concrete option ("Storage Account") rather than
+    // the parameter name, which the name-based checker cannot see. Enum matching resolves
+    // this false positive additively and must not weaken non-enum behavior.
+
+    // ── ParseAllowedValues ──────────────────────────────────────────
+
+    [Fact]
+    public void ParseAllowedValues_AvailableOptions_ExtractsQuotedValues()
+    {
+        const string description =
+            "The Azure resource type for which to get rules. Available options: 'keyvault_vaults', "
+            + "'storage_storageaccounts', 'web_serverfarms'.";
+        var values = ParameterCoverageChecker.ParseAllowedValues(description);
+
+        Assert.Equal(new[] { "keyvault_vaults", "storage_storageaccounts", "web_serverfarms" }, values);
+    }
+
+    [Fact]
+    public void ParseAllowedValues_AllowedValuesTrigger_ExtractsQuotedValues()
+    {
+        // Different Azure service (Cosmos DB) + different trigger phrase.
+        const string description =
+            "The consistency level to apply. Allowed values: 'Strong', 'BoundedStaleness', 'Session'.";
+        var values = ParameterCoverageChecker.ParseAllowedValues(description);
+
+        Assert.Equal(new[] { "Strong", "BoundedStaleness", "Session" }, values);
+    }
+
+    [Fact]
+    public void ParseAllowedValues_ExampleOnlyPhrasing_ReturnsEmpty()
+    {
+        // "e.g." is an open-ended example, NOT a closed enum — must not be parsed as allowed values.
+        const string description =
+            "Filter recommendations by impacted Azure resource type (e.g., 'Microsoft.Storage/storageAccounts').";
+        var values = ParameterCoverageChecker.ParseAllowedValues(description);
+
+        Assert.Empty(values);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("A free-text parameter with no enumerated options.")]
+    public void ParseAllowedValues_NoClosedEnum_ReturnsEmpty(string? description)
+    {
+        Assert.Empty(ParameterCoverageChecker.ParseAllowedValues(description));
+    }
+
+    // ── Enum coverage (positive) ────────────────────────────────────
+
+    [Fact]
+    public void EnumParam_PromptReferencesAllowedValue_ReturnsCovered()
+    {
+        // Advisor "recommendation apply": required param display name "Resource name",
+        // enum option 'storage_storageaccounts'. Authoritative prompt says "Storage Account".
+        var prompts = new[] { "Apply Advisor recommendations to a Terraform file for Storage Account" };
+        const string description =
+            "The Azure resource type for which to get rules to apply to IaaC file. Available options: "
+            + "'aad_domainservices', 'keyvault_vaults', 'storage_storageaccounts', 'web_serverfarms', 'web_staticsites'.";
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "Resource name", 1, description);
+
+        Assert.True(result.Covered,
+            "Prompt referencing enum option 'Storage Account' should cover the enum-constrained 'Resource name' parameter");
+    }
+
+    [Fact]
+    public void EnumParam_MultiSegmentResourceType_MatchesResourceTypeToken()
+    {
+        // AKS-style option 'containerservice_managedclusters'; prompt names the resource type only.
+        var prompts = new[] { "Apply recommendations for a managed cluster to my Bicep file" };
+        const string description =
+            "The resource type to target. Available options: 'containerservice_managedclusters', 'compute_virtualmachines'.";
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "Resource name", 1, description);
+
+        Assert.True(result.Covered,
+            "Prompt naming the resource type 'managed cluster' should match option 'containerservice_managedclusters'");
+    }
+
+    [Fact]
+    public void EnumParam_SingleWordEnumValue_MatchesWholeValue()
+    {
+        // Cosmos DB consistency level: single-token enum value.
+        var prompts = new[] { "Create a Cosmos DB account with consistency BoundedStaleness" };
+        const string description =
+            "The default consistency level. Allowed values: 'Strong', 'BoundedStaleness', 'Session', 'Eventual'.";
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "consistency-level", 1, description);
+
+        Assert.True(result.Covered,
+            "Prompt referencing enum value 'BoundedStaleness' should cover the parameter");
+    }
+
+    // ── Enum coverage (negative — must not blanket-pass) ────────────
+
+    [Fact]
+    public void EnumParam_PromptMissingAllowedValue_ReturnsFalse()
+    {
+        // Same enum param, but the prompt names no concrete option (generic ARM template).
+        var prompts = new[] { "Apply Advisor recommendations to this ARM template" };
+        const string description =
+            "The Azure resource type for which to get rules to apply to IaaC file. Available options: "
+            + "'aad_domainservices', 'keyvault_vaults', 'storage_storageaccounts', 'web_serverfarms', 'web_staticsites'.";
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "Resource name", 1, description);
+
+        Assert.False(result.Covered,
+            "Enum matching must not blanket-cover: a prompt naming no allowed option stays uncovered");
+    }
+
+    [Fact]
+    public void EnumParam_NullDescription_BehavesLikeNonEnum()
+    {
+        // Without a description, an enum-style param with no name/value match stays uncovered
+        // (proves enum matching is opt-in via description and introduces no false positives).
+        var prompts = new[] { "Apply Advisor recommendations to a Terraform file for Storage Account" };
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "Resource name", 1, parameterDescription: null);
+
+        Assert.False(result.Covered,
+            "With no allowed-value description, coverage must fall back to name-based matching only");
+    }
+
+    [Fact]
+    public void EnumDescription_DoesNotAffectAlreadyCoveredParameter()
+    {
+        // Additive guarantee: a parameter already covered by the name+value path stays covered
+        // and is unaffected by enum parsing.
+        var prompts = new[] { "Deploy to resource group named 'my-rg' for Storage Account" };
+        const string description = "Available options: 'storage_storageaccounts', 'web_serverfarms'.";
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "resource-group", 2, description);
+
+        Assert.True(result.Covered);
+    }
 }
