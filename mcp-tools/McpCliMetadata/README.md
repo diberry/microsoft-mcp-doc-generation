@@ -27,6 +27,13 @@ The `azmcp` binary must be available on `PATH` as a prerequisite.
 - **`IProcessRunner`** — abstraction over `Process.Start` (enables unit testing with fakes)
 - **`Program.cs`** — entry point; accepts output directory as argument
 
+> **Single entry point.** This project is an `Exe` and `Program.cs` is its only
+> entry point. Do **not** add scratch or experimental `.cs` files that use
+> top-level statements here — a second set of top-level statements creates a
+> second entry point and fails the Release build with `CS8802`. Local scratch
+> helpers named `GenerateMapping.cs` or `scratch-*.cs` are git-ignored for this
+> reason; keep any throwaway experiments to those names (or a separate project).
+
 ## Testing
 
 ```bash
