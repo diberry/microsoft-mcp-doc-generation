@@ -56,6 +56,48 @@ public class AcrolinxPostProcessorTests
         result.Should().Contain("role-based access control (RBAC)");
     }
 
+    // === Punctuation artifact normalization (e.g. LLM output "code,. Provides") ===
+
+    [Fact]
+    public void Process_CollapsesCommaPeriodArtifact()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var result = processor.Process("It scaffolds infrastructure-as-code,. Provides validation.");
+
+        result.Should().NotContain(",.");
+        result.Should().Contain("infrastructure-as-code. Provides validation.");
+    }
+
+    [Fact]
+    public void Process_CollapsesCommaSpacePeriodArtifact()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var result = processor.Process("It checks dependencies, . Local services are ready.");
+
+        result.Should().NotContain(",.");
+        result.Should().NotContain(", .");
+        result.Should().Contain("dependencies. Local services are ready.");
+    }
+
+    [Fact]
+    public void Process_CollapsesDuplicateCommas()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var result = processor.Process("Supports blobs, , and queues.");
+
+        result.Should().NotContain(",,");
+        result.Should().NotContain(", ,");
+    }
+
+    [Fact]
+    public void Process_PreservesValidPunctuation()
+    {
+        var processor = new AcrolinxPostProcessor(null, null, _logger);
+        var result = processor.Process("Deploy the app. Configure storage, queues, and blobs.");
+
+        result.Should().Contain("storage, queues, and blobs.");
+    }
+
     [Fact]
     public void Process_AppliesContractions()
     {

@@ -375,11 +375,18 @@ public class SkillPageGenerator : ISkillPageGenerator
         // If it already looks like a question, keep it
         if (trimmed.EndsWith('?')) return trimmed;
 
+        // Interrogative fragments ("is my code ready to deploy", "can I ship this")
+        // read as natural questions on their own — frame directly rather than wrapping
+        // in "How do I work with ...?".
+        if (IsInterrogative(trimmed))
+            return $"{char.ToUpper(trimmed[0])}{trimmed[1..]}?";
+
         // If it starts with a verb phrase (e.g., "deploy copilot app"), frame as "How do I..."
         var verbStarters = new[] { "deploy", "create", "configure", "set up", "manage", "build",
             "monitor", "diagnose", "troubleshoot", "migrate", "optimize", "analyze", "query",
             "list", "get", "add", "remove", "update", "delete", "run", "test", "check", "find",
-            "enable", "disable", "connect", "plan", "design", "review", "install", "generate" };
+            "enable", "disable", "connect", "plan", "design", "review", "install", "generate",
+            "bring", "move", "scan", "evaluate", "provision", "estimate", "recommend", "onboard" };
 
         var lower = trimmed.ToLowerInvariant();
         foreach (var verb in verbStarters)
@@ -407,11 +414,12 @@ public class SkillPageGenerator : ISkillPageGenerator
             // Skip items that are too short to be meaningful
             if (trimmed.Length < 4) continue;
 
-            // Skip question-like items (leaked trigger prompts, not use cases)
-            if (trimmed.StartsWith("How ", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith("What ", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith("Or ", StringComparison.OrdinalIgnoreCase) ||
-                trimmed.StartsWith("Show ", StringComparison.OrdinalIgnoreCase))
+            // Skip question-like items (leaked trigger prompts, not use-case scenarios).
+            // Interrogatives ("Is/Does/Can/What/How ...") belong in the Example Prompts
+            // section, not in the "When to use" scenario list.
+            if (trimmed.StartsWith("Or ", StringComparison.OrdinalIgnoreCase) ||
+                trimmed.StartsWith("Show ", StringComparison.OrdinalIgnoreCase) ||
+                IsInterrogative(trimmed))
                 continue;
 
             var wordCount = trimmed.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
@@ -474,6 +482,26 @@ public class SkillPageGenerator : ISkillPageGenerator
 
         result.Add($"Manage and configure {joined} in Azure");
         shortItems.Clear();
+    }
+
+    private static readonly HashSet<string> InterrogativeStarters = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "is", "are", "am", "was", "were", "do", "does", "did", "can", "could",
+        "should", "would", "will", "shall", "may", "might", "must",
+        "has", "have", "had", "what", "what's", "whats", "which", "who",
+        "whom", "whose", "why", "where", "when", "how", "how's"
+    };
+
+    /// <summary>
+    /// Returns true if the phrase begins with an interrogative word, indicating it is a
+    /// user question (belongs in Example Prompts) rather than a use-case scenario.
+    /// Service-agnostic: matches only on the leading word, never on service names.
+    /// </summary>
+    private static bool IsInterrogative(string text)
+    {
+        var firstWord = text.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        firstWord = firstWord.TrimEnd(',', '.', '?', ':', ';');
+        return InterrogativeStarters.Contains(firstWord);
     }
 
     private static bool StartsWithVerb(string text)

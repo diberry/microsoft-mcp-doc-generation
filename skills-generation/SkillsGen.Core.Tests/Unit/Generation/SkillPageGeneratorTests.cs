@@ -143,6 +143,42 @@ public class NaturalizeItemsTests
         var result = SkillPageGenerator.NaturalizeItems(["No", "ok"], "Test");
         result.Should().BeEmpty();
     }
+
+    // === Interrogative items are trigger prompts, not use-case scenarios — dropped from "When to use" ===
+
+    [Theory]
+    [InlineData("Is my app ready to deploy")]
+    [InlineData("Does my app need a Dockerfile")]
+    [InlineData("Can I ship this to Azure")]
+    [InlineData("Do I need a Dockerfile")]
+    [InlineData("What's blocking my deployment")]
+    [InlineData("Are my dependencies compatible")]
+    [InlineData("Should I enable diagnostics")]
+    public void NaturalizeItems_InterrogativeItems_Dropped(string interrogative)
+    {
+        var result = SkillPageGenerator.NaturalizeItems([interrogative], "Test");
+        result.Should().BeEmpty($"'{interrogative}' is an interrogative trigger prompt, not a use-case scenario");
+    }
+
+    [Fact]
+    public void NaturalizeItems_InterrogativeShortFragments_NotWrappedInManageAndConfigure()
+    {
+        // Regression: short interrogative fragments must NOT get the "Manage and configure ... in Azure" wrapper
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["does my app need", "is this app deployable"], "Azure App Onboard");
+        result.Should().NotContain(r => r.Contains("Manage and configure does my app need"));
+        result.Should().NotContain(r => r.Contains("Manage and configure is this app deployable"));
+    }
+
+    [Fact]
+    public void NaturalizeItems_MixedItems_KeepsVerbScenariosDropsInterrogatives()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["Evaluate my repo", "is my app ready to deploy", "Scan my repo for issues"], "Test");
+        result.Should().Contain("Evaluate my repo in Azure");
+        result.Should().Contain("Scan my repo for issues");
+        result.Should().NotContain(r => r.Contains("ready to deploy"));
+    }
 }
 
 // === Issue 4: DoNotUseFor shouldNotTrigger filtering ===
