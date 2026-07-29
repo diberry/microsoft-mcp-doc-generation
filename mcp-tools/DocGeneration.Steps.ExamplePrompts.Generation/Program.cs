@@ -218,6 +218,7 @@ internal static class Program
         var successCount = 0;
         var failureCount = 0;
         var deterministicCount = 0;
+        var verbatimCount = 0;
         var e2eMatchCount = 0;
         var e2eMissCount = 0;
         var e2eLogEntries = new List<string>();
@@ -278,7 +279,16 @@ internal static class Program
             ExamplePromptsResponse? promptsResponse;
             string rawResponse;
 
-            if (DeterministicExamplePromptGenerator.IsEligible(tool, hasE2ePrompts))
+            if (hasE2ePrompts)
+            {
+                // Issue #748: publish source prompts VERBATIM — no AI rewrite, no cap.
+                // Preserves exact text, count (1–19), and order of the source prompts.
+                promptsResponse = VerbatimExamplePromptBuilder.Build(tool, referencePrompts!);
+                userPrompt = VerbatimExamplePromptBuilder.BuildProvenanceNote(referencePrompts!);
+                rawResponse = "{}";
+                verbatimCount++;
+            }
+            else if (DeterministicExamplePromptGenerator.IsEligible(tool, hasE2ePrompts))
             {
                 promptsResponse = DeterministicExamplePromptGenerator.Generate(tool);
                 userPrompt = $"deterministic — no AI call (#163 Tier 2a)\nVerb: {DeterministicExamplePromptGenerator.ClassifyVerb(tool.Command!)}\nResource: {DeterministicExamplePromptGenerator.ExtractResource(tool.Command!)}";
@@ -372,12 +382,14 @@ internal static class Program
             }
 
             await File.WriteAllTextAsync(examplePromptPath, exampleContent, Encoding.UTF8);
-            var modeLabel = DeterministicExamplePromptGenerator.IsEligible(tool, hasE2ePrompts) ? "deterministic" : "AI";
+            var modeLabel = hasE2ePrompts
+                ? "verbatim"
+                : DeterministicExamplePromptGenerator.IsEligible(tool, hasE2ePrompts) ? "deterministic" : "AI";
             Console.WriteLine($"  ✅ {tool.Command,-50} → {examplePromptFileName} ({modeLabel})");
         }
 
         Console.WriteLine($"\n📊 Summary:");
-        Console.WriteLine($"  ✅ Generated: {successCount} ({deterministicCount} deterministic, {successCount - deterministicCount} AI)");
+        Console.WriteLine($"  ✅ Generated: {successCount} ({verbatimCount} verbatim, {deterministicCount} deterministic, {successCount - verbatimCount - deterministicCount} AI)");
         Console.WriteLine($"  ❌ Failed:    {failureCount}");
         if (e2eLookup != null)
         {

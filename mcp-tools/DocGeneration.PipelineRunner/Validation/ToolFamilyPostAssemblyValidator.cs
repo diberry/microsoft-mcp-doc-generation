@@ -714,6 +714,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             .GroupBy(entry => entry.Command, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.First().Section, StringComparer.OrdinalIgnoreCase);
 
+        var naturalLanguageReverseMap = SourceVerificationHelpers.LoadNaturalLanguageReverseMap(context.McpToolsRoot);
+
         foreach (var sourceTool in sourceTools)
         {
             var normalizedCommand = NormalizeToolCommand(sourceTool.Command);
@@ -735,6 +737,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             var documentedParameters = section.ParameterRows
                 .Select(row => SourceVerificationHelpers.NormalizeParameterName(row.ParameterName))
                 .Where(parameter => !string.IsNullOrWhiteSpace(parameter))
+                .Select(parameter => SourceVerificationHelpers.ResolveDocumentedParameterName(parameter, naturalLanguageReverseMap, sourceParameterNames))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var extraParameters = documentedParameters
