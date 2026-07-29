@@ -1,3 +1,20 @@
 {
-  "agents": {}
+  "agents": {
+    "marlowe": {
+      "name": "Marlowe",
+      "role": "Fact-Checker",
+      "reason": "User requested a dedicated fact-checker for the open PR/issue review pass. Verifies every factual claim in PRs and issues against the current codebase and referenced PRs before the team acts on them.",
+      "hired_by": "squad-coordinator",
+      "date": "2026-07-28",
+      "status": "guest"
+    },
+    "blair": {
+      "name": "Blair",
+      "role": "Adversarial Reviewer",
+      "reason": "User requested an adversarial reviewer for the open PR/issue review pass. Red-teams merge decisions and proposed approaches to surface hidden risks, false assumptions, and regressions.",
+      "hired_by": "squad-coordinator",
+      "date": "2026-07-28",
+      "status": "guest"
+    }
+  }
 }

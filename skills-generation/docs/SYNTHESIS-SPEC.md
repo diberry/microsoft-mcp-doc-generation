@@ -116,7 +116,7 @@ This section maps every source section to its destination in the output article 
 
 | Source Section | Output Destination | Classification | Pipeline Step |
 |---|---|---|---|
-| Use cases | `## When to use this skill` (bullets) | ✅ Customer-facing | Deterministic lift |
+| Use cases | `## When to use this skill` (scenario bullets; interrogative UseFor fragments are excluded and reserved for Example prompts) | ✅ Customer-facing | Deterministic lift + interrogative filtering |
 | Negative use cases | `### When not to use this skill` (sub-bullets) | ✅ Customer-facing | Deterministic lift |
 | Azure services | `### Azure services knowledge` (under What it provides) | ✅ Customer-facing | Deterministic lift |
 | MCP tools | **EXCLUDED** (per §4.2) | ❌ Implementation detail | Not rendered |
@@ -479,14 +479,14 @@ This method currently feeds MCP tool purposes and workflow steps into the LLM pr
 | "What it provides" | Must add NEW info beyond description | System prompt rule: no paraphrasing |
 | UseFor items cap | 10 | `SkillPageGenerator.cs:50-51` |
 | DoNotUseFor source | Only `SKILL.md` `DO NOT USE FOR:` | Never from `shouldNotTrigger` test data |
-| Fallback prompts | Generated from UseFor with verb-detection | `SkillPageGenerator.cs:331-367` |
+| Fallback prompts | Generated from UseFor with verb/interrogative detection — interrogative fragments become direct questions; action phrases become "How do I ...?" prompts | `SkillPageGenerator.cs:331-367` |
 | Deployment workflow | Hardcoded for 3 skills only | `SkillPageGenerator.cs:238-277` |
 
 ### 4.7 Example Prompt Priority
 
 1. **Curated prompts** from `skill-example-prompts.json` (highest fidelity)
 2. **Trigger test data** from `triggers.test.ts` `shouldTrigger` entries
-3. **Fallback generation** from `UseFor` items or `DetectionMarkers` — converted to natural-language questions ("How do I {verb phrase}?")
+3. **Fallback generation** from `UseFor` items or `DetectionMarkers` — interrogative fragments that start with words such as `is`, `are`, `do`, `does`, `can`, `what`, `how`, `which`, `should`, or `will` are rendered as direct questions; action-verb phrases are converted to "How do I {verb phrase}?" prompts
 
 > **Reference:** `SkillPageGenerator.cs:67-91`
 

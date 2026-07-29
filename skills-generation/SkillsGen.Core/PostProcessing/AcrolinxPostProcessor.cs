@@ -150,10 +150,33 @@ public partial class AcrolinxPostProcessor
         // Final cleanup: remove consecutive duplicate sentences
         result = RemoveConsecutiveDuplicateSentences(result);
 
+        // Final cleanup: normalize stray punctuation artifacts (e.g. LLM output "code,. Provides")
+        result = NormalizePunctuationArtifacts(result);
+
         // Final cleanup: collapse multiple consecutive blank lines into a single blank line
         result = CollapseBlankLines(result);
 
         return processedFrontmatter + result;
+    }
+
+    /// <summary>
+    /// Collapses stray punctuation artifacts that arise from LLM output or template
+    /// concatenation — e.g. "infrastructure-as-code,. Provides" → "infrastructure-as-code. Provides".
+    /// Service-agnostic and content-independent: "," never validly precedes "." and duplicate
+    /// commas are never valid prose. Backtick spans are protected so code samples are untouched.
+    /// Uses <c>[^\S\n]*</c> (horizontal whitespace only) rather than <c>\s*</c> so the fix never
+    /// reaches across a line break to merge two separate lines/list items.
+    /// </summary>
+    private static string NormalizePunctuationArtifacts(string text)
+    {
+        return ApplyWithBacktickProtection(text, t =>
+        {
+            // Comma immediately before a sentence terminator: "code,. Provides" / "deps, . Local"
+            t = Regex.Replace(t, @",[^\S\n]*\.", ".");
+            // Duplicate commas: "blobs, , and queues" → "blobs, and queues"
+            t = Regex.Replace(t, @",[^\S\n]*,", ",");
+            return t;
+        });
     }
 
     /// <summary>
