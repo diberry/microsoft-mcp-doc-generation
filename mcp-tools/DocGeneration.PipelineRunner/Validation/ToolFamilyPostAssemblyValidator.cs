@@ -516,6 +516,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             var headerCells = ConvertTableLineToCells(sourceTableLines[0]);
             var parameterIndex = -1;
             var requiredIndex = -1;
+            var descriptionIndex = -1;
             for (var index = 0; index < headerCells.Count; index++)
             {
                 var header = ParameterCoverageChecker.RemoveMarkup(headerCells[index]);
@@ -526,6 +527,10 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 if (Regex.IsMatch(header, "(?i)required"))
                 {
                     requiredIndex = index;
+                }
+                if (Regex.IsMatch(header, "(?i)description"))
+                {
+                    descriptionIndex = index;
                 }
             }
 
@@ -550,7 +555,10 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 var parameterName = ParameterCoverageChecker.RemoveMarkup(cells[parameterIndex]);
                 var requiredValue = ParameterCoverageChecker.RemoveMarkup(cells[requiredIndex]);
                 var isRequired = Regex.IsMatch(requiredValue, "(?i)^(yes|✅|required\\*?)$") || Regex.IsMatch(requiredValue, "(?i)^required");
-                targetRows.Add(new ParameterRow(parameterName, requiredValue, isRequired));
+                var description = descriptionIndex >= 0 && descriptionIndex < cells.Count
+                    ? ParameterCoverageChecker.RemoveMarkup(cells[descriptionIndex])
+                    : null;
+                targetRows.Add(new ParameterRow(parameterName, requiredValue, isRequired, description));
             }
         }
 
@@ -805,12 +813,13 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             }
 
             var missingParameters = new List<string>();
-            foreach (var requiredParameter in section.RequiredParameters)
+            var requiredRows = section.ParameterRows.Where(row => row.IsRequired).ToList();
+            foreach (var row in requiredRows)
             {
-                var coverage = ParameterCoverageChecker.GetConcretePromptCoverage(section.ExamplePrompts, requiredParameter, section.RequiredParameters.Count);
+                var coverage = ParameterCoverageChecker.GetConcretePromptCoverage(section.ExamplePrompts, row.ParameterName, section.RequiredParameters.Count, row.Description);
                 if (!coverage.Covered && !coverage.PlaceholderDetected)
                 {
-                    missingParameters.Add(requiredParameter);
+                    missingParameters.Add(row.ParameterName);
                 }
             }
 
@@ -1480,7 +1489,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
 
 
-    private sealed record ParameterRow(string ParameterName, string RequiredValue, bool IsRequired);
+    private sealed record ParameterRow(string ParameterName, string RequiredValue, bool IsRequired, string? Description = null);
 
     private sealed record ArticleSection(
         string Heading,

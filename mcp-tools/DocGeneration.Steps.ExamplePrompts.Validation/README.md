@@ -9,8 +9,9 @@ When generating example prompts for Azure MCP tools, it's important to ensure th
 1. **Validates required parameters** - Checks that each prompt contains all required parameters for the command
 2. **Provides full tool context** - Passes complete tool documentation including description, parameters, and metadata
 3. **Handles natural language variations** - Understands different ways parameters can be expressed in natural language
-4. **Excludes infrastructure parameters** - Automatically filters out subscription, tenant, auth, and retry parameters
-5. **Generates detailed reports** - Provides per-tool validation with specific missing parameter information
+4. **Recognizes required enum parameters by allowed value** - When a required parameter's description enumerates a closed option set (for example `Available options: 'storage_storageaccounts', 'sql_servers', …`), a prompt that names one of those allowed values (for example "…for my Storage Account") counts as covering the parameter, even if the prompt never uses the parameter name. This matching is additive — it can only turn an otherwise-uncovered enum parameter into covered — and is service-agnostic (no hardcoded service names or enum values). See `ParameterCoverageChecker` in `DocGeneration.Core.Shared`.
+5. **Excludes infrastructure parameters** - Automatically filters out subscription, tenant, auth, and retry parameters
+6. **Generates detailed reports** - Provides per-tool validation with specific missing parameter information
 
 ## Folder Structure
 

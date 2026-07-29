@@ -12,6 +12,18 @@ namespace Shared;
 public static class ParameterCoverageChecker
 {
     public static PromptCoverage GetConcretePromptCoverage(IReadOnlyList<string> examplePrompts, string parameterName, int totalRequiredParameters)
+        => GetConcretePromptCoverage(examplePrompts, parameterName, totalRequiredParameters, parameterDescription: null);
+
+    /// <summary>
+    /// Checks whether the example prompts contain a concrete (non-placeholder) value for the
+    /// required parameter. When <paramref name="parameterDescription"/> declares a closed set of
+    /// allowed values (for example "Available options: 'storage_storageaccounts', ...") this method
+    /// additionally treats the parameter as covered when a prompt references one of those allowed
+    /// values by name (for example a prompt mentioning "Storage Account"). Enum matching is purely
+    /// additive: it can only turn an otherwise-uncovered enum parameter into covered, never the
+    /// reverse, and only affects parameters whose description enumerates a closed option set.
+    /// </summary>
+    public static PromptCoverage GetConcretePromptCoverage(IReadOnlyList<string> examplePrompts, string parameterName, int totalRequiredParameters, string? parameterDescription)
     {
         var slug = ConvertToSlug(parameterName);
         var words = slug.Split('-', StringSplitOptions.RemoveEmptyEntries);
@@ -238,7 +250,159 @@ public static class ParameterCoverageChecker
             }
         }
 
+        // Enum-aware coverage (additive only): if the parameter description enumerates a closed set
+        // of allowed values and none of the name-based checks matched, treat the parameter as covered
+        // when any prompt references one of the allowed values. This resolves false positives where an
+        // authoritative prompt names a concrete option (e.g. "Storage Account") rather than repeating
+        // the parameter name. It can only flip covered from false to true, so it never masks a genuine
+        // miss on a non-enum parameter.
+        if (!covered)
+        {
+            var allowedValues = ParseAllowedValues(parameterDescription);
+            if (allowedValues.Count > 0)
+            {
+                foreach (var examplePrompt in examplePrompts)
+                {
+                    if (string.IsNullOrWhiteSpace(examplePrompt))
+                    {
+                        continue;
+                    }
+
+                    var promptTokenNGrams = BuildPromptTokenNGrams(examplePrompt);
+                    if (PromptReferencesAllowedValue(promptTokenNGrams, allowedValues))
+                    {
+                        covered = true;
+                        break;
+                    }
+                }
+            }
+        }
+
         return new PromptCoverage(covered, placeholderDetected);
+    }
+
+    /// <summary>
+    /// Parses a closed set of allowed values from a parameter description. Only explicit closed-enum
+    /// trigger phrases ("Available options:", "Allowed values:", "Valid values:", "Must be one of:",
+    /// "One of:") are recognized; open-ended example phrasing ("e.g.", "for example", "such as",
+    /// "typical values") is intentionally ignored so free-text parameters are not treated as enums.
+    /// Returns the quoted values that follow the trigger phrase.
+    /// </summary>
+    public static IReadOnlyList<string> ParseAllowedValues(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return Array.Empty<string>();
+        }
+
+        var clean = RemoveMarkup(description);
+        var trigger = Regex.Match(
+            clean,
+            "(?i)\\b(available options|allowed values|valid values|must be one of|one of the following|one of)\\s*:?\\s*");
+        if (!trigger.Success)
+        {
+            return Array.Empty<string>();
+        }
+
+        var tail = clean[(trigger.Index + trigger.Length)..];
+        var values = new List<string>();
+        foreach (Match match in Regex.Matches(tail, "'([^']+)'|\"([^\"]+)\""))
+        {
+            var value = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value;
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                values.Add(value.Trim());
+            }
+        }
+
+        return values;
+    }
+
+    /// <summary>
+    /// Builds the set of concatenated adjacent-token n-grams (1..maxN words) for a prompt, each
+    /// reduced to lowercase alphanumerics. Enum matching compares candidates against these n-grams by
+    /// equality, which enforces word boundaries: a multi-word display value ("Storage Account" →
+    /// "storageaccount") still matches, but a generic segment ("server") can no longer match inside an
+    /// unrelated word ("observer") the way a raw substring scan of the fully collapsed prompt would.
+    /// </summary>
+    private static HashSet<string> BuildPromptTokenNGrams(string prompt, int maxN = 4)
+    {
+        var tokens = Regex.Split(prompt.ToLowerInvariant(), "[^a-z0-9]+")
+            .Where(token => token.Length > 0)
+            .ToArray();
+        var nGrams = new HashSet<string>(StringComparer.Ordinal);
+        for (var i = 0; i < tokens.Length; i++)
+        {
+            var accumulated = string.Empty;
+            for (var n = 0; n < maxN && i + n < tokens.Length; n++)
+            {
+                accumulated += tokens[i + n];
+                nGrams.Add(accumulated);
+            }
+        }
+
+        return nGrams;
+    }
+
+    private static bool PromptReferencesAllowedValue(IReadOnlyCollection<string> promptTokenNGrams, IReadOnlyList<string> allowedValues)
+    {
+        foreach (var value in allowedValues)
+        {
+            foreach (var candidate in GetEnumMatchCandidates(value))
+            {
+                if (candidate.Length >= 5 && promptTokenNGrams.Contains(candidate))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Produces match candidates for an allowed enum value. Azure resource-type options follow a
+    /// "provider_resourcetype" convention (e.g. "storage_storageaccounts"), so both the whole collapsed
+    /// value and the final segment (the resource type) are yielded, each with a de-pluralized form.
+    /// Generic leading provider segments (e.g. "storage", "web") are intentionally excluded to limit
+    /// incidental matches. Candidates shorter than five characters are dropped by the caller. Candidates
+    /// are matched against prompt token n-grams by equality (see <see cref="BuildPromptTokenNGrams"/>),
+    /// so they align to word boundaries rather than matching as raw substrings.
+    /// </summary>
+    private static IEnumerable<string> GetEnumMatchCandidates(string value)
+    {
+        var lower = value.ToLowerInvariant();
+        var segments = Regex.Split(lower, "[^a-z0-9]+")
+            .Where(segment => segment.Length > 0)
+            .ToArray();
+        if (segments.Length == 0)
+        {
+            yield break;
+        }
+
+        var whole = string.Concat(segments);
+        foreach (var candidate in Depluralize(whole))
+        {
+            yield return candidate;
+        }
+
+        var last = segments[^1];
+        if (!string.Equals(last, whole, StringComparison.Ordinal))
+        {
+            foreach (var candidate in Depluralize(last))
+            {
+                yield return candidate;
+            }
+        }
+    }
+
+    private static IEnumerable<string> Depluralize(string word)
+    {
+        yield return word;
+        if (word.Length > 5 && word.EndsWith('s'))
+        {
+            yield return word[..^1];
+        }
     }
 
     public static string ConvertToSlug(string text)

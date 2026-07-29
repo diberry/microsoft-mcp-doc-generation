@@ -6,7 +6,8 @@ public sealed class CodeBasedPromptValidator
 {
     public CodeBasedPromptValidationResult ValidatePrompts(
         IReadOnlyList<string> prompts,
-        IReadOnlyList<string> requiredParameterNames)
+        IReadOnlyList<string> requiredParameterNames,
+        IReadOnlyDictionary<string, string>? descriptionsByParameter = null)
     {
         if (requiredParameterNames.Count == 0)
         {
@@ -22,8 +23,11 @@ public sealed class CodeBasedPromptValidator
 
         foreach (var parameterName in requiredParameterNames)
         {
+            string? description = null;
+            descriptionsByParameter?.TryGetValue(parameterName, out description);
+
             var coverage = ParameterCoverageChecker.GetConcretePromptCoverage(
-                prompts, parameterName, requiredParameterNames.Count);
+                prompts, parameterName, requiredParameterNames.Count, description);
 
             var effectivelyCovered = coverage.Covered || coverage.PlaceholderDetected;
             if (!effectivelyCovered)
