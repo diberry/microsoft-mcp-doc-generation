@@ -22,6 +22,57 @@ internal static class SourceVerificationHelpers
         return normalized.Trim('-');
     }
 
+    public static IReadOnlyDictionary<string, string> LoadNaturalLanguageReverseMap(string? mcpToolsRoot)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(mcpToolsRoot))
+        {
+            return map;
+        }
+
+        var path = Path.Combine(mcpToolsRoot, "data", "nl-parameter-identifiers.json");
+        if (!File.Exists(path))
+        {
+            return map;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                return map;
+            }
+
+            foreach (var entry in document.RootElement.EnumerateArray())
+            {
+                if (!entry.TryGetProperty("Parameter", out var parameterProperty)
+                    || !entry.TryGetProperty("NaturalLanguage", out var naturalLanguageProperty))
+                {
+                    continue;
+                }
+
+                var cliName = NormalizeParameterName(parameterProperty.GetString() ?? string.Empty);
+                var displaySlug = NormalizeParameterName(naturalLanguageProperty.GetString() ?? string.Empty);
+                if (string.IsNullOrWhiteSpace(cliName) || string.IsNullOrWhiteSpace(displaySlug))
+                {
+                    continue;
+                }
+
+                map[displaySlug] = cliName;
+            }
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return map;
+    }
+
+    public static string ResolveDocumentedParameterName(string normalizedName, IReadOnlyDictionary<string, string> reverseMap)
+        => reverseMap.TryGetValue(normalizedName, out var cliName) ? cliName : normalizedName;
+
     public static IReadOnlyList<SourceParameter> GetSourceParameters(JsonElement options)
     {
         var parameters = new List<SourceParameter>();

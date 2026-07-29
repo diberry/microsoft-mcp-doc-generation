@@ -47,7 +47,7 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
     }
 
     [Fact]
-    public async Task ValidateAsync_Fails_WhenDocumentedParameterIsNotInSourceJson()
+    public async Task ValidateAsync_Passes_WhenDocumentedParameterIsNaturalLanguageRename()
     {
         var context = CreateContext(
             sourceTools:
@@ -63,9 +63,49 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
 
         var result = await ValidateAsync(context);
 
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Fails_WhenDocumentedParameterIsGenuinelyNotInSourceJson()
+    {
+        var context = CreateContext(
+            sourceTools:
+            [
+                SourceTool("monitor metrics query", "--resource")
+            ],
+            articleTools:
+            [
+                ("Query metrics", "monitor metrics query", ["region"]),
+            ],
+            frontmatterVersion: "3.0.0-beta.14",
+            namespaceName: "monitor");
+
+        var result = await ValidateAsync(context);
+
         Assert.False(result.Success);
         Assert.Contains(result.Warnings, warning => warning.Contains("parameter(s) documented but not present in source CLI JSON", StringComparison.Ordinal));
-        Assert.Contains(result.Warnings, warning => warning.Contains("resource-name", StringComparison.Ordinal));
+        Assert.Contains(result.Warnings, warning => warning.Contains("region", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_Passes_WhenRequiredSourceParameterDocumentedAsNaturalLanguageRename()
+    {
+        var context = CreateContext(
+            sourceTools:
+            [
+                RequiredSourceTool("cosmos account show", "--account")
+            ],
+            articleTools:
+            [
+                ("Show account", "cosmos account show", ["account-name"]),
+            ],
+            frontmatterVersion: "3.0.0-beta.14",
+            namespaceName: "cosmos");
+
+        var result = await ValidateAsync(context);
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
     }
 
     [Fact]
@@ -238,6 +278,22 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
         Directory.CreateDirectory(Path.Combine(outputPath, "tool-family"));
         File.WriteAllText(Path.Combine(_root, "mcp-tool-version.txt"), "3.0.0-beta.14");
 
+        var dataDirectory = Path.Combine(_root, "mcp-tools", "data");
+        Directory.CreateDirectory(dataDirectory);
+        File.WriteAllText(
+            Path.Combine(dataDirectory, "nl-parameter-identifiers.json"),
+            """
+            [
+              { "Parameter": "account", "NaturalLanguage": "Account name" },
+              { "Parameter": "database", "NaturalLanguage": "Database name" },
+              { "Parameter": "index", "NaturalLanguage": "Index name" },
+              { "Parameter": "resource", "NaturalLanguage": "Resource name" },
+              { "Parameter": "service", "NaturalLanguage": "Service name" },
+              { "Parameter": "vault", "NaturalLanguage": "Vault name" },
+              { "Parameter": "workspace", "NaturalLanguage": "Workspace name" }
+            ]
+            """);
+
         var cliTools = sourceTools
             .Select(tool => new CliTool(
                 tool.GetProperty("command").GetString()!,
@@ -306,6 +362,15 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
         var options = string.Join(
             ",",
             parameters.Select(parameter => $$"""{"name":"{{parameter}}","description":"Test parameter","type":"string"}"""));
+        using var document = JsonDocument.Parse($$"""{"name":"{{command.Split(' ').Last()}}","description":"Test tool","command":"{{command}}","option":[{{options}}]}""");
+        return document.RootElement.Clone();
+    }
+
+    private static JsonElement RequiredSourceTool(string command, params string[] parameters)
+    {
+        var options = string.Join(
+            ",",
+            parameters.Select(parameter => $$"""{"name":"{{parameter}}","description":"Test parameter","type":"string","required":true}"""));
         using var document = JsonDocument.Parse($$"""{"name":"{{command.Split(' ').Last()}}","description":"Test tool","command":"{{command}}","option":[{{options}}]}""");
         return document.RootElement.Clone();
     }
