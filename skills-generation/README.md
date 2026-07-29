@@ -27,8 +27,8 @@ SkillPipelineOrchestrator
   ├── Parse      → SkillMarkdownParser + TriggerTestParser
   ├── Assess     → TierAssessor (Tier 1 / Tier 2 scoring)
   ├── Rewrite    → AzureOpenAiRewriter (LLM intro polish)
-  ├── Generate   → SkillPageGenerator (Handlebars template)
-  ├── Post-proc  → AcrolinxPostProcessor (contractions, URLs, acronyms)
+  ├── Generate   → SkillPageGenerator (Handlebars template; interrogative UseFor items → direct questions, dropped from "When to use")
+  ├── Post-proc  → AcrolinxPostProcessor (contractions, URLs, acronyms, stray-punctuation cleanup)
   └── Validate   → SkillPageValidator (sections, frontmatter, word count)
 ```
 

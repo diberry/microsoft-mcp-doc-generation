@@ -298,7 +298,7 @@ public static class DocumentationGenerator
                 // All downstream generators inherit this order.
                 if (tool.Option != null)
                 {
-                    tool.Option = ParameterSorting.SortByRequiredThenName(tool.Option).ToList();
+                    tool.Option = Generators.ParameterSorting.SortByRequiredThenName(tool.Option).ToList();
                 }
 
                 var conditionalRequirement = ExtractConditionalRequirement(tool.Description ?? "");
