@@ -8,6 +8,8 @@
     { "name": "azure-messaging", "displayName": "Azure Messaging", "category": "Data and Storage" },
     { "name": "azure-storage", "displayName": "Azure Storage", "category": "Data and Storage" },
     { "name": "azure-deploy", "displayName": "Azure Deploy", "category": "Development Lifecycle" },
+    { "name": "azure-app-onboard", "displayName": "Azure App Onboard", "category": "Development Lifecycle" },
+    { "name": "azure-app-onboard-prereq", "displayName": "Azure App Onboard Prereq", "category": "Development Lifecycle" },
     { "name": "azure-prepare", "displayName": "Azure Prepare", "category": "Development Lifecycle" },
     { "name": "azure-upgrade", "displayName": "Azure Upgrade", "category": "Development Lifecycle", "skillVersion": "1.0.0" },
     { "name": "azure-validate", "displayName": "Azure Validate", "category": "Development Lifecycle" },
