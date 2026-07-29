@@ -59,5 +59,51 @@ public class ParameterSortingTests
         Assert.Empty(sorted);
     }
 
+    [Fact]
+    public void SortByRequiredThenName_Generic_PreservesSourceOrderWhenAllRequired_Bug743()
+    {
+        var parameters = new[]
+        {
+            new ParameterFixture("storage account required", true),
+            new ParameterFixture("key vault secret required", true),
+            new ParameterFixture("cosmos database required", true),
+            new ParameterFixture("monitor alert required", true)
+        };
+
+        var sorted = ParameterSorting.SortByRequiredThenName(parameters, p => p.IsRequired).ToList();
+
+        Assert.Equal(
+            [
+                "storage account required",
+                "key vault secret required",
+                "cosmos database required",
+                "monitor alert required"
+            ],
+            sorted.Select(p => p.Name));
+    }
+
+    [Fact]
+    public void SortByRequiredThenName_Generic_PreservesSourceOrderWhenAllOptional_Bug743()
+    {
+        var parameters = new[]
+        {
+            new ParameterFixture("monitor optional first", false),
+            new ParameterFixture("cosmos optional second", false),
+            new ParameterFixture("key vault optional third", false),
+            new ParameterFixture("storage optional fourth", false)
+        };
+
+        var sorted = ParameterSorting.SortByRequiredThenName(parameters, p => p.IsRequired).ToList();
+
+        Assert.Equal(
+            [
+                "monitor optional first",
+                "cosmos optional second",
+                "key vault optional third",
+                "storage optional fourth"
+            ],
+            sorted.Select(p => p.Name));
+    }
+
     private sealed record ParameterFixture(string Name, bool IsRequired);
 }

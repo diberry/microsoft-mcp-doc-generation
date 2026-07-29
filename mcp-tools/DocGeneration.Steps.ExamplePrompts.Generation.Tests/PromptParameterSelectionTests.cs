@@ -176,20 +176,6 @@ public class PromptParameterSelectionTests
     }
 
     [Fact]
-    public void GetPromptParameters_UsesSharedParameterSortingHelper_Bug743()
-    {
-        var sourcePath = FindRepositoryFile(
-            "mcp-tools",
-            "DocGeneration.Steps.ExamplePrompts.Generation",
-            "Generators",
-            "ExamplePromptGenerator.cs");
-        var source = File.ReadAllText(sourcePath);
-
-        Assert.Contains("ParameterSorting.SortByRequiredThenName", source);
-        Assert.DoesNotContain(".OrderByDescending(p => p.IsRequired)", source);
-    }
-
-    [Fact]
     public void BuildParametersSection_PreservesManifestRequirementText()
     {
         var parameters = new List<(string Name, string RequirementText, string Description, bool IsRequired)>
@@ -202,22 +188,5 @@ public class PromptParameterSelectionTests
 
         Assert.Contains("- Vault name (Required*): Provide vault name.", section);
         Assert.Contains("- Secret name (Optional*): Provide secret name.", section);
-    }
-
-    private static string FindRepositoryFile(params string[] relativePathParts)
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null)
-        {
-            var candidate = Path.Combine([directory.FullName, .. relativePathParts]);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new FileNotFoundException($"Could not find repository file '{Path.Combine(relativePathParts)}'.");
     }
 }
