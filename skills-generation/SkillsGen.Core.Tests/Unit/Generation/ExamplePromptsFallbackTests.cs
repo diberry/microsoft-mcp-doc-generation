@@ -75,4 +75,39 @@ public class ExamplePromptsFallbackTests
         var result = SkillPageGenerator.ConvertToPrompt("What is the cost?", "Test");
         result.Should().Be("What is the cost?");
     }
+
+    // === Interrogative fragments framed as direct questions (not "How do I work with ...?") ===
+
+    [Theory]
+    [InlineData("is my code ready to deploy", "Is my code ready to deploy?")]
+    [InlineData("can I ship this to Azure", "Can I ship this to Azure?")]
+    [InlineData("does my app need a Dockerfile", "Does my app need a Dockerfile?")]
+    [InlineData("what Azure services do I need", "What Azure services do I need?")]
+    [InlineData("do I need a Dockerfile", "Do I need a Dockerfile?")]
+    [InlineData("are my dependencies compatible", "Are my dependencies compatible?")]
+    [InlineData("should I use a managed identity", "Should I use a managed identity?")]
+    public void ConvertToPrompt_InterrogativePhrase_FramedAsDirectQuestion(string input, string expected)
+    {
+        var result = SkillPageGenerator.ConvertToPrompt(input, "Test");
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void ConvertToPrompt_InterrogativePhrase_NotWrappedInHowDoIWorkWith()
+    {
+        var result = SkillPageGenerator.ConvertToPrompt("is my code ready to deploy", "Test");
+        result.Should().NotContain("How do I work with");
+    }
+
+    // === Common action verbs framed as "How do I ...?" (not "How do I work with ...?") ===
+
+    [Theory]
+    [InlineData("bring your app to Azure", "How do I bring your app to Azure?")]
+    [InlineData("scan my repo for issues", "How do I scan my repo for issues?")]
+    [InlineData("evaluate my project for readiness", "How do I evaluate my project for readiness?")]
+    public void ConvertToPrompt_ActionVerb_FramedAsHowDoI(string input, string expected)
+    {
+        var result = SkillPageGenerator.ConvertToPrompt(input, "Test");
+        result.Should().Be(expected);
+    }
 }

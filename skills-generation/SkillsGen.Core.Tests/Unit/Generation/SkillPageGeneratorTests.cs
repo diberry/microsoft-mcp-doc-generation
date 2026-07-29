@@ -143,6 +143,44 @@ public class NaturalizeItemsTests
         var result = SkillPageGenerator.NaturalizeItems(["No", "ok"], "Test");
         result.Should().BeEmpty();
     }
+
+    // === Interrogative items are trigger prompts, not use-case scenarios — dropped from "When to use" ===
+
+    [Theory]
+    [InlineData("Is my app ready to deploy")]
+    [InlineData("Does my app need a Dockerfile")]
+    [InlineData("Can I ship this to Azure")]
+    [InlineData("Do I need a Dockerfile")]
+    [InlineData("What's blocking my deployment")]
+    [InlineData("Are my dependencies compatible")]
+    [InlineData("Should I enable diagnostics")]
+    [InlineData("How do I deploy my app to Azure")]
+    [InlineData("Which region should I choose")]
+    public void NaturalizeItems_InterrogativeItems_Dropped(string interrogative)
+    {
+        var result = SkillPageGenerator.NaturalizeItems([interrogative], "Test");
+        result.Should().BeEmpty($"'{interrogative}' is an interrogative trigger prompt, not a use-case scenario");
+    }
+
+    [Fact]
+    public void NaturalizeItems_InterrogativeShortFragments_NotWrappedInManageAndConfigure()
+    {
+        // Regression: short interrogative fragments must NOT get the "Manage and configure ... in Azure" wrapper
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["does my app need", "is this app deployable"], "Azure App Onboard");
+        result.Should().NotContain(r => r.Contains("Manage and configure does my app need"));
+        result.Should().NotContain(r => r.Contains("Manage and configure is this app deployable"));
+    }
+
+    [Fact]
+    public void NaturalizeItems_MixedItems_KeepsVerbScenariosDropsInterrogatives()
+    {
+        var result = SkillPageGenerator.NaturalizeItems(
+            ["Evaluate my repo", "is my app ready to deploy", "Scan my repo for issues"], "Test");
+        result.Should().Contain("Evaluate my repo in Azure");
+        result.Should().Contain("Scan my repo for issues");
+        result.Should().NotContain(r => r.Contains("ready to deploy"));
+    }
 }
 
 // === Issue 4: DoNotUseFor shouldNotTrigger filtering ===
@@ -1180,6 +1218,50 @@ public class BuildContextWhatItProvidesTests
         context.Should().NotBeNull();
         var mechanical = SkillPageGenerator.BuildWhatItProvides(skillData);
         context!["whatItProvides"].Should().Be(mechanical);
+    }
+}
+
+public class BuildContextWhenToUseInterrogativeFallbackTests
+{
+    [Fact]
+    public void BuildContext_EmptyUseForWithAllInterrogativeTriggers_StillProducesWhenToUseBullets()
+    {
+        // Regression (Riley P1): when UseFor is empty, BuildContext falls back to ShouldTrigger.
+        // If every trigger is an interrogative prompt, NaturalizeItems drops them all, which would
+        // leave "When to use" with ZERO bullets — violating the >=1-bullet content contract.
+        // The empty-guard must re-run with a declarative fallback so useFor is never empty.
+        var skillData = new SkillData
+        {
+            Name = "azure-cosmos-db",
+            DisplayName = "Azure Cosmos DB",
+            Description = "Work with Cosmos DB.",
+            UseFor = [], // empty — forces fallback to ShouldTrigger
+            Services = [new ServiceEntry("Cosmos DB", "Globally distributed database")],
+            McpTools = [new McpToolEntry("cosmos_query", "cosmos query", "Query a Cosmos DB container")]
+        };
+        var allInterrogativeTriggers = new List<string>
+        {
+            "How do I connect to my Cosmos DB account",
+            "Which consistency level should I pick",
+            "Is my container partitioned correctly",
+            "Do I need to provision throughput"
+        };
+        var triggers = new TriggerData(allInterrogativeTriggers, [], null);
+        var tier = new TierAssessment(1, [], "Test", false, false, false, false, false);
+        var prereqs = new SkillPrerequisites();
+
+        var context = SkillPageGenerator.BuildContext(
+            skillData, triggers, tier, prereqs,
+            triggerProcessor: null, curatedData: null, logger: null,
+            translatedWorkflowSteps: null, whatItProvides: null)
+            as IDictionary<string, object?>;
+
+        context.Should().NotBeNull();
+        var useFor = context!["useFor"] as List<string>;
+        useFor.Should().NotBeNullOrEmpty("the empty-guard must supply a declarative fallback bullet");
+        ((bool)context["hasUseFor"]!).Should().BeTrue();
+        useFor!.Should().NotContain(b => b.TrimEnd().EndsWith("?"),
+            "fallback bullets must be declarative, never interrogative");
     }
 }
 
