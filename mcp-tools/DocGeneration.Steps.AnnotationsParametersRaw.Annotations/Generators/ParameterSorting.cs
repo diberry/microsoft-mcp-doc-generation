@@ -20,7 +20,7 @@ public static class ParameterSorting
     public static IOrderedEnumerable<Option> SortByRequiredThenName(
         IEnumerable<Option> parameters)
     {
-        return Shared.ParameterSorting.SortByRequiredThenName(parameters, p => p.Required);
+        return Shared.ParameterSorting.SortRequiredFirstStable(parameters, p => p.Required);
     }
 
     /// <summary>
@@ -32,6 +32,6 @@ public static class ParameterSorting
     public static IOrderedEnumerable<Shared.CliSwitch> SortByRequiredThenName(
         IEnumerable<Shared.CliSwitch> switches)
     {
-        return Shared.ParameterSorting.SortByRequiredThenName(switches, s => s.IsRequired == true);
+        return Shared.ParameterSorting.SortRequiredFirstStable(switches, s => s.IsRequired == true);
     }
 }

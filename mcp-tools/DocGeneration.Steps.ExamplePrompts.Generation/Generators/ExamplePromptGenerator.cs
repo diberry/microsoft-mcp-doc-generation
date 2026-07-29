@@ -213,7 +213,7 @@ public sealed class ExamplePromptGenerator
                         IsRequired: requirementText.StartsWith("Required", StringComparison.OrdinalIgnoreCase));
                 });
 
-            return ParameterSorting.SortByRequiredThenName(parameters, p => p.IsRequired).ToList();
+            return ParameterSorting.SortRequiredFirstStable(parameters, p => p.IsRequired).ToList();
         }
 
         var optionParameters = (tool.Option ?? new List<Option>())
@@ -224,7 +224,7 @@ public sealed class ExamplePromptGenerator
                 Description: string.IsNullOrWhiteSpace(o.Description) ? "No description" : o.Description!,
                 IsRequired: o.Required));
 
-        return ParameterSorting.SortByRequiredThenName(optionParameters, p => p.IsRequired).ToList();
+        return ParameterSorting.SortRequiredFirstStable(optionParameters, p => p.IsRequired).ToList();
     }
 
     internal static string BuildParametersSection(

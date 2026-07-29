@@ -6,7 +6,7 @@ namespace DocGeneration.Core.Shared.Tests;
 public class ParameterSortingTests
 {
     [Fact]
-    public void SortByRequiredThenName_Generic_ReturnsRequiredItemsFirst_Bug743()
+    public void SortRequiredFirstStable_Generic_ReturnsRequiredItemsFirst_Bug743()
     {
         var parameters = new[]
         {
@@ -15,7 +15,7 @@ public class ParameterSortingTests
             new ParameterFixture("cosmos optional", false)
         };
 
-        var sorted = ParameterSorting.SortByRequiredThenName(parameters, p => p.IsRequired).ToList();
+        var sorted = ParameterSorting.SortRequiredFirstStable(parameters, p => p.IsRequired).ToList();
 
         Assert.Equal(
             [
@@ -27,7 +27,7 @@ public class ParameterSortingTests
     }
 
     [Fact]
-    public void SortByRequiredThenName_Generic_PreservesSourceOrderWithinRequiredAndOptionalGroups_Bug743()
+    public void SortRequiredFirstStable_Generic_PreservesSourceOrderWithinRequiredAndOptionalGroups_Bug743()
     {
         var parameters = new[]
         {
@@ -37,7 +37,7 @@ public class ParameterSortingTests
             new ParameterFixture("monitor optional second", false)
         };
 
-        var sorted = ParameterSorting.SortByRequiredThenName(parameters, p => p.IsRequired).ToList();
+        var sorted = ParameterSorting.SortRequiredFirstStable(parameters, p => p.IsRequired).ToList();
 
         Assert.Equal(
             [
@@ -50,17 +50,17 @@ public class ParameterSortingTests
     }
 
     [Fact]
-    public void SortByRequiredThenName_Generic_ReturnsEmptySequenceForEmptyInput_Bug743()
+    public void SortRequiredFirstStable_Generic_ReturnsEmptySequenceForEmptyInput_Bug743()
     {
         var sorted = ParameterSorting
-            .SortByRequiredThenName(Array.Empty<ParameterFixture>(), p => p.IsRequired)
+            .SortRequiredFirstStable(Array.Empty<ParameterFixture>(), p => p.IsRequired)
             .ToList();
 
         Assert.Empty(sorted);
     }
 
     [Fact]
-    public void SortByRequiredThenName_Generic_PreservesSourceOrderWhenAllRequired_Bug743()
+    public void SortRequiredFirstStable_Generic_PreservesSourceOrderWhenAllRequired_Bug743()
     {
         var parameters = new[]
         {
@@ -70,7 +70,7 @@ public class ParameterSortingTests
             new ParameterFixture("monitor alert required", true)
         };
 
-        var sorted = ParameterSorting.SortByRequiredThenName(parameters, p => p.IsRequired).ToList();
+        var sorted = ParameterSorting.SortRequiredFirstStable(parameters, p => p.IsRequired).ToList();
 
         Assert.Equal(
             [
@@ -83,7 +83,7 @@ public class ParameterSortingTests
     }
 
     [Fact]
-    public void SortByRequiredThenName_Generic_PreservesSourceOrderWhenAllOptional_Bug743()
+    public void SortRequiredFirstStable_Generic_PreservesSourceOrderWhenAllOptional_Bug743()
     {
         var parameters = new[]
         {
@@ -93,7 +93,7 @@ public class ParameterSortingTests
             new ParameterFixture("storage optional fourth", false)
         };
 
-        var sorted = ParameterSorting.SortByRequiredThenName(parameters, p => p.IsRequired).ToList();
+        var sorted = ParameterSorting.SortRequiredFirstStable(parameters, p => p.IsRequired).ToList();
 
         Assert.Equal(
             [

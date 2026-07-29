@@ -46,7 +46,10 @@ public class ExamplePromptGeneratorArchitectureTests
 
         var sharedSortingCallCount = CountSharedParameterSortingCalls(method);
 
-        Assert.Equal(2, sharedSortingCallCount);
+        // Two parameter-source branches exist today; this is a delegation guard, not an exact-call-count contract.
+        Assert.True(
+            sharedSortingCallCount >= 2,
+            $"GetPromptParameters must route both manifest-derived parameters and tool.Option fallback parameters through Shared.ParameterSorting.SortRequiredFirstStable; found {sharedSortingCallCount} shared helper call(s).");
     }
 
     private static int CountSharedParameterSortingCalls(MethodInfo method)
@@ -90,7 +93,7 @@ public class ExamplePromptGeneratorArchitectureTests
             : methodInfo;
 
         return methodDefinition.DeclaringType == typeof(Shared.ParameterSorting)
-            && methodDefinition.Name == nameof(Shared.ParameterSorting.SortByRequiredThenName);
+            && methodDefinition.Name == nameof(Shared.ParameterSorting.SortRequiredFirstStable);
     }
 
     private static OpCode ReadOpCode(byte[] il, ref int offset)

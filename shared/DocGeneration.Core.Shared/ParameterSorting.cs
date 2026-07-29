@@ -8,7 +8,7 @@ public static class ParameterSorting
     /// <summary>
     /// Sorts items so required entries appear before optional entries while preserving source order within each group.
     /// </summary>
-    public static IOrderedEnumerable<T> SortByRequiredThenName<T>(
+    public static IOrderedEnumerable<T> SortRequiredFirstStable<T>(
         IEnumerable<T> items,
         Func<T, bool> isRequired)
     {
