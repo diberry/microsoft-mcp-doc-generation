@@ -31,28 +31,52 @@ Pulls the example prompt generation functionality out of DocGeneration.Steps.Ann
 ## Outputs
 
 1. **Example Prompts Files** (`{command}-example-prompts.md`)
-   - Generated markdown files with 5 AI-generated example prompts per tool
+   - Generated markdown files with example prompts per tool. Tools with source
+     `e2eTestPrompts.md` prompts get those prompts **verbatim** (1–19, uncapped);
+     other tools get deterministic or AI-generated prompts (AI capped at 10).
    - Located in `example-prompts/` subdirectory
    - Includes frontmatter metadata, command comment, and required parameters comment
 
 3. **Input Prompt Files** (`{command}-input-prompt.md`)
-   - User prompts (with parameters) that were sent to Azure OpenAI
+   - User prompts (with parameters) that were sent to Azure OpenAI. For verbatim-sourced
+     tools this is a provenance note (`"verbatim — N source prompt(s) … (no AI call)"`).
    - Located in `example-prompts-prompts/` subdirectory
    - For debugging and validation purposes
 
 4. **Raw AI Output Files** (`{command}-raw-output.txt`)
-   - Pure JSON response extracted from Azure OpenAI
+   - Pure JSON response extracted from Azure OpenAI (`{}` for verbatim/deterministic tools)
    - Located in `example-prompts-raw-output/` subdirectory
    - Shows what the LLM returned (with extraction strategy logged)
    - Useful for debugging JSON parse failures
 
 ## Processing Flow
 
-The tool processes each tool **sequentially** (not in batch):
+Each tool is routed to one of three paths (checked in this order):
+
+1. **Verbatim (issue #748)** — If the tool has developer-authored source prompts in
+   `e2eTestPrompts.md` (i.e. it is present in `parsed.json` / `--e2e-prompts`), those
+   prompts are published **verbatim — exact text, exact count, exact order, and NO Azure
+   OpenAI call.** Source counts vary 1–19 per tool and are preserved in full (the AI-only
+   "maximum of 10" cap does not apply). `VerbatimExamplePromptBuilder` constructs the
+   response; the `example-prompts-prompts/*` input file records a provenance note
+   (`"verbatim — N source prompt(s) from e2eTestPrompts.md (no AI call)"`) and
+   `example-prompts-raw-output/*` is `{}`.
+2. **Deterministic** — Tools with no source prompts that match a standard verb
+   (`list`/`get`/`create`/`delete`/`update`) and have no non-common optional parameters
+   are generated deterministically (no AI call). See `DeterministicExamplePromptGenerator`.
+3. **AI** — All remaining tools call Azure OpenAI. The developer-authored source prompts
+   (when present) are only used by the verbatim path; the AI path only runs for tools
+   **without** source prompts.
+
+The `CredentialSanitizer` defense-in-depth pass runs on every path before writing. All
+paths converge on the same final include (`example-prompts/{tool}-example-prompts.md`
+rendered via `example-prompts-template.hbs`), so Step 3 is unaffected by the routing.
+
+The tool processes each tool **sequentially** (not in batch). For the AI path:
 1. Generate custom user prompt from template with tool-specific parameters
 2. Call Azure OpenAI with system + user prompts
 3. Extract JSON from LLM response (handles preamble text, code blocks, reasoning)
-4. Parse JSON response (5 example prompts)
+4. Parse JSON response (up to 10 example prompts)
 5. Save input prompt, raw output (JSON only), and example prompts
 6. Move to next tool
 
