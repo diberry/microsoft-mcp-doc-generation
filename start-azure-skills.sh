@@ -66,13 +66,21 @@ if [ "$SOURCE_IS_GITHUB" != "true" ]; then
     SOURCE_ARGS+=(--source local --source-path "$SKILLS_SOURCE/skills/" --tests-path "$SKILLS_SOURCE/tests/")
 fi
 
+# Anchor data + template paths to the skills-generation dir so the script is cwd-independent.
+# The CLI defaults --data-path/--template-path to cwd-relative "./data/" and "./templates/...".
+# This script runs `dotnet run` from the caller's cwd (it does not cd), so without these the
+# inventory at skills-generation/data/skills-inventory.json is not found when invoked from the
+# repo root — the documented usage — yielding "No skills found in inventory". Placed before
+# "$@" so an explicit user --data-path/--template-path still wins (System.CommandLine last-wins).
+DATA_ARGS=(--data-path "$SKILLS_DIR/data/" --template-path "$SKILLS_DIR/templates/skill-page-template.hbs")
+
 # Determine mode
 if [ "${1:-}" != "" ] && [[ ! "$1" =~ ^-- ]]; then
     SKILL_NAME="$1"
     shift
     echo "[run]   Generating skill: $SKILL_NAME"
-    dotnet run --project "$CLI_PROJECT" --configuration Release --no-build -- generate-skill "$SKILL_NAME" "${SOURCE_ARGS[@]}" "$@"
+    dotnet run --project "$CLI_PROJECT" --configuration Release --no-build -- generate-skill "$SKILL_NAME" "${SOURCE_ARGS[@]}" "${DATA_ARGS[@]}" "$@"
 else
     echo "[run]   Generating all skills..."
-    dotnet run --project "$CLI_PROJECT" --configuration Release --no-build -- generate-skills --all "${SOURCE_ARGS[@]}" "$@"
+    dotnet run --project "$CLI_PROJECT" --configuration Release --no-build -- generate-skills --all "${SOURCE_ARGS[@]}" "${DATA_ARGS[@]}" "$@"
 fi
