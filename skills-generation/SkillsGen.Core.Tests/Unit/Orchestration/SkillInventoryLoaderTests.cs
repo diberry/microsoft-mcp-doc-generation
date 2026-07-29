@@ -62,6 +62,29 @@ public class SkillInventoryLoaderTests
     }
 
     [Fact]
+    public void Load_RealInventoryFile_ContainsAppOnboardSkills()
+    {
+        // Regression guard for issues #759/#760: the new-skill "azure-app-onboard" and
+        // "azure-app-onboard-prereq" upstream skills must be present in the inventory so that
+        // `generate-skills --all` (which iterates the inventory) produces their docs articles.
+        var loader = new SkillInventoryLoader(_logger);
+        var inventoryPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "data", "skills-inventory.json"));
+
+        // Skip if file not found (CI environment without the data directory)
+        if (!File.Exists(inventoryPath)) return;
+
+        var result = loader.Load(inventoryPath);
+
+        result.Should().Contain(
+            e => e.Name == "azure-app-onboard" && e.DisplayName == "Azure App Onboard",
+            "issue #759 requires the azure-app-onboard skill in the inventory with its display name");
+        result.Should().Contain(
+            e => e.Name == "azure-app-onboard-prereq" && e.DisplayName == "Azure App Onboard Prereq",
+            "issue #760 requires the azure-app-onboard-prereq skill in the inventory with its display name");
+    }
+
+    [Fact]
     public void Load_MissingFile_ReturnsEmptyList()
     {
         var loader = new SkillInventoryLoader(_logger);
