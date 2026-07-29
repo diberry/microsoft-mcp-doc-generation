@@ -283,11 +283,6 @@ jobs:
             fi
           fi
           
-          # Stage the diff file if it exists
-          if [ -f "mcp-cli-metadata/${{ steps.diff-check.outputs.diff_file }}" ]; then
-            git add "mcp-cli-metadata/${{ steps.diff-check.outputs.diff_file }}"
-          fi
-          
           # Create commit message file (built line-by-line so the YAML
           # block scalar is never broken by column-0 continuation lines)
           COMMIT_MSG_FILE="$(mktemp)"
