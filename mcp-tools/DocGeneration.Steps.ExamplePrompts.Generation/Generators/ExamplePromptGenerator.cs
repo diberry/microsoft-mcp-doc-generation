@@ -198,7 +198,7 @@ public sealed class ExamplePromptGenerator
     {
         if (parameterManifest != null)
         {
-            return parameterManifest
+            var parameters = parameterManifest
                 .Where(p => !string.IsNullOrWhiteSpace(p.Name) || !string.IsNullOrWhiteSpace(p.DisplayName))
                 .Select(p =>
                 {
@@ -211,20 +211,20 @@ public sealed class ExamplePromptGenerator
                         RequirementText: requirementText,
                         Description: string.IsNullOrWhiteSpace(p.Description) ? "No description" : p.Description!,
                         IsRequired: requirementText.StartsWith("Required", StringComparison.OrdinalIgnoreCase));
-                })
-                .OrderByDescending(p => p.IsRequired)
-                .ToList();
+                });
+
+            return ParameterSorting.SortRequiredFirstStable(parameters, p => p.IsRequired).ToList();
         }
 
-        return (tool.Option ?? new List<Option>())
+        var optionParameters = (tool.Option ?? new List<Option>())
             .Where(o => !string.IsNullOrWhiteSpace(o.Name))
             .Select(o => (
                 Name: o.Name!,
                 RequirementText: o.Required ? "Required" : "Optional",
                 Description: string.IsNullOrWhiteSpace(o.Description) ? "No description" : o.Description!,
-                IsRequired: o.Required))
-            .OrderByDescending(p => p.IsRequired)
-            .ToList();
+                IsRequired: o.Required));
+
+        return ParameterSorting.SortRequiredFirstStable(optionParameters, p => p.IsRequired).ToList();
     }
 
     internal static string BuildParametersSection(
