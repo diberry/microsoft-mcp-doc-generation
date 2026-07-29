@@ -47,7 +47,9 @@ internal static class SourceVerificationHelpers
             foreach (var entry in document.RootElement.EnumerateArray())
             {
                 if (!entry.TryGetProperty("Parameter", out var parameterProperty)
-                    || !entry.TryGetProperty("NaturalLanguage", out var naturalLanguageProperty))
+                    || parameterProperty.ValueKind != JsonValueKind.String
+                    || !entry.TryGetProperty("NaturalLanguage", out var naturalLanguageProperty)
+                    || naturalLanguageProperty.ValueKind != JsonValueKind.String)
                 {
                     continue;
                 }
@@ -70,8 +72,17 @@ internal static class SourceVerificationHelpers
         return map;
     }
 
-    public static string ResolveDocumentedParameterName(string normalizedName, IReadOnlyDictionary<string, string> reverseMap)
-        => reverseMap.TryGetValue(normalizedName, out var cliName) ? cliName : normalizedName;
+    // Reverse-map a documented display slug (e.g. "resource-name") back to its canonical CLI name
+    // (e.g. "resource") only when that CLI name is actually present in the tool's source parameters.
+    // The per-tool guard prevents mis-rewriting a raw CLI option whose name happens to collide with a
+    // display slug: the rewrite applies only if it resolves to a real source parameter.
+    public static string ResolveDocumentedParameterName(
+        string normalizedName,
+        IReadOnlyDictionary<string, string> reverseMap,
+        ISet<string> sourceParameterNames)
+        => reverseMap.TryGetValue(normalizedName, out var cliName) && sourceParameterNames.Contains(cliName)
+            ? cliName
+            : normalizedName;
 
     public static IReadOnlyList<SourceParameter> GetSourceParameters(JsonElement options)
     {

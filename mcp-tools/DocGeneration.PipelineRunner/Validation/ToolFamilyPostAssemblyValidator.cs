@@ -737,7 +737,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             var documentedParameters = section.ParameterRows
                 .Select(row => SourceVerificationHelpers.NormalizeParameterName(row.ParameterName))
                 .Where(parameter => !string.IsNullOrWhiteSpace(parameter))
-                .Select(parameter => SourceVerificationHelpers.ResolveDocumentedParameterName(parameter, naturalLanguageReverseMap))
+                .Select(parameter => SourceVerificationHelpers.ResolveDocumentedParameterName(parameter, naturalLanguageReverseMap, sourceParameterNames))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var extraParameters = documentedParameters

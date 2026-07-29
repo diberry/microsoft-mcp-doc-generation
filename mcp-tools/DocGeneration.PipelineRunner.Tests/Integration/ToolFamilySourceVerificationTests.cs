@@ -109,6 +109,53 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
     }
 
     [Fact]
+    public async Task ValidateAsync_Passes_WhenSourceParameterNameCollidesWithDisplaySlug()
+    {
+        // A source tool that genuinely exposes a raw CLI option normalizing to a display slug
+        // (e.g. "resource-name") must NOT have its documented parameter rewritten to the short
+        // CLI form ("resource"); the per-tool guard keeps it matched to the real source parameter.
+        var context = CreateContext(
+            sourceTools:
+            [
+                SourceTool("keyvault key show", "--resource-name")
+            ],
+            articleTools:
+            [
+                ("Show key", "keyvault key show", ["resource-name"]),
+            ],
+            frontmatterVersion: "3.0.0-beta.14",
+            namespaceName: "keyvault");
+
+        var result = await ValidateAsync(context);
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
+    }
+
+    [Fact]
+    public void LoadNaturalLanguageReverseMap_ReturnsEmpty_WhenFileMissing()
+    {
+        var map = SourceVerificationHelpers.LoadNaturalLanguageReverseMap(
+            Path.Combine(_root, "no-such-mcp-tools"));
+
+        Assert.Empty(map);
+    }
+
+    [Fact]
+    public void LoadNaturalLanguageReverseMap_DegradesGracefully_WhenEntriesAreNotStrings()
+    {
+        var toolsRoot = Path.Combine(_root, "malformed-mcp-tools");
+        Directory.CreateDirectory(Path.Combine(toolsRoot, "data"));
+        File.WriteAllText(
+            Path.Combine(toolsRoot, "data", "nl-parameter-identifiers.json"),
+            """[ { "Parameter": 123, "NaturalLanguage": true }, { "Parameter": "resource", "NaturalLanguage": "Resource name" } ]""");
+
+        var map = SourceVerificationHelpers.LoadNaturalLanguageReverseMap(toolsRoot);
+
+        // Non-string entry is skipped (no throw); the valid entry is still loaded.
+        Assert.Equal("resource", Assert.Contains("resource-name", map));
+    }
+
+    [Fact]
     public async Task ValidateAsync_Fails_WhenFrontmatterVersionDoesNotMatchSourceVersion()
     {
         var context = CreateContext(
