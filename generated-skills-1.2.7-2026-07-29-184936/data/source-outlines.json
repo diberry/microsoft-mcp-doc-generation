@@ -1,0 +1,1412 @@
+{
+  "azure-ai": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Services",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Server (Preferred)",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "AI Search",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Speech",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "AI Search Capabilities",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Speech Capabilities",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Service Details",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 8,
+    "catalogedAt": "2026-07-30T01:49:37.5183428Z"
+  },
+  "azure-aigateway": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Get Gateway Details",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Test AI Endpoint",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Common Tasks",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Add AI Backend",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Apply AI Governance Policy",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Troubleshooting",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick References",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 10,
+    "catalogedAt": "2026-07-30T01:50:17.2482419Z"
+  },
+  "microsoft-foundry": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Pre-Execution Requirements",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Sub-Skills",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Infrastructure Lifecycle",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Agent Development Lifecycle",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Agent: .foundry Workspace Standard",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Agent: Setup References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Agent: Common Project Context Resolution",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 1: Discover Agent Roots and azd Context",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 2: Resolve Environment and Deployment Context",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 3: Select Metadata Overlay and Resolve Environment",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 4: Resolve eval.yaml Local Evaluation Intent",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 5: Resolve Common Configuration",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 6: Write Metadata Overlay (Create/Deploy/Observe Only)",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 7: Collect Missing Values",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Agent: Agent Types",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Tool Usage Conventions",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Additional Resources",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Network Isolation Errors",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 19,
+    "catalogedAt": "2026-07-30T01:50:44.0056643Z"
+  },
+  "azure-kusto": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Skill Activation Triggers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Overview",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Core Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Query Patterns",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Pattern 1: Basic Data Retrieval",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Pattern 2: Aggregation Analysis",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Pattern 3: Time Series Analytics",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Pattern 4: Join and Correlation",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Pattern 5: Schema Discovery",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Key Data Fields",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Result Format",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "KQL Best Practices",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Best Practices",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools Used",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Fallback Strategy: Azure CLI Commands",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "CLI Command Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "KQL Query via Azure CLI",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "When to Fallback",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Common Issues",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Use Cases",
+        "mappedTo": "When to use this skill"
+      }
+    ],
+    "unmappedCount": 19,
+    "catalogedAt": "2026-07-30T01:51:13.2685279Z"
+  },
+  "azure-messaging": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Diagnosis Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Troubleshooting Guides",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "References",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 5,
+    "catalogedAt": "2026-07-30T01:51:34.4645061Z"
+  },
+  "azure-storage": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Services",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Server (Preferred)",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "CLI Fallback",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Storage Account Tiers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Blob Access Tiers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Redundancy Options",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Service Details",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Azure SDKs",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 9,
+    "catalogedAt": "2026-07-30T01:51:58.4985883Z"
+  },
+  "azure-deploy": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Triggers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Steps",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "References",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 3,
+    "catalogedAt": "2026-07-30T01:52:28.9694369Z"
+  },
+  "azure-app-onboard": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "When NOT to Use",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Pipeline Rules",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Error Handling",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 5,
+    "catalogedAt": "2026-07-30T01:52:54.1428544Z"
+  },
+  "azure-app-onboard-prereq": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "When NOT to Use",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 1: Session Check",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 2: Scan Workspace",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 3: Per-Component Evaluation",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 4: Write Artifacts \u002B Readiness Gate",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 5: Present Findings",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 6: Remediation (conditional)",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 7: Write Final State",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 8: Route",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Outputs",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 10,
+    "catalogedAt": "2026-07-30T01:53:23.2398326Z"
+  },
+  "azure-prepare": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Triggers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "\u274C PLAN-FIRST WORKFLOW \u2014 MANDATORY",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "\u274C STEP 0: Specialized Technology Check \u2014 MANDATORY FIRST ACTION",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Check 1: Prompt keywords",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Phase 1: Planning (BLOCKING \u2014 Complete Before Any Execution)",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Phase 2: Execution (Only After Plan Approval)",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Outputs",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Next",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 9,
+    "catalogedAt": "2026-07-30T01:53:41.1602271Z"
+  },
+  "azure-upgrade": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Triggers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Upgrade Scenarios",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Steps",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Next",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 4,
+    "catalogedAt": "2026-07-30T01:54:11.8146428Z"
+  },
+  "azure-validate": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Triggers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Steps",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 1,
+    "catalogedAt": "2026-07-30T01:54:40.8404832Z"
+  },
+  "airunway-aks-setup": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Prerequisites",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Steps",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Error Handling",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 3,
+    "catalogedAt": "2026-07-30T01:55:10.2473267Z"
+  },
+  "azure-compute": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Routing",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 2,
+    "catalogedAt": "2026-07-30T01:55:33.6921845Z"
+  },
+  "azure-enterprise-infra-planner": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Workflow (Start Here)",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Error Handling",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 4,
+    "catalogedAt": "2026-07-30T01:56:02.2633072Z"
+  },
+  "azure-kubernetes": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Required Inputs (Ask only what\u2019s needed)",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "1. Cluster Type",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "2. Networking (Pod IP, Egress, Ingress, Dataplane)",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "3. Security",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "4. Observability",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "5. Upgrades \u0026 Patching",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "6. Performance",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "7. Node Pools \u0026 Compute",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "8. Reliability",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "9. Cost Controls",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Guardrails / Safety",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Error Handling",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 14,
+    "catalogedAt": "2026-07-30T01:56:33.1062355Z"
+  },
+  "azure-cloud-migrate": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Migration Scenarios",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Output Directory",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Steps",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 2,
+    "catalogedAt": "2026-07-30T01:57:06.7033725Z"
+  },
+  "appinsights-instrumentation": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "When to Use azure-prepare Instead",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Prerequisites",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Guidelines",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Collect context information",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Prefer auto-instrument if possible",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Manually instrument",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Platform-Specific Guides",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 8,
+    "catalogedAt": "2026-07-30T01:57:35.8644673Z"
+  },
+  "azure-cost": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Routing",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Scope Patterns",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Service-Specific Optimization",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "References",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 5,
+    "catalogedAt": "2026-07-30T01:57:55.3705146Z"
+  },
+  "azure-diagnostics": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Triggers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Rules",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Quick Diagnosis Flow",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Troubleshooting Guides by Service",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Routing",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Common Diagnostic Commands",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "AppLens (MCP Tools)",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Azure Monitor (MCP Tools)",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Check Azure Resource Health",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Using MCP",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Using CLI",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "References",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 12,
+    "catalogedAt": "2026-07-30T01:58:15.0424964Z"
+  },
+  "azure-quotas": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Overview",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Quota Types",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Understanding Resource Name Mapping",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Example Mappings",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Discovery Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Scripts",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Core Workflows",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Workflow 1: Check Quota for a Specific Resource",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Workflow 2: Compare Quotas Across Regions",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Workflow 3: Request Quota Increase",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Workflow 4: List All Quotas for Planning",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Troubleshooting",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Common Errors",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Unsupported Resource Providers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Additional Resources",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Best Practices",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 18,
+    "catalogedAt": "2026-07-30T01:58:49.9474130Z"
+  },
+  "azure-resource-lookup": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 1: Check for a Dedicated MCP Tool",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 2: Generate the ARG Query",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 3: Execute and Format Results",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Error Handling",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Constraints",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 7,
+    "catalogedAt": "2026-07-30T01:59:13.2429750Z"
+  },
+  "azure-resource-visualizer": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Core Responsibilities",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Workflow Process",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 1: Resource Group Selection",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 2: Resource Discovery \u0026 Analysis",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 3: Diagram Construction",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 4: File Creation",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Operating Guidelines",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Quality Standards",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Tool Usage Patterns",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Constraints \u0026 Boundaries",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Edge Cases \u0026 Error Handling",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Output Format Specifications",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Mermaid Diagram Syntax",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Markdown Structure",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Success Criteria",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 15,
+    "catalogedAt": "2026-07-30T01:59:41.5088006Z"
+  },
+  "azure-compliance": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Quick Reference",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "When to Use This Skill",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Skill Activation Triggers",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Prerequisites",
+        "mappedTo": "Prerequisites"
+      },
+      {
+        "level": 2,
+        "text": "Assessments",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Assessment Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Priority Classification",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Error Handling",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Best Practices",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick References",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 9,
+    "catalogedAt": "2026-07-30T02:00:00.3196968Z"
+  },
+  "entra-app-registration": {
+    "headings": [
+      {
+        "level": 2,
+        "text": "Overview",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Key Concepts",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Application Types",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Core Workflow",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 1: Register the Application",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 2: Configure Authentication",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 3: Configure API Permissions",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 4: Create Client Credentials (if needed)",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Step 5: Implement OAuth Flow",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Common Patterns",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Pattern 1: First-Time App Registration",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Pattern 2: Console Application with User Authentication",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Pattern 3: Service-to-Service Authentication",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "MCP Tools and CLI",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Azure CLI Commands",
+        "mappedTo": null
+      },
+      {
+        "level": 3,
+        "text": "Microsoft Authentication Library (MSAL)",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "Security Best Practices",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "SDK Quick References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "References",
+        "mappedTo": null
+      },
+      {
+        "level": 2,
+        "text": "External Resources",
+        "mappedTo": null
+      }
+    ],
+    "unmappedCount": 20,
+    "catalogedAt": "2026-07-30T02:00:21.5755472Z"
+  }
+}

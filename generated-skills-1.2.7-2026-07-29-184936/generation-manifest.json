@@ -1,0 +1,425 @@
+{
+  "results": [
+    {
+      "skillName": "azure-ai",
+      "tier": 1,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 384,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-ai.md",
+      "durationMs": 39423
+    },
+    {
+      "skillName": "azure-aigateway",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 438,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-aigateway.md",
+      "durationMs": 26711
+    },
+    {
+      "skillName": "azure-hosted-copilot-sdk",
+      "tier": 0,
+      "validation": {
+        "isValid": false,
+        "errors": [
+          "Source files not found"
+        ],
+        "warnings": [],
+        "wordCount": 0,
+        "sectionCount": 0
+      },
+      "outputPath": null,
+      "durationMs": 2
+    },
+    {
+      "skillName": "microsoft-foundry",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022General Azure deploy (use \u0060azure-deploy\u0060)\u0022",
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022General Azure prep (use \u0060azure-prepare\u0060)\u0022",
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items",
+          "INTERNAL_JARGON: Internal/implementation token \u0022SFT\u0022 found in article body \u2014 use user-facing capability phrasing (#735)"
+        ],
+        "wordCount": 490,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\microsoft-foundry.md",
+      "durationMs": 29164
+    },
+    {
+      "skillName": "azure-kusto",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 354,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-kusto.md",
+      "durationMs": 21042
+    },
+    {
+      "skillName": "azure-messaging",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 453,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-messaging.md",
+      "durationMs": 23950
+    },
+    {
+      "skillName": "azure-storage",
+      "tier": 1,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022Manage and configure SQL databases and Cosmos Db (use \u0060azure-prepare\u0060) in Azure\u0022",
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022Messaging with Event Hubs or Service Bus (use \u0060azure-messaging\u0060)\u0022",
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 479,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-storage.md",
+      "durationMs": 30301
+    },
+    {
+      "skillName": "azure-deploy",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 440,
+        "sectionCount": 6
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-deploy.md",
+      "durationMs": 24907
+    },
+    {
+      "skillName": "azure-app-onboard",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022Running \u0060azd\u0060 up (use \u0060azure-deploy\u0060)\u0022",
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022Optimizing existing costs (use \u0060azure-cost\u0060)\u0022",
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022Code readiness checks only (use \u0060azure-app-onboard-prereq\u0060)\u0022",
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 401,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-app-onboard.md",
+      "durationMs": 29082
+    },
+    {
+      "skillName": "azure-app-onboard-prereq",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 316,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-app-onboard-prereq.md",
+      "durationMs": 17795
+    },
+    {
+      "skillName": "azure-prepare",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022Python App Service code-only deploys (use python-appservice-deploy)\u0022",
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 483,
+        "sectionCount": 6
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-prepare.md",
+      "durationMs": 30526
+    },
+    {
+      "skillName": "azure-upgrade",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 377,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-upgrade.md",
+      "durationMs": 28689
+    },
+    {
+      "skillName": "azure-validate",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 385,
+        "sectionCount": 6
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-validate.md",
+      "durationMs": 29543
+    },
+    {
+      "skillName": "airunway-aks-setup",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 376,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\airunway-aks-setup.md",
+      "durationMs": 23336
+    },
+    {
+      "skillName": "azure-compute",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 478,
+        "sectionCount": 6
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-compute.md",
+      "durationMs": 28470
+    },
+    {
+      "skillName": "azure-enterprise-infra-planner",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 512,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-enterprise-infra-planner.md",
+      "durationMs": 30722
+    },
+    {
+      "skillName": "azure-kubernetes",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 405,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-kubernetes.md",
+      "durationMs": 33482
+    },
+    {
+      "skillName": "azure-cloud-migrate",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 394,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-cloud-migrate.md",
+      "durationMs": 29059
+    },
+    {
+      "skillName": "appinsights-instrumentation",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 366,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\appinsights-instrumentation.md",
+      "durationMs": 19412
+    },
+    {
+      "skillName": "azure-cost",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 375,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-cost.md",
+      "durationMs": 19549
+    },
+    {
+      "skillName": "azure-diagnostics",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 473,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-diagnostics.md",
+      "durationMs": 34799
+    },
+    {
+      "skillName": "azure-quotas",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items",
+          "PHASE_VERB: Validate-phase skill claims provisioning/creation action \u0022provisioning\u0022 \u2014 this phase generates or validates IaC; provisioning happens in the deploy phase (#734)"
+        ],
+        "wordCount": 389,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-quotas.md",
+      "durationMs": 22917
+    },
+    {
+      "skillName": "azure-resource-lookup",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022Manage and configure deploying/changing resources (use \u0060azure-deploy\u0060) and cost optimization (use \u0060azure-cost\u0060) in Azure\u0022",
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 480,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-resource-lookup.md",
+      "durationMs": 28418
+    },
+    {
+      "skillName": "azure-resource-visualizer",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 339,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-resource-visualizer.md",
+      "durationMs": 18510
+    },
+    {
+      "skillName": "azure-compliance",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 322,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\azure-compliance.md",
+      "durationMs": 21224
+    },
+    {
+      "skillName": "azure-rbac",
+      "tier": 0,
+      "validation": {
+        "isValid": false,
+        "errors": [
+          "Source files not found"
+        ],
+        "warnings": [],
+        "wordCount": 0,
+        "sectionCount": 0
+      },
+      "outputPath": null,
+      "durationMs": 1
+    },
+    {
+      "skillName": "entra-app-registration",
+      "tier": 2,
+      "validation": {
+        "isValid": true,
+        "errors": [],
+        "warnings": [
+          "NEGATIVE_IN_POSITIVE: Item in \u0027When to use\u0027 appears negative/redirect: \u0022Key Vault secrets (use \u0060azure-keyvault-expiration-audit\u0060)\u0022",
+          "PROMPT_SOURCE: No triggers.test.ts found; example prompts generated from UseFor items"
+        ],
+        "wordCount": 405,
+        "sectionCount": 5
+      },
+      "outputPath": "./generated-skills-1.2.7-2026-07-29-184936\\entra-app-registration.md",
+      "durationMs": 21269
+    }
+  ],
+  "totalDurationMs": 665359,
+  "generatorVersion": "1.0.0",
+  "templateVersion": "1.0.0",
+  "generatedAtUtc": "2026-07-30T02:00:42.8214405Z"
+}
