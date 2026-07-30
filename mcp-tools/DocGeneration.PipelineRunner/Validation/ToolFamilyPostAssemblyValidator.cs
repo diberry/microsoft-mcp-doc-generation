@@ -723,6 +723,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             .ToDictionary(group => group.Key, group => group.First().Section, StringComparer.OrdinalIgnoreCase);
 
         var naturalLanguageReverseMap = SourceVerificationHelpers.LoadNaturalLanguageReverseMap(context.McpToolsRoot);
+        var compoundWordReverseMap = SourceVerificationHelpers.LoadCompoundWordReverseMap(context.McpToolsRoot);
 
         foreach (var sourceTool in sourceTools)
         {
@@ -746,6 +747,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                 .Select(row => SourceVerificationHelpers.NormalizeParameterName(row.ParameterName))
                 .Where(parameter => !string.IsNullOrWhiteSpace(parameter))
                 .Select(parameter => SourceVerificationHelpers.ResolveDocumentedParameterName(parameter, naturalLanguageReverseMap, sourceParameterNames))
+                .Select(parameter => SourceVerificationHelpers.ResolveDocumentedParameterName(parameter, compoundWordReverseMap, sourceParameterNames))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             var extraParameters = documentedParameters
