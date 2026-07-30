@@ -2,6 +2,16 @@
 
 This file provides instructions to GitHub Copilot for working with this codebase.
 
+## Response Format — Prompt Echo (all Squad sessions)
+
+End every final response with a one-line block quoting the user request it is responding to, so the transcript stays self-documenting:
+
+```
+↩︎ Responding to: "{verbatim text of the user prompt this response addresses}"
+```
+
+Use the current turn's user request (the prompt that triggered this response). Keep it to a single quoted line; truncate prompts longer than ~200 characters with an ellipsis. This applies to the coordinator's own replies; spawned agents are unaffected. (Mirrored from `squad.agent.md` so it survives `squad upgrade`, which regenerates that file.)
+
 ## Project Overview
 
 This is the Azure MCP Documentation Generator - an automated system that generates 590+ markdown documentation files for Microsoft Azure Model Context Protocol (MCP) server tools using a containerized Docker solution.
