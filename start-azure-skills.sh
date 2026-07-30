@@ -74,6 +74,24 @@ fi
 # "$@" so an explicit user --data-path/--template-path still wins (System.CommandLine last-wins).
 DATA_ARGS=(--data-path "$SKILLS_DIR/data/" --template-path "$SKILLS_DIR/templates/skill-page-template.hbs")
 
+# Load Azure OpenAI credentials so the LLM rewriter runs. The skills CLI selects the keyless
+# AzureOpenAiRewriter only when FOUNDRY_ENDPOINT is present in the process environment (see
+# SkillsGen.Cli/Program.cs); otherwise every [LLM] step falls back to the NoOp rewriter and the
+# output is mechanical, not AI-polished. Unlike start.sh (which runs preflight), this script
+# never puts FOUNDRY_* into the environment, so we source mcp-tools/.env here. Guarded with a
+# file-existence check so a missing .env does not abort under `set -euo pipefail` — `--no-llm`
+# and metadata-only runs still work without it. `set -a` exports every sourced variable so the
+# child `dotnet run` process inherits them (keyless auth also needs `az login`/managed identity).
+if [ -f "$SCRIPT_DIR/mcp-tools/.env" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$SCRIPT_DIR/mcp-tools/.env"
+    set +a
+    echo "[env] ✅ Loaded mcp-tools/.env (LLM rewriter enabled when FOUNDRY_ENDPOINT is set)"
+else
+    echo "[env] ⚠️ mcp-tools/.env not found — LLM steps fall back to the no-op rewriter (mechanical output)"
+fi
+
 # Determine mode
 if [ "${1:-}" != "" ] && [[ ! "$1" =~ ^-- ]]; then
     SKILL_NAME="$1"
