@@ -67,6 +67,26 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
     }
 
     [Fact]
+    public async Task ValidateAsync_Passes_WhenDocumentedParameterUsesCompoundWordDisplayName()
+    {
+        var context = CreateContext(
+            sourceTools:
+            [
+                SourceTool("aks nodepool get", "--nodepool")
+            ],
+            articleTools:
+            [
+                ("Get node pool", "aks nodepool get", ["node-pool"]),
+            ],
+            frontmatterVersion: "3.0.0-beta.14",
+            namespaceName: "aks");
+
+        var result = await ValidateAsync(context);
+
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
+    }
+
+    [Fact]
     public async Task ValidateAsync_Fails_WhenDocumentedParameterIsGenuinelyNotInSourceJson()
     {
         var context = CreateContext(
@@ -339,6 +359,13 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
               { "Parameter": "vault", "NaturalLanguage": "Vault name" },
               { "Parameter": "workspace", "NaturalLanguage": "Workspace name" }
             ]
+            """);
+        File.WriteAllText(
+            Path.Combine(dataDirectory, "compound-words.json"),
+            """
+            {
+              "nodepool": "node-pool"
+            }
             """);
 
         var cliTools = sourceTools

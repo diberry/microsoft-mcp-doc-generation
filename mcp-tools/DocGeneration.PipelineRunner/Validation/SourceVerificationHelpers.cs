@@ -72,6 +72,51 @@ internal static class SourceVerificationHelpers
         return map;
     }
 
+    public static IReadOnlyDictionary<string, string> LoadCompoundWordReverseMap(string? mcpToolsRoot)
+    {
+        var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(mcpToolsRoot))
+        {
+            return map;
+        }
+
+        var path = Path.Combine(mcpToolsRoot, "data", "compound-words.json");
+        if (!File.Exists(path))
+        {
+            return map;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return map;
+            }
+
+            foreach (var entry in document.RootElement.EnumerateObject())
+            {
+                if (entry.Value.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                var cliName = NormalizeParameterName(entry.Name);
+                var displaySlug = NormalizeParameterName(entry.Value.GetString() ?? string.Empty);
+                if (!string.IsNullOrWhiteSpace(cliName) && !string.IsNullOrWhiteSpace(displaySlug))
+                {
+                    map[displaySlug] = cliName;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return map;
+    }
+
     // Reverse-map a documented display slug (e.g. "resource-name") back to its canonical CLI name
     // (e.g. "resource") only when that CLI name is actually present in the tool's source parameters.
     // The per-tool guard prevents mis-rewriting a raw CLI option whose name happens to collide with a
