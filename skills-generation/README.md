@@ -9,7 +9,7 @@ Generates customer-facing markdown documentation for Azure Skills used in GitHub
 ./start-azure-skills.sh
 ```
 
-Requires a `.env` file in `skills-generation/` with Azure OpenAI configuration. Authentication is **keyless** — this repository never uses API keys. Sign in with `az login` (or run under a managed identity in CI); `DefaultAzureCredential` handles the rest:
+`start-azure-skills.sh` sources credentials from `mcp-tools/.env` (the same shared configuration the namespace pipeline uses) and exports them so the CLI's keyless Azure OpenAI rewriter runs. If that file is absent, the script still runs but every LLM step falls back to a no-op rewriter, producing mechanical (non-AI-polished) output; pass `--no-llm` to request that explicitly. Authentication is **keyless** — this repository never uses API keys. Sign in with `az login` (or run under a managed identity in CI); `DefaultAzureCredential` handles the rest. `mcp-tools/.env` must define:
 
 ```env
 FOUNDRY_ENDPOINT=<your-endpoint>

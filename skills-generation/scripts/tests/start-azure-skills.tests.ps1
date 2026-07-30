@@ -39,4 +39,37 @@ Describe "start-azure-skills.sh" {
         $inlineDataPath  = ([regex]::Matches($script:ScriptText, '--data-path[^\r\n]*SKILLS_DIR')).Count
         ($sharedArrayUses -ge 2 -or $inlineDataPath -ge 2) | Should -BeTrue
     }
+
+    # --- .env-sourcing regression guard (LLM enablement) ---
+    # The skills CLI selects the keyless Azure OpenAI rewriter only when FOUNDRY_ENDPOINT is
+    # present in the process environment (SkillsGen.Cli/Program.cs). start-azure-skills.sh does
+    # not run through start.sh's preflight, so without sourcing mcp-tools/.env the FOUNDRY_*
+    # variables are absent and every [LLM] step silently falls back to the NoOp rewriter,
+    # producing mechanical (non-AI-polished) output. These tests FAIL if the .env sourcing is
+    # removed.
+    Context ".env sourcing enables the LLM rewriter" {
+        It "References the mcp-tools/.env file anchored to the script/repo dir" {
+            $script:ScriptText | Should -Match 'mcp-tools/\.env'
+        }
+
+        It "Auto-exports sourced variables so the child dotnet process inherits FOUNDRY_*" {
+            # `set -a` before sourcing marks all assigned vars for export; `set +a` restores.
+            # Without export, `source`d vars stay shell-local and the dotnet child never sees them.
+            $script:ScriptText | Should -Match '(?s)set -a.*(source|\.)\s+["'']?\$\{?[A-Za-z_]+\}?[^\r\n]*mcp-tools/\.env'
+        }
+
+        It "Guards the source with a file-existence check (no crash under set -euo pipefail when absent)" {
+            # A bare `source missing.env` aborts the script under `set -e`. The sourcing must be
+            # wrapped in an `if [ -f ... ]` (or equivalent) guard.
+            $script:ScriptText | Should -Match '(?s)if\s+\[\s+-f\s+["'']?\$\{?[A-Za-z_]+\}?[^\r\n]*mcp-tools/\.env'
+        }
+
+        It "Sources .env before the dotnet run generation invocations" {
+            $sourceIdx = $script:ScriptText.IndexOf('mcp-tools/.env')
+            $firstRunIdx = $script:ScriptText.IndexOf('dotnet run --project "$CLI_PROJECT"')
+            $sourceIdx | Should -BeGreaterThan -1
+            $firstRunIdx | Should -BeGreaterThan -1
+            $sourceIdx | Should -BeLessThan $firstRunIdx
+        }
+    }
 }
