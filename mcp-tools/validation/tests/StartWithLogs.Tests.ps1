@@ -1,6 +1,6 @@
 BeforeAll {
     $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
-    $script:ProductionScript = Join-Path $script:RepoRoot "generate-all-azure-mcp-namespace-family-files.ps1"
+    $script:ProductionScript = Join-Path $script:RepoRoot "start-with-logs.ps1"
     $script:WorkRoot = Join-Path $PSScriptRoot (".work-generate-all-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $script:WorkRoot -Force | Out-Null
 
@@ -55,7 +55,7 @@ BeforeAll {
 
         $repository = Join-Path $script:WorkRoot ([guid]::NewGuid().ToString("N") + " repo with spaces")
         New-Item -ItemType Directory -Path $repository -Force | Out-Null
-        Copy-Item $script:ProductionScript (Join-Path $repository "generate-all-azure-mcp-namespace-family-files.ps1")
+        Copy-Item $script:ProductionScript (Join-Path $repository "start-with-logs.ps1")
 
         $azureEnvironment = Join-Path $repository ".azure\test-env"
         New-Item -ItemType Directory -Path $azureEnvironment -Force | Out-Null
@@ -101,7 +101,7 @@ printf 'END-START-SH:%s\n' "$1"
         $env:GENERATION_INVOCATION_LOG = $logPath
         try {
             $output = & pwsh -NoProfile -File (
-                Join-Path $Repository "generate-all-azure-mcp-namespace-family-files.ps1"
+                Join-Path $Repository "start-with-logs.ps1"
             ) @Arguments 2>&1
             $exitCode = $LASTEXITCODE
         } finally {
@@ -123,7 +123,7 @@ AfterAll {
     }
 }
 
-Describe "generate-all-azure-mcp-namespace-family-files.ps1" {
+Describe "start-with-logs.ps1" {
     It "fails before start.sh when the tracked metadata version is absent" {
         $repository = New-TestRepository
         New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa"

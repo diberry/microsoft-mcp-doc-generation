@@ -10,7 +10,13 @@
 
 ## Versioned all-namespace family generation
 
-Use the root `generate-all-azure-mcp-namespace-family-files.ps1` script when you need to generate every namespace family from repository-tracked, versioned CLI metadata. This specialized PowerShell entry point complements `start.sh`; it doesn't replace the typed primary entry point or provide the general-purpose namespace, step, and flag controls described in this guide.
+Use the root `start-with-logs.ps1` script when you need to generate namespace families from repository-tracked, versioned CLI metadata. This specialized PowerShell entry point complements `start.sh`; it doesn't replace the typed primary entry point or provide the general-purpose namespace, step, and flag controls described in this guide.
+
+It supports three namespace selection modes:
+
+- **Full list** (default) — all namespaces from `namespace-mapping.json`
+- **Comma list** — via `-Namespaces "advisor,appservice,compute"`
+- **Text file** — via `-NamespaceFile ./my-namespaces.txt` (one namespace per line, `#` comments and blank lines ignored)
 
 Before running the script, ensure:
 
@@ -23,7 +29,14 @@ The script resolves the environment named by `defaultEnvironment` in Azure Devel
 Run the script from PowerShell or Git Bash:
 
 ```powershell
-pwsh -File ./generate-all-azure-mcp-namespace-family-files.ps1
+# All namespaces
+pwsh -File ./start-with-logs.ps1
+
+# Specific namespaces
+pwsh -File ./start-with-logs.ps1 -Namespaces "advisor,appservice,compute"
+
+# From a text file
+pwsh -File ./start-with-logs.ps1 -NamespaceFile ./my-namespaces.txt
 ```
 
 The script:
@@ -32,6 +45,7 @@ The script:
 1. Resolves and loads the AZD environment file.
 1. Validates the required keyless `FOUNDRY_*` settings.
 1. Reads the complete namespace list from the snapshot's `namespace-mapping.json`.
+1. Filters to the requested namespaces (if `-Namespaces` or `-NamespaceFile` was provided), validating each exists in the metadata.
 1. Calls `start.sh <namespace> 1,2,3,4,5` for every namespace, so the typed pipeline remains the only generation entry point.
 1. Reuses the first run's build and CLI installation on later namespaces with `--skip-build --skip-npm-update`.
 1. Writes each namespace to the normal `generated-<namespace>/` directory and streams `start.sh` output to the console.
@@ -39,7 +53,7 @@ The script:
 To validate the selected metadata and resolved environment without creating or changing `generated/`, run:
 
 ```powershell
-pwsh -File ./generate-all-azure-mcp-namespace-family-files.ps1 -PreflightOnly
+pwsh -File ./start-with-logs.ps1 -PreflightOnly
 ```
 
 The script stops on invalid metadata, a missing or ambiguous environment file, invalid keyless settings, or the first namespace-generation failure. It doesn't run Step 6 horizontal article generation. AI-backed steps 2-4 still take time for every tool; the wrapper avoids additional per-namespace rebuilds after the first run.

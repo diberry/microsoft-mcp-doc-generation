@@ -35,10 +35,17 @@ Skip dependency validation for fast iteration on a single step:
 
 ### Generate all namespace family files from versioned metadata
 
-Use `start.sh` as the primary, general-purpose entry point for the typed pipeline. To generate every namespace family specifically from the version named by `mcp-cli-metadata/tracked-version.txt`, use the root PowerShell script:
+Use `start.sh` as the primary, general-purpose entry point for the typed pipeline. To generate namespace families from the version named by `mcp-cli-metadata/tracked-version.txt`, use the root PowerShell script:
 
 ```powershell
-pwsh -File ./generate-all-azure-mcp-namespace-family-files.ps1
+# All namespaces (default)
+pwsh -File ./start-with-logs.ps1
+
+# Specific namespaces (comma list)
+pwsh -File ./start-with-logs.ps1 -Namespaces "advisor,appservice,compute"
+
+# Namespaces from a text file (one per line, # comments supported)
+pwsh -File ./start-with-logs.ps1 -NamespaceFile ./my-namespaces.txt
 ```
 
 The same command works from PowerShell or Git Bash. Store AI settings in `.azure/<environment>/.env`. The script uses the environment named by `defaultEnvironment`; if no default resolves, it accepts one unambiguous nested environment. A root `.azure/.env` is the fallback when no nested environment file exists.
@@ -48,10 +55,10 @@ Before generation, the script fails if the tracked metadata snapshot is absent o
 To validate the real metadata and resolved environment without creating or changing `generated/`, run:
 
 ```powershell
-pwsh -File ./generate-all-azure-mcp-namespace-family-files.ps1 -PreflightOnly
+pwsh -File ./start-with-logs.ps1 -PreflightOnly
 ```
 
-This specialized script doesn't replace `start.sh`: it is intended for versioned, all-namespace family generation and doesn't run Step 6.
+This specialized script doesn't replace `start.sh`: it is intended for versioned namespace family generation and doesn't run Step 6.
 
 ### Parallel Execution (Fan-Out)
 
