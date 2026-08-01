@@ -10,6 +10,7 @@ How to decide who handles what.
 | Pipeline orchestrator / step contracts | Riley | PipelineRunner, step registration, dependencies, workspace isolation, retry logic, merge orchestration |
 | C# generator code (`mcp-tools/**/*.cs`) | Morgan | Generator bug fixes, new generators, template changes, config file updates |
 | Scripts / CI / Docker (`.ps1`, `.sh`, `.yml`, `Dockerfile`) | Quinn | Script fixes, Docker builds, CI pipeline, preflight validation |
+| PowerShell param safety (`.ps1` reviews) | Quinn | Check param names don't collide with locals (AD-027), verify `[switch]` not `[bool]`, validate bash interop |
 | AI prompts / Azure OpenAI (`prompts/`, `GenerativeAI/`) | Sage | Prompt design, AI output validation, fabrication detection, content transformation |
 | Test projects (`*.Tests/`, `verify-quantity/`) | Parker | New tests, test data, content validation, regression detection |
 | Code review | Avery + domain specialist | Avery coordinates review; domain owner reviews implementation |
