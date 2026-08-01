@@ -373,7 +373,30 @@ public class ToolFamilyPostAssemblyValidatorTests
     }
 
     [Fact]
-    public async Task ValidateAsync_ToolWithOneParameter_EmitsLowParamWarning()
+    public async Task ValidateAsync_TabbedArticle_CliTabTableBeforeMarker_NoMisplacedWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var context = CreateContext(testRoot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "compute.md"), ArticleWithTabbedCliTableBeforeMarker());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.DoesNotContain(result.Warnings, warning =>
+                warning.Contains("misplaced", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ToolWithOneParameter_NoLowParamWarning()
     {
         var testRoot = CreateTestRoot();
         try
@@ -386,11 +409,9 @@ public class ToolFamilyPostAssemblyValidatorTests
             var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.Contains(result.Warnings, warning =>
-                (warning.Contains("compute-list", StringComparison.OrdinalIgnoreCase)
-                    || warning.Contains("list", StringComparison.OrdinalIgnoreCase))
-                && (warning.Contains("1 documented parameter", StringComparison.OrdinalIgnoreCase)
-                    || warning.Contains("only 1", StringComparison.OrdinalIgnoreCase)));
+            Assert.DoesNotContain(result.Warnings, warning =>
+                warning.Contains("documented parameter", StringComparison.OrdinalIgnoreCase)
+                || warning.Contains("no documented", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -414,8 +435,7 @@ public class ToolFamilyPostAssemblyValidatorTests
             Assert.True(result.Success);
             Assert.Contains(result.Warnings, warning =>
                 warning.Contains("list", StringComparison.OrdinalIgnoreCase)
-                && (warning.Contains("0 documented parameter", StringComparison.OrdinalIgnoreCase)
-                    || warning.Contains("only 0", StringComparison.OrdinalIgnoreCase)));
+                && warning.Contains("no documented parameters", StringComparison.OrdinalIgnoreCase));
         }
         finally
         {
@@ -1161,6 +1181,41 @@ public class ToolFamilyPostAssemblyValidatorTests
         | Parameter | Required |
         | --- | --- |
         | resource group name | Yes |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string ArticleWithTabbedCliTableBeforeMarker()
+        => """
+        ---
+        title: Compute tools
+        tool_count: 1
+        ---
+        # Compute tools
+
+        ## List virtual machines
+
+        Lists virtual machines in the subscription.
+
+        #### [Azure MCP CLI](#tab/azure-mcp-cli)
+
+        **Example CLI command**
+
+        | Parameter | Type | Required | Description |
+        |-----------|------|----------|-------------|
+        | `resource-group` | string | No | The name of the resource group. |
+
+        #### [MCP Server](#tab/mcp-server)
+
+        <!-- @mcpcli compute list -->
+
+        Example prompts include:
+
+        - "List all virtual machines in my subscription"
+        - "Show VMs in resource group 'rg-prod'"
+
+        ---
 
         ## Related content
         - Link

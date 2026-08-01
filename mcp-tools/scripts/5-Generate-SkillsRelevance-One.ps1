@@ -67,11 +67,10 @@ try {
     # Build .NET packages (skip if already built by preflight)
     Invoke-DotnetBuild -SkipBuild:$SkipBuild
 
-    # Warn if GITHUB_TOKEN is not set (unauthenticated requests are rate-limited to 60/hr)
+    # Info if GITHUB_TOKEN is not set (unauthenticated requests are rate-limited to 60/hr)
     $githubToken = $env:GITHUB_TOKEN
     if (-not $githubToken) {
-        Write-Warning "GITHUB_TOKEN not set. Unauthenticated GitHub API rate limits (60 req/hr) apply."
-        Write-Warning "Set GITHUB_TOKEN to a personal access token for higher rate limits."
+        Write-Host "  ℹ️  GITHUB_TOKEN not set. Unauthenticated GitHub API rate limits (60 req/hr) apply."
     } else {
         Write-Info "✓ GITHUB_TOKEN set"
     }

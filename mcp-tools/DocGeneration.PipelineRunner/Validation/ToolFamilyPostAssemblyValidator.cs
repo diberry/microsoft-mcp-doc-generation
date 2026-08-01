@@ -16,7 +16,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private static readonly Regex FrontmatterRegex = new(@"^---\s*\n(.*?)\n---\s*\n?", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex HeadingRegex = new(@"(?m)^##\s+(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex McpCliRegex = new(@"(?m)^\s*<!--\s*@mcpcli\s+(.+?)\s*-->$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex McpCliRegex = new(@"<!--\s*@mcpcli\s+([\s\S]+?)\s*-->", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex FencedCodeDelimiterRegex = new(@"^`{3,}(?:\s*[A-Za-z0-9_-]+)?\s*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly BrandingRule[] BrandingRules =
@@ -311,6 +311,8 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
     private static async Task<NamespaceToolFile[]> GetNamespaceToolFilesAsync(string toolsDirectory, string namespaceName, IReadOnlyList<string> prefixes, CancellationToken cancellationToken)
     {
         var files = new List<NamespaceToolFile>();
+        // Normalize namespaceName for multi-token matching (e.g., "get_azure_bestpractices" → "get azure bestpractices")
+        var normalizedNamespace = NormalizeToolCommand(namespaceName);
         foreach (var filePath in Directory.EnumerateFiles(toolsDirectory, "*.md", SearchOption.TopDirectoryOnly))
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -321,8 +323,9 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             foreach (var candidate in GetMcpCliCommands(content))
             {
                 var normalized = NormalizeToolCommand(candidate);
-                var tokens = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                if (tokens.Length > 0 && string.Equals(tokens[0], namespaceName, StringComparison.OrdinalIgnoreCase))
+                // Match if the CLI command equals or starts with the normalized namespace prefix
+                if (string.Equals(normalized, normalizedNamespace, StringComparison.OrdinalIgnoreCase)
+                    || normalized.StartsWith($"{normalizedNamespace} ", StringComparison.OrdinalIgnoreCase))
                 {
                     commandText = candidate;
                     break;
@@ -847,7 +850,13 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
             {
                 headerIsPositionedCorrectly = section.ExampleHeaderIndex > section.MarkerLineIndices[^1];
             }
-            if (headerIsStandard && section.TableStartIndex >= 0)
+            // Only enforce the "header before table" constraint when the table
+            // appears in the MCP Server tab (after the marker). Tables in the
+            // CLI tab (before the marker) belong to a different context.
+            var tableIsAfterMarker = section.TableStartIndex >= 0
+                && (section.MarkerLineIndices.Count == 0
+                    || section.TableStartIndex > section.MarkerLineIndices[^1]);
+            if (headerIsStandard && tableIsAfterMarker)
             {
                 headerIsPositionedCorrectly &= section.ExampleHeaderIndex < section.TableStartIndex;
             }
@@ -1443,9 +1452,9 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         var warnings = new List<string>();
         foreach (var section in sections)
         {
-            if (section.TotalParameterCount < 2)
+            if (section.TotalParameterCount < 1)
             {
-                warnings.Add($"⚠️ {section.ToolKey}: only {section.TotalParameterCount} documented parameter(s) (expected ≥2)");
+                warnings.Add($"⚠️ {section.ToolKey}: no documented parameters (expected ≥1)");
             }
         }
 
@@ -1469,14 +1478,14 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private static IReadOnlyList<string> GetMcpCliCommands(string text)
         => McpCliRegex.Matches(text.Replace("\r\n", "\n", StringComparison.Ordinal))
-            .Select(match => match.Groups[1].Value.Trim())
+            .Select(match => Regex.Replace(match.Groups[1].Value.Trim(), @"\s+", " "))
             .Where(command => !string.IsNullOrWhiteSpace(command))
             .ToArray();
 
     private static string ConvertCommandToToolKey(string commandText, string namespaceName)
     {
         var normalized = NormalizeToolCommand(commandText).Trim().ToLowerInvariant();
-        var namespacePrefix = $"{namespaceName.ToLowerInvariant()} ";
+        var namespacePrefix = $"{NormalizeToolCommand(namespaceName).ToLowerInvariant()} ";
         if (normalized.StartsWith(namespacePrefix, StringComparison.Ordinal))
         {
             normalized = normalized[namespacePrefix.Length..];

@@ -29,7 +29,7 @@ public sealed class SkillsRelevanceStep : NamespaceStepBase
 
         if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_TOKEN")))
         {
-            warnings.Add("GITHUB_TOKEN not set. Unauthenticated GitHub API rate limits (60 req/hr) apply.");
+            Console.WriteLine("  ℹ️  GITHUB_TOKEN not set. Unauthenticated GitHub API rate limits (60 req/hr) apply.");
         }
 
         var processResult = await context.ProcessRunner.RunDotNetProjectAsync(

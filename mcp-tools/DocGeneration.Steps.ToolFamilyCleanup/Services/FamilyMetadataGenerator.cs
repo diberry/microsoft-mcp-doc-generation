@@ -16,7 +16,7 @@ public class FamilyMetadataGenerator
 {
     private const string SERVICE_DESC_SYSTEM_PROMPT = "./prompts/service-description-system-prompt.txt";
     private const string SERVICE_DESC_USER_PROMPT = "./prompts/service-description-user-prompt.txt";
-    private const int MAX_TOKENS = 500; // Service description is short (~200 tokens typical)
+    private const int MAX_TOKENS = 1000; // Service description is typically ~200 tokens but some namespaces need up to ~820
 
     private readonly GenerativeAIClient _aiClient;
     private string? _systemPrompt;

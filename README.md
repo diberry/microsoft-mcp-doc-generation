@@ -33,6 +33,26 @@ Skip dependency validation for fast iteration on a single step:
 
 **Note**: When a specific namespace is provided, output goes to `./generated-<namespace>/` instead of `./generated/`. This allows you to work on a single service without affecting the full documentation set.
 
+### Generate all namespace family files from versioned metadata
+
+Use `start.sh` as the primary, general-purpose entry point for the typed pipeline. To generate every namespace family specifically from the version named by `mcp-cli-metadata/tracked-version.txt`, use the root PowerShell script:
+
+```powershell
+pwsh -File ./generate-all-azure-mcp-namespace-family-files.ps1
+```
+
+The same command works from PowerShell or Git Bash. Store AI settings in `.azure/<environment>/.env`. The script uses the environment named by `defaultEnvironment`; if no default resolves, it accepts one unambiguous nested environment. A root `.azure/.env` is the fallback when no nested environment file exists.
+
+Before generation, the script fails if the tracked metadata snapshot is absent or unusable, then validates the required keyless settings: `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME`, `FOUNDRY_MODEL_API_VERSION`, and `FOUNDRY_USE_DEFAULT_CREDENTIAL=true`. It reads the namespace list from the selected JSON and calls `start.sh <namespace> 1,2,3,4,5` for each entry. Later namespaces reuse the first run's build and CLI installation, output goes to `generated-<namespace>/`, and `start.sh` progress streams directly.
+
+To validate the real metadata and resolved environment without creating or changing `generated/`, run:
+
+```powershell
+pwsh -File ./generate-all-azure-mcp-namespace-family-files.ps1 -PreflightOnly
+```
+
+This specialized script doesn't replace `start.sh`: it is intended for versioned, all-namespace family generation and doesn't run Step 6.
+
 ### Parallel Execution (Fan-Out)
 
 After preflight (Step 0) completes once, individual namespaces can run **in parallel** since each writes to its own isolated `generated-<namespace>/` directory:

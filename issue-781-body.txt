@@ -1,0 +1,243 @@
+# P0: Deterministic prompt repair pass to fix Step 2 example prompt validation failures
+
+
+
+**Priority**: P0 — next to work on  
+
+**Status**: Open  
+
+**Created**: 2026-07-31  
+
+**GitHub**: https://github.com/diberry/microsoft-mcp-doc-generation/issues/781  
+
+**Latest run**: `generated-20260731T072405/` — **42/65 namespaces failed (170 critical failures)**
+
+
+
+## Failure Breakdown (170 total)
+
+
+
+| Category | Count | % | Root cause |
+
+|----------|-------|---|------------|
+
+| Step 2: Missing required params | 129 | 76% | AI prompts don't include param names the validator expects |
+
+| Step 4: Cascade from Step 2 | 38 | 22% | Validator re-checks same missing params at article assembly |
+
+| Step 0: Bootstrap failures | 2 | 1% | `foundry` (no tools found), `subscription` (CLI extraction failed) |
+
+| Step 5: Skills relevance | 1 | <1% | `get_azure_bestpractices` missing GITHUB_TOKEN |
+
+
+
+**167 of 170 failures (98%) are fixed by solving Step 2.** Step 4 failures are pure cascades.
+
+
+
+### Most frequently missing parameters (Step 2)
+
+
+
+| Missing param | Count | Example namespaces |
+
+|---------------|-------|--------------------|
+
+| `resource-group` | 25 | storage, servicefabric, fileshares, managedlustre |
+
+| `eventhub` | 5 | eventhubs |
+
+| `account` | 4 | appconfig, storage |
+
+| `message` | 4 | communication |
+
+| `snapshot-name` | 3 | sreagent |
+
+| `resource-type` | 3 | bicepschema |
+
+| `location` | 3 | redis, storage |
+
+| `query` | 2 | search, kusto |
+
+| `namespace` | 2 | servicebus |
+
+
+
+## Root Cause
+
+
+
+Pipeline design is **determinism first, AI second** (ARCHITECTURE.md). Step 1 extracts all parameter names and required status from CLI metadata. Step 2 passes this to the LLM, but the output is not deterministically verified and repaired before validation.
+
+
+
+The required parameter names are **known facts** from Step 1 — we should not rely on AI compliance.
+
+
+
+## Proposed Fix
+
+
+
+**Deterministic prompt repair pass** in Step 2, between AI generation and validation:
+
+
+
+1. **New class**: `DeterministicPromptRepairer` in `DocGeneration.Steps.ExamplePrompts.Generation`
+
+2. **Input**: Generated prompts + required parameter list from cli-output.json (Step 1)
+
+3. **Logic**: Run `ParameterCoverageChecker.GetConcretePromptCoverage()` on each prompt. For any uncovered required param, inject `{natural-name} '{example-value}'` into the prompt text.
+
+4. **Call site**: `ExamplePromptsStep.cs`, after AI generation, before validation
+
+5. **Guarantee**: Uses the **same** `ParameterCoverageChecker` the validator uses — repaired prompts guaranteed to pass validation
+
+
+
+### Why this works
+
+- `ParameterCoverageChecker` converts param names to slug variants (e.g., `resource-group` → "resource group", "resource-group", "resource_group")
+
+- It strips suffix words ("name", "text", "array") → also matches just the base word
+
+- The repair injects text that satisfies the exact same checker the validator calls
+
+- No prompt engineering needed — deterministic post-processing
+
+
+
+## Validation Plan
+
+
+
+### Unit tests MUST prove correctness without running the pipeline
+
+
+
+The `DeterministicPromptRepairer` is deterministic — it takes prompt text + required params → outputs repaired text. All 80 failure patterns can be validated with unit tests.
+
+
+
+**Test fixture strategy**: Build test cases from real failure data (below). Each test:
+
+1. Constructs a prompt string that mimics what AI generated (missing the param name)
+
+2. Passes it through `DeterministicPromptRepairer` with the required params
+
+3. Asserts `ParameterCoverageChecker.GetConcretePromptCoverage()` returns full coverage
+
+
+
+**Required test categories** (from actual failures):
+
+
+
+| Category | Example param | Count | Test verifies |
+
+|----------|--------------|-------|---------------|
+
+| Single common param | `resource-group` | 25 | Injects "resource group 'my-resource-group'" |
+
+| Single short param | `account` | 4 | Injects "account 'my-account'" |
+
+| Single short param | `query` | 2 | Injects "query 'SELECT *'" |
+
+| Compound param with suffix | `module-name` | 1 | Checker strips `-name` → also matches "module" |
+
+| Compound param | `cli-type` | 1 | Injects "cli type 'az'" |
+
+| Multi-param (2) | `server-id, resource-group` | 2 | Both injected |
+
+| Multi-param (4) | `from, to, message, endpoint` | 2 | All 4 injected |
+
+| Multi-param (5+) | `query, auth-type, user` + server, db | 1 | All injected |
+
+| Param already present | `resource-group` in text | — | No-op, prompt unchanged |
+
+| All params present | — | — | No-op, prompt unchanged |
+
+
+
+**Concrete fixture examples** (from `generated-20260731T072405/critical-failures/`):
+
+
+
+```
+
+// Fixture 1: resource-group missing (25 occurrences)
+
+Prompt: "Export all resources in my Azure subscription to Terraform configuration"
+
+Required params: [{ name: "resource-group", required: true }]
+
+Expected: prompt now contains "resource group 'my-resource-group'" or similar
+
+
+
+// Fixture 2: account missing (appconfig — 4 occurrences)
+
+Prompt: "Delete the key-value pair with key 'FeatureFlag' and label 'production'"
+
+Required params: [{ name: "account", required: true }]
+
+Expected: prompt now contains "account 'my-account'"
+
+
+
+// Fixture 3: multi-param (communication — 2 occurrences)
+
+Prompt: "Send an email notification about the deployment status"
+
+Required params: [from, to, message, endpoint] (all required)
+
+Expected: all 4 param names appear with placeholder values
+
+
+
+// Fixture 4: already-covered param (no-op)
+
+Prompt: "List resources in resource group 'my-rg'"
+
+Required params: [{ name: "resource-group", required: true }]
+
+Expected: prompt unchanged (ParameterCoverageChecker already passes)
+
+```
+
+
+
+### Pipeline validation (confirmation only, not proof)
+
+
+
+After unit tests pass:
+
+1. `dotnet test` — all tests pass (existing + new)
+
+2. `./start.sh appconfig 2` — quick spot-check (4 tools, was 4 failures)
+
+3. `./start.sh azureterraform 2` — larger spot-check (was 9 failures)
+
+
+
+## Other Failures (separate from P0)
+
+
+
+| Namespace | Step | Issue | Fix |
+
+|-----------|------|-------|-----|
+
+| `foundry` | 0 | "No tools found matching 'foundry'" | Namespace mapping config — check if `foundry` is a valid CLI namespace |
+
+| `subscription` | 0 | CLI metadata extraction failed (exit code 1) | Investigate CLI extraction for this namespace |
+
+| `extension_azqr` | 4 | tool_count mismatch (1 vs 3) | Namespace mapping or merge group config |
+
+| `virtualdesktop` | 4 | Phantom parameter `host-pool-resource-id` | Upstream CLI renamed this parameter |
+
+| `get_azure_bestpractices` | 5 | Skills relevance output missing | Needs GITHUB_TOKEN or exemption |
+
+

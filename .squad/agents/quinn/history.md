@@ -85,3 +85,14 @@
 - **CLI flags:** `--source local --source-path {clone}/skills/ --tests-path {clone}/tests/`
 - **Fallback:** `--source github` still works if explicitly passed; script detects it and skips clone
 - **Gitignore:** Added root-level `skills-source/` (existing entry was `docs-generation/skills-source/`, different path)
+
+### Versioned All-Namespace PowerShell Orchestration (2026-07-30)
+
+- Added a root PowerShell orchestrator dedicated to generating all namespace family files from the latest valid semantic-versioned metadata snapshot.
+- AZD environment discovery supports `.azure/<environment>/.env`, resolves `defaultEnvironment`, rejects ambiguous nested environments, and falls back to `.azure/.env` only when no nested candidate exists.
+- Generation invokes exactly Steps 1-5 with AI improvements enabled and leaves Step 6 to the general-purpose `start.sh` workflow.
+- Child generator output is streamed directly rather than captured, preserving real-time progress.
+- Invocation is compatible with PowerShell and Git Bash, including paths containing spaces.
+- A preflight-only mode validates metadata and keyless Foundry settings without writing generated output.
+- README, `docs/START-SCRIPTS.md`, and CHANGELOG describe the specialized entry point and its boundary with `start.sh`.
+- TDD was observed: tests failed before implementation and passed afterward. No generated output, commit, or PR was produced.
