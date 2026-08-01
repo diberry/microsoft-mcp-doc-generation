@@ -591,4 +591,51 @@ public class ParameterCoverageCheckerTests
         Assert.True(result.Covered,
             "Prompt naming the resource type 'servers' as a whole word should cover option 'sql_servers'");
     }
+
+    // ── Phase 2: Generic suffix stripping for display names ──────────────────────
+
+    [Theory]
+    [InlineData("App name", "Start the web app <app>")]
+    [InlineData("Resource group", "Deploy to resource <resource-group>")]
+    [InlineData("Vault name", "List secrets in vault <vault>")]
+    [InlineData("Account name", "Check account <account>")]
+    public void PlaceholderDetected_WhenLastWordIsGenericSuffix_MatchesBaseWord(string paramName, string prompt)
+    {
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(
+            new[] { prompt }, paramName, 1);
+
+        Assert.True(result.PlaceholderDetected,
+            $"Placeholder should be detected for '{paramName}' in: {prompt}");
+    }
+
+    [Fact]
+    public void GenericSuffixList_CoversCommonCases()
+    {
+        // Each suffix should enable base-word-only matching
+        foreach (var suffix in new[] { "group", "id", "name", "text", "value" })
+        {
+            var paramName = $"resource {suffix}";
+            var prompt = "Check the resource <resource>";
+            var result = ParameterCoverageChecker.GetConcretePromptCoverage(
+                new[] { prompt }, paramName, 1);
+
+            Assert.True(result.PlaceholderDetected,
+                $"Placeholder should match for param 'resource {suffix}' with base word in placeholder");
+        }
+    }
+
+    [Fact]
+    public void NonGenericMultiWordParams_RequireFullMatch()
+    {
+        // "state change" — both words needed, "change" is NOT a generic suffix
+        var prompts = new[] { "Check the current <state>" };
+
+        var result = ParameterCoverageChecker.GetConcretePromptCoverage(prompts, "state change", 1);
+
+        // "change" is not in the generic suffix list, so both words are needed
+        // <state> only contains "state" not "change" — should NOT match with full confidence
+        // (though individual word variants may still match depending on word length)
+        // The key behavior: this is different from "App name" where "name" is generic
+        Assert.False(result.Covered, "Non-generic suffix params should not get free coverage");
+    }
 }
