@@ -16,7 +16,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
 
     private static readonly Regex FrontmatterRegex = new(@"^---\s*\n(.*?)\n---\s*\n?", RegexOptions.Singleline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex HeadingRegex = new(@"(?m)^##\s+(.*)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex McpCliRegex = new(@"<!--\s*@mcpcli\s+([\s\S]+?)\s*-->", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex McpCliRegex = new(@"(?m)^\s*<!--\s*@mcpcli\s+([\s\S]+?)\s*-->", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex FencedCodeDelimiterRegex = new(@"^`{3,}(?:\s*[A-Za-z0-9_-]+)?\s*$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly BrandingRule[] BrandingRules =
