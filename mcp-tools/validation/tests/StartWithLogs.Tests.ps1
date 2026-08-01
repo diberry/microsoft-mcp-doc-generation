@@ -224,7 +224,7 @@ Describe "start-with-logs.ps1" {
         ($result.Output -join "`n") | Should -Match "Preflight validation succeeded"
     }
 
-    It "generates only comma-listed namespaces via -Namespaces" {
+    It "generates only comma-listed namespaces via -NamespaceList" {
         $repository = New-TestRepository
         New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
             -Namespaces @("storage", "keyvault", "monitor", "compute")
@@ -263,7 +263,7 @@ compute
         ($result.Output -join "`n") | Should -Match "file"
     }
 
-    It "fails when -Namespaces contains an unknown namespace" {
+    It "fails when -NamespaceList contains an unknown namespace" {
         $repository = New-TestRepository
         New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
             -Namespaces @("storage", "keyvault")

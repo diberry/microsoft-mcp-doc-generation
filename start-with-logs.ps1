@@ -8,7 +8,7 @@
     transcript logging. Supports three namespace selection modes:
 
     1. Full list (default) — all namespaces from namespace-mapping.json
-    2. Comma-separated list — via -Namespaces parameter
+    2. Comma-separated list — via -NamespaceList parameter
     3. Text file — via -NamespaceFile parameter (one namespace per line)
 
     Each namespace runs steps 1-5 via start.sh. After each namespace completes
