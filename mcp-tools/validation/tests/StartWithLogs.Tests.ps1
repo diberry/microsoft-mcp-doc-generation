@@ -1,6 +1,6 @@
 BeforeAll {
     $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
-    $script:ProductionScript = Join-Path $script:RepoRoot "generate-all-azure-mcp-namespace-family-files.ps1"
+    $script:ProductionScript = Join-Path $script:RepoRoot "start-with-logs.ps1"
     $script:WorkRoot = Join-Path $PSScriptRoot (".work-generate-all-" + [guid]::NewGuid().ToString("N"))
     New-Item -ItemType Directory -Path $script:WorkRoot -Force | Out-Null
 
@@ -55,7 +55,7 @@ BeforeAll {
 
         $repository = Join-Path $script:WorkRoot ([guid]::NewGuid().ToString("N") + " repo with spaces")
         New-Item -ItemType Directory -Path $repository -Force | Out-Null
-        Copy-Item $script:ProductionScript (Join-Path $repository "generate-all-azure-mcp-namespace-family-files.ps1")
+        Copy-Item $script:ProductionScript (Join-Path $repository "start-with-logs.ps1")
 
         $azureEnvironment = Join-Path $repository ".azure\test-env"
         New-Item -ItemType Directory -Path $azureEnvironment -Force | Out-Null
@@ -101,7 +101,7 @@ printf 'END-START-SH:%s\n' "$1"
         $env:GENERATION_INVOCATION_LOG = $logPath
         try {
             $output = & pwsh -NoProfile -File (
-                Join-Path $Repository "generate-all-azure-mcp-namespace-family-files.ps1"
+                Join-Path $Repository "start-with-logs.ps1"
             ) @Arguments 2>&1
             $exitCode = $LASTEXITCODE
         } finally {
@@ -123,7 +123,7 @@ AfterAll {
     }
 }
 
-Describe "generate-all-azure-mcp-namespace-family-files.ps1" {
+Describe "start-with-logs.ps1" {
     It "fails before start.sh when the tracked metadata version is absent" {
         $repository = New-TestRepository
         New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa"
@@ -166,14 +166,15 @@ Describe "generate-all-azure-mcp-namespace-family-files.ps1" {
         $result = Invoke-Generator $repository
 
         $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
+        # Namespaces dispatched in sorted order; first gets no skip flags
         $result.Invocations | Should -Be @(
-            "storage 1,2,3,4,5",
+            "extension_cli_generate 1,2,3,4,5",
             "keyvault 1,2,3,4,5 --skip-build --skip-npm-update",
-            "extension_cli_generate 1,2,3,4,5 --skip-build --skip-npm-update"
+            "storage 1,2,3,4,5 --skip-build --skip-npm-update"
         )
     }
 
-    It "streams start.sh output and stops after the first namespace failure" {
+    It "continues past a namespace failure and reports it in the summary" {
         $repository = New-TestRepository
         New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
             -Namespaces @("storage", "keyvault", "monitor")
@@ -186,12 +187,13 @@ Describe "generate-all-azure-mcp-namespace-family-files.ps1" {
         }
 
         $result.ExitCode | Should -Not -Be 0
+        # All 3 namespaces dispatched (sorted); keyvault fails but others continue
         $result.Invocations | Should -Be @(
-            "storage 1,2,3,4,5",
-            "keyvault 1,2,3,4,5 --skip-build --skip-npm-update"
+            "keyvault 1,2,3,4,5",
+            "monitor 1,2,3,4,5 --skip-build --skip-npm-update",
+            "storage 1,2,3,4,5 --skip-build --skip-npm-update"
         )
-        ($result.Output -join "`n") | Should -Match "START-SH:storage"
-        ($result.Output -join "`n") | Should -Match "END-START-SH:storage"
+        ($result.Output -join "`n") | Should -Match "START-SH:keyvault"
     }
 
     It "does not call the legacy Generate-ToolFamily script" {
@@ -220,5 +222,82 @@ Describe "generate-all-azure-mcp-namespace-family-files.ps1" {
         $result.ExitCode | Should -Be 0
         $result.Invocations | Should -BeNullOrEmpty
         ($result.Output -join "`n") | Should -Match "Preflight validation succeeded"
+    }
+
+    It "generates only comma-listed namespaces via -NamespaceList" {
+        $repository = New-TestRepository
+        New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
+            -Namespaces @("storage", "keyvault", "monitor", "compute")
+
+        $result = Invoke-Generator $repository -Arguments @("-NamespaceList", "storage,monitor")
+
+        $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
+        $result.Invocations | Should -Be @(
+            "storage 1,2,3,4,5",
+            "monitor 1,2,3,4,5 --skip-build --skip-npm-update"
+        )
+        ($result.Output -join "`n") | Should -Match "comma list"
+    }
+
+    It "generates only file-listed namespaces via -NamespaceFile" {
+        $repository = New-TestRepository
+        New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
+            -Namespaces @("storage", "keyvault", "monitor", "compute")
+
+        $nsFile = Join-Path $repository "ns-list.txt"
+        @"
+# This is a comment
+keyvault
+compute
+
+# Another comment
+"@ | Set-Content $nsFile
+
+        $result = Invoke-Generator $repository -Arguments @("-NamespaceFile", $nsFile)
+
+        $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
+        $result.Invocations | Should -Be @(
+            "keyvault 1,2,3,4,5",
+            "compute 1,2,3,4,5 --skip-build --skip-npm-update"
+        )
+        ($result.Output -join "`n") | Should -Match "file"
+    }
+
+    It "fails when -NamespaceList contains an unknown namespace" {
+        $repository = New-TestRepository
+        New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
+            -Namespaces @("storage", "keyvault")
+
+        $result = Invoke-Generator $repository -Arguments @("-NamespaceList", "storage,bogus")
+
+        $result.ExitCode | Should -Not -Be 0
+        $result.Invocations | Should -BeNullOrEmpty
+        ($result.Output -join "`n") | Should -Match "bogus"
+    }
+
+    It "fails when -NamespaceFile does not exist" {
+        $repository = New-TestRepository
+        New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa"
+
+        $result = Invoke-Generator $repository -Arguments @("-NamespaceFile", "/no/such/file.txt")
+
+        $result.ExitCode | Should -Not -Be 0
+        $result.Invocations | Should -BeNullOrEmpty
+        ($result.Output -join "`n") | Should -Match "not found"
+    }
+
+    It "fails when both -NamespaceList and -NamespaceFile are provided" {
+        $repository = New-TestRepository
+        New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
+            -Namespaces @("storage")
+
+        $nsFile = Join-Path $repository "ns-list.txt"
+        "storage" | Set-Content $nsFile
+
+        $result = Invoke-Generator $repository -Arguments @("-NamespaceList", "storage", "-NamespaceFile", $nsFile)
+
+        $result.ExitCode | Should -Not -Be 0
+        $result.Invocations | Should -BeNullOrEmpty
+        ($result.Output -join "`n") | Should -Match "Cannot specify both"
     }
 }

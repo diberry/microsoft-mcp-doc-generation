@@ -1,27 +1,44 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Generate documentation for all Azure MCP namespace families.
+    Generate documentation for Azure MCP namespace families with transcript logging.
 
 .DESCRIPTION
-    Orchestrates the full documentation generation pipeline for all namespaces
-    listed in mcp-cli-metadata/namespace-mapping.json. Each namespace runs
-    steps 1-5 via start.sh. After each namespace completes (or fails), its
-    output is moved from the repo root into a consolidated run directory:
+    Orchestrates the documentation generation pipeline for namespaces with full
+    transcript logging. Supports three namespace selection modes:
+
+    1. Full list (default) — all namespaces from namespace-mapping.json
+    2. Comma-separated list — via -NamespaceList parameter
+    3. Text file — via -NamespaceFile parameter (one namespace per line)
+
+    Each namespace runs steps 1-5 via start.sh. After each namespace completes
+    (or fails), its output is moved from the repo root into a consolidated
+    run directory:
 
         ./generated-<run-datetime>/<namespace>/
 
-    This keeps only the currently-running namespace's output at the repo root.
+.PARAMETER NamespaceList
+    Comma-separated list of namespaces to generate (e.g., "advisor,appservice,compute").
+
+.PARAMETER NamespaceFile
+    Path to a text file with one namespace per line. Blank lines and lines
+    starting with # are ignored.
 
 .PARAMETER PreflightOnly
     Validate environment, credentials, and metadata without generating docs.
 
 .EXAMPLE
     # Full generation of all namespaces
-    pwsh ./generate-all-azure-mcp-namespace-family-files.ps1
+    pwsh ./start-with-logs.ps1
+
+    # Generate specific namespaces (comma list)
+    pwsh ./start-with-logs.ps1 -NamespaceList "advisor,appservice,compute"
+
+    # Generate namespaces from a text file
+    pwsh ./start-with-logs.ps1 -NamespaceFile ./my-namespaces.txt
 
     # Preflight check only (no generation)
-    pwsh ./generate-all-azure-mcp-namespace-family-files.ps1 -PreflightOnly
+    pwsh ./start-with-logs.ps1 -PreflightOnly
 
 .OUTPUTS
     Generated docs:  ./generated-<run-datetime>/<namespace>/
@@ -32,8 +49,14 @@
 #>
 
 param(
+    [string]$NamespaceList,
+    [string]$NamespaceFile,
     [switch]$PreflightOnly
 )
+
+if (-not [string]::IsNullOrWhiteSpace($NamespaceList) -and -not [string]::IsNullOrWhiteSpace($NamespaceFile)) {
+    throw "Cannot specify both -NamespaceList and -NamespaceFile. Use one or the other."
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -270,11 +293,49 @@ try {
         throw "Metadata artifact has an invalid shape (missing namespaces): $(Join-Path $selectedDirectory 'namespace-mapping.json')"
     }
 
-    $namespaces = @($namespaceMapping.namespaces.PSObject.Properties.Name | Sort-Object)
-    if ($namespaces.Count -eq 0 -or
-        @($namespaces | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
+    $allKnownNamespaces = @($namespaceMapping.namespaces.PSObject.Properties.Name | Sort-Object)
+    if ($allKnownNamespaces.Count -eq 0 -or
+        @($allKnownNamespaces | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
         throw "Metadata namespace mapping is empty: $(Join-Path $selectedDirectory 'namespace-mapping.json')"
     }
+
+    # Resolve namespace list from the three input modes
+    if (-not [string]::IsNullOrWhiteSpace($NamespaceFile)) {
+        if (-not (Test-Path -LiteralPath $NamespaceFile -PathType Leaf)) {
+            throw "Namespace file not found: $NamespaceFile"
+        }
+        $namespaces = @(
+            Get-Content -LiteralPath $NamespaceFile |
+                ForEach-Object { $_.Trim() } |
+                Where-Object { $_ -and -not $_.StartsWith("#") }
+        )
+        if ($namespaces.Count -eq 0) {
+            throw "Namespace file is empty or contains only comments: $NamespaceFile"
+        }
+        $inputMode = "file ($NamespaceFile)"
+    } elseif (-not [string]::IsNullOrWhiteSpace($NamespaceList)) {
+        $namespaces = @(
+            $NamespaceList -split ',' |
+                ForEach-Object { $_.Trim() } |
+                Where-Object { $_ }
+        )
+        if ($namespaces.Count -eq 0) {
+            throw "Namespaces parameter is empty after parsing."
+        }
+        $inputMode = "comma list ($($namespaces.Count) namespace(s))"
+    } else {
+        $namespaces = $allKnownNamespaces
+        $inputMode = "full list ($($namespaces.Count) namespace(s))"
+    }
+
+    # Validate requested namespaces exist in metadata
+    $unknownNamespaces = @($namespaces | Where-Object { $_ -notin $allKnownNamespaces })
+    if ($unknownNamespaces.Count -gt 0) {
+        throw "Unknown namespace(s) not in metadata: $($unknownNamespaces -join ', ')"
+    }
+
+    Write-Host "Namespace source: $inputMode"
+    Write-Host "Namespaces to generate: $($namespaces -join ', ')"
 
     Import-ProcessEnvironment -Path $environmentPath
 
