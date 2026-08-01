@@ -331,6 +331,43 @@ internal static class Program
 
             successCount++;
 
+            // Issue #781: Deterministic prompt repair — inject concrete values for missing params
+            // Runs AFTER AI parse, BEFORE sanitization. Verification runs on sanitized text.
+            var requiredOptions = (tool.Option ?? new List<Option>())
+                .Where(o => o.Required && !string.IsNullOrWhiteSpace(o.Name))
+                .ToList();
+
+            if (requiredOptions.Count > 0)
+            {
+                var repairResult = DeterministicPromptRepairer.Repair(promptsResponse.Prompts, requiredOptions);
+                promptsResponse.Prompts = repairResult.RepairedPrompts.ToList();
+
+                if (repairResult.Actions.Count > 0)
+                {
+                    Console.WriteLine($"    🔧 Repaired {repairResult.Actions.Count} param(s): {string.Join(", ", repairResult.Actions.Select(a => a.ParameterName))}");
+                }
+                if (repairResult.StillUncovered.Count > 0)
+                {
+                    Console.WriteLine($"    ⚠️  Still uncovered after repair: {string.Join(", ", repairResult.StillUncovered)}");
+                }
+
+                // Write repair telemetry
+                var telemetryDir = Path.Combine(outputDir, "repair-telemetry");
+                Directory.CreateDirectory(telemetryDir);
+                var telemetryFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(
+                    tool.Command, nameContext).Replace("-example-prompts.md", "-repair-telemetry.json");
+                var telemetry = new
+                {
+                    tool = tool.Command,
+                    timestamp = DateTime.UtcNow.ToString("o"),
+                    actions = repairResult.Actions.Select(a => new { a.ParameterName, a.InjectedValue, a.ActionType }),
+                    stillUncovered = repairResult.StillUncovered,
+                    promptCount = repairResult.RepairedPrompts.Count
+                };
+                var telemetryJson = JsonSerializer.Serialize(telemetry, new JsonSerializerOptions { WriteIndented = true });
+                await File.WriteAllTextAsync(Path.Combine(telemetryDir, telemetryFileName), telemetryJson, Encoding.UTF8);
+            }
+
             // Defense-in-depth: sanitize all prompts before writing to disk (issue #288)
             // Handles credentials AND Azure endpoint patterns (PR #286).
             // Idempotent — safe for deterministic prompts that already sanitized internally.

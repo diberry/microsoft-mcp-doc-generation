@@ -420,4 +420,108 @@ public class DeterministicPromptRepairerTests
         // Should have no StillUncovered
         Assert.Empty(result.StillUncovered);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    // INTEGRATION: Full flow — AI response with missing params → repair → sanitize
+    // → coverage checker passes. Uses real E2E failure cases from #781.
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Integration_KeyVault_CertificateData_RepairThenSanitize_Passes()
+    {
+        // Simulate AI-generated prompts that miss certificate-data param
+        var aiPrompts = new List<string>
+        {
+            "Import a certificate into my Key Vault named 'contoso-kv-01'.",
+            "Upload a PFX certificate to the vault 'my-vault'.",
+            "Add a new certificate to Key Vault for my application.",
+            "Import the SSL certificate into Azure Key Vault.",
+            "Store a code signing certificate in the vault."
+        };
+        var required = new List<Option>
+        {
+            new() { Name = "--certificate-data", Required = true, Description = "Base64-encoded certificate data (PFX/PEM)" }
+        };
+
+        var result = DeterministicPromptRepairer.Repair(aiPrompts, required);
+
+        // Verify: all non-blank prompts now mention certificate-data
+        Assert.Empty(result.StillUncovered);
+        Assert.True(result.Actions.Count > 0, "Should have repaired certificate-data");
+        Assert.Equal("certificate-data", result.Actions[0].ParameterName);
+
+        // Full pipeline: sanitize then re-check coverage
+        var sanitized = result.RepairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
+        foreach (var prompt in sanitized.Where(p => !string.IsNullOrWhiteSpace(p)))
+        {
+            Assert.Contains("certificate", prompt, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Integration_Cosmos_OpenAIEndpointAndEmbeddingDeployment_RepairThenSanitize_Passes()
+    {
+        // Simulate AI-generated prompts that miss openai-endpoint and embedding-deployment
+        var aiPrompts = new List<string>
+        {
+            "Create a vector index in my Cosmos DB database 'products'.",
+            "Set up vector search for the 'reviews' collection.",
+            "Configure embeddings for Cosmos DB container.",
+            "Initialize vector indexing policy on my database.",
+            "Enable vector search capabilities in Cosmos."
+        };
+        var required = new List<Option>
+        {
+            new() { Name = "--openai-endpoint", Required = true, Description = "Azure OpenAI endpoint URL" },
+            new() { Name = "--embedding-deployment", Required = true, Description = "Embedding model deployment name" },
+            new() { Name = "--database", Required = true, Description = "Database name" }
+        };
+
+        var result = DeterministicPromptRepairer.Repair(aiPrompts, required);
+
+        // database is likely already covered in prompts; openai-endpoint and embedding-deployment should be repaired
+        var repairedParamNames = result.Actions.Select(a => a.ParameterName).ToHashSet();
+        Assert.Contains("openai-endpoint", repairedParamNames);
+        Assert.Contains("embedding-deployment", repairedParamNames);
+
+        // Verify post-sanitize coverage
+        Assert.Empty(result.StillUncovered);
+
+        var sanitized = result.RepairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
+        foreach (var prompt in sanitized.Where(p => !string.IsNullOrWhiteSpace(p)))
+        {
+            // openai-endpoint should survive sanitization (heuristic value isn't a real credential)
+            var coverage1 = ParameterCoverageChecker.GetConcretePromptCoverage(
+                new[] { prompt }, "openai-endpoint", required.Count, required[0].Description);
+            var coverage2 = ParameterCoverageChecker.GetConcretePromptCoverage(
+                new[] { prompt }, "embedding-deployment", required.Count, required[1].Description);
+            Assert.True(coverage1.Covered || coverage1.PlaceholderDetected,
+                $"openai-endpoint not covered in: {prompt}");
+            Assert.True(coverage2.Covered || coverage2.PlaceholderDetected,
+                $"embedding-deployment not covered in: {prompt}");
+        }
+    }
+
+    [Fact]
+    public void Integration_RepairDoesNotDoubleInjectAlreadyCoveredParams()
+    {
+        // Prompts already contain the required param — repair should be a no-op
+        var prompts = new List<string>
+        {
+            "List certificates in vault 'contoso-vault' for resource group 'rg-contoso-01'.",
+            "Show certificate details in vault 'test-kv' for resource group 'rg-test'."
+        };
+        var required = new List<Option>
+        {
+            new() { Name = "--resource-group", Required = true, Description = "Resource group name" }
+        };
+
+        var result = DeterministicPromptRepairer.Repair(prompts, required);
+
+        Assert.Empty(result.Actions);
+        Assert.Empty(result.StillUncovered);
+        // Prompts unchanged
+        Assert.Equal(prompts[0], result.RepairedPrompts[0]);
+        Assert.Equal(prompts[1], result.RepairedPrompts[1]);
+    }
 }
