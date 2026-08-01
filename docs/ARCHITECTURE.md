@@ -65,9 +65,13 @@ Step 1: Annotations + Parameters + Raw Tools ───────────�
   │  Uses: Handlebars templates, static-text-replacement.json
   │
   ▼
-Step 2: Example Prompts (AI) ──────────────────────────────────────
+Step 2: Example Prompts (AI + Deterministic Repair) ───────────────
   │  • tools-raw/ + cli-output.json → example-prompts/*.md
   │  • Azure OpenAI generates 5 natural language prompts per tool
+  │  • DeterministicPromptRepairer replaces placeholder/fabricated
+  │    parameter values with realistic deterministic values (runs
+  │    AFTER AI parse, BEFORE CredentialSanitizer)
+  │  • Per-tool repair telemetry → repair-telemetry/*.json
   │  • Validation checks parameter coverage in generated prompts
   │
   ▼
@@ -123,6 +127,18 @@ Step 7: Article Health Validation (non-blocking) ──────────�
   │    Get-ArticleHealthSmokeFixtures.ps1, an explicit healthy-fixture
   │    allowlist, so negative health fixtures and coverage fixtures stay
   │    in their dedicated tests instead of becoming baseline gate failures
+  │
+  ▼
+Step 8: Coverage Audit (non-blocking) ─────────────────────────────
+  │  • Invokes Scan-McpToolCoverage.ps1 to verify all CLI tools
+  │    have corresponding documentation in tool-family articles
+  │  • Compares cli-output.json tools against tool-family/*.md markers
+  │  • Detects: missing tools, missing parameters, annotation mismatches
+  │  • Gate mode from mcp-tools/data/validation-gate-config.json:
+  │    "warn" = missing-tool findings fail, param/annotation findings warn;
+  │    "block" = all findings fail the step
+  │  • Depends on Steps 0, 4, 7; warn-only — failures don't stop the pipeline
+  │  • Output: validation/coverage-audit.json, validation/validation-summary.md
   │
   ▼
 Final Output ──────────────────────────────────────────────────────
