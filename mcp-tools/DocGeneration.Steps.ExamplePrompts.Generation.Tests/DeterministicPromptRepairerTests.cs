@@ -541,4 +541,89 @@ public class DeterministicPromptRepairerTests
         Assert.Equal(prompts[0], result.RepairedPrompts[0]);
         Assert.Equal(prompts[1], result.RepairedPrompts[1]);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────────
+    // PHASE 1: Display-name alignment (PR #783 TDD fix plan)
+    // ──────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Repair_UsesDisplayNameForCoverageCheck_DetectsGapCorrectly()
+    {
+        // Given: Option.Name = "--app", DisplayName = "App name"
+        //        Prompt contains "<app>" placeholder but NO concrete "app name" value
+        var prompts = new List<string>
+        {
+            "Start the web app <app>.",
+            "Restart the application <app>.",
+        };
+        var required = new List<Option>
+        {
+            new() { Name = "--app", Required = true, Description = "The web app name", DisplayName = "App name" }
+        };
+
+        var result = DeterministicPromptRepairer.Repair(prompts, required);
+
+        // With display name "App name", the checker should recognize the <app> placeholder
+        // covers the display name (since "app" is the base word when "name" suffix is stripped).
+        // The PlaceholderDetected path should satisfy coverage.
+        Assert.Empty(result.StillUncovered);
+    }
+
+    [Fact]
+    public void Repair_WithDisplayName_InjectsWhenNoCoverageAtAll()
+    {
+        // Given: Option.Name = "--eventhub", DisplayName = "Event Hub name"
+        //        Prompts have NO reference to eventhub at all
+        var prompts = new List<string>
+        {
+            "Send a message to the queue.",
+            "List all consumer groups.",
+        };
+        var required = new List<Option>
+        {
+            new() { Name = "--eventhub", Required = true, Description = "Event Hub name", DisplayName = "Event Hub name" }
+        };
+
+        var result = DeterministicPromptRepairer.Repair(prompts, required);
+
+        // Should inject because display name "Event Hub name" has no coverage
+        Assert.NotEmpty(result.Actions);
+        Assert.Contains(result.Actions, a => a.ParameterName == "eventhub");
+    }
+
+    [Fact]
+    public void Repair_WithDisplayName_PostRepairVerificationUsesDisplayName()
+    {
+        // Given: Prompts with injected "for app 'my-webapp'"
+        // When: Post-repair verification runs with DisplayName "App name"
+        // Then: ParameterCoverageChecker("App name", ...) returns Covered (because "name" is generic suffix)
+        var prompts = new List<string>
+        {
+            "Start the web app for app 'my-webapp'.",
+        };
+        var required = new List<Option>
+        {
+            new() { Name = "--app", Required = true, Description = "Web app name", DisplayName = "App name" }
+        };
+
+        var result = DeterministicPromptRepairer.Repair(prompts, required);
+
+        // "App name" → base word "app" (since "name" is generic suffix)
+        // Prompt already has " app 'my-webapp'" → covered
+        Assert.Empty(result.StillUncovered);
+    }
+
+    [Fact]
+    public void GetCoverageName_ReturnsDisplayName_WhenPresent()
+    {
+        var option = new Option { Name = "--app", Required = true, DisplayName = "App name" };
+        Assert.Equal("App name", DeterministicPromptRepairer.GetCoverageName(option));
+    }
+
+    [Fact]
+    public void GetCoverageName_FallsBackToCanonicalName_WhenNoDisplayName()
+    {
+        var option = new Option { Name = "--resource-group", Required = true };
+        Assert.Equal("resource-group", DeterministicPromptRepairer.GetCoverageName(option));
+    }
 }

@@ -337,6 +337,21 @@ internal static class Program
                 .Where(o => o.Required && !string.IsNullOrWhiteSpace(o.Name))
                 .ToList();
 
+            // Enrich options with display names from parameter manifest (fixes display-name
+            // mismatch: repairer was checking "app" but Step 4 validates "App name").
+            if (parameterManifest != null)
+            {
+                foreach (var opt in requiredOptions)
+                {
+                    var manifestParam = parameterManifest.FirstOrDefault(p =>
+                        string.Equals(p.Name, opt.Name, StringComparison.OrdinalIgnoreCase));
+                    if (manifestParam?.DisplayName != null)
+                    {
+                        opt.DisplayName = manifestParam.DisplayName;
+                    }
+                }
+            }
+
             if (requiredOptions.Count > 0)
             {
                 var repairResult = DeterministicPromptRepairer.Repair(promptsResponse.Prompts, requiredOptions);

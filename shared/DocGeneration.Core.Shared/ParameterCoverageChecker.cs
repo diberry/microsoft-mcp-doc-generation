@@ -11,6 +11,12 @@ namespace Shared;
 /// </summary>
 public static class ParameterCoverageChecker
 {
+    /// <summary>
+    /// Generic suffixes that do not contribute to placeholder matching: when the last word of a
+    /// parameter name is one of these, only the preceding words are required in placeholders.
+    /// </summary>
+    internal static readonly string[] GenericSuffixes = ["name", "text", "array", "value", "group", "id"];
+
     public static PromptCoverage GetConcretePromptCoverage(IReadOnlyList<string> examplePrompts, string parameterName, int totalRequiredParameters)
         => GetConcretePromptCoverage(examplePrompts, parameterName, totalRequiredParameters, parameterDescription: null);
 
@@ -44,7 +50,7 @@ public static class ParameterCoverageChecker
             }
         }
 
-        if (words.Length > 1 && new[] { "name", "text", "array", "value" }.Contains(words[^1], StringComparer.Ordinal))
+        if (words.Length > 1 && GenericSuffixes.Contains(words[^1], StringComparer.Ordinal))
         {
             var baseWords = words[..^1];
             foreach (var variant in new[]
@@ -138,10 +144,17 @@ public static class ParameterCoverageChecker
                 // Strip any remaining nested delimiters (handles double-wrapped like `<account>`)
                 inner = inner.TrimStart('<', '{', '[').TrimEnd('>', '}', ']');
                 var placeholderSlug = ConvertToSlug(inner);
-                var requiredWordMatches = Math.Min(Math.Max(words.Length, 1), 2);
+                // When the last word is a known generic suffix (name, group, id, etc.),
+                // only the non-suffix words are required for placeholder matching.
+                var effectiveWords = words;
+                if (words.Length > 1 && GenericSuffixes.Contains(words[^1], StringComparer.Ordinal))
+                {
+                    effectiveWords = words[..^1];
+                }
+                var requiredWordMatches = Math.Min(Math.Max(effectiveWords.Length, 1), 2);
                 if (placeholderSlug == slug
                     || placeholderSlug.Contains(slug, StringComparison.Ordinal)
-                    || CountRequiredWordMatches(words, word => placeholderSlug.Contains(word, StringComparison.Ordinal)) >= requiredWordMatches)
+                    || CountRequiredWordMatches(effectiveWords, word => placeholderSlug.Contains(word, StringComparison.Ordinal)) >= requiredWordMatches)
                 {
                     placeholderDetected = true;
                 }
@@ -154,7 +167,7 @@ public static class ParameterCoverageChecker
                     var innerTokens = Regex.Split(inner.ToLowerInvariant(), "[^a-z0-9]+")
                         .Where(t => t.Length > 0)
                         .ToArray();
-                    if (CountRequiredWordMatches(words, word => innerTokens.Contains(word, StringComparer.Ordinal))
+                    if (CountRequiredWordMatches(effectiveWords, word => innerTokens.Contains(word, StringComparer.Ordinal))
                         >= requiredWordMatches)
                     {
                         placeholderDetected = true;

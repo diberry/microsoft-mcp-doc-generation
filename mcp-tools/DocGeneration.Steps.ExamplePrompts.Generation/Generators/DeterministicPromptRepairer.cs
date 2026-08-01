@@ -17,6 +17,8 @@ public static class DeterministicPromptRepairer
     /// <summary>
     /// Repairs prompts so that every non-blank prompt covers every required parameter.
     /// Uses the coverage checker to detect gaps, then injects values from the resolution chain.
+    /// Coverage verification uses the display name (matching Step 4 validation) when available,
+    /// falling back to the canonicalized CLI name.
     /// </summary>
     public static RepairResult Repair(IReadOnlyList<string> prompts, IReadOnlyList<Option> requiredParameters)
     {
@@ -32,7 +34,8 @@ public static class DeterministicPromptRepairer
             if (string.IsNullOrWhiteSpace(param.Name)) continue;
 
             var canonicalName = CanonicalizeParamName(param.Name);
-            var coverage = GetEffectiveCoverage(repairedPrompts, canonicalName, requiredParameters.Count, param.Description);
+            var coverageName = GetCoverageName(param);
+            var coverage = GetEffectiveCoverage(repairedPrompts, coverageName, requiredParameters.Count, param.Description);
 
             if (coverage) continue;
 
@@ -60,15 +63,26 @@ public static class DeterministicPromptRepairer
         foreach (var param in requiredParameters)
         {
             if (string.IsNullOrWhiteSpace(param.Name)) continue;
-            var canonicalName = CanonicalizeParamName(param.Name);
-            var postSanitizeCoverage = GetEffectiveCoverage(sanitizedPrompts, canonicalName, requiredParameters.Count, param.Description);
+            var coverageName = GetCoverageName(param);
+            var postSanitizeCoverage = GetEffectiveCoverage(sanitizedPrompts, coverageName, requiredParameters.Count, param.Description);
             if (!postSanitizeCoverage)
             {
-                stillUncovered.Add(canonicalName);
+                stillUncovered.Add(coverageName);
             }
         }
 
         return new RepairResult(repairedPrompts, actions, stillUncovered);
+    }
+
+    /// <summary>
+    /// Gets the name used for coverage checking: display name (matching Step 4 validator)
+    /// when available, otherwise the canonicalized CLI name.
+    /// </summary>
+    internal static string GetCoverageName(Option param)
+    {
+        if (!string.IsNullOrWhiteSpace(param.DisplayName))
+            return param.DisplayName;
+        return CanonicalizeParamName(param.Name!);
     }
 
     /// <summary>
