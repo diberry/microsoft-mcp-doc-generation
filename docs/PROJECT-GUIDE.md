@@ -122,7 +122,7 @@ When iterating on a single step whose prerequisites already exist from a prior r
 |------|------|-------|-------------|--------|
 | 0 | Bootstrap | Global | No | Validates config, extracts CLI metadata, cleans output dirs |
 | 1 | Annotations & Parameters | Per-namespace | No | `annotations/`, `parameters/`, `tools-raw/` |
-| 2 | Example Prompts | Per-namespace | Yes | `example-prompts/`, `example-prompts-prompts/` |
+| 2 | Example Prompts | Per-namespace | Yes | `example-prompts/`, `example-prompts-prompts/`, `repair-telemetry/` |
 | 3 | Tool Generation | Per-namespace | Yes | `tools/` (AI-improved markdown) |
 | 4 | Tool-Family Assembly | Per-namespace | Yes | `tool-family/{namespace}.md` |
 | 5 | Skills Relevance | Per-namespace | No | `skills-relevance/{namespace}-skills-relevance.md` |
@@ -614,7 +614,10 @@ Located: `PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs`
 
 **What it does:**
 - Requires AI configuration
-- Invokes `ExamplePromptGeneratorStandalone` project
+- Invokes `DocGeneration.Steps.ExamplePrompts.Generation` project
+- After AI parse, runs `DeterministicPromptRepairer` to replace placeholder/fabricated parameter values (GUIDs, `your-*`, `example-*`, `<placeholder>`) with realistic deterministic values from `ParameterValueBank`
+- Emits per-tool repair telemetry JSON to `repair-telemetry/` directory
+- Runs `CredentialSanitizer` after repair
 - Validates output using `ExamplePromptValidator`
 - Creates filtered CLI view
 

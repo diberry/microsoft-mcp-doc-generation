@@ -284,9 +284,9 @@ public static class ParameterCoverageChecker
     /// <summary>
     /// Parses a closed set of allowed values from a parameter description. Only explicit closed-enum
     /// trigger phrases ("Available options:", "Allowed values:", "Valid values:", "Must be one of:",
-    /// "One of:") are recognized; open-ended example phrasing ("e.g.", "for example", "such as",
-    /// "typical values") is intentionally ignored so free-text parameters are not treated as enums.
-    /// Returns the quoted values that follow the trigger phrase.
+    /// "One of:", "Options:") are recognized; open-ended example phrasing ("e.g.", "for example",
+    /// "such as", "typical values") is intentionally ignored so free-text parameters are not treated
+    /// as enums. Returns the quoted values that follow the trigger phrase.
     /// </summary>
     public static IReadOnlyList<string> ParseAllowedValues(string? description)
     {
@@ -298,7 +298,7 @@ public static class ParameterCoverageChecker
         var clean = RemoveMarkup(description);
         var trigger = Regex.Match(
             clean,
-            "(?i)\\b(available options|allowed values|valid values|must be one of|one of the following|one of)\\s*:?\\s*");
+            "(?i)\\b(available options|allowed values|valid values|must be one of|one of the following|one of|options)\\s*:?\\s*");
         if (!trigger.Success)
         {
             return Array.Empty<string>();

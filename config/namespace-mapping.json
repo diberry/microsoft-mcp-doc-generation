@@ -8,7 +8,7 @@
   "datadog": "azure-native-isv.md",
   "foundryextensions": "azure-foundry.md",
   "functionapp": "azure-functions.md",
-  "get": "azure-best-practices.md",
+  "get_azure_bestpractices": "azure-best-practices.md",
   "acr": "azure-container-registry.md",
   "advisor": "azure-advisor.md",
   "aks": "azure-kubernetes.md",

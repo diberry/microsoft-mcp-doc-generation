@@ -65,9 +65,13 @@ Step 1: Annotations + Parameters + Raw Tools ───────────�
   │  Uses: Handlebars templates, static-text-replacement.json
   │
   ▼
-Step 2: Example Prompts (AI) ──────────────────────────────────────
+Step 2: Example Prompts (AI + Deterministic Repair) ───────────────
   │  • tools-raw/ + cli-output.json → example-prompts/*.md
   │  • Azure OpenAI generates 5 natural language prompts per tool
+  │  • DeterministicPromptRepairer replaces placeholder/fabricated
+  │    parameter values with realistic deterministic values (runs
+  │    AFTER AI parse, BEFORE CredentialSanitizer)
+  │  • Per-tool repair telemetry → repair-telemetry/*.json
   │  • Validation checks parameter coverage in generated prompts
   │
   ▼

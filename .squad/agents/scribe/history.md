@@ -36,3 +36,21 @@ Initial setup complete.
 **Scribe Workflow:** Documented via 4 orchestration logs (one per agent), 1 session log, agent history updates. Decision inbox empty (no new decisions to merge).
 
 **Lasting Pattern:** Round 2 re-review demonstrates effective use of agent-specific expertise and test-driven quality gates. Template-level regression tests now standard practice for `.hbs` file changes (AD-019).
+
+### 2026-07-30: Versioned All-Namespace PowerShell Orchestrator Completed
+
+**Session Summary:** A root `generate-all-azure-mcp-namespace-family-files.ps1` entry point was completed for versioned, all-namespace family generation.
+
+**Delivered behavior:**
+- Selects the latest semantic-versioned metadata snapshot and validates its required artifacts.
+- Resolves AZD settings from `.azure/<environment>/.env`, honoring `defaultEnvironment`, accepting one unambiguous nested environment, and retaining `.azure/.env` as fallback.
+- Runs exactly Steps 1-5 with AI improvements enabled and streams output in real time.
+- Supports PowerShell and Git Bash, including repository paths containing spaces.
+- Includes a non-writing `-PreflightOnly` validation path.
+- Updates README, start-script documentation, and CHANGELOG.
+
+**Quality outcome:** Work followed TDD with a confirmed RED phase before implementation and GREEN afterward. Cameron completed final review with a PASS.
+
+**Repository state at handoff:** No generated outputs were added or modified. No commit or PR was created.
+
+**Decision handling:** No new architectural decision was identified, so no decision-inbox entry was created.
