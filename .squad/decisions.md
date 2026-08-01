@@ -2,6 +2,11 @@
 
 ## Active Decisions
 
+### 2026-08-01: AD-027 — PowerShell parameter-variable collision check
+**By:** Coordinator (learned from PR #785)
+**What:** When reviewing PowerShell scripts (`.ps1`), Quinn and reviewers must check that `param()` parameter names do not collide (case-insensitive) with local variables used in the script body. PowerShell's type-constrained parameters silently coerce reassigned values (e.g., `[string]$Namespaces` converts an array assignment to a space-joined string), causing subtle bugs that only surface at runtime.
+**Why:** PR #785 had `[string]$Namespaces` as a parameter and `$namespaces` as a local variable. PowerShell treated them as the same variable, coercing array→string and breaking namespace iteration. Fix was to rename the parameter to `$NamespaceList`. This class of bug is invisible to static analysis and easy to introduce.
+
 ### 2026-05-31: AD-026 — PR CHANGELOG requirement (summary reference)
 **By:** Dina Berry (via Copilot)
 **What:** Every PR must update `CHANGELOG.md` under `## [Unreleased]` with a user-facing description before team review. Full definition in `.squad/decisions-archive.md` under AD-026.
