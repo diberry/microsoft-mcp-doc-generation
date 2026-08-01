@@ -6,6 +6,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Renamed `generate-all-azure-mcp-namespace-family-files.ps1` → `start-with-logs.ps1` (#785)** — Shorter name, same behavior. Added `-NamespaceList` (comma-separated list) and `-NamespaceFile` (text file, one per line, `#` comments) parameters for selective namespace generation. Unknown namespaces fail fast with a clear error. The two filtering params are mutually exclusive. Updated README.md, docs/START-SCRIPTS.md, and Pester tests.
+
 ### Added
 
 - **Deterministic prompt repair for AI-generated example prompts (#781, #782)** — Added `DeterministicPromptRepairer` and `ParameterValueBank` in `DocGeneration.Steps.ExamplePrompts.Generation` that run AFTER the AI parse and BEFORE `CredentialSanitizer` in Step 2. The repairer scans AI-generated prompts for placeholder/fabricated parameter values (GUIDs, `your-*`, `example-*`, `<placeholder>`) and replaces them with realistic, deterministic values drawn from `ParameterValueBank` — a curated dictionary keyed by parameter name. Per-tool telemetry JSON is emitted to `repair-telemetry/` for observability. This eliminates ~95% of placeholder leakage without re-calling the LLM. 41 new tests (38 unit + 3 integration) cover the repair logic.

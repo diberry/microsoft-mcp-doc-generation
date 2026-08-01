@@ -17,7 +17,7 @@
 
         ./generated-<run-datetime>/<namespace>/
 
-.PARAMETER Namespaces
+.PARAMETER NamespaceList
     Comma-separated list of namespaces to generate (e.g., "advisor,appservice,compute").
 
 .PARAMETER NamespaceFile
@@ -32,7 +32,7 @@
     pwsh ./start-with-logs.ps1
 
     # Generate specific namespaces (comma list)
-    pwsh ./start-with-logs.ps1 -Namespaces "advisor,appservice,compute"
+    pwsh ./start-with-logs.ps1 -NamespaceList "advisor,appservice,compute"
 
     # Generate namespaces from a text file
     pwsh ./start-with-logs.ps1 -NamespaceFile ./my-namespaces.txt
@@ -49,10 +49,14 @@
 #>
 
 param(
-    [string]$Namespaces,
+    [string]$NamespaceList,
     [string]$NamespaceFile,
     [switch]$PreflightOnly
 )
+
+if (-not [string]::IsNullOrWhiteSpace($NamespaceList) -and -not [string]::IsNullOrWhiteSpace($NamespaceFile)) {
+    throw "Cannot specify both -NamespaceList and -NamespaceFile. Use one or the other."
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -309,9 +313,9 @@ try {
             throw "Namespace file is empty or contains only comments: $NamespaceFile"
         }
         $inputMode = "file ($NamespaceFile)"
-    } elseif (-not [string]::IsNullOrWhiteSpace($Namespaces)) {
+    } elseif (-not [string]::IsNullOrWhiteSpace($NamespaceList)) {
         $namespaces = @(
-            $Namespaces -split ',' |
+            $NamespaceList -split ',' |
                 ForEach-Object { $_.Trim() } |
                 Where-Object { $_ }
         )

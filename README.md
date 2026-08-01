@@ -42,7 +42,7 @@ Use `start.sh` as the primary, general-purpose entry point for the typed pipelin
 pwsh -File ./start-with-logs.ps1
 
 # Specific namespaces (comma list)
-pwsh -File ./start-with-logs.ps1 -Namespaces "advisor,appservice,compute"
+pwsh -File ./start-with-logs.ps1 -NamespaceList "advisor,appservice,compute"
 
 # Namespaces from a text file (one per line, # comments supported)
 pwsh -File ./start-with-logs.ps1 -NamespaceFile ./my-namespaces.txt
@@ -490,3 +490,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 **Last Updated**: March 2026  
 **Maintained By**: @diberry
+
