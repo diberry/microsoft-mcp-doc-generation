@@ -136,10 +136,14 @@ public class DeterministicPromptRepairerTests
 
         var result = DeterministicPromptRepairer.Repair(prompts, required);
 
-        // The JWT-like enum value will be sanitized — should land in StillUncovered
-        // OR IsValidValue rejects it (contains special pattern) and fallback is used
-        // Either way, the system should handle this gracefully
-        Assert.NotNull(result);
+        // The enum value '******' is rejected by IsValidValue (contains special chars),
+        // so the repairer falls back to the contoso heuristic. Verify repair actually happened.
+        Assert.Single(result.Actions);
+        Assert.Equal("token-input", result.Actions[0].ParameterName);
+        // The fallback value should be safe and survive sanitization
+        Assert.True(DeterministicPromptRepairer.IsValidValue(result.Actions[0].InjectedValue),
+            "Injected fallback value must pass IsValidValue");
+        Assert.DoesNotContain("******", result.RepairedPrompts[0]);
     }
 
     // ──────────────────────────────────────────────────────────────────────────────
@@ -243,6 +247,19 @@ public class DeterministicPromptRepairerTests
     {
         var maxValue = new string('a', 200);
         Assert.True(DeterministicPromptRepairer.IsValidValue(maxValue));
+    }
+
+    [Theory]
+    [InlineData("café-resource", true)]     // accented chars are fine
+    [InlineData("value\twith\ttabs", false)] // tabs are control chars
+    [InlineData("value`backtick", true)]     // backticks allowed
+    [InlineData("value;semicolon", true)]    // semicolons allowed
+    [InlineData("DROP TABLE users;--", true)] // not SQL-injecting markdown
+    [InlineData("line1\nline2", false)]       // newlines rejected
+    [InlineData("has'quote", false)]          // single quotes rejected
+    public void IsValidValue_EdgeCases(string value, bool expected)
+    {
+        Assert.Equal(expected, DeterministicPromptRepairer.IsValidValue(value));
     }
 
     // ──────────────────────────────────────────────────────────────────────────────

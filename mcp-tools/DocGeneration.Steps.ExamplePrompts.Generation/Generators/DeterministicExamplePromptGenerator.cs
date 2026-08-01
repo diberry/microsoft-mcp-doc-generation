@@ -20,34 +20,16 @@ public static class DeterministicExamplePromptGenerator
         "list", "get", "create", "delete", "update"
     };
 
-    private static readonly Dictionary<string, string[]> ValueBank = new(StringComparer.OrdinalIgnoreCase)
+    // Single source of truth: delegate to ParameterValueBank (shared with DeterministicPromptRepairer).
+    // The "value" key with credential-shaped strings is intentionally kept here for deterministic
+    // prompt generation (CredentialSanitizer runs afterward), but excluded from ParameterValueBank.
+    private static readonly Dictionary<string, string[]> ValueBank = new(ParameterValueBank.Bank, StringComparer.OrdinalIgnoreCase)
     {
-        ["account"] = ["mystorageacct", "prodstore2026", "companydata2024", "webappstorage", "mediaacct2024"],
-        ["vault"] = ["prod-kv", "dev-keyvault", "finance-kv", "webapp-kv", "backup-kv"],
-        ["vaultname"] = ["prod-kv", "dev-keyvault", "finance-kv", "webapp-kv", "backup-kv"],
-        ["resource-group"] = ["rg-prod", "my-resource-group", "rg-dev", "rg-company", "rg-analytics"],
-        ["subscription"] = ["my-subscription", "contoso-sub", "dev-subscription", "prod-sub", "test-sub"],
-        ["location"] = ["eastus", "westus2", "centralus", "northcentralus", "eastus2"],
-        ["server-name"] = ["prod-sql-server", "dev-pg-server", "test-server-01", "analytics-server", "backup-server"],
-        ["servername"] = ["prod-sql-server", "dev-pg-server", "test-server-01", "analytics-server", "backup-server"],
-        ["database-name"] = ["mydb", "prod-database", "analytics-db", "app-data", "user-store"],
-        ["databasename"] = ["mydb", "prod-database", "analytics-db", "app-data", "user-store"],
-        ["container-name"] = ["backups", "documents", "images", "logs", "media"],
-        ["containername"] = ["backups", "documents", "images", "logs", "media"],
-        ["name"] = ["my-resource", "prod-item-01", "dev-config", "test-resource-2026", "analytics-asset"],
-        ["secret-name"] = ["db-password", "api-key", "oauth-token", "storage-conn-string", "payment-key"],
-        ["secretname"] = ["db-password", "api-key", "oauth-token", "storage-conn-string", "payment-key"],
-        ["key-name"] = ["signing-key", "encryption-key", "rsa-key-01", "auth-key", "backup-key"],
-        ["keyname"] = ["signing-key", "encryption-key", "rsa-key-01", "auth-key", "backup-key"],
+        // "value" key is the only addition — credential-shaped strings are sanitized post-generation
         ["value"] = ["P@ssw0rd!2026", "sk_live_4f3b2a", "DefaultEndpointsProtocol=https", "eyJhbGciOi", "pg_live_98zxy"],
-        ["query"] = ["Heartbeat | take 10", "AzureMetrics | summarize count()", "requests | where success == false", "traces | top 5 by timestamp", "exceptions | count"],
-        ["planid"] = ["plan-001", "marketing-plan", "dev-sprint-q1", "onboarding-plan", "project-alpha"],
-        ["taskid"] = ["task-001", "review-docs", "fix-bug-42", "deploy-staging", "update-config"],
-        ["groupid"] = ["group-engineering", "team-marketing", "dept-finance", "org-contoso", "project-alpha"],
-        ["indexname"] = ["products-index", "search-docs", "knowledge-base", "catalog-idx", "content-index"],
     };
 
-    private static readonly string[] DefaultValues = ["my-value-1", "prod-value-02", "test-config-a", "dev-item-2026", "sample-value"];
+    private static readonly string[] DefaultValues = ParameterValueBank.DefaultValues;
 
     /// <summary>
     /// Classifies the verb from a tool command string.
