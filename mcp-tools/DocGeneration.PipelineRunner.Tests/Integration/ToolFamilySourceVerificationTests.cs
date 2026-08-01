@@ -42,8 +42,9 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
         var result = await ValidateAsync(context);
 
         Assert.False(result.Success);
-        Assert.Contains(result.Warnings, warning => warning.Contains("article marker(s) are not present in source CLI JSON", StringComparison.Ordinal));
-        Assert.Contains(result.Warnings, warning => warning.Contains("storage account delete", StringComparison.Ordinal));
+        Assert.Contains(result.Warnings, warning =>
+            warning.Contains("No tools found matching", StringComparison.Ordinal)
+            && warning.Contains("storage account delete", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -234,7 +235,7 @@ public sealed class ToolFamilySourceVerificationTests : IDisposable
         var result = await ValidateAsync(context);
 
         Assert.False(result.Success);
-        Assert.Contains(result.Warnings, warning => warning.Contains("No tools found matching 'emptyservice'", StringComparison.Ordinal));
+        Assert.Contains(result.Warnings, warning => warning.Contains("No tools found matching 'emptyservice resource list'", StringComparison.Ordinal));
     }
 
     [Fact]

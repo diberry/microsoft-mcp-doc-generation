@@ -1609,6 +1609,305 @@ public class ToolFamilyPostAssemblyValidatorTests
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Issue #787: Shared-prefix namespace tests
+    // -----------------------------------------------------------------------
+
+    [Fact]
+    public async Task ValidateAsync_SharedPrefix_OnlyMatchesOwnNamespace_ExtensionCliGenerate()
+    {
+        // Reproduces #787: extension_cli_generate should resolve 1 tool, not 3.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var snapshot = BuildCliOutputSimple("extension azqr", "extension cli generate", "extension cli install");
+            var context = CreateContextForNamespace(testRoot, "extension_cli_generate", snapshot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "extension_cli_generate.md"), "extension cli generate");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "extension_cli_generate.md"),
+                SharedPrefixArticle("extension cli generate", "Extension CLI Generate"));
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success, $"Validation failed. Warnings: {string.Join("; ", result.Warnings)}");
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("Source tool count check failed", StringComparison.Ordinal));
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("extra article command", StringComparison.OrdinalIgnoreCase));
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("missing from article", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Theory]
+    [InlineData("extension_azqr", "extension azqr", "Extension AzQR")]
+    [InlineData("extension_cli_generate", "extension cli generate", "Extension CLI Generate")]
+    [InlineData("extension_cli_install", "extension cli install", "Extension CLI Install")]
+    public async Task ValidateAsync_SharedPrefix_EachNamespaceGetsOnlyOwnTool(
+        string namespaceName, string command, string heading)
+    {
+        // Each of the 3 extension namespaces should resolve exactly 1 tool.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var snapshot = BuildCliOutputSimple("extension azqr", "extension cli generate", "extension cli install");
+            var context = CreateContextForNamespace(testRoot, namespaceName, snapshot);
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", $"{namespaceName}.md"), command);
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", $"{namespaceName}.md"),
+                SharedPrefixArticle(command, heading));
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success, $"Namespace '{namespaceName}' failed. Warnings: {string.Join("; ", result.Warnings)}");
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("Source tool count check failed", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MultiToolNamespace_StillWorksCorrectly()
+    {
+        // Regression guard: acr namespace with multiple sub-tools still resolves all of them.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var snapshot = BuildCliOutputSimple("acr repository list", "acr repository show", "acr repository delete");
+            var context = CreateContextForNamespace(testRoot, "acr", snapshot);
+
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "acr-repository-list.md"), "acr repository list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "acr-repository-show.md"), "acr repository show");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "acr-repository-delete.md"), "acr repository delete");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "acr.md"), MultiToolArticle());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success, $"Validation failed. Warnings: {string.Join("; ", result.Warnings)}");
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("Source tool count check failed", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_SingleToolNamespace_NoSubcommands()
+    {
+        // Single-tool namespace where command = namespace name resolves to exactly 1 tool.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var snapshot = BuildCliOutputSimple("version");
+            var context = CreateContextForNamespace(testRoot, "version", snapshot);
+
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "version.md"), "version");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "version.md"), SingleToolArticle());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success, $"Validation failed. Warnings: {string.Join("; ", result.Warnings)}");
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("Source tool count check failed", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_MixedDepthCommands_ResolvesCorrectly()
+    {
+        // Cameron amendment: namespace with commands at different depth levels.
+        // "network" has both "network list" and "network vnet show" — both should resolve.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var snapshot = BuildCliOutputSimple("network list", "network vnet show", "network vnet delete");
+            var context = CreateContextForNamespace(testRoot, "network", snapshot);
+
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "network-list.md"), "network list");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "network-vnet-show.md"), "network vnet show");
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "network-vnet-delete.md"), "network vnet delete");
+            SeedFile(Path.Combine(context.OutputPath, "tool-family", "network.md"), MixedDepthArticle());
+
+            var validator = new ToolFamilyPostAssemblyValidator();
+            var result = await validator.ValidateAsync(context, new FakeStep(), CancellationToken.None);
+
+            Assert.True(result.Success, $"Validation failed. Warnings: {string.Join("; ", result.Warnings)}");
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("Source tool count check failed", StringComparison.Ordinal));
+            Assert.DoesNotContain(result.Warnings, w => w.Contains("missing from article", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    private static PipelineContext CreateContextForNamespace(string testRoot, string namespaceName, CliMetadataSnapshot snapshot)
+    {
+        var outputPath = Path.Combine(testRoot, $"generated-{namespaceName}");
+        Directory.CreateDirectory(outputPath);
+
+        var context = new PipelineContext
+        {
+            Request = new PipelineRequest(namespaceName, [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
+            RepoRoot = testRoot,
+            McpToolsRoot = Path.Combine(testRoot, "mcp-tools"),
+            OutputPath = outputPath,
+            ProcessRunner = new RecordingProcessRunner(),
+            Workspaces = new WorkspaceManager(),
+            CliMetadataLoader = new StubCliMetadataLoader(),
+            TargetMatcher = new TargetMatcher(),
+            FilteredCliWriter = new StubFilteredCliWriter(),
+            BuildCoordinator = new StubBuildCoordinator(),
+            AiCapabilityProbe = new StubAiCapabilityProbe(),
+            Reports = new BufferedReportWriter(),
+            CliVersion = "1.2.3",
+            SelectedNamespaces = [namespaceName],
+        };
+
+        context.Items[ToolFamilyPostAssemblyValidator.FamilyNameContextKey] = namespaceName;
+        context.Items["Namespace"] = namespaceName;
+        context.CliOutput = snapshot;
+        context.SourceCliOutput = snapshot;
+        return context;
+    }
+
+    private static CliMetadataSnapshot BuildCliOutputSimple(params string[] commands)
+    {
+        var cliTools = new List<CliTool>();
+        foreach (var cmd in commands)
+        {
+            var json = $$"""{ "command": "{{cmd}}", "name": "{{cmd}}" }""";
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            cliTools.Add(new CliTool(cmd, cmd, null, doc.RootElement.Clone()));
+        }
+
+        using var rootDoc = System.Text.Json.JsonDocument.Parse("{}");
+        return new CliMetadataSnapshot("cli-output.json", rootDoc.RootElement.Clone(), cliTools);
+    }
+
+    private static string SharedPrefixArticle(string command, string heading)
+        => $$"""
+        ---
+        title: {{heading}} tools
+        tool_count: 1
+        ---
+        # {{heading}} tools
+
+        ## {{heading}}
+        <!-- @mcpcli {{command}} -->
+        Example prompts include:
+        - Run the tool with name 'my-resource' in resource group 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | name | No |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string MultiToolArticle()
+        => """
+        ---
+        title: ACR tools
+        tool_count: 3
+        ---
+        # ACR tools
+
+        ## List repositories
+        <!-- @mcpcli acr repository list -->
+        Example prompts include:
+        - List repositories where registry name is 'myregistry'
+        | Parameter | Required |
+        | --- | --- |
+        | registry name | Yes |
+
+        ## Show repository
+        <!-- @mcpcli acr repository show -->
+        Example prompts include:
+        - Show details of repository name 'myrepo' in registry name 'myregistry'
+        | Parameter | Required |
+        | --- | --- |
+        | registry name | Yes |
+        | repository name | Yes |
+
+        ## Delete repository
+        <!-- @mcpcli acr repository delete -->
+        Example prompts include:
+        - Delete repository name 'myrepo' from registry name 'myregistry'
+        | Parameter | Required |
+        | --- | --- |
+        | registry name | Yes |
+        | repository name | Yes |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string SingleToolArticle()
+        => """
+        ---
+        title: Version tools
+        tool_count: 1
+        ---
+        # Version tools
+
+        ## Version
+        <!-- @mcpcli version -->
+        Example prompts include:
+        - Show the current version
+        | Parameter | Required |
+        | --- | --- |
+        | format | No |
+
+        ## Related content
+        - Link
+        """;
+
+    private static string MixedDepthArticle()
+        => """
+        ---
+        title: Network tools
+        tool_count: 3
+        ---
+        # Network tools
+
+        ## List networks
+        <!-- @mcpcli network list -->
+        Example prompts include:
+        - List all networks in resource group 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | resource group | No |
+
+        ## Show virtual network
+        <!-- @mcpcli network vnet show -->
+        Example prompts include:
+        - Show details of vnet name 'myvnet' in resource group 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vnet name | Yes |
+
+        ## Delete virtual network
+        <!-- @mcpcli network vnet delete -->
+        Example prompts include:
+        - Delete vnet name 'myvnet' from resource group 'rg-one'
+        | Parameter | Required |
+        | --- | --- |
+        | vnet name | Yes |
+
+        ## Related content
+        - Link
+        """;
+
     private static CliMetadataSnapshot BuildCliOutput(
         params (string Command, bool Destructive, bool Idempotent, bool OpenWorld, bool ReadOnly, bool Secret, bool LocalRequired)[] tools)
     {

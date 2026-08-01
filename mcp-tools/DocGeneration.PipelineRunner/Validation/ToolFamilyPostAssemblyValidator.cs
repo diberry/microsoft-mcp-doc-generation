@@ -786,7 +786,6 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         var roots = article.Sections
                 .SelectMany(section => section.Commands)
                 .Select(NormalizeToolCommand)
-                .Select(command => command.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault())
                 .Append(sourceNamespace)
                 .Where(root => !string.IsNullOrWhiteSpace(root))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
