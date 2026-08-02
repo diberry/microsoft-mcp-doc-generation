@@ -171,7 +171,7 @@ Steps declare their dependencies, failure policy, and whether they need AI confi
 
 | Step | Class | AI? | Failure | Retries | Key Outputs |
 |------|-------|-----|---------|---------|-------------|
-| 0 | `BootstrapStep` | No | Fatal | 0 | `cli/`, `h2-headings/`, `e2e-test-prompts/`, `namespace-mapping.json` |
+| 0 | `BootstrapStep` | No | Fatal | 3 | `cli/`, `h2-headings/`, `e2e-test-prompts/`, `namespace-mapping.json` |
 | 1 | `AnnotationsParametersRawStep` | No | Fatal | 0 | `annotations/`, `parameters/`, `tools-raw/` |
 | 2 | `ExamplePromptsStep` | Yes | Fatal | 0 | `example-prompts/` |
 | 3 | `ToolGenerationStep` | Yes | Fatal | 0 | `tools-composed/`, `tools/` |
@@ -392,6 +392,51 @@ Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` applies an
 1. `--mcp-branch` CLI flag
 2. `MCP_BRANCH` environment variable
 3. Default: `main`
+
+### CLI Metadata Retry Logic
+
+BootstrapStep retries CLI metadata extraction with exponential backoff to handle cold-start timeouts (e.g., first invocation after `dotnet tool install`):
+
+- **Attempts**: Initial + 3 retries (4 total)
+- **Backoff**: 2s → 4s → 8s between retries
+- **Scope**: All CLI metadata extractions (not just cold-start)
+- **On exhaustion**: Pipeline fails with diagnostic message listing all attempt errors
+- **Testability**: Delay function is injected (overridable in tests)
+
+### Namespace Drift Detection
+
+After loading CLI metadata, BootstrapStep validates that every `mcpServerName` in `brand-to-server-mapping.json` exists in the live CLI namespace list. Mismatches produce a **hard error** that stops the pipeline:
+
+```
+Namespace 'foundry' exists in brand-to-server-mapping.json but was not found in CLI output.
+Check config/namespace-mapping.json and merge-namespaces.sh for planned namespace changes.
+HUMAN action required.
+```
+
+This prevents silent failures when Microsoft renames or removes namespaces between beta versions. Configuration files that track planned changes:
+- `config/namespace-mapping.json` — namespace lifecycle tracking
+- `merge-namespaces.sh` — namespace merge/join configuration
+
+### Output Archival (generated-old)
+
+When running a **clean run** (full pipeline), previous output is moved to `generated-old/{timestamp}/` instead of being deleted. This:
+- Preserves prior generation results for debugging cross-version issues
+- Prevents stale content from contaminating fresh runs
+- Provides clear logging: "Clean run: archiving previous output" vs "Incremental run: preserving existing output"
+
+## Parameter Taxonomy (3-Tier Model)
+
+Parameters in Azure MCP tools fall into three categories:
+
+| Tier | Parameters | Behavior in Generated Output |
+|------|-----------|------------------------------|
+| **Global** | `--tenant`, `--auth-method`, `--retry-delay`, `--retry-max-delay`, `--retry-max-retries`, `--retry-mode`, `--retry-network-timeout` | Included in all tool parameter tables (Dina strips during content PR) |
+| **Resource-group** | `--resource-group` | Included in all tool parameter tables (Dina strips during content PR when not required) |
+| **Tool-specific** | All other parameters | Always included; must never be lost or dropped |
+
+**Historical note**: Prior to beta.31 fixes, common/global parameters were filtered from generated output automatically. This was changed to include all parameters for consistency between CLI and NLP tabs, with manual stripping during content PR creation.
+
+The `common-parameters.json` file is retained for documentation purposes but is no longer used for filtering.
 
 ### Parallel Execution
 

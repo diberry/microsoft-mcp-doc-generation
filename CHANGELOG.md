@@ -6,6 +6,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Beta.31 generation failures — 20/65 namespace failures resolved** — Four fixes addressing cold-start timeouts, stale namespace config, parameter filtering, and output contamination:
+  - **F1: CLI metadata retry with exponential backoff** — BootstrapStep now retries CLI metadata extraction up to 3 times (2s→4s→8s backoff) before failing with a clear diagnostic message. Applies to all runs, not just cold-start.
+  - **F2: Removed stale `foundry` namespace + drift detection** — Removed the obsolete `foundry` entry from `brand-to-server-mapping.json` (replaced by `foundryextensions` in beta.31). Added namespace drift detection that hard-errors when a configured namespace is missing from CLI output, with guidance to check `config/namespace-mapping.json`.
+  - **F3: Include ALL parameters in generated output** — Stopped filtering common parameters (tenant, auth-method, retry-*, subscription) from tool parameter tables. All params now appear; Dina strips them manually during content PR creation for consistency between CLI and NLP tabs.
+  - **F4: Archive previous output to `generated-old/`** — Previous generation output is now moved to `generated-old/{timestamp}/` instead of deleted, preventing cross-version contamination while preserving history. Clear logging distinguishes clean vs incremental runs.
+
 ### Changed
 
 - **Renamed `generate-all-azure-mcp-namespace-family-files.ps1` → `start-with-logs.ps1` (#785)** — Shorter name, same behavior. Added `-NamespaceList` (comma-separated list) and `-NamespaceFile` (text file, one per line, `#` comments) parameters for selective namespace generation. Unknown namespaces fail fast with a clear error. The two filtering params are mutually exclusive. Updated README.md, docs/START-SCRIPTS.md, and Pester tests.
