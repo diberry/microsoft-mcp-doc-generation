@@ -229,13 +229,6 @@
     "mergeRole": "secondary"
   },
   {
-    "brandName": "Azure Get",
-    "mcpServerName": "get",
-    "shortName": "Get",
-    "fileName": "azure-get",
-    "composition": "standalone"
-  },
-  {
     "brandName": "Azure Best Practices",
     "mcpServerName": "get_azure_bestpractices",
     "shortName": "Best Practices",
