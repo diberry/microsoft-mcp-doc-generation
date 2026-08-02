@@ -202,13 +202,6 @@
     "composition": "standalone"
   },
   {
-    "brandName": "Microsoft Foundry",
-    "mcpServerName": "foundry",
-    "shortName": "Foundry",
-    "fileName": "microsoft-foundry",
-    "composition": "standalone"
-  },
-  {
     "brandName": "Microsoft Foundry Extensions",
     "mcpServerName": "foundryextensions",
     "shortName": "Foundry Extensions",

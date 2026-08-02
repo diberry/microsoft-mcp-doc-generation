@@ -27,7 +27,12 @@ public static class OutputArtifactLocator
         }
 
         return Directory.GetDirectories(outputRoot, "generated-*")
-            .Where(static dir => !string.Equals(Path.GetFileName(dir), "generated", StringComparison.OrdinalIgnoreCase))
+            .Where(static dir =>
+            {
+                var directoryName = Path.GetFileName(dir);
+                return !string.Equals(directoryName, "generated", StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(directoryName, "generated-old", StringComparison.OrdinalIgnoreCase);
+            })
             .OrderBy(static dir => dir, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }

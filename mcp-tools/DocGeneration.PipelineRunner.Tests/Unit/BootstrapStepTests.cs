@@ -53,6 +53,54 @@ public class BootstrapStepTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_NamespaceDriftDetected_FailsWithHumanActionMessage()
+    {
+        using var harness = CreateHarness(
+            brandMappingJson: """[{"mcpServerName":"foundry","brandName":"Azure AI Foundry","shortName":"Foundry","fileName":"azure-ai-foundry"}]""");
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Contains(
+            result.Warnings,
+            warning => warning.Contains(
+                "Namespace 'foundry' exists in brand-to-server-mapping.json but was not found in CLI output. Check config/namespace-mapping.json and merge-namespaces.sh for planned namespace changes. HUMAN action required.",
+                StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CliMetadataExtractionRetriesThreeTimesAndFailsWithClearMessage()
+    {
+        using var harness = CreateHarness(metadataFailuresBeforeSuccess: 4);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(4, harness.ProcessRunner.MetadataInvocationCount);
+        Assert.Contains(
+            result.Warnings,
+            warning => warning.Contains("CLI metadata extraction failed after 4 attempts", StringComparison.Ordinal));
+        Assert.Contains(
+            ((BufferedReportWriter)harness.Context.Reports).Messages,
+            message => message.Contains("Retrying CLI metadata extraction (attempt 2 of 4)", StringComparison.Ordinal));
+        Assert.Contains(
+            ((BufferedReportWriter)harness.Context.Reports).Messages,
+            message => message.Contains("Retrying CLI metadata extraction (attempt 4 of 4)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CliMetadataExtractionSucceedsOnThirdAttempt()
+    {
+        using var harness = CreateHarness(metadataFailuresBeforeSuccess: 2);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(3, harness.ProcessRunner.MetadataInvocationCount);
+        Assert.Equal("1.2.3", harness.Context.CliVersion);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_CliVersionMetadataMissing_Fails()
     {
         using var harness = CreateHarness(cliMetadataLoader: new DelegatingCliMetadataLoader(versionExists: false));
@@ -72,6 +120,40 @@ public class BootstrapStepTests
 
         Assert.True(result.Success);
         Assert.True(harness.BuildCoordinator.SkipBuildObserved);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_FullRunMovesExistingOutputToGeneratedOld()
+    {
+        using var harness = CreateHarness(requestSteps: [1, 2, 3, 4, 5, 6]);
+        Directory.CreateDirectory(harness.Context.OutputPath);
+        File.WriteAllText(Path.Combine(harness.Context.OutputPath, "existing.txt"), "keep me");
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        var archiveRoot = Path.Combine(harness.Context.RepoRoot, "generated-old");
+        Assert.True(Directory.Exists(archiveRoot));
+        var archivedDirectories = Directory.GetDirectories(archiveRoot);
+        Assert.Single(archivedDirectories);
+        Assert.True(File.Exists(Path.Combine(archivedDirectories[0], "existing.txt")));
+        Assert.False(File.Exists(Path.Combine(harness.Context.OutputPath, "existing.txt")));
+        Assert.Contains(
+            ((BufferedReportWriter)harness.Context.Reports).Messages,
+            message => message.Contains("Clean run: moving previous output to generated-old/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_IncrementalRunLogsPreservationMessage()
+    {
+        using var harness = CreateHarness();
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Contains(
+            ((BufferedReportWriter)harness.Context.Reports).Messages,
+            message => message.Contains("Incremental run: preserving existing output", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -104,6 +186,7 @@ public class BootstrapStepTests
         // Brand mapping lists azurebackup; SelectedNamespaces echoes it
         using var harness = CreateHarness(
             selectedNamespaces: ["azurebackup"],
+            namespaceNames: ["azurebackup"],
             brandMappingJson: """[{"mcpServerName":"azurebackup","fileName":"azure-backup"}]""");
 
         var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
@@ -123,6 +206,7 @@ public class BootstrapStepTests
         // Running only "monitor" should also include "workbooks" (same mergeGroup)
         using var harness = CreateHarness(
             selectedNamespaces: ["monitor"],
+            namespaceNames: ["monitor", "workbooks"],
             brandMappingJson: """
                 [
                   {"mcpServerName":"monitor","fileName":"azure-monitor","mergeGroup":"azure-monitor","mergeRole":"primary"},
@@ -146,6 +230,7 @@ public class BootstrapStepTests
     {
         // No selected namespaces (all-namespace run) — should pull all from brand mapping
         using var harness = CreateHarness(
+            namespaceNames: ["compute", "storage"],
             brandMappingJson: """
                 [
                   {"mcpServerName":"compute","fileName":"azure-compute"},
@@ -437,9 +522,12 @@ public class BootstrapStepTests
         bool skipEnvValidation = false,
         bool skipNpmUpdate = false,
         bool failNpmLatestInstall = false,
+        int metadataFailuresBeforeSuccess = 0,
         bool requiresAiConfiguration = false,
         bool aiConfigured = true,
         ICliMetadataLoader? cliMetadataLoader = null,
+        IReadOnlyList<string>? namespaceNames = null,
+        IReadOnlyList<int>? requestSteps = null,
         IReadOnlyList<string>? selectedNamespaces = null,
         string? brandMappingJson = null,
         string? mcpToolVersionFileContent = "3.0.0-beta.15",
@@ -464,10 +552,12 @@ public class BootstrapStepTests
         {
             FailNpmLatestInstall = failNpmLatestInstall,
             AlreadyInstalledVersion = alreadyInstalledVersion,
+            MetadataFailuresBeforeSuccess = metadataFailuresBeforeSuccess,
+            NamespaceNames = namespaceNames ?? ["compute"],
         };
         var buildCoordinator = new RecordingBuildCoordinator();
         var aiCapabilityProbe = new RecordingAiCapabilityProbe(aiConfigured);
-        var step = new BootstrapStep();
+        var step = new BootstrapStep(delayAsync: static (_, _) => Task.CompletedTask);
         var plannedSteps = requiresAiConfiguration
             ? new IPipelineStep[] { step, new ExamplePromptsStep() }
             : new IPipelineStep[] { step, new AnnotationsParametersRawStep() };
@@ -476,7 +566,7 @@ public class BootstrapStepTests
         {
             Request = new PipelineRequest(
                 "compute",
-                [1],
+                requestSteps ?? [1],
                 ".\\generated-compute",
                 SkipBuild: skipBuild,
                 SkipValidation: skipValidation,
@@ -604,17 +694,6 @@ public class BootstrapStepTests
             },
         });
 
-        private static readonly string NamespaceJson = JsonSerializer.Serialize(new
-        {
-            results = new[]
-            {
-                new
-                {
-                    name = "compute",
-                },
-            },
-        });
-
         public bool FailNpmLatestInstall { get; init; }
 
         /// <summary>
@@ -622,6 +701,12 @@ public class BootstrapStepTests
         /// with "already installed" in stderr — simulating the tool already being at that version.
         /// </summary>
         public string? AlreadyInstalledVersion { get; init; }
+
+        public int MetadataFailuresBeforeSuccess { get; init; }
+
+        public int MetadataInvocationCount { get; private set; }
+
+        public IReadOnlyList<string> NamespaceNames { get; init; } = ["compute"];
 
         public List<ProcessSpec> Invocations { get; } = new();
 
@@ -660,12 +745,28 @@ public class BootstrapStepTests
 
             if (spec.FileName == "dotnet" && spec.Arguments.Any(arg => arg.EndsWith("McpCliMetadata.csproj", StringComparison.OrdinalIgnoreCase)))
             {
+                MetadataInvocationCount++;
+                if (MetadataInvocationCount <= MetadataFailuresBeforeSuccess)
+                {
+                    return ValueTask.FromResult(new ProcessExecutionResult(
+                        spec.FileName,
+                        spec.Arguments,
+                        spec.WorkingDirectory,
+                        124,
+                        string.Empty,
+                        "timed out waiting for azmcp cold start",
+                        TimeSpan.Zero));
+                }
+
                 var outputPath = spec.Arguments.Last();
                 var cliDir = Path.Combine(outputPath, "cli");
                 Directory.CreateDirectory(cliDir);
                 File.WriteAllText(Path.Combine(cliDir, "cli-version.json"), "{\"version\":\"1.2.3\"}");
                 File.WriteAllText(Path.Combine(cliDir, "cli-output.json"), CliOutputJson);
-                File.WriteAllText(Path.Combine(cliDir, "cli-namespace.json"), NamespaceJson);
+                File.WriteAllText(Path.Combine(cliDir, "cli-namespace.json"), JsonSerializer.Serialize(new
+                {
+                    results = NamespaceNames.Select(name => new { name }).ToArray(),
+                }));
                 return ValueTask.FromResult(Success(spec));
             }
 

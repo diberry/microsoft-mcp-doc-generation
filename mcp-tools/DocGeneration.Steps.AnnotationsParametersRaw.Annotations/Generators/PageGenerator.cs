@@ -42,12 +42,6 @@ public class PageGenerator
             var fileName = $"{areaNameForFile}.md";
             var outputFile = Path.Combine(outputDir, fileName);
 
-            // Get common parameter names to filter them out
-            var commonParameters = data.SourceDiscoveredCommonParams.Any() 
-                ? data.SourceDiscoveredCommonParams 
-                : _extractCommonParameters(data.Tools);
-            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
-
             // Annotations directory path (at parent level)
             var parentDirCandidate = Path.GetDirectoryName(outputDir);
             var parentDir = string.IsNullOrWhiteSpace(parentDirCandidate) ? outputDir : parentDirCandidate;
@@ -55,6 +49,7 @@ public class PageGenerator
             
             // Load shared data files for filename generation
             var nameContext = await FileNameContext.CreateAsync();
+            var ignoredCommonParameterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             // Filter out common parameters from tools for area pages and add annotation content
             var toolsWithFilteredParamsTasks = areaData.Tools.Select(async tool => 
@@ -100,7 +95,7 @@ public class PageGenerator
                         StringComparer.OrdinalIgnoreCase);
 
                     var filteredOptions = tool.Option
-                        .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames));
+                        .Where(opt => ParameterFilterHelper.ShouldInclude(opt, ignoredCommonParameterNames));
 
                     filteredTool.Option = filteredOptions
                         .Select(opt => new Option
@@ -121,13 +116,13 @@ public class PageGenerator
                 return filteredTool;
             });
 
-            var toolsWithFilteredParams = (await Task.WhenAll(toolsWithFilteredParamsTasks)).ToList();
+            var toolsWithIncludedParams = (await Task.WhenAll(toolsWithFilteredParamsTasks)).ToList();
 
             var areaPageData = new Dictionary<string, object>
             {
                 ["areaName"] = areaName,
                 ["areaData"] = areaData,
-                ["tools"] = toolsWithFilteredParams,
+                ["tools"] = toolsWithIncludedParams,
                 ["version"] = data.Version,
                 ["generatedAt"] = data.GeneratedAt,
                 ["generateAreaPage"] = true
@@ -236,8 +231,7 @@ public class PageGenerator
     }
 
     /// <summary>
-    /// Filters a tool's options to exclude common parameters that are optional.
-    /// Required common parameters are kept so they appear in the parameter table.
+    /// Filters a tool's options down to named parameters only.
     /// </summary>
     internal static List<Option> FilterToolOptions(
         IEnumerable<Option> options, HashSet<string> commonParameterNames)

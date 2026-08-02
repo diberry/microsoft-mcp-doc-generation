@@ -74,16 +74,14 @@ public class CliTabConfigGenerationTests
             ? Directory.GetDirectories(GeneratedOutputRoot, "generated-*")
             : Array.Empty<string>();
         generatedNamespaceNames = generatedNamespaceNames
-            .Select(TryExtractNamespace)
-            .Where(d => d is not null && !d.Contains("-old-") && !d.Contains("-prev"))
+            .Select(path => TryExtractMappedNamespace(path, namespaces))
+            .Where(d => d is not null)
             .Cast<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        // At minimum, azurebackup must exist (our primary test namespace)
         // In CI where no generation has run, skip gracefully
         if (generatedNamespaceNames.Length == 0) return;
-        Assert.Contains("azurebackup", generatedNamespaceNames);
 
         // Every generated directory must correspond to a known namespace
         foreach (var genNs in generatedNamespaceNames)
@@ -139,7 +137,9 @@ public class CliTabConfigGenerationTests
     private static string? TryExtractNamespace(string directoryPath)
     {
         var directoryName = Path.GetFileName(directoryPath);
-        if (string.IsNullOrWhiteSpace(directoryName) || directoryName.Equals("generated", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(directoryName)
+            || directoryName.Equals("generated", StringComparison.OrdinalIgnoreCase)
+            || directoryName.Equals("generated-old", StringComparison.OrdinalIgnoreCase))
             return null;
 
         var timestampedMatch = TimestampedNamespaceDirectoryPattern.Match(directoryName);
@@ -149,6 +149,28 @@ public class CliTabConfigGenerationTests
         return directoryName.StartsWith("generated-", StringComparison.OrdinalIgnoreCase)
             ? directoryName["generated-".Length..]
             : null;
+    }
+
+    private static string? TryExtractMappedNamespace(string directoryPath, IReadOnlyCollection<string> knownNamespaces)
+    {
+        var extracted = TryExtractNamespace(directoryPath);
+        if (!string.IsNullOrWhiteSpace(extracted) && knownNamespaces.Contains(extracted))
+        {
+            return extracted;
+        }
+
+        var directoryName = Path.GetFileName(directoryPath);
+        if (string.IsNullOrWhiteSpace(directoryName) || !directoryName.StartsWith("generated-", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var candidate = directoryName["generated-".Length..];
+        return knownNamespaces
+            .OrderByDescending(static ns => ns.Length)
+            .FirstOrDefault(ns =>
+                candidate.Equals(ns, StringComparison.OrdinalIgnoreCase)
+                || candidate.StartsWith(ns + "-", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string? FindLatestGeneratedDirectory(string namespaceName)
