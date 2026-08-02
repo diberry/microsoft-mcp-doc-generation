@@ -1,4 +1,7 @@
 using System.Text.RegularExpressions;
+using System.Text.Json;
+using ExamplePromptGeneratorStandalone.Generators;
+using ExamplePromptGeneratorStandalone.Models;
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
@@ -9,6 +12,11 @@ namespace PipelineRunner.Steps;
 public sealed class ExamplePromptsStep : NamespaceStepBase
 {
     private const int MaxValidationRetries = 2;
+
+    private static readonly JsonSerializerOptions CaseInsensitiveJson = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
 
     private static readonly Regex FailedToolRegex = new(
         @"^\s*❌\s+(?<command>.+?)(?:\s+\(.*\))?$",
@@ -204,6 +212,12 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             {
                 var preservedArtifacts = PreserveAttemptArtifacts(artifact, attempt);
                 var reason = SummarizeValidationReport(preservedArtifacts.ValidationPath);
+                await EnrichValidationFeedbackAsync(
+                    preservedArtifacts.ValidationPath,
+                    artifact.ExamplePromptPath,
+                    Path.Combine(context.OutputPath, "parameters"),
+                    command,
+                    cancellationToken);
                 var retryMessage = $"Retrying example prompts for '{command}' (attempt {attempt}/{MaxValidationRetries}) because {reason}";
                 context.Reports.Warning($"    {retryMessage}");
                 retryWarnings.Add(retryMessage);
@@ -417,6 +431,95 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             .ToList();
     }
 
+    private static async Task EnrichValidationFeedbackAsync(
+        string validationPath,
+        string examplePromptPath,
+        string parameterManifestDirectory,
+        string command,
+        CancellationToken cancellationToken)
+    {
+        if (!File.Exists(validationPath) || !File.Exists(examplePromptPath))
+        {
+            return;
+        }
+
+        var prompts = File.ReadLines(examplePromptPath)
+            .Select(static line => line.Trim())
+            .Where(static line => line.StartsWith("- ", StringComparison.Ordinal))
+            .Select(static line => line[2..].Trim().Trim('"'))
+            .Where(static prompt => !string.IsNullOrWhiteSpace(prompt))
+            .ToArray();
+
+        if (prompts.Length == 0)
+        {
+            return;
+        }
+
+        var requiredOptions = await LoadRequiredOptionsAsync(parameterManifestDirectory, command, cancellationToken);
+        if (requiredOptions.Count == 0)
+        {
+            return;
+        }
+
+        var guidance = DeterministicPromptRepairer.BuildRetryFeedback(prompts, requiredOptions);
+        if (string.IsNullOrWhiteSpace(guidance))
+        {
+            return;
+        }
+
+        var currentContent = await File.ReadAllTextAsync(validationPath, cancellationToken);
+        if (currentContent.Contains(guidance, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var augmentedContent = $"{currentContent.TrimEnd()}{Environment.NewLine}{Environment.NewLine}{guidance}{Environment.NewLine}";
+        await File.WriteAllTextAsync(validationPath, augmentedContent, cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<Option>> LoadRequiredOptionsAsync(
+        string parameterManifestDirectory,
+        string command,
+        CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(parameterManifestDirectory))
+        {
+            return Array.Empty<Option>();
+        }
+
+        var nameContext = await FileNameContext.CreateAsync();
+        var manifestPath = Path.Combine(
+            parameterManifestDirectory,
+            ToolFileNameBuilder.BuildParameterManifestFileName(command, nameContext));
+        if (!File.Exists(manifestPath))
+        {
+            return Array.Empty<Option>();
+        }
+
+        try
+        {
+            var manifest = JsonSerializer.Deserialize<List<ParameterManifestOption>>(
+                await File.ReadAllTextAsync(manifestPath, cancellationToken),
+                CaseInsensitiveJson) ?? [];
+
+            return manifest
+                .Where(static param => param.Required || (param.RequiredText?.StartsWith("Required", StringComparison.OrdinalIgnoreCase) ?? false))
+                .Where(static param => !string.IsNullOrWhiteSpace(param.Name))
+                .Select(param => new Option
+                {
+                    Name = param.Name,
+                    DisplayName = param.DisplayName,
+                    Required = param.Required,
+                    Description = param.Description
+                })
+                .ToArray();
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<Option>();
+        }
+    }
+
     private static Dictionary<string, List<string>> GetPerToolOutputIssues(IEnumerable<ToolArtifacts> toolArtifacts)
     {
         var issues = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -573,4 +676,11 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         ValidatorResult ValidatorResult,
         IReadOnlyList<string> Warnings,
         IReadOnlyList<ArtifactFailure> ArtifactFailures);
+
+    private sealed record ParameterManifestOption(
+        string? Name,
+        string? DisplayName,
+        bool Required,
+        string? RequiredText,
+        string? Description);
 }

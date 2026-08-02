@@ -6,7 +6,7 @@
 .DESCRIPTION
     Performs all one-time setup steps before namespace processing:
     - Validates .env file exists with required AI credentials
-    - Cleans ./generated directory
+    - Archives previous output under ./generated-old/
     - Creates output directory structure
     - Builds .NET solution (all generator projects)
     - Generates MCP CLI metadata (cli-output.json, cli-namespace.json, cli-version.json)
@@ -55,6 +55,27 @@ Write-Host "PREFLIGHT: Global Setup" -ForegroundColor Cyan
 Write-Host "===================================================================" -ForegroundColor Cyan
 Write-Host ""
 
+function Get-ArchivePath {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ExistingPath,
+        [Parameter(Mandatory = $true)]
+        [string]$ArchiveRoot
+    )
+
+    $directoryName = Split-Path -Leaf $ExistingPath
+    $timestamp = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmssfff")
+    $candidate = Join-Path $ArchiveRoot "$directoryName-$timestamp"
+    $suffix = 1
+
+    while ((Test-Path $candidate)) {
+        $candidate = Join-Path $ArchiveRoot "$directoryName-$timestamp-$suffix"
+        $suffix++
+    }
+
+    return $candidate
+}
+
 # Step 0: Validate .env file and AI configuration
 if ($SkipEnvValidation) {
     Write-Host "Skipping .env validation (handled by DocGeneration.PipelineRunner)..." -ForegroundColor Yellow
@@ -69,12 +90,18 @@ if ($SkipEnvValidation) {
 }
 Write-Host ""
 
-# Step 1: Clean up last run
-Write-Host "Cleaning previous run..." -ForegroundColor Yellow
+# Step 1: Archive last run
+Write-Host "Clean run: moving previous output to generated-old/" -ForegroundColor Yellow
+$generatedOldRoot = Join-Path $repoRoot "generated-old"
 if (Test-Path $OutputPath) {
-    Remove-Item -Path $OutputPath -Recurse -Force
+    New-Item -ItemType Directory -Path $generatedOldRoot -Force | Out-Null
+    $archivePath = Get-ArchivePath -ExistingPath $OutputPath -ArchiveRoot $generatedOldRoot
+    Move-Item -Path $OutputPath -Destination $archivePath
+    Write-Host "✓ Archived previous output to: $archivePath" -ForegroundColor Green
 }
-Write-Host "✓ Cleaned: $OutputPath" -ForegroundColor Green
+else {
+    Write-Host "✓ No previous output found at: $OutputPath" -ForegroundColor Green
+}
 Write-Host ""
 
 # Step 2: Create output directories

@@ -287,16 +287,16 @@ try {
         }
     }
 
-    $namespaceMapping = $artifacts["namespace-mapping.json"]
-    if ($null -eq $namespaceMapping.PSObject.Properties["namespaces"] -or
-        $namespaceMapping.namespaces -isnot [PSCustomObject]) {
-        throw "Metadata artifact has an invalid shape (missing namespaces): $(Join-Path $selectedDirectory 'namespace-mapping.json')"
+    # Derive namespace list from cli-namespace.json (actual CLI output) — the source of truth.
+    # namespace-mapping.json is a derivative artifact that may include stale entries.
+    $cliNamespaceData = $artifacts["cli-namespace.json"]
+    if ($null -eq $cliNamespaceData.results -or $cliNamespaceData.results -isnot [array] -or $cliNamespaceData.results.Count -eq 0) {
+        throw "cli-namespace.json has no results — cannot determine namespace list: $(Join-Path $selectedDirectory 'cli-namespace.json')"
     }
 
-    $allKnownNamespaces = @($namespaceMapping.namespaces.PSObject.Properties.Name | Sort-Object)
-    if ($allKnownNamespaces.Count -eq 0 -or
-        @($allKnownNamespaces | Where-Object { [string]::IsNullOrWhiteSpace($_) }).Count -gt 0) {
-        throw "Metadata namespace mapping is empty: $(Join-Path $selectedDirectory 'namespace-mapping.json')"
+    $allKnownNamespaces = @($cliNamespaceData.results | ForEach-Object { $_.name } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object)
+    if ($allKnownNamespaces.Count -eq 0) {
+        throw "cli-namespace.json produced no valid namespace names: $(Join-Path $selectedDirectory 'cli-namespace.json')"
     }
 
     # Resolve namespace list from the three input modes

@@ -125,7 +125,7 @@ When iterating on a single step whose prerequisites already exist from a prior r
 | 2 | Example Prompts | Per-namespace | Yes | `example-prompts/`, `example-prompts-prompts/`, `repair-telemetry/` |
 | 3 | Tool Generation | Per-namespace | Yes | `tools/` (AI-improved markdown) |
 | 4 | Tool-Family Assembly | Per-namespace | Yes | `tool-family/{namespace}.md` |
-| 5 | Skills Relevance | Per-namespace | No | `skills-relevance/{namespace}-skills-relevance.md` |
+| 5 | Skills Relevance | Per-namespace | No | `skills-relevance/{sanitized-namespace}-skills-relevance.md` |
 | 6 | Horizontal Articles | Per-namespace | Yes | `horizontal-articles/` |
 
 ### Pipeline Observability
@@ -302,10 +302,25 @@ tail -f generated/logs/step2.log
 ./start.sh advisor 2 --verbose
 ```
 
+#### Step 2 keeps retrying the same missing required parameters
+
+**Cause:** The validation report found missing required parameters in generated example prompts  
+**Solution:** Retry feedback now appends actionable guidance naming the missing parameters, suggesting which prompt slots to rewrite, and giving a concrete rewrite example. If retries still fail, inspect `example-prompts-validation/` and `repair-telemetry/` for the exact uncovered parameter names.
+
 #### Step 4 tool-count mismatch in validation report
 
 **Cause:** Phantom `## ` sections injected by AI heading replacement or assembly, inflating the detected tool count  
 **Solution:** The pipeline now strips phantom H2 sections during Phase 1.5 (heading replacement) and Step 4 (post-assembly). If validation still fails, inspect the tool-family article for stray `## ` headings with no body content.
+
+#### Step 4 reports parameters that do not exist in CLI source
+
+**Cause:** Step 3 can hallucinate plausible parameter names when it rewrites tool prose  
+**Solution:** `FamilyStructureBuilder` now cross-checks each tool parameter table against the Step 1 parameter manifest and strips hallucinated rows before assembly. If one still appears, inspect `parameters/*-params.json` for the source-of-truth parameter list and compare it to the corresponding `tools/*.md` file.
+
+#### Step 5 warns about missing skills relevance output for extension namespaces
+
+**Cause:** Skills relevance filenames are sanitized from the normalized namespace, so multi-token namespaces such as `extension azqr` produce `extension-azqr-skills-relevance.md`  
+**Solution:** The pipeline now uses the same sanitization for lookup and treats zero relevant skills as a warning-only success. Check the `skills-relevance/` directory for the sanitized filename if you need to inspect the raw output manually.
 
 #### ParameterCoverageChecker false positives freezing sections
 
@@ -810,7 +825,7 @@ The pipeline operates in **6 sequential steps per namespace**, taking a canonica
 3. **Example Prompts (Step 2)** → Use AI to generate realistic usage examples for each tool
 4. **Tool Generation (Step 3)** → Use AI to compose markdown for each tool, referencing examples and annotations
 5. **Tool-Family Assembly (Step 4)** → Use AI to assemble per-namespace articles, validate structural integrity
-6. **Skills Relevance (Step 5)** → Generate Copilot skills relevance metadata (supplementary)
+6. **Skills Relevance (Step 5)** → Generate Copilot skills relevance metadata (supplementary, warning-only, sanitized filenames)
 7. **Horizontal Articles (Step 6)** → Generate cross-service feature articles using AI
 
 **Key design principles:**

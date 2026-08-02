@@ -56,6 +56,9 @@ Step 1: Annotations + Parameters + Raw Tools ───────────�
   │  • cli-output.json → annotations/*.md (tool metadata flags)
   │  • cli-output.json → parameters/*.md (parameter tables)
   │  • cli-output.json → tools-raw/*.md (raw tool markdown)
+  │  • Parameter tables now keep ALL CLI parameters, including common
+  │    infrastructure/scoping flags such as tenant, auth-method,
+  │    retry-*, and subscription
   │  • Parameter tables and CLI example command flags use the same
   │    stable required-first order: required parameters first, then
   │    optional parameters, preserving source order within each group
@@ -71,6 +74,12 @@ Step 2: Example Prompts (AI + Deterministic Repair) ─────────�
   │  • DeterministicPromptRepairer replaces placeholder/fabricated
   │    parameter values with realistic deterministic values (runs
   │    AFTER AI parse, BEFORE CredentialSanitizer)
+  │  • Retry feedback now adds actionable repair guidance: missing
+  │    parameter names, prompt-slot suggestions, and a concrete rewrite
+  │    example for the next AI attempt
+  │  • If canonical-name injection still misses a required parameter
+  │    after sanitization, DeterministicPromptRepairer injects a
+  │    display-name-based last-resort fallback prompt
   │  • Per-tool repair telemetry → repair-telemetry/*.json
   │  • Validation checks parameter coverage in generated prompts
   │
@@ -86,6 +95,9 @@ Step 4: Tool Family Assembly (AI + Retry + Validation) ────────�
   │  • `FamilyStructureBuilder` deterministically emits
   │    `FamilyStructureContext` (family name, section order, headings,
   │    source content, schema version) before AI metadata generation
+  │  • Pre-assembly `ParameterCrossCheckService` compares each tool's
+  │    parameter table to the Step 1 parameter manifest and strips any
+  │    hallucinated parameter rows before the family article is stitched
   │  • H2 headings come from bootstrap `h2-headings/*.json`
   │  • AI generates: frontmatter, intro, related content
   │  • Post-processing: MCP acronym expansion, frontmatter enrichment,
@@ -104,6 +116,10 @@ Step 4: Tool Family Assembly (AI + Retry + Validation) ────────�
   ▼
 Step 5: Skills Relevance (non-blocking) ───────────────────────────
   │  • tools/ → skills-relevance/*.md (GitHub Copilot skills mapping)
+  │  • Output lookup uses the same sanitized filename strategy as the
+  │    writer, so multi-token/extension namespaces resolve correctly
+  │  • Zero relevant skills is treated as warning-only success rather
+  │    than a missing-artifact failure
   │  • Warning-only — failures don't stop the pipeline
   │
   ▼
@@ -171,7 +187,7 @@ Steps declare their dependencies, failure policy, and whether they need AI confi
 
 | Step | Class | AI? | Failure | Retries | Key Outputs |
 |------|-------|-----|---------|---------|-------------|
-| 0 | `BootstrapStep` | No | Fatal | 0 | `cli/`, `h2-headings/`, `e2e-test-prompts/`, `namespace-mapping.json` |
+| 0 | `BootstrapStep` | No | Fatal | 3 | `cli/`, `h2-headings/`, `e2e-test-prompts/`, `namespace-mapping.json` |
 | 1 | `AnnotationsParametersRawStep` | No | Fatal | 0 | `annotations/`, `parameters/`, `tools-raw/` |
 | 2 | `ExamplePromptsStep` | Yes | Fatal | 0 | `example-prompts/` |
 | 3 | `ToolGenerationStep` | Yes | Fatal | 0 | `tools-composed/`, `tools/` |
@@ -392,6 +408,65 @@ Before processing namespace-scoped steps, `PipelineRunner.RunAsync()` applies an
 1. `--mcp-branch` CLI flag
 2. `MCP_BRANCH` environment variable
 3. Default: `main`
+
+### CLI Metadata Retry Logic
+
+BootstrapStep retries CLI metadata extraction with exponential backoff to handle cold-start timeouts (e.g., first invocation after `dotnet tool install`):
+
+- **Attempts**: Initial + 3 retries (4 total)
+- **Backoff**: 2s → 4s → 8s between retries
+- **Scope**: All CLI metadata extractions (not just cold-start)
+- **On exhaustion**: Pipeline fails with diagnostic message listing all attempt errors
+- **Testability**: Delay function is injected (overridable in tests)
+
+### Namespace Drift Detection
+
+After loading CLI metadata, BootstrapStep checks whether every `mcpServerName` in `brand-to-server-mapping.json` exists in the live CLI namespace list. Mismatches produce a **warning** (non-fatal) logged to the console:
+
+```
+WARNING: Namespace 'get' exists in brand-to-server-mapping.json but was not found in CLI output.
+```
+
+This alerts operators to namespace lifecycle changes but does **not** stop the pipeline — Steps 1–3 do not require brand-mapping data and can proceed for any namespace present in the CLI output.
+
+Configuration files that track planned changes:
+- `config/namespace-mapping.json` — namespace lifecycle tracking
+- `merge-namespaces.sh` — namespace merge/join configuration
+
+### Brand-to-Server Mapping: When It Matters
+
+`brand-to-server-mapping.json` is consumed only at **Step 4** (tool-family assembly) and **Step 5** (merge-namespaces). Its purpose is to:
+
+1. Resolve the user-facing brand name and output filename for the tool-family article
+2. Determine whether multiple namespaces merge into a single tool-family file (`mergeGroup`)
+
+**If a namespace is NOT in brand-mapping**, Steps 4 and 5 still complete successfully — they use the raw namespace name as the fallback filename and skip multi-namespace merge logic. The only features that require a brand-mapping entry are:
+
+- Custom brand display names (e.g., "Azure Container Registry" instead of "acr")
+- Multi-namespace merge groups (combining related namespaces into one article)
+
+Namespaces missing from brand-mapping produce identical tool-family output to those with an entry whose `fileName` matches the namespace — i.e., no alterations are needed for single-namespace families.
+
+### Output Archival (generated-old)
+
+When running a **clean run** (full pipeline), previous output is moved to `generated-old/{timestamp}/` instead of being deleted. This:
+- Preserves prior generation results for debugging cross-version issues
+- Prevents stale content from contaminating fresh runs
+- Provides clear logging: "Clean run: archiving previous output" vs "Incremental run: preserving existing output"
+
+## Parameter Taxonomy (3-Tier Model)
+
+Parameters in Azure MCP tools fall into three categories:
+
+| Tier | Parameters | Behavior in Generated Output |
+|------|-----------|------------------------------|
+| **Global** | `--tenant`, `--auth-method`, `--retry-delay`, `--retry-max-delay`, `--retry-max-retries`, `--retry-mode`, `--retry-network-timeout` | Included in all tool parameter tables (Dina strips during content PR) |
+| **Resource-group** | `--resource-group` | Included in all tool parameter tables (Dina strips during content PR when not required) |
+| **Tool-specific** | All other parameters | Always included; must never be lost or dropped |
+
+**Historical note**: Prior to beta.31 fixes, common/global parameters were filtered from generated output automatically. This was changed to include all parameters for consistency between CLI and NLP tabs, with manual stripping during content PR creation.
+
+The `common-parameters.json` file is retained for documentation purposes but is no longer used for filtering.
 
 ### Parallel Execution
 

@@ -35,9 +35,10 @@ public class ParameterGenerator
             // Load shared data files for filename generation
             var nameContext = await FileNameContext.CreateAsync();
             
-            // Get common parameters from CLI data only
+            // Keep common parameter metadata for canonical descriptions, but include
+            // every named parameter in generated tool output.
             var commonParameters = data.SourceDiscoveredCommonParams;
-            var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
+            var ignoredCommonParameterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             
             // Build canonical description lookup for consistent parameter descriptions
             // GroupBy ensures no duplicate key exceptions if source has case-variant duplicates
@@ -59,16 +60,14 @@ public class ParameterGenerator
                 var outputFile = Path.Combine(outputDir, fileName);
                 var manifestOutputFile = Path.Combine(outputDir, manifestFileName);
 
-                // Filter out common parameters unless they are required for this specific tool
                 var allOptions = tool.Option ?? new List<Option>();
                 
-                // Filter to get only tool-specific parameters (non-common) or required common parameters
                 var conditionalParameters = new HashSet<string>(
                     tool.ConditionalRequiredParameters ?? new List<string>(),
                     StringComparer.OrdinalIgnoreCase);
 
                 var filteredOptions = allOptions
-                    .Where(opt => ParameterFilterHelper.ShouldInclude(opt, commonParameterNames))
+                    .Where(opt => ParameterFilterHelper.ShouldInclude(opt, ignoredCommonParameterNames))
                     .ToList();
 
                 var parameterManifest = BuildParameterManifest(filteredOptions, conditionalParameters, canonicalDescriptions);

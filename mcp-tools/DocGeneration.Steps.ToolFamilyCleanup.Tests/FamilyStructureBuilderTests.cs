@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Shared;
 using ToolFamilyCleanup.Services;
 using Xunit;
 
@@ -243,6 +244,59 @@ public sealed class FamilyStructureBuilderTests : IDisposable
         Assert.Single(result.Sections);
         Assert.Equal(["monitor metrics query"], result.Sections[0].ToolNames);
         Assert.StartsWith("## ", result.Sections[0].SourceContent.ReplaceLineEndings());
+    }
+
+    [Fact]
+    public async Task BuildAsync_StripsPhantomParametersNotPresentInManifest()
+    {
+        var toolsDirectory = Path.Combine(_testRoot, "phantom-tools");
+        var parametersDirectory = Path.Combine(_testRoot, "parameters");
+        Directory.CreateDirectory(toolsDirectory);
+        Directory.CreateDirectory(parametersDirectory);
+
+        const string command = "cosmos account show";
+        await File.WriteAllTextAsync(
+            Path.Combine(toolsDirectory, "cosmos-account-show.md"),
+            """
+            ---
+            ---
+            # Show account
+
+            <!-- @mcpcli cosmos account show -->
+
+            Shows an Azure Cosmos DB account.
+
+            | Parameter | Required or optional | Description |
+            | --- | --- | --- |
+            | `account` | Required | Account name. |
+            | `authentication-method` | Optional | Authentication mode. |
+            """);
+
+        var nameContext = await FileNameContext.CreateAsync();
+        var manifestPath = Path.Combine(
+            parametersDirectory,
+            ToolFileNameBuilder.BuildParameterManifestFileName(command, nameContext));
+        await File.WriteAllTextAsync(
+            manifestPath,
+            """
+            [
+              {
+                "name": "account",
+                "displayName": "account",
+                "required": true,
+                "requiredText": "Required",
+                "description": "Account name."
+              }
+            ]
+            """);
+
+        var builder = new FamilyStructureBuilder();
+
+        var result = await builder.BuildAsync(toolsDirectory, "cosmos", h2HeadingsDirectory: null, CancellationToken.None);
+
+        var section = Assert.Single(result.Sections);
+        Assert.Contains("`account`", section.SourceContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("authentication-method", section.SourceContent, StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()

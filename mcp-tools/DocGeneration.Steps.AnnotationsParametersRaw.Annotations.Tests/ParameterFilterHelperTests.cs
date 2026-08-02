@@ -26,7 +26,7 @@ public class ParameterFilterHelperTests
     {
         var common = MakeCommonSet("--resource-group", "--subscription", "--tenant");
         var opt = MakeOption("--resource-group", required: false);
-        Assert.False(ParameterFilterHelper.ShouldInclude(opt, common));
+        Assert.True(ParameterFilterHelper.ShouldInclude(opt, common));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class ParameterFilterHelperTests
     {
         var common = MakeCommonSet("--resource-group", "--subscription", "--tenant");
         var opt = MakeOption("--subscription", required: false);
-        Assert.False(ParameterFilterHelper.ShouldInclude(opt, common));
+        Assert.True(ParameterFilterHelper.ShouldInclude(opt, common));
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class ParameterFilterHelperTests
     {
         var common = MakeCommonSet("--tenant", "--auth-method", "--retry-delay");
         var opt = MakeOption("--tenant", required: false);
-        Assert.False(ParameterFilterHelper.ShouldInclude(opt, common));
+        Assert.True(ParameterFilterHelper.ShouldInclude(opt, common));
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class ParameterFilterHelperTests
     {
         var common = MakeCommonSet("--tenant", "--auth-method", "--retry-delay");
         var opt = MakeOption("--retry-delay", required: false);
-        Assert.False(ParameterFilterHelper.ShouldInclude(opt, common));
+        Assert.True(ParameterFilterHelper.ShouldInclude(opt, common));
     }
 
     [Fact]

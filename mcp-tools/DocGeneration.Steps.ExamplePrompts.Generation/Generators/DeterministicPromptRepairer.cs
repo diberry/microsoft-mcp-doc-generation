@@ -4,6 +4,7 @@
 using ExamplePromptGeneratorStandalone.Models;
 using ExamplePromptGeneratorStandalone.Sanitizers;
 using Shared;
+using System.Text;
 
 namespace ExamplePromptGeneratorStandalone.Generators;
 
@@ -58,20 +59,51 @@ public static class DeterministicPromptRepairer
             }
         }
 
-        // Post-repair verification: run AFTER sanitization (blocking issue #2)
         var sanitizedPrompts = repairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
-        foreach (var param in requiredParameters)
+        stillUncovered.AddRange(GetStillUncovered(sanitizedPrompts, requiredParameters));
+
+        if (stillUncovered.Count > 0)
         {
-            if (string.IsNullOrWhiteSpace(param.Name)) continue;
-            var coverageName = GetCoverageName(param);
-            var postSanitizeCoverage = GetEffectiveCoverage(sanitizedPrompts, coverageName, requiredParameters.Count, param.Description);
-            if (!postSanitizeCoverage)
-            {
-                stillUncovered.Add(coverageName);
-            }
+            ApplyLastResortFallback(repairedPrompts, requiredParameters, stillUncovered);
+            sanitizedPrompts = repairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
+            stillUncovered = GetStillUncovered(sanitizedPrompts, requiredParameters).ToList();
         }
 
         return new RepairResult(repairedPrompts, actions, stillUncovered);
+    }
+
+    public static string BuildRetryFeedback(IReadOnlyList<string> prompts, IReadOnlyList<Option> requiredParameters)
+    {
+        var missing = requiredParameters
+            .Where(param => !string.IsNullOrWhiteSpace(param.Name))
+            .Where(param => !GetEffectiveCoverage(prompts, GetCoverageName(param), requiredParameters.Count, param.Description))
+            .ToList();
+
+        if (missing.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var promptIndices = prompts
+            .Select((prompt, index) => new { prompt, index })
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.prompt))
+            .Select(entry => $"Prompt #{entry.index + 1}")
+            .ToArray();
+
+        var sb = new StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine("## Actionable repair guidance");
+        sb.AppendLine();
+        sb.AppendLine($"- Missing required parameters by name: {string.Join(", ", missing.Select(GetCoverageName))}");
+        sb.AppendLine($"- Prompt slots that can absorb the missing parameters: {(promptIndices.Length > 0 ? string.Join(", ", promptIndices) : "Prompt #1")}");
+
+        var rewriteExample = BuildRewriteExample(prompts, missing[0]);
+        if (!string.IsNullOrWhiteSpace(rewriteExample))
+        {
+            sb.AppendLine($"- Rewrite example: {rewriteExample}");
+        }
+
+        return sb.ToString().TrimEnd();
     }
 
     /// <summary>
@@ -178,6 +210,73 @@ public static class DeterministicPromptRepairer
 
         // No punctuation — append with period
         return trimmed + $". Specify {naturalName} '{value}'.";
+    }
+
+    private static IReadOnlyList<string> GetStillUncovered(IReadOnlyList<string> sanitizedPrompts, IReadOnlyList<Option> requiredParameters)
+        => requiredParameters
+            .Where(param => !string.IsNullOrWhiteSpace(param.Name))
+            .Select(param => new
+            {
+                CoverageName = GetCoverageName(param),
+                Covered = GetEffectiveCoverage(sanitizedPrompts, GetCoverageName(param), requiredParameters.Count, param.Description)
+            })
+            .Where(result => !result.Covered)
+            .Select(result => result.CoverageName)
+            .ToArray();
+
+    private static void ApplyLastResortFallback(List<string> prompts, IReadOnlyList<Option> requiredParameters, IReadOnlyList<string> unresolvedCoverageNames)
+    {
+        if (unresolvedCoverageNames.Count == 0)
+        {
+            return;
+        }
+
+        var targetIndices = prompts
+            .Select((prompt, index) => new { prompt, index })
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.prompt))
+            .Select(entry => entry.index)
+            .ToList();
+
+        if (targetIndices.Count == 0)
+        {
+            prompts.Add(string.Empty);
+            targetIndices.Add(prompts.Count - 1);
+        }
+
+        var writeIndex = 0;
+        foreach (var coverageName in unresolvedCoverageNames)
+        {
+            var param = requiredParameters.FirstOrDefault(option =>
+                string.Equals(GetCoverageName(option), coverageName, StringComparison.Ordinal));
+            if (param is null || string.IsNullOrWhiteSpace(param.Name))
+            {
+                continue;
+            }
+
+            var targetPromptIndex = targetIndices[writeIndex % targetIndices.Count];
+            var value = ResolveValue(CanonicalizeParamName(param.Name), param.Description);
+            prompts[targetPromptIndex] = BuildLastResortPrompt(prompts[targetPromptIndex], coverageName, value);
+            writeIndex++;
+        }
+    }
+
+    private static string BuildRewriteExample(IReadOnlyList<string> prompts, Option param)
+    {
+        var promptIndex = prompts
+            .Select((prompt, index) => new { prompt, index })
+            .FirstOrDefault(entry => !string.IsNullOrWhiteSpace(entry.prompt));
+        var original = promptIndex?.prompt?.Trim() ?? "Use the tool.";
+        var coverageName = GetCoverageName(param);
+        var value = ResolveValue(CanonicalizeParamName(param.Name!), param.Description);
+        var rewritten = BuildLastResortPrompt(original, coverageName, value);
+        var label = promptIndex is null ? "Prompt #1" : $"Prompt #{promptIndex.index + 1}";
+        return $"{label}: \"{original}\" → \"{rewritten}\"";
+    }
+
+    private static string BuildLastResortPrompt(string prompt, string coverageName, string value)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(prompt) ? "Use the tool" : prompt.Trim().TrimEnd('.', '!', '?');
+        return $"{trimmed}. Specify {coverageName} '{value}'.";
     }
 }
 

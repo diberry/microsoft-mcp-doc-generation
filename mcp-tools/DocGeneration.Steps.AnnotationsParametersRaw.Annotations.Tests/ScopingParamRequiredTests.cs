@@ -9,9 +9,7 @@ namespace CSharpGenerator.Tests;
 
 /// <summary>
 /// Tests that PageGenerator.FilterToolOptions and DocumentationGenerator.CountNonCommonParameters
-/// correctly include required common/scoping parameters in output.
-/// Bug: Both methods unconditionally excluded ALL common parameters, even when
-/// required for a specific tool (e.g., --resource-group on sql database list).
+/// now include all named parameters in output and summary counts.
 /// </summary>
 public class ScopingParamRequiredTests
 {
@@ -30,7 +28,7 @@ public class ScopingParamRequiredTests
 
         Assert.Contains(filtered, o => o.Name == "--resource-group");
         Assert.Contains(filtered, o => o.Name == "--server-name");
-        Assert.DoesNotContain(filtered, o => o.Name == "--tenant");
+        Assert.Contains(filtered, o => o.Name == "--tenant");
     }
 
     [Fact]
@@ -45,7 +43,7 @@ public class ScopingParamRequiredTests
 
         var filtered = PageGenerator.FilterToolOptions(options, common);
 
-        Assert.DoesNotContain(filtered, o => o.Name == "--resource-group");
+        Assert.Contains(filtered, o => o.Name == "--resource-group");
         Assert.Contains(filtered, o => o.Name == "--server-name");
     }
 
@@ -80,14 +78,16 @@ public class ScopingParamRequiredTests
 
         var filtered = PageGenerator.FilterToolOptions(options, common);
 
-        Assert.Equal(3, filtered.Count);
+        Assert.Equal(5, filtered.Count);
         Assert.Contains(filtered, o => o.Name == "--resource-group");
         Assert.Contains(filtered, o => o.Name == "--subscription");
         Assert.Contains(filtered, o => o.Name == "--server-name");
+        Assert.Contains(filtered, o => o.Name == "--tenant");
+        Assert.Contains(filtered, o => o.Name == "--retry-delay");
     }
 
     [Fact]
-    public void CountNonCommonParameters_RequiredScopingParams_AreCounted()
+    public void CountNonCommonParameters_ReturnsTotalNamedParameters()
     {
         var common = MakeCommonSet("--resource-group", "--subscription", "--tenant");
         var tool = new Tool
@@ -104,11 +104,11 @@ public class ScopingParamRequiredTests
 
         var count = DocumentationGenerator.CountNonCommonParameters(tool, common);
 
-        Assert.Equal(3, count);
+        Assert.Equal(4, count);
     }
 
     [Fact]
-    public void CountNonCommonParameters_AllOptionalCommon_ReturnsZero()
+    public void CountNonCommonParameters_AllOptionalCommon_ReturnsTotalCount()
     {
         var common = MakeCommonSet("--tenant", "--auth-method", "--retry-delay");
         var tool = new Tool
@@ -124,7 +124,7 @@ public class ScopingParamRequiredTests
 
         var count = DocumentationGenerator.CountNonCommonParameters(tool, common);
 
-        Assert.Equal(0, count);
+        Assert.Equal(3, count);
     }
 
     [Fact]

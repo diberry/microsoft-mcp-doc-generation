@@ -626,4 +626,55 @@ public class DeterministicPromptRepairerTests
         var option = new Option { Name = "--resource-group", Required = true };
         Assert.Equal("resource-group", DeterministicPromptRepairer.GetCoverageName(option));
     }
+
+    [Fact]
+    public void BuildRetryFeedback_IncludesMissingParamNamesPromptIndicesAndRewriteExample()
+    {
+        var prompts = new List<string>
+        {
+            "Scale the deployment.",
+            "Increase the instance count.",
+            "",
+            "Show me the current capacity."
+        };
+        var required = new List<Option>
+        {
+            new() { Name = "--resource-group", Required = true, DisplayName = "Resource group name", Description = "Resource group name" }
+        };
+
+        var feedback = DeterministicPromptRepairer.BuildRetryFeedback(prompts, required);
+
+        Assert.Contains("Resource group name", feedback, StringComparison.Ordinal);
+        Assert.Contains("Prompt #1", feedback, StringComparison.Ordinal);
+        Assert.Contains("Prompt #2", feedback, StringComparison.Ordinal);
+        Assert.Contains("Prompt #4", feedback, StringComparison.Ordinal);
+        Assert.Contains("Rewrite example", feedback, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Repair_WhenDisplayNameCoverageStillMissing_AddsLastResortPromptUsingDisplayName()
+    {
+        var prompts = new List<string>
+        {
+            "Scale the deployment.",
+            "Increase the instance count."
+        };
+        var required = new List<Option>
+        {
+            new()
+            {
+                Name = "--vmss",
+                Required = true,
+                DisplayName = "Virtual machine scale set name",
+                Description = "Virtual machine scale set name"
+            }
+        };
+
+        var result = DeterministicPromptRepairer.Repair(prompts, required);
+
+        Assert.Empty(result.StillUncovered);
+        Assert.Contains(
+            result.RepairedPrompts,
+            prompt => prompt.Contains("Virtual machine scale set name", StringComparison.Ordinal));
+    }
 }

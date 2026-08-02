@@ -39,7 +39,8 @@ BeforeAll {
         } | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $versionDirectory "namespace-mapping.json")
 
         @{ version = $Version } | ConvertTo-Json | Set-Content (Join-Path $versionDirectory "cli-version.json")
-        @{ results = @() } | ConvertTo-Json | Set-Content (Join-Path $versionDirectory "cli-namespace.json")
+        $nsResults = @($Namespaces | ForEach-Object { @{ name = $_ } })
+        @{ results = $nsResults } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $versionDirectory "cli-namespace.json")
         if (-not $Unusable) {
             @{ results = @() } | ConvertTo-Json | Set-Content (Join-Path $versionDirectory "cli-output.json")
         }

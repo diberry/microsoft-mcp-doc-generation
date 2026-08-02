@@ -32,7 +32,7 @@ public sealed class FamilyStructureBuilder
 
         var toolReader = new ToolReader(toolsDirectory);
         var toolsByFamily = await toolReader.ReadAndGroupToolsAsync();
-        var tools = toolsByFamily
+        IReadOnlyList<ToolContent> tools = toolsByFamily
             .FirstOrDefault(kv => string.Equals(kv.Key, familyName, StringComparison.OrdinalIgnoreCase))
             .Value;
 
@@ -43,6 +43,8 @@ public sealed class FamilyStructureBuilder
 
         var headings = await LoadHeadingsAsync(h2HeadingsDirectory, familyName, ct);
         var compoundWords = await DataFileLoader.LoadCompoundWordsAsync();
+        var parameterManifestDirectory = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(toolsDirectory))!, "parameters");
+        tools = await new ParameterCrossCheckService().StripHallucinatedParametersAsync(tools, parameterManifestDirectory, ct);
         var sections = BuildSections(tools, headings, compoundWords);
         return new FamilyStructureContext(familyName, sections);
     }

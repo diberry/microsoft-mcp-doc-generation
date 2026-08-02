@@ -571,6 +571,105 @@ public class NamespaceStepTests
     }
 
     [Fact]
+    public async Task Step5_SkillsRelevance_UsesSanitizedNamespaceForOutputLookup()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new SkillsRelevanceOutputRunner();
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["extension azqr list"]);
+            context.Items["Namespace"] = "extension_azqr";
+
+            var step = new SkillsRelevanceStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
+            Assert.Empty(result.ArtifactFailures);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step5_SkillsRelevance_ZeroSkillsWithoutOutput_SucceedsWithWarning()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new SkillsRelevanceZeroSkillsRunner();
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute";
+
+            var step = new SkillsRelevanceStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            Assert.Empty(result.ArtifactFailures);
+            Assert.Contains(result.Warnings, warning => warning.Contains("zero relevant skills", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_RetryFeedbackFileIncludesActionableRepairGuidance()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            const string command = "compute list";
+            var runner = new ExamplePromptRetryRunner(command, validationFailuresBeforeSuccess: 1);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: [command]);
+            context.Items["Namespace"] = command;
+
+            var artifacts = await GetExamplePromptArtifactsAsync(context.OutputPath, command);
+            SeedFile(
+                artifacts.ExamplePromptPath,
+                """
+                - "List all compute resources."
+                - "Show me the current compute resources."
+                - "Display the compute inventory."
+                """);
+            SeedFile(artifacts.InputPromptPath, "initial input prompt");
+            SeedFile(artifacts.RawOutputPath, "initial raw output");
+            await SeedParameterManifestAsync(
+                context.OutputPath,
+                command,
+                """
+                [
+                  {
+                    "name": "--subscription",
+                    "displayName": "Subscription name",
+                    "required": true,
+                    "requiredText": "Required",
+                    "description": "Subscription name."
+                  }
+                ]
+                """);
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+            var feedbackPath = GetArgumentValue(runner.Invocations[2].Arguments, "--validation-feedback-file");
+
+            Assert.True(result.Success);
+            Assert.NotNull(feedbackPath);
+            var feedback = await File.ReadAllTextAsync(feedbackPath!);
+            Assert.Contains("Missing required parameters by name", feedback, StringComparison.Ordinal);
+            Assert.Contains("Subscription name", feedback, StringComparison.Ordinal);
+            Assert.Contains("Prompt #1", feedback, StringComparison.Ordinal);
+            Assert.Contains("Rewrite example", feedback, StringComparison.Ordinal);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task Step6_HorizontalArticles_UsesReducerOverride_AndWritesOutput()
     {
         var testRoot = CreateTestRoot();
@@ -716,6 +815,16 @@ public class NamespaceStepTests
             SeedFile(artifacts.RawOutputPath);
             SeedFile(artifacts.ValidationPath);
         }
+    }
+
+    private static async Task SeedParameterManifestAsync(string outputPath, string command, string content)
+    {
+        var nameContext = await FileNameContext.CreateAsync();
+        var manifestPath = Path.Combine(
+            outputPath,
+            "parameters",
+            ToolFileNameBuilder.BuildParameterManifestFileName(command, nameContext));
+        SeedFile(manifestPath, content);
     }
 
     private static async Task SeedToolGenerationFilesAsync(string outputPath, IReadOnlyList<string> commands, bool includeComposed, bool includeImproved)
@@ -914,6 +1023,89 @@ public class NamespaceStepTests
         }
     }
 
+    private sealed class SkillsRelevanceOutputRunner : IProcessRunner
+    {
+        public List<ProcessSpec> Invocations { get; } = new();
+
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
+        {
+            Invocations.Add(spec);
+            var outputPath = GetFlagValue(spec.Arguments, "--output-path");
+            if (!string.IsNullOrWhiteSpace(outputPath))
+            {
+                SeedFile(Path.Combine(outputPath, "extension-azqr-skills-relevance.md"), "skills report");
+            }
+
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero));
+        }
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)
+            => RunAsync(
+                new ProcessSpec(
+                    "dotnet",
+                    ["build", solutionPath, "--configuration", "Release", "--verbosity", "quiet"],
+                    Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory),
+                cancellationToken);
+
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string projectPath, IEnumerable<string> arguments, bool noBuild, string workingDirectory, CancellationToken cancellationToken)
+        {
+            var invocation = new List<string> { "run", "--project", projectPath, "--configuration", "Release" };
+            if (noBuild)
+            {
+                invocation.Add("--no-build");
+            }
+
+            invocation.Add("--");
+            invocation.AddRange(arguments);
+            return RunAsync(new ProcessSpec("dotnet", invocation, workingDirectory), cancellationToken);
+        }
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
+            => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
+    }
+
+    private sealed class SkillsRelevanceZeroSkillsRunner : IProcessRunner
+    {
+        public List<ProcessSpec> Invocations { get; } = new();
+
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
+        {
+            Invocations.Add(spec);
+            return ValueTask.FromResult(new ProcessExecutionResult(
+                spec.FileName,
+                spec.Arguments,
+                spec.WorkingDirectory,
+                0,
+                "Relevant skills:      0 (min score: 0.10)",
+                string.Empty,
+                TimeSpan.Zero));
+        }
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)
+            => RunAsync(
+                new ProcessSpec(
+                    "dotnet",
+                    ["build", solutionPath, "--configuration", "Release", "--verbosity", "quiet"],
+                    Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory),
+                cancellationToken);
+
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string projectPath, IEnumerable<string> arguments, bool noBuild, string workingDirectory, CancellationToken cancellationToken)
+        {
+            var invocation = new List<string> { "run", "--project", projectPath, "--configuration", "Release" };
+            if (noBuild)
+            {
+                invocation.Add("--no-build");
+            }
+
+            invocation.Add("--");
+            invocation.AddRange(arguments);
+            return RunAsync(new ProcessSpec("dotnet", invocation, workingDirectory), cancellationToken);
+        }
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
+            => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
+    }
+
     private sealed class FailingProcessRunner : IProcessRunner
     {
         private readonly int _exitCode;
@@ -967,4 +1159,7 @@ public class NamespaceStepTests
         public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
             => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
     }
+
+    private static string? GetFlagValue(IReadOnlyList<string> arguments, string flag)
+        => GetArgumentValue(arguments, flag);
 }

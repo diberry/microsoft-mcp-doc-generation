@@ -54,8 +54,22 @@ public static partial class NamespaceMerger
             var primary = members.FirstOrDefault(m =>
                 string.Equals(m.MergeRole, "primary", StringComparison.OrdinalIgnoreCase));
 
-            if (primary == null || !articles.ContainsKey(primary.McpServerName))
+            // Skip this merge group when its primary namespace has no article.
+            // This happens when the primary namespace was not generated in the
+            // current run (e.g., single-namespace mode or a generation failure).
+            // Without the primary, we have no frontmatter, H1, overview, or
+            // related-content scaffold to merge secondary tool sections into.
+            if (primary == null)
+            {
+                Console.WriteLine($"  ⏭ Skipping merge group '{groupKey}': no member has mergeRole=primary — check brand-to-server-mapping.json");
                 continue;
+            }
+
+            if (!articles.ContainsKey(primary.McpServerName))
+            {
+                Console.WriteLine($"  ⏭ Skipping merge group '{groupKey}': primary namespace '{primary.McpServerName}' has no generated article (was it included in this run?)");
+                continue;
+            }
 
             var primaryContent = articles[primary.McpServerName];
             var (header, primaryTools, relatedContent) = ParseArticle(primaryContent);
@@ -68,7 +82,10 @@ public static partial class NamespaceMerger
                     continue;
 
                 if (!articles.TryGetValue(member.McpServerName, out var secondaryContent))
+                {
+                    Console.WriteLine($"  ⚠ Merge group '{groupKey}': secondary namespace '{member.McpServerName}' has no generated article — its tools will be missing from the merged output");
                     continue;
+                }
 
                 var (_, secondaryTools, _) = ParseArticle(secondaryContent);
                 allTools.AddRange(secondaryTools);

@@ -203,12 +203,6 @@ public static class DocumentationGenerator
         Console.WriteLine($"    Tools requiring secrets: {secretsCount}");
         Console.WriteLine($"    Tools requiring local consent: {consentCount}");
         
-        // Get common parameter names for filtering
-        var commonParameters = transformedData.SourceDiscoveredCommonParams.Any() 
-            ? transformedData.SourceDiscoveredCommonParams 
-            : ExtractCommonParameters(transformedData.Tools);
-        var commonParameterNames = new HashSet<string>(commonParameters.Select(p => p.Name ?? ""), StringComparer.OrdinalIgnoreCase);
-        
         // Log detailed area breakdown to file
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
@@ -223,6 +217,7 @@ public static class DocumentationGenerator
         LogFileHelper.WriteDebug("");
         LogFileHelper.WriteDebug("Legend: [A] = Annotation file, [P] = Parameter file, [E] = Example prompts file");
         LogFileHelper.WriteDebug("");
+        var ignoredCommonParameterNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         
         foreach (var area in transformedData.Areas.OrderBy(a => a.Key))
         {
@@ -232,8 +227,7 @@ public static class DocumentationGenerator
             
             foreach (var tool in area.Value.Tools.OrderBy(t => t.Command))
             {
-                // Calculate non-common parameter count (matches what's shown in parameter tables)
-                var nonCommonParamCount = CountNonCommonParameters(tool, commonParameterNames);
+                var parameterCount = CountNonCommonParameters(tool, ignoredCommonParameterNames);
                 
                 // Build indicators for generated files
                 var indicators = new List<string>();
@@ -242,7 +236,7 @@ public static class DocumentationGenerator
                 if (tool.HasExamplePrompts) indicators.Add("E");
                 var indicatorStr = indicators.Count > 0 ? $" [{string.Join(",", indicators)}]" : "";
                 
-                LogFileHelper.WriteDebug($"  • {tool.Command,-50} - {tool.Name,-20} [{nonCommonParamCount,2} params]{indicatorStr}");
+                LogFileHelper.WriteDebug($"  • {tool.Command,-50} - {tool.Name,-20} [{parameterCount,2} params]{indicatorStr}");
             }
         }
 
@@ -529,8 +523,8 @@ public static class DocumentationGenerator
     }
 
     /// <summary>
-    /// Counts non-common parameters for a tool, excluding common parameters that are optional.
-    /// Required common parameters are counted because they appear in parameter tables.
+    /// Counts named parameters for a tool. Common parameters are no longer filtered
+    /// from generated tables or summary counts.
     /// </summary>
     internal static int CountNonCommonParameters(Tool tool, HashSet<string> commonParameterNames)
     {

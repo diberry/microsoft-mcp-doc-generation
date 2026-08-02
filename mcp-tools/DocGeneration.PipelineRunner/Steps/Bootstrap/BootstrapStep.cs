@@ -10,6 +10,13 @@ namespace PipelineRunner.Steps;
 
 public sealed class BootstrapStep : StepDefinition
 {
+    private static readonly TimeSpan[] CliMetadataRetryDelays =
+    [
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4),
+        TimeSpan.FromSeconds(8),
+    ];
+
     /// <summary>
     /// Base path within the microsoft/mcp repo where upstream doc files live.
     /// </summary>
@@ -42,8 +49,11 @@ public sealed class BootstrapStep : StepDefinition
     ];
 
     private readonly INamespaceMappingEmitter _namespaceMappingEmitter;
+    private readonly Func<TimeSpan, CancellationToken, Task> _delayAsync;
 
-    public BootstrapStep(INamespaceMappingEmitter? namespaceMappingEmitter = null)
+    public BootstrapStep(
+        INamespaceMappingEmitter? namespaceMappingEmitter = null,
+        Func<TimeSpan, CancellationToken, Task>? delayAsync = null)
         : base(
             0,
             "Bootstrap pipeline",
@@ -65,6 +75,7 @@ public sealed class BootstrapStep : StepDefinition
             ])
     {
         _namespaceMappingEmitter = namespaceMappingEmitter ?? new NamespaceMappingEmitter();
+        _delayAsync = delayAsync ?? Task.Delay;
     }
 
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
@@ -97,11 +108,12 @@ public sealed class BootstrapStep : StepDefinition
 
             if (IsFullPipelineRun(context))
             {
+                context.Reports.Info("Clean run: moving previous output to generated-old/");
                 ResetOutputDirectory(context.OutputPath);
             }
             else
             {
-                // Incremental run — preserve existing output, just ensure directories exist
+                context.Reports.Info("Incremental run: preserving existing output");
                 Directory.CreateDirectory(context.OutputPath);
             }
             CreateDirectories(context.OutputPath, ["cli"]);
@@ -165,16 +177,18 @@ public sealed class BootstrapStep : StepDefinition
                 context.Reports.Info("Skipping azure.mcp dotnet tool update (--skip-npm-update).");
             }
 
-            var metadataGenerationResult = await context.ProcessRunner.RunDotNetProjectAsync(
+            var metadataGenerationAttempts = await RunCliMetadataExtractionWithRetryAsync(
+                context,
                 mcpCliMetadataProject,
-                [context.OutputPath],
-                noBuild: true,
-                context.RepoRoot,
                 cancellationToken);
-            processResults.Add(metadataGenerationResult);
+            processResults.AddRange(metadataGenerationAttempts);
+            var metadataGenerationResult = metadataGenerationAttempts[^1];
             if (!metadataGenerationResult.Succeeded)
             {
-                AddProcessIssue(metadataGenerationResult, warnings, "CLI metadata extraction failed");
+                AddProcessIssue(
+                    metadataGenerationResult,
+                    warnings,
+                    $"CLI metadata extraction failed after {metadataGenerationAttempts.Count} attempts (3 retries). This usually means the azure.mcp CLI cold-start timed out or the CLI remained unavailable.");
                 return BuildResult(context, processResults, success: false, warnings);
             }
 
@@ -198,7 +212,7 @@ public sealed class BootstrapStep : StepDefinition
 
             context.CliOutput = await context.CliMetadataLoader.LoadCliOutputAsync(context.OutputPath, cancellationToken);
             context.CliVersion = await context.CliMetadataLoader.LoadCliVersionAsync(context.OutputPath, cancellationToken);
-            await context.CliMetadataLoader.LoadNamespacesAsync(context.OutputPath, cancellationToken);
+            var availableNamespaces = await context.CliMetadataLoader.LoadNamespacesAsync(context.OutputPath, cancellationToken);
 
             // Generate deterministic H2 headings from CLI metadata (once, for all namespaces)
             await GenerateH2HeadingsAsync(context);
@@ -336,6 +350,15 @@ public sealed class BootstrapStep : StepDefinition
                 context.Reports.Warning("brand-to-server-mapping.json is empty or missing — namespace-mapping.json will contain no namespaces.");
             }
 
+            var namespaceDriftWarnings = ValidateNamespaceDrift(brandEntries, availableNamespaces);
+            if (namespaceDriftWarnings.Count > 0)
+            {
+                // Brand-mapping drift is non-fatal — the mapping is only consumed at Step 4/5
+                // for tool-family assembly. Namespaces missing from the CLI can still be skipped
+                // gracefully at that stage. Log warnings but allow the pipeline to continue.
+                warnings.AddRange(namespaceDriftWarnings);
+            }
+
             var namespacesForConfig = await ResolveCliTabNamespacesAsync(brandMappingPath, context.SelectedNamespaces, cancellationToken);
             var cliTabConfig = CliTabConfig.ForNamespaces([.. namespacesForConfig]);
             var cliTabConfigPath = Path.Combine(context.OutputPath, "cli-tab-config.json");
@@ -406,10 +429,28 @@ public sealed class BootstrapStep : StepDefinition
     {
         if (Directory.Exists(outputPath))
         {
-            Directory.Delete(outputPath, recursive: true);
+            var archiveRoot = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? outputPath, "generated-old");
+            Directory.CreateDirectory(archiveRoot);
+            var archivePath = GetArchivePath(outputPath, archiveRoot);
+            Directory.Move(outputPath, archivePath);
         }
 
         Directory.CreateDirectory(outputPath);
+    }
+
+    private static string GetArchivePath(string outputPath, string archiveRoot)
+    {
+        var directoryName = Path.GetFileName(Path.GetFullPath(outputPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
+        var candidate = Path.Combine(archiveRoot, $"{directoryName}-{timestamp}");
+        var suffix = 1;
+
+        while (Directory.Exists(candidate) || File.Exists(candidate))
+        {
+            candidate = Path.Combine(archiveRoot, $"{directoryName}-{timestamp}-{suffix++}");
+        }
+
+        return candidate;
     }
 
     private static void CreateDirectories(string outputPath, IEnumerable<string> directories)
@@ -418,6 +459,66 @@ public sealed class BootstrapStep : StepDefinition
         {
             Directory.CreateDirectory(Path.Combine(outputPath, directory));
         }
+    }
+
+    private static IReadOnlyList<string> ValidateNamespaceDrift(
+        IReadOnlyList<BrandMappingEntry> brandEntries,
+        IReadOnlyList<string> availableNamespaces)
+    {
+        var availableNamespaceSet = new HashSet<string>(
+            availableNamespaces.Where(static ns => !string.IsNullOrWhiteSpace(ns)),
+            StringComparer.OrdinalIgnoreCase);
+
+        return brandEntries
+            .Select(entry => entry.McpServerName)
+            .Where(static name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(name => !availableNamespaceSet.Contains(name))
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Select(name => $"Namespace '{name}' exists in brand-to-server-mapping.json but was not found in CLI output. Check config/namespace-mapping.json and merge-namespaces.sh for planned namespace changes. HUMAN action required.")
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<ProcessExecutionResult>> RunCliMetadataExtractionWithRetryAsync(
+        PipelineContext context,
+        string mcpCliMetadataProject,
+        CancellationToken cancellationToken)
+    {
+        var attempts = new List<ProcessExecutionResult>();
+        var totalAttempts = CliMetadataRetryDelays.Length + 1;
+
+        for (var attempt = 1; attempt <= totalAttempts; attempt++)
+        {
+            var result = await context.ProcessRunner.RunDotNetProjectAsync(
+                mcpCliMetadataProject,
+                [context.OutputPath],
+                noBuild: true,
+                context.RepoRoot,
+                cancellationToken);
+            attempts.Add(result);
+
+            if (result.Succeeded)
+            {
+                if (attempt > 1)
+                {
+                    context.Reports.Info($"CLI metadata extraction succeeded on attempt {attempt} of {totalAttempts}.");
+                }
+
+                return attempts;
+            }
+
+            if (attempt == totalAttempts)
+            {
+                break;
+            }
+
+            var delay = CliMetadataRetryDelays[attempt - 1];
+            context.Reports.Warning(
+                $"CLI metadata extraction attempt {attempt} of {totalAttempts} failed with exit code {result.ExitCode}. Retrying CLI metadata extraction (attempt {attempt + 1} of {totalAttempts}) after {delay.TotalSeconds:0}s.");
+            await _delayAsync(delay, cancellationToken);
+        }
+
+        return attempts;
     }
 
     /// <summary>
