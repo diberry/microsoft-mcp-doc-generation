@@ -13,6 +13,11 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
 {
     private const int MaxValidationRetries = 2;
 
+    private static readonly JsonSerializerOptions CaseInsensitiveJson = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private static readonly Regex FailedToolRegex = new(
         @"^\s*❌\s+(?<command>.+?)(?:\s+\(.*\))?$",
         RegexOptions.Multiline | RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -495,7 +500,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         {
             var manifest = JsonSerializer.Deserialize<List<ParameterManifestOption>>(
                 await File.ReadAllTextAsync(manifestPath, cancellationToken),
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+                CaseInsensitiveJson) ?? [];
 
             return manifest
                 .Where(static param => param.Required || (param.RequiredText?.StartsWith("Required", StringComparison.OrdinalIgnoreCase) ?? false))
