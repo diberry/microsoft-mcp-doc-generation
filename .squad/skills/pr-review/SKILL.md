@@ -25,6 +25,20 @@ Every PR in this repository MUST receive a full Squad team review before merging
 
 ## Review Process
 
+### Step 0: Verify CI Checks Pass
+
+**Before any code review begins**, verify all CI checks are passing:
+
+1. Run `gh pr checks {number} --repo {owner}/{repo}` to get check status
+2. If ANY check is failing:
+   - **Do NOT proceed with team review** — a failing build is a pre-review gate
+   - Report which checks failed and link to the logs
+   - Request the author fix the failing checks first
+   - Post a comment: "⛔ CI checks failing — review blocked until checks pass. Failing: {check names}"
+3. Only proceed to Step 1 when all checks show ✅ pass
+
+**Rationale**: Team review time is wasted if the code doesn't build or pass tests. CI is the first gate; human review is the second.
+
 ### Step 1: Read the PR
 
 1. Use `github-mcp-server-pull_request_read` with method `get` to get PR metadata
@@ -104,6 +118,8 @@ Format:
 - ❌ Skipping reviews for "trivial" changes
 - ❌ Only reviewing large PRs
 - ❌ Rubber-stamp reviews with no substance
+- ❌ Approving a PR when CI checks are failing
+- ❌ Reviewing code before verifying the build passes
 
 ## Examples
 
