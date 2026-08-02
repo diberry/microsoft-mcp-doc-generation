@@ -1,6 +1,7 @@
 using PipelineRunner.Context;
 using PipelineRunner.Contracts;
 using PipelineRunner.Services;
+using System.Text.RegularExpressions;
 
 namespace PipelineRunner.Steps;
 
@@ -21,7 +22,7 @@ public sealed class SkillsRelevanceStep : NamespaceStepBase
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
     {
         var currentNamespace = GetCurrentNamespace(context);
-        var namespaceRoot = currentNamespace.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0].ToLowerInvariant();
+        var reportStem = SanitizeSkillsReportName(currentNamespace);
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
@@ -49,20 +50,26 @@ public sealed class SkillsRelevanceStep : NamespaceStepBase
             AddProcessIssue(processResult, warnings, "Skills relevance generation failed");
             artifactFailures.Add(CreateArtifactFailure(
                 "azure skill",
-                $"{namespaceRoot}-skills-relevance.md",
+                $"{reportStem}-skills-relevance.md",
                 "Azure skill relevance generation failed for this namespace.",
                 warnings,
-                [Path.Combine(skillsOutputDirectory, $"{namespaceRoot}-skills-relevance.md")]));
+                [Path.Combine(skillsOutputDirectory, $"{reportStem}-skills-relevance.md")]));
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
-        var reportPath = Path.Combine(skillsOutputDirectory, $"{namespaceRoot}-skills-relevance.md");
+        var reportPath = Path.Combine(skillsOutputDirectory, $"{reportStem}-skills-relevance.md");
         if (!File.Exists(reportPath))
         {
+            if (HasZeroRelevantSkills(processResult.StandardOutput))
+            {
+                warnings.Add($"Skills relevance produced zero relevant skills for '{currentNamespace}'.");
+                return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
+            }
+
             warnings.Add($"Expected skills relevance output at '{reportPath}'.");
             artifactFailures.Add(CreateArtifactFailure(
                 "azure skill",
-                $"{namespaceRoot}-skills-relevance.md",
+                $"{reportStem}-skills-relevance.md",
                 "Azure skill relevance output is missing for this namespace.",
                 warnings,
                 [reportPath]));
@@ -71,4 +78,10 @@ public sealed class SkillsRelevanceStep : NamespaceStepBase
 
         return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
     }
+
+    private static string SanitizeSkillsReportName(string value)
+        => Regex.Replace(value.ToLowerInvariant().Replace(' ', '-'), @"[^a-z0-9\-]", string.Empty);
+
+    private static bool HasZeroRelevantSkills(string output)
+        => Regex.IsMatch(output ?? string.Empty, @"(?mi)^\s*Relevant skills:\s*0\b");
 }

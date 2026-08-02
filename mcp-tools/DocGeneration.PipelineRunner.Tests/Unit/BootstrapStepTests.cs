@@ -53,18 +53,18 @@ public class BootstrapStepTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_NamespaceDriftDetected_FailsWithHumanActionMessage()
+    public async Task ExecuteAsync_NamespaceDriftDetected_SucceedsWithWarning()
     {
         using var harness = CreateHarness(
             brandMappingJson: """[{"mcpServerName":"foundry","brandName":"Azure AI Foundry","shortName":"Foundry","fileName":"azure-ai-foundry"}]""");
 
         var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
 
-        Assert.False(result.Success);
+        Assert.True(result.Success, "Namespace drift should be a warning, not a fatal error");
         Assert.Contains(
             result.Warnings,
             warning => warning.Contains(
-                "Namespace 'foundry' exists in brand-to-server-mapping.json but was not found in CLI output. Check config/namespace-mapping.json and merge-namespaces.sh for planned namespace changes. HUMAN action required.",
+                "Namespace 'foundry' exists in brand-to-server-mapping.json but was not found in CLI output",
                 StringComparison.Ordinal));
     }
 

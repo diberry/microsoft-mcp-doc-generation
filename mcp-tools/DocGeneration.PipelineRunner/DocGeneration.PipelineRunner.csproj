@@ -11,6 +11,7 @@
     <InternalsVisibleTo Include="DocGeneration.PipelineRunner.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DocGeneration.Steps.ExamplePrompts.Generation\DocGeneration.Steps.ExamplePrompts.Generation.csproj" />
     <ProjectReference Include="..\..\shared\DocGeneration.Core.Shared\DocGeneration.Core.Shared.csproj" />
     <ProjectReference Include="..\..\shared\DocGeneration.Core.GenerativeAI\DocGeneration.Core.GenerativeAI.csproj" />
     <ProjectReference Include="..\..\shared\DocGeneration.Core.Tracing\DocGeneration.Core.Tracing.csproj" />

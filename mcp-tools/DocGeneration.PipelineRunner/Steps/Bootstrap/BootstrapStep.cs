@@ -353,8 +353,10 @@ public sealed class BootstrapStep : StepDefinition
             var namespaceDriftWarnings = ValidateNamespaceDrift(brandEntries, availableNamespaces);
             if (namespaceDriftWarnings.Count > 0)
             {
+                // Brand-mapping drift is non-fatal — the mapping is only consumed at Step 4/5
+                // for tool-family assembly. Namespaces missing from the CLI can still be skipped
+                // gracefully at that stage. Log warnings but allow the pipeline to continue.
                 warnings.AddRange(namespaceDriftWarnings);
-                return BuildResult(context, processResults, success: false, warnings);
             }
 
             var namespacesForConfig = await ResolveCliTabNamespacesAsync(brandMappingPath, context.SelectedNamespaces, cancellationToken);

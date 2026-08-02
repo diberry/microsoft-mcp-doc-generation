@@ -72,6 +72,20 @@ The `CredentialSanitizer` defense-in-depth pass runs on every path before writin
 paths converge on the same final include (`example-prompts/{tool}-example-prompts.md`
 rendered via `example-prompts-template.hbs`), so Step 3 is unaffected by the routing.
 
+### Retry Repair Guidance and Last-Resort Fallback
+
+When Step 2 validation fails for missing required parameters, the retry loop now feeds the
+LLM an actionable guidance block that:
+
+- names the missing required parameters explicitly
+- suggests which prompt slots can absorb them
+- includes a concrete rewrite example
+
+After the AI response is parsed, `DeterministicPromptRepairer` still runs before
+`CredentialSanitizer`. If canonical CLI-name injection does not satisfy post-sanitization
+coverage, the repairer now injects a display-name-based last-resort fallback prompt so the
+written file still covers the required parameter set deterministically.
+
 The tool processes each tool **sequentially** (not in batch). For the AI path:
 1. Generate custom user prompt from template with tool-specific parameters
 2. Call Azure OpenAI with system + user prompts
