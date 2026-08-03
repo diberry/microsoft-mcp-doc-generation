@@ -62,36 +62,17 @@ internal static class Program
 
         var serviceName = serviceNameArg;
         var outputDir = Path.GetFullPath(outputPath);
-        var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-        var sources = SkillSource.Defaults.ToList();
 
         Console.WriteLine($"Service/Namespace: {serviceName}");
         Console.WriteLine($"Output directory:  {outputDir}");
         Console.WriteLine($"Minimum relevance: {minScore:F2}");
-        Console.WriteLine($"GitHub token:      {(githubToken != null ? "✓ set" : "⚠️  not set (rate limits apply)")}");
+        Console.WriteLine($"Rate limiting:     ✓ enabled (60 req/hr unauthenticated)");
         Console.WriteLine();
-
-        // Preflight check: warn if GITHUB_TOKEN is missing
-        // The unauthenticated rate limit is 60 requests per hour.
-        // For a full pipeline with 58+ namespaces, each requiring 2-3 API calls,
-        // this is insufficient. GITHUB_TOKEN is recommended for full runs.
-        if (string.IsNullOrWhiteSpace(githubToken))
-        {
-            Console.WriteLine("⚠️  GITHUB_TOKEN is not set.");
-            Console.WriteLine($"   Unauthenticated GitHub API rate limit: 60 requests/hour");
-            Console.WriteLine($"   Estimated requests for this run: {sources.Count * 2}-{sources.Count * 3}");
-            if (sources.Count * 2 > 60)
-            {
-                Console.WriteLine($"   ⚠️  WARNING: This run may exceed the unauthenticated rate limit.");
-                Console.WriteLine("   To avoid failures, set GITHUB_TOKEN environment variable:");
-                Console.WriteLine("   export GITHUB_TOKEN=\"your_github_personal_access_token\"");
-            }
-            Console.WriteLine();
-        }
 
         try
         {
-            var fetcher = new GitHubSkillsFetcher(githubToken);
+            var sources = SkillSource.Defaults.ToList();
+            var fetcher = new GitHubSkillsFetcher();
             var analyzer = new SkillRelevanceAnalyzer(serviceName);
             var allFetchedSkills = new List<SkillInfo>();
 
@@ -137,32 +118,9 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            // Ensure fallback output is produced on failure
-            try
-            {
-                Console.Error.WriteLine();
-                Console.Error.WriteLine($"Error during skills fetch/analysis: {ex.Message}");
-                Console.Error.WriteLine("Generating fallback output with available skills...");
-                LogFileHelper.WriteDebug($"Exception: {ex}");
-
-                // Always try to write something, even if it's empty
-                var emptySkills = new List<SkillInfo>();
-                await SkillsMarkdownWriter.WriteServiceSummaryAsync(outputDir, serviceName, emptySkills, sources);
-                await SkillsJsonWriter.WriteServiceSummaryJsonAsync(outputDir, serviceName, emptySkills, sources);
-                await SkillsMarkdownWriter.WriteIndexAsync(outputDir, new List<string> { serviceName });
-
-                Console.Error.WriteLine();
-                Console.Error.WriteLine("✅ Fallback output files created (with zero skills found).");
-                Console.Error.WriteLine("   This indicates a GitHub API access issue.");
-                Console.Error.WriteLine("   Check your GITHUB_TOKEN or network connectivity.");
-                return 0;  // Return success so pipeline doesn't fail, but output indicates the issue
-            }
-            catch (Exception fallbackEx)
-            {
-                Console.Error.WriteLine($"Fatal error (even fallback failed): {fallbackEx.Message}");
-                Console.Error.WriteLine(fallbackEx.StackTrace);
-                return 1;
-            }
+            Console.Error.WriteLine($"Fatal error: {ex.Message}");
+            Console.Error.WriteLine(ex.StackTrace);
+            return 1;
         }
     }
 
@@ -179,8 +137,10 @@ internal static class Program
         Console.WriteLine("  --all-skills           Include all skills regardless of relevance score");
         Console.WriteLine("  --help, -h             Show this help message");
         Console.WriteLine();
-        Console.WriteLine("Environment variables:");
-        Console.WriteLine("  GITHUB_TOKEN           GitHub personal access token (recommended to avoid rate limits)");
+        Console.WriteLine("Rate Limiting:");
+        Console.WriteLine("  GitHub unauthenticated API requests are limited to 60 per hour.");
+        Console.WriteLine("  This tool automatically throttles requests to stay within this limit");
+        Console.WriteLine("  and caches responses to minimize redundant API calls.");
         Console.WriteLine();
         Console.WriteLine("Examples:");
         Console.WriteLine("  SkillsRelevance aks");
