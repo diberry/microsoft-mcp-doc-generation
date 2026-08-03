@@ -92,4 +92,61 @@ public class SkillInventoryLoaderTests
 
         result.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Load_RealInventoryFile_DoesNotContainAzureRbac()
+    {
+        // Issue #773: azure-rbac does not exist in skills-source/skills/ and must be removed from inventory
+        var loader = new SkillInventoryLoader(_logger);
+        var inventoryPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "data", "skills-inventory.json"));
+
+        // Skip if file not found (CI environment without the data directory)
+        if (!File.Exists(inventoryPath)) return;
+
+        var result = loader.Load(inventoryPath);
+
+        result.Should().NotContain(
+            e => e.Name == "azure-rbac",
+            "issue #773 requires azure-rbac to be removed from inventory as it does not exist upstream in skills-source/skills/");
+    }
+
+    [Fact]
+    public void Load_RealInventoryFile_DoesNotContainAzureHostedCopilotSdk()
+    {
+        // Issue #774: azure-hosted-copilot-sdk does not exist in skills-source/skills/ and must be removed from inventory
+        var loader = new SkillInventoryLoader(_logger);
+        var inventoryPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "data", "skills-inventory.json"));
+
+        // Skip if file not found (CI environment without the data directory)
+        if (!File.Exists(inventoryPath)) return;
+
+        var result = loader.Load(inventoryPath);
+
+        result.Should().NotContain(
+            e => e.Name == "azure-hosted-copilot-sdk",
+            "issue #774 requires azure-hosted-copilot-sdk to be removed from inventory as it does not exist upstream in skills-source/skills/");
+    }
+
+    [Fact]
+    public void Load_RealInventoryFile_RetainsValidEntries()
+    {
+        // Guard: ensure we didn't accidentally remove valid entries when fixing #773 and #774
+        var loader = new SkillInventoryLoader(_logger);
+        var inventoryPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "..", "data", "skills-inventory.json"));
+
+        // Skip if file not found (CI environment without the data directory)
+        if (!File.Exists(inventoryPath)) return;
+
+        var result = loader.Load(inventoryPath);
+
+        // Verify a representative sample of valid entries still exist
+        result.Should().Contain(e => e.Name == "azure-storage", "azure-storage is a valid upstream skill");
+        result.Should().Contain(e => e.Name == "azure-compute", "azure-compute is a valid upstream skill");
+        result.Should().Contain(e => e.Name == "azure-compliance", "azure-compliance is a valid upstream skill");
+        result.Should().Contain(e => e.Name == "azure-ai", "azure-ai is a valid upstream skill");
+        result.Should().Contain(e => e.Name == "microsoft-foundry", "microsoft-foundry is a valid upstream skill");
+    }
 }
