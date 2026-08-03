@@ -42,7 +42,7 @@ public class RequestThrottler
 
         if (_requestTimestamps.Count >= UnauthenticatedRateLimit)
         {
-            // We've hit the limit; calculate how long to wait
+            // We'"'"'ve hit the limit; calculate how long to wait
             var oldestRequest = _requestTimestamps.Peek();
             var timeSinceOldest = DateTime.UtcNow - oldestRequest;
             var timeToWait = TimeSpan.FromSeconds(TimeWindowSeconds) - timeSinceOldest;
@@ -55,7 +55,7 @@ public class RequestThrottler
             }
         }
 
-        // Even if we're within limits, add a small delay to distribute requests evenly
+        // Even if we'"'"'re within limits, add a small delay to distribute requests evenly
         if (_requestTimestamps.Count > 0)
         {
             var lastRequest = _requestTimestamps.Last();
