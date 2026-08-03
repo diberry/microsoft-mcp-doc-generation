@@ -106,10 +106,7 @@ public class FamilyMetadataGeneratorTests
         var result = InvokeBuildFallbackServiceDescription(displayName, familyName);
 
         // Assert
-        Assert.Contains(displayName, result);
-        Assert.Contains("Azure service", result);
-        Assert.Contains("For more information, see", result);
-        Assert.Contains("[Azure Key Vault documentation](/azure/keyvault/)", result);
+        Assert.Equal("<TBD_Content>", result);
     }
 
     /// <summary>

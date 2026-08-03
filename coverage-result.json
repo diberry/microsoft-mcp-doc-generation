@@ -1,0 +1,153 @@
+{
+  "scan_date": "2026-08-03T09:05:04",
+  "total_tools_in_json": 4,
+  "namespaces": [
+    {
+      "filename": "azure-compute.md",
+      "pr_number": null,
+      "expected_tools": 2,
+      "tool_details": [
+        {
+          "documented": true,
+          "params": {
+            "documented": "VM name",
+            "expected": "--vm-name",
+            "missing": []
+          },
+          "command": "compute vm list",
+          "name": "compute_vm_list",
+          "annotations": {
+            "documented": {
+              "Open World": false,
+              "Destructive": false,
+              "Idempotent": true,
+              "Read Only": true
+            },
+            "expected": {
+              "Read Only": true,
+              "Open World": true,
+              "Idempotent": true,
+              "Destructive": false
+            },
+            "mismatches": [
+              {
+                "expected": true,
+                "annotation": "Open World",
+                "actual": false
+              }
+            ]
+          }
+        },
+        {
+          "documented": false,
+          "params": {
+            "documented": [],
+            "expected": [],
+            "missing": []
+          },
+          "command": "compute vm start",
+          "name": "compute_vm_start",
+          "annotations": {
+            "documented": {},
+            "expected": {},
+            "mismatches": []
+          }
+        }
+      ],
+      "file_exists": true,
+      "tools_in_pr": [],
+      "documented_tools": 1,
+      "namespace": "compute",
+      "missing_tools": [
+        "compute vm start"
+      ]
+    },
+    {
+      "filename": "azure-storage.md",
+      "pr_number": null,
+      "expected_tools": 2,
+      "tool_details": [
+        {
+          "documented": true,
+          "params": {
+            "documented": "Account name",
+            "expected": "--account-name",
+            "missing": []
+          },
+          "command": "storage account list",
+          "name": "storage_account_list",
+          "annotations": {
+            "documented": {
+              "Open World": false,
+              "Destructive": false,
+              "Idempotent": true,
+              "Read Only": true
+            },
+            "expected": {
+              "Read Only": true,
+              "Open World": false,
+              "Idempotent": true,
+              "Destructive": false
+            },
+            "mismatches": []
+          }
+        },
+        {
+          "documented": true,
+          "params": {
+            "documented": [
+              "Resource group",
+              "Account name",
+              "Container name",
+              "Blob name"
+            ],
+            "expected": [
+              "--resource-group",
+              "--account-name",
+              "--container-name",
+              "--blob-name"
+            ],
+            "missing": []
+          },
+          "command": "storage blob upload",
+          "name": "storage_blob_upload",
+          "annotations": {
+            "documented": {
+              "Open World": false,
+              "Destructive": true,
+              "Idempotent": false,
+              "Read Only": false
+            },
+            "expected": {
+              "Read Only": false,
+              "Open World": false,
+              "Idempotent": false,
+              "Destructive": true
+            },
+            "mismatches": []
+          }
+        }
+      ],
+      "file_exists": true,
+      "tools_in_pr": [],
+      "documented_tools": 2,
+      "namespace": "storage",
+      "missing_tools": []
+    }
+  ],
+  "version": "mcp-tools/validation/tests/fixtures/coverage/tools-list-minimal.json",
+  "open_prs_scanned": 0,
+  "summary": {
+    "params_missing": 0,
+    "tools_missing": 1,
+    "annotation_matches": 11,
+    "tools_in_open_prs": 0,
+    "annotation_mismatches": 1,
+    "tools_documented": 3,
+    "params_documented": 6,
+    "articles_missing": 0,
+    "params_in_open_prs": 0,
+    "articles_in_open_prs": 0
+  },
+  "total_namespaces": 2
+}

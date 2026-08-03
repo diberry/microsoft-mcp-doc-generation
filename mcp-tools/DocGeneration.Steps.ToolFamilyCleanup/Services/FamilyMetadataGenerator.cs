@@ -168,14 +168,11 @@ public class FamilyMetadataGenerator
 
     /// <summary>
     /// Builds generic fallback service description when AI fails.
+    /// Uses TBD placeholder instead of hardcoded strings - content must be manually provided.
     /// </summary>
     private static string BuildFallbackServiceDescription(string displayName, string familyName)
     {
-        var sanitizedName = familyName.ToLowerInvariant().Replace("-", "").Replace("_", "");
-        var docPath = $"/azure/{sanitizedName}/";
-
-        return $"{displayName} is an Azure service that provides cloud-based capabilities for your applications. " +
-               $"For more information, see [{displayName} documentation]({docPath}).";
+        return "<TBD_Content>";
     }
 
     /// <summary>

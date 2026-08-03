@@ -10,20 +10,23 @@ namespace SkillsRelevance.Services;
 
 /// <summary>
 /// Fetches skill files from GitHub repositories using the GitHub REST API.
-/// Supports optional GITHUB_TOKEN for higher rate limits.
+/// Respects unauthenticated rate limits (60 requests per hour) through throttling.
+/// Caches responses to reduce redundant API calls.
 /// </summary>
 public class GitHubSkillsFetcher
 {
     // Static HttpClient is the recommended pattern for console apps with short lifetimes.
-    // It avoids socket exhaustion from repeated creation/disposal and is safe here
-    // because authorization is set per-request (not on DefaultRequestHeaders).
+    // It avoids socket exhaustion from repeated creation/disposal.
     private static readonly HttpClient _httpClient = new();
-    private readonly string? _githubToken;
     private readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private readonly RequestThrottler _throttler;
+    private readonly ResponseCache _cache;
+    private int _requestsMade = 0;
 
-    public GitHubSkillsFetcher(string? githubToken = null)
+    public GitHubSkillsFetcher()
     {
-        _githubToken = githubToken;
+        _throttler = new RequestThrottler();
+        _cache = new ResponseCache();
         if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
         {
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "azure-mcp-docs-generator/1.0");
@@ -32,6 +35,7 @@ public class GitHubSkillsFetcher
 
     /// <summary>
     /// Fetches all skill files from a source repository.
+    /// Returns stubs for any namespaces that would exceed the rate limit budget.
     /// </summary>
     public async Task<List<(GitHubFileEntry Entry, string Content)>> FetchSkillsAsync(SkillSource source)
     {
@@ -42,18 +46,27 @@ public class GitHubSkillsFetcher
             var apiUrl = source.GetContentsApiUrl();
             LogFileHelper.WriteDebug($"Fetching skills from: {apiUrl}");
 
-            var request = CreateRequest(apiUrl);
-            var response = await _httpClient.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
+            // Check if we have enough requests remaining before proceeding
+            var requestsRemaining = _throttler.GetRequestsRemaining();
+            if (requestsRemaining <= 1)
             {
-                Console.WriteLine($"  ⚠️  Could not access {source.DisplayName} (HTTP {(int)response.StatusCode}). Skipping.");
-                LogFileHelper.WriteDebug($"HTTP {(int)response.StatusCode} from {apiUrl}");
+                Console.WriteLine($"  ⚠️  Rate limit budget exhausted. Skipping {source.DisplayName}.");
+                LogFileHelper.WriteDebug($"Insufficient request budget (remaining: {requestsRemaining}) for {source.DisplayName}");
                 return results;
             }
 
-            var json = await response.Content.ReadAsStringAsync();
-            var entries = JsonSerializer.Deserialize<List<GitHubFileEntry>>(json, _jsonOptions);
+            // Apply throttling before making the request
+            await _throttler.ThrottleAsync();
+            _requestsMade++;
+
+            var content = await FetchUrlAsync(apiUrl);
+            if (content == null)
+            {
+                Console.WriteLine($"  ⚠️  Could not access {source.DisplayName}. Skipping.");
+                return results;
+            }
+
+            var entries = JsonSerializer.Deserialize<List<GitHubFileEntry>>(content, _jsonOptions);
 
             if (entries == null || entries.Count == 0)
             {
@@ -66,10 +79,18 @@ public class GitHubSkillsFetcher
 
             foreach (var entry in skillFiles)
             {
-                var content = await FetchFileContentAsync(entry);
-                if (content != null)
+                // Check budget before each file fetch
+                if (_throttler.GetRequestsRemaining() <= 0)
                 {
-                    results.Add((entry, content));
+                    LogFileHelper.WriteDebug($"Rate limit budget exhausted while fetching files from {source.DisplayName}");
+                    Console.WriteLine($"  ⚠️  Rate limit budget exhausted. Remaining files from {source.DisplayName} skipped.");
+                    break;
+                }
+
+                var fileContent = await FetchFileContentAsync(entry);
+                if (fileContent != null)
+                {
+                    results.Add((entry, fileContent));
                 }
             }
         }
@@ -89,16 +110,24 @@ public class GitHubSkillsFetcher
             var url = entry.DownloadUrl ?? entry.Url;
             if (string.IsNullOrEmpty(url)) return null;
 
-            var request = CreateRequest(url);
-            var response = await _httpClient.SendAsync(request);
-
-            if (!response.IsSuccessStatusCode)
+            // Check cache first
+            if (_cache.TryGetValue(url, out var cachedContent))
             {
-                LogFileHelper.WriteDebug($"Failed to fetch content for {entry.Name}: HTTP {(int)response.StatusCode}");
-                return null;
+                LogFileHelper.WriteDebug($"Cache hit for {entry.Name}");
+                return cachedContent;
             }
 
-            return await response.Content.ReadAsStringAsync();
+            // Throttle before fetching
+            await _throttler.ThrottleAsync();
+            _requestsMade++;
+
+            var content = await FetchUrlAsync(url);
+            if (content != null)
+            {
+                _cache.Set(url, content);
+            }
+
+            return content;
         }
         catch (Exception ex)
         {
@@ -107,14 +136,32 @@ public class GitHubSkillsFetcher
         }
     }
 
-    private HttpRequestMessage CreateRequest(string url)
+    private async Task<string?> FetchUrlAsync(string url)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        if (!string.IsNullOrEmpty(_githubToken))
+        try
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _githubToken);
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+            
+            var response = await _httpClient.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                LogFileHelper.WriteDebug($"HTTP {(int)response.StatusCode} from {url}");
+                return null;
+            }
+
+            return await response.Content.ReadAsStringAsync();
         }
-        return request;
+        catch (Exception ex)
+        {
+            LogFileHelper.WriteDebug($"Exception fetching {url}: {ex.Message}");
+            return null;
+        }
     }
+
+    /// <summary>
+    /// Gets the total number of API requests made during this run.
+    /// </summary>
+    public int GetRequestsMade() => _requestsMade;
 }

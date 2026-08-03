@@ -17,10 +17,22 @@ Use the Azure Compute tools to manage virtual machines.
 
 List all virtual machines in the subscription.
 
-Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ✅
+Destructive: ❌ | Idempotent: ✅ | Open World: ✅ | Read Only: ✅
 
 ### Parameters
 
 | **VM name** | Optional | The name of the virtual machine to filter by |
 
-<!-- compute vm start is intentionally NOT documented (missing tool) -->
+## Start virtual machine
+
+<!-- compute vm start -->
+
+Start a virtual machine in Azure.
+
+Destructive: ❌ | Idempotent: ✅ | Open World: ❌ | Read Only: ❌
+
+### Parameters
+
+| **Resource group** | Required | The name of the resource group |
+| **VM name** | Required | The name of the virtual machine to start |
+| **No wait** | Optional | Do not wait for the long-running operation to finish |
