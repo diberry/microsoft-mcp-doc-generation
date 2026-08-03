@@ -147,7 +147,7 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
                     blockingIssues.Add($"Cross-reference check failed. {string.Join(". ", parts)}.");
                 }
 
-                foreach (var issue in GetRequiredParameterIssues(sections))
+                foreach (var issue in await GetRequiredParameterIssuesAndInjectCommentsAsync(sections, context.OutputPath, familyName, cancellationToken))
                 {
                     requiredParamIssues.Add(issue);
                     blockingIssues.Add(issue);
@@ -836,6 +836,88 @@ public sealed class ToolFamilyPostAssemblyValidator : IPostValidator
         }
 
         return issues;
+    }
+
+    /// <summary>
+    /// Detects required parameters missing from example prompts AND injects warning comments
+    /// into the corresponding example prompt include files.
+    /// 
+    /// The comment flows through the @mcpcli marker into the tool-family article source,
+    /// making missing parameters discoverable in the final output and audit logs.
+    /// </summary>
+    private static async Task<IReadOnlyList<string>> GetRequiredParameterIssuesAndInjectCommentsAsync(
+        IEnumerable<ArticleSection> sections,
+        string outputPath,
+        string familyName,
+        CancellationToken cancellationToken)
+    {
+        var issues = GetRequiredParameterIssues(sections);
+        
+        if (issues.Count == 0)
+        {
+            return issues;
+        }
+
+        var injector = new ExamplePromptCommentInjector();
+        var examplePromptsDirectory = Path.Combine(outputPath, "example-prompts");
+
+        if (!Directory.Exists(examplePromptsDirectory))
+        {
+            // Example prompts directory doesn't exist — can't inject comments
+            return issues;
+        }
+
+        // Extract tool commands and missing params from issues, then inject into files
+        foreach (var issue in issues)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Parse issue format: "🛑 {command}: missing {params} in example prompt{s}"
+            // Extract command and parameters
+            var commandAndDetails = issue
+                .Replace("🛑 ", string.Empty, StringComparison.Ordinal)
+                .Split(':', 2);
+
+            if (commandAndDetails.Length < 2)
+            {
+                continue;
+            }
+
+            var command = commandAndDetails[0].Trim();
+            var details = commandAndDetails[1];
+
+            // Extract missing parameter names from details using regex
+            // Format: "missing 'param1', 'param2', and 'param3' in example prompt"
+            var paramMatches = System.Text.RegularExpressions.Regex.Matches(details, @"'([^']+)'");
+            var missingParams = paramMatches
+                .Cast<System.Text.RegularExpressions.Match>()
+                .Select(m => m.Groups[1].Value)
+                .ToArray();
+
+            if (missingParams.Length == 0)
+            {
+                continue;
+            }
+
+            // Find and modify the example prompt file for this command
+            var examplePromptFileName = $"{command}-example-prompts.md";
+            var examplePromptPath = Path.Combine(examplePromptsDirectory, examplePromptFileName);
+
+            if (File.Exists(examplePromptPath))
+            {
+                try
+                {
+                    injector.InjectCommentToFile(examplePromptPath, command, missingParams);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail validation — comment injection is informational
+                    Console.WriteLine($"⚠ Failed to inject comment into {examplePromptFileName}: {ex.Message}");
+                }
+            }
+        }
+
+        return await Task.FromResult(issues);
     }
 
     private static IReadOnlyList<string> GetExampleHeaderWarnings(IEnumerable<ArticleSection> sections)
