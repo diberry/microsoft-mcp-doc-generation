@@ -9,6 +9,7 @@ namespace GenerativeAI;
 
 public class GenerativeAIClient
 {
+    private const int CharactersPerTokenEstimate = 4;
     private const int MaxRetries = 5;
     private readonly IChatClient _chatClient;
     private readonly IPipelineTracer _tracer;
@@ -80,6 +81,30 @@ public class GenerativeAIClient
         return responseText;
     }
 
+    public static int CalculateDynamicMaxTokens(
+        string systemPrompt,
+        string userPrompt,
+        double outputMultiplier = 2.0,
+        int minimumTokens = 1500,
+        int maximumTokens = 16384)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(outputMultiplier);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(minimumTokens);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumTokens);
+
+        if (minimumTokens > maximumTokens)
+        {
+            throw new ArgumentOutOfRangeException(nameof(minimumTokens), "minimumTokens cannot exceed maximumTokens.");
+        }
+
+        var systemLength = systemPrompt?.Length ?? 0;
+        var userLength = userPrompt?.Length ?? 0;
+        var estimatedInputTokens = (int)Math.Ceiling((systemLength + userLength) / (double)CharactersPerTokenEstimate);
+        var estimatedOutputTokens = (int)Math.Ceiling(estimatedInputTokens * outputMultiplier);
+
+        return Math.Clamp(estimatedOutputTokens, minimumTokens, maximumTokens);
+    }
+
     private static (IChatClient ChatClient, string? ModelName) CreateConfiguredChatClient(GenerativeAIOptions? opts)
     {
         var resolvedOptions = opts ?? GenerativeAIOptions.LoadFromEnvironmentOrDotEnv();
@@ -138,3 +163,4 @@ public class GenerativeAIClient
                ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase);
     }
 }
+

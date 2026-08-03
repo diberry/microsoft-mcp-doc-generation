@@ -62,18 +62,17 @@ internal static class Program
 
         var serviceName = serviceNameArg;
         var outputDir = Path.GetFullPath(outputPath);
-        var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
 
         Console.WriteLine($"Service/Namespace: {serviceName}");
         Console.WriteLine($"Output directory:  {outputDir}");
         Console.WriteLine($"Minimum relevance: {minScore:F2}");
-        Console.WriteLine($"GitHub token:      {(githubToken != null ? "✓ set" : "⚠️  not set (rate limits apply)")}");
+        Console.WriteLine($"Rate limiting:     ✓ enabled (60 req/hr unauthenticated)");
         Console.WriteLine();
 
         try
         {
             var sources = SkillSource.Defaults.ToList();
-            var fetcher = new GitHubSkillsFetcher(githubToken);
+            var fetcher = new GitHubSkillsFetcher();
             var analyzer = new SkillRelevanceAnalyzer(serviceName);
             var allFetchedSkills = new List<SkillInfo>();
 
@@ -138,8 +137,10 @@ internal static class Program
         Console.WriteLine("  --all-skills           Include all skills regardless of relevance score");
         Console.WriteLine("  --help, -h             Show this help message");
         Console.WriteLine();
-        Console.WriteLine("Environment variables:");
-        Console.WriteLine("  GITHUB_TOKEN           GitHub personal access token (recommended to avoid rate limits)");
+        Console.WriteLine("Rate Limiting:");
+        Console.WriteLine("  GitHub unauthenticated API requests are limited to 60 per hour.");
+        Console.WriteLine("  This tool automatically throttles requests to stay within this limit");
+        Console.WriteLine("  and caches responses to minimize redundant API calls.");
         Console.WriteLine();
         Console.WriteLine("Examples:");
         Console.WriteLine("  SkillsRelevance aks");

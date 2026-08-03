@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1.0",
+  "runId": "a73a617c-3c41-44ca-81c0-09085705b169",
+  "namespace": "all",
+  "generatedAt": "2026-08-03T09:07:25Z",
+  "verdict": "fail",
+  "checks": [
+    {
+      "name": "tools_coverage",
+      "status": "fail",
+      "detail": "3/4 tools documented"
+    },
+    {
+      "name": "params_coverage",
+      "status": "pass",
+      "detail": "6/6 params documented"
+    },
+    {
+      "name": "annotation_accuracy",
+      "status": "warn",
+      "detail": "1 mismatches"
+    }
+  ],
+  "summary": {
+    "tools_missing": 1,
+    "articles_in_open_prs": 0,
+    "params_missing": 0,
+    "articles_missing": 0,
+    "tools_documented": 3,
+    "tools_in_open_prs": 0,
+    "params_in_open_prs": 0,
+    "annotation_matches": 11,
+    "params_documented": 6,
+    "annotation_mismatches": 1
+  }
+}

@@ -16,7 +16,9 @@ public class FamilyMetadataGenerator
 {
     private const string SERVICE_DESC_SYSTEM_PROMPT = "./prompts/service-description-system-prompt.txt";
     private const string SERVICE_DESC_USER_PROMPT = "./prompts/service-description-user-prompt.txt";
-    private const int MAX_TOKENS = 1000; // Service description is typically ~200 tokens but some namespaces need up to ~820
+    internal const int MinimumServiceDescriptionMaxTokens = 2000;
+    private const int MaximumServiceDescriptionMaxTokens = 4000;
+    private const double ServiceDescriptionOutputMultiplier = 4.0;
 
     private readonly GenerativeAIClient _aiClient;
     private string? _systemPrompt;
@@ -25,6 +27,13 @@ public class FamilyMetadataGenerator
     public FamilyMetadataGenerator(GenerativeAIOptions options)
     {
         _aiClient = new GenerativeAIClient(options);
+    }
+
+    internal FamilyMetadataGenerator(GenerativeAIClient aiClient, string systemPrompt, string userPromptTemplate)
+    {
+        _aiClient = aiClient ?? throw new ArgumentNullException(nameof(aiClient));
+        _systemPrompt = systemPrompt ?? throw new ArgumentNullException(nameof(systemPrompt));
+        _userPromptTemplate = userPromptTemplate ?? throw new ArgumentNullException(nameof(userPromptTemplate));
     }
 
     /// <summary>
@@ -142,20 +151,28 @@ public class FamilyMetadataGenerator
         var userPrompt = _userPromptTemplate!
             .Replace("{{FAMILY_DISPLAY_NAME}}", displayName);
 
-        var response = await _aiClient.GetChatCompletionAsync(_systemPrompt!, userPrompt, maxTokens: MAX_TOKENS);
+        var maxTokens = CalculateServiceDescriptionMaxTokens(_systemPrompt!, userPrompt);
+        var response = await _aiClient.GetChatCompletionAsync(_systemPrompt!, userPrompt, maxTokens: maxTokens);
         return response.Trim();
+    }
+
+    internal static int CalculateServiceDescriptionMaxTokens(string systemPrompt, string userPrompt)
+    {
+        return GenerativeAIClient.CalculateDynamicMaxTokens(
+            systemPrompt,
+            userPrompt,
+            outputMultiplier: ServiceDescriptionOutputMultiplier,
+            minimumTokens: MinimumServiceDescriptionMaxTokens,
+            maximumTokens: MaximumServiceDescriptionMaxTokens);
     }
 
     /// <summary>
     /// Builds generic fallback service description when AI fails.
+    /// Uses TBD placeholder instead of hardcoded strings - content must be manually provided.
     /// </summary>
     private static string BuildFallbackServiceDescription(string displayName, string familyName)
     {
-        var sanitizedName = familyName.ToLowerInvariant().Replace("-", "").Replace("_", "");
-        var docPath = $"/azure/{sanitizedName}/";
-
-        return $"{displayName} is an Azure service that provides cloud-based capabilities for your applications. " +
-               $"For more information, see [{displayName} documentation]({docPath}).";
+        return "<TBD_Content>";
     }
 
     /// <summary>
