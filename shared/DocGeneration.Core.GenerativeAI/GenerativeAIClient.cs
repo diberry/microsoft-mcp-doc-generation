@@ -163,3 +163,4 @@ public class GenerativeAIClient
                ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase);
     }
 }
+
