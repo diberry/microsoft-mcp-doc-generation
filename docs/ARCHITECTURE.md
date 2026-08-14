@@ -462,7 +462,9 @@ immutable fixtures in `DocGeneration.Baseline.Beta34.Tests` with a provenance ma
 **no pipeline behavior** — it exists so later fixes can be measured against a stable reference
 that cannot silently drift. The freeze script (`scripts/baseline/New-Beta34Baseline.ps1`)
 regenerates it deterministically from a read-only source run and its `-VerifyOnly` mode proves
-byte-for-byte reproducibility; 24 guard tests run in CI via `dotnet test mcp-doc-generation.sln`.
+byte-for-byte reproducibility; 32 guard tests (31 run + 1 opt-in deep-verify skip) run in CI via
+`dotnet test mcp-doc-generation.sln`. A committed `Fixtures/source-inventory.json` (68 physical
+copies) and a `.gitattributes` EOL lock let the suite pass on a clean checkout.
 See [`beta34-baseline-freeze.md`](beta34-baseline-freeze.md).
 
 ## Parameter Taxonomy (3-Tier Model)
