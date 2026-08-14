@@ -18,7 +18,13 @@
       normalized to LF and the BOM is stripped on write.
 
     Rules are applied in this order (case-insensitive; each rule matches BOTH the \\-escaped
-    JSON form and the raw/forward-slash form via a shared separator sub-pattern):
+    JSON form and the raw/forward-slash form via a shared separator sub-pattern). The sanitizer's
+    complete approved placeholder token vocabulary is these EIGHT tokens (kept in lock-step with
+    the C# ApprovedPlaceholders allowlist in DocGeneration.Baseline.Beta34.Tests/BaselineContext.cs):
+        <REPO> <TEMP> <USER> <USER_HOME> <HOST> <RUNSTAMP> <GUID> <PATH>
+    Of these, only <REPO>, <TEMP>, <RUNSTAMP>, and <GUID> actually occur in the current beta.34
+    fixtures; the remaining four (<USER>, <USER_HOME>, <HOST>, <PATH>) are defensive rules that
+    would fire on other capture environments but produce no match in this run's data.
       1. Repo root absolute path                          -> <REPO>
       2. C:\Users\<name>\AppData\Local\Temp               -> <TEMP>
          other C:\Users\<name>                            -> <USER_HOME>
@@ -27,6 +33,16 @@
       5. pipeline-runner-step<N>-<32hex>                  -> pipeline-runner-step<N>-<GUID>
       6. generated-<ns>-YYYY-MM-DD-HH-MM-SS               -> generated-<ns>-<RUNSTAMP>
       7. any remaining drive-letter absolute path X:\...  -> <PATH>   (safety net)
+
+    AI PROVENANCE (per Ellis blocking-1): the manifest's provenance.ai block is derived from the
+    RUN'S OWN sanitized logs (per-namespace */logs/example-prompts.log environment dumps),
+    source="run-log" — NOT from mcp-tools/sample.env and never from mcp-tools/.env. The model and
+    api-version identifiers are non-secret; the endpoint host and API key are never emitted.
+    temperature/seed are not configured in code (SDK defaults) and are recorded null.
+
+    SOURCE INVENTORY (per Cameron BLOCKING-1 / Ellis blocking-2): source-inventory.json is emitted
+    alongside the manifest so the 68-physical -> 34-logical duplicate accounting and per-copy
+    source-hash integrity are provable from COMMITTED data alone (the source run dir is gitignored).
 
     RETAINED (semantic, never redacted): recordedAtUtc, azureMcpBuild version+SHA, namespace,
     stepId, stepName, artifactType, artifactName, summary, details, validatorResults,
@@ -263,6 +279,141 @@ function Get-HashList {
     return $out
 }
 
+# ---- AI provenance (derived from the RUN'S sanitized logs, never sample.env/.env) ----
+# Scans every */logs/*.log under the source run for the model / deployment / api-version
+# identifiers the run actually consumed, tallies distinct values per namespace, and records
+# evidence (relative log paths + source='run-log'). Endpoint host + API key are NEVER emitted;
+# only the non-secret model + api-version identifiers are surfaced.
+function Add-ObservedValue {
+    param([hashtable]$Map, [string]$Value, [string]$Namespace, [string]$EvidenceRel)
+    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -eq 'NOT') { return }
+    if (-not $Map.ContainsKey($Value)) {
+        $Map[$Value] = @{
+            Namespaces = (New-Object 'System.Collections.Generic.HashSet[string]')
+            Evidence   = (New-Object 'System.Collections.Generic.HashSet[string]')
+        }
+    }
+    [void]$Map[$Value].Namespaces.Add($Namespace)
+    [void]$Map[$Value].Evidence.Add($EvidenceRel)
+}
+
+function Merge-ObservedMap {
+    param([hashtable]$A, [hashtable]$B)
+    $m = @{}
+    foreach ($src in @($A, $B)) {
+        foreach ($k in $src.Keys) {
+            if (-not $m.ContainsKey($k)) {
+                $m[$k] = @{
+                    Namespaces = (New-Object 'System.Collections.Generic.HashSet[string]')
+                    Evidence   = (New-Object 'System.Collections.Generic.HashSet[string]')
+                }
+            }
+            foreach ($n in $src[$k].Namespaces) { [void]$m[$k].Namespaces.Add($n) }
+            foreach ($e in $src[$k].Evidence)   { [void]$m[$k].Evidence.Add($e) }
+        }
+    }
+    return $m
+}
+
+function Get-ObservedList {
+    param([hashtable]$Map)
+    $out = New-Object System.Collections.Generic.List[object]
+    foreach ($k in ($Map.Keys | Sort-Object)) {
+        $ev = @($Map[$k].Evidence | Sort-Object | Select-Object -First 5)
+        $out.Add([ordered]@{
+            value              = $k
+            source             = 'run-log'
+            namespacesObserved = $Map[$k].Namespaces.Count
+            evidence           = $ev
+        })
+    }
+    return ,$out.ToArray()
+}
+
+function Get-ScalarObserved {
+    param([hashtable]$Map)
+    $keys = @($Map.Keys | Sort-Object)
+    if ($keys.Count -eq 0) { return $null }
+    if ($keys.Count -eq 1) { return $keys[0] }
+    return ($keys -join '|')
+}
+
+function Get-AiProvenance {
+    param([string]$RunDir, [string]$RunDirName, [string]$RepoRoot)
+
+    $rxS2M = [regex]'(?<![A-Za-z_])FOUNDRY_MODEL_NAME\s*[:=]\s*([^\s]+)'
+    $rxS2A = [regex]'(?<![A-Za-z_])FOUNDRY_MODEL_API_VERSION\s*[:=]\s*([^\s]+)'
+    $rxS4M = [regex]'TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME\s*[:=]\s*([^\s]+)'
+    $rxS4A = [regex]'TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION\s*[:=]\s*([^\s]+)'
+
+    $s2m = @{}; $s2a = @{}; $s4m = @{}; $s4a = @{}
+    $runPrefix  = $RunDir.TrimEnd('\', '/')
+    $repoPrefix = $RepoRoot.TrimEnd('\', '/')
+
+    foreach ($lf in (Get-ChildItem $RunDir -Recurse -File -Filter *.log -ErrorAction SilentlyContinue)) {
+        $rel      = $lf.FullName.Substring($repoPrefix.Length + 1) -replace '\\', '/'
+        $relToRun = $lf.FullName.Substring($runPrefix.Length + 1) -replace '\\', '/'
+        $ns = if ($relToRun -match '/') { ($relToRun -split '/')[0] } else { '(root)' }
+        $text = [System.IO.File]::ReadAllText($lf.FullName)
+        foreach ($mm in $rxS2M.Matches($text)) { Add-ObservedValue -Map $s2m -Value $mm.Groups[1].Value -Namespace $ns -EvidenceRel $rel }
+        foreach ($mm in $rxS2A.Matches($text)) { Add-ObservedValue -Map $s2a -Value $mm.Groups[1].Value -Namespace $ns -EvidenceRel $rel }
+        foreach ($mm in $rxS4M.Matches($text)) { Add-ObservedValue -Map $s4m -Value $mm.Groups[1].Value -Namespace $ns -EvidenceRel $rel }
+        foreach ($mm in $rxS4A.Matches($text)) { Add-ObservedValue -Map $s4a -Value $mm.Groups[1].Value -Namespace $ns -EvidenceRel $rel }
+    }
+
+    $modelValues = @(($s2m.Keys + $s4m.Keys) | Sort-Object -Unique)
+    $apiValues   = @(($s2a.Keys + $s4a.Keys) | Sort-Object -Unique)
+    if ($modelValues.Count -eq 0 -or $apiValues.Count -eq 0) {
+        Write-Fatal "AI provenance: no model/api-version identifiers found in the run's */logs/*.log. Cannot derive provenance from run logs." 11
+    }
+
+    $sameModel = ((@($s2m.Keys | Sort-Object) -join ',') -eq (@($s4m.Keys | Sort-Object) -join ','))
+    $sameApi   = ((@($s2a.Keys | Sort-Object) -join ',') -eq (@($s4a.Keys | Sort-Object) -join ','))
+    $single    = $sameModel -and $sameApi
+
+    $note = 'Model and API version are derived from the run''s sanitized logs (per-namespace ' +
+            '*/logs/example-prompts.log environment dumps), source="run-log" — NOT from ' +
+            'mcp-tools/sample.env and never from mcp-tools/.env. Step 2 (example prompts, ' +
+            'FOUNDRY_MODEL_NAME/FOUNDRY_MODEL_API_VERSION) and Step 4 (tool-family cleanup, ' +
+            'TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME/_API_VERSION) are reported separately; ' +
+            'singleBlock=true means both steps used identical values. Endpoint host and API ' +
+            'key are non-emitted (redacted); temperature/seed are not configured in code ' +
+            '(Azure OpenAI SDK defaults apply) and are recorded as null.'
+
+    return [ordered]@{
+        source      = 'run-log'
+        singleBlock = [bool]$single
+        note        = $note
+        model       = if ($modelValues.Count -eq 1) { $modelValues[0] } else { $null }
+        apiVersion  = if ($apiValues.Count -eq 1) { $apiValues[0] } else { $null }
+        temperature = $null
+        seed        = $null
+        step2ExamplePrompts = [ordered]@{
+            envKeys    = @('FOUNDRY_MODEL_NAME', 'FOUNDRY_MODEL_API_VERSION')
+            model      = (Get-ScalarObserved $s2m)
+            apiVersion = (Get-ScalarObserved $s2a)
+            source     = 'run-log'
+        }
+        step4ToolFamilyCleanup = [ordered]@{
+            envKeys    = @('TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME', 'TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION')
+            model      = (Get-ScalarObserved $s4m)
+            apiVersion = (Get-ScalarObserved $s4a)
+            source     = 'run-log'
+        }
+        observed = [ordered]@{
+            models      = (Get-ObservedList (Merge-ObservedMap $s2m $s4m))
+            apiVersions = (Get-ObservedList (Merge-ObservedMap $s2a $s4a))
+        }
+    }
+}
+
+# ---- errorClass string -> array ("A+B" -> ["A","B"]) -----------------------
+function ConvertTo-ErrorClasses {
+    param([string]$ErrorClass)
+    if ([string]::IsNullOrWhiteSpace($ErrorClass)) { return @() }
+    return @($ErrorClass -split '\+' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+}
+
 # ---- Secret scan -----------------------------------------------------------
 function Invoke-SecretScan {
     param([string[]]$Files, [hashtable]$Ctx)
@@ -301,6 +452,7 @@ function Build-Artifacts {
         [hashtable]$Ctx,
         [string]$RunDirName,
         [string]$RepoRoot,
+        [string]$SourceRunDir,
         [bool]$Quiet
     )
 
@@ -310,6 +462,7 @@ function Build-Artifacts {
 
     $records = New-Object System.Collections.Generic.List[object]
     $producedFiles = New-Object System.Collections.Generic.List[string]
+    $inventory = New-Object System.Collections.Generic.List[object]
 
     foreach ($cf in $CatalogFiles) {
         $rawBytes = [System.IO.File]::ReadAllBytes($cf.FullName)
@@ -370,6 +523,20 @@ function Build-Artifacts {
         $sanitizedSha = Get-FileSha256HexUpper -FilePath $fixturePath
 
         $sourceRel = ($catalogCopy.Rel)
+        $logicalIdentity = ('{0}|{1}|{2}|{3}' -f $ns, $sid, $art, $rec)
+
+        # --- physical-copy inventory (committed proof of the 68 -> 34 accounting) ---
+        foreach ($copy in @($catalogCopy, $namespaceCopy)) {
+            $copyBytes = [System.IO.File]::ReadAllBytes($copy.Full)
+            $inventory.Add([ordered]@{
+                relativePath    = ('{0}/{1}' -f $RunDirName, $copy.Rel)
+                copyKind        = if ($copy.IsCatalog) { 'catalog' } else { 'namespace' }
+                sha256          = (Get-Sha256HexUpper -Bytes $copyBytes)
+                logicalIdentity = $logicalIdentity
+                stableId        = $stableId
+            })
+        }
+
         $records.Add([ordered]@{
             stableId             = $stableId
             namespace            = $ns
@@ -380,7 +547,10 @@ function Build-Artifacts {
             recordedAtUtc        = $rec
             classification       = $cls.role
             errorClass           = $cls.errorClass
+            errorClasses         = @(ConvertTo-ErrorClasses -ErrorClass $cls.errorClass)
             hasUpstreamStep2     = $cls.hasUpstreamStep2
+            chainRole            = $null
+            upstreamStableIds    = @()
             rationale            = $cls.rationale
             sourceRelativePath   = $sourceRel
             sourceSha256         = $sourceSha
@@ -392,8 +562,118 @@ function Build-Artifacts {
         if (-not $Quiet) { Write-Host ("  [OK] {0,-40} <- {1}" -f $stableId, $catalogCopy.Rel) }
     }
 
+    # --- Class-D chain accounting: chainRole + upstreamStableIds (derived MECHANICALLY
+    #     from source records, independent of the classification/error-overlap taxonomy).
+    #     A Step-4 record with >=1 upstream Step-2 record in the SAME namespace is 'cascade';
+    #     everything else (all Step-2 records, and Step-4 records with no namespace-mate Step-2)
+    #     is 'root'. This is chain POSITION only — it does NOT conflate with A+B error overlap. ---
+    $step2ByNs = @{}
+    foreach ($r in $records) {
+        if ($r.stepId -eq 2) {
+            if (-not $step2ByNs.ContainsKey($r.namespace)) {
+                $step2ByNs[$r.namespace] = New-Object System.Collections.Generic.List[string]
+            }
+            $step2ByNs[$r.namespace].Add([string]$r.stableId)
+        }
+    }
+    $allStableIds = @{}
+    foreach ($r in $records) { $allStableIds[[string]$r.stableId] = $true }
+    foreach ($r in $records) {
+        $up = @()
+        if ($r.stepId -eq 4 -and $step2ByNs.ContainsKey($r.namespace)) {
+            $up = @($step2ByNs[$r.namespace] | Sort-Object)
+        }
+        foreach ($u in $up) {
+            if (-not $allStableIds.ContainsKey($u)) {
+                Write-Fatal "upstreamStableIds for '$($r.stableId)' references non-existent stableId '$u'." 10
+            }
+        }
+        $r.upstreamStableIds = @($up)
+        $r.chainRole = if ($up.Count -gt 0) { 'cascade' } else { 'root' }
+    }
+
     # Sort records by stableId for stable diffs.
     $sorted = $records | Sort-Object { $_.stableId }
+
+    # --- Accounting block (EVERY number computed from the data; gated vs pinned expectations) ---
+    $step2Count   = @($records | Where-Object { $_.stepId -eq 2 }).Count
+    $step4Count   = @($records | Where-Object { $_.stepId -eq 4 }).Count
+    $cascadeCount = @($records | Where-Object { $_.chainRole -eq 'cascade' }).Count
+    $rootChain    = @($records | Where-Object { $_.chainRole -eq 'root' }).Count
+    $depLinks     = ($records | ForEach-Object { @($_.upstreamStableIds).Count } | Measure-Object -Sum).Sum
+    if ($null -eq $depLinks) { $depLinks = 0 }
+    $accounting = [ordered]@{
+        logicalRecords  = $records.Count
+        physicalCopies  = $inventory.Count
+        step2Records    = $step2Count
+        step4Records    = $step4Count
+        dependentRecords = $cascadeCount
+        dependencyLinks = [int]$depLinks
+        chainRoleCounts = [ordered]@{
+            root    = $rootChain
+            cascade = $cascadeCount
+        }
+        classificationCounts = [ordered]@{
+            root       = @($records | Where-Object { $_.classification -eq 'root' }).Count
+            cascade    = @($records | Where-Object { $_.classification -eq 'cascade' }).Count
+            mixed      = @($records | Where-Object { $_.classification -eq 'mixed' }).Count
+            diagnostic = @($records | Where-Object { $_.classification -eq 'diagnostic' }).Count
+        }
+        errorClassCounts = [ordered]@{
+            A  = @($records | Where-Object { @($_.errorClasses) -contains 'A' }).Count
+            B  = @($records | Where-Object { @($_.errorClasses) -contains 'B' }).Count
+            AB = @($records | Where-Object { (@($_.errorClasses) -contains 'A') -and (@($_.errorClasses) -contains 'B') }).Count
+            C  = @($records | Where-Object { @($_.errorClasses) -contains 'C' }).Count
+        }
+    }
+
+    # Fail-closed gate: computed numbers MUST match the pinned expectations. On any disagreement
+    # STOP (exit 10) with a precise report rather than silently forcing/hardcoding a value.
+    $expected = [ordered]@{
+        'logicalRecords'                 = 34
+        'physicalCopies'                 = 68
+        'step2Records'                   = 17
+        'step4Records'                   = 17
+        'dependentRecords'               = 10
+        'dependencyLinks'                = 16
+        'classificationCounts.root'      = 21
+        'classificationCounts.cascade'   = 9
+        'classificationCounts.mixed'     = 3
+        'classificationCounts.diagnostic' = 1
+        'errorClassCounts.A'             = 29
+        'errorClassCounts.B'             = 7
+        'errorClassCounts.AB'            = 3
+        'errorClassCounts.C'             = 1
+    }
+    $actual = @{
+        'logicalRecords'                 = $accounting.logicalRecords
+        'physicalCopies'                 = $accounting.physicalCopies
+        'step2Records'                   = $accounting.step2Records
+        'step4Records'                   = $accounting.step4Records
+        'dependentRecords'               = $accounting.dependentRecords
+        'dependencyLinks'                = $accounting.dependencyLinks
+        'classificationCounts.root'      = $accounting.classificationCounts.root
+        'classificationCounts.cascade'   = $accounting.classificationCounts.cascade
+        'classificationCounts.mixed'     = $accounting.classificationCounts.mixed
+        'classificationCounts.diagnostic' = $accounting.classificationCounts.diagnostic
+        'errorClassCounts.A'             = $accounting.errorClassCounts.A
+        'errorClassCounts.B'             = $accounting.errorClassCounts.B
+        'errorClassCounts.AB'            = $accounting.errorClassCounts.AB
+        'errorClassCounts.C'             = $accounting.errorClassCounts.C
+    }
+    $mismatch = @()
+    foreach ($k in $expected.Keys) {
+        if ([int]$actual[$k] -ne [int]$expected[$k]) {
+            $mismatch += ("  {0}: computed={1} expected={2}" -f $k, $actual[$k], $expected[$k])
+        }
+    }
+    # Cross-check the two chain-role buckets partition all records and cascade == dependentRecords.
+    if (($rootChain + $cascadeCount) -ne $records.Count) {
+        $mismatch += ("  chainRoleCounts: root({0})+cascade({1}) != records({2})" -f $rootChain, $cascadeCount, $records.Count)
+    }
+    if ($mismatch.Count -gt 0) {
+        Write-Fatal ("Accounting disagreement with pinned expectations (computed from data):`n" + ($mismatch -join "`n")) 10
+    }
 
     # --- provenance ---
     $repoCommit = try { (& git -C $RepoRoot rev-parse HEAD) 2>$null | Select-Object -First 1 } catch { $null }
@@ -424,6 +704,8 @@ function Build-Artifacts {
         'mcp-tools/data/validation-gate-config.json'
     )
 
+    $aiProvenance = Get-AiProvenance -RunDir $SourceRunDir -RunDirName $RunDirName -RepoRoot $RepoRoot
+
     $manifest = [ordered]@{
         schemaVersion = $ManifestSchema
         provenance = [ordered]@{
@@ -431,22 +713,13 @@ function Build-Artifacts {
             sourceRunDir   = $RunDirName
             azureMcpBuild  = $AzureMcpBuild
             sanitizerVersion = $SanitizerVer
-            ai = [ordered]@{
-                note = 'Model/deployment/apiVersion sourced from the public template mcp-tools/sample.env. temperature/seed are not set anywhere in code (SDK defaults apply) and are therefore null. Credential values in mcp-tools/.env were never accessed.'
-                step2ExamplePrompts = [ordered]@{
-                    model = 'gpt-4.1-mini'; deployment = 'gpt-4.1-mini'
-                    apiVersion = '2025-01-01-preview'; temperature = $null; seed = $null
-                }
-                step4ToolFamilyCleanup = [ordered]@{
-                    model = 'gpt-4o'; deployment = 'gpt-4o'
-                    apiVersion = '2025-01-01-preview'; temperature = $null; seed = $null
-                }
-            }
+            ai = $aiProvenance
             promptHashes = (Get-HashList -RepoRoot $RepoRoot -RelPaths $promptFiles)
             configHashes = (Get-HashList -RepoRoot $RepoRoot -RelPaths $configFiles)
             captureTimestampUtc = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ss.fffffffZ')
             toolVersions = (Get-ToolVersions)
         }
+        accounting = $accounting
         records = @($sorted)
     }
 
@@ -455,10 +728,27 @@ function Build-Artifacts {
     Write-Utf8NoBomLf -FilePath $manifestPath -Content $manifestJson
     $producedFiles.Add($manifestPath)
 
+    # --- source physical-copy inventory (committed evidence: 68 physical -> 34 logical) ---
+    $sortedInventory = @($inventory | Sort-Object { $_.relativePath })
+    $inventoryObj = [ordered]@{
+        schemaVersion     = '1.0.0'
+        sourceRunDir      = $RunDirName
+        generatedAtUtc    = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ss.fffffffZ')
+        physicalCopyCount = $sortedInventory.Count
+        logicalRecordCount = $records.Count
+        physicalCopies    = $sortedInventory
+    }
+    $inventoryPath = Join-Path $DestRoot 'source-inventory.json'
+    $inventoryJson = $inventoryObj | ConvertTo-Json -Depth 32
+    Write-Utf8NoBomLf -FilePath $inventoryPath -Content $inventoryJson
+    $producedFiles.Add($inventoryPath)
+
     return [pscustomobject]@{
         Records       = $sorted
         FixturesDir   = $fixturesDir
         ManifestPath  = $manifestPath
+        InventoryPath = $inventoryPath
+        Inventory     = $sortedInventory
         ProducedFiles = $producedFiles
     }
 }
@@ -547,7 +837,7 @@ if ($VerifyOnly) {
     try {
         $fresh = Build-Artifacts -DestRoot $tempRoot -CatalogFiles $catalogFiles `
             -PhysicalByIdentity $physicalByIdentity -ClassMap $classMap -Ctx $ctx `
-            -RunDirName $runDirName -RepoRoot $repoRoot -Quiet $true
+            -RunDirName $runDirName -RepoRoot $repoRoot -SourceRunDir $runDir -Quiet $true
 
         $scanHits = @(Invoke-SecretScan -Files @($fresh.ProducedFiles) -Ctx $ctx)
         if ($scanHits.Count -gt 0) { Write-Fatal ("Secret scan FAILED on regenerated files:`n" + ($scanHits -join "`n")) 8 }
@@ -577,10 +867,34 @@ if ($VerifyOnly) {
         $committedCount = @($committedManifest.records).Count
         if ($committedCount -ne $ExpectedRecords) { $drift.Add("MANIFEST: committed record count $committedCount != $ExpectedRecords") }
 
+        # (c) Source inventory (deterministic subset: per-copy sha/path/identity/stableId) must match.
+        $committedInvPath = Join-Path $outRoot 'source-inventory.json'
+        if (-not (Test-Path $committedInvPath)) {
+            $drift.Add("INVENTORY: committed source-inventory.json missing")
+        }
+        else {
+            $committedInv = Get-Content $committedInvPath -Raw | ConvertFrom-Json
+            $freshByPath = @{}
+            foreach ($fe in $fresh.Inventory) { $freshByPath[$fe.relativePath] = $fe }
+            $committedByPath = @{}
+            foreach ($ce in $committedInv.physicalCopies) { $committedByPath[$ce.relativePath] = $ce }
+            if (@($committedInv.physicalCopies).Count -ne $fresh.Inventory.Count) {
+                $drift.Add("INVENTORY copy count committed=$(@($committedInv.physicalCopies).Count) fresh=$($fresh.Inventory.Count)")
+            }
+            foreach ($p in $freshByPath.Keys) {
+                if (-not $committedByPath.ContainsKey($p)) { $drift.Add("INVENTORY: committed missing copy $p"); continue }
+                $cf = $committedByPath[$p]; $ff = $freshByPath[$p]
+                if ($cf.sha256 -ne $ff.sha256)                   { $drift.Add("INVENTORY sha256 drift $p") }
+                if ($cf.copyKind -ne $ff.copyKind)               { $drift.Add("INVENTORY copyKind drift $p") }
+                if ($cf.logicalIdentity -ne $ff.logicalIdentity) { $drift.Add("INVENTORY logicalIdentity drift $p") }
+                if ($cf.stableId -ne $ff.stableId)               { $drift.Add("INVENTORY stableId drift $p") }
+            }
+        }
+
         if ($drift.Count -gt 0) {
             Write-Fatal ("DETERMINISM DRIFT DETECTED (" + $drift.Count + " issue(s)):`n" + ($drift -join "`n")) 9
         }
-        Write-Host "DETERMINISM VERIFIED: $($fresh.Records.Count)/$ExpectedRecords fixtures byte-identical; manifest record hashes match. Secret scan clean." -ForegroundColor Green
+        Write-Host "DETERMINISM VERIFIED: $($fresh.Records.Count)/$ExpectedRecords fixtures byte-identical; manifest record hashes + $($fresh.Inventory.Count)-entry inventory match. Secret scan clean." -ForegroundColor Green
         exit 0
     }
     finally {
@@ -596,7 +910,7 @@ Write-Host "   classify   : $classFile"
 
 $result = Build-Artifacts -DestRoot $outRoot -CatalogFiles $catalogFiles `
     -PhysicalByIdentity $physicalByIdentity -ClassMap $classMap -Ctx $ctx `
-    -RunDirName $runDirName -RepoRoot $repoRoot -Quiet $false
+    -RunDirName $runDirName -RepoRoot $repoRoot -SourceRunDir $runDir -Quiet $false
 
 # Orphan classification check (all entries must be consumed).
 $orphans = @()
@@ -613,6 +927,7 @@ if ($scan.Count -gt 0) {
 
 Write-Host ""
 Write-Host "SUCCESS: $($result.Records.Count)/$ExpectedRecords fixtures written -> $($result.FixturesDir)" -ForegroundColor Green
-Write-Host "Manifest: $($result.ManifestPath)"
+Write-Host "Manifest : $($result.ManifestPath)"
+Write-Host "Inventory: $($result.InventoryPath) ($($result.Inventory.Count) physical copies)"
 Write-Host "Secret scan: CLEAN ($($result.ProducedFiles.Count) files scanned)."
 exit 0

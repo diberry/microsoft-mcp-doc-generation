@@ -50,9 +50,11 @@ public sealed class StableIdTests
 }
 
 /// <summary>
-/// T15, T16: 68 physical -> 34 logical duplicate accounting. Copies are paired by LOGICAL IDENTITY
+/// T15, T16: 68 physical -> 34 logical duplicate accounting, asserted against the COMMITTED
+/// source-inventory.json so the checks run on a clean checkout / CI (Cameron BLOCKING-1 /
+/// Ellis blocking-2). Copies are paired by LOGICAL IDENTITY
 /// (namespace|stepId|artifactName|recordedAtUtc), never by filename (the two copies differ only by
-/// a "&lt;namespace&gt;--" prefix). Reads the in-repo source run READ-ONLY.
+/// a "&lt;namespace&gt;--" prefix and directory).
 /// </summary>
 public sealed class DuplicateCopyTests
 {
@@ -60,43 +62,29 @@ public sealed class DuplicateCopyTests
     [Fact]
     public void T15_Each_Logical_Record_Has_Exactly_Two_Physical_Copies()
     {
-        Manifest manifest = BaselineContext.LoadManifest();
-        Assert.Equal(BaselineContext.ExpectedRecordCount, manifest.Records.Count);
+        SourceInventory inventory = BaselineContext.LoadSourceInventory();
 
-        Assert.True(Directory.Exists(BaselineContext.SourceRunDir),
-            "Source run directory is required in-repo: " + BaselineContext.SourceRunDir);
+        // Exactly 68 physical copies recorded.
+        Assert.Equal(68, inventory.PhysicalCopies.Count);
+        Assert.Equal(68, inventory.PhysicalCopyCount);
 
-        var allPhysical = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Every relativePath is distinct (no copy double-counted).
+        int distinctPaths = inventory.PhysicalCopies
+            .Select(c => c.RelativePath ?? "").Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        Assert.Equal(68, distinctPaths);
 
-        foreach (BaselineRecord r in manifest.Records)
+        var byStableId = inventory.PhysicalCopies
+            .GroupBy(c => c.StableId ?? "", StringComparer.Ordinal)
+            .ToList();
+
+        // Exactly 34 logical records, each with exactly two copies: one catalog + one namespace.
+        Assert.Equal(BaselineContext.ExpectedRecordCount, byStableId.Count);
+        foreach (var group in byStableId)
         {
-            Assert.Equal(2, r.PhysicalCopies.Count);
-
-            string[] resolved = r.PhysicalCopies
-                .Select(BaselineContext.ResolveSourceRelative).ToArray();
-
-            foreach (string p in resolved)
-            {
-                Assert.True(File.Exists(p), $"Physical copy missing for '{r.StableId}': {p}");
-                Assert.True(allPhysical.Add(p), $"Physical copy counted twice across records: {p}");
-            }
-
-            // One copy sits under the run-root critical-failures dir, the other under <ns>/critical-failures.
-            string catalogDir = Path.GetFullPath(BaselineContext.SourceCriticalFailuresDir);
-            string namespaceDir = Path.GetFullPath(
-                Path.Combine(BaselineContext.SourceRunDir, r.Namespace!, "critical-failures"));
-
-            int catalogCopies = resolved.Count(p =>
-                string.Equals(Path.GetDirectoryName(p), catalogDir, StringComparison.OrdinalIgnoreCase));
-            int namespaceCopies = resolved.Count(p =>
-                string.Equals(Path.GetDirectoryName(p), namespaceDir, StringComparison.OrdinalIgnoreCase));
-
-            Assert.Equal(1, catalogCopies);
-            Assert.Equal(1, namespaceCopies);
+            Assert.Equal(2, group.Count());
+            Assert.Equal(1, group.Count(c => string.Equals(c.CopyKind, "catalog", StringComparison.Ordinal)));
+            Assert.Equal(1, group.Count(c => string.Equals(c.CopyKind, "namespace", StringComparison.Ordinal)));
         }
-
-        // 34 logical * 2 == 68 distinct physical files.
-        Assert.Equal(68, allPhysical.Count);
     }
 
     // T16
@@ -104,38 +92,47 @@ public sealed class DuplicateCopyTests
     public void T16_Catalog_And_Namespace_Copies_Agree_On_Identity()
     {
         Manifest manifest = BaselineContext.LoadManifest();
+        SourceInventory inventory = BaselineContext.LoadSourceInventory();
         Assert.Equal(BaselineContext.ExpectedRecordCount, manifest.Records.Count);
 
-        Assert.True(Directory.Exists(BaselineContext.SourceRunDir),
-            "Source run directory is required in-repo: " + BaselineContext.SourceRunDir);
+        Dictionary<string, BaselineRecord> recordByStableId =
+            manifest.Records.ToDictionary(r => r.StableId!, StringComparer.Ordinal);
 
-        foreach (BaselineRecord r in manifest.Records)
+        var byStableId = inventory.PhysicalCopies
+            .GroupBy(c => c.StableId ?? "", StringComparer.Ordinal)
+            .ToList();
+        Assert.Equal(BaselineContext.ExpectedRecordCount, byStableId.Count);
+
+        // Pairing is by LOGICAL IDENTITY, never by filename: grouping copies by their logicalIdentity
+        // must reproduce the same 34 two-copy sets as grouping by stableId (1:1 stableId<->identity).
+        int distinctIdentities = inventory.PhysicalCopies
+            .Select(c => c.LogicalIdentity ?? "").Distinct(StringComparer.Ordinal).Count();
+        Assert.Equal(BaselineContext.ExpectedRecordCount, distinctIdentities);
+
+        foreach (var group in byStableId)
         {
-            Assert.Equal(2, r.PhysicalCopies.Count);
-            string[] resolved = r.PhysicalCopies
-                .Select(BaselineContext.ResolveSourceRelative).ToArray();
+            InventoryCopy catalog = group.Single(c => string.Equals(c.CopyKind, "catalog", StringComparison.Ordinal));
+            InventoryCopy nsCopy = group.Single(c => string.Equals(c.CopyKind, "namespace", StringComparison.Ordinal));
 
-            // Pair by LOGICAL IDENTITY, not filename.
-            string identityA = BaselineContext.LogicalIdentity(resolved[0]);
-            string identityB = BaselineContext.LogicalIdentity(resolved[1]);
-            Assert.Equal(identityA, identityB);
+            // The two copies are byte-identical (Ellis) — identical sha256 AND identical logical identity.
+            Assert.False(string.IsNullOrWhiteSpace(catalog.Sha256), $"catalog sha missing for {group.Key}");
+            Assert.False(string.IsNullOrWhiteSpace(nsCopy.Sha256), $"namespace sha missing for {group.Key}");
+            Assert.Equal(catalog.Sha256!.ToLowerInvariant(), nsCopy.Sha256!.ToLowerInvariant());
 
-            // Filenames differ ONLY by the "<namespace>--" prefix on the catalog copy.
-            string catalogName = Path.GetFileName(resolved.Single(p =>
-                string.Equals(Path.GetDirectoryName(p),
-                    Path.GetFullPath(BaselineContext.SourceCriticalFailuresDir),
-                    StringComparison.OrdinalIgnoreCase)));
-            string namespaceName = Path.GetFileName(resolved.Single(p =>
-                string.Equals(Path.GetDirectoryName(p),
-                    Path.GetFullPath(Path.Combine(BaselineContext.SourceRunDir, r.Namespace!, "critical-failures")),
-                    StringComparison.OrdinalIgnoreCase)));
+            Assert.False(string.IsNullOrWhiteSpace(catalog.LogicalIdentity), $"catalog identity missing for {group.Key}");
+            Assert.Equal(catalog.LogicalIdentity, nsCopy.LogicalIdentity);
 
-            Assert.Equal($"{r.Namespace}--{namespaceName}", catalogName);
+            // Identity is consistent with the manifest record's own content fields.
+            Assert.True(recordByStableId.TryGetValue(group.Key, out BaselineRecord? record),
+                $"Inventory stableId '{group.Key}' has no manifest record.");
+            string expectedIdentityPrefix = string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"{record!.Namespace}|{record.StepId}|{record.ArtifactName}|");
+            Assert.StartsWith(expectedIdentityPrefix, catalog.LogicalIdentity!, StringComparison.Ordinal);
 
-            // Identity is consistent with the record's own fields.
-            string expected = string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                $"{r.Namespace}|{r.StepId}|{r.ArtifactName}|");
-            Assert.StartsWith(expected, identityA, StringComparison.Ordinal);
+            // Filenames differ ONLY by the "<namespace>--" prefix on the catalog copy (never used for pairing).
+            string catalogName = Path.GetFileName((catalog.RelativePath ?? "").Replace('\\', '/'));
+            string namespaceName = Path.GetFileName((nsCopy.RelativePath ?? "").Replace('\\', '/'));
+            Assert.Equal($"{record.Namespace}--{namespaceName}", catalogName);
         }
     }
 }

@@ -4,10 +4,10 @@ using Xunit;
 namespace DocGeneration.Baseline.Beta34.Tests;
 
 /// <summary>
-/// T17–T22: secret / PII / path-leak scanning across ALL fixtures AND the manifest, plus the
-/// sanitization determinism proxy (only approved placeholder tokens, no residual absolute paths).
-/// Every scan first pins the frozen-input inventory so an empty/missing baseline fails RED rather
-/// than passing vacuously.
+/// T17–T22: secret / PII / path-leak scanning across ALL fixtures, the manifest, AND the source
+/// inventory, plus the sanitization determinism proxy (only approved placeholder tokens, no residual
+/// absolute paths). Every scan first pins the frozen-input inventory so an empty/missing baseline
+/// fails RED rather than passing vacuously.
 /// </summary>
 public sealed class SecretScanTests
 {
@@ -19,6 +19,8 @@ public sealed class SecretScanTests
         Assert.Equal(BaselineContext.ExpectedRecordCount, fixtures.Length);
         Assert.True(File.Exists(BaselineContext.ManifestPath),
             "Frozen manifest must exist to scan: " + BaselineContext.ManifestPath);
+        Assert.True(File.Exists(BaselineContext.SourceInventoryPath),
+            "Frozen source inventory must exist to scan: " + BaselineContext.SourceInventoryPath);
 
         var targets = new List<ScanTarget>();
         foreach (string f in fixtures)
@@ -27,6 +29,8 @@ public sealed class SecretScanTests
         }
         targets.Add(new ScanTarget("beta34-baseline-manifest.json",
             File.ReadAllText(BaselineContext.ManifestPath)));
+        targets.Add(new ScanTarget("source-inventory.json",
+            File.ReadAllText(BaselineContext.SourceInventoryPath)));
         return targets;
     }
 
@@ -120,7 +124,7 @@ public sealed class SecretScanTests
         AssertNoRegex(new Regex(@"[A-Za-z]:\\", RegexOptions.None),
             "Residual absolute Windows path (sanitizer non-idempotent or incomplete)");
 
-        // (b) Every angle-bracket placeholder token must be one of the approved five.
+        // (b) Every angle-bracket placeholder token must be one of the approved set (8 tokens).
         var placeholder = new Regex(@"<[A-Z][A-Z_]*>", RegexOptions.None);
         foreach (ScanTarget t in ScanTargets())
         {
@@ -128,8 +132,50 @@ public sealed class SecretScanTests
             {
                 Assert.True(BaselineContext.ApprovedPlaceholders.Contains(m.Value),
                     $"'{t.Label}' uses non-approved placeholder '{m.Value}'. " +
-                    $"Approved: {string.Join(", ", BaselineContext.ApprovedPlaceholders)}.");
+                    $"Approved ({BaselineContext.ApprovedPlaceholders.Count}): " +
+                    $"{string.Join(", ", BaselineContext.ApprovedPlaceholders.OrderBy(x => x, StringComparer.Ordinal))}.");
             }
         }
+    }
+
+    // SourceInventory_Contains_No_Environment_Leakage (Ellis blocking-2 follow-on):
+    // the capture inventory is a committed artifact — it must be as clean as the fixtures.
+    [Fact]
+    public void SourceInventory_Contains_No_Environment_Leakage()
+    {
+        Assert.True(File.Exists(BaselineContext.SourceInventoryPath),
+            "Frozen source inventory must exist to scan: " + BaselineContext.SourceInventoryPath);
+        string text = File.ReadAllText(BaselineContext.SourceInventoryPath);
+
+        void NoRegex(Regex pattern, string reason)
+        {
+            Match m = pattern.Match(text);
+            Assert.False(m.Success, $"{reason} — source-inventory.json contains '{Trunc(m.Value)}' at index {m.Index}.");
+        }
+
+        void NoLiteral(string token, string reason)
+        {
+            int idx = text.IndexOf(token, StringComparison.OrdinalIgnoreCase);
+            Assert.True(idx < 0, $"{reason} — source-inventory.json contains '{token}' at index {idx}.");
+        }
+
+        // Absolute paths (relativePath values must stay repo-relative, starting with generated-…).
+        NoRegex(new Regex(@"[A-Za-z]:\\", RegexOptions.None), "Absolute Windows path leaked");
+        NoRegex(new Regex(@"[A-Za-z]:\\+Users\\+", RegexOptions.IgnoreCase), "User home path leaked");
+        NoRegex(new Regex(@"/(?:home|Users)/[^/""\\ ]+", RegexOptions.IgnoreCase), "POSIX home path leaked");
+        NoRegex(new Regex(@"AppData[\\/]+Local[\\/]+Temp", RegexOptions.IgnoreCase), "Temp directory path leaked");
+        NoRegex(new Regex(@"pipeline-runner-step\d+-[0-9a-fA-F]{16,}", RegexOptions.None), "Pipeline-runner temp GUID leaked");
+
+        // User / machine names and repo-root path segments.
+        NoLiteral("diberry", "Capture username leaked");
+        NoLiteral("my-squad-projects", "Absolute repo-root path leaked");
+
+        // Credential shapes.
+        NoLiteral("password", "Credential-shaped token 'password'");
+        NoLiteral("apikey", "Credential-shaped token 'apikey'");
+        NoLiteral("secret", "Credential-shaped token 'secret'");
+        NoLiteral("AccountKey=", "Storage AccountKey secret");
+        NoRegex(new Regex(@"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]+", RegexOptions.None), "JWT-shaped token");
+        NoRegex(new Regex(@"sk-[A-Za-z0-9]{20,}", RegexOptions.None), "OpenAI-style API key");
     }
 }

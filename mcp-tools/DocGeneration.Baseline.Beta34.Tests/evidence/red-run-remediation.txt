@@ -1,0 +1,85 @@
+===============================================================================
+RED evidence — PR #814 remediation (issue #813 Step 1), captured by Parker (QA)
+Date: 2026-08-14
+Build: dotnet build ... --configuration Release => 0 Warnings, 0 Errors (see green-run-remediation.txt)
+RED strategy (AD-010 revert-sensitivity): the committed fixtures/manifest are FINAL and pass GREEN,
+so RED is produced by pointing BETA34_FIXTURES_DIR at a TAMPERED copy (.red-scratch) whose values
+were mutated to the WRONG answers. Each new/modified test fails on a real Assert mismatch (NOT a
+compile error), proving it would FAIL if the pinned contract were reverted/regressed.
+
+Tampering applied to .red-scratch:
+  * provenance.ai.model : gpt-5-mini -> gpt-4o        (Ai_Provenance model + forbidden-string scan)
+  * postgres.04.postgres.01.chainRole : root -> cascade (ChainRole_Counts / ChainRole_Is_Decoupled / accounting)
+  * storage.04.storage.01.upstreamStableIds : 2 -> 1 link (UpstreamStableIds_Reconcile / accounting dependencyLinks)
+  * one errorClass="A" record.errorClasses : [A] -> [A,B] (ErrorClasses_Array_Reconciles scalar/array mismatch)
+  * source-inventory.json + leakNote "C:\Users\diberry\AppData\Local\Temp\secret" (SourceInventory leakage + T17-T22)
+===============================================================================
+
+--- RUN 1: tampered inputs (BETA34_FIXTURES_DIR=.red-scratch) ---
+[xUnit.net 00:00:00.25]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T18_Fixtures_Contain_No_MachineOrUserNames [FAIL]
+  Skipped DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T4b_DeepVerify_LiveSourceRun_Hashes_Match_Inventory [1 ms]
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T18_Fixtures_Contain_No_MachineOrUserNames [48 ms]
+  Error Message:
+   Capture username leaked — 'source-inventory.json' contains disallowed token 'diberry' at index 28892.
+[xUnit.net 00:00:00.30]     DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.UpstreamStableIds_Reconcile_ClassD_Accounting [FAIL]
+  Failed DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.UpstreamStableIds_Reconcile_ClassD_Accounting [76 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 16
+Actual:   15
+[xUnit.net 00:00:00.30]     DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.Accounting_Block_Matches_Independently_Computed_Values [FAIL]
+[xUnit.net 00:00:00.30]     DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.ErrorClasses_Array_Reconciles_With_ErrorClass_Counts [FAIL]
+[xUnit.net 00:00:00.30]     DocGeneration.Baseline.Beta34.Tests.ProvenanceTests.Ai_Provenance_Is_Derived_From_RunLogs_Not_SampleEnv [FAIL]
+  Failed DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.Accounting_Block_Matches_Independently_Computed_Values [4 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 15
+Actual:   16
+  Failed DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.ErrorClasses_Array_Reconciles_With_ErrorClass_Counts [7 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+Expected: "A"
+Actual:   "A+B"
+  Failed DocGeneration.Baseline.Beta34.Tests.ProvenanceTests.Ai_Provenance_Is_Derived_From_RunLogs_Not_SampleEnv [7 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+Expected: "gpt-5-mini"
+Actual:   "gpt-4o"
+[xUnit.net 00:00:00.30]     DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.ChainRole_Is_Decoupled_From_ErrorOverlap [FAIL]
+[xUnit.net 00:00:00.30]     DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.ChainRole_Counts_Are_Pinned [FAIL]
+  Failed DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.ChainRole_Is_Decoupled_From_ErrorOverlap [2 ms]
+  Error Message:
+   Assert.Equal() Failure: Strings differ
+Expected: "root"
+Actual:   "cascade"
+  Failed DocGeneration.Baseline.Beta34.Tests.ChainAndAccountingTests.ChainRole_Counts_Are_Pinned [2 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 24
+Actual:   23
+[xUnit.net 00:00:00.44]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T20_Fixtures_Contain_No_Secret_Shaped_Values [FAIL]
+[xUnit.net 00:00:00.49]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T19_Fixtures_Contain_No_TempGuidPipelinePaths [FAIL]
+[xUnit.net 00:00:00.49]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.SourceInventory_Contains_No_Environment_Leakage [FAIL]
+[xUnit.net 00:00:00.52]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T17_Fixtures_Contain_No_UserHomePaths [FAIL]
+[xUnit.net 00:00:00.55]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T22_Sanitization_Only_Uses_Approved_Placeholders_And_No_Absolute_Paths [FAIL]
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T20_Fixtures_Contain_No_Secret_Shaped_Values [117 ms]
+  Error Message:
+   Credential-shaped token 'secret' — 'source-inventory.json' contains disallowed token 'secret' at index 28923.
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T19_Fixtures_Contain_No_TempGuidPipelinePaths [45 ms]
+  Error Message:
+   Temp directory path leaked — 'source-inventory.json' contains disallowed match 'AppData\\Local\\Temp' at index 28901.
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.SourceInventory_Contains_No_Environment_Leakage [1 ms]
+  Error Message:
+   Absolute Windows path leaked — source-inventory.json contains 'C:\' at index 28881.
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T17_Fixtures_Contain_No_UserHomePaths [30 ms]
+  Error Message:
+   User home path leaked — 'source-inventory.json' contains disallowed match 'C:\\Users\\' at index 28881.
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T22_Sanitization_Only_Uses_Approved_Placeholders_And_No_Absolute_Paths [25 ms]
+  Error Message:
+   Residual absolute Windows path (sanitizer non-idempotent or incomplete) — 'source-inventory.json' contains disallowed match 'C:\' at index 28881.
+Failed!  - Failed:    12, Passed:    19, Skipped:     1, Total:    32, Duration: 343 ms - DocGeneration.Baseline.Beta34.Tests.dll (net10.0)
+
+--- RUN 2: absent input (BETA34_FIXTURES_DIR=<nonexistent>) proves non-vacuity ---
+Every test that depends on the frozen inputs fails RED (FileNotFoundException / File.Exists guard)
+rather than passing silently when the baseline is missing.
+Failed!  - Failed:    31, Passed:     0, Skipped:     1, Total:    32, Duration: 78 ms - DocGeneration.Baseline.Beta34.Tests.dll (net10.0)

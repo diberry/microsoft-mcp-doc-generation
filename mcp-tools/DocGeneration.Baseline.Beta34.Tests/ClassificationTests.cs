@@ -169,14 +169,17 @@ public sealed class ClassificationTests
 
     // T14
     [Fact]
-    public void T14_MixedRecords_Have_Both_Signatures()
+    public void T14_MixedRecords_Have_Both_Signatures_And_NonMixed_Lack_Both()
     {
         Manifest manifest = Manifest();
+        Assert.Equal(BaselineContext.ExpectedRecordCount, manifest.Records.Count);
 
         List<BaselineRecord> mixed =
             manifest.Records.Where(r => r.Classification == "mixed").ToList();
         Assert.Equal(3, mixed.Count);
 
+        // Forward direction: every mixed record HAS both a coverage-divergence AND a reconstruction
+        // signature, and is tagged A+B.
         foreach (BaselineRecord r in mixed)
         {
             string details = ReadFixtureDetailsText(r);
@@ -185,6 +188,23 @@ public sealed class ClassificationTests
             Assert.True(ReconstructionSignature.IsMatch(details),
                 $"Mixed record '{r.StableId}' is missing a reconstruction signature.");
             Assert.Equal("A+B", r.ErrorClass);
+        }
+
+        // Reverse direction: every NON-mixed record must NOT carry BOTH signatures (only mixed does),
+        // and must not be tagged A+B. This makes the discriminator bidirectional (Cameron note 4).
+        List<BaselineRecord> nonMixed =
+            manifest.Records.Where(r => r.Classification != "mixed").ToList();
+        Assert.Equal(BaselineContext.ExpectedRecordCount - 3, nonMixed.Count);
+
+        foreach (BaselineRecord r in nonMixed)
+        {
+            string details = ReadFixtureDetailsText(r);
+            bool hasCoverage = CoverageSignature.IsMatch(details);
+            bool hasReconstruction = ReconstructionSignature.IsMatch(details);
+            Assert.False(hasCoverage && hasReconstruction,
+                $"Non-mixed record '{r.StableId}' [{r.Classification}/{r.ErrorClass}] carries BOTH " +
+                "signatures; only 'mixed' records may have both.");
+            Assert.NotEqual("A+B", r.ErrorClass);
         }
     }
 

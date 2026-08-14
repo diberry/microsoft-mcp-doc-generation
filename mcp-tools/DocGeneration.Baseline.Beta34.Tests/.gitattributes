@@ -1,0 +1,11 @@
+# EOL lock for hash-pinned baseline artifacts (Cameron BLOCKING-2).
+#
+# The repo-root .gitattributes only sets `* text=auto`. With core.autocrlf=true (the default on
+# Windows), a fresh clone would rewrite these committed-LF JSON artifacts to CRLF on checkout,
+# which changes their bytes and breaks the SHA-256 values pinned in the manifest + the tests that
+# assert them (proven: eventhubs.04 5d13fbba… -> 3187f4e9… under CRLF). Marking them `-text`
+# disables ALL end-of-line conversion so the working-tree bytes always equal the committed bytes,
+# on every OS. These are generated, hash-pinned fixtures — treat them as binary-exact.
+Fixtures/critical-failures/*.json      -text
+Fixtures/beta34-baseline-manifest.json -text
+Fixtures/source-inventory.json         -text

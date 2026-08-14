@@ -1,25 +1,65 @@
 {
   "schemaVersion": 1,
   "provenance": {
-    "repoCommitSha": "b6eb1c13e663f0686ca84b1ac0afc564aa9582b4",
+    "repoCommitSha": "fe4d0c0393748bcdd249029526dc42fa614d037f",
     "sourceRunDir": "generated-20260813T162453",
     "azureMcpBuild": "3.0.0-beta.34+eec7acccddab1e16be852a3c3b9503cc9adf7538",
     "sanitizerVersion": "1.0.0",
     "ai": {
-      "note": "Model/deployment/apiVersion sourced from the public template mcp-tools/sample.env. temperature/seed are not set anywhere in code (SDK defaults apply) and are therefore null. Credential values in mcp-tools/.env were never accessed.",
+      "source": "run-log",
+      "singleBlock": true,
+      "note": "Model and API version are derived from the run's sanitized logs (per-namespace */logs/example-prompts.log environment dumps), source=\"run-log\" — NOT from mcp-tools/sample.env and never from mcp-tools/.env. Step 2 (example prompts, FOUNDRY_MODEL_NAME/FOUNDRY_MODEL_API_VERSION) and Step 4 (tool-family cleanup, TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME/_API_VERSION) are reported separately; singleBlock=true means both steps used identical values. Endpoint host and API key are non-emitted (redacted); temperature/seed are not configured in code (Azure OpenAI SDK defaults apply) and are recorded as null.",
+      "model": "gpt-5-mini",
+      "apiVersion": "2025-03-01-preview",
+      "temperature": null,
+      "seed": null,
       "step2ExamplePrompts": {
-        "model": "gpt-4.1-mini",
-        "deployment": "gpt-4.1-mini",
-        "apiVersion": "2025-01-01-preview",
-        "temperature": null,
-        "seed": null
+        "envKeys": [
+          "FOUNDRY_MODEL_NAME",
+          "FOUNDRY_MODEL_API_VERSION"
+        ],
+        "model": "gpt-5-mini",
+        "apiVersion": "2025-03-01-preview",
+        "source": "run-log"
       },
       "step4ToolFamilyCleanup": {
-        "model": "gpt-4o",
-        "deployment": "gpt-4o",
-        "apiVersion": "2025-01-01-preview",
-        "temperature": null,
-        "seed": null
+        "envKeys": [
+          "TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME",
+          "TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_API_VERSION"
+        ],
+        "model": "gpt-5-mini",
+        "apiVersion": "2025-03-01-preview",
+        "source": "run-log"
+      },
+      "observed": {
+        "models": [
+          {
+            "value": "gpt-5-mini",
+            "source": "run-log",
+            "namespacesObserved": 63,
+            "evidence": [
+              "generated-20260813T162453/acr/logs/example-prompts.log",
+              "generated-20260813T162453/advisor/logs/example-prompts.log",
+              "generated-20260813T162453/aks/logs/example-prompts.log",
+              "generated-20260813T162453/appconfig/logs/example-prompts.log",
+              "generated-20260813T162453/applens/logs/example-prompts.log"
+            ]
+          }
+        ],
+        "apiVersions": [
+          {
+            "value": "2025-03-01-preview",
+            "source": "run-log",
+            "namespacesObserved": 63,
+            "evidence": [
+              "generated-20260813T162453/acr/logs/example-prompts.log",
+              "generated-20260813T162453/advisor/logs/example-prompts.log",
+              "generated-20260813T162453/aks/logs/example-prompts.log",
+              "generated-20260813T162453/appconfig/logs/example-prompts.log",
+              "generated-20260813T162453/applens/logs/example-prompts.log"
+            ]
+          }
+        ]
       }
     },
     "promptHashes": {
@@ -48,12 +88,36 @@
       "mcp-tools/data/transformation-config.json": "BC44DC2E8B6B8E56D7D27E7913CFE9F26A95124E4A01ABF866B0576DBD8114E9",
       "mcp-tools/data/validation-gate-config.json": "4D157864E3730353763F1B80114732D277616411425604B8B5B0B007571C5D19"
     },
-    "captureTimestampUtc": "2026-08-14T17:03:32.8152857Z",
+    "captureTimestampUtc": "2026-08-14T17:47:29.5506549Z",
     "toolVersions": {
       "dotnet": "10.0.303",
       "pwsh": "7.6.4",
       "git": "git version 2.55.0.vfs.0.3",
       "os": "Microsoft Windows 10.0.26200"
+    }
+  },
+  "accounting": {
+    "logicalRecords": 34,
+    "physicalCopies": 68,
+    "step2Records": 17,
+    "step4Records": 17,
+    "dependentRecords": 10,
+    "dependencyLinks": 16,
+    "chainRoleCounts": {
+      "root": 24,
+      "cascade": 10
+    },
+    "classificationCounts": {
+      "root": 21,
+      "cascade": 9,
+      "mixed": 3,
+      "diagnostic": 1
+    },
+    "errorClassCounts": {
+      "A": 29,
+      "B": 7,
+      "AB": 3,
+      "C": 1
     }
   },
   "records": [
@@ -67,7 +131,12 @@
       "recordedAtUtc": "2026-08-13T23:46:20.1282129Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/appconfig--20260813T234620128Z-step-02-tool-appconfig-kv-get-01.json",
       "sourceSha256": "103E0BC29B68521D484BD52EDE9610617F4E2992B4712AAFDBB0B2F9E95D32BC",
@@ -88,7 +157,14 @@
       "recordedAtUtc": "2026-08-13T23:46:33.8224111Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "appconfig.02.kv-get.01"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/appconfig--20260813T234633822Z-step-04-tool-family-appconfig-01.json",
       "sourceSha256": "BDBC9AFB5C18F02D395E1DB60DBB0083A3A3FC682F895CF47F534FEA178E85E7",
@@ -109,7 +185,12 @@
       "recordedAtUtc": "2026-08-14T00:07:15.5342594Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/azurebackup--20260814T000715534Z-step-02-tool-azurebackup-governance-soft-delete-01.json",
       "sourceSha256": "CA1B4FDDE93B4ADFA50BB0C6882958E8046A379BE27E1853813D95E15337A0E4",
@@ -130,7 +211,14 @@
       "recordedAtUtc": "2026-08-14T00:07:30.0626544Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "azurebackup.02.governance-soft-delete.01"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/azurebackup--20260814T000730062Z-step-04-tool-family-azurebackup-01.json",
       "sourceSha256": "D47EFC2F873DF507E8CF8A3D19B17C5771E6D158BE7D034605981287AFB47AAF",
@@ -151,7 +239,12 @@
       "recordedAtUtc": "2026-08-14T00:14:54.7073341Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/azureterraform--20260814T001454707Z-step-02-tool-azureterraform-aztfexport-query-01.json",
       "sourceSha256": "60E400CAD6FEE919B144FB500CF48950BF53B866BC18892652BD9045895B1318",
@@ -172,7 +265,12 @@
       "recordedAtUtc": "2026-08-14T00:14:54.7073341Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/azureterraform--20260814T001454707Z-step-02-tool-azureterraform-aztfexport-resourcegroup-02.json",
       "sourceSha256": "C6DB02FF42943A9DAF3D8AD0F31C5CC4F3B5B83AFCE26AAD7064CD6C11881A29",
@@ -193,7 +291,15 @@
       "recordedAtUtc": "2026-08-14T00:15:08.8270879Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "azureterraform.02.aztfexport-query.01",
+        "azureterraform.02.aztfexport-resourcegroup.02"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/azureterraform--20260814T001508827Z-step-04-tool-family-azureterraform-01.json",
       "sourceSha256": "7E0AAFED0B1E643A15F222092C13E3CF8A3E81B648E18B42403F8E262C98AC9F",
@@ -214,7 +320,12 @@
       "recordedAtUtc": "2026-08-14T00:34:40.120727Z",
       "classification": "root",
       "errorClass": "B",
+      "errorClasses": [
+        "B"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 4 reconstruction-only failure (canonical name rebuilt from rendered labels) with no upstream Step 2 in the namespace (originating Class B).",
       "sourceRelativePath": "critical-failures/compute--20260814T003440120Z-step-04-tool-family-compute-01.json",
       "sourceSha256": "197F59EBC5C5981D0A5E8E96757BD84D02558122B1873CF2D6D188AB1A46FD4E",
@@ -235,7 +346,12 @@
       "recordedAtUtc": "2026-08-14T00:48:57.308823Z",
       "classification": "root",
       "errorClass": "B",
+      "errorClasses": [
+        "B"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 4 reconstruction-only failure (canonical name rebuilt from rendered labels) with no upstream Step 2 in the namespace (originating Class B).",
       "sourceRelativePath": "critical-failures/cosmos--20260814T004857308Z-step-04-tool-family-cosmos-01.json",
       "sourceSha256": "E07CB7D53F252EA3A585D53D946A346A1B47EEBD1193C9735E4F5EE3FB5A58BE",
@@ -256,7 +372,12 @@
       "recordedAtUtc": "2026-08-14T00:49:33.1863946Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/datadog--20260814T004933186Z-step-02-tool-datadog-monitoredresources-list-01.json",
       "sourceSha256": "95DE71AB435B26E2289C028569FF065B89A78649F63CC4375CFF4EF822DDA3C5",
@@ -277,7 +398,14 @@
       "recordedAtUtc": "2026-08-14T00:49:44.3064425Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "datadog.02.monitoredresources-list.01"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/datadog--20260814T004944306Z-step-04-tool-family-datadog-01.json",
       "sourceSha256": "CFD3DE8A1EF17A0138F540ABC7608521D81BFD16F50015D7695BE4C5312ED11C",
@@ -298,7 +426,12 @@
       "recordedAtUtc": "2026-08-14T01:02:37.8322763Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 4 coverage-divergence failure that originates in Step 4 with no upstream Step 2 in the namespace (originating Class A).",
       "sourceRelativePath": "critical-failures/eventhubs--20260814T010237832Z-step-04-tool-family-eventhubs-01.json",
       "sourceSha256": "560C50B40846614366628C4C8A11CBF7E9CAED9BABCA89682EC6F0536EC177AC",
@@ -319,7 +452,12 @@
       "recordedAtUtc": "2026-08-14T01:18:08.5511342Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/foundryextensions--20260814T011808551Z-step-02-tool-foundryextensions-openai-chat-completions-create-01.json",
       "sourceSha256": "91C0100D2E9B34CEF4BC1DD5C42B8EBC22DE47744D4CB55747136F555B55CBCA",
@@ -340,7 +478,12 @@
       "recordedAtUtc": "2026-08-14T01:18:08.5511342Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/foundryextensions--20260814T011808551Z-step-02-tool-foundryextensions-openai-embeddings-create-02.json",
       "sourceSha256": "A1B71B610B82223F1CD99747A345DD9A01C8CDA4AB5D8EA1D2152138CA23184E",
@@ -361,7 +504,16 @@
       "recordedAtUtc": "2026-08-14T01:18:21.6427172Z",
       "classification": "mixed",
       "errorClass": "A+B",
+      "errorClasses": [
+        "A",
+        "B"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "foundryextensions.02.openai-chat-completions-create.01",
+        "foundryextensions.02.openai-embeddings-create.02"
+      ],
       "rationale": "Step 4 record whose details carry BOTH a coverage-divergence signature and a reconstruction-from-rendered-labels signature (Class A+B).",
       "sourceRelativePath": "critical-failures/foundryextensions--20260814T011821642Z-step-04-tool-family-foundryextensions-01.json",
       "sourceSha256": "09B10CD03619AB8EE3BA12D5E6F3A7FF7D87267AA2F293FAF38A7C2C78AF94AA",
@@ -382,7 +534,12 @@
       "recordedAtUtc": "2026-08-14T01:41:49.3581685Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/group--20260814T014149358Z-step-02-tool-group-resource-list-01.json",
       "sourceSha256": "D43207C24C889DCA6EAE175985D2A6EF6BD619CD655C0AF398C6A4D311BE35A7",
@@ -403,7 +560,14 @@
       "recordedAtUtc": "2026-08-14T01:42:00.615579Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "group.02.resource-list.01"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/group--20260814T014200615Z-step-04-tool-family-group-01.json",
       "sourceSha256": "E2E72A15B9613A5C99DBE68242E882C387D380A9C9D731B77CBA6C6509820ACB",
@@ -424,7 +588,13 @@
       "recordedAtUtc": "2026-08-14T02:01:34.3111413Z",
       "classification": "mixed",
       "errorClass": "A+B",
+      "errorClasses": [
+        "A",
+        "B"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 4 record whose details carry BOTH a coverage-divergence signature and a reconstruction-from-rendered-labels signature (Class A+B).",
       "sourceRelativePath": "critical-failures/loadtesting--20260814T020134311Z-step-04-tool-family-loadtesting-01.json",
       "sourceSha256": "796043CB06DB81B525AEBD266011054F122045BA5733FCDFBF24A7A6A0528FDC",
@@ -445,7 +615,12 @@
       "recordedAtUtc": "2026-08-14T02:11:29.8524265Z",
       "classification": "diagnostic",
       "errorClass": "C",
+      "errorClasses": [
+        "C"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 opaque generation failure: empty validatorResults and 'generation failed'/missing-output details, no parameter-identity text (Class C).",
       "sourceRelativePath": "critical-failures/monitor--20260814T021129852Z-step-02-tool-monitor-webtests-get-01.json",
       "sourceSha256": "0550BFB3BDCC4440C35798B2E378E6826DE954AF4AB638B1D326AD3DC2F01445",
@@ -466,7 +641,12 @@
       "recordedAtUtc": "2026-08-14T02:12:14.7347171Z",
       "classification": "root",
       "errorClass": "B",
+      "errorClasses": [
+        "B"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 4 reconstruction-only failure (canonical name rebuilt from rendered labels) with no upstream Step 2 in the namespace (originating Class B).",
       "sourceRelativePath": "critical-failures/mysql--20260814T021214734Z-step-04-tool-family-mysql-01.json",
       "sourceSha256": "38E6949B24A2017B75EDB6D0E5B3533CFED615102F94A706BC4A03181E56B709",
@@ -487,7 +667,13 @@
       "recordedAtUtc": "2026-08-14T02:19:37.4468681Z",
       "classification": "mixed",
       "errorClass": "A+B",
+      "errorClasses": [
+        "A",
+        "B"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 4 record whose details carry BOTH a coverage-divergence signature and a reconstruction-from-rendered-labels signature (Class A+B).",
       "sourceRelativePath": "critical-failures/postgres--20260814T021937446Z-step-04-tool-family-postgres-01.json",
       "sourceSha256": "86F54B2EA3CE8936BD3E39C23F8E3D7152E1FDC18E224F6E8149858E3BE11CF8",
@@ -508,7 +694,12 @@
       "recordedAtUtc": "2026-08-14T02:56:34.7948234Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/search--20260814T025634794Z-step-02-tool-search-knowledge-base-retrieve-01.json",
       "sourceSha256": "CF54535BE918F61479BF1919248DB4D463AE9ECC64566A1039C74DA6C0F9923E",
@@ -529,7 +720,14 @@
       "recordedAtUtc": "2026-08-14T02:56:46.9414612Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "search.02.knowledge-base-retrieve.01"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/search--20260814T025646941Z-step-04-tool-family-search-01.json",
       "sourceSha256": "D5863FEAB40D3D9D9DF09371F094EF9FF70C7266913661F24531E7C1B386EA31",
@@ -550,7 +748,12 @@
       "recordedAtUtc": "2026-08-14T03:31:09.1345567Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-docs-memories-add-01.json",
       "sourceSha256": "C083061F21F13823EC00C2935AF06F00EB86EDCCD8E0C1020A180F758BFE27E5",
@@ -571,7 +774,12 @@
       "recordedAtUtc": "2026-08-14T03:31:09.1345567Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-docs-memories-search-02.json",
       "sourceSha256": "04ED91DD7204B001E4D59C43C6F4E65AC3658AB8B97A5C1A7EE4C2BCC0B34893",
@@ -592,7 +800,12 @@
       "recordedAtUtc": "2026-08-14T03:31:09.1345567Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-threads-send-message-03.json",
       "sourceSha256": "D79BDFCCD50B5F3BF435768B03DB73DFF8B3C45BF5313166121D55C853430461",
@@ -613,7 +826,16 @@
       "recordedAtUtc": "2026-08-14T03:31:27.2620676Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "sreagent.02.docs-memories-add.01",
+        "sreagent.02.docs-memories-search.02",
+        "sreagent.02.threads-send-message.03"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/sreagent--20260814T033127262Z-step-04-tool-family-sreagent-01.json",
       "sourceSha256": "160D17BB3BBBF447D0C747B83C587599652C2A5475FF2DDD9F02D594E8EC2881",
@@ -634,7 +856,12 @@
       "recordedAtUtc": "2026-08-14T03:32:11.9060665Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/storage--20260814T033211906Z-step-02-tool-storage-account-create-01.json",
       "sourceSha256": "A8D3AA4901B2F9B950CB898917D7D33A8E468C971CF58DE7E0B89E5992D347B7",
@@ -655,7 +882,12 @@
       "recordedAtUtc": "2026-08-14T03:32:11.9060665Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/storage--20260814T033211906Z-step-02-tool-storage-blob-container-create-02.json",
       "sourceSha256": "FBACA481B38B9A31AB7D0EF662E411F2C7A60C7B3812A6FB9455A404AFEBF49E",
@@ -676,7 +908,15 @@
       "recordedAtUtc": "2026-08-14T03:32:24.0119642Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "storage.02.account-create.01",
+        "storage.02.blob-container-create.02"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/storage--20260814T033224011Z-step-04-tool-family-storage-01.json",
       "sourceSha256": "93B4080B641850E012238CBDE0B3935C7C65E3C942B316939747F1768CBE1381",
@@ -697,7 +937,12 @@
       "recordedAtUtc": "2026-08-14T03:33:09.4882235Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/storagesync--20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-changedetection-01.json",
       "sourceSha256": "7E247F78854F840834D8E7CFC85D2F02A8ECCB2510F0E1453EFDFAADCD560143",
@@ -718,7 +963,12 @@
       "recordedAtUtc": "2026-08-14T03:33:09.4882235Z",
       "classification": "root",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
       "sourceRelativePath": "critical-failures/storagesync--20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-create-02.json",
       "sourceSha256": "52CCE45336CF9FF90C36FC85710547A915305C69E416D505AB72996417CF56DF",
@@ -739,7 +989,15 @@
       "recordedAtUtc": "2026-08-14T03:33:23.0387496Z",
       "classification": "cascade",
       "errorClass": "A",
+      "errorClasses": [
+        "A"
+      ],
       "hasUpstreamStep2": true,
+      "chainRole": "cascade",
+      "upstreamStableIds": [
+        "storagesync.02.cloudendpoint-changedetection.01",
+        "storagesync.02.cloudendpoint-create.02"
+      ],
       "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
       "sourceRelativePath": "critical-failures/storagesync--20260814T033323038Z-step-04-tool-family-storagesync-01.json",
       "sourceSha256": "FE84D8C331A7336546C8DE1ADBA88B4215D24E6C9D8B7AD551CBEB075C2E7B6C",
@@ -760,7 +1018,12 @@
       "recordedAtUtc": "2026-08-14T03:40:45.5234271Z",
       "classification": "root",
       "errorClass": "B",
+      "errorClasses": [
+        "B"
+      ],
       "hasUpstreamStep2": false,
+      "chainRole": "root",
+      "upstreamStableIds": [],
       "rationale": "Step 4 reconstruction-only failure (canonical name rebuilt from rendered labels) with no upstream Step 2 in the namespace (originating Class B).",
       "sourceRelativePath": "critical-failures/virtualdesktop--20260814T034045523Z-step-04-tool-family-virtualdesktop-01.json",
       "sourceSha256": "B9F43E5AB6603728D333D26E341460C663EC4A04FAD1050B39A63C548449AFAA",

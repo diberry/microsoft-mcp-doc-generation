@@ -38,5 +38,6 @@
   [OK] virtualdesktop.04.virtualdesktop.01      <- critical-failures/virtualdesktop--20260814T034045523Z-step-04-tool-family-virtualdesktop-01.json
 
 SUCCESS: 34/34 fixtures written -> C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\Fixtures\critical-failures
-Manifest: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\Fixtures\beta34-baseline-manifest.json
-Secret scan: CLEAN (35 files scanned).
+Manifest : C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\Fixtures\beta34-baseline-manifest.json
+Inventory: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\Fixtures\source-inventory.json (68 physical copies)
+Secret scan: CLEAN (36 files scanned).

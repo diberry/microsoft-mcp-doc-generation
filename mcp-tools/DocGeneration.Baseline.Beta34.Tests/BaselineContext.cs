@@ -17,18 +17,22 @@ internal static class BaselineContext
     public const string ExpectedAzureMcpBuild = "3.0.0-beta.34+eec7acccddab1e16be852a3c3b9503cc9adf7538";
     public const string ExpectedSourceRunDir = "generated-20260813T162453";
 
-    // The exhaustive set of placeholder tokens the sanitizer is allowed to emit.
-    // NOTE (task-vs-AD028 discrepancy — surfaced for reviewer adjudication): the issue #813 task
-    // brief enumerated five approved tokens (<REPO>, <TEMP>, <USER>, <HOST>, <RUNSTAMP>). Riley's
-    // AD-028 sanitization contract additionally mandates <GUID> for the pipeline temp directory
-    // (`<TEMP>/pipeline-runner-stepN-<GUID>/…`), and Quinn's generator emits it. Rejecting the
-    // AD-028-mandated <GUID> would make T22 a false positive against a correct baseline (AD-010),
-    // so it is included here. Reviewers who prefer the strict five-token list can remove <GUID>.
+    // The exhaustive set of placeholder tokens the sanitizer is allowed to emit. This MUST match the
+    // eight tokens defined by the sanitization contract in `scripts/baseline/New-Beta34Baseline.ps1`
+    // and documented in `scripts/baseline/README.md` (AD-028). Of these, only <REPO>, <TEMP>,
+    // <RUNSTAMP>, and <GUID> actually occur in the current beta.34 fixtures; the remaining four
+    // (<USER>, <USER_HOME>, <HOST>, <PATH>) are defensive rules that may not appear but are still
+    // permitted output of the sanitizer. Keeping this list aligned with the script is required by
+    // AD-010 so T22 does not become a false positive against a correctly-sanitized baseline.
     public static readonly HashSet<string> ApprovedPlaceholders =
-        new(StringComparer.Ordinal) { "<REPO>", "<TEMP>", "<USER>", "<HOST>", "<RUNSTAMP>", "<GUID>" };
+        new(StringComparer.Ordinal)
+        {
+            "<REPO>", "<TEMP>", "<USER>", "<USER_HOME>", "<HOST>", "<RUNSTAMP>", "<GUID>", "<PATH>",
+        };
 
     public static readonly string[] ValidClassifications = { "root", "cascade", "mixed", "diagnostic" };
     public static readonly string[] ValidErrorClasses = { "A", "B", "A+B", "C" };
+    public static readonly string[] ValidChainRoles = { "root", "cascade" };
 
     private static string? _repoRoot;
 
@@ -66,6 +70,14 @@ internal static class BaselineContext
     public static string FixtureCriticalFailuresDir => Path.Combine(FixturesDir, "critical-failures");
 
     public static string ManifestPath => Path.Combine(FixturesDir, "beta34-baseline-manifest.json");
+
+    /// <summary>
+    /// Committed capture-inventory fixture produced by Quinn's generator. It records the 68 physical
+    /// copies (34 catalog + 34 namespace) of the source run with per-copy sha256, logical identity,
+    /// and stable id, so the immutability / duplicate-accounting tests can run on a CLEAN CHECKOUT
+    /// without the gitignored source run directory (Cameron BLOCKING-1 / Ellis blocking-2).
+    /// </summary>
+    public static string SourceInventoryPath => Path.Combine(FixturesDir, "source-inventory.json");
 
     public static string SourceRunDir => Path.Combine(RepoRoot, ExpectedSourceRunDir);
 
@@ -113,6 +125,28 @@ internal static class BaselineContext
         return manifest;
     }
 
+    /// <summary>
+    /// Loads the committed source inventory. Throws FileNotFoundException when it has not been
+    /// produced yet — an intentional RED failure prior to Quinn's generator running.
+    /// </summary>
+    public static SourceInventory LoadSourceInventory()
+    {
+        if (!File.Exists(SourceInventoryPath))
+        {
+            throw new FileNotFoundException(
+                $"Frozen source inventory not found (expected committed fixture). Path: {SourceInventoryPath}",
+                SourceInventoryPath);
+        }
+
+        byte[] bytes = File.ReadAllBytes(SourceInventoryPath);
+        SourceInventory? inventory = JsonSerializer.Deserialize<SourceInventory>(bytes, ManifestJsonOptions);
+        if (inventory is null)
+        {
+            throw new InvalidOperationException("Source inventory deserialized to null: " + SourceInventoryPath);
+        }
+        return inventory;
+    }
+
     public static string Sha256Hex(byte[] bytes) =>
         Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 
@@ -124,6 +158,17 @@ internal static class BaselineContext
     {
         string normalized = relative.Replace('\\', '/').TrimStart('.', '/');
         return Path.GetFullPath(Path.Combine(SourceRunDir, normalized.Replace('/', Path.DirectorySeparatorChar)));
+    }
+
+    /// <summary>
+    /// Resolves a source-inventory <c>relativePath</c> (recorded relative to the REPO ROOT, e.g.
+    /// "generated-20260813T162453/appconfig/critical-failures/…") against the working tree. Used only
+    /// by the opt-in deep source-run verification, which requires the (gitignored) source run present.
+    /// </summary>
+    public static string ResolveRepoRelative(string relative)
+    {
+        string normalized = relative.Replace('\\', '/').TrimStart('/');
+        return Path.GetFullPath(Path.Combine(RepoRoot, normalized.Replace('/', Path.DirectorySeparatorChar)));
     }
 
     /// <summary>Parses JSON bytes, tolerating a leading UTF-8 BOM (present in the raw source captures).</summary>
@@ -191,7 +236,21 @@ internal sealed record Manifest
 {
     [JsonPropertyName("schemaVersion")] public JsonElement SchemaVersion { get; init; }
     [JsonPropertyName("provenance")] public Provenance? Provenance { get; init; }
+    [JsonPropertyName("accounting")] public Accounting? Accounting { get; init; }
     [JsonPropertyName("records")] public List<BaselineRecord> Records { get; init; } = new();
+}
+
+internal sealed record Accounting
+{
+    [JsonPropertyName("logicalRecords")] public int LogicalRecords { get; init; }
+    [JsonPropertyName("physicalCopies")] public int PhysicalCopies { get; init; }
+    [JsonPropertyName("step2Records")] public int Step2Records { get; init; }
+    [JsonPropertyName("step4Records")] public int Step4Records { get; init; }
+    [JsonPropertyName("dependentRecords")] public int DependentRecords { get; init; }
+    [JsonPropertyName("dependencyLinks")] public int DependencyLinks { get; init; }
+    [JsonPropertyName("chainRoleCounts")] public Dictionary<string, int> ChainRoleCounts { get; init; } = new();
+    [JsonPropertyName("classificationCounts")] public Dictionary<string, int> ClassificationCounts { get; init; } = new();
+    [JsonPropertyName("errorClassCounts")] public Dictionary<string, int> ErrorClassCounts { get; init; } = new();
 }
 
 internal sealed record Provenance
@@ -199,6 +258,7 @@ internal sealed record Provenance
     [JsonPropertyName("repoCommitSha")] public string? RepoCommitSha { get; init; }
     [JsonPropertyName("sourceRunDir")] public string? SourceRunDir { get; init; }
     [JsonPropertyName("azureMcpBuild")] public string? AzureMcpBuild { get; init; }
+    [JsonPropertyName("sanitizerVersion")] public string? SanitizerVersion { get; init; }
     [JsonPropertyName("captureTimestampUtc")] public string? CaptureTimestampUtc { get; init; }
     [JsonPropertyName("ai")] public JsonElement Ai { get; init; }
     [JsonPropertyName("configHashes")] public JsonElement ConfigHashes { get; init; }
@@ -219,11 +279,33 @@ internal sealed record BaselineRecord
     [JsonPropertyName("sanitizedSha256")] public string? SanitizedSha256 { get; init; }
     [JsonPropertyName("classification")] public string? Classification { get; init; }
     [JsonPropertyName("errorClass")] public string? ErrorClass { get; init; }
+    [JsonPropertyName("errorClasses")] public List<string> ErrorClasses { get; init; } = new();
     [JsonPropertyName("hasUpstreamStep2")] public bool HasUpstreamStep2 { get; init; }
+    [JsonPropertyName("chainRole")] public string? ChainRole { get; init; }
+    [JsonPropertyName("upstreamStableIds")] public List<string> UpstreamStableIds { get; init; } = new();
     [JsonPropertyName("physicalCopies")] public List<string> PhysicalCopies { get; init; } = new();
     [JsonPropertyName("rationale")] public string? Rationale { get; init; }
 
     /// <summary>The committed fixture filename linked to this record (basename of sanitizedRelativePath).</summary>
     public string FixtureFileName =>
         Path.GetFileName((SanitizedRelativePath ?? string.Empty).Replace('\\', '/'));
+}
+
+internal sealed record SourceInventory
+{
+    [JsonPropertyName("schemaVersion")] public string? SchemaVersion { get; init; }
+    [JsonPropertyName("sourceRunDir")] public string? SourceRunDir { get; init; }
+    [JsonPropertyName("generatedAtUtc")] public string? GeneratedAtUtc { get; init; }
+    [JsonPropertyName("physicalCopyCount")] public int PhysicalCopyCount { get; init; }
+    [JsonPropertyName("logicalRecordCount")] public int LogicalRecordCount { get; init; }
+    [JsonPropertyName("physicalCopies")] public List<InventoryCopy> PhysicalCopies { get; init; } = new();
+}
+
+internal sealed record InventoryCopy
+{
+    [JsonPropertyName("relativePath")] public string? RelativePath { get; init; }
+    [JsonPropertyName("copyKind")] public string? CopyKind { get; init; }
+    [JsonPropertyName("sha256")] public string? Sha256 { get; init; }
+    [JsonPropertyName("logicalIdentity")] public string? LogicalIdentity { get; init; }
+    [JsonPropertyName("stableId")] public string? StableId { get; init; }
 }

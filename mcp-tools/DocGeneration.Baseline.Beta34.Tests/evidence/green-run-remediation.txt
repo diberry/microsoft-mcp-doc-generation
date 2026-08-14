@@ -1,0 +1,12 @@
+=== GREEN run — PR #814 remediation, real committed fixtures/manifest/inventory ===
+Date: 2026-08-14
+Command: dotnet test ... --configuration Release
+
+  Skipped DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T4b_DeepVerify_LiveSourceRun_Hashes_Match_Inventory [1 ms]
+Passed!  - Failed:     0, Passed:    31, Skipped:     1, Total:    32, Duration: 708 ms - DocGeneration.Baseline.Beta34.Tests.dll (net10.0)
+
+--- Opt-in deep source-run verification (BETA34_VERIFY_SOURCE_RUN=1) ---
+Proves T4b is NOT vacuous: with the (gitignored) source run present, it hashes all 68 physical
+copies and matches source-inventory.json. On CI/fresh clone it reports as a VISIBLE skip.
+Command: dotnet test ... --filter FullyQualifiedName~T4b_DeepVerify  (with BETA34_VERIFY_SOURCE_RUN=1)
+Passed!  - Failed: 0, Passed: 1, Skipped: 0, Total: 1
