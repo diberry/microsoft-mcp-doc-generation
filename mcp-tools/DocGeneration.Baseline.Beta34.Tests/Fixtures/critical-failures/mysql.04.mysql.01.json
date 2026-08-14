@@ -1,0 +1,48 @@
+{
+  "recordedAtUtc": "2026-08-14T02:12:14.7347171Z",
+  "namespace": "mysql",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "mysql",
+  "summary": "Blocking: Source CLI JSON check failed for \u0027mysql server param get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+  "details": [
+    "Blocking: Source CLI JSON check failed for \u0027mysql server param get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027mysql server param set\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Retrieves comprehensive configuration details for the specified Azure Database for MySQL Flexible Server instance. This command provides insights into server settings, performance parameters, security configurations, and operational characteristics essential for database administration and optimization. Returns configuration data in JSON format including ServerName, Location, Version, SKU, StorageSizeGB, BackupRetentionDays, and GeoRedundantBackup properties.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Retrieves detailed schema information for a specific table within an Azure Database for MySQL Flexible Server database. This command provides comprehensive metadata including column definitions, data types, constraints, indexes, and relationships, essential for understanding table structure and supporting application development.]"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-mysql-<RUNSTAMP>\\tool-family\\azure-database-for-mysql.md",
+    "<REPO>\\generated-mysql-<RUNSTAMP>\\reports\\tool-family-validation-mysql.txt",
+    "<REPO>\\generated-mysql-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-mysql-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-mysql-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-mysql-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: Source CLI JSON check failed for \u0027mysql server param get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027mysql server param set\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Retrieves comprehensive configuration details for the specified Azure Database for MySQL Flexible Server instance. This command provides insights into server settings, performance parameters, security configurations, and operational characteristics essential for database administration and optimization. Returns configuration data in JSON format including ServerName, Location, Version, SKU, StorageSizeGB, BackupRetentionDays, and GeoRedundantBackup properties.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Retrieves detailed schema information for a specific table within an Azure Database for MySQL Flexible Server database. This command provides comprehensive metadata including column definitions, data types, constraints, indexes, and relationships, essential for understanding table structure and supporting application development.]"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: Source CLI JSON check failed for \u0027mysql server param get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027mysql server param set\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Retrieves comprehensive configuration details for the specified Azure Database for MySQL Flexible Server instance. This command provides insights into server settings, performance parameters, security configurations, and operational characteristics essential for database administration and optimization. Returns configuration data in JSON format including ServerName, Location, Version, SKU, StorageSizeGB, BackupRetentionDays, and GeoRedundantBackup properties.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Retrieves detailed schema information for a specific table within an Azure Database for MySQL Flexible Server database. This command provides comprehensive metadata including column definitions, data types, constraints, indexes, and relationships, essential for understanding table structure and supporting application development.]"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

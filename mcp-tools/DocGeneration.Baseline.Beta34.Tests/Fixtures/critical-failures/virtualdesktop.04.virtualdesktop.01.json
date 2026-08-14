@@ -1,0 +1,51 @@
+{
+  "recordedAtUtc": "2026-08-14T03:40:45.5234271Z",
+  "namespace": "virtualdesktop",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "virtualdesktop",
+  "summary": "Blocking: Source CLI JSON check failed for \u0027virtualdesktop hostpool host list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027host-pool-resource-id\u0027.",
+  "details": [
+    "Blocking: Source CLI JSON check failed for \u0027virtualdesktop hostpool host list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027host-pool-resource-id\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027virtualdesktop hostpool host user-list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027host-pool-resource-id\u0027.",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all host pools in a subscription or resource group. This command retrieves all Azure Virtual Desktop host pool objects available in the specified --subscription. If a resource group is specified, only host pools in that resource group are returned. Results include host pool names and are returned as a JSON array.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all SessionHosts in a host pool. This command retrieves all Azure Virtual Desktop SessionHost objects available in the specified --subscription and host pool. Results include SessionHost details and are returned as a JSON array.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all user sessions on a specific session host in a host pool. This command retrieves all Azure Virtual Desktop user session objects available on the specified session host. Results include user session details such as user principal name, session state, application type, and creation time.]"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-virtualdesktop-<RUNSTAMP>\\tool-family\\azure-virtual-desktop.md",
+    "<REPO>\\generated-virtualdesktop-<RUNSTAMP>\\reports\\tool-family-validation-virtualdesktop.txt",
+    "<REPO>\\generated-virtualdesktop-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-virtualdesktop-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-virtualdesktop-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-virtualdesktop-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: Source CLI JSON check failed for \u0027virtualdesktop hostpool host list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027host-pool-resource-id\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027virtualdesktop hostpool host user-list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027host-pool-resource-id\u0027.",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all host pools in a subscription or resource group. This command retrieves all Azure Virtual Desktop host pool objects available in the specified --subscription. If a resource group is specified, only host pools in that resource group are returned. Results include host pool names and are returned as a JSON array.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all SessionHosts in a host pool. This command retrieves all Azure Virtual Desktop SessionHost objects available in the specified --subscription and host pool. Results include SessionHost details and are returned as a JSON array.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all user sessions on a specific session host in a host pool. This command retrieves all Azure Virtual Desktop user session objects available on the specified session host. Results include user session details such as user principal name, session state, application type, and creation time.]"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: Source CLI JSON check failed for \u0027virtualdesktop hostpool host list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027host-pool-resource-id\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027virtualdesktop hostpool host user-list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027host-pool-resource-id\u0027.",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all host pools in a subscription or resource group. This command retrieves all Azure Virtual Desktop host pool objects available in the specified --subscription. If a resource group is specified, only host pools in that resource group are returned. Results include host pool names and are returned as a JSON array.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all SessionHosts in a host pool. This command retrieves all Azure Virtual Desktop SessionHost objects available in the specified --subscription and host pool. Results include SessionHost details and are returned as a JSON array.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all user sessions on a specific session host in a host pool. This command retrieves all Azure Virtual Desktop user session objects available on the specified session host. Results include user session details such as user principal name, session state, application type, and creation time.]"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

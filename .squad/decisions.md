@@ -2,6 +2,16 @@
 
 ## Active Decisions
 
+### 2026-08-14: AD-028 — beta.34 baseline fixture freeze architecture
+**By:** Riley (Architect) — issue #813 Step 1
+**What:** Freeze the 34 logical catalog-level critical-failure records from run `generated-20260813T162453` as immutable test fixtures.
+- **Layout:** new xUnit project `mcp-tools/DocGeneration.Baseline.Beta34.Tests` (net10.0, CPM, added to `mcp-doc-generation.sln`) holding `Fixtures/critical-failures/*.json` (34 sanitized copies) + `Fixtures/beta34-baseline-manifest.json` + `README.md`. Fixtures are copied output, never edits to the source run — complies with "never edit generated files."
+- **Stable ID:** `{namespace}.{stepId:D2}.{artifactSlug}.{ordinal:D2}` (e.g., `storage.02.account-create.01`) — derived only from record content (namespace, stepId, kebab artifactName, per-tool ordinal), path/timestamp-independent, proven collision-free across all 34.
+- **Sanitization contract (deterministic + idempotent — 2nd pass byte-identical):** redact/normalize absolute repo paths → `<REPO>/…`, temp dirs `…/AppData/Local/Temp/…` and pipeline GUID dirs → `<TEMP>/pipeline-runner-stepN-<GUID>/…`, username `diberry`/machine name → `<USER>`/`<HOST>`, per-run output dir suffix `generated-<ns>-YYYY-MM-DD-HH-MM-SS` → `generated-<ns>-<RUNSTAMP>`. **Retained (semantically meaningful):** `recordedAtUtc`, azureMcpBuild version+SHA, stepId, namespace, artifactName, validatorResults. No secrets exist in records; secret-scan test enforces it.
+- **Manifest:** versioned (`schemaVersion`), `provenance` block (repo commit SHA, source run dir, `azureMcpBuild=3.0.0-beta.34+eec7acccddab1e16be852a3c3b9503cc9adf7538`, model/deployment/apiVersion/temperature/seed where discoverable, config/prompt hashes, capture timestamp, tool versions) + 34 `records[]` each with `stableId, namespace, stepId, artifactName, sourceRelativePath, sourceSha256, sanitizedSha256, classification(root|mixed|cascade|diagnostic), errorClass(A|B|C|D), physicalCopies[](catalog+namespace paths), rationale`.
+- **Immutability:** tests assert `sanitizedSha256` of each fixture and `sourceSha256` against the manifest; a `--regen` script recomputes but fails if any existing hash would change (no silent drift). Duplicate accounting test proves 34 logical → 68 physical (catalog + one namespace copy each).
+**Why:** Establishes a provable, secret-free, deterministic beta.34 regression baseline; classification captured exactly once per logical record. **No blocking concerns**; seed/temperature may be undiscoverable — record as `null` with a provenance note rather than fabricate.
+
 ### 2026-08-01: AD-027 — PowerShell parameter-variable collision check
 **By:** Coordinator (learned from PR #785)
 **What:** When reviewing PowerShell scripts (`.ps1`), Quinn and reviewers must check that `param()` parameter names do not collide (case-insensitive) with local variables used in the script body. PowerShell's type-constrained parameters silently coerce reassigned values (e.g., `[string]$Namespaces` converts an array assignment to a space-joined string), causing subtle bugs that only surface at runtime.

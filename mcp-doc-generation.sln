@@ -111,6 +111,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpCliMetadata", "mcp-tools
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpCliMetadata.Tests", "mcp-tools\McpCliMetadata.Tests\McpCliMetadata.Tests.csproj", "{390AE03B-5B33-4D63-A584-F919E2BA2001}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocGeneration.Baseline.Beta34.Tests", "mcp-tools\DocGeneration.Baseline.Beta34.Tests\DocGeneration.Baseline.Beta34.Tests.csproj", "{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -661,6 +663,18 @@ Global
 		{390AE03B-5B33-4D63-A584-F919E2BA2001}.Release|x64.Build.0 = Release|Any CPU
 		{390AE03B-5B33-4D63-A584-F919E2BA2001}.Release|x86.ActiveCfg = Release|Any CPU
 		{390AE03B-5B33-4D63-A584-F919E2BA2001}.Release|x86.Build.0 = Release|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Debug|x64.Build.0 = Debug|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Debug|x86.Build.0 = Debug|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Release|x64.ActiveCfg = Release|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Release|x64.Build.0 = Release|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Release|x86.ActiveCfg = Release|Any CPU
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -696,5 +710,6 @@ Global
 		{F7E43BB2-EBAF-4165-A182-3FA30211B4DF} = {4F52FD11-658E-A102-6CD3-7D7C16FFA15B}
 		{E9DE7B3E-DA44-4B64-880C-228C32FA6BE8} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 		{390AE03B-5B33-4D63-A584-F919E2BA2001} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
+		{F5455DD8-1EE2-42A3-A9C2-F63F9E3FCC5A} = {DF01CBFE-2A46-B04D-C9C1-3B401942EB66}
 	EndGlobalSection
 EndGlobal

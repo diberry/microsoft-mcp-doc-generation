@@ -1,0 +1,45 @@
+{
+  "recordedAtUtc": "2026-08-14T00:15:08.8270879Z",
+  "namespace": "azureterraform",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "azureterraform",
+  "summary": "Blocking: \uD83D\uDED1 aztfexport-query: missing \u0027query\u0027, \u0027Query\u0027 in example prompts",
+  "details": [
+    "Blocking: \uD83D\uDED1 aztfexport-query: missing \u0027query\u0027, \u0027Query\u0027 in example prompts",
+    "Blocking: \uD83D\uDED1 aztfexport-resourcegroup: missing \u0027resource-group\u0027, \u0027Resource group\u0027 in example prompts",
+    "Branding: Verify first mention uses the full product name (for example, \u0022Microsoft Foundry\u0022). [Retrieves all available versions of a specified Azure Verified Module (AVM). Works for both resource modules (avm-res-*) and pattern modules (avm-ptn-*). Returns version tags with creation dates, sorted from newest to oldest. The first version in the list is the latest. Use --module-name to specify the module (e.g., avm-res-storage-storageaccount or avm-ptn-aiml-ai-foundry).]"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-azureterraform-<RUNSTAMP>\\tool-family\\azure-azureterraform.md",
+    "<REPO>\\generated-azureterraform-<RUNSTAMP>\\reports\\tool-family-validation-azureterraform.txt",
+    "<REPO>\\generated-azureterraform-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-azureterraform-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-azureterraform-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-azureterraform-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 aztfexport-query: missing \u0027query\u0027, \u0027Query\u0027 in example prompts",
+    "Blocking: \uD83D\uDED1 aztfexport-resourcegroup: missing \u0027resource-group\u0027, \u0027Resource group\u0027 in example prompts",
+    "Branding: Verify first mention uses the full product name (for example, \u0022Microsoft Foundry\u0022). [Retrieves all available versions of a specified Azure Verified Module (AVM). Works for both resource modules (avm-res-*) and pattern modules (avm-ptn-*). Returns version tags with creation dates, sorted from newest to oldest. The first version in the list is the latest. Use --module-name to specify the module (e.g., avm-res-storage-storageaccount or avm-ptn-aiml-ai-foundry).]"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 aztfexport-query: missing \u0027query\u0027, \u0027Query\u0027 in example prompts",
+        "Blocking: \uD83D\uDED1 aztfexport-resourcegroup: missing \u0027resource-group\u0027, \u0027Resource group\u0027 in example prompts",
+        "Branding: Verify first mention uses the full product name (for example, \u0022Microsoft Foundry\u0022). [Retrieves all available versions of a specified Azure Verified Module (AVM). Works for both resource modules (avm-res-*) and pattern modules (avm-ptn-*). Returns version tags with creation dates, sorted from newest to oldest. The first version in the list is the latest. Use --module-name to specify the module (e.g., avm-res-storage-storageaccount or avm-ptn-aiml-ai-foundry).]"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

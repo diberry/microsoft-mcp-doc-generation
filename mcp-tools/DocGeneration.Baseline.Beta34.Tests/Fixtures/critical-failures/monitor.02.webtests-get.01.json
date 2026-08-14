@@ -1,0 +1,29 @@
+{
+  "recordedAtUtc": "2026-08-14T02:11:29.8524265Z",
+  "namespace": "monitor",
+  "stepId": 2,
+  "stepName": "Generate example prompts",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool",
+  "artifactName": "monitor webtests get",
+  "summary": "Example prompt generation failed for this tool.",
+  "details": [
+    "Example prompt generation failed (exit code 1).",
+    "Missing example prompts markdown: \u0027<REPO>\\generated-monitor-<RUNSTAMP>\\example-prompts\\azure-monitor-web-tests-get-example-prompts.md\u0027.",
+    "Missing saved example prompt input: \u0027<REPO>\\generated-monitor-<RUNSTAMP>\\example-prompts-prompts\\azure-monitor-web-tests-get-input-prompt.md\u0027.",
+    "Missing raw AI output: \u0027<REPO>\\generated-monitor-<RUNSTAMP>\\example-prompts-raw-output\\azure-monitor-web-tests-get-raw-output.txt\u0027."
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-monitor-<RUNSTAMP>\\example-prompts\\azure-monitor-web-tests-get-example-prompts.md",
+    "<REPO>\\generated-monitor-<RUNSTAMP>\\example-prompts-prompts\\azure-monitor-web-tests-get-input-prompt.md",
+    "<REPO>\\generated-monitor-<RUNSTAMP>\\example-prompts-raw-output\\azure-monitor-web-tests-get-raw-output.txt",
+    "<REPO>\\generated-monitor-<RUNSTAMP>\\example-prompts-validation\\azure-monitor-web-tests-get-validation.md"
+  ],
+  "stepWarnings": [
+    "Example prompt generation failed (exit code 1)."
+  ],
+  "processInvocations": [
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-monitor-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-monitor-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-monitor-<RUNSTAMP>\\parameters"
+  ],
+  "validatorResults": []
+}

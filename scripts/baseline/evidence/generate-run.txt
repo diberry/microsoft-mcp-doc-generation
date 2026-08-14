@@ -1,0 +1,42 @@
+== Generating beta.34 baseline fixtures ==
+   source run : generated-20260813T162453
+   output root: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\Fixtures
+   classify   : C:\my-squad-projects\microsoft-mcp-doc-generation\scripts\baseline\beta34-classification.json
+  [OK] appconfig.02.kv-get.01                   <- critical-failures/appconfig--20260813T234620128Z-step-02-tool-appconfig-kv-get-01.json
+  [OK] appconfig.04.appconfig.01                <- critical-failures/appconfig--20260813T234633822Z-step-04-tool-family-appconfig-01.json
+  [OK] azurebackup.02.governance-soft-delete.01 <- critical-failures/azurebackup--20260814T000715534Z-step-02-tool-azurebackup-governance-soft-delete-01.json
+  [OK] azurebackup.04.azurebackup.01            <- critical-failures/azurebackup--20260814T000730062Z-step-04-tool-family-azurebackup-01.json
+  [OK] azureterraform.02.aztfexport-query.01    <- critical-failures/azureterraform--20260814T001454707Z-step-02-tool-azureterraform-aztfexport-query-01.json
+  [OK] azureterraform.02.aztfexport-resourcegroup.02 <- critical-failures/azureterraform--20260814T001454707Z-step-02-tool-azureterraform-aztfexport-resourcegroup-02.json
+  [OK] azureterraform.04.azureterraform.01      <- critical-failures/azureterraform--20260814T001508827Z-step-04-tool-family-azureterraform-01.json
+  [OK] compute.04.compute.01                    <- critical-failures/compute--20260814T003440120Z-step-04-tool-family-compute-01.json
+  [OK] cosmos.04.cosmos.01                      <- critical-failures/cosmos--20260814T004857308Z-step-04-tool-family-cosmos-01.json
+  [OK] datadog.02.monitoredresources-list.01    <- critical-failures/datadog--20260814T004933186Z-step-02-tool-datadog-monitoredresources-list-01.json
+  [OK] datadog.04.datadog.01                    <- critical-failures/datadog--20260814T004944306Z-step-04-tool-family-datadog-01.json
+  [OK] eventhubs.04.eventhubs.01                <- critical-failures/eventhubs--20260814T010237832Z-step-04-tool-family-eventhubs-01.json
+  [OK] foundryextensions.02.openai-chat-completions-create.01 <- critical-failures/foundryextensions--20260814T011808551Z-step-02-tool-foundryextensions-openai-chat-completions-create-01.json
+  [OK] foundryextensions.02.openai-embeddings-create.02 <- critical-failures/foundryextensions--20260814T011808551Z-step-02-tool-foundryextensions-openai-embeddings-create-02.json
+  [OK] foundryextensions.04.foundryextensions.01 <- critical-failures/foundryextensions--20260814T011821642Z-step-04-tool-family-foundryextensions-01.json
+  [OK] group.02.resource-list.01                <- critical-failures/group--20260814T014149358Z-step-02-tool-group-resource-list-01.json
+  [OK] group.04.group.01                        <- critical-failures/group--20260814T014200615Z-step-04-tool-family-group-01.json
+  [OK] loadtesting.04.loadtesting.01            <- critical-failures/loadtesting--20260814T020134311Z-step-04-tool-family-loadtesting-01.json
+  [OK] monitor.02.webtests-get.01               <- critical-failures/monitor--20260814T021129852Z-step-02-tool-monitor-webtests-get-01.json
+  [OK] mysql.04.mysql.01                        <- critical-failures/mysql--20260814T021214734Z-step-04-tool-family-mysql-01.json
+  [OK] postgres.04.postgres.01                  <- critical-failures/postgres--20260814T021937446Z-step-04-tool-family-postgres-01.json
+  [OK] search.02.knowledge-base-retrieve.01     <- critical-failures/search--20260814T025634794Z-step-02-tool-search-knowledge-base-retrieve-01.json
+  [OK] search.04.search.01                      <- critical-failures/search--20260814T025646941Z-step-04-tool-family-search-01.json
+  [OK] sreagent.02.docs-memories-add.01         <- critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-docs-memories-add-01.json
+  [OK] sreagent.02.docs-memories-search.02      <- critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-docs-memories-search-02.json
+  [OK] sreagent.02.threads-send-message.03      <- critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-threads-send-message-03.json
+  [OK] sreagent.04.sreagent.01                  <- critical-failures/sreagent--20260814T033127262Z-step-04-tool-family-sreagent-01.json
+  [OK] storage.02.account-create.01             <- critical-failures/storage--20260814T033211906Z-step-02-tool-storage-account-create-01.json
+  [OK] storage.02.blob-container-create.02      <- critical-failures/storage--20260814T033211906Z-step-02-tool-storage-blob-container-create-02.json
+  [OK] storage.04.storage.01                    <- critical-failures/storage--20260814T033224011Z-step-04-tool-family-storage-01.json
+  [OK] storagesync.02.cloudendpoint-changedetection.01 <- critical-failures/storagesync--20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-changedetection-01.json
+  [OK] storagesync.02.cloudendpoint-create.02   <- critical-failures/storagesync--20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-create-02.json
+  [OK] storagesync.04.storagesync.01            <- critical-failures/storagesync--20260814T033323038Z-step-04-tool-family-storagesync-01.json
+  [OK] virtualdesktop.04.virtualdesktop.01      <- critical-failures/virtualdesktop--20260814T034045523Z-step-04-tool-family-virtualdesktop-01.json
+
+SUCCESS: 34/34 fixtures written -> C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\Fixtures\critical-failures
+Manifest: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\Fixtures\beta34-baseline-manifest.json
+Secret scan: CLEAN (35 files scanned).

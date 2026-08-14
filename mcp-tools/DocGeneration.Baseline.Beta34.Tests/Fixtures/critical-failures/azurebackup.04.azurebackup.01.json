@@ -1,0 +1,39 @@
+{
+  "recordedAtUtc": "2026-08-14T00:07:30.0626544Z",
+  "namespace": "azurebackup",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "azurebackup",
+  "summary": "Blocking: \uD83D\uDED1 governance-soft-delete: missing \u0027soft-delete\u0027, \u0027Soft delete\u0027 in example prompts",
+  "details": [
+    "Blocking: \uD83D\uDED1 governance-soft-delete: missing \u0027soft-delete\u0027, \u0027Soft delete\u0027 in example prompts"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\tool-family\\azure-backup.md",
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\reports\\tool-family-validation-azurebackup.txt",
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 governance-soft-delete: missing \u0027soft-delete\u0027, \u0027Soft delete\u0027 in example prompts"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 governance-soft-delete: missing \u0027soft-delete\u0027, \u0027Soft delete\u0027 in example prompts"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

@@ -1,0 +1,775 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "repoCommitSha": "b6eb1c13e663f0686ca84b1ac0afc564aa9582b4",
+    "sourceRunDir": "generated-20260813T162453",
+    "azureMcpBuild": "3.0.0-beta.34+eec7acccddab1e16be852a3c3b9503cc9adf7538",
+    "sanitizerVersion": "1.0.0",
+    "ai": {
+      "note": "Model/deployment/apiVersion sourced from the public template mcp-tools/sample.env. temperature/seed are not set anywhere in code (SDK defaults apply) and are therefore null. Credential values in mcp-tools/.env were never accessed.",
+      "step2ExamplePrompts": {
+        "model": "gpt-4.1-mini",
+        "deployment": "gpt-4.1-mini",
+        "apiVersion": "2025-01-01-preview",
+        "temperature": null,
+        "seed": null
+      },
+      "step4ToolFamilyCleanup": {
+        "model": "gpt-4o",
+        "deployment": "gpt-4o",
+        "apiVersion": "2025-01-01-preview",
+        "temperature": null,
+        "seed": null
+      }
+    },
+    "promptHashes": {
+      "mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/prompts/system-prompt-example-prompt.txt": "EB48F7E478593CD186A78FDF5CB1194E9C629339F403D540F6E33DCBE49F5F3E",
+      "mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/prompts/user-prompt-example-prompt.txt": "1FCF6724D27EEEC88104690709417AE90521027D1CFBF29948A66D1FA194567C",
+      "mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/prompts/system-prompt-example-prompt-validation.txt": "9D9AF61945104FA9B41ACB3A9328014FC36FA257B31E38AEE1F531FBFDF5C097",
+      "mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/prompts/user-prompt-example-prompt-validation.txt": "BC1A55C53F005D2F0090D9B93009C6C56717DF790888790CC42E70D65284EB75",
+      "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/family-metadata-system-prompt.txt": "587BFBE397609F7C7C62886D34BF4801A4CADF6A904F25AFC9522D1F05898916",
+      "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/family-metadata-user-prompt.txt": "2E7B5C70711716EFF4D8671B0654C094853504CD1BABF999A3E2D5DDF51127A1",
+      "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/h2-heading-system-prompt.txt": "69C67360EA7B3276A8EA7333813AE4030B9A071BB881B7A227E1306F965A1332",
+      "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/h2-heading-user-prompt.txt": "E542E36E376FC60B6318D3762AE84C74B7C6FD8A9C9F058BB52EA7F9A7B5A0D6",
+      "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/service-description-system-prompt.txt": "ECAE777DA92CA1FDA2FDE42A5AFF2646FD6A40638BF3EC989EF0A6577EEE6D8B",
+      "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/service-description-user-prompt.txt": "269E49E6737765E4CE940F9170D9C4BE09B3176936B9659FBC1E652D8AC79A8F",
+      "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/tool-family-cleanup-system-prompt.txt": "888614AAA3586DBB4BE3BD6959FD9C326E7403DDD81A19BB0D3E80BACC7F2F86",
+      "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/prompts/tool-family-cleanup-user-prompt.txt": "7393BC44FDEBB54FDEE94A2770C5F584F8C7A79874422AF0723652AD0489B16A"
+    },
+    "configHashes": {
+      "mcp-tools/data/brand-to-server-mapping.json": "C2E52C8A5E2AF3DAE136931B70FCBE64308B2A845FB0F44226DDF0CA438A4337",
+      "mcp-tools/data/common-parameters.json": "116EAB3A038DC4D258115EE1E4820D333450028EC15E7247E3ABC27E35EB3815",
+      "mcp-tools/data/compound-words.json": "5BBCEB4612EA87B2EC4E0E81DE14771F6EDD8412D9946EB95BCFB6CBFCC4FE8D",
+      "mcp-tools/data/nl-parameter-identifiers.json": "06140711E494522684E2CAE2A5710695AC2658EF494389307CE0A3D434C73E83",
+      "mcp-tools/data/nl-parameters.json": "65830AD6E35CFAE6A93D1EB072567F328E4790658E0A59E6F823D0774FCBC6A6",
+      "mcp-tools/data/service-doc-links.json": "CECCA709DC9A05385C3B09C89452D659D25C183160B638B6303BF8E3976049D2",
+      "mcp-tools/data/static-text-replacement.json": "BDCB77ABFEC68659B6665EC2935465C9FFF3281E3D9FA99BE2ED95B42612F8CE",
+      "mcp-tools/data/stop-words.json": "9DF265C11501A1CC9B8C94F769CD184225EC50E6003B14C82B2CB89F7923F93C",
+      "mcp-tools/data/transformation-config.json": "BC44DC2E8B6B8E56D7D27E7913CFE9F26A95124E4A01ABF866B0576DBD8114E9",
+      "mcp-tools/data/validation-gate-config.json": "4D157864E3730353763F1B80114732D277616411425604B8B5B0B007571C5D19"
+    },
+    "captureTimestampUtc": "2026-08-14T17:03:32.8152857Z",
+    "toolVersions": {
+      "dotnet": "10.0.303",
+      "pwsh": "7.6.4",
+      "git": "git version 2.55.0.vfs.0.3",
+      "os": "Microsoft Windows 10.0.26200"
+    }
+  },
+  "records": [
+    {
+      "stableId": "appconfig.02.kv-get.01",
+      "namespace": "appconfig",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "appconfig kv get",
+      "recordedAtUtc": "2026-08-13T23:46:20.1282129Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/appconfig--20260813T234620128Z-step-02-tool-appconfig-kv-get-01.json",
+      "sourceSha256": "103E0BC29B68521D484BD52EDE9610617F4E2992B4712AAFDBB0B2F9E95D32BC",
+      "sanitizedRelativePath": "critical-failures/appconfig.02.kv-get.01.json",
+      "sanitizedSha256": "2FC7DCD24F55239E9B0CA9AA7ED33780205A9977E7B17664CB33BA4D20445B3E",
+      "physicalCopies": [
+        "critical-failures/appconfig--20260813T234620128Z-step-02-tool-appconfig-kv-get-01.json",
+        "appconfig/critical-failures/20260813T234620128Z-step-02-tool-appconfig-kv-get-01.json"
+      ]
+    },
+    {
+      "stableId": "appconfig.04.appconfig.01",
+      "namespace": "appconfig",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "appconfig",
+      "recordedAtUtc": "2026-08-13T23:46:33.8224111Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/appconfig--20260813T234633822Z-step-04-tool-family-appconfig-01.json",
+      "sourceSha256": "BDBC9AFB5C18F02D395E1DB60DBB0083A3A3FC682F895CF47F534FEA178E85E7",
+      "sanitizedRelativePath": "critical-failures/appconfig.04.appconfig.01.json",
+      "sanitizedSha256": "F1C8747E5DC331807D0287A9D407EBEB97F724F9632CCEF6F6BDC7242258FCD7",
+      "physicalCopies": [
+        "critical-failures/appconfig--20260813T234633822Z-step-04-tool-family-appconfig-01.json",
+        "appconfig/critical-failures/20260813T234633822Z-step-04-tool-family-appconfig-01.json"
+      ]
+    },
+    {
+      "stableId": "azurebackup.02.governance-soft-delete.01",
+      "namespace": "azurebackup",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "azurebackup governance soft-delete",
+      "recordedAtUtc": "2026-08-14T00:07:15.5342594Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/azurebackup--20260814T000715534Z-step-02-tool-azurebackup-governance-soft-delete-01.json",
+      "sourceSha256": "CA1B4FDDE93B4ADFA50BB0C6882958E8046A379BE27E1853813D95E15337A0E4",
+      "sanitizedRelativePath": "critical-failures/azurebackup.02.governance-soft-delete.01.json",
+      "sanitizedSha256": "623B5C625A1C3F904D48BBD7C3AE057A0197FB05A1D75E270DC7B3BB4DEDA406",
+      "physicalCopies": [
+        "critical-failures/azurebackup--20260814T000715534Z-step-02-tool-azurebackup-governance-soft-delete-01.json",
+        "azurebackup/critical-failures/20260814T000715534Z-step-02-tool-azurebackup-governance-soft-delete-01.json"
+      ]
+    },
+    {
+      "stableId": "azurebackup.04.azurebackup.01",
+      "namespace": "azurebackup",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "azurebackup",
+      "recordedAtUtc": "2026-08-14T00:07:30.0626544Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/azurebackup--20260814T000730062Z-step-04-tool-family-azurebackup-01.json",
+      "sourceSha256": "D47EFC2F873DF507E8CF8A3D19B17C5771E6D158BE7D034605981287AFB47AAF",
+      "sanitizedRelativePath": "critical-failures/azurebackup.04.azurebackup.01.json",
+      "sanitizedSha256": "79DDD2B35F6A02D26A9AB54D4AEE7671E1578D4D8213F619EF70C3458CBC17C4",
+      "physicalCopies": [
+        "critical-failures/azurebackup--20260814T000730062Z-step-04-tool-family-azurebackup-01.json",
+        "azurebackup/critical-failures/20260814T000730062Z-step-04-tool-family-azurebackup-01.json"
+      ]
+    },
+    {
+      "stableId": "azureterraform.02.aztfexport-query.01",
+      "namespace": "azureterraform",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "azureterraform aztfexport query",
+      "recordedAtUtc": "2026-08-14T00:14:54.7073341Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/azureterraform--20260814T001454707Z-step-02-tool-azureterraform-aztfexport-query-01.json",
+      "sourceSha256": "60E400CAD6FEE919B144FB500CF48950BF53B866BC18892652BD9045895B1318",
+      "sanitizedRelativePath": "critical-failures/azureterraform.02.aztfexport-query.01.json",
+      "sanitizedSha256": "8F4D83F278F8BB41B3A9BC6FB1CEE4E26B1458887A56EFB32B608DA0ED5579E0",
+      "physicalCopies": [
+        "critical-failures/azureterraform--20260814T001454707Z-step-02-tool-azureterraform-aztfexport-query-01.json",
+        "azureterraform/critical-failures/20260814T001454707Z-step-02-tool-azureterraform-aztfexport-query-01.json"
+      ]
+    },
+    {
+      "stableId": "azureterraform.02.aztfexport-resourcegroup.02",
+      "namespace": "azureterraform",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "azureterraform aztfexport resourcegroup",
+      "recordedAtUtc": "2026-08-14T00:14:54.7073341Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/azureterraform--20260814T001454707Z-step-02-tool-azureterraform-aztfexport-resourcegroup-02.json",
+      "sourceSha256": "C6DB02FF42943A9DAF3D8AD0F31C5CC4F3B5B83AFCE26AAD7064CD6C11881A29",
+      "sanitizedRelativePath": "critical-failures/azureterraform.02.aztfexport-resourcegroup.02.json",
+      "sanitizedSha256": "D459E58FC2954B1039A4C644AA7371E8CBF4218B37AC8B36F596C0E84F5B5484",
+      "physicalCopies": [
+        "critical-failures/azureterraform--20260814T001454707Z-step-02-tool-azureterraform-aztfexport-resourcegroup-02.json",
+        "azureterraform/critical-failures/20260814T001454707Z-step-02-tool-azureterraform-aztfexport-resourcegroup-02.json"
+      ]
+    },
+    {
+      "stableId": "azureterraform.04.azureterraform.01",
+      "namespace": "azureterraform",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "azureterraform",
+      "recordedAtUtc": "2026-08-14T00:15:08.8270879Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/azureterraform--20260814T001508827Z-step-04-tool-family-azureterraform-01.json",
+      "sourceSha256": "7E0AAFED0B1E643A15F222092C13E3CF8A3E81B648E18B42403F8E262C98AC9F",
+      "sanitizedRelativePath": "critical-failures/azureterraform.04.azureterraform.01.json",
+      "sanitizedSha256": "551E3438737D28E967DFB9445F311A7F4A2C07713656D4B59AABD3CAB5E03E0A",
+      "physicalCopies": [
+        "critical-failures/azureterraform--20260814T001508827Z-step-04-tool-family-azureterraform-01.json",
+        "azureterraform/critical-failures/20260814T001508827Z-step-04-tool-family-azureterraform-01.json"
+      ]
+    },
+    {
+      "stableId": "compute.04.compute.01",
+      "namespace": "compute",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "compute",
+      "recordedAtUtc": "2026-08-14T00:34:40.120727Z",
+      "classification": "root",
+      "errorClass": "B",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 4 reconstruction-only failure (canonical name rebuilt from rendered labels) with no upstream Step 2 in the namespace (originating Class B).",
+      "sourceRelativePath": "critical-failures/compute--20260814T003440120Z-step-04-tool-family-compute-01.json",
+      "sourceSha256": "197F59EBC5C5981D0A5E8E96757BD84D02558122B1873CF2D6D188AB1A46FD4E",
+      "sanitizedRelativePath": "critical-failures/compute.04.compute.01.json",
+      "sanitizedSha256": "94C15ADA0A007ECA245D11AA55F4D8DAF6316D58723A897A88813D2AB4168DAD",
+      "physicalCopies": [
+        "critical-failures/compute--20260814T003440120Z-step-04-tool-family-compute-01.json",
+        "compute/critical-failures/20260814T003440120Z-step-04-tool-family-compute-01.json"
+      ]
+    },
+    {
+      "stableId": "cosmos.04.cosmos.01",
+      "namespace": "cosmos",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "cosmos",
+      "recordedAtUtc": "2026-08-14T00:48:57.308823Z",
+      "classification": "root",
+      "errorClass": "B",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 4 reconstruction-only failure (canonical name rebuilt from rendered labels) with no upstream Step 2 in the namespace (originating Class B).",
+      "sourceRelativePath": "critical-failures/cosmos--20260814T004857308Z-step-04-tool-family-cosmos-01.json",
+      "sourceSha256": "E07CB7D53F252EA3A585D53D946A346A1B47EEBD1193C9735E4F5EE3FB5A58BE",
+      "sanitizedRelativePath": "critical-failures/cosmos.04.cosmos.01.json",
+      "sanitizedSha256": "2ACFDDA246232F7CDB4720BF3ECE165E531073A63BE488AD22C05A722172F992",
+      "physicalCopies": [
+        "critical-failures/cosmos--20260814T004857308Z-step-04-tool-family-cosmos-01.json",
+        "cosmos/critical-failures/20260814T004857308Z-step-04-tool-family-cosmos-01.json"
+      ]
+    },
+    {
+      "stableId": "datadog.02.monitoredresources-list.01",
+      "namespace": "datadog",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "datadog monitoredresources list",
+      "recordedAtUtc": "2026-08-14T00:49:33.1863946Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/datadog--20260814T004933186Z-step-02-tool-datadog-monitoredresources-list-01.json",
+      "sourceSha256": "95DE71AB435B26E2289C028569FF065B89A78649F63CC4375CFF4EF822DDA3C5",
+      "sanitizedRelativePath": "critical-failures/datadog.02.monitoredresources-list.01.json",
+      "sanitizedSha256": "0759443EC0AFF6A97E9FD11AF3E621207706BCAC08F400128386469D1BA6E029",
+      "physicalCopies": [
+        "critical-failures/datadog--20260814T004933186Z-step-02-tool-datadog-monitoredresources-list-01.json",
+        "datadog/critical-failures/20260814T004933186Z-step-02-tool-datadog-monitoredresources-list-01.json"
+      ]
+    },
+    {
+      "stableId": "datadog.04.datadog.01",
+      "namespace": "datadog",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "datadog",
+      "recordedAtUtc": "2026-08-14T00:49:44.3064425Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/datadog--20260814T004944306Z-step-04-tool-family-datadog-01.json",
+      "sourceSha256": "CFD3DE8A1EF17A0138F540ABC7608521D81BFD16F50015D7695BE4C5312ED11C",
+      "sanitizedRelativePath": "critical-failures/datadog.04.datadog.01.json",
+      "sanitizedSha256": "13624582B6DD4040C16832B0A48B6EDC919740D073D2F5D9B42FD0FFFA6EB922",
+      "physicalCopies": [
+        "critical-failures/datadog--20260814T004944306Z-step-04-tool-family-datadog-01.json",
+        "datadog/critical-failures/20260814T004944306Z-step-04-tool-family-datadog-01.json"
+      ]
+    },
+    {
+      "stableId": "eventhubs.04.eventhubs.01",
+      "namespace": "eventhubs",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "eventhubs",
+      "recordedAtUtc": "2026-08-14T01:02:37.8322763Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 4 coverage-divergence failure that originates in Step 4 with no upstream Step 2 in the namespace (originating Class A).",
+      "sourceRelativePath": "critical-failures/eventhubs--20260814T010237832Z-step-04-tool-family-eventhubs-01.json",
+      "sourceSha256": "560C50B40846614366628C4C8A11CBF7E9CAED9BABCA89682EC6F0536EC177AC",
+      "sanitizedRelativePath": "critical-failures/eventhubs.04.eventhubs.01.json",
+      "sanitizedSha256": "5D13FBBA519F0A0E97A90F0A126980CB60625C249BC1453F943431DCE47FA5A2",
+      "physicalCopies": [
+        "critical-failures/eventhubs--20260814T010237832Z-step-04-tool-family-eventhubs-01.json",
+        "eventhubs/critical-failures/20260814T010237832Z-step-04-tool-family-eventhubs-01.json"
+      ]
+    },
+    {
+      "stableId": "foundryextensions.02.openai-chat-completions-create.01",
+      "namespace": "foundryextensions",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "foundryextensions openai chat-completions-create",
+      "recordedAtUtc": "2026-08-14T01:18:08.5511342Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/foundryextensions--20260814T011808551Z-step-02-tool-foundryextensions-openai-chat-completions-create-01.json",
+      "sourceSha256": "91C0100D2E9B34CEF4BC1DD5C42B8EBC22DE47744D4CB55747136F555B55CBCA",
+      "sanitizedRelativePath": "critical-failures/foundryextensions.02.openai-chat-completions-create.01.json",
+      "sanitizedSha256": "C40EBBDE88FAF67B4978BB39034876C7630722935DFF1F001911AD3B6D3E7BDE",
+      "physicalCopies": [
+        "critical-failures/foundryextensions--20260814T011808551Z-step-02-tool-foundryextensions-openai-chat-completions-create-01.json",
+        "foundryextensions/critical-failures/20260814T011808551Z-step-02-tool-foundryextensions-openai-chat-completions-create-01.json"
+      ]
+    },
+    {
+      "stableId": "foundryextensions.02.openai-embeddings-create.02",
+      "namespace": "foundryextensions",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "foundryextensions openai embeddings-create",
+      "recordedAtUtc": "2026-08-14T01:18:08.5511342Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/foundryextensions--20260814T011808551Z-step-02-tool-foundryextensions-openai-embeddings-create-02.json",
+      "sourceSha256": "A1B71B610B82223F1CD99747A345DD9A01C8CDA4AB5D8EA1D2152138CA23184E",
+      "sanitizedRelativePath": "critical-failures/foundryextensions.02.openai-embeddings-create.02.json",
+      "sanitizedSha256": "AE6E3FE447847EF9D4183C2DE581FA27789F21451B57D5FE1EF0D41900887CFC",
+      "physicalCopies": [
+        "critical-failures/foundryextensions--20260814T011808551Z-step-02-tool-foundryextensions-openai-embeddings-create-02.json",
+        "foundryextensions/critical-failures/20260814T011808551Z-step-02-tool-foundryextensions-openai-embeddings-create-02.json"
+      ]
+    },
+    {
+      "stableId": "foundryextensions.04.foundryextensions.01",
+      "namespace": "foundryextensions",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "foundryextensions",
+      "recordedAtUtc": "2026-08-14T01:18:21.6427172Z",
+      "classification": "mixed",
+      "errorClass": "A+B",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 record whose details carry BOTH a coverage-divergence signature and a reconstruction-from-rendered-labels signature (Class A+B).",
+      "sourceRelativePath": "critical-failures/foundryextensions--20260814T011821642Z-step-04-tool-family-foundryextensions-01.json",
+      "sourceSha256": "09B10CD03619AB8EE3BA12D5E6F3A7FF7D87267AA2F293FAF38A7C2C78AF94AA",
+      "sanitizedRelativePath": "critical-failures/foundryextensions.04.foundryextensions.01.json",
+      "sanitizedSha256": "E5F29979B8DA1922A6D598574462106AAC7B601F7A3214A3505EA226E612D6DA",
+      "physicalCopies": [
+        "critical-failures/foundryextensions--20260814T011821642Z-step-04-tool-family-foundryextensions-01.json",
+        "foundryextensions/critical-failures/20260814T011821642Z-step-04-tool-family-foundryextensions-01.json"
+      ]
+    },
+    {
+      "stableId": "group.02.resource-list.01",
+      "namespace": "group",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "group resource list",
+      "recordedAtUtc": "2026-08-14T01:41:49.3581685Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/group--20260814T014149358Z-step-02-tool-group-resource-list-01.json",
+      "sourceSha256": "D43207C24C889DCA6EAE175985D2A6EF6BD619CD655C0AF398C6A4D311BE35A7",
+      "sanitizedRelativePath": "critical-failures/group.02.resource-list.01.json",
+      "sanitizedSha256": "31BFF249A19CC803A41571287C8299C8541F04CA2799C3FF0749A7C7EF8F2ADA",
+      "physicalCopies": [
+        "critical-failures/group--20260814T014149358Z-step-02-tool-group-resource-list-01.json",
+        "group/critical-failures/20260814T014149358Z-step-02-tool-group-resource-list-01.json"
+      ]
+    },
+    {
+      "stableId": "group.04.group.01",
+      "namespace": "group",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "group",
+      "recordedAtUtc": "2026-08-14T01:42:00.615579Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/group--20260814T014200615Z-step-04-tool-family-group-01.json",
+      "sourceSha256": "E2E72A15B9613A5C99DBE68242E882C387D380A9C9D731B77CBA6C6509820ACB",
+      "sanitizedRelativePath": "critical-failures/group.04.group.01.json",
+      "sanitizedSha256": "9A465534B8C72214E529EC6558F098BFCF267F455AAD00DC66CABE6BC0C1890F",
+      "physicalCopies": [
+        "critical-failures/group--20260814T014200615Z-step-04-tool-family-group-01.json",
+        "group/critical-failures/20260814T014200615Z-step-04-tool-family-group-01.json"
+      ]
+    },
+    {
+      "stableId": "loadtesting.04.loadtesting.01",
+      "namespace": "loadtesting",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "loadtesting",
+      "recordedAtUtc": "2026-08-14T02:01:34.3111413Z",
+      "classification": "mixed",
+      "errorClass": "A+B",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 4 record whose details carry BOTH a coverage-divergence signature and a reconstruction-from-rendered-labels signature (Class A+B).",
+      "sourceRelativePath": "critical-failures/loadtesting--20260814T020134311Z-step-04-tool-family-loadtesting-01.json",
+      "sourceSha256": "796043CB06DB81B525AEBD266011054F122045BA5733FCDFBF24A7A6A0528FDC",
+      "sanitizedRelativePath": "critical-failures/loadtesting.04.loadtesting.01.json",
+      "sanitizedSha256": "F8AFBFE215B6ADD0C48F825718203A0DF073CAACAD20BEC7FE654F207F6586A6",
+      "physicalCopies": [
+        "critical-failures/loadtesting--20260814T020134311Z-step-04-tool-family-loadtesting-01.json",
+        "loadtesting/critical-failures/20260814T020134311Z-step-04-tool-family-loadtesting-01.json"
+      ]
+    },
+    {
+      "stableId": "monitor.02.webtests-get.01",
+      "namespace": "monitor",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "monitor webtests get",
+      "recordedAtUtc": "2026-08-14T02:11:29.8524265Z",
+      "classification": "diagnostic",
+      "errorClass": "C",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 opaque generation failure: empty validatorResults and 'generation failed'/missing-output details, no parameter-identity text (Class C).",
+      "sourceRelativePath": "critical-failures/monitor--20260814T021129852Z-step-02-tool-monitor-webtests-get-01.json",
+      "sourceSha256": "0550BFB3BDCC4440C35798B2E378E6826DE954AF4AB638B1D326AD3DC2F01445",
+      "sanitizedRelativePath": "critical-failures/monitor.02.webtests-get.01.json",
+      "sanitizedSha256": "E950F1D6004D14669D76050625F00C6E295BE53503D74BDEE4B2A73D5A09CD74",
+      "physicalCopies": [
+        "critical-failures/monitor--20260814T021129852Z-step-02-tool-monitor-webtests-get-01.json",
+        "monitor/critical-failures/20260814T021129852Z-step-02-tool-monitor-webtests-get-01.json"
+      ]
+    },
+    {
+      "stableId": "mysql.04.mysql.01",
+      "namespace": "mysql",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "mysql",
+      "recordedAtUtc": "2026-08-14T02:12:14.7347171Z",
+      "classification": "root",
+      "errorClass": "B",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 4 reconstruction-only failure (canonical name rebuilt from rendered labels) with no upstream Step 2 in the namespace (originating Class B).",
+      "sourceRelativePath": "critical-failures/mysql--20260814T021214734Z-step-04-tool-family-mysql-01.json",
+      "sourceSha256": "38E6949B24A2017B75EDB6D0E5B3533CFED615102F94A706BC4A03181E56B709",
+      "sanitizedRelativePath": "critical-failures/mysql.04.mysql.01.json",
+      "sanitizedSha256": "9288A84E0C96075BDFDC8A3FDA2BF7C019C0FED64A82716E5603F0C95F9ACD81",
+      "physicalCopies": [
+        "critical-failures/mysql--20260814T021214734Z-step-04-tool-family-mysql-01.json",
+        "mysql/critical-failures/20260814T021214734Z-step-04-tool-family-mysql-01.json"
+      ]
+    },
+    {
+      "stableId": "postgres.04.postgres.01",
+      "namespace": "postgres",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "postgres",
+      "recordedAtUtc": "2026-08-14T02:19:37.4468681Z",
+      "classification": "mixed",
+      "errorClass": "A+B",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 4 record whose details carry BOTH a coverage-divergence signature and a reconstruction-from-rendered-labels signature (Class A+B).",
+      "sourceRelativePath": "critical-failures/postgres--20260814T021937446Z-step-04-tool-family-postgres-01.json",
+      "sourceSha256": "86F54B2EA3CE8936BD3E39C23F8E3D7152E1FDC18E224F6E8149858E3BE11CF8",
+      "sanitizedRelativePath": "critical-failures/postgres.04.postgres.01.json",
+      "sanitizedSha256": "61DCD31DD0635C62065C78C044EE594AB3DAB20B1E949A234A1D1C1968C45C32",
+      "physicalCopies": [
+        "critical-failures/postgres--20260814T021937446Z-step-04-tool-family-postgres-01.json",
+        "postgres/critical-failures/20260814T021937446Z-step-04-tool-family-postgres-01.json"
+      ]
+    },
+    {
+      "stableId": "search.02.knowledge-base-retrieve.01",
+      "namespace": "search",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "search knowledge base retrieve",
+      "recordedAtUtc": "2026-08-14T02:56:34.7948234Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/search--20260814T025634794Z-step-02-tool-search-knowledge-base-retrieve-01.json",
+      "sourceSha256": "CF54535BE918F61479BF1919248DB4D463AE9ECC64566A1039C74DA6C0F9923E",
+      "sanitizedRelativePath": "critical-failures/search.02.knowledge-base-retrieve.01.json",
+      "sanitizedSha256": "3005A8F02D7DD0A72E41C44E9FF7E4D4EE72150AF7C30F317C63DB935B8C6D23",
+      "physicalCopies": [
+        "critical-failures/search--20260814T025634794Z-step-02-tool-search-knowledge-base-retrieve-01.json",
+        "search/critical-failures/20260814T025634794Z-step-02-tool-search-knowledge-base-retrieve-01.json"
+      ]
+    },
+    {
+      "stableId": "search.04.search.01",
+      "namespace": "search",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "search",
+      "recordedAtUtc": "2026-08-14T02:56:46.9414612Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/search--20260814T025646941Z-step-04-tool-family-search-01.json",
+      "sourceSha256": "D5863FEAB40D3D9D9DF09371F094EF9FF70C7266913661F24531E7C1B386EA31",
+      "sanitizedRelativePath": "critical-failures/search.04.search.01.json",
+      "sanitizedSha256": "C9821A2885D5AEA268CC1D519EB38CE926CA81AC8CB992921D901A7601C87BEB",
+      "physicalCopies": [
+        "critical-failures/search--20260814T025646941Z-step-04-tool-family-search-01.json",
+        "search/critical-failures/20260814T025646941Z-step-04-tool-family-search-01.json"
+      ]
+    },
+    {
+      "stableId": "sreagent.02.docs-memories-add.01",
+      "namespace": "sreagent",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "sreagent docs memories add",
+      "recordedAtUtc": "2026-08-14T03:31:09.1345567Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-docs-memories-add-01.json",
+      "sourceSha256": "C083061F21F13823EC00C2935AF06F00EB86EDCCD8E0C1020A180F758BFE27E5",
+      "sanitizedRelativePath": "critical-failures/sreagent.02.docs-memories-add.01.json",
+      "sanitizedSha256": "41818E2A8F9FC183BB72738FA5ED74E1B7762B9F132E37F7B64551513098CA24",
+      "physicalCopies": [
+        "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-docs-memories-add-01.json",
+        "sreagent/critical-failures/20260814T033109134Z-step-02-tool-sreagent-docs-memories-add-01.json"
+      ]
+    },
+    {
+      "stableId": "sreagent.02.docs-memories-search.02",
+      "namespace": "sreagent",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "sreagent docs memories search",
+      "recordedAtUtc": "2026-08-14T03:31:09.1345567Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-docs-memories-search-02.json",
+      "sourceSha256": "04ED91DD7204B001E4D59C43C6F4E65AC3658AB8B97A5C1A7EE4C2BCC0B34893",
+      "sanitizedRelativePath": "critical-failures/sreagent.02.docs-memories-search.02.json",
+      "sanitizedSha256": "6EDBD7281FF3E0AD0F660E77453FD509E9007560396D345F1B337FCA1269CF63",
+      "physicalCopies": [
+        "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-docs-memories-search-02.json",
+        "sreagent/critical-failures/20260814T033109134Z-step-02-tool-sreagent-docs-memories-search-02.json"
+      ]
+    },
+    {
+      "stableId": "sreagent.02.threads-send-message.03",
+      "namespace": "sreagent",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "sreagent threads send message",
+      "recordedAtUtc": "2026-08-14T03:31:09.1345567Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-threads-send-message-03.json",
+      "sourceSha256": "D79BDFCCD50B5F3BF435768B03DB73DFF8B3C45BF5313166121D55C853430461",
+      "sanitizedRelativePath": "critical-failures/sreagent.02.threads-send-message.03.json",
+      "sanitizedSha256": "4549ADEDB4335FBE4094A2D00777C67BF1A0B12811784E4B6D9C0D9680690BA7",
+      "physicalCopies": [
+        "critical-failures/sreagent--20260814T033109134Z-step-02-tool-sreagent-threads-send-message-03.json",
+        "sreagent/critical-failures/20260814T033109134Z-step-02-tool-sreagent-threads-send-message-03.json"
+      ]
+    },
+    {
+      "stableId": "sreagent.04.sreagent.01",
+      "namespace": "sreagent",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "sreagent",
+      "recordedAtUtc": "2026-08-14T03:31:27.2620676Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/sreagent--20260814T033127262Z-step-04-tool-family-sreagent-01.json",
+      "sourceSha256": "160D17BB3BBBF447D0C747B83C587599652C2A5475FF2DDD9F02D594E8EC2881",
+      "sanitizedRelativePath": "critical-failures/sreagent.04.sreagent.01.json",
+      "sanitizedSha256": "1F17BB8071C62FD50DDB1B327BFEDC2A2C05854A826C90DEE4962266165A1F9E",
+      "physicalCopies": [
+        "critical-failures/sreagent--20260814T033127262Z-step-04-tool-family-sreagent-01.json",
+        "sreagent/critical-failures/20260814T033127262Z-step-04-tool-family-sreagent-01.json"
+      ]
+    },
+    {
+      "stableId": "storage.02.account-create.01",
+      "namespace": "storage",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "storage account create",
+      "recordedAtUtc": "2026-08-14T03:32:11.9060665Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/storage--20260814T033211906Z-step-02-tool-storage-account-create-01.json",
+      "sourceSha256": "A8D3AA4901B2F9B950CB898917D7D33A8E468C971CF58DE7E0B89E5992D347B7",
+      "sanitizedRelativePath": "critical-failures/storage.02.account-create.01.json",
+      "sanitizedSha256": "DD22C0671CDA7899D7A89930FE186E001DF0C6AB74F2D090097420D7767037B9",
+      "physicalCopies": [
+        "critical-failures/storage--20260814T033211906Z-step-02-tool-storage-account-create-01.json",
+        "storage/critical-failures/20260814T033211906Z-step-02-tool-storage-account-create-01.json"
+      ]
+    },
+    {
+      "stableId": "storage.02.blob-container-create.02",
+      "namespace": "storage",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "storage blob container create",
+      "recordedAtUtc": "2026-08-14T03:32:11.9060665Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/storage--20260814T033211906Z-step-02-tool-storage-blob-container-create-02.json",
+      "sourceSha256": "FBACA481B38B9A31AB7D0EF662E411F2C7A60C7B3812A6FB9455A404AFEBF49E",
+      "sanitizedRelativePath": "critical-failures/storage.02.blob-container-create.02.json",
+      "sanitizedSha256": "8A6BB67C6CEC09A59DF3F125B222DF59374135A04FAC24D48758DD7391A2515B",
+      "physicalCopies": [
+        "critical-failures/storage--20260814T033211906Z-step-02-tool-storage-blob-container-create-02.json",
+        "storage/critical-failures/20260814T033211906Z-step-02-tool-storage-blob-container-create-02.json"
+      ]
+    },
+    {
+      "stableId": "storage.04.storage.01",
+      "namespace": "storage",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "storage",
+      "recordedAtUtc": "2026-08-14T03:32:24.0119642Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/storage--20260814T033224011Z-step-04-tool-family-storage-01.json",
+      "sourceSha256": "93B4080B641850E012238CBDE0B3935C7C65E3C942B316939747F1768CBE1381",
+      "sanitizedRelativePath": "critical-failures/storage.04.storage.01.json",
+      "sanitizedSha256": "BC14E439A110A99C3AEAB2B7377C3BA84FFECEB7E8833698C1ECD0971B97B7BD",
+      "physicalCopies": [
+        "critical-failures/storage--20260814T033224011Z-step-04-tool-family-storage-01.json",
+        "storage/critical-failures/20260814T033224011Z-step-04-tool-family-storage-01.json"
+      ]
+    },
+    {
+      "stableId": "storagesync.02.cloudendpoint-changedetection.01",
+      "namespace": "storagesync",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "storagesync cloudendpoint changedetection",
+      "recordedAtUtc": "2026-08-14T03:33:09.4882235Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/storagesync--20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-changedetection-01.json",
+      "sourceSha256": "7E247F78854F840834D8E7CFC85D2F02A8ECCB2510F0E1453EFDFAADCD560143",
+      "sanitizedRelativePath": "critical-failures/storagesync.02.cloudendpoint-changedetection.01.json",
+      "sanitizedSha256": "5EF2C552D4F82EE80B833F7CD11FF48EBBCA2A168F2FB2724CB5FBF771BDDCAB",
+      "physicalCopies": [
+        "critical-failures/storagesync--20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-changedetection-01.json",
+        "storagesync/critical-failures/20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-changedetection-01.json"
+      ]
+    },
+    {
+      "stableId": "storagesync.02.cloudendpoint-create.02",
+      "namespace": "storagesync",
+      "stepId": 2,
+      "stepName": "Generate example prompts",
+      "artifactType": "tool",
+      "artifactName": "storagesync cloudendpoint create",
+      "recordedAtUtc": "2026-08-14T03:33:09.4882235Z",
+      "classification": "root",
+      "errorClass": "A",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 2 required-parameter identity/coverage divergence with non-empty validatorResults (originating Class A failure).",
+      "sourceRelativePath": "critical-failures/storagesync--20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-create-02.json",
+      "sourceSha256": "52CCE45336CF9FF90C36FC85710547A915305C69E416D505AB72996417CF56DF",
+      "sanitizedRelativePath": "critical-failures/storagesync.02.cloudendpoint-create.02.json",
+      "sanitizedSha256": "EF9BEF063908D61BAE56B1530EFD38870B23AF9606B56FC5B7849098EE0181F8",
+      "physicalCopies": [
+        "critical-failures/storagesync--20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-create-02.json",
+        "storagesync/critical-failures/20260814T033309488Z-step-02-tool-storagesync-cloudendpoint-create-02.json"
+      ]
+    },
+    {
+      "stableId": "storagesync.04.storagesync.01",
+      "namespace": "storagesync",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "storagesync",
+      "recordedAtUtc": "2026-08-14T03:33:23.0387496Z",
+      "classification": "cascade",
+      "errorClass": "A",
+      "hasUpstreamStep2": true,
+      "rationale": "Step 4 coverage-divergence-only failure with an unresolved upstream Step 2 critical-failure in the same namespace (Class-D dependency cascade, Class A).",
+      "sourceRelativePath": "critical-failures/storagesync--20260814T033323038Z-step-04-tool-family-storagesync-01.json",
+      "sourceSha256": "FE84D8C331A7336546C8DE1ADBA88B4215D24E6C9D8B7AD551CBEB075C2E7B6C",
+      "sanitizedRelativePath": "critical-failures/storagesync.04.storagesync.01.json",
+      "sanitizedSha256": "2D41B235D9137829700412CC7FEFF33675E6B43D728813CD32BDB5D11962CDB7",
+      "physicalCopies": [
+        "critical-failures/storagesync--20260814T033323038Z-step-04-tool-family-storagesync-01.json",
+        "storagesync/critical-failures/20260814T033323038Z-step-04-tool-family-storagesync-01.json"
+      ]
+    },
+    {
+      "stableId": "virtualdesktop.04.virtualdesktop.01",
+      "namespace": "virtualdesktop",
+      "stepId": 4,
+      "stepName": "Generate tool-family article",
+      "artifactType": "tool family",
+      "artifactName": "virtualdesktop",
+      "recordedAtUtc": "2026-08-14T03:40:45.5234271Z",
+      "classification": "root",
+      "errorClass": "B",
+      "hasUpstreamStep2": false,
+      "rationale": "Step 4 reconstruction-only failure (canonical name rebuilt from rendered labels) with no upstream Step 2 in the namespace (originating Class B).",
+      "sourceRelativePath": "critical-failures/virtualdesktop--20260814T034045523Z-step-04-tool-family-virtualdesktop-01.json",
+      "sourceSha256": "B9F43E5AB6603728D333D26E341460C663EC4A04FAD1050B39A63C548449AFAA",
+      "sanitizedRelativePath": "critical-failures/virtualdesktop.04.virtualdesktop.01.json",
+      "sanitizedSha256": "A6DB703A8D55E3E733A11F50C3AA92F547E25533DA2CD04D3B6B4F2EDFF0770D",
+      "physicalCopies": [
+        "critical-failures/virtualdesktop--20260814T034045523Z-step-04-tool-family-virtualdesktop-01.json",
+        "virtualdesktop/critical-failures/20260814T034045523Z-step-04-tool-family-virtualdesktop-01.json"
+      ]
+    }
+  ]
+}

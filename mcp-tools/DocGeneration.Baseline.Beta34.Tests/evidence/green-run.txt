@@ -1,0 +1,6 @@
+### i.e. the tests are non-vacuous guards (AD-010).
+
+Test run for C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\bin\Release\net10.0\DocGeneration.Baseline.Beta34.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    24, Skipped:     0, Total:    24, Duration: 683 ms - DocGeneration.Baseline.Beta34.Tests.dll (net10.0)

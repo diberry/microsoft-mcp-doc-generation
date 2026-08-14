@@ -1,0 +1,50 @@
+{
+  "recordedAtUtc": "2026-08-14T02:56:34.7948234Z",
+  "namespace": "search",
+  "stepId": 2,
+  "stepName": "Generate example prompts",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool",
+  "artifactName": "search knowledge base retrieve",
+  "summary": "Example prompt validation failed for this tool after automatic retries.",
+  "details": [
+    "Retrying example prompts for \u0027search knowledge base retrieve\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: knowledge-base",
+    "Example prompt validation completed with issues for \u0027search knowledge base retrieve\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027search knowledge base retrieve\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: knowledge-base",
+    "**Summary:** Required parameters missing from example prompts: knowledge-base",
+    "- Missing params: knowledge-base"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-search-<RUNSTAMP>\\example-prompts-validation\\azure-ai-search-knowledge-base-retrieve-validation.md",
+    "<REPO>\\generated-search-<RUNSTAMP>\\example-prompts\\azure-ai-search-knowledge-base-retrieve-example-prompts.md",
+    "<REPO>\\generated-search-<RUNSTAMP>\\example-prompts-raw-output\\azure-ai-search-knowledge-base-retrieve-raw-output.txt"
+  ],
+  "stepWarnings": [
+    "Example prompt validation completed with issues (exit code 1).",
+    "Retrying example prompts for \u0027search knowledge base retrieve\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: knowledge-base",
+    "Example prompt validation completed with issues for \u0027search knowledge base retrieve\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027search knowledge base retrieve\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: knowledge-base",
+    "Example prompt validation completed with issues for \u0027search knowledge base retrieve\u0027 (exit code 1)."
+  ],
+  "processInvocations": [
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-search-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-search-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-search-<RUNSTAMP>\\parameters",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-search-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-search-<RUNSTAMP>\\example-prompts",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-search-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-search-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-search-<RUNSTAMP>\\parameters --tool-command \u0022search knowledge base retrieve\u0022 --validation-feedback-file <REPO>\\generated-search-<RUNSTAMP>\\example-prompts-validation\\attempt-1\\azure-ai-search-knowledge-base-retrieve-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-search-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-search-<RUNSTAMP>\\example-prompts --tool-command \u0022search knowledge base retrieve\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-search-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-search-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-search-<RUNSTAMP>\\parameters --tool-command \u0022search knowledge base retrieve\u0022 --validation-feedback-file <REPO>\\generated-search-<RUNSTAMP>\\example-prompts-validation\\attempt-2\\azure-ai-search-knowledge-base-retrieve-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-search-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-search-<RUNSTAMP>\\example-prompts --tool-command \u0022search knowledge base retrieve\u0022"
+  ],
+  "validatorResults": [
+    {
+      "name": "Validate-ExamplePrompts-RequiredParams",
+      "success": false,
+      "warnings": [
+        "Example prompt validation completed with issues (exit code 1).",
+        "Retrying example prompts for \u0027search knowledge base retrieve\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: knowledge-base",
+        "Example prompt validation completed with issues for \u0027search knowledge base retrieve\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027search knowledge base retrieve\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: knowledge-base",
+        "Example prompt validation completed with issues for \u0027search knowledge base retrieve\u0027 (exit code 1)."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "recordedAtUtc": "2026-08-14T03:31:09.1345567Z",
+  "namespace": "sreagent",
+  "stepId": 2,
+  "stepName": "Generate example prompts",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool",
+  "artifactName": "sreagent docs memories add",
+  "summary": "Example prompt validation failed for this tool after automatic retries.",
+  "details": [
+    "Retrying example prompts for \u0027sreagent docs memories add\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: agent",
+    "Example prompt validation completed with issues for \u0027sreagent docs memories add\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027sreagent docs memories add\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: agent",
+    "**Summary:** Required parameters missing from example prompts: agent",
+    "- Missing params: agent"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts-validation\\azure-sreagent-docs-memories-add-validation.md",
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts\\azure-sreagent-docs-memories-add-example-prompts.md",
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts-raw-output\\azure-sreagent-docs-memories-add-raw-output.txt"
+  ],
+  "stepWarnings": [
+    "Example prompt validation completed with issues (exit code 1).",
+    "Retrying example prompts for \u0027sreagent docs memories add\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: agent",
+    "Example prompt validation completed with issues for \u0027sreagent docs memories add\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027sreagent docs memories add\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: agent",
+    "Example prompt validation completed with issues for \u0027sreagent docs memories add\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027sreagent docs memories search\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: agent",
+    "Example prompt validation completed with issues for \u0027sreagent docs memories search\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027sreagent docs memories search\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: agent",
+    "Example prompt validation completed with issues for \u0027sreagent docs memories search\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027sreagent threads send message\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: message",
+    "Example prompt validation completed with issues for \u0027sreagent threads send message\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027sreagent threads send message\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: message",
+    "Example prompt validation completed with issues for \u0027sreagent threads send message\u0027 (exit code 1)."
+  ],
+  "processInvocations": [
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-sreagent-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-sreagent-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-sreagent-<RUNSTAMP>\\parameters",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-sreagent-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-sreagent-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-sreagent-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-sreagent-<RUNSTAMP>\\parameters --tool-command \u0022sreagent docs memories add\u0022 --validation-feedback-file <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts-validation\\attempt-1\\azure-sreagent-docs-memories-add-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-sreagent-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts --tool-command \u0022sreagent docs memories add\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-sreagent-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-sreagent-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-sreagent-<RUNSTAMP>\\parameters --tool-command \u0022sreagent docs memories add\u0022 --validation-feedback-file <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts-validation\\attempt-2\\azure-sreagent-docs-memories-add-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-sreagent-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts --tool-command \u0022sreagent docs memories add\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-sreagent-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-sreagent-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-sreagent-<RUNSTAMP>\\parameters --tool-command \u0022sreagent docs memories search\u0022 --validation-feedback-file <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts-validation\\attempt-1\\azure-sreagent-docs-memories-search-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-sreagent-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts --tool-command \u0022sreagent docs memories search\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-sreagent-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-sreagent-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-sreagent-<RUNSTAMP>\\parameters --tool-command \u0022sreagent docs memories search\u0022 --validation-feedback-file <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts-validation\\attempt-2\\azure-sreagent-docs-memories-search-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-sreagent-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts --tool-command \u0022sreagent docs memories search\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-sreagent-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-sreagent-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-sreagent-<RUNSTAMP>\\parameters --tool-command \u0022sreagent threads send message\u0022 --validation-feedback-file <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts-validation\\attempt-1\\azure-sreagent-threads-send-message-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-sreagent-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts --tool-command \u0022sreagent threads send message\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-sreagent-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-sreagent-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-sreagent-<RUNSTAMP>\\parameters --tool-command \u0022sreagent threads send message\u0022 --validation-feedback-file <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts-validation\\attempt-2\\azure-sreagent-threads-send-message-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-sreagent-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-sreagent-<RUNSTAMP>\\example-prompts --tool-command \u0022sreagent threads send message\u0022"
+  ],
+  "validatorResults": [
+    {
+      "name": "Validate-ExamplePrompts-RequiredParams",
+      "success": false,
+      "warnings": [
+        "Example prompt validation completed with issues (exit code 1).",
+        "Retrying example prompts for \u0027sreagent docs memories add\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: agent",
+        "Example prompt validation completed with issues for \u0027sreagent docs memories add\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027sreagent docs memories add\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: agent",
+        "Example prompt validation completed with issues for \u0027sreagent docs memories add\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027sreagent docs memories search\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: agent",
+        "Example prompt validation completed with issues for \u0027sreagent docs memories search\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027sreagent docs memories search\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: agent",
+        "Example prompt validation completed with issues for \u0027sreagent docs memories search\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027sreagent threads send message\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: message",
+        "Example prompt validation completed with issues for \u0027sreagent threads send message\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027sreagent threads send message\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: message",
+        "Example prompt validation completed with issues for \u0027sreagent threads send message\u0027 (exit code 1)."
+      ]
+    }
+  ]
+}

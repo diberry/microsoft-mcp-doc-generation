@@ -1,0 +1,63 @@
+{
+  "recordedAtUtc": "2026-08-14T01:02:37.8322763Z",
+  "namespace": "eventhubs",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "eventhubs",
+  "summary": "Blocking: \uD83D\uDED1 eventhub-consumergroup-delete: missing \u0027eventhub\u0027 in example prompt",
+  "details": [
+    "Blocking: \uD83D\uDED1 eventhub-consumergroup-delete: missing \u0027eventhub\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 eventhub-consumergroup-get: missing \u0027eventhub\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 eventhub-consumergroup-update: missing \u0027eventhub\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 eventhub-delete: missing \u0027eventhub\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 eventhub-update: missing \u0027eventhub\u0027 in example prompt",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Create or update an Event Hub within an Azure Event Hubs namespace. This command can either:]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get consumer groups from Azure Event Hub. This command can either:]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get Event Hubs from Azure namespace. This command can either:]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get Event Hubs namespaces from Azure. This command supports three modes of operation:]"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-eventhubs-<RUNSTAMP>\\tool-family\\azure-event-hubs.md",
+    "<REPO>\\generated-eventhubs-<RUNSTAMP>\\reports\\tool-family-validation-eventhubs.txt",
+    "<REPO>\\generated-eventhubs-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-eventhubs-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-eventhubs-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-eventhubs-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 eventhub-consumergroup-delete: missing \u0027eventhub\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 eventhub-consumergroup-get: missing \u0027eventhub\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 eventhub-consumergroup-update: missing \u0027eventhub\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 eventhub-delete: missing \u0027eventhub\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 eventhub-update: missing \u0027eventhub\u0027 in example prompt",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Create or update an Event Hub within an Azure Event Hubs namespace. This command can either:]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get consumer groups from Azure Event Hub. This command can either:]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get Event Hubs from Azure namespace. This command can either:]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get Event Hubs namespaces from Azure. This command supports three modes of operation:]"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 eventhub-consumergroup-delete: missing \u0027eventhub\u0027 in example prompt",
+        "Blocking: \uD83D\uDED1 eventhub-consumergroup-get: missing \u0027eventhub\u0027 in example prompt",
+        "Blocking: \uD83D\uDED1 eventhub-consumergroup-update: missing \u0027eventhub\u0027 in example prompt",
+        "Blocking: \uD83D\uDED1 eventhub-delete: missing \u0027eventhub\u0027 in example prompt",
+        "Blocking: \uD83D\uDED1 eventhub-update: missing \u0027eventhub\u0027 in example prompt",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Create or update an Event Hub within an Azure Event Hubs namespace. This command can either:]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get consumer groups from Azure Event Hub. This command can either:]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get Event Hubs from Azure namespace. This command can either:]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Get Event Hubs namespaces from Azure. This command supports three modes of operation:]"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

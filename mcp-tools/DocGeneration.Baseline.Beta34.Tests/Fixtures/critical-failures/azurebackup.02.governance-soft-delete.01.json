@@ -1,0 +1,50 @@
+{
+  "recordedAtUtc": "2026-08-14T00:07:15.5342594Z",
+  "namespace": "azurebackup",
+  "stepId": 2,
+  "stepName": "Generate example prompts",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool",
+  "artifactName": "azurebackup governance soft-delete",
+  "summary": "Example prompt validation failed for this tool after automatic retries.",
+  "details": [
+    "Retrying example prompts for \u0027azurebackup governance soft-delete\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: soft-delete",
+    "Example prompt validation completed with issues for \u0027azurebackup governance soft-delete\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027azurebackup governance soft-delete\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: soft-delete",
+    "**Summary:** Required parameters missing from example prompts: soft-delete",
+    "- Missing params: soft-delete"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\example-prompts-validation\\azure-backup-governance-soft-delete-validation.md",
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\example-prompts\\azure-backup-governance-soft-delete-example-prompts.md",
+    "<REPO>\\generated-azurebackup-<RUNSTAMP>\\example-prompts-raw-output\\azure-backup-governance-soft-delete-raw-output.txt"
+  ],
+  "stepWarnings": [
+    "Example prompt validation completed with issues (exit code 1).",
+    "Retrying example prompts for \u0027azurebackup governance soft-delete\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: soft-delete",
+    "Example prompt validation completed with issues for \u0027azurebackup governance soft-delete\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027azurebackup governance soft-delete\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: soft-delete",
+    "Example prompt validation completed with issues for \u0027azurebackup governance soft-delete\u0027 (exit code 1)."
+  ],
+  "processInvocations": [
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-azurebackup-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-azurebackup-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-azurebackup-<RUNSTAMP>\\parameters",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-azurebackup-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-azurebackup-<RUNSTAMP>\\example-prompts",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-azurebackup-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-azurebackup-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-azurebackup-<RUNSTAMP>\\parameters --tool-command \u0022azurebackup governance soft-delete\u0022 --validation-feedback-file <REPO>\\generated-azurebackup-<RUNSTAMP>\\example-prompts-validation\\attempt-1\\azure-backup-governance-soft-delete-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-azurebackup-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-azurebackup-<RUNSTAMP>\\example-prompts --tool-command \u0022azurebackup governance soft-delete\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-azurebackup-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-azurebackup-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-azurebackup-<RUNSTAMP>\\parameters --tool-command \u0022azurebackup governance soft-delete\u0022 --validation-feedback-file <REPO>\\generated-azurebackup-<RUNSTAMP>\\example-prompts-validation\\attempt-2\\azure-backup-governance-soft-delete-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-azurebackup-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-azurebackup-<RUNSTAMP>\\example-prompts --tool-command \u0022azurebackup governance soft-delete\u0022"
+  ],
+  "validatorResults": [
+    {
+      "name": "Validate-ExamplePrompts-RequiredParams",
+      "success": false,
+      "warnings": [
+        "Example prompt validation completed with issues (exit code 1).",
+        "Retrying example prompts for \u0027azurebackup governance soft-delete\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: soft-delete",
+        "Example prompt validation completed with issues for \u0027azurebackup governance soft-delete\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027azurebackup governance soft-delete\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: soft-delete",
+        "Example prompt validation completed with issues for \u0027azurebackup governance soft-delete\u0027 (exit code 1)."
+      ]
+    }
+  ]
+}

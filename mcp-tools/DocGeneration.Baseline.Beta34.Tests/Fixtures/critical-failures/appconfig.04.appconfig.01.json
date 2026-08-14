@@ -1,0 +1,60 @@
+{
+  "recordedAtUtc": "2026-08-13T23:46:33.8224111Z",
+  "namespace": "appconfig",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "appconfig",
+  "summary": "Blocking: \uD83D\uDED1 kv-get: missing \u0027account\u0027 in example prompt",
+  "details": [
+    "Blocking: \uD83D\uDED1 kv-get: missing \u0027account\u0027 in example prompt",
+    "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Set a key-value setting in an App Configuration store. This command creates or updates a key-value setting with the specified value. You must specify an account name, key, and value. Optionally, you can specify a label otherwise the default label is used. You can also specify a content type to indicate how the value should be interpreted. You can add tags in the format \u0027key=value\u0027 to associate metadata with the setting.]",
+    "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Sets the lock state of a key-value in an App Configuration store. This command can lock and unlock key-values. Locking sets a key-value to read-only mode, preventing any modifications to its value. Unlocking removes the read-only mode from a key-value setting, allowing modifications to its value. You must specify an account name and key. Optionally, you can specify a label to lock or unlock a specific labeled version of the key-value. Default is unlocking the key-value.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Delete a key-value pair from an App Configuration store. This command removes the specified key-value pair from the store. If a label is specified, only the labeled version is deleted. If no label is specified, the key-value with the matching key and the default label is deleted.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Gets key-values in an App Configuration store. This command can either retrieve a specific key-value by its key and optional label, or list key-values if no key is provided. Listing key-values can optionally be filtered by a key filter and label filter. Each key-value includes its key, value, label, content type, ETag, last modified time, and lock status.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all App Configuration stores in a subscription. This command retrieves and displays all App Configuration stores available in the specified subscription. Results include store names returned as a JSON array.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Set a key-value setting in an App Configuration store. This command creates or updates a key-value setting with the specified value. You must specify an account name, key, and value. Optionally, you can specify a label otherwise the default label is used. You can also specify a content type to indicate how the value should be interpreted. You can add tags in the format \u0027key=value\u0027 to associate metadata with the setting.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Sets the lock state of a key-value in an App Configuration store. This command can lock and unlock key-values. Locking sets a key-value to read-only mode, preventing any modifications to its value. Unlocking removes the read-only mode from a key-value setting, allowing modifications to its value. You must specify an account name and key. Optionally, you can specify a label to lock or unlock a specific labeled version of the key-value. Default is unlocking the key-value.]"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-appconfig-<RUNSTAMP>\\tool-family\\azure-app-configuration.md",
+    "<REPO>\\generated-appconfig-<RUNSTAMP>\\reports\\tool-family-validation-appconfig.txt",
+    "<REPO>\\generated-appconfig-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-appconfig-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-appconfig-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-appconfig-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 kv-get: missing \u0027account\u0027 in example prompt",
+    "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Set a key-value setting in an App Configuration store. This command creates or updates a key-value setting with the specified value. You must specify an account name, key, and value. Optionally, you can specify a label otherwise the default label is used. You can also specify a content type to indicate how the value should be interpreted. You can add tags in the format \u0027key=value\u0027 to associate metadata with the setting.]",
+    "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Sets the lock state of a key-value in an App Configuration store. This command can lock and unlock key-values. Locking sets a key-value to read-only mode, preventing any modifications to its value. Unlocking removes the read-only mode from a key-value setting, allowing modifications to its value. You must specify an account name and key. Optionally, you can specify a label to lock or unlock a specific labeled version of the key-value. Default is unlocking the key-value.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Delete a key-value pair from an App Configuration store. This command removes the specified key-value pair from the store. If a label is specified, only the labeled version is deleted. If no label is specified, the key-value with the matching key and the default label is deleted.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Gets key-values in an App Configuration store. This command can either retrieve a specific key-value by its key and optional label, or list key-values if no key is provided. Listing key-values can optionally be filtered by a key filter and label filter. Each key-value includes its key, value, label, content type, ETag, last modified time, and lock status.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all App Configuration stores in a subscription. This command retrieves and displays all App Configuration stores available in the specified subscription. Results include store names returned as a JSON array.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Set a key-value setting in an App Configuration store. This command creates or updates a key-value setting with the specified value. You must specify an account name, key, and value. Optionally, you can specify a label otherwise the default label is used. You can also specify a content type to indicate how the value should be interpreted. You can add tags in the format \u0027key=value\u0027 to associate metadata with the setting.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Sets the lock state of a key-value in an App Configuration store. This command can lock and unlock key-values. Locking sets a key-value to read-only mode, preventing any modifications to its value. Unlocking removes the read-only mode from a key-value setting, allowing modifications to its value. You must specify an account name and key. Optionally, you can specify a label to lock or unlock a specific labeled version of the key-value. Default is unlocking the key-value.]"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 kv-get: missing \u0027account\u0027 in example prompt",
+        "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Set a key-value setting in an App Configuration store. This command creates or updates a key-value setting with the specified value. You must specify an account name, key, and value. Optionally, you can specify a label otherwise the default label is used. You can also specify a content type to indicate how the value should be interpreted. You can add tags in the format \u0027key=value\u0027 to associate metadata with the setting.]",
+        "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Sets the lock state of a key-value in an App Configuration store. This command can lock and unlock key-values. Locking sets a key-value to read-only mode, preventing any modifications to its value. Unlocking removes the read-only mode from a key-value setting, allowing modifications to its value. You must specify an account name and key. Optionally, you can specify a label to lock or unlock a specific labeled version of the key-value. Default is unlocking the key-value.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Delete a key-value pair from an App Configuration store. This command removes the specified key-value pair from the store. If a label is specified, only the labeled version is deleted. If no label is specified, the key-value with the matching key and the default label is deleted.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Gets key-values in an App Configuration store. This command can either retrieve a specific key-value by its key and optional label, or list key-values if no key is provided. Listing key-values can optionally be filtered by a key filter and label filter. Each key-value includes its key, value, label, content type, ETag, last modified time, and lock status.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [List all App Configuration stores in a subscription. This command retrieves and displays all App Configuration stores available in the specified subscription. Results include store names returned as a JSON array.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Set a key-value setting in an App Configuration store. This command creates or updates a key-value setting with the specified value. You must specify an account name, key, and value. Optionally, you can specify a label otherwise the default label is used. You can also specify a content type to indicate how the value should be interpreted. You can add tags in the format \u0027key=value\u0027 to associate metadata with the setting.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Sets the lock state of a key-value in an App Configuration store. This command can lock and unlock key-values. Locking sets a key-value to read-only mode, preventing any modifications to its value. Unlocking removes the read-only mode from a key-value setting, allowing modifications to its value. You must specify an account name and key. Optionally, you can specify a label to lock or unlock a specific labeled version of the key-value. Default is unlocking the key-value.]"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}
