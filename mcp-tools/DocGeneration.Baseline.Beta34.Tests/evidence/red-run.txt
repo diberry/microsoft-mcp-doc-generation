@@ -1,0 +1,256 @@
+### RED-first evidence — issue #813 Step 1 (baseline-absent scenario)
+### Reproduced by pointing BETA34_FIXTURES_DIR at a non-existent directory so the frozen
+### fixtures + manifest are absent (the intended RED-first state per AD-007). This does NOT
+### disturb Quinn's parallel fixtures in the shared working tree.
+### Command: dotnet test ... --no-build   (BETA34_FIXTURES_DIR=<nonexistent>)
+
+Test run for C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\bin\Release\net10.0\DocGeneration.Baseline.Beta34.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.21]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T18_Fixtures_Contain_No_MachineOrUserNames [FAIL]
+[xUnit.net 00:00:00.22]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T11_ClassD_DependencyPairs_Equal_10_Via_UpstreamFlag [FAIL]
+[xUnit.net 00:00:00.22]     DocGeneration.Baseline.Beta34.Tests.ProvenanceTests.T23_Provenance_Is_Complete_And_NonEmpty [FAIL]
+[xUnit.net 00:00:00.23]     DocGeneration.Baseline.Beta34.Tests.DuplicateCopyTests.T16_Catalog_And_Namespace_Copies_Agree_On_Identity [FAIL]
+[xUnit.net 00:00:00.23]     DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T1_FixtureCount_Is_Exactly_34 [FAIL]
+[xUnit.net 00:00:00.23]     DocGeneration.Baseline.Beta34.Tests.StableIdTests.T6_StableId_Is_Deterministic_And_PathTimestampIndependent [FAIL]
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T18_Fixtures_Contain_No_MachineOrUserNames [10 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 34
+Actual:   0
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.ScanTargets() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 19
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.AssertNoLiteral(String token, String reason) in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 45
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T18_Fixtures_Contain_No_MachineOrUserNames() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 69
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T11_ClassD_DependencyPairs_Equal_10_Via_UpstreamFlag [5 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T11_ClassD_DependencyPairs_Equal_10_Via_UpstreamFlag() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 126
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ProvenanceTests.T23_Provenance_Is_Complete_And_NonEmpty [5 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ProvenanceTests.T23_Provenance_Is_Complete_And_NonEmpty() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ProvenanceTests.cs:line 18
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.DuplicateCopyTests.T16_Catalog_And_Namespace_Copies_Agree_On_Identity [5 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.DuplicateCopyTests.T16_Catalog_And_Namespace_Copies_Agree_On_Identity() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\StableIdAndCopyTests.cs:line 106
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T1_FixtureCount_Is_Exactly_34 [10 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 34
+Actual:   0
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T1_FixtureCount_Is_Exactly_34() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ImmutabilityTests.cs:line 16
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.StableIdTests.T6_StableId_Is_Deterministic_And_PathTimestampIndependent [5 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.StableIdTests.T6_StableId_Is_Deterministic_And_PathTimestampIndependent() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\StableIdAndCopyTests.cs:line 22
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.26]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T21_Fixtures_Contain_No_AbsoluteRepoPaths [FAIL]
+[xUnit.net 00:00:00.26]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T12_Eventhubs_Step4_Is_Root_Not_Cascade [FAIL]
+[xUnit.net 00:00:00.26]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T20_Fixtures_Contain_No_Secret_Shaped_Values [FAIL]
+[xUnit.net 00:00:00.26]     DocGeneration.Baseline.Beta34.Tests.DuplicateCopyTests.T15_Each_Logical_Record_Has_Exactly_Two_Physical_Copies [FAIL]
+[xUnit.net 00:00:00.26]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T5_StableIds_Are_Unique_And_34 [FAIL]
+[xUnit.net 00:00:00.26]     DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T2_ManifestRecordCount_Equals_SourceCatalogCount [FAIL]
+[xUnit.net 00:00:00.26]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T9_ClassificationCounts_Are_Pinned [FAIL]
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T21_Fixtures_Contain_No_AbsoluteRepoPaths [< 1 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 34
+Actual:   0
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.ScanTargets() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 19
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.AssertNoLiteral(String token, String reason) in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 45
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T21_Fixtures_Contain_No_AbsoluteRepoPaths() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 111
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T12_Eventhubs_Step4_Is_Root_Not_Cascade [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T12_Eventhubs_Step4_Is_Root_Not_Cascade() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 140
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T20_Fixtures_Contain_No_Secret_Shaped_Values [< 1 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 34
+Actual:   0
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.ScanTargets() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 19
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.AssertNoLiteral(String token, String reason) in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 45
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T20_Fixtures_Contain_No_Secret_Shaped_Values() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 86
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.DuplicateCopyTests.T15_Each_Logical_Record_Has_Exactly_Two_Physical_Copies [1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.DuplicateCopyTests.T15_Each_Logical_Record_Has_Exactly_Two_Physical_Copies() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\StableIdAndCopyTests.cs:line 63
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T5_StableIds_Are_Unique_And_34 [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T5_StableIds_Are_Unique_And_34() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 26
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T2_ManifestRecordCount_Equals_SourceCatalogCount [1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T2_ManifestRecordCount_Equals_SourceCatalogCount() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ImmutabilityTests.cs:line 23
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T19_Fixtures_Contain_No_TempGuidPipelinePaths [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T14_MixedRecords_Have_Both_Signatures [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T3_EachFixture_Sha256_Matches_Manifest_SanitizedSha256 [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T7_EveryRecord_Classified_Exactly_Once [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T4_EachSource_Sha256_Matches_Manifest_SourceSha256 [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T13_Diagnostic_Is_Exactly_Monitor_WebtestsGet [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T10_ErrorClassCounts_Are_Pinned [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T24_Manifest_Every_Entry_Has_All_Required_Fields [FAIL]
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T9_ClassificationCounts_Are_Pinned [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T9_ClassificationCounts_Are_Pinned() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 93
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T19_Fixtures_Contain_No_TempGuidPipelinePaths [1 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 34
+Actual:   0
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.ScanTargets() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 19
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.AssertNoRegex(Regex pattern, String reason) in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 35
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T19_Fixtures_Contain_No_TempGuidPipelinePaths() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 76
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T14_MixedRecords_Have_Both_Signatures [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T14_MixedRecords_Have_Both_Signatures() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 174
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T3_EachFixture_Sha256_Matches_Manifest_SanitizedSha256 [1 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 34
+Actual:   0
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T3_EachFixture_Sha256_Matches_Manifest_SanitizedSha256() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ImmutabilityTests.cs:line 41
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T7_EveryRecord_Classified_Exactly_Once [1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T7_EveryRecord_Classified_Exactly_Once() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 38
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T4_EachSource_Sha256_Matches_Manifest_SourceSha256 [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T4_EachSource_Sha256_Matches_Manifest_SourceSha256() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ImmutabilityTests.cs:line 64
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T13_Diagnostic_Is_Exactly_Monitor_WebtestsGet [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T13_Diagnostic_Is_Exactly_Monitor_WebtestsGet() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 152
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T10_ErrorClassCounts_Are_Pinned [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T10_ErrorClassCounts_Are_Pinned() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 106
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T24_Manifest_Every_Entry_Has_All_Required_Fields [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T24_Manifest_Every_Entry_Has_All_Required_Fields() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 195
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T17_Fixtures_Contain_No_UserHomePaths [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T8_Classification_Union_Covers_All_34_No_Overlap [FAIL]
+[xUnit.net 00:00:00.27]     DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T22_Sanitization_Only_Uses_Approved_Placeholders_And_No_Absolute_Paths [FAIL]
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T17_Fixtures_Contain_No_UserHomePaths [4 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 34
+Actual:   0
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.ScanTargets() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 19
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.AssertNoRegex(Regex pattern, String reason) in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 35
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T17_Fixtures_Contain_No_UserHomePaths() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 59
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T8_Classification_Union_Covers_All_34_No_Overlap [< 1 ms]
+  Error Message:
+   System.IO.FileNotFoundException : Frozen baseline manifest not found (expected committed fixture). Path: C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\__NONEXISTENT_BASELINE__\beta34-baseline-manifest.json
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.BaselineContext.LoadManifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\BaselineContext.cs:line 102
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.Manifest() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 20
+   at DocGeneration.Baseline.Beta34.Tests.ClassificationTests.T8_Classification_Union_Covers_All_34_No_Overlap() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\ClassificationTests.cs:line 63
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T22_Sanitization_Only_Uses_Approved_Placeholders_And_No_Absolute_Paths [< 1 ms]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 34
+Actual:   0
+  Stack Trace:
+     at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.ScanTargets() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 19
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.AssertNoRegex(Regex pattern, String reason) in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 35
+   at DocGeneration.Baseline.Beta34.Tests.SecretScanTests.T22_Sanitization_Only_Uses_Approved_Placeholders_And_No_Absolute_Paths() in C:\my-squad-projects\microsoft-mcp-doc-generation\mcp-tools\DocGeneration.Baseline.Beta34.Tests\SecretScanTests.cs:line 120
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:    24, Passed:     0, Skipped:     0, Total:    24, Duration: 62 ms - DocGeneration.Baseline.Beta34.Tests.dll (net10.0)

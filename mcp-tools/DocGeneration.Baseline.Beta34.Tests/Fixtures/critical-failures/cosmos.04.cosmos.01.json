@@ -1,0 +1,57 @@
+{
+  "recordedAtUtc": "2026-08-14T00:48:57.308823Z",
+  "namespace": "cosmos",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "cosmos",
+  "summary": "Blocking: Source CLI JSON check failed for \u0027cosmos database container item get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+  "details": [
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item list-recent\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item query\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item text-search\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item vector-search\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container schema infer\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027."
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-cosmos-<RUNSTAMP>\\tool-family\\azure-cosmos-db.md",
+    "<REPO>\\generated-cosmos-<RUNSTAMP>\\reports\\tool-family-validation-cosmos.txt",
+    "<REPO>\\generated-cosmos-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-cosmos-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-cosmos-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-cosmos-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item list-recent\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item query\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item text-search\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container item vector-search\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos database container schema infer\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027cosmos list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027."
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: Source CLI JSON check failed for \u0027cosmos database container item get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027cosmos database container item list-recent\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027cosmos database container item query\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027cosmos database container item text-search\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027cosmos database container item vector-search\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027cosmos database container schema infer\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027cosmos list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027."
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

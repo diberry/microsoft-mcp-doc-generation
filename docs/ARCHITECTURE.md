@@ -454,6 +454,19 @@ When running a **clean run** (full pipeline), previous output is moved to `gener
 - Prevents stale content from contaminating fresh runs
 - Provides clear logging: "Clean run: archiving previous output" vs "Incremental run: preserving existing output"
 
+### beta.34 Critical-Failure Baseline Freeze (AD-028)
+
+Issue #813 remediation is anchored to a **frozen evidence baseline**: 34 sanitized,
+hash-pinned critical-failure records from Azure MCP build `3.0.0-beta.34+eec7accc`, stored as
+immutable fixtures in `DocGeneration.Baseline.Beta34.Tests` with a provenance manifest. It adds
+**no pipeline behavior** — it exists so later fixes can be measured against a stable reference
+that cannot silently drift. The freeze script (`scripts/baseline/New-Beta34Baseline.ps1`)
+regenerates it deterministically from a read-only source run and its `-VerifyOnly` mode proves
+byte-for-byte reproducibility; 32 guard tests (31 run + 1 opt-in deep-verify skip) run in CI via
+`dotnet test mcp-doc-generation.sln`. A committed `Fixtures/source-inventory.json` (68 physical
+copies) and a `.gitattributes` EOL lock let the suite pass on a clean checkout.
+See [`beta34-baseline-freeze.md`](beta34-baseline-freeze.md).
+
 ## Parameter Taxonomy (3-Tier Model)
 
 Parameters in Azure MCP tools fall into three categories:

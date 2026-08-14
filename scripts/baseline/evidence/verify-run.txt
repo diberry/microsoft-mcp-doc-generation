@@ -1,0 +1,2 @@
+== VerifyOnly: regenerating into temp and comparing deterministic outputs ==
+DETERMINISM VERIFIED: 34/34 fixtures byte-identical; manifest record hashes + 68-entry inventory match. Secret scan clean.

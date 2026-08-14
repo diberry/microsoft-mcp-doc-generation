@@ -1,0 +1,45 @@
+{
+  "recordedAtUtc": "2026-08-14T03:31:27.2620676Z",
+  "namespace": "sreagent",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "sreagent",
+  "summary": "Blocking: \uD83D\uDED1 docs-memories-add: missing \u0027agent\u0027, \u0027Agent\u0027 in example prompts",
+  "details": [
+    "Blocking: \uD83D\uDED1 docs-memories-add: missing \u0027agent\u0027, \u0027Agent\u0027 in example prompts",
+    "Blocking: \uD83D\uDED1 docs-memories-search: missing \u0027agent\u0027, \u0027Agent\u0027 in example prompts",
+    "Blocking: \uD83D\uDED1 threads-send-message: missing \u0027message\u0027, \u0027Message\u0027 in example prompts"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\tool-family\\azure-sreagent.md",
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\reports\\tool-family-validation-sreagent.txt",
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-sreagent-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 docs-memories-add: missing \u0027agent\u0027, \u0027Agent\u0027 in example prompts",
+    "Blocking: \uD83D\uDED1 docs-memories-search: missing \u0027agent\u0027, \u0027Agent\u0027 in example prompts",
+    "Blocking: \uD83D\uDED1 threads-send-message: missing \u0027message\u0027, \u0027Message\u0027 in example prompts"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 docs-memories-add: missing \u0027agent\u0027, \u0027Agent\u0027 in example prompts",
+        "Blocking: \uD83D\uDED1 docs-memories-search: missing \u0027agent\u0027, \u0027Agent\u0027 in example prompts",
+        "Blocking: \uD83D\uDED1 threads-send-message: missing \u0027message\u0027, \u0027Message\u0027 in example prompts"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

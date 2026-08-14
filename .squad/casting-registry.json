@@ -15,6 +15,16 @@
       "hired_by": "squad-coordinator",
       "date": "2026-07-28",
       "status": "guest"
+    },
+    "ellis": {
+      "name": "Ellis",
+      "role": "Evaluation Reviewer (nondeterministic)",
+      "reason": "Issue #813 Step 1 requires an independent nondeterministic evaluation of baseline representativeness, sanitization, and failure taxonomy. Cameron/Parker/Quinn/Riley/Reeve all authored part of the work, so reviewer-lockout bars them from this gate.",
+      "hired_by": "squad-coordinator",
+      "date": "2026-08-14",
+      "status": "guest",
+      "engagement": "complete",
+      "engagementNote": "#813 Step 1 only. Dismissed 2026-08-14. If #813 Steps 2-10 also need an independent eval reviewer, assess for promotion to standing before next step."
     }
   }
 }

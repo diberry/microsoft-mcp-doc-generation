@@ -1,0 +1,51 @@
+{
+  "recordedAtUtc": "2026-08-14T02:01:34.3111413Z",
+  "namespace": "loadtesting",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "loadtesting",
+  "summary": "Blocking: \uD83D\uDED1 testrun-createorupdate: missing \u0027testrun-id\u0027 in example prompt",
+  "details": [
+    "Blocking: \uD83D\uDED1 testrun-createorupdate: missing \u0027testrun-id\u0027 in example prompt",
+    "Blocking: Source CLI JSON check failed for \u0027loadtesting testrun createorupdate\u0027: parameter(s) documented but not present in source CLI JSON: \u0027old-test-run-id\u0027, \u0027test-run-id\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027loadtesting testrun get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027test-run-id\u0027.",
+    "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Returns the created Load Testing resource. This creates the resource in Azure only. It does not create any test plan or test run. Once the resource is setup, you can go and configure test plans in the resource and then trigger test runs for your test plans.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Creates a new load test plan or configuration for performance testing scenarios. This command creates a basic URL-based load test that can be used to evaluate the performance and scalability of web applications and APIs. The test configuration defines target endpoint, load parameters, and test duration. Once we create a test plan, we can use that to trigger test runs to test the endpoints set using the \u0027azmcp loadtesting test run create\u0027 command. This is NOT going to trigger or create any test runs and only will setup your test plan. Also, this is NOT going to create any test resource in azure. It will only create a test in an already existing load test resource.]"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-loadtesting-<RUNSTAMP>\\tool-family\\azure-load-testing.md",
+    "<REPO>\\generated-loadtesting-<RUNSTAMP>\\reports\\tool-family-validation-loadtesting.txt",
+    "<REPO>\\generated-loadtesting-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-loadtesting-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-loadtesting-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-loadtesting-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 testrun-createorupdate: missing \u0027testrun-id\u0027 in example prompt",
+    "Blocking: Source CLI JSON check failed for \u0027loadtesting testrun createorupdate\u0027: parameter(s) documented but not present in source CLI JSON: \u0027old-test-run-id\u0027, \u0027test-run-id\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027loadtesting testrun get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027test-run-id\u0027.",
+    "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Returns the created Load Testing resource. This creates the resource in Azure only. It does not create any test plan or test run. Once the resource is setup, you can go and configure test plans in the resource and then trigger test runs for your test plans.]",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Creates a new load test plan or configuration for performance testing scenarios. This command creates a basic URL-based load test that can be used to evaluate the performance and scalability of web applications and APIs. The test configuration defines target endpoint, load parameters, and test duration. Once we create a test plan, we can use that to trigger test runs to test the endpoints set using the \u0027azmcp loadtesting test run create\u0027 command. This is NOT going to trigger or create any test runs and only will setup your test plan. Also, this is NOT going to create any test resource in azure. It will only create a test in an already existing load test resource.]"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 testrun-createorupdate: missing \u0027testrun-id\u0027 in example prompt",
+        "Blocking: Source CLI JSON check failed for \u0027loadtesting testrun createorupdate\u0027: parameter(s) documented but not present in source CLI JSON: \u0027old-test-run-id\u0027, \u0027test-run-id\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027loadtesting testrun get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027test-run-id\u0027.",
+        "\u26A0\uFE0F Tone marker: second-person phrase \u0027you can\u0027 found: [Returns the created Load Testing resource. This creates the resource in Azure only. It does not create any test plan or test run. Once the resource is setup, you can go and configure test plans in the resource and then trigger test runs for your test plans.]",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Creates a new load test plan or configuration for performance testing scenarios. This command creates a basic URL-based load test that can be used to evaluate the performance and scalability of web applications and APIs. The test configuration defines target endpoint, load parameters, and test duration. Once we create a test plan, we can use that to trigger test runs to test the endpoints set using the \u0027azmcp loadtesting test run create\u0027 command. This is NOT going to trigger or create any test runs and only will setup your test plan. Also, this is NOT going to create any test resource in azure. It will only create a test in an already existing load test resource.]"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

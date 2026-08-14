@@ -1,0 +1,48 @@
+{
+  "recordedAtUtc": "2026-08-14T00:34:40.120727Z",
+  "namespace": "compute",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "compute",
+  "summary": "Blocking: Source CLI JSON check failed for \u0027compute vmss create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+  "details": [
+    "Blocking: Source CLI JSON check failed for \u0027compute vmss create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027compute vmss delete\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027compute vmss get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027compute vmss update\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027."
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-compute-<RUNSTAMP>\\tool-family\\azure-compute.md",
+    "<REPO>\\generated-compute-<RUNSTAMP>\\reports\\tool-family-validation-compute.txt",
+    "<REPO>\\generated-compute-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-compute-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-compute-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-compute-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: Source CLI JSON check failed for \u0027compute vmss create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027compute vmss delete\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027compute vmss get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027compute vmss update\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027."
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: Source CLI JSON check failed for \u0027compute vmss create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027compute vmss delete\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027compute vmss get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027compute vmss update\u0027: parameter(s) documented but not present in source CLI JSON: \u0027virtual-machine-scale-set--vmss--name\u0027."
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

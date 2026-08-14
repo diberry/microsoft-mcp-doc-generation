@@ -1,0 +1,39 @@
+{
+  "recordedAtUtc": "2026-08-14T02:56:46.9414612Z",
+  "namespace": "search",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "search",
+  "summary": "Blocking: \uD83D\uDED1 knowledge-base-retrieve: missing \u0027knowledge-base\u0027 in example prompt",
+  "details": [
+    "Blocking: \uD83D\uDED1 knowledge-base-retrieve: missing \u0027knowledge-base\u0027 in example prompt"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-search-<RUNSTAMP>\\tool-family\\azure-ai-search.md",
+    "<REPO>\\generated-search-<RUNSTAMP>\\reports\\tool-family-validation-search.txt",
+    "<REPO>\\generated-search-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-search-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-search-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-search-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 knowledge-base-retrieve: missing \u0027knowledge-base\u0027 in example prompt"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 knowledge-base-retrieve: missing \u0027knowledge-base\u0027 in example prompt"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

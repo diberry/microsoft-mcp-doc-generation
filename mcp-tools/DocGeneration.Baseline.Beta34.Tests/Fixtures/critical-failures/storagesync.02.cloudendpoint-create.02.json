@@ -1,0 +1,62 @@
+{
+  "recordedAtUtc": "2026-08-14T03:33:09.4882235Z",
+  "namespace": "storagesync",
+  "stepId": 2,
+  "stepName": "Generate example prompts",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool",
+  "artifactName": "storagesync cloudendpoint create",
+  "summary": "Example prompt validation failed for this tool after automatic retries.",
+  "details": [
+    "Retrying example prompts for \u0027storagesync cloudendpoint create\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: cloud-endpoint-name",
+    "Example prompt validation completed with issues for \u0027storagesync cloudendpoint create\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027storagesync cloudendpoint create\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: cloud-endpoint-name",
+    "**Summary:** Required parameters missing from example prompts: cloud-endpoint-name",
+    "- Missing params: cloud-endpoint-name"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts-validation\\azure-storage-sync-cloudendpoint-create-validation.md",
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts\\azure-storage-sync-cloudendpoint-create-example-prompts.md",
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts-raw-output\\azure-storage-sync-cloudendpoint-create-raw-output.txt"
+  ],
+  "stepWarnings": [
+    "Example prompt validation completed with issues (exit code 1).",
+    "Retrying example prompts for \u0027storagesync cloudendpoint changedetection\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: directory-path",
+    "Example prompt validation completed with issues for \u0027storagesync cloudendpoint changedetection\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027storagesync cloudendpoint changedetection\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: directory-path",
+    "Example prompt validation completed with issues for \u0027storagesync cloudendpoint changedetection\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027storagesync cloudendpoint create\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: cloud-endpoint-name",
+    "Example prompt validation completed with issues for \u0027storagesync cloudendpoint create\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027storagesync cloudendpoint create\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: cloud-endpoint-name",
+    "Example prompt validation completed with issues for \u0027storagesync cloudendpoint create\u0027 (exit code 1)."
+  ],
+  "processInvocations": [
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-storagesync-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-storagesync-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-storagesync-<RUNSTAMP>\\parameters",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-storagesync-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-storagesync-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-storagesync-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-storagesync-<RUNSTAMP>\\parameters --tool-command \u0022storagesync cloudendpoint changedetection\u0022 --validation-feedback-file <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts-validation\\attempt-1\\azure-storage-sync-cloudendpoint-changedetection-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-storagesync-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts --tool-command \u0022storagesync cloudendpoint changedetection\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-storagesync-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-storagesync-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-storagesync-<RUNSTAMP>\\parameters --tool-command \u0022storagesync cloudendpoint changedetection\u0022 --validation-feedback-file <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts-validation\\attempt-2\\azure-storage-sync-cloudendpoint-changedetection-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-storagesync-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts --tool-command \u0022storagesync cloudendpoint changedetection\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-storagesync-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-storagesync-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-storagesync-<RUNSTAMP>\\parameters --tool-command \u0022storagesync cloudendpoint create\u0022 --validation-feedback-file <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts-validation\\attempt-1\\azure-storage-sync-cloudendpoint-create-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-storagesync-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts --tool-command \u0022storagesync cloudendpoint create\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-storagesync-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-storagesync-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-storagesync-<RUNSTAMP>\\parameters --tool-command \u0022storagesync cloudendpoint create\u0022 --validation-feedback-file <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts-validation\\attempt-2\\azure-storage-sync-cloudendpoint-create-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-storagesync-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-storagesync-<RUNSTAMP>\\example-prompts --tool-command \u0022storagesync cloudendpoint create\u0022"
+  ],
+  "validatorResults": [
+    {
+      "name": "Validate-ExamplePrompts-RequiredParams",
+      "success": false,
+      "warnings": [
+        "Example prompt validation completed with issues (exit code 1).",
+        "Retrying example prompts for \u0027storagesync cloudendpoint changedetection\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: directory-path",
+        "Example prompt validation completed with issues for \u0027storagesync cloudendpoint changedetection\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027storagesync cloudendpoint changedetection\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: directory-path",
+        "Example prompt validation completed with issues for \u0027storagesync cloudendpoint changedetection\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027storagesync cloudendpoint create\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: cloud-endpoint-name",
+        "Example prompt validation completed with issues for \u0027storagesync cloudendpoint create\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027storagesync cloudendpoint create\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: cloud-endpoint-name",
+        "Example prompt validation completed with issues for \u0027storagesync cloudendpoint create\u0027 (exit code 1)."
+      ]
+    }
+  ]
+}

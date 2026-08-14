@@ -368,6 +368,7 @@ To modify AI-generated content quality or style:
 | Document | Description |
 |----------|-------------|
 | [docs/test-strategy.md](docs/test-strategy.md) | Test strategy for the documentation pipeline |
+| [docs/beta34-baseline-freeze.md](docs/beta34-baseline-freeze.md) | Frozen beta.34 critical-failure evidence baseline (#813) — immutability, regeneration, classification, sanitization |
 | [docs/FINGERPRINTING.md](docs/FINGERPRINTING.md) | Baseline fingerprinting tool — snapshot and diff generated output |
 | [docs/acrolinx-compliance-strategy.md](docs/acrolinx-compliance-strategy.md) | Acrolinx compliance strategy for tool-family articles |
 | [mcp-tools/validation/README.md](mcp-tools/validation/README.md) | Repo-local validation scripts, test fixtures, and manual execution commands |

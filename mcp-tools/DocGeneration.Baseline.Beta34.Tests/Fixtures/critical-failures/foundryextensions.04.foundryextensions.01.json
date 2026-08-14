@@ -1,0 +1,57 @@
+{
+  "recordedAtUtc": "2026-08-14T01:18:21.6427172Z",
+  "namespace": "foundryextensions",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "foundryextensions",
+  "summary": "Blocking: \uD83D\uDED1 openai-chat-completions-create: missing \u0027deployment\u0027 in example prompt",
+  "details": [
+    "Blocking: \uD83D\uDED1 openai-chat-completions-create: missing \u0027deployment\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 openai-embeddings-create: missing \u0027deployment\u0027 in example prompt",
+    "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai chat-completions-create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai create-completion\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai embeddings-create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai models-list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Lists or gets Microsoft Foundry resources (accounts/services) and returns resource-level details such as endpoint URL, location, SKU, kind, and provisioning state. Use this when users ask to list all Microsoft Foundry resources in a subscription, show resources in a resource group, or get details for a specific resource by name. If resource-name is provided with resource-group, returns that single resource; otherwise returns the resource inventory in scope. This command is for Foundry resource metadata, not model deployment inventory. For Azure OpenAI model deployments inside a Foundry resource, use the \u0027openai models-list\u0027 tool.]"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-foundryextensions-<RUNSTAMP>\\tool-family\\microsoft-foundry-extensions.md",
+    "<REPO>\\generated-foundryextensions-<RUNSTAMP>\\reports\\tool-family-validation-foundryextensions.txt",
+    "<REPO>\\generated-foundryextensions-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-foundryextensions-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-foundryextensions-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-foundryextensions-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 openai-chat-completions-create: missing \u0027deployment\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 openai-embeddings-create: missing \u0027deployment\u0027 in example prompt",
+    "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai chat-completions-create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai create-completion\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai embeddings-create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai models-list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+    "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Lists or gets Microsoft Foundry resources (accounts/services) and returns resource-level details such as endpoint URL, location, SKU, kind, and provisioning state. Use this when users ask to list all Microsoft Foundry resources in a subscription, show resources in a resource group, or get details for a specific resource by name. If resource-name is provided with resource-group, returns that single resource; otherwise returns the resource inventory in scope. This command is for Foundry resource metadata, not model deployment inventory. For Azure OpenAI model deployments inside a Foundry resource, use the \u0027openai models-list\u0027 tool.]"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 openai-chat-completions-create: missing \u0027deployment\u0027 in example prompt",
+        "Blocking: \uD83D\uDED1 openai-embeddings-create: missing \u0027deployment\u0027 in example prompt",
+        "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai chat-completions-create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai create-completion\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai embeddings-create\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027foundryextensions openai models-list\u0027: parameter(s) documented but not present in source CLI JSON: \u0027authentication-method\u0027.",
+        "Branding: Use \u0022this tool\u0022 instead of \u0022this command\u0022. [Lists or gets Microsoft Foundry resources (accounts/services) and returns resource-level details such as endpoint URL, location, SKU, kind, and provisioning state. Use this when users ask to list all Microsoft Foundry resources in a subscription, show resources in a resource group, or get details for a specific resource by name. If resource-name is provided with resource-group, returns that single resource; otherwise returns the resource inventory in scope. This command is for Foundry resource metadata, not model deployment inventory. For Azure OpenAI model deployments inside a Foundry resource, use the \u0027openai models-list\u0027 tool.]"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

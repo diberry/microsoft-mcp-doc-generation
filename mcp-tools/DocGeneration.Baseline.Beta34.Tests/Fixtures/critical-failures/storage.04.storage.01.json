@@ -1,0 +1,42 @@
+{
+  "recordedAtUtc": "2026-08-14T03:32:24.0119642Z",
+  "namespace": "storage",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "storage",
+  "summary": "Blocking: \uD83D\uDED1 account-create: missing \u0027account\u0027 in example prompt",
+  "details": [
+    "Blocking: \uD83D\uDED1 account-create: missing \u0027account\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 blob-container-create: missing \u0027container\u0027 in example prompt"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-storage-<RUNSTAMP>\\tool-family\\azure-storage.md",
+    "<REPO>\\generated-storage-<RUNSTAMP>\\reports\\tool-family-validation-storage.txt",
+    "<REPO>\\generated-storage-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-storage-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-storage-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-storage-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 account-create: missing \u0027account\u0027 in example prompt",
+    "Blocking: \uD83D\uDED1 blob-container-create: missing \u0027container\u0027 in example prompt"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 account-create: missing \u0027account\u0027 in example prompt",
+        "Blocking: \uD83D\uDED1 blob-container-create: missing \u0027container\u0027 in example prompt"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

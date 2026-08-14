@@ -1,0 +1,42 @@
+{
+  "recordedAtUtc": "2026-08-14T03:33:23.0387496Z",
+  "namespace": "storagesync",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "storagesync",
+  "summary": "Blocking: \uD83D\uDED1 cloudendpoint-changedetection: missing \u0027directory-path\u0027, \u0027Directory path\u0027 in example prompts",
+  "details": [
+    "Blocking: \uD83D\uDED1 cloudendpoint-changedetection: missing \u0027directory-path\u0027, \u0027Directory path\u0027 in example prompts",
+    "Blocking: \uD83D\uDED1 cloudendpoint-create: missing \u0027cloud-endpoint-name\u0027, \u0027Cloud endpoint name\u0027 in example prompts"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\tool-family\\azure-storage-sync.md",
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\reports\\tool-family-validation-storagesync.txt",
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-storagesync-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 cloudendpoint-changedetection: missing \u0027directory-path\u0027, \u0027Directory path\u0027 in example prompts",
+    "Blocking: \uD83D\uDED1 cloudendpoint-create: missing \u0027cloud-endpoint-name\u0027, \u0027Cloud endpoint name\u0027 in example prompts"
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 cloudendpoint-changedetection: missing \u0027directory-path\u0027, \u0027Directory path\u0027 in example prompts",
+        "Blocking: \uD83D\uDED1 cloudendpoint-create: missing \u0027cloud-endpoint-name\u0027, \u0027Cloud endpoint name\u0027 in example prompts"
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

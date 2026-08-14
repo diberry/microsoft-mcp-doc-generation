@@ -1,0 +1,45 @@
+{
+  "recordedAtUtc": "2026-08-14T02:19:37.4468681Z",
+  "namespace": "postgres",
+  "stepId": 4,
+  "stepName": "Generate tool-family article",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool family",
+  "artifactName": "postgres",
+  "summary": "Blocking: \uD83D\uDED1 server-param-get: missing \u0027Parameter\u0027 in example prompt",
+  "details": [
+    "Blocking: \uD83D\uDED1 server-param-get: missing \u0027Parameter\u0027 in example prompt",
+    "Blocking: Source CLI JSON check failed for \u0027postgres server param get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027postgres server param set\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027."
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-postgres-<RUNSTAMP>\\tool-family\\azure-database-for-postgresql.md",
+    "<REPO>\\generated-postgres-<RUNSTAMP>\\reports\\tool-family-validation-postgres.txt",
+    "<REPO>\\generated-postgres-<RUNSTAMP>\\tool-family-metadata",
+    "<REPO>\\generated-postgres-<RUNSTAMP>\\tool-family-related",
+    "<REPO>\\generated-postgres-<RUNSTAMP>\\tool-family",
+    "<REPO>\\generated-postgres-<RUNSTAMP>\\reports"
+  ],
+  "stepWarnings": [
+    "Blocking: \uD83D\uDED1 server-param-get: missing \u0027Parameter\u0027 in example prompt",
+    "Blocking: Source CLI JSON check failed for \u0027postgres server param get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+    "Blocking: Source CLI JSON check failed for \u0027postgres server param set\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027."
+  ],
+  "processInvocations": [],
+  "validatorResults": [
+    {
+      "name": "ToolFamilyPostAssemblyValidator",
+      "success": false,
+      "warnings": [
+        "Blocking: \uD83D\uDED1 server-param-get: missing \u0027Parameter\u0027 in example prompt",
+        "Blocking: Source CLI JSON check failed for \u0027postgres server param get\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027.",
+        "Blocking: Source CLI JSON check failed for \u0027postgres server param set\u0027: parameter(s) documented but not present in source CLI JSON: \u0027parameter\u0027."
+      ]
+    },
+    {
+      "name": "CompositionOutputValidator",
+      "success": true,
+      "warnings": []
+    }
+  ]
+}

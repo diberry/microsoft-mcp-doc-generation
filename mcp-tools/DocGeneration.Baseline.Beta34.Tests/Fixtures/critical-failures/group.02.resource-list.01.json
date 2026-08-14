@@ -1,0 +1,50 @@
+{
+  "recordedAtUtc": "2026-08-14T01:41:49.3581685Z",
+  "namespace": "group",
+  "stepId": 2,
+  "stepName": "Generate example prompts",
+  "failurePolicy": "Fatal",
+  "artifactType": "tool",
+  "artifactName": "group resource list",
+  "summary": "Example prompt validation failed for this tool after automatic retries.",
+  "details": [
+    "Retrying example prompts for \u0027group resource list\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: resource-group",
+    "Example prompt validation completed with issues for \u0027group resource list\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027group resource list\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: resource-group",
+    "**Summary:** Required parameters missing from example prompts: resource-group",
+    "- Missing params: resource-group"
+  ],
+  "relatedPaths": [
+    "<REPO>\\generated-group-<RUNSTAMP>\\example-prompts-validation\\azure-resource-group-resource-list-validation.md",
+    "<REPO>\\generated-group-<RUNSTAMP>\\example-prompts\\azure-resource-group-resource-list-example-prompts.md",
+    "<REPO>\\generated-group-<RUNSTAMP>\\example-prompts-raw-output\\azure-resource-group-resource-list-raw-output.txt"
+  ],
+  "stepWarnings": [
+    "Example prompt validation completed with issues (exit code 1).",
+    "Retrying example prompts for \u0027group resource list\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: resource-group",
+    "Example prompt validation completed with issues for \u0027group resource list\u0027 (exit code 1).",
+    "Retrying example prompts for \u0027group resource list\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: resource-group",
+    "Example prompt validation completed with issues for \u0027group resource list\u0027 (exit code 1)."
+  ],
+  "processInvocations": [
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-group-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-group-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-group-<RUNSTAMP>\\parameters",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-group-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-group-<RUNSTAMP>\\example-prompts",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-group-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-group-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-group-<RUNSTAMP>\\parameters --tool-command \u0022group resource list\u0022 --validation-feedback-file <REPO>\\generated-group-<RUNSTAMP>\\example-prompts-validation\\attempt-1\\azure-resource-group-resource-list-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-group-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-group-<RUNSTAMP>\\example-prompts --tool-command \u0022group resource list\u0022",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Generation\\DocGeneration.Steps.ExamplePrompts.Generation.csproj --configuration Release --no-build -- <TEMP>\\pipeline-runner-step2-<GUID>\\cli-output-single-tool.json <REPO>\\generated-group-<RUNSTAMP> 3.0.0-beta.34\u002Beec7acccddab1e16be852a3c3b9503cc9adf7538 --e2e-prompts <REPO>\\generated-group-<RUNSTAMP>\\e2e-test-prompts\\parsed.json --param-manifests <REPO>\\generated-group-<RUNSTAMP>\\parameters --tool-command \u0022group resource list\u0022 --validation-feedback-file <REPO>\\generated-group-<RUNSTAMP>\\example-prompts-validation\\attempt-2\\azure-resource-group-resource-list-validation.md",
+    "dotnet run --project <REPO>\\mcp-tools\\DocGeneration.Steps.ExamplePrompts.Validation\\DocGeneration.Steps.ExamplePrompts.Validation.csproj --configuration Release --no-build -- --generated <REPO>\\generated-group-<RUNSTAMP> --example-prompts-dir <REPO>\\generated-group-<RUNSTAMP>\\example-prompts --tool-command \u0022group resource list\u0022"
+  ],
+  "validatorResults": [
+    {
+      "name": "Validate-ExamplePrompts-RequiredParams",
+      "success": false,
+      "warnings": [
+        "Example prompt validation completed with issues (exit code 1).",
+        "Retrying example prompts for \u0027group resource list\u0027 (attempt 1/2) because **Summary:** Required parameters missing from example prompts: resource-group",
+        "Example prompt validation completed with issues for \u0027group resource list\u0027 (exit code 1).",
+        "Retrying example prompts for \u0027group resource list\u0027 (attempt 2/2) because **Summary:** Required parameters missing from example prompts: resource-group",
+        "Example prompt validation completed with issues for \u0027group resource list\u0027 (exit code 1)."
+      ]
+    }
+  ]
+}
