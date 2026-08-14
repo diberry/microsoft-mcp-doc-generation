@@ -2,6 +2,41 @@
 
 ## Active Decisions
 
+### 2026-08-14: L-006 — `gh api -f body=@file` does NOT expand file references
+**By:** Scribe — learned from #813 Step 1 (Quinn/Avery)
+**What:** `gh api -f body=@file` writes the literal string `@file`, not the file's contents. It clobbered a live tracker comment. Use `gh api --input payload.json` with a JSON body file instead.
+**Why:** Tooling gotcha worth recording to prevent repeat.
+
+### 2026-08-14: L-005 — Reviewer-lockout pattern is worth the overhead
+**By:** Scribe — learned from #813 Step 1 (Cameron + Ellis)
+**What:** Cameron authored only strategy (not tests); Ellis (guest) authored nothing — between them they caught 7 blocking defects that self-review would have missed.
+**Why:** Independent review gates justify the cost of spawning a guest reviewer even for single tasks. If #813 Steps 2–10 also need independent nondeterministic eval, consider promoting the Evaluation Reviewer role to standing.
+
+### 2026-08-14: L-004 — Don't collapse independent dimensions into one taxonomy field
+**By:** Scribe — learned from #813 Step 1 (Riley/Parker)
+**What:** `classification: mixed` was conflating error-type overlap with chain position. Fix: keep the mandated single taxonomy but add `chainRole`, `errorClasses`, and `upstreamStableIds`. Correct accounting is **10 dependent Step-4 records / 16 upstream Step-2 links** (one Step-4 record can have multiple roots), not "10 pairs."
+**Why:** Collapsing dimensions loses auditability and produces wrong downstream counts.
+
+### 2026-08-14: L-003 — Derive provenance from run evidence, not sample config
+**By:** Scribe — learned from #813 Step 1 (Quinn)
+**What:** The manifest initially recorded `sample.env` model values (`gpt-4.1-mini`/`gpt-4o`, api `2025-01-01-preview`) while run logs showed `gpt-5-mini` / `2025-03-01-preview`. Always derive provenance from the run's own sanitized logs; if undiscoverable, record `null` with a note — never fabricate.
+**Why:** Fabricated provenance makes the baseline untrustworthy for regression comparison.
+
+### 2026-08-14: L-002 — Hash-pinned fixtures need a `-text` `.gitattributes` entry
+**By:** Scribe — learned from #813 Step 1 (Quinn)
+**What:** Committed fixtures under `* text=auto` + `core.autocrlf=true` caused Windows checkout to rewrite LF→CRLF, breaking every pinned SHA-256. Any future hash-pinned artifact must have `-text` in a local `.gitattributes` in the same directory.
+**Why:** EOL rewriting silently invalidates all hash assertions, making fixtures appear corrupted on every Windows clone.
+
+### 2026-08-14: L-001 — Green in author's tree ≠ green in CI or a clean clone
+**By:** Scribe — learned from #813 Step 1 (Cameron/Ellis round-1 rejection)
+**What:** Tests depended on a gitignored `generated-*` directory that existed in the author's working tree but not in CI or a fresh clone — both review gates rejected round 1. Fix pattern: commit an inventory artifact (raw hashes + logical identity) so accounting/hash gates verify from committed data; make live-source verification an explicitly-skipped opt-in test.
+**Why:** Any test that silently passes when a gitignored directory is absent is not a reliable regression guard.
+
+### 2026-08-14: ROSTER — Ellis guest engagement complete; recurring need flagged
+**By:** Scribe — #813 Step 1
+**What:** Ellis (guest Evaluation Reviewer, nondeterministic) was hired 2026-08-14 for #813 Step 1 only. Engagement is complete; guest is dismissed. If #813 Steps 2–10 also require an independent eval reviewer, the recurring need should be assessed for promotion to a standing roster position before the next step begins.
+**Why:** Guest reviewers must be explicitly re-engaged per step unless promoted to standing.
+
 ### 2026-08-14: AD-028 — beta.34 baseline fixture freeze architecture
 **By:** Riley (Architect) — issue #813 Step 1
 **What:** Freeze the 34 logical catalog-level critical-failure records from run `generated-20260813T162453` as immutable test fixtures.
