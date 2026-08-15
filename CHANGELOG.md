@@ -6,6 +6,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Canonical parameter identity contract — v2 manifest schema (#813, Step 3)** — Step 1 (`ParameterGenerator`) now emits a versioned `{tool}-params.json` manifest per tool with `schemaVersion: "2.0"`, `toolCommand`, `namespace`, `sourceIdentity` (MCP build + timestamp), and a typed `parameters[]` array where each entry carries a `canonicalName`, `displayName`, pre-computed `displayAliases`, and `placeholderAliases`. Aliases are derived at emit time by `CanonicalAliasDeriver` with deterministic collision-elimination (aliases that shadow another parameter's canonical name are pruned). The manifest is the sole canonical parameter identity authority for all downstream steps.
+
+  - **Strict fail-closed loader** — `CanonicalParameterManifestLoader` (in `DocGeneration.Core.Shared`) validates schema version, command, namespace, build provenance, duplicate canonicals, alias collisions, normalization collisions, and placeholder multi-bind. Every failure throws `ParameterManifestException` with a stable string error code from `ParameterManifestErrorCode` (14 codes). Legacy bare-array manifests (pre-v2) are rejected with `PARAM_MANIFEST_LEGACY_FORMAT` and the diagnostic message directs the operator to rerun Step 1.
+
+  - **Canonical coverage evaluator** — `CanonicalCoverageEvaluator` replaces `Contains`/substring/N-of-M word matching with token-aware evaluation using only manifest-authorized placeholder aliases. Four verdicts: `Concrete` (literal alias match), `AuthorizedPlaceholder` (placeholder inner text exactly equals a `placeholderAliases` entry), `Missing`, `Ambiguous`. Generic word or suffix similarity no longer authorizes a placeholder.
+
+  - **Bounded, idempotent, provenance-tracked repair** — `DeterministicPromptRepairer` now evaluates coverage via `CanonicalCoverageEvaluator` after sanitization. When required canonical coverage is absent, it appends at most one deterministic clause per missing parameter (` for {displayName} '{resolvedValue}'`). Prompts with full coverage are emitted byte-identical.
+
+  - **Consumer migration** — All five production call sites now route through the shared loader: Step 2 generation (`ExamplePrompts.Generation/Program.cs`), Step 2 deterministic repair, Step 2 validation (`CodeBasedPromptValidator`), PipelineRunner retry feedback (`ExamplePromptsStep.LoadRequiredOptionsAsync`), and Step 4 cross-check (`ParameterCrossCheckService`). `ParameterManifestException` propagates as a classified `ArtifactFailure` in the pipeline (no silent empty-array fallback).
+
+  - **`--parameter-manifests-dir` argument** — The example-prompt validator CLI (`DocGeneration.Steps.ExamplePrompts.Validation`) accepts `--parameter-manifests-dir <path>` to locate v2 manifest files. Defaults to `{generated}/parameters`. The validator now loads manifests via the strict loader and exits nonzero on manifest failure.
+
+  - **Breaking: regenerate Step 1 output** — Step 2 and Step 4 consumers reject legacy manifests. After upgrading to this build, rerun Step 1 to regenerate v2 manifests before running Steps 2–4.
+
 ### Fixed
 
 - **Pipeline generation hardening for Step 2, Step 4, and Step 5 failures (#791)** — Three pipeline fixes now prevent the 2026-08-02 catalog run regressions from recurring:

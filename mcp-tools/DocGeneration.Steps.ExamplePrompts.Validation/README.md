@@ -1,17 +1,18 @@
 # Example Prompt Validator
 
-The Example Prompt Validator is a standalone package that validates generated example prompts, ensuring they contain all required parameters.
+The Example Prompt Validator is a standalone package that validates generated example prompts, ensuring they contain all required parameters using the v2 canonical parameter manifest.
 
 ## Purpose
 
 When generating example prompts for Azure MCP tools, it's important to ensure that the prompts include all required parameters. This validator:
 
-1. **Validates required parameters** - Checks that each prompt contains all required parameters for the command
+1. **Validates required parameters** - Loads the v2 canonical parameter manifest via `CanonicalParameterManifestLoader` and uses `CanonicalCoverageEvaluator` to determine coverage verdicts (`Concrete`, `AuthorizedPlaceholder`, `Missing`, `Ambiguous`)
 2. **Provides full tool context** - Passes complete tool documentation including description, parameters, and metadata
-3. **Handles natural language variations** - Understands different ways parameters can be expressed in natural language
+3. **Handles natural language variations** - Matches only manifest-authorized `placeholderAliases`; generic substring/similarity matching is not used
 4. **Recognizes required enum parameters by allowed value** - When a required parameter's description enumerates a closed option set (for example `Available options: 'storage_storageaccounts', 'sql_servers', …`), a prompt that names one of those allowed values (for example "…for my Storage Account") counts as covering the parameter, even if the prompt never uses the parameter name. This matching is additive — it can only turn an otherwise-uncovered enum parameter into covered — and is service-agnostic (no hardcoded service names or enum values). See `ParameterCoverageChecker` in `DocGeneration.Core.Shared`.
 5. **Excludes infrastructure parameters** - Automatically filters out subscription, tenant, auth, and retry parameters
 6. **Generates detailed reports** - Provides per-tool validation with specific missing parameter information
+7. **Exits nonzero on manifest failure** - If `CanonicalParameterManifestLoader` throws (e.g., legacy format, missing file), the validator exits with a nonzero exit code
 
 ## Folder Structure
 
@@ -79,16 +80,18 @@ From the `docs-generation` folder:
 
 ```bash
 cd docs-generation
-dotnet run --project DocGeneration.Steps.ExamplePrompts.Validation --configuration Release -- `
-  ../generated/cli/cli-output.json `
-  ../generated/example-prompts `
-  50
+dotnet run --project DocGeneration.Steps.ExamplePrompts.Validation --configuration Release -- \
+  --generated ../generated \
+  --parameter-manifests-dir ../generated/parameters
 ```
 
-Arguments:
-1. **CLI Output File**: Path to `cli-output.json` (contains tool definitions)
-2. **Example Prompts Directory**: Path to folder with generated `*-example-prompts.md` files
-3. **Max Missing Details** (optional): Maximum number of tools with missing params to display (default: 50)
+CLI arguments:
+- `--generated <path>` — Root generated directory (defaults to `../generated` relative to cwd)
+- `--example-prompts-dir <path>` — Example prompts directory (defaults to `{generated}/example-prompts`)
+- `--parameter-manifests-dir <path>` — Directory containing v2 `{tool}-params.json` manifests (defaults to `{generated}/parameters`). The validator loads each manifest via `CanonicalParameterManifestLoader`; if a manifest is missing or uses legacy format, the tool exits nonzero.
+- `--tools-dir <path>` — Tools directory (defaults to `{generated}/tools`)
+- `--tool-command <cmd>` — Validate only the specified tool command
+- `--use-llm-validation` — Use LLM-based validation instead of code-based
 
 #### Enable validation when running the documentation generator:
 

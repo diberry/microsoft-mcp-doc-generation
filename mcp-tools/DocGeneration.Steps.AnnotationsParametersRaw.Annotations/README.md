@@ -52,12 +52,14 @@ DocumentationGenerator.TransformCliOutput()
 ┌─────────────────────────────────┐
 │ AnnotationGenerator             │──▶ generated/annotations/*.md
 │ ParameterGenerator              │──▶ generated/parameters/*.md
+│                                 │──▶ generated/parameters/{tool}-params.json (v2 canonical manifests)
 │ PageGenerator                   │──▶ generated/common-general/*.md
 └─────────────────────────────────┘
 ```
 
 ### Key behaviors
 
+- **V2 canonical parameter manifests**: `ParameterGenerator.BuildParameterManifest` emits a `{tool}-params.json` file per tool containing schema version `"2.0"`, tool command, namespace, source identity (MCP build + timestamp), and a typed parameter array with `canonicalName`, `displayName`, pre-computed `displayAliases` and `placeholderAliases`, required flag, and description. Aliases are derived at emit time by `CanonicalAliasDeriver` with collision-elimination. These manifests are consumed by Steps 2 and 4 via `CanonicalParameterManifestLoader`.
 - **Common parameter filtering**: Parameters listed in `common-parameters.json` (e.g., `--tenant`, `--subscription`, `--resource-group`) are excluded from parameter tables unless they are marked `Required` for a specific tool. See `ParameterFilterHelper.cs` for the authoritative logic. ⚠️ `resource-group` is the most commonly misunderstood case — if source `required` field is blank, it must NOT appear in the published table.
 - **Three-tier filename resolution**: Include filenames are resolved through `brand-to-server-mapping.json` → `compound-words.json` → original area name (see `DocGeneration.Core.Shared/ToolFileNameBuilder`).
 - **Text cleanup**: Parameter names and descriptions pass through `DocGeneration.Core.NaturalLanguage.TextCleanup` for normalization (e.g., `--resource-group` → "Resource group"), static text replacement, and period normalization.

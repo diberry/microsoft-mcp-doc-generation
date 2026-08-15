@@ -82,9 +82,11 @@ LLM an actionable guidance block that:
 - includes a concrete rewrite example
 
 After the AI response is parsed, `DeterministicPromptRepairer` still runs before
-`CredentialSanitizer`. If canonical CLI-name injection does not satisfy post-sanitization
-coverage, the repairer now injects a display-name-based last-resort fallback prompt so the
-written file still covers the required parameter set deterministically.
+`CredentialSanitizer`. Post-repair, coverage is verified via `CanonicalCoverageEvaluator`
+against the v2 parameter manifest (loaded by `CanonicalParameterManifestLoader`). Only
+manifest-authorized `placeholderAliases` count as covered — generic substring similarity
+no longer suffices. If canonical coverage is still absent after sanitization, the repairer
+appends at most one deterministic clause per missing required parameter.
 
 The tool processes each tool **sequentially** (not in batch). For the AI path:
 1. Generate custom user prompt from template with tool-specific parameters

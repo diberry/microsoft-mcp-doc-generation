@@ -56,6 +56,7 @@ Step 1: Annotations + Parameters + Raw Tools ───────────�
   │  • cli-output.json → annotations/*.md (tool metadata flags)
   │  • cli-output.json → parameters/*.md (parameter tables)
   │  • cli-output.json → tools-raw/*.md (raw tool markdown)
+  │  • cli-output.json → parameters/{tool}-params.json (v2 canonical manifests)
   │  • Parameter tables now keep ALL CLI parameters, including common
   │    infrastructure/scoping flags such as tenant, auth-method,
   │    retry-*, and subscription
@@ -645,6 +646,90 @@ Parameters in Azure MCP tools fall into three categories:
 **Historical note**: Prior to beta.31 fixes, common/global parameters were filtered from generated output automatically. This was changed to include all parameters for consistency between CLI and NLP tabs, with manual stripping during content PR creation.
 
 The `common-parameters.json` file is retained for documentation purposes but is no longer used for filtering.
+
+### Canonical Parameter Identity and Manifest Contract (AD-030)
+
+Step 1 emits a **v2 parameter manifest** (`{tool}-params.json`) for each tool — the sole canonical parameter identity authority consumed by Steps 2 and 4.
+
+#### Manifest Schema v2
+
+```jsonc
+{
+  "schemaVersion": "2.0",
+  "toolCommand": "azmcp appconfig account list",
+  "namespace": "appconfig",
+  "sourceIdentity": {
+    "azureMcpBuild": "3.0.0-beta.34+eec7accc…",
+    "generatedAtUtc": "2026-08-15T12:00:00Z"
+  },
+  "parameters": [
+    {
+      "canonicalName": "account",
+      "displayName": "Account name",
+      "displayAliases": ["account-name", "account"],
+      "placeholderAliases": ["account", "account-name", "account_name"],
+      "required": true,
+      "requiredText": "Required",
+      "isConditionalRequired": false,
+      "description": "The name of the App Configuration account."
+    }
+  ]
+}
+```
+
+**Alias derivation** (`CanonicalAliasDeriver`): At emit time, `ParameterGenerator.BuildParameterManifest` derives `displayAliases` and `placeholderAliases` deterministically from `canonicalName` and `displayName` via `CanonicalParameterNormalizer.Normalize()`. Aliases that collide with another parameter's `canonicalName` are pruned at emit time and never re-derived at read time.
+
+#### Strict Fail-Closed Loader
+
+`CanonicalParameterManifestLoader` (in `DocGeneration.Core.Shared`) performs ordered validation:
+
+1. File existence → `PARAM_MANIFEST_NOT_FOUND`
+2. JSON parse → `PARAM_MANIFEST_MALFORMED`
+3. Root token is array → `PARAM_MANIFEST_LEGACY_FORMAT` ("Rerun Step 1")
+4. `schemaVersion` ≠ `"2.0"` → `PARAM_MANIFEST_SCHEMA_UNKNOWN`
+5. `toolCommand` mismatch → `PARAM_MANIFEST_COMMAND_MISMATCH`
+6. `namespace` mismatch → `PARAM_MANIFEST_NAMESPACE_MISMATCH`
+7. Build provenance mismatch → `PARAM_MANIFEST_SOURCE_STALE`
+8. Structural checks: `PARAM_MANIFEST_EMPTY_PARAMS`, `PARAM_MANIFEST_EMPTY_ALIAS`, `PARAM_MANIFEST_DUPLICATE_CANONICAL`, `PARAM_MANIFEST_ALIAS_COLLISION`, `PARAM_MANIFEST_ALIAS_SHADOWS_CANONICAL`, `PARAM_MANIFEST_NORMALIZATION_COLLISION`, `PARAM_MANIFEST_PLACEHOLDER_MULTI_BIND`
+
+Every failure throws `ParameterManifestException` with a stable error code (string constants on `ParameterManifestErrorCode`). The loader **never** returns null, never swallows `JsonException`, never returns an empty fallback.
+
+#### Coverage Evaluator
+
+`CanonicalCoverageEvaluator` (in `DocGeneration.Core.Shared`) evaluates parameter coverage using **only** manifest-authorized aliases — no `Contains`, no substring, no N-of-M word similarity:
+
+| Verdict | Definition | Covered? |
+|---------|-----------|----------|
+| `Concrete` | Prompt literal matches a display alias | ✅ |
+| `AuthorizedPlaceholder` | Placeholder inner text exactly equals a `placeholderAliases` entry | ✅ |
+| `Missing` | No match | ❌ |
+| `Ambiguous` | Placeholder maps to two+ canonical names | ❌ |
+
+Placeholder tokens are extracted via regex (`<…>`, `{…}`, `[…]`, `` `…` ``) and matched only after `Normalize()`.
+
+#### Consumer Seam Map
+
+| Seam | File | Consumes |
+|------|------|----------|
+| Step 2 generation | `ExamplePrompts.Generation/Program.cs` | `LoadAsync` → required params for AI prompt |
+| Step 2 repair | `DeterministicPromptRepairer` | `EvaluateParameterCoverage` post-sanitization |
+| Step 2 retry feedback | `ExamplePromptsStep.LoadRequiredOptionsAsync` | `LoadAsync` (propagates `ParameterManifestException`) |
+| Step 2 validation | `CodeBasedPromptValidator` | `EvaluateParameterCoverage` for verdict |
+| Step 4 cross-check | `ParameterCrossCheckService` | `LoadAsync` → valid parameter set |
+
+#### Bounded Repair Contract
+
+`DeterministicPromptRepairer` appends **at most one clause per missing required parameter** (` for {displayName} '{value}'`) when `CanonicalCoverageEvaluator` reports `Missing` after sanitization. Prompts with full coverage are emitted byte-identical.
+
+#### Rollback Boundary
+
+A single commit introduces the v2 emitter in Step 1 and the strict loader/evaluator in Shared. Reverting that commit restores the legacy emitter and all consumers to their pre-v2 state. The beta.34 baseline fixtures (legacy format) test that the loader correctly rejects them.
+
+#### ⚠️ Maintainer Trap
+
+Adding a manifest-optional overload (e.g., `Load(..., optional: true)`) or a `catch (JsonException) { return empty; }` anywhere in the loader re-opens the fail-open hole this step closed. The `ParameterManifestException` **must** propagate to the pipeline as a classified `ArtifactFailure`.
+
+**Note:** `SourceVerificationHelpers` (Step 4 post-assembly validation) still uses a heuristic reverse-mapping from NL identifiers. This is deliberately retained for backward compatibility and will be replaced by a canonical-evaluator path in the next step.
 
 ### Parallel Execution
 
