@@ -19,12 +19,15 @@
     "ellis": {
       "name": "Ellis",
       "role": "Evaluation Reviewer (nondeterministic)",
-      "reason": "Issue #813 Step 1 requires an independent nondeterministic evaluation of baseline representativeness, sanitization, and failure taxonomy. Cameron/Parker/Quinn/Riley/Reeve all authored part of the work, so reviewer-lockout bars them from this gate.",
+      "reason": "Originally hired as a guest for issue #813 Step 1 (independent nondeterministic evaluation of baseline representativeness, sanitization, and failure taxonomy). Promoted to standing on 2026-08-14: #813 items 2-10 each carry a mandatory nondeterministic evaluation gate, so the need recurs across at least eight further engagements. Reviewer-lockout bars Riley/Morgan/Quinn/Cameron/Parker/Reeve from this gate because each authors part of the work.",
       "hired_by": "squad-coordinator",
       "date": "2026-08-14",
-      "status": "guest",
-      "engagement": "complete",
-      "engagementNote": "#813 Step 1 only. Dismissed 2026-08-14. If #813 Steps 2-10 also need an independent eval reviewer, assess for promotion to standing before next step."
+      "status": "active",
+      "promoted_from": "guest",
+      "promoted_on": "2026-08-14",
+      "charter": ".squad/agents/ellis/charter.md",
+      "engagement": "#813 Step 2 — runtime dependency suppression, accounting, and orchestration",
+      "engagementNote": "Standing member. Independence invariant: authors no implementation, tests, fixtures, scripts, or documentation for any work Ellis evaluates. Never granted merge authority; only the repository owner merges PRs."
     }
   }
 }

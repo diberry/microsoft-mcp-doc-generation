@@ -20,9 +20,10 @@
 | Cameron | Test Lead | `.squad/agents/cameron/charter.md` | ✅ Active |
 | Parker | QA / Tester | `.squad/agents/parker/charter.md` | ✅ Active |
 | Reeve | Documentation Engineer | `.squad/agents/reeve/charter.md` | ✅ Active |
+| Ellis | Evaluation Reviewer (nondeterministic) | `.squad/agents/ellis/charter.md` | ✅ Active |
 | Scribe | Session Logger | `.squad/agents/scribe/charter.md` | 📋 Silent |
 
-> **Standing roster, not a ceiling.** These nine are the permanent team. The Coordinator may
+> **Standing roster, not a ceiling.** These ten are the permanent team. The Coordinator may
 > hire additional specialists **at-will** — as disposable *guests* for a single task/review, or
 > as *standing* members for recurring needs — when the roster lacks required expertise. Hires are
 > tracked in `.squad/casting-registry.json`; see "Hiring New Agents" in `.github/agents/squad.agent.md`.
