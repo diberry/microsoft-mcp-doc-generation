@@ -1,0 +1,40 @@
+# 813 Step 3 Round 2 — RED Evidence (Mutation-based)
+# These tests fail when each seam is reverted to its pre-migration state.
+# Tests reference new canonical API surface; compile-RED without implementation is
+# unavoidable (testing that the signature changed IS the contract test).
+
+Commit SHA (before implementation): 65e8180
+Branch: squad/813-step3-canonical-parameter-contract
+UTC Timestamp: 2026-08-15T08:15:25.2695713-07:00
+OS: Microsoft Windows 10.0.26200
+dotnet --version: 10.0.303
+pwsh --version: 7.6.5
+git --version: git version 2.55.0.vfs.0.3
+
+## RED Shape: COMPILE-RED (unavoidable — tests assert new method signatures)
+
+The binding tests added in this round reference production method signatures
+that only exist after migration:
+- ValidatorCanonicalBindingTests.ValidatePrompts_WithManifest_* → calls
+  CodeBasedPromptValidator.ValidatePrompts(..., manifest: ...) which requires
+  the new optional parameter
+- EmitterRoundTripBindingTests.V2Manifest_SerializedToFile_IsLoadableByCanonicalLoader
+  → calls the v2 emitter path which only exists post-migration
+- CanonicalManifestBindingTests → tests LoadParameterManifestAsync returning
+  CanonicalParameterManifest? which is the new return type
+- SharedEvaluatorArchitectureTests.ExamplePromptsStep_DoesNotDefinePrivateParameterManifestOptionRecord
+  → behavioral, passes only after DTO removal
+
+These are unavoidable compile-RED cases because the TEST IS that the method
+signature/return type has changed to use the canonical type.
+
+## Behavioral RED proven by mutation (see 813-step3-mutation-proof.txt):
+Each seam revert causes the corresponding test to go RED.
+
+## Failing tests (would fail if implementation reverted):
+1. EmitterRoundTripBindingTests.V2Manifest_SerializedToFile_IsLoadableByCanonicalLoader
+2. EmitterRoundTripBindingTests.LegacyArray_SerializedToFile_ThrowsLegacyFormatException
+3. ValidatorCanonicalBindingTests.ValidatePrompts_WithManifest_UnauthorizedPlaceholder_ReturnsIsValidFalse
+4. SharedEvaluatorArchitectureTests.ExamplePromptsStep_DoesNotDefinePrivateParameterManifestOptionRecord
+5. SharedEvaluatorArchitectureTests.ExamplePromptGenerator_GetPromptParameters_DoesNotAcceptLegacyManifestType
+6. SharedEvaluatorArchitectureTests.CodeBasedPromptValidator_ValidatePrompts_AcceptsCanonicalManifestParameter

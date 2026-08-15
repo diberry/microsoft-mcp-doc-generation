@@ -11,6 +11,9 @@
     <ProjectReference Include="../DocGeneration.Core.GenerativeAI/DocGeneration.Core.GenerativeAI.csproj" />
     <ProjectReference Include="../DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
     <ProjectReference Include="../../mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/DocGeneration.Steps.ToolFamilyCleanup.csproj" />
+    <ProjectReference Include="../../mcp-tools/DocGeneration.PipelineRunner/DocGeneration.PipelineRunner.csproj" />
+    <ProjectReference Include="../../mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/DocGeneration.Steps.ExamplePrompts.Validation.csproj" />
+    <ProjectReference Include="../../mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/DocGeneration.Steps.ExamplePrompts.Generation.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

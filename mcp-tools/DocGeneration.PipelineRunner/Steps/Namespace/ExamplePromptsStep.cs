@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using System.Text.Json;
 using ExamplePromptGeneratorStandalone.Generators;
 using ExamplePromptGeneratorStandalone.Models;
 using PipelineRunner.Context;
@@ -12,11 +11,6 @@ namespace PipelineRunner.Steps;
 public sealed class ExamplePromptsStep : NamespaceStepBase
 {
     private const int MaxValidationRetries = 2;
-
-    private static readonly JsonSerializerOptions CaseInsensitiveJson = new()
-    {
-        PropertyNameCaseInsensitive = true
-    };
 
     private static readonly Regex FailedToolRegex = new(
         @"^\s*❌\s+(?<command>.+?)(?:\s+\(.*\))?$",
@@ -212,12 +206,23 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             {
                 var preservedArtifacts = PreserveAttemptArtifacts(artifact, attempt);
                 var reason = SummarizeValidationReport(preservedArtifacts.ValidationPath);
-                await EnrichValidationFeedbackAsync(
-                    preservedArtifacts.ValidationPath,
-                    artifact.ExamplePromptPath,
-                    Path.Combine(context.OutputPath, "parameters"),
-                    command,
-                    cancellationToken);
+                try
+                {
+                    await EnrichValidationFeedbackAsync(
+                        preservedArtifacts.ValidationPath,
+                        artifact.ExamplePromptPath,
+                        Path.Combine(context.OutputPath, "parameters"),
+                        command,
+                        cancellationToken);
+                }
+                catch (ParameterManifestException pme)
+                {
+                    // C6: classified failure — record the error code so it appears in the step
+                    // report and in AD-029 accounting. Do not crash or silently swallow.
+                    var manifestWarning = $"Parameter manifest error for '{command}' [{pme.ErrorCode}]: {pme.Message}";
+                    retryWarnings.Add(manifestWarning);
+                    AddToolWarnings(perToolWarnings, command, [manifestWarning]);
+                }
                 var retryMessage = $"Retrying example prompts for '{command}' (attempt {attempt}/{MaxValidationRetries}) because {reason}";
                 context.Reports.Warning($"    {retryMessage}");
                 retryWarnings.Add(retryMessage);
@@ -496,28 +501,22 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             return Array.Empty<Option>();
         }
 
-        try
-        {
-            var manifest = JsonSerializer.Deserialize<List<ParameterManifestOption>>(
-                await File.ReadAllTextAsync(manifestPath, cancellationToken),
-                CaseInsensitiveJson) ?? [];
+        // Fail-closed: if the file exists but is malformed or legacy format,
+        // ParameterManifestException propagates to the caller as a classified failure.
+        var manifest = await CanonicalParameterManifestLoader.LoadAsync(
+            manifestPath, command, cancellationToken: cancellationToken);
 
-            return manifest
-                .Where(static param => param.Required || (param.RequiredText?.StartsWith("Required", StringComparison.OrdinalIgnoreCase) ?? false))
-                .Where(static param => !string.IsNullOrWhiteSpace(param.Name))
-                .Select(param => new Option
-                {
-                    Name = param.Name,
-                    DisplayName = param.DisplayName,
-                    Required = param.Required,
-                    Description = param.Description
-                })
-                .ToArray();
-        }
-        catch (JsonException)
-        {
-            return Array.Empty<Option>();
-        }
+        return manifest.Parameters
+            .Where(static param => param.Required || (param.RequiredText?.StartsWith("Required", StringComparison.OrdinalIgnoreCase) ?? false))
+            .Where(static param => !string.IsNullOrWhiteSpace(param.CanonicalName))
+            .Select(param => new Option
+            {
+                Name = param.CanonicalName,
+                DisplayName = param.DisplayName,
+                Required = param.Required,
+                Description = param.Description
+            })
+            .ToArray();
     }
 
     private static Dictionary<string, List<string>> GetPerToolOutputIssues(IEnumerable<ToolArtifacts> toolArtifacts)
@@ -676,11 +675,4 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         ValidatorResult ValidatorResult,
         IReadOnlyList<string> Warnings,
         IReadOnlyList<ArtifactFailure> ArtifactFailures);
-
-    private sealed record ParameterManifestOption(
-        string? Name,
-        string? DisplayName,
-        bool Required,
-        string? RequiredText,
-        string? Description);
 }

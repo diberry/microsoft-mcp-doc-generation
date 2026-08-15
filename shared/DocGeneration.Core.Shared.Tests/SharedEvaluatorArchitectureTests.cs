@@ -150,4 +150,72 @@ public class SharedEvaluatorArchitectureTests
             "ParameterCrossCheckService should not define a private ParameterManifestEntry — " +
             "it must use the shared CanonicalParameterManifestLoader.");
     }
+
+    // ── Defect 5 binding tests ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Architecture binding: ExamplePromptsStep must NOT define a private ParameterManifestOption
+    /// record (Defect 4). After the fix, the step uses CanonicalParameterManifestLoader directly.
+    /// </summary>
+    [Fact]
+    public void ExamplePromptsStep_DoesNotDefinePrivateParameterManifestOptionRecord()
+    {
+        var stepType = typeof(PipelineRunner.Steps.ExamplePromptsStep);
+        var nestedTypes = stepType.GetNestedTypes(
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+
+        var hasRecord = nestedTypes.Any(t => t.Name == "ParameterManifestOption");
+        Assert.False(hasRecord,
+            "ExamplePromptsStep must not define a private ParameterManifestOption record. " +
+            "After Defect 4 is fixed, it must use CanonicalParameterManifestLoader.");
+    }
+
+    /// <summary>
+    /// Architecture binding: CodeBasedPromptValidator.ValidatePrompts must have an overload
+    /// that accepts CanonicalParameterManifest? so callers can use canonical evaluation (Defect 3).
+    /// </summary>
+    [Fact]
+    public void CodeBasedPromptValidator_ValidatePrompts_AcceptsCanonicalManifestParameter()
+    {
+        var validatorType = typeof(DocGeneration.Steps.ExamplePrompts.Validation.CodeBasedPromptValidator);
+        var methods = validatorType.GetMethods(
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+        var hasCanonicalOverload = methods
+            .Where(m => m.Name == "ValidatePrompts")
+            .Any(m => m.GetParameters()
+                .Any(p => p.ParameterType == typeof(CanonicalParameterManifest)));
+
+        Assert.True(hasCanonicalOverload,
+            "CodeBasedPromptValidator.ValidatePrompts must have an overload accepting " +
+            "CanonicalParameterManifest? (Defect 3 fix).");
+    }
+
+    /// <summary>
+    /// Architecture binding: ExamplePromptGenerator.GetPromptParameters must NOT reference
+    /// the legacy ParameterManifestParameter type as its manifest parameter type (Defect 2).
+    /// After the fix, it must accept CanonicalParameterManifest?.
+    /// </summary>
+    [Fact]
+    public void ExamplePromptGenerator_GetPromptParameters_DoesNotAcceptLegacyManifestType()
+    {
+        var generatorType = typeof(ExamplePromptGeneratorStandalone.Generators.ExamplePromptGenerator);
+        var method = generatorType.GetMethod(
+            "GetPromptParameters",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        Assert.NotNull(method);
+
+        // After migration, none of the parameters should be of the legacy
+        // ParameterManifestParameter list type
+        var hasLegacyParam = method!.GetParameters()
+            .Any(p => p.ParameterType.IsGenericType &&
+                      p.ParameterType.GetGenericArguments().Any(a =>
+                          a.Name == "ParameterManifestParameter"));
+
+        Assert.False(hasLegacyParam,
+            "ExamplePromptGenerator.GetPromptParameters must not accept legacy " +
+            "IReadOnlyList<ParameterManifestParameter>. After Defect 2 is fixed it must " +
+            "accept CanonicalParameterManifest?.");
+    }
 }

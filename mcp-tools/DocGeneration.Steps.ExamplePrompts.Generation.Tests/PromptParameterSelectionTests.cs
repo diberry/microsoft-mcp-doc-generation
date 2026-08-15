@@ -1,11 +1,34 @@
 using ExamplePromptGeneratorStandalone.Generators;
 using ExamplePromptGeneratorStandalone.Models;
+using Shared;
 using Xunit;
 
 namespace ExamplePromptGeneratorStandalone.Tests;
 
 public class PromptParameterSelectionTests
 {
+    // Helper: build a minimal CanonicalParameterManifest for testing.
+    private static CanonicalParameterManifest BuildManifest(
+        params (string canonical, string displayName, string requiredText, bool required, string description)[] entries)
+    {
+        var parameters = entries.Select(e => new CanonicalParameterEntry(
+            e.canonical, e.displayName,
+            new[] { e.displayName.ToLowerInvariant().Replace(' ', '-') },
+            new[] { e.canonical },
+            e.required, e.requiredText,
+            false, e.description)).ToArray();
+
+        var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in parameters)
+            foreach (var alias in p.PlaceholderAliases)
+                index.TryAdd(alias, p.CanonicalName);
+
+        return new CanonicalParameterManifest(
+            "2.0", "test tool", "test",
+            new ManifestSourceIdentity("1.0.0", "2026-01-01T00:00:00Z"),
+            parameters, index);
+    }
+
     [Fact]
     public void GetPromptParameters_UsesManifestDisplayNamesAndRequiredMarkers()
     {
@@ -17,25 +40,9 @@ public class PromptParameterSelectionTests
                 new Option { Name = "--vault-name", Required = false, Description = "Raw fallback description" }
             ]
         };
-        var manifest = new List<ParameterManifestParameter>
-        {
-            new()
-            {
-                Name = "--vault-name",
-                DisplayName = "Vault name",
-                Required = false,
-                RequiredText = "Required*",
-                Description = "Provide vault name."
-            },
-            new()
-            {
-                Name = "--secret-name",
-                DisplayName = "Secret name",
-                Required = false,
-                RequiredText = "Optional*",
-                Description = "Provide secret name."
-            }
-        };
+        var manifest = BuildManifest(
+            ("vault-name", "Vault name", "Required*", false, "Provide vault name."),
+            ("secret-name", "Secret name", "Optional*", false, "Provide secret name."));
 
         var parameters = ExamplePromptGenerator.GetPromptParameters(tool, manifest);
 
@@ -95,7 +102,7 @@ public class PromptParameterSelectionTests
             ]
         };
 
-        var parameters = ExamplePromptGenerator.GetPromptParameters(tool, new List<ParameterManifestParameter>());
+        var parameters = ExamplePromptGenerator.GetPromptParameters(tool, BuildManifest());
 
         Assert.Empty(parameters);
     }
@@ -104,37 +111,11 @@ public class PromptParameterSelectionTests
     public void GetPromptParameters_ManifestParameters_AreRequiredFirstAndStableWithinGroups_Bug743()
     {
         var tool = new Tool { Command = "storage account update" };
-        var manifest = new List<ParameterManifestParameter>
-        {
-            new()
-            {
-                Name = "--storage-optional-first",
-                DisplayName = "storage optional first",
-                RequiredText = "Optional",
-                Description = "Storage optional parameter."
-            },
-            new()
-            {
-                Name = "--key-vault-required-first",
-                DisplayName = "key vault required first",
-                RequiredText = "Required",
-                Description = "Key Vault required parameter."
-            },
-            new()
-            {
-                Name = "--cosmos-required-second",
-                DisplayName = "cosmos required second",
-                RequiredText = "Required",
-                Description = "Cosmos DB required parameter."
-            },
-            new()
-            {
-                Name = "--monitor-optional-second",
-                DisplayName = "monitor optional second",
-                RequiredText = "Optional",
-                Description = "Monitor optional parameter."
-            }
-        };
+        var manifest = BuildManifest(
+            ("storage-optional-first", "storage optional first", "Optional", false, "Storage optional parameter."),
+            ("key-vault-required-first", "key vault required first", "Required", true, "Key Vault required parameter."),
+            ("cosmos-required-second", "cosmos required second", "Required", true, "Cosmos DB required parameter."),
+            ("monitor-optional-second", "monitor optional second", "Optional", false, "Monitor optional parameter."));
 
         var parameters = ExamplePromptGenerator.GetPromptParameters(tool, manifest);
 

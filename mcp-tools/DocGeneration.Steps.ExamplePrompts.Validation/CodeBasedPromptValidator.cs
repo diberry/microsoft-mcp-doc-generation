@@ -7,7 +7,8 @@ public sealed class CodeBasedPromptValidator
     public CodeBasedPromptValidationResult ValidatePrompts(
         IReadOnlyList<string> prompts,
         IReadOnlyList<string> requiredParameterNames,
-        IReadOnlyDictionary<string, string>? descriptionsByParameter = null)
+        IReadOnlyDictionary<string, string>? descriptionsByParameter = null,
+        CanonicalParameterManifest? manifest = null)
     {
         if (requiredParameterNames.Count == 0)
         {
@@ -18,6 +19,13 @@ public sealed class CodeBasedPromptValidator
                 Details: Array.Empty<ParameterValidationDetail>());
         }
 
+        // When a canonical manifest is supplied, use the evaluator (Ambiguous is never covered).
+        if (manifest != null)
+        {
+            return ValidateWithCanonicalManifest(prompts, manifest);
+        }
+
+        // Legacy path: no manifest — use old heuristic.
         var details = new List<ParameterValidationDetail>();
         var allCovered = true;
 
@@ -45,6 +53,26 @@ public sealed class CodeBasedPromptValidator
             IsValid: allCovered,
             TotalPrompts: prompts.Count,
             TotalRequiredParameters: requiredParameterNames.Count,
+            Details: details);
+    }
+
+    private static CodeBasedPromptValidationResult ValidateWithCanonicalManifest(
+        IReadOnlyList<string> prompts,
+        CanonicalParameterManifest manifest)
+    {
+        var coverageResult = CanonicalCoverageEvaluator.EvaluateParameterCoverage(prompts, manifest);
+
+        var details = coverageResult.ParameterResults
+            .Select(c => new ParameterValidationDetail(
+                ParameterName: c.CanonicalName,
+                Covered: c.Verdict == CoverageVerdict.Concrete,
+                PlaceholderDetected: c.Verdict == CoverageVerdict.AuthorizedPlaceholder))
+            .ToList();
+
+        return new CodeBasedPromptValidationResult(
+            IsValid: coverageResult.AllRequiredCovered,
+            TotalPrompts: prompts.Count,
+            TotalRequiredParameters: manifest.Parameters.Count(p => p.Required),
             Details: details);
     }
 }

@@ -67,7 +67,7 @@ public sealed class ExamplePromptGenerator
     public async Task<(string userPrompt, ExamplePromptsResponse? response, string rawResponse)?> GenerateAsync(
         Tool tool,
         List<string>? referencePrompts = null,
-        IReadOnlyList<ParameterManifestParameter>? parameterManifest = null,
+        CanonicalParameterManifest? parameterManifest = null,
         string? validationFeedback = null)
     {
         if (!IsInitialized || tool == null)
@@ -194,22 +194,22 @@ public sealed class ExamplePromptGenerator
 
     internal static List<(string Name, string RequirementText, string Description, bool IsRequired)> GetPromptParameters(
         Tool tool,
-        IReadOnlyList<ParameterManifestParameter>? parameterManifest = null)
+        CanonicalParameterManifest? parameterManifest = null)
     {
         if (parameterManifest != null)
         {
-            var parameters = parameterManifest
-                .Where(p => !string.IsNullOrWhiteSpace(p.Name) || !string.IsNullOrWhiteSpace(p.DisplayName))
+            var parameters = parameterManifest.Parameters
+                .Where(p => !string.IsNullOrWhiteSpace(p.CanonicalName) || !string.IsNullOrWhiteSpace(p.DisplayName))
                 .Select(p =>
                 {
                     var requirementText = string.IsNullOrWhiteSpace(p.RequiredText)
                         ? (p.Required ? "Required" : "Optional")
-                        : p.RequiredText!;
+                        : p.RequiredText;
 
                     return (
-                        Name: string.IsNullOrWhiteSpace(p.DisplayName) ? p.Name ?? "Unknown" : p.DisplayName!,
+                        Name: string.IsNullOrWhiteSpace(p.DisplayName) ? p.CanonicalName : p.DisplayName,
                         RequirementText: requirementText,
-                        Description: string.IsNullOrWhiteSpace(p.Description) ? "No description" : p.Description!,
+                        Description: string.IsNullOrWhiteSpace(p.Description) ? "No description" : p.Description,
                         IsRequired: requirementText.StartsWith("Required", StringComparison.OrdinalIgnoreCase));
                 });
 

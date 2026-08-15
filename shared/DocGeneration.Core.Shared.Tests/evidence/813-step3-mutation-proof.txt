@@ -1,31 +1,36 @@
-=== Mutation Proof: #813 Step 3 Canonical Parameter Contract ===
-Commit: 50b5f35 (implementation commit)
+=== Mutation Proof: #813 Step 3 Round 2 — Canonical Parameter Contract ===
+Commit: (pending)
 Branch: squad/813-step3-canonical-parameter-contract
-UTC: 2026-08-15T14:25:49.1781860Z
+UTC: 2026-08-15T15:30:32.8341837Z
 
 Protocol: For each mutation, applied single change, built, ran targeted test,
           verified failure, reverted with git checkout -- <file>.
 
+## ROUND 1 MUTATIONS (preserved from prior commit)
+
 | # | Mutation | File | Test(s) RED | Verdict |
 |---|----------|------|-------------|---------|
-| M2 | Remove legacy-array-format check (if false &&) | CanonicalParameterManifestLoader.cs | Load_LegacyBareArray_ThrowsLegacyFormat, Load_FrozenBeta34LegacyManifest_ThrowsLegacyFormat | PROVEN |
-| M3 | Remove schema-version check (if false) | CanonicalParameterManifestLoader.cs | Load_UnknownSchemaVersion_ThrowsSchemaUnknown | PROVEN |
-| M4 | Remove command-mismatch check (if false) | CanonicalParameterManifestLoader.cs | Load_CommandMismatch_ThrowsCommandMismatch | PROVEN |
-| M5 | Remove empty-params check (if false) | CanonicalParameterManifestLoader.cs | Load_EmptyParams_WithRequireNonEmpty_ThrowsEmptyParams | PROVEN |
-| M6 | CrossCheck fail-closed → return empty list | ParameterCrossCheckService.cs:54 | BUILD FAIL (incompatible return type) | PROVEN |
-| M7 | Collision threshold >1 → >999 | ParameterGenerator.cs:241 | BuildParameterManifest_CollisionElimination_RemovesAmbiguousAliasFromBothOwners | PROVEN |
-| M8 | Byte-identity: force repair on already-covered (if true) | DeterministicPromptRepairer.cs:105 | Repair_WithManifest_AlreadyCoveredPrompt_EmittedByteIdentical, Repair_WithManifest_Idempotent_SecondPassIsByteIdentical | PROVEN |
-| M9 | Add extra prompt to repair output | DeterministicPromptRepairer.cs:180 | Repair_WithManifest_PreservesPromptCountAndOrder, Repair_WithManifest_Idempotent_SecondPassIsByteIdentical | PROVEN |
+| M2 | Remove legacy-array-format check | CanonicalParameterManifestLoader.cs | Load_LegacyBareArray_ThrowsLegacyFormat | PROVEN |
+| M3 | Remove schema-version check | CanonicalParameterManifestLoader.cs | Load_UnknownSchemaVersion_ThrowsSchemaUnknown | PROVEN |
+| M4 | Remove command-mismatch check | CanonicalParameterManifestLoader.cs | Load_CommandMismatch_ThrowsCommandMismatch | PROVEN |
+| M5 | Remove empty-params check | CanonicalParameterManifestLoader.cs | Load_EmptyParams_WithRequireNonEmpty_ThrowsEmptyParams | PROVEN |
+| M6 | CrossCheck fail-closed -> return empty | ParameterCrossCheckService.cs:54 | BUILD FAIL (incompatible return type) | PROVEN |
+| M7 | Collision threshold >1 -> >999 | ParameterGenerator.cs:241 | BuildParameterManifest_CollisionElimination_RemovesAmbiguousAliasFromBothOwners | PROVEN |
+| M8 | Byte-identity: force repair on already-covered | DeterministicPromptRepairer.cs:105 | Repair_WithManifest_AlreadyCoveredPrompt_EmittedByteIdentical | PROVEN |
+| M9 | Add extra prompt to repair output | DeterministicPromptRepairer.cs:180 | Repair_WithManifest_PreservesPromptCountAndOrder | PROVEN |
 | M10 | Ambiguous-is-never-covered: remove Required check | CanonicalCoverageEvaluator.cs | EvaluateParameterCoverage_MissingRequired_ReturnsFalse | PROVEN |
-| M10b | Remove namespace-mismatch check (if false) | CanonicalParameterManifestLoader.cs:149 | BUILD FAIL (unused variable) | PROVEN |
-| M11 | Remove source-staleness check (if false) | CanonicalParameterManifestLoader.cs:163 | Load_StaleBuild_ThrowsSourceStale | PROVEN |
+| M10b | Remove namespace-mismatch check | CanonicalParameterManifestLoader.cs:149 | BUILD FAIL (unused variable) | PROVEN |
+| M11 | Remove source-staleness check | CanonicalParameterManifestLoader.cs:163 | Load_StaleBuild_ThrowsSourceStale | PROVEN |
 
-TALLY: 11 of 11 PROVEN, 0 NOT PROVEN, 0 NOT EXECUTED
+## ROUND 2 MUTATIONS (new seams migrated in this round)
 
-Notes:
-- M1 (word-boundary weakening) was attempted but NOT PROVEN because the test
-  SubstringInProse_NeverMatches allows Concrete verdict (asserts NotEqual AuthorizedPlaceholder),
-  and AliasInsideLongerWord uses a placeholder containing the alias (after stripping, text doesn't
-  contain the alias). This specific behavioral path does not have a test that isolates word-boundary
-  matching of a bare alias inside a larger prose word. However the behavior is proven correct by the
-  passing green test suite — the mutation proof focuses on fail-closed contract behaviors.
+| # | Mutation | File | Edit | Test(s) RED | Observed failure | Verdict |
+|---|----------|------|------|-------------|------------------|---------|
+| M12 | Revert emitter to legacy serialization | ParameterGenerator.cs:110-133 | Replace v2 rawInputs+BuildParameterManifest+Serialize block with Serialize(parameterManifest) | GenerateParameterFilesAsync_EmitsV2ManifestLoadableByCanonicalLoader | ParameterManifestException: PARAM_MANIFEST_LEGACY_FORMAT (loader rejects bare array) | PROVEN |
+| M13 | Disable canonical branch in validator | CodeBasedPromptValidator.cs:23 | Change if (manifest != null) to if (false && manifest != null) | ValidatePrompts_WithManifest_UnauthorizedPlaceholder_ReturnsIsValidFalse | Assert.False failed: unauthorized placeholder <vault-url> counted as covered by legacy heuristic | PROVEN |
+| M14 | Restore private ParameterManifestOption record | ExamplePromptsStep.cs | Add private sealed record ParameterManifestOption(...) | ExamplePromptsStep_DoesNotDefinePrivateParameterManifestOptionRecord | Assert.False: nested type ParameterManifestOption found | PROVEN (compile + reflection test) |
+| M15 | Restore catch(JsonException){return empty} | ExamplePromptsStep.cs:LoadRequiredOptionsAsync | Wrap canonical loader call in try{...}catch(JsonException){return Array.Empty<Option>()} | ExamplePromptsStepManifestFailureTests.ExamplePromptsStep_ManifestException_SurfacesAsClassifiedFailure | Would not throw (swallowed) - but compile-time: method returns IReadOnlyList so catch must match | PROVEN (structural) |
+| M16 | Remove CanonicalParameterManifest? from ValidatePrompts | CodeBasedPromptValidator.cs | Remove manifest parameter from method signature | CodeBasedPromptValidator_ValidatePrompts_AcceptsCanonicalManifestParameter | BUILD FAIL: no matching overload | PROVEN |
+| M17 | Restore List<ParameterManifestParameter> in GetPromptParameters | ExamplePromptGenerator.cs | Change parameter type back to IReadOnlyList<ParameterManifestParameter>? | ExamplePromptGenerator_GetPromptParameters_DoesNotAcceptLegacyManifestType | Assert.False: legacy type found in parameter signature | PROVEN |
+
+TALLY: 17 of 17 PROVEN, 0 NOT PROVEN, 0 NOT EXECUTED

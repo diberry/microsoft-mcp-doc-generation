@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using ExamplePromptGeneratorStandalone.Generators;
 using ExamplePromptGeneratorStandalone.Models;
+using Shared;
 using Xunit;
 
 namespace ExamplePromptGeneratorStandalone.Tests;
@@ -39,7 +40,7 @@ public class ExamplePromptGeneratorArchitectureTests
             "GetPromptParameters",
             BindingFlags.Static | BindingFlags.NonPublic,
             binder: null,
-            [typeof(Tool), typeof(IReadOnlyList<ParameterManifestParameter>)],
+            [typeof(Tool), typeof(CanonicalParameterManifest)],
             modifiers: null);
 
         Assert.NotNull(method);

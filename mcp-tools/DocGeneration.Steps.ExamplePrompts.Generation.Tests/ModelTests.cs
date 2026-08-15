@@ -67,41 +67,40 @@ public class ModelTests
     }
 
     // ─────────────────────────────────────────────────
-    // ParameterManifestParameter model
+    // CanonicalParameterEntry (replaces legacy ParameterManifestParameter)
     // ─────────────────────────────────────────────────
 
     [Fact]
-    public void ParameterManifestParameter_DefaultValues()
+    public void CanonicalParameterEntry_DefaultValues()
     {
-        var parameter = new ParameterManifestParameter();
+        var entry = new Shared.CanonicalParameterEntry(
+            "", "", Array.Empty<string>(), Array.Empty<string>(),
+            false, "", false, "");
 
-        Assert.Null(parameter.Name);
-        Assert.Null(parameter.DisplayName);
-        Assert.False(parameter.Required);
-        Assert.Null(parameter.RequiredText);
-        Assert.False(parameter.IsConditionalRequired);
-        Assert.Null(parameter.Description);
+        Assert.Equal("", entry.CanonicalName);
+        Assert.Equal("", entry.DisplayName);
+        Assert.Empty(entry.DisplayAliases);
+        Assert.Empty(entry.PlaceholderAliases);
+        Assert.False(entry.Required);
+        Assert.Equal("", entry.RequiredText);
+        Assert.False(entry.IsConditionalRequired);
+        Assert.Equal("", entry.Description);
     }
 
     [Fact]
-    public void ParameterManifestParameter_SetProperties()
+    public void CanonicalParameterEntry_SetProperties()
     {
-        var parameter = new ParameterManifestParameter
-        {
-            Name = "--vault-name",
-            DisplayName = "Vault name",
-            Required = false,
-            RequiredText = "Optional*",
-            IsConditionalRequired = true,
-            Description = "Provide vault name."
-        };
+        var entry = new Shared.CanonicalParameterEntry(
+            "vault-name", "Vault name",
+            new[] { "vault-name" }, new[] { "vault-name", "vault_name" },
+            false, "Optional*", true, "Provide vault name.");
 
-        Assert.Equal("--vault-name", parameter.Name);
-        Assert.Equal("Vault name", parameter.DisplayName);
-        Assert.False(parameter.Required);
-        Assert.Equal("Optional*", parameter.RequiredText);
-        Assert.True(parameter.IsConditionalRequired);
-        Assert.Equal("Provide vault name.", parameter.Description);
+        Assert.Equal("vault-name", entry.CanonicalName);
+        Assert.Equal("Vault name", entry.DisplayName);
+        Assert.False(entry.Required);
+        Assert.Equal("Optional*", entry.RequiredText);
+        Assert.True(entry.IsConditionalRequired);
+        Assert.Equal("Provide vault name.", entry.Description);
     }
 
     // ─────────────────────────────────────────────────

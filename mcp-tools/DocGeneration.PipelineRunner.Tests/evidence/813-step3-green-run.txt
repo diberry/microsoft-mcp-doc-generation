@@ -1,0 +1,103 @@
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\shared\DocGeneration.Core.TemplateEngine.Tests\bin\Release\net10.0\DocGeneration.Core.TemplateEngine.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.Bootstrap.BrandMappings.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.BrandMappings.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\shared\DocGeneration.Core.Shared.Tests\bin\Release\net10.0\DocGeneration.Core.Shared.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\shared\DocGeneration.Core.TextTransformation.Tests\bin\Release\net10.0\DocGeneration.Core.TextTransformation.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.HorizontalArticles.Tests\bin\Release\net10.0\DocGeneration.Steps.HorizontalArticles.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation.Tests\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Generation.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.Bootstrap.CommandParser.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.CommandParser.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.SkillsRelevance.Tests\bin\Release\net10.0\DocGeneration.Steps.SkillsRelevance.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.PipelineRunner.Tests\bin\Release\net10.0\DocGeneration.PipelineRunner.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup.Tests\bin\Release\net10.0\DocGeneration.Steps.ToolFamilyCleanup.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.ToolGeneration.Improvements.Tests\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Improvements.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.PromptRegression.Tests\bin\Release\net10.0\DocGeneration.PromptRegression.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Tools.Fingerprint.Tests\bin\Release\net10.0\DocGeneration.Tools.Fingerprint.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    29, Skipped:     0, Total:    29, Duration: 600 ms - DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    36, Skipped:     0, Total:    36, Duration: 127 ms - DocGeneration.Steps.Bootstrap.CommandParser.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    36, Skipped:     0, Total:    36, Duration: 132 ms - DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    18, Skipped:     0, Total:    18, Duration: 1 s - DocGeneration.Core.TemplateEngine.Tests.dll (net10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.PipelineRunner.SmokeTests\bin\Release\net10.0\DocGeneration.PipelineRunner.SmokeTests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.E2E.Tests\bin\Release\net10.0\DocGeneration.E2E.Tests.dll (.NETCoreApp,Version=v10.0)
+
+Passed!  - Failed:     0, Passed:    72, Skipped:     0, Total:    72, Duration: 1 s - DocGeneration.Core.TextTransformation.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   332, Skipped:     0, Total:   332, Duration: 1 s - DocGeneration.Steps.ExamplePrompts.Generation.Tests.dll (net10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\shared\DocGeneration.Core.Tracing.Tests\bin\Release\net10.0\DocGeneration.Core.Tracing.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\McpCliMetadata.Tests\bin\Release\net10.0\DocGeneration.McpCliMetadata.Tests.dll (.NETCoreApp,Version=v10.0)
+[xUnit.net 00:00:02.45]     DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription [FAIL]
+  Failed DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription [99 ms]
+  Error Message:
+   Assert.Contains() Failure: Sub-string not found
+String:    "---\r\ntitle: Azure MCP Server tools for Az"···
+Not found: "Azure Storage is an Azure service that pr"···
+  Stack Trace:
+     at DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription() in C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup.Tests\FamilyMetadataGeneratorTests.cs:line 40
+--- End of stack trace from previous location ---
+
+Passed!  - Failed:     0, Passed:   172, Skipped:     0, Total:   172, Duration: 3 s - DocGeneration.Steps.HorizontalArticles.Tests.dll (net10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Baseline.Beta34.Tests\bin\Release\net10.0\DocGeneration.Baseline.Beta34.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   549, Skipped:     0, Total:   549, Duration: 4 s - DocGeneration.Core.Shared.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    56, Skipped:     0, Total:    56, Duration: 3 s - DocGeneration.PromptRegression.Tests.dll (net10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    67, Skipped:     0, Total:    67, Duration: 1 s - DocGeneration.Tools.Fingerprint.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   105, Skipped:     0, Total:   105, Duration: 5 s - DocGeneration.Steps.ToolGeneration.Improvements.Tests.dll (net10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   380, Skipped:     0, Total:   380, Duration: 6 s - DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    47, Skipped:     0, Total:    47, Duration: 292 ms - DocGeneration.E2E.Tests.dll (net10.0)
+
+Failed!  - Failed:     1, Passed:   977, Skipped:     0, Total:   978, Duration: 6 s - DocGeneration.Steps.ToolFamilyCleanup.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    11, Skipped:     0, Total:    11, Duration: 1 s - DocGeneration.PipelineRunner.SmokeTests.dll (net10.0)
+[xUnit.net 00:00:00.62]     DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T4b_DeepVerify_LiveSourceRun_Hashes_Match_Inventory [SKIP]
+  Skipped DocGeneration.Baseline.Beta34.Tests.ImmutabilityTests.T4b_DeepVerify_LiveSourceRun_Hashes_Match_Inventory [1 ms]
+
+Passed!  - Failed:     0, Passed:    22, Skipped:     0, Total:    22, Duration: 591 ms - DocGeneration.McpCliMetadata.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    17, Skipped:     0, Total:    17, Duration: 1 s - DocGeneration.Core.Tracing.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    24, Skipped:     0, Total:    24, Duration: 13 s - DocGeneration.Steps.Bootstrap.BrandMappings.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    31, Skipped:     1, Total:    32, Duration: 1 s - DocGeneration.Baseline.Beta34.Tests.dll (net10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\mcp-tools\DocGeneration.Steps.ExamplePrompts.Validation.Tests\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Validation.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step3-canonical-parameter-contract\shared\DocGeneration.Core.GenerativeAI.Tests\bin\Release\net10.0\DocGeneration.Core.GenerativeAI.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    17, Skipped:     0, Total:    17, Duration: 202 ms - DocGeneration.Steps.ExamplePrompts.Validation.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    31, Skipped:     0, Total:    31, Duration: 197 ms - DocGeneration.Core.GenerativeAI.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   680, Skipped:     0, Total:   680, Duration: 13 s - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:    89, Skipped:     0, Total:    89, Duration: 2 m - DocGeneration.Steps.SkillsRelevance.Tests.dll (net10.0)

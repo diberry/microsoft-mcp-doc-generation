@@ -640,15 +640,29 @@ public class NamespaceStepTests
                 context.OutputPath,
                 command,
                 """
-                [
-                  {
-                    "name": "--subscription",
-                    "displayName": "Subscription name",
-                    "required": true,
-                    "requiredText": "Required",
-                    "description": "Subscription name."
+                {
+                  "schemaVersion": "2.0",
+                  "toolCommand": "compute list",
+                  "namespace": "compute",
+                  "sourceIdentity": { "azureMcpBuild": "1.0.0", "generatedAtUtc": "2026-01-01T00:00:00Z" },
+                  "parameters": [
+                    {
+                      "canonicalName": "subscription",
+                      "displayName": "Subscription name",
+                      "displayAliases": ["subscription-name", "subscription"],
+                      "placeholderAliases": ["subscription", "subscription-name", "subscription_name"],
+                      "required": true,
+                      "requiredText": "Required",
+                      "isConditionalRequired": false,
+                      "description": "Subscription name."
+                    }
+                  ],
+                  "placeholderAliasIndex": {
+                    "subscription": "subscription",
+                    "subscription-name": "subscription",
+                    "subscription_name": "subscription"
                   }
-                ]
+                }
                 """);
 
             var step = new ExamplePromptsStep();

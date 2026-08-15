@@ -343,9 +343,10 @@ internal static class Program
             {
                 foreach (var opt in requiredOptions)
                 {
-                    var manifestParam = parameterManifest.FirstOrDefault(p =>
-                        string.Equals(p.Name, opt.Name, StringComparison.OrdinalIgnoreCase));
-                    if (manifestParam?.DisplayName != null)
+                    var manifestParam = parameterManifest.Parameters.FirstOrDefault(p =>
+                        string.Equals(p.CanonicalName, opt.Name, StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(p.DisplayName, opt.DisplayName, StringComparison.OrdinalIgnoreCase));
+                    if (manifestParam != null)
                     {
                         opt.DisplayName = manifestParam.DisplayName;
                     }
@@ -489,7 +490,7 @@ internal static class Program
         return failureCount > 0 ? 1 : 0;
     }
 
-    internal static async Task<List<ParameterManifestParameter>?> LoadParameterManifestAsync(
+    internal static async Task<CanonicalParameterManifest?> LoadParameterManifestAsync(
         string? toolCommand,
         string? paramManifestsDir,
         FileNameContext nameContext)
@@ -506,19 +507,8 @@ internal static class Program
             return null;
         }
 
-        try
-        {
-            var json = await File.ReadAllTextAsync(manifestPath);
-            return JsonSerializer.Deserialize<List<ParameterManifestParameter>>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"  ⚠️  Failed to load parameter manifest for '{toolCommand}' (falling back to CLI JSON): {ex.Message}");
-            return null;
-        }
+        // Fail-closed: if the file exists but is malformed or legacy format, throw ParameterManifestException.
+        return await CanonicalParameterManifestLoader.LoadAsync(manifestPath, toolCommand);
     }
 
     internal static async Task<string?> LoadValidationFeedbackAsync(string? validationFeedbackFile)

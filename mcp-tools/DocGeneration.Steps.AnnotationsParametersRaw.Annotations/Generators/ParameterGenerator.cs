@@ -106,9 +106,26 @@ public class ParameterGenerator
                     fileName);
                 var result = frontmatter + templateResult;
                 await File.WriteAllTextAsync(outputFile, result, Encoding.UTF8);
+
+                // Build v2 canonical manifest for the JSON file.
+                // The legacy BuildParameterManifest result (parameterManifest) feeds the
+                // Handlebars template above; the v2 overload is used for disk serialization.
+                var rawInputs = filteredOptions
+                    .Zip(parameterManifest, (opt, legacy) => new RawParameterInput(
+                        legacy.Name,
+                        legacy.DisplayName,
+                        legacy.Required,
+                        legacy.RequiredText,
+                        legacy.IsConditionalRequired,
+                        legacy.Description))
+                    .ToList();
+
+                var v2Manifest = BuildParameterManifest(
+                    tool.Command!, tool.Area ?? "", data.Version ?? "unknown", rawInputs);
+
                 await File.WriteAllTextAsync(
                     manifestOutputFile,
-                    JsonSerializer.Serialize(parameterManifest, new JsonSerializerOptions
+                    JsonSerializer.Serialize(v2Manifest, new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                         WriteIndented = true
