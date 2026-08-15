@@ -35,9 +35,9 @@
       "reason": "Issue #813 Step 2, round 2. Ellis returned FAIL with two blocking findings and an independent code review returned two High findings against the PipelineRunner suppression runtime. Reviewer-lockout bars Morgan (the original author of the rejected runtime) from authoring its remediation, so an independent C# implementer is required. Rowan authored none of the Step 2 design, tests, implementation, scripts, or docs.",
       "hired_by": "squad-coordinator",
       "date": "2026-08-14",
-      "status": "guest",
+      "status": "dismissed",
       "engagement": "#813 Step 2 remediation - root-detection predicate, full-graph transitive traversal, canonical suppressed envelope path",
-      "engagementNote": "Guest. Dismissed after Ellis re-evaluates the remediation. Not permitted to review or approve their own work; Ellis holds the evaluation gate and Avery holds final acceptance. No merge authority."
+      "engagementNote": "Guest. Engagement complete and dismissed 2026-08-14 after Ellis's round-2 PASS. Delivered commit 4dea086 (D1-D4). Did not review or approve their own work; Ellis held the evaluation gate and Avery held final acceptance. No merge authority was granted or exercised. Re-engage explicitly if another remediation under reviewer-lockout is needed."
     }
   }
 }
