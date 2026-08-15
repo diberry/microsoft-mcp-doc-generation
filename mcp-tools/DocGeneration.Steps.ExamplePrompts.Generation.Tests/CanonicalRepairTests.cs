@@ -149,6 +149,27 @@ public class CanonicalRepairTests
             "Repair must not silently report no actions while canonical coverage is absent");
     }
 
+    [Fact]
+    public void Repair_WithManifest_AppConfigStorePlaceholder_IsTreatedAsMissingAndInjected()
+    {
+        var manifest = BuildManifest("azmcp appconfig kv get", "appconfig",
+            BuildEntry("account", "Account name", required: true));
+        var prompts = new List<string> { "Get key-values from App Configuration store <app_config_store_name>" };
+
+        var before = CanonicalCoverageEvaluator.EvaluateSingleParameter(
+            prompts, manifest.Parameters[0], manifest.PlaceholderAliasIndex);
+        Assert.Equal(CoverageVerdict.Missing, before.Verdict);
+
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
+
+        Assert.Contains(result.Actions, action => action.ParameterName == "account");
+        var after = CanonicalCoverageEvaluator.EvaluateSingleParameter(
+            result.RepairedPrompts, manifest.Parameters[0], manifest.PlaceholderAliasIndex);
+        Assert.True(
+            after.Verdict == CoverageVerdict.Concrete || after.Verdict == CoverageVerdict.AuthorizedPlaceholder,
+            $"Repair must close the canonical gap, but verdict stayed {after.Verdict}.");
+    }
+
     // ── Manifest order for appended parameters ───────────────────────
 
     [Fact]

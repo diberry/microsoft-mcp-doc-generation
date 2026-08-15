@@ -1,0 +1,42 @@
+813-step3-red-round5.txt
+=========================
+Branch: squad/813-step3-canonical-parameter-contract
+HEAD: ee3ca029b0f89d10417dafd5556b9e523cab350a
+UTC: 2026-08-15T17:58:37.3650591Z
+OS: Windows_NT
+
+dotnet --version: 10.0.303
+pwsh --version: PowerShell 7.6.5
+git --version: git version 2.55.0.vfs.0.3
+
+Commands and exit codes:
+1. dotnet test shared/DocGeneration.Core.Shared.Tests/DocGeneration.Core.Shared.Tests.csproj --configuration Release --filter "CanonicalCoverageEvaluatorTests|Round3CanonicalContractTests"
+   Exit code: 1
+2. dotnet test mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation.Tests/DocGeneration.Steps.ExamplePrompts.Generation.Tests.csproj --configuration Release --filter "CanonicalManifestBindingTests|CanonicalRepairTests"
+   Exit code: 1
+
+Failing tests and verbatim assertion messages:
+
+1. DocGeneration.Core.Shared.Tests.Round3CanonicalContractTests.ExamplePromptsStep_RetryFeedback_UsesManifestBasedGuidance
+   Assert.Contains() Failure: Sub-string not found
+   String:    "using System.Text.RegularExpressions;\r\nus"···
+   Not found: "var manifest = await LoadParameterManifes"···
+   at DocGeneration.Core.Shared.Tests.Round3CanonicalContractTests.ExamplePromptsStep_RetryFeedback_UsesManifestBasedGuidance() in shared\DocGeneration.Core.Shared.Tests\Round3CanonicalContractTests.cs:line 126
+
+2. DocGeneration.Core.Shared.Tests.CanonicalCoverageEvaluatorTests.EvaluateSingleParameter_HyphenatedAliasFragment_ReturnsMissing
+   Assert.Equal() Failure: Values differ
+   Expected: Missing
+   Actual:   Concrete
+   at DocGeneration.Core.Shared.Tests.CanonicalCoverageEvaluatorTests.EvaluateSingleParameter_HyphenatedAliasFragment_ReturnsMissing() in shared\DocGeneration.Core.Shared.Tests\CanonicalCoverageEvaluatorTests.cs:line 45
+
+3. ExamplePromptGeneratorStandalone.Tests.CanonicalManifestBindingTests.Program_Source_RepairSeam_UsesManifestRepairOverload
+   Assert.Contains() Failure: Sub-string not found
+   String:    "using System.Text;\r\nusing System.Text.Jso"···
+   Not found: "DeterministicPromptRepairer.Repair(prompt"···
+   at ExamplePromptGeneratorStandalone.Tests.CanonicalManifestBindingTests.Program_Source_RepairSeam_UsesManifestRepairOverload() in mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation.Tests\CanonicalManifestBindingTests.cs:line 97
+
+Observed RED status:
+- Program.cs still binds the repair seam to the legacy requiredOptions overload.
+- ExamplePromptsStep still builds retry guidance from requiredOptions instead of the canonical manifest.
+- CanonicalCoverageEvaluator still treats hyphenated alias fragments like "account-level" as Concrete coverage.
+- The new manifest-based repair binding test already passes, confirming the defect is at the production seam, not in the manifest overload itself.

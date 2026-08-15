@@ -89,6 +89,16 @@ public class CanonicalManifestBindingTests : IDisposable
     }
 
     [Fact]
+    public void Program_Source_RepairSeam_UsesManifestRepairOverload()
+    {
+        var source = File.ReadAllText(Path.Combine(FindSolutionRoot(), "mcp-tools", "DocGeneration.Steps.ExamplePrompts.Generation", "Program.cs"));
+
+        Assert.Contains("if (parameterManifest != null)", source, StringComparison.Ordinal);
+        Assert.Contains("DeterministicPromptRepairer.Repair(promptsResponse.Prompts, parameterManifest);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DeterministicPromptRepairer.Repair(promptsResponse.Prompts, requiredOptions);", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task LoadParameterManifestAsync_WithLegacyArrayJson_ThrowsParameterManifestException()
     {
         // After migration: if the file exists but is in legacy format, it must throw
@@ -104,5 +114,21 @@ public class CanonicalManifestBindingTests : IDisposable
 
         await Assert.ThrowsAsync<ParameterManifestException>(
             () => Program.LoadParameterManifestAsync("storage account list", _tempDir, nameContext));
+    }
+
+    private static string FindSolutionRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "mcp-doc-generation.sln")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repo root from AppContext.BaseDirectory.");
     }
 }

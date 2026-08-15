@@ -3,6 +3,7 @@
 
 using System.Reflection;
 using DocGeneration.Steps.ExamplePrompts.Validation;
+using DocGeneration.TestInfrastructure;
 using Shared;
 using Xunit;
 
@@ -96,29 +97,6 @@ public class Round3CanonicalContractTests
             "This would allow the ParameterCoverageChecker legacy path to be reached.");
     }
 
-    private static bool TypeReferencesOther(Type type, Type target)
-    {
-        // Check fields
-        if (type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
-            .Any(f => f.FieldType == target))
-            return true;
-
-        // Check method signatures (parameters and return types)
-        var allMethods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
-        foreach (var method in allMethods)
-        {
-            if (method.ReturnType == target) return true;
-            if (method.GetParameters().Any(p => p.ParameterType == target)) return true;
-        }
-
-        // Check properties
-        if (type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
-            .Any(p => p.PropertyType == target))
-            return true;
-
-        return false;
-    }
-
     /// <summary>
     /// C6 classified failure test: when ExamplePromptsStep encounters a ParameterManifestException
     /// during the retry-feedback path, it must record an ArtifactFailure (not merely a warning).
@@ -127,30 +105,27 @@ public class Round3CanonicalContractTests
     [Fact]
     public void ExamplePromptsStep_ManifestError_RecordsArtifactFailure_NotJustWarning()
     {
-        // The step's catch block at line ~218 currently only records a warning.
-        // After the fix, it must also create an ArtifactFailure.
-        // We verify this structurally: the step type must have logic that converts
-        // ParameterManifestException into an ArtifactFailure in the retry path.
+        var source = ReadExamplePromptsStepSource();
+        var catchStart = source.IndexOf("catch (ParameterManifestException pme)", StringComparison.Ordinal);
+        Assert.True(catchStart >= 0, "ExamplePromptsStep must explicitly catch ParameterManifestException in the retry path.");
 
-        // This test verifies that the RetryInvalidToolsAsync method (or its caller)
-        // captures manifest exceptions as artifact failures by checking that
-        // the step's retry outcome includes artifact failures when manifest loading fails.
+        var catchEnd = source.IndexOf("var retryMessage =", catchStart, StringComparison.Ordinal);
+        Assert.True(catchEnd > catchStart, "Could not isolate the ParameterManifestException catch block.");
 
-        // We can verify this by checking that the step class references both
-        // ParameterManifestException and ArtifactFailure in its retry logic.
-        var stepType = typeof(PipelineRunner.Steps.ExamplePromptsStep);
-        var stepAssembly = stepType.Assembly;
+        var catchBlock = source.Substring(catchStart, catchEnd - catchStart);
+        Assert.Contains("AddToolWarnings(perToolWarnings, command, [manifestWarning]);", catchBlock, StringComparison.Ordinal);
+        Assert.Contains("break;", catchBlock, StringComparison.Ordinal);
+        Assert.Contains("BuildValidationFailureDetails(artifact, toolWarnings)", source, StringComparison.Ordinal);
+    }
 
-        // The step assembly must reference ParameterManifestException
-        var referencesManifestException = stepAssembly.GetTypes()
-            .SelectMany(t => t.GetMethods(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
-            .Any(m => m.GetMethodBody()?.LocalVariables?.Any(v =>
-                v.LocalType == typeof(ParameterManifestException)) == true);
+    [Fact]
+    public void ExamplePromptsStep_RetryFeedback_UsesManifestBasedGuidance()
+    {
+        var source = ReadExamplePromptsStepSource();
 
-        // Structural check: the catch(ParameterManifestException) block must add to artifactFailures,
-        // not just warnings. We verify by checking the RetryOutcome type includes failures.
-        // This is an indirect but stable check — the actual behavioral test is the integration test below.
-        Assert.True(true, "Structural check deferred to integration test below");
+        Assert.Contains("var manifest = await LoadParameterManifestAsync(parameterManifestDirectory, command, cancellationToken);", source, StringComparison.Ordinal);
+        Assert.Contains("DeterministicPromptRepairer.BuildRetryFeedback(prompts, manifest);", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DeterministicPromptRepairer.BuildRetryFeedback(prompts, requiredOptions);", source, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -208,4 +183,37 @@ public class Round3CanonicalContractTests
         }
     }
 
+    private static bool TypeReferencesOther(Type type, Type target)
+    {
+        // Check fields
+        if (type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+            .Any(f => f.FieldType == target))
+            return true;
+
+        // Check method signatures (parameters and return types)
+        var allMethods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+        foreach (var method in allMethods)
+        {
+            if (method.ReturnType == target) return true;
+            if (method.GetParameters().Any(p => p.ParameterType == target)) return true;
+        }
+
+        // Check properties
+        if (type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+            .Any(p => p.PropertyType == target))
+            return true;
+
+        return false;
+    }
+
+    private static string ReadExamplePromptsStepSource()
+    {
+        return File.ReadAllText(Path.Combine(
+            ProjectRootFinder.FindSolutionRoot(),
+            "mcp-tools",
+            "DocGeneration.PipelineRunner",
+            "Steps",
+            "Namespace",
+            "ExamplePromptsStep.cs"));
+    }
 }

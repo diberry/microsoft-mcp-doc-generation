@@ -31,6 +31,64 @@ public class CanonicalCoverageEvaluatorTests
         Assert.NotNull(result.MatchedPromptIndex);
     }
 
+    [Fact]
+    public void EvaluateSingleParameter_HyphenatedAliasFragment_ReturnsMissing()
+    {
+        var param = BuildEntry("account", "Account name",
+            displayAliases: ["account-name", "account"],
+            placeholderAliases: ["account", "account-name", "account_name"]);
+        var index = BuildPlaceholderIndex(param);
+        var prompts = new[] { "Review account-level metrics for the service" };
+
+        var result = CanonicalCoverageEvaluator.EvaluateSingleParameter(prompts, param, index);
+
+        Assert.Equal(CoverageVerdict.Missing, result.Verdict);
+    }
+
+    [Fact]
+    public void EvaluateSingleParameter_UnderscoredAliasFragment_ReturnsMissing()
+    {
+        var param = BuildEntry("account", "Account name",
+            displayAliases: ["account-name", "account"],
+            placeholderAliases: ["account", "account-name", "account_name"]);
+        var index = BuildPlaceholderIndex(param);
+        var prompts = new[] { "Inspect per-account_quota settings before rollout" };
+
+        var result = CanonicalCoverageEvaluator.EvaluateSingleParameter(prompts, param, index);
+
+        Assert.Equal(CoverageVerdict.Missing, result.Verdict);
+    }
+
+    [Fact]
+    public void EvaluateSingleParameter_QuotedConcreteAlias_StillReturnsConcrete()
+    {
+        var param = BuildEntry("account", "Account name",
+            displayAliases: ["account-name", "account"],
+            placeholderAliases: ["account", "account-name", "account_name"]);
+        var index = BuildPlaceholderIndex(param);
+        var prompts = new[] { "Use account 'myaccount' for the export" };
+
+        var result = CanonicalCoverageEvaluator.EvaluateSingleParameter(prompts, param, index);
+
+        Assert.Equal(CoverageVerdict.Concrete, result.Verdict);
+        Assert.Contains("account 'myaccount'", result.MatchEvidence, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void EvaluateSingleParameter_StandaloneNaturalAlias_StillReturnsConcrete()
+    {
+        var param = BuildEntry("account", "Account name",
+            displayAliases: ["account-name", "account"],
+            placeholderAliases: ["account", "account-name", "account_name"]);
+        var index = BuildPlaceholderIndex(param);
+        var prompts = new[] { "The account is configured for diagnostics" };
+
+        var result = CanonicalCoverageEvaluator.EvaluateSingleParameter(prompts, param, index);
+
+        Assert.Equal(CoverageVerdict.Concrete, result.Verdict);
+        Assert.Equal("account", result.MatchEvidence);
+    }
+
     // ── AuthorizedPlaceholder verdict ────────────────────────────────
 
     [Fact]
