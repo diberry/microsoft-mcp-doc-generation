@@ -279,15 +279,24 @@ public sealed class FamilyStructureBuilderTests : IDisposable
         await File.WriteAllTextAsync(
             manifestPath,
             """
-            [
-              {
-                "name": "account",
-                "displayName": "account",
-                "required": true,
-                "requiredText": "Required",
-                "description": "Account name."
-              }
-            ]
+            {
+              "schemaVersion": "2.0",
+              "toolCommand": "cosmos account show",
+              "namespace": "cosmos",
+              "sourceIdentity": { "azureMcpBuild": "1.0.0", "generatedAtUtc": "2026-01-01T00:00:00Z" },
+              "parameters": [
+                {
+                  "canonicalName": "account",
+                  "displayName": "account",
+                  "displayAliases": ["account"],
+                  "placeholderAliases": ["account"],
+                  "required": true,
+                  "requiredText": "Required",
+                  "isConditionalRequired": false,
+                  "description": "Account name."
+                }
+              ]
+            }
             """);
 
         var builder = new FamilyStructureBuilder();

@@ -72,6 +72,118 @@ public static class DeterministicPromptRepairer
         return new RepairResult(repairedPrompts, actions, stillUncovered);
     }
 
+    /// <summary>
+    /// Manifest-aware repair overload: uses canonical coverage evaluator for identity
+    /// and appends bounded clauses in manifest order for missing required parameters.
+    /// Byte-identical when already covered. Idempotent (second pass = no-op).
+    /// </summary>
+    public static RepairResult Repair(IReadOnlyList<string> prompts, CanonicalParameterManifest manifest)
+    {
+        if (prompts.Count == 0 || manifest.Parameters.Count == 0)
+            return new RepairResult(prompts.ToList(), [], []);
+
+        var repairedPrompts = prompts.Select(p => p ?? "").ToList();
+        var actions = new List<RepairAction>();
+        var stillUncovered = new List<string>();
+        var repairedParamNames = new List<string>();
+
+        // Evaluate coverage using canonical evaluator
+        var requiredParams = manifest.Parameters.Where(p => p.Required).ToList();
+
+        // Determine which params are missing and which are covered
+        var missingParams = new List<CanonicalParameterEntry>();
+        var coveredParams = new List<CanonicalParameterEntry>();
+        foreach (var param in requiredParams)
+        {
+            var coverage = CanonicalCoverageEvaluator.EvaluateSingleParameter(
+                repairedPrompts, param, manifest.PlaceholderAliasIndex);
+            if (coverage.Verdict == CoverageVerdict.Concrete || coverage.Verdict == CoverageVerdict.AuthorizedPlaceholder)
+                coveredParams.Add(param);
+            else
+                missingParams.Add(param);
+        }
+
+        if (missingParams.Count > 0)
+        {
+            // Determine injection strategy: if a covered param's canonical name appears as a word
+            // in any prompt, prepend to preserve manifest order in IndexOf lookups
+            var needsPrepend = coveredParams.Any(cp =>
+                repairedPrompts.Any(prompt =>
+                    !string.IsNullOrWhiteSpace(prompt) &&
+                    System.Text.RegularExpressions.Regex.IsMatch(prompt,
+                        $@"(?<!\w){System.Text.RegularExpressions.Regex.Escape(cp.CanonicalName)}(?!\w)",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase)));
+
+            if (needsPrepend)
+            {
+                // Prepend all missing params at the start to maintain manifest order
+                for (int i = 0; i < repairedPrompts.Count; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(repairedPrompts[i])) continue;
+                    var clauses = missingParams.Select(p =>
+                    {
+                        var value = ResolveValue(p.CanonicalName, p.Description);
+                        return $"{p.CanonicalName.Replace('-', ' ')} '{value}'";
+                    });
+                    repairedPrompts[i] = $"For {string.Join(", ", clauses)}: {repairedPrompts[i]}";
+                }
+
+                foreach (var param in missingParams)
+                {
+                    actions.Add(new RepairAction(param.CanonicalName, ResolveValue(param.CanonicalName, param.Description), "injected"));
+                    repairedParamNames.Add(param.CanonicalName);
+                }
+            }
+            else
+            {
+                // Append each missing param at the end (preserves StartsWith)
+                foreach (var param in missingParams)
+                {
+                    var value = ResolveValue(param.CanonicalName, param.Description);
+                    var injected = false;
+                    for (int i = 0; i < repairedPrompts.Count; i++)
+                    {
+                        if (string.IsNullOrWhiteSpace(repairedPrompts[i])) continue;
+                        repairedPrompts[i] = InjectParameter(repairedPrompts[i], param.CanonicalName, value);
+                        injected = true;
+                    }
+                    if (injected)
+                    {
+                        actions.Add(new RepairAction(param.CanonicalName, value, "injected"));
+                        repairedParamNames.Add(param.CanonicalName);
+                    }
+                }
+            }
+        }
+
+        // Post-repair verification
+        foreach (var param in requiredParams)
+        {
+            var postCoverage = CanonicalCoverageEvaluator.EvaluateSingleParameter(
+                repairedPrompts, param, manifest.PlaceholderAliasIndex);
+            if (postCoverage.Verdict != CoverageVerdict.Concrete && postCoverage.Verdict != CoverageVerdict.AuthorizedPlaceholder)
+            {
+                stillUncovered.Add(param.CanonicalName);
+            }
+        }
+
+        // Build provenance
+        var provenance = new List<RepairProvenance>();
+        if (repairedParamNames.Count > 0 || stillUncovered.Count > 0)
+        {
+            provenance.Add(new RepairProvenance(
+                "ai-generated",
+                repairedParamNames.ToArray(),
+                manifest.SchemaVersion,
+                manifest.SourceIdentity.AzureMcpBuild));
+        }
+
+        return new RepairResult(repairedPrompts, actions, stillUncovered)
+        {
+            RepairProvenance = provenance
+        };
+    }
+
     public static string BuildRetryFeedback(IReadOnlyList<string> prompts, IReadOnlyList<Option> requiredParameters)
     {
         var missing = requiredParameters
@@ -286,9 +398,24 @@ public static class DeterministicPromptRepairer
 public sealed record RepairResult(
     IReadOnlyList<string> RepairedPrompts,
     IReadOnlyList<RepairAction> Actions,
-    IReadOnlyList<string> StillUncovered);
+    IReadOnlyList<string> StillUncovered)
+{
+    /// <summary>
+    /// Provenance records for manifest-aware repair (populated by the manifest overload).
+    /// </summary>
+    public IReadOnlyList<RepairProvenance> RepairProvenance { get; init; } = Array.Empty<RepairProvenance>();
+}
 
 /// <summary>
 /// Describes a single repair action taken on a prompt set.
 /// </summary>
 public sealed record RepairAction(string ParameterName, string InjectedValue, string ActionType);
+
+/// <summary>
+/// Provenance/telemetry for a manifest-based repair pass.
+/// </summary>
+public sealed record RepairProvenance(
+    string PromptSource,
+    string[] RepairedParameters,
+    string ManifestSchemaVersion,
+    string ManifestSourceBuild);

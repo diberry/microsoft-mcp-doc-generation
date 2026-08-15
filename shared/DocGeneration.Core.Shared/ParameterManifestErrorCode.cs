@@ -1,0 +1,25 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
+namespace Shared;
+
+/// <summary>
+/// Stable error codes for parameter manifest validation failures.
+/// </summary>
+public static class ParameterManifestErrorCode
+{
+    public const string PARAM_MANIFEST_NOT_FOUND = "PARAM_MANIFEST_NOT_FOUND";
+    public const string PARAM_MANIFEST_MALFORMED = "PARAM_MANIFEST_MALFORMED";
+    public const string PARAM_MANIFEST_SCHEMA_UNKNOWN = "PARAM_MANIFEST_SCHEMA_UNKNOWN";
+    public const string PARAM_MANIFEST_LEGACY_FORMAT = "PARAM_MANIFEST_LEGACY_FORMAT";
+    public const string PARAM_MANIFEST_COMMAND_MISMATCH = "PARAM_MANIFEST_COMMAND_MISMATCH";
+    public const string PARAM_MANIFEST_NAMESPACE_MISMATCH = "PARAM_MANIFEST_NAMESPACE_MISMATCH";
+    public const string PARAM_MANIFEST_SOURCE_STALE = "PARAM_MANIFEST_SOURCE_STALE";
+    public const string PARAM_MANIFEST_EMPTY_PARAMS = "PARAM_MANIFEST_EMPTY_PARAMS";
+    public const string PARAM_MANIFEST_EMPTY_ALIAS = "PARAM_MANIFEST_EMPTY_ALIAS";
+    public const string PARAM_MANIFEST_DUPLICATE_CANONICAL = "PARAM_MANIFEST_DUPLICATE_CANONICAL";
+    public const string PARAM_MANIFEST_ALIAS_COLLISION = "PARAM_MANIFEST_ALIAS_COLLISION";
+    public const string PARAM_MANIFEST_ALIAS_SHADOWS_CANONICAL = "PARAM_MANIFEST_ALIAS_SHADOWS_CANONICAL";
+    public const string PARAM_MANIFEST_NORMALIZATION_COLLISION = "PARAM_MANIFEST_NORMALIZATION_COLLISION";
+    public const string PARAM_MANIFEST_PLACEHOLDER_MULTI_BIND = "PARAM_MANIFEST_PLACEHOLDER_MULTI_BIND";
+}

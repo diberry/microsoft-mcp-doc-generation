@@ -1,0 +1,69 @@
+=== GREEN Evidence: #813 Step 3 Canonical Parameter Contract ===
+
+Commit SHA:  6461ad9e88ce53a283c1b4195074ec1f0d6d173a
+Branch:      squad/813-step3-canonical-parameter-contract
+UTC:         2026-08-15T14:15:03.5341071Z
+OS:          Windows_NT (Windows 11)
+dotnet:      10.0.303
+pwsh:        PowerShell 7.6.5
+git:         git version 2.55.0.vfs.0.3
+
+--- BUILD ---
+Command: dotnet build mcp-doc-generation.sln --configuration Release
+Exit code: 0
+Errors: 0
+Warnings: 0
+
+--- DOTNET TEST ---
+Command: dotnet test mcp-doc-generation.sln --no-build --configuration Release
+Exit code: 1 (due to 1 pre-existing failure)
+
+Results by project:
+  DocGeneration.Steps.Bootstrap.CommandParser.Tests          Passed: 36   Failed: 0
+  DocGeneration.Core.TemplateEngine.Tests                   Passed: 18   Failed: 0
+  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests   Passed: 36   Failed: 0
+  DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests    Passed: 29   Failed: 0
+  DocGeneration.Steps.ExamplePrompts.Generation.Tests       Passed: 328  Failed: 0
+  DocGeneration.Core.Shared.Tests                           Passed: 546  Failed: 0
+  DocGeneration.Steps.HorizontalArticles.Tests              Passed: 172  Failed: 0
+  DocGeneration.Core.TextTransformation.Tests               Passed: 72   Failed: 0
+  DocGeneration.Steps.ToolGeneration.Improvements.Tests     Passed: 105  Failed: 0
+  DocGeneration.PromptRegression.Tests                      Passed: 56   Failed: 0
+  DocGeneration.E2E.Tests                                   Passed: 47   Failed: 0
+  DocGeneration.Tools.Fingerprint.Tests                     Passed: 67   Failed: 0
+  DocGeneration.Steps.ToolFamilyCleanup.Tests               Passed: 977  Failed: 1 (PRE-EXISTING)
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests Passed: 377  Failed: 0
+  DocGeneration.PipelineRunner.SmokeTests                   Passed: 11   Failed: 0
+  DocGeneration.McpCliMetadata.Tests                        Passed: 22   Failed: 0
+  DocGeneration.Core.Tracing.Tests                          Passed: 17   Failed: 0
+  DocGeneration.Steps.Bootstrap.BrandMappings.Tests         Passed: 24   Failed: 0
+  DocGeneration.Baseline.Beta34.Tests                       Passed: 31   Failed: 0  Skipped: 1
+  DocGeneration.Core.GenerativeAI.Tests                     Passed: 31   Failed: 0
+  DocGeneration.Steps.ExamplePrompts.Validation.Tests       Passed: 13   Failed: 0
+  DocGeneration.PipelineRunner.Tests                        Passed: 680  Failed: 0
+  DocGeneration.Steps.SkillsRelevance.Tests                 Passed: 89   Failed: 0
+
+Total: Passed 3,854  Failed 1  Skipped 1
+
+Pre-existing failure (NOT mine):
+  FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription
+  (DocGeneration.Steps.ToolFamilyCleanup.Tests)
+
+--- PESTER ---
+Command: pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests -Output Detailed -CI"
+Exit code: 8
+Tests Passed: 118, Failed: 8, Skipped: 1
+
+Pre-existing failures (all 8 in Scan-McpToolCoverage.Tests.ps1):
+  These 8 It-blocks have always failed on this base branch.
+
+--- STEP 3 TESTS (all pass) ---
+  CanonicalParameterManifestLoaderTests: PASS (all)
+  CanonicalCoverageEvaluatorTests: PASS (all 47)
+  SharedEvaluatorArchitectureTests: PASS (all)
+  CanonicalCoverageRuntimeRedTests: PASS (all)
+  CanonicalManifestEmitterTests: PASS (all)
+  CanonicalRepairTests: PASS (all 8)
+  CanonicalValidationSeamTests: PASS (all)
+  ExamplePromptsStepManifestFailureTests: PASS (all)
+  ParameterCrossCheckCanonicalLoaderTests: PASS (all)

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Shared;
 using ToolFamilyCleanup.Models;
@@ -49,12 +48,11 @@ internal sealed class ParameterCrossCheckService
             HashSet<string> validParameters;
             try
             {
-                validParameters = await LoadValidParametersAsync(manifestPath, cancellationToken);
+                validParameters = await LoadValidParametersAsync(manifestPath, tool.Command, cancellationToken);
             }
-            catch (JsonException)
+            catch (ParameterManifestException)
             {
-                rewrittenTools.Add(tool);
-                continue;
+                throw;
             }
 
             if (validParameters.Count == 0)
@@ -70,14 +68,18 @@ internal sealed class ParameterCrossCheckService
         return rewrittenTools;
     }
 
-    private static async Task<HashSet<string>> LoadValidParametersAsync(string manifestPath, CancellationToken cancellationToken)
+    private static async Task<HashSet<string>> LoadValidParametersAsync(string manifestPath, string toolCommand, CancellationToken cancellationToken)
     {
-        var manifest = JsonSerializer.Deserialize<List<ParameterManifestEntry>>(
-            await File.ReadAllTextAsync(manifestPath, cancellationToken),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
+        var manifest = await CanonicalParameterManifestLoader.LoadAsync(
+            manifestPath,
+            expectedCommand: toolCommand,
+            expectedNamespace: null,
+            currentAzureMcpBuild: null,
+            requireNonEmptyParameters: false,
+            cancellationToken: cancellationToken);
 
-        return manifest
-            .SelectMany(static entry => new[] { entry.Name, entry.DisplayName })
+        return manifest.Parameters
+            .SelectMany(static entry => new[] { entry.CanonicalName, entry.DisplayName })
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Select(static value => NormalizeParameterName(value!))
             .Where(static value => !string.IsNullOrWhiteSpace(value))
@@ -163,6 +165,4 @@ internal sealed class ParameterCrossCheckService
         clean = Regex.Replace(clean, @"[^a-z0-9\-]+", "-");
         return clean.Trim('-');
     }
-
-    private sealed record ParameterManifestEntry(string? Name, string? DisplayName);
 }

@@ -195,4 +195,129 @@ public class ParameterGenerator
         public bool IsConditionalRequired { get; set; }
         public string Description { get; set; } = string.Empty;
     }
+
+    /// <summary>
+    /// Builds a v2 canonical parameter manifest from raw parameter inputs.
+    /// Derives aliases deterministically and applies collision elimination per AD-030 §1.3 / C3.
+    /// </summary>
+    public static CanonicalParameterManifest BuildParameterManifest(
+        string toolCommand,
+        string toolNamespace,
+        string azureMcpBuild,
+        IReadOnlyList<RawParameterInput> parameters)
+    {
+        var generatedAt = DateTime.UtcNow.ToString("O");
+
+        // Step 1: Build entries with initial alias derivation
+        var entries = new List<(string Canonical, string DisplayName, List<string> DisplayAliases, List<string> PlaceholderAliases, RawParameterInput Raw)>();
+        foreach (var param in parameters)
+        {
+            var canonical = CanonicalParameterNormalizer.Normalize(param.Name);
+            var displayAliases = CanonicalAliasDeriver.DeriveDisplayAliases(canonical, param.DisplayName).ToList();
+            var placeholderAliases = CanonicalAliasDeriver.DerivePlaceholderAliases(canonical, param.DisplayName).ToList();
+            entries.Add((canonical, param.DisplayName, displayAliases, placeholderAliases, param));
+        }
+
+        // Step 2: Collision elimination per C3
+        var allCanonicals = entries.Select(e => e.Canonical).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // Find display alias collisions (same alias claimed by multiple params)
+        var displayAliasCounts = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < entries.Count; i++)
+        {
+            foreach (var alias in entries[i].DisplayAliases)
+            {
+                if (!displayAliasCounts.TryGetValue(alias, out var owners))
+                {
+                    owners = new List<int>();
+                    displayAliasCounts[alias] = owners;
+                }
+                owners.Add(i);
+            }
+        }
+
+        // Remove colliding display aliases from ALL owners
+        foreach (var (alias, owners) in displayAliasCounts)
+        {
+            if (owners.Count > 1)
+            {
+                foreach (var idx in owners)
+                {
+                    entries[idx].DisplayAliases.Remove(alias);
+                }
+            }
+        }
+
+        // Remove display aliases that shadow another parameter's canonical name
+        for (int i = 0; i < entries.Count; i++)
+        {
+            entries[i].DisplayAliases.RemoveAll(alias =>
+                allCanonicals.Contains(alias) &&
+                !string.Equals(alias, entries[i].Canonical, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Find placeholder alias collisions
+        var placeholderCounts = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < entries.Count; i++)
+        {
+            foreach (var alias in entries[i].PlaceholderAliases)
+            {
+                if (!placeholderCounts.TryGetValue(alias, out var owners))
+                {
+                    owners = new List<int>();
+                    placeholderCounts[alias] = owners;
+                }
+                owners.Add(i);
+            }
+        }
+
+        // Remove colliding placeholder aliases from ALL owners
+        foreach (var (alias, owners) in placeholderCounts)
+        {
+            if (owners.Count > 1)
+            {
+                foreach (var idx in owners)
+                {
+                    entries[idx].PlaceholderAliases.Remove(alias);
+                }
+            }
+        }
+
+        // Remove placeholder aliases that shadow another parameter's canonical name
+        for (int i = 0; i < entries.Count; i++)
+        {
+            entries[i].PlaceholderAliases.RemoveAll(alias =>
+                allCanonicals.Contains(alias) &&
+                !string.Equals(alias, entries[i].Canonical, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Step 3: Build final entries
+        var finalParams = entries.Select(e => new CanonicalParameterEntry(
+            e.Canonical,
+            e.DisplayName,
+            e.DisplayAliases.Distinct(StringComparer.Ordinal).ToArray(),
+            e.PlaceholderAliases.Distinct(StringComparer.Ordinal).ToArray(),
+            e.Raw.Required,
+            e.Raw.RequiredText,
+            e.Raw.IsConditionalRequired,
+            e.Raw.Description)).ToArray();
+
+        // Build placeholder index
+        var placeholderIndex = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in finalParams)
+        {
+            foreach (var alias in p.PlaceholderAliases)
+            {
+                placeholderIndex.TryAdd(alias, p.CanonicalName);
+            }
+        }
+
+        return new CanonicalParameterManifest(
+            "2.0",
+            toolCommand,
+            toolNamespace,
+            new ManifestSourceIdentity(azureMcpBuild, generatedAt),
+            finalParams,
+            placeholderIndex);
+    }
 }
