@@ -1,0 +1,48 @@
+# 813-step3-red-verified.txt
+# Proof that RED state is caused entirely by missing AD-030 types
+
+Commit: e34981f2381f3053a1affc32d8c5823bd31ae43d
+Branch: squad/813-step3-canonical-parameter-contract
+Timestamp (UTC): 2026-08-15T13:44:23Z
+OS: Windows_NT (Windows 11)
+dotnet --version: 10.0.303
+pwsh --version: PowerShell 7.6.5
+git --version: git version 2.55.0.vfs.0.3
+
+Command: dotnet build mcp-doc-generation.sln --configuration Release
+Exit code: 1
+
+Total compiler errors: 74
+
+Deduplicated diagnostics (all reference not-yet-existing AD-030 types):
+
+DocGeneration.Core.Shared.Tests:
+  CS0246: The type or namespace name 'CanonicalParameterEntry' could not be found (x4)
+  CS0246: The type or namespace name 'CanonicalParameterManifest' could not be found (x1)
+
+DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests:
+  CS0246: The type or namespace name 'RawParameterInput' could not be found (x1)
+
+DocGeneration.Steps.ExamplePrompts.Generation.Tests:
+  CS0246: The type or namespace name 'CanonicalParameterManifest' could not be found (x1)
+  CS0246: The type or namespace name 'CanonicalParameterEntry' could not be found (x2)
+
+DocGeneration.Steps.ExamplePrompts.Validation.Tests:
+  CS0246: The type or namespace name 'CanonicalParameterEntry' could not be found (x2)
+  CS0103: The name 'CanonicalCoverageEvaluator' does not exist in the current context (x2)
+  CS0103: The name 'CoverageVerdict' does not exist in the current context (x2)
+
+DocGeneration.PipelineRunner.Tests:
+  CS0246: The type or namespace name 'ParameterManifestException' could not be found (x5)
+  CS0103: The name 'CanonicalParameterManifestLoader' does not exist in the current context (x5)
+  CS0103: The name 'ParameterManifestErrorCode' does not exist in the current context (x5)
+
+DocGeneration.Steps.ToolFamilyCleanup.Tests:
+  CS0246: The type or namespace name 'ParameterManifestException' could not be found (x2)
+  CS0103: The name 'CanonicalParameterManifestLoader' does not exist in the current context (x3)
+  CS0103: The name 'ParameterManifestErrorCode' does not exist in the current context (x2)
+
+All diagnostics reference AD-030 types: CanonicalParameterManifestLoader, CanonicalCoverageEvaluator,
+CanonicalParameterEntry, CanonicalParameterManifest, CanonicalParameterNormalizer,
+ParameterManifestException, ParameterManifestErrorCode, CoverageVerdict, RawParameterInput.
+No test code is broken for any other reason. RED is confirmed.
