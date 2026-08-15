@@ -195,6 +195,7 @@ Steps declare their dependencies, failure policy, and whether they need AI confi
 | 5 | `SkillsRelevanceStep` | No | **Warn** | 0 | `skills-relevance/` |
 | 6 | `HorizontalArticlesStep` | Yes | Fatal | 0 | `horizontal-articles/` |
 | 7 | `ArticleHealthValidatorStep` | No | **Warn** | 0 | `article-health.json`, `validation-summary.md` |
+| 8 | `CoverageAuditStep` | No | **Warn** | 0 | `coverage-audit.json`, `validation-summary.md` |
 
 ### Dependencies
 
@@ -206,6 +207,7 @@ Step 4 → depends on Step 3
 Step 5 → (no deps, reads tools/ directly)
 Step 6 → (no deps, reads tools/ + cli-output.json)
 Step 7 → depends on Step 4 (validates tool-family/ output)
+Step 8 → depends on Steps 4 and 7 (tool coverage audit)
 ```
 
 ## Key Design Decisions
@@ -467,6 +469,86 @@ byte-for-byte reproducibility; 32 guard tests (31 run + 1 opt-in deep-verify ski
 copies) and a `.gitattributes` EOL lock let the suite pass on a clean checkout.
 See [`beta34-baseline-freeze.md`](beta34-baseline-freeze.md).
 
+### Runtime Dependency Suppression (AD-029)
+
+A fatal step no longer aborts the whole catalog. Before Step 2 of issue #813, the first
+namespace-scoped step to exit nonzero returned immediately and every remaining namespace was
+skipped. `PipelineRunner` now lets a namespace **survive** a fatal step by suppressing only the
+work that actually depended on it, then continues to the next namespace and finally exits nonzero.
+
+**What happens when a selected `Fatal` step fails in a namespace:**
+
+1. The runner records exactly **one root failure** for that step, with a run-independent id
+   `{namespaceSlug}.{stepId:D2}.root` (for example `storage.02.root`).
+2. It computes the step's **selected transitive dependents** — a breadth-first walk over the
+   reverse-adjacency (dependents) map built once from the real `StepRegistry`
+   (`BuildDependentsOf`), intersected with the selected steps (`SelectedTransitiveDependents`).
+   Only selected steps can be suppressed; an unselected step is simply absent from the walk.
+3. Each dependent is **suppressed**: it does not execute, produces no outputs, gets no retries,
+   and emits **no critical-failure JSON**. The runner writes only a step-result envelope with
+   `suppressed: true` and a `blockedByDependency` block naming the root (see below).
+4. **Independent** selected steps in the same namespace still run, and **later namespaces** still
+   run. Per-namespace runtime state is a fresh instance each iteration, so nothing leaks across
+   namespaces.
+
+**Warn vs. Fatal.** Only `FailurePolicy.Fatal` steps can become roots. A `FailurePolicy.Warn`
+step that fails maps to exit 0, records a warning-only outcome for accounting, and **never**
+suppresses dependents (its downstream steps stay eligible to run).
+
+**Global vs. namespace scope.** Only the per-namespace step loop changed. Global-scope failures —
+Step 0 Bootstrap, the source-version gate, and namespace/argument planning errors — still abort
+the catalog immediately.
+
+**Exit code.** After every namespace has been attempted, the catalog exits nonzero if any fatal
+root occurred. A hard fatal (`1`) dominates human-review (`2`); an explicit validation-gate
+failure still wins over both because the gates run and return first.
+
+**Worked examples** (matching the dependency chain in [Step Details](#dependencies)):
+
+- Select `[1,2,3,4,6]`; Step 4 fails fatally. Its dependents (Steps 7/8) are not selected, so the
+  suppression closure is empty. Step 6 (depends on Step 0, not Step 4) still runs. The namespace
+  exits nonzero.
+- Select `[1,2,3,4,7]`; Step 2 fails fatally. The closure is `{3, 4, 7}` — all suppressed. Later
+  namespaces still run.
+
+**Step-result envelope extension.** `StepResultFile` (in `DocGeneration.Core.Shared`) gains two
+**additive, optional** fields, plus a top-level `BlockedByDependency` type:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `suppressed` | `bool?` | `true` when the step was blocked by a fatal dependency; null/absent for steps that executed normally. |
+| `blockedByDependency` | object | Present only when `suppressed` is true. Fields: `namespace`, `failedRootStepId`, `failedRootStepName`, `rootFailureId`. |
+
+`schemaVersion` deliberately stays `"1.0"` — the reader only rejects an *unrecognized non-empty*
+`schemaVersion`, and both new fields are nullable, so every pre-existing envelope and every current
+reader deserializes byte-unchanged. The informational integer `version` moves `3` → `4` to document
+the new content shape. A suppressed step writes `status: "failure"` with
+`validationStatus: "skipped"`; the **authoritative** signal is `suppressed == true`, and the
+non-success status is a conservative fallback for tooling that ignores the new field.
+
+**Run accounting (`run-accounting.json`).** Each completed run writes `run-accounting.json` at the
+output-directory root and prints a matching six-category console summary. The same partition backs
+both surfaces, so they cannot diverge:
+
+| Category | Source | Contents |
+|----------|--------|----------|
+| 1. Successful namespaces | live | Namespaces whose selected steps all succeeded or warn-failed with zero fatal roots. |
+| 2. Root-failed namespaces | live | Each `(namespace, rootStepId, rootStepName, rootFailureId, exitCode)`. |
+| 3. Warning-only failures | live | Each selected `Warn` step that did not succeed, as `(namespace, stepId, stepName)`. |
+| 4. Suppressed steps | live | Each suppressed dependent, as `(namespace, stepId, rootFailureId)`. |
+| 5. Cascades imported from historical fixtures | baseline | `chainRoleCounts.cascade` from the frozen beta.34 manifest. |
+| 6. Unclassified records | baseline | `classificationCounts.diagnostic` from the frozen beta.34 manifest. |
+
+Categories 1–4 are computed live from the per-namespace reports. Categories 5–6 live under the
+`reconciliation` object and are a **pure function of the frozen AD-028 baseline manifest** — they
+reflect the historical baseline, not the current run, and are read once (never summed). The
+`reconciliation` object is `null` when the baseline manifest cannot be located (graceful
+degradation), and the top-level `successfulNamespaces` / `rootFailedNamespaces` /
+`warningOnlyFailures` / `suppressedSteps` arrays always reflect the live run. The catalog wrapper
+`start-with-logs.ps1` aggregates every namespace's `run-accounting.json` into one catalog summary
+(live categories summed; baseline categories taken once); missing or malformed files are
+skipped/warned and can never mask a failure.
+
 ## Parameter Taxonomy (3-Tier Model)
 
 Parameters in Azure MCP tools fall into three categories:
@@ -512,6 +594,12 @@ Each namespace writes to its own `generated-{namespace}/` directory with no shar
 | 1 | Fatal error (step failure) |
 | 2 | Human review required (brand mapping suggestions) |
 | 64 | Invalid CLI arguments |
+
+Since #813 Step 2, a namespace-scoped fatal step (codes 1/2) no longer stops the run: the runner
+suppresses that step's selected dependents, continues with independent steps and later namespaces,
+and surfaces the **worst** namespace exit code at the end (a hard fatal `1` dominates human-review
+`2`). Global-scope failures still abort immediately. See
+[Runtime Dependency Suppression](#runtime-dependency-suppression-ad-029).
 
 ## AI Configuration
 
@@ -571,7 +659,7 @@ Both pipelines emit structured trace files after every run to `{output-dir}/trac
 
 Tracing is always-on (no opt-in flag), uses in-memory collection during execution, and flushes once at the end of each run. The `NullTracer` pattern ensures zero overhead when the tracer is not wired (e.g., in unit tests).
 
-PipelineRunner also writes a shared `step-result.json` envelope for every selected step under `{output-dir}/step-<id>-<slug>/`. Dry runs emit the same envelope with placeholder values, and missing envelopes abort the run for fatal steps while warn-only steps continue.
+PipelineRunner also writes a shared `step-result.json` envelope for every selected step under `{output-dir}/step-<id>-<slug>/`. Dry runs emit the same envelope with placeholder values. A missing envelope is a fatal outcome for that step: a Global-scope step aborts the catalog, while a namespace step records a root failure and suppresses its selected dependents before the run continues (see [Runtime Dependency Suppression](#runtime-dependency-suppression-ad-029)); warn-only steps continue.
 
 In addition, every executed step now gets an observability directory at `{output-dir}/observability/{stepId}-{slug}/`. The runner writes `summary.md`, `validation.json`, and `metrics.json`, writes `prompt-preview-na.txt` for deterministic steps, and checks for the full 5-file contract (`prompt-preview.txt` for AI/hybrid steps). Missing contract files are surfaced as warnings so partial instrumentation is visible during rollout.
 
@@ -730,7 +818,7 @@ All enforcement decisions across the pipeline follow a four-tier model.
 
 | Level | Condition | Response |
 |-------|-----------|----------|
-| **Fatal** | `step-result.json` absent after a non-warn-only step completes | Runner logs FATAL and aborts the pipeline. |
+| **Fatal** | `step-result.json` absent after a non-warn-only step completes | Runner logs FATAL. A Global-scope step aborts the catalog; a namespace step records a root failure and suppresses its selected dependents, then the run continues and exits nonzero (see [Runtime Dependency Suppression](#runtime-dependency-suppression-ad-029)). |
 | **Validation skip** | Pre-AI seam validator returns `isValid: false` | Stage is skipped; `validationStatus: failed` written to step envelope; pipeline continues to next independent step. |
 | **Warning** | Observability files (`summary.md`, `metrics.json`, etc.) missing after a step | Logged as WARNING; pipeline continues. |
 | **Phase-gated** | `StepRegistry` in-memory registry diverges from `pipeline.config.json` | Phase 1: WARNING; Phase 2 and beyond: throws `StepRegistryConfigMismatchException`. |

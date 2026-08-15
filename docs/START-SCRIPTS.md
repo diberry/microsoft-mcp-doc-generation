@@ -47,7 +47,7 @@ The script:
 1. Reads the complete namespace list from the snapshot's `namespace-mapping.json`.
 1. Filters to the requested namespaces (if `-NamespaceList` or `-NamespaceFile` was provided), validating each exists in the metadata.
 1. Calls `start.sh <namespace> 1,2,3,4,5` for every namespace, so the typed pipeline remains the only generation entry point.
-1. Reuses the first run's build and CLI installation on later namespaces with `--skip-build --skip-npm-update`.
+1. Reuses the shared build and CLI installation (`--skip-build --skip-npm-update`) only after an earlier namespace **actually built and exited 0** — a confirmed successful build, not loop position. If a namespace built but exited nonzero (for example from a suppressed fatal root), the build stays unconfirmed and the next namespace rebuilds.
 1. Writes each namespace to the normal `generated-<namespace>/` directory and streams `start.sh` output to the console.
 
 To validate the selected metadata and resolved environment without creating or changing `generated/`, run:
@@ -56,7 +56,9 @@ To validate the selected metadata and resolved environment without creating or c
 pwsh -File ./start-with-logs.ps1 -PreflightOnly
 ```
 
-The script stops on invalid metadata, a missing or ambiguous environment file, invalid keyless settings, or the first namespace-generation failure. It doesn't run Step 6 horizontal article generation. AI-backed steps 2-4 still take time for every tool; the wrapper avoids additional per-namespace rebuilds after the first run.
+The script stops before generation on invalid metadata, a missing or ambiguous environment file, or invalid keyless settings. It does **not** stop on a namespace-generation failure: it records the failed namespace, prints a warning, **continues with the next namespace**, and exits `1` at the end if any namespace failed (exit `0` otherwise). It doesn't run Step 6 horizontal article generation. AI-backed steps 2-4 still take time for every tool; the wrapper avoids additional per-namespace rebuilds once a shared build has been confirmed successful.
+
+After all namespaces run, the wrapper prints a **six-category run-accounting summary** (see [Run Accounting Summary](#run-accounting-summary)) aggregated from each namespace's `run-accounting.json`.
 
 ## Usage Patterns
 
@@ -236,6 +238,29 @@ Audits a `tools-list.json` (Azure MCP CLI metadata) by counting tools and groupi
 
 Output: total tool count, a per-service breakdown table (descending by count), and the structured `{ Total, ByService }` object emitted to the pipeline for programmatic use. It accepts both the results-wrapped shape (`{ "results": [ … ] }`) and a bare top-level array, and errors clearly on a missing or unrecognized file.
 
+## Run Accounting Summary
+
+Since #813 Step 2, every pipeline run writes a machine-readable `run-accounting.json` at the root
+of its output directory and prints a six-category summary. When a selected `Fatal` step fails in a
+namespace, the runner suppresses only that step's selected downstream dependents, keeps running the
+independent steps and later namespaces, and reports the outcome across these categories:
+
+| # | Category | Meaning |
+|---|----------|---------|
+| 1 | Successful namespaces | All selected steps succeeded (or warn-failed) with zero fatal roots. |
+| 2 | Root-failed namespaces | A selected `Fatal` step failed; named with its stable `rootFailureId`. |
+| 3 | Warning-only failures | A selected `Warn` step (for example Step 5) that did not succeed. Never suppresses anything. |
+| 4 | Suppressed steps | Downstream dependents skipped because a fatal root blocked them; each linked to its `rootFailureId`. |
+| 5 | Cascades imported from historical fixtures | Constant, read once from the frozen beta.34 baseline manifest. |
+| 6 | Unclassified records | Constant, read once from the frozen beta.34 baseline manifest. |
+
+`start-with-logs.ps1` aggregates every namespace's `run-accounting.json` into one catalog-level
+summary: live categories 1–4 are **summed** across namespaces, while catalog-constant categories
+5–6 are taken **once** (never summed). A missing or malformed `run-accounting.json` is skipped with
+a warning and can never mask a failure — the per-namespace exit-code list remains the authoritative
+status signal. See [ARCHITECTURE.md → Runtime Dependency Suppression](ARCHITECTURE.md#runtime-dependency-suppression-ad-029)
+for the full contract and the `run-accounting.json` schema.
+
 ## Exit Codes
 
 | Code | Meaning |
@@ -244,4 +269,8 @@ Output: total tool count, a per-service breakdown table (descending by count), a
 | 1 | Fatal step failure |
 | 2 | Human review required (brand mapping) |
 | 64 | Invalid arguments |
+
+A single namespace's fatal step no longer stops the run. `start.sh` (one namespace) exits with that
+namespace's worst code; `start-with-logs.ps1` (catalog) continues past a failed namespace and exits
+`1` if any namespace failed. A hard fatal (`1`) dominates human-review (`2`).
 

@@ -202,7 +202,10 @@ Cross-cutting "how-to" guides for service-level scenarios:
 - `example-prompts/` and `example-prompts-prompts/` - generated prompts plus the exact AI input used to create them
 - `skills-relevance/` - supplementary GitHub Copilot skills relevance reports
 - `cli/` - MCP CLI metadata snapshots (`cli-output.json`, `cli-namespace.json`, `cli-version.json`, `azmcp-commands.json`)
+- `run-accounting.json` - per-run six-category summary (successful/root-failed/warning-only/suppressed namespaces plus frozen-baseline reconciliation); see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#runtime-dependency-suppression-ad-029)
 - `logs/` - run logs and diagnostics
+
+> When a step fails fatally, the steps that depend on it are **suppressed** (skipped) rather than aborting the whole run. A suppressed step writes a `step-result.json` marked `suppressed: true` and produces no other output; independent steps and later namespaces still run.
 
 ## Folder Organization
 
@@ -245,6 +248,7 @@ microsoft-mcp-doc-generation/
 │   ├── example-prompts-prompts/ # Prompt captures for example generation
 │   ├── skills-relevance/        # GitHub Copilot skills reports
 │   ├── reports/                 # Validation reports
+│   ├── run-accounting.json      # Per-run six-category outcome summary
 │   └── logs/                    # Generation logs
 │
 ├── mcp-cli-metadata/          # MCP CLI metadata extractor
