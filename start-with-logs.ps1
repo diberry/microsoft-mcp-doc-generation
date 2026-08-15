@@ -388,19 +388,30 @@ try {
     }
 
     $failedNamespaces = @()
+    $sharedBuildConfirmed = $false
     for ($index = 0; $index -lt $namespaces.Count; $index++) {
         $namespace = $namespaces[$index]
         $progress = "$namespace - $($index + 1)/$($namespaces.Count)"
         Write-Host ""
         Write-Host "Generating namespace family: $progress"
 
+        # AD-029 §7: skip the shared build/npm update only after an earlier invocation
+        # actually built and exited 0 ($sharedBuildConfirmed). Loop position never gates this.
         $startArguments = @($startPath, $namespace, "1,2,3,4,5")
-        if ($index -gt 0) {
+        if ($sharedBuildConfirmed) {
             $startArguments += @("--skip-build", "--skip-npm-update")
         }
 
         $global:LASTEXITCODE = 0
         & $bashPath @startArguments
+        $namespaceExitCode = $LASTEXITCODE
+
+        # Confirm the shared build only when THIS invocation built (omitted --skip-build)
+        # and exited cleanly. A namespace that built but exited nonzero leaves the build
+        # unconfirmed, so the next namespace rebuilds. AD-029 §7.
+        if (-not $sharedBuildConfirmed -and $namespaceExitCode -eq 0) {
+            $sharedBuildConfirmed = $true
+        }
 
         # Move generated output into consolidated directory
         $generatedDirs = @(Get-ChildItem -LiteralPath $repoRoot -Directory -Filter "generated-${namespace}-*" |
@@ -443,9 +454,9 @@ try {
             }
         }
 
-        if ($LASTEXITCODE -ne 0) {
+        if ($namespaceExitCode -ne 0) {
             $failedNamespaces += $namespace
-            Write-Warning "$progress - Namespace generation failed with exit code $LASTEXITCODE. Continuing with next namespace."
+            Write-Warning "$progress - Namespace generation failed with exit code $namespaceExitCode. Continuing with next namespace."
         }
     }
 
@@ -468,6 +479,119 @@ try {
         }
         Write-Host ""
     }
+
+    # AD-029 §6 / ADDENDUM A: six-category run-accounting catalog summary.
+    # Aggregate each processed namespace's run-accounting.json (relocated by the move block above
+    # into <consolidatedDir>/<namespace>/) into ONE catalog summary that reports the six categories
+    # on separate, individually identifiable lines. Live categories 1-4 (successful, root-failed,
+    # warning-only, suppressed) are SUMMED across namespaces. Catalog-constant categories 5-6
+    # (cascades imported from historical fixtures, unclassified records) are a pure function of the
+    # frozen beta34 baseline — identical in every namespace's file — so they are taken ONCE and
+    # never summed (guards against inflating (10)/(1) into (30)/(3)).
+    $accountingSuccessful = @()
+    $accountingRootFailed = @()
+    $accountingWarningOnly = @()
+    $accountingSuppressed = @()
+    $accountingCascadeImported = 0
+    $accountingUnclassified = 0
+    $accountingBaselineCaptured = $false
+    $accountingUnreadable = @()
+
+    foreach ($accountingNamespace in $namespaces) {
+        $accountingPath = Join-Path (Join-Path $consolidatedDir $accountingNamespace) "run-accounting.json"
+        if (-not (Test-Path -LiteralPath $accountingPath -PathType Leaf)) {
+            # A missing artifact is non-fatal here and cannot mask a real failure: the authoritative
+            # per-namespace failure signal is $failedNamespaces (captured from $namespaceExitCode and
+            # reported above), which is computed independently of this read.
+            continue
+        }
+
+        try {
+            $accountingData = Get-Content -LiteralPath $accountingPath -Raw | ConvertFrom-Json
+        } catch {
+            # Malformed JSON must never crash the summary or silently corrupt counts. It is recorded
+            # for a visible note and excluded from every live/baseline count; the independent
+            # $failedNamespaces list remains the authoritative status, so no failure is hidden.
+            $accountingUnreadable += $accountingNamespace
+            continue
+        }
+
+        # Null-filter each list: a missing property yields $null, and @($null) would otherwise add a
+        # phantom entry that inflates the count. Empty arrays contribute nothing.
+        $accountingSuccessful += @($accountingData.successfulNamespaces | Where-Object { $null -ne $_ })
+        $accountingRootFailed += @($accountingData.rootFailedNamespaces | Where-Object { $null -ne $_ })
+        $accountingWarningOnly += @($accountingData.warningOnlyFailures | Where-Object { $null -ne $_ })
+        $accountingSuppressed += @($accountingData.suppressedSteps | Where-Object { $null -ne $_ })
+
+        # Categories 5-6 are catalog-constant: capture ONCE from the first file that carries them.
+        if (-not $accountingBaselineCaptured -and
+            $null -ne $accountingData.reconciliation -and
+            $null -ne $accountingData.reconciliation.categoryCounts) {
+            $accountingCounts = $accountingData.reconciliation.categoryCounts
+            if ($null -ne $accountingCounts.cascadeImported) {
+                $accountingCascadeImported = [int]$accountingCounts.cascadeImported
+            }
+            if ($null -ne $accountingCounts.unclassifiedDiagnostic) {
+                $accountingUnclassified = [int]$accountingCounts.unclassifiedDiagnostic
+            }
+            $accountingBaselineCaptured = $true
+        }
+    }
+
+    $accountingSuccessful = @($accountingSuccessful)
+    $accountingRootFailed = @($accountingRootFailed)
+    $accountingWarningOnly = @($accountingWarningOnly)
+    $accountingSuppressed = @($accountingSuppressed)
+
+    Write-Host ""
+    Write-Host "====================================================================="
+    Write-Host "Run accounting - six categories"
+    Write-Host "====================================================================="
+
+    # Category 1 — Successful namespaces (live, aggregated).
+    $accountingSuccessfulLine = "  Successful namespaces ($($accountingSuccessful.Count))"
+    if ($accountingSuccessful.Count -gt 0) {
+        $accountingSuccessfulLine += ": " + (($accountingSuccessful | ForEach-Object { [string]$_ }) -join ", ")
+    }
+    Write-Host $accountingSuccessfulLine
+
+    # Category 2 — Root-failed namespaces (live, aggregated), each named with its stable root id.
+    $accountingRootFailedLine = "  Root-failed namespaces ($($accountingRootFailed.Count))"
+    if ($accountingRootFailed.Count -gt 0) {
+        $accountingRootFailedLine += ": " + (($accountingRootFailed | ForEach-Object {
+            "$($_.namespace) [step $($_.rootStepId) root=$($_.rootFailureId)]"
+        }) -join ", ")
+    }
+    Write-Host $accountingRootFailedLine
+
+    # Category 3 — Warning-only failures (live, aggregated), separate from roots.
+    $accountingWarningOnlyLine = "  Warning-only failures ($($accountingWarningOnly.Count))"
+    if ($accountingWarningOnly.Count -gt 0) {
+        $accountingWarningOnlyLine += ": " + (($accountingWarningOnly | ForEach-Object {
+            "$($_.namespace) [step $($_.stepId)]"
+        }) -join ", ")
+    }
+    Write-Host $accountingWarningOnlyLine
+
+    # Category 4 — Suppressed steps (live, aggregated), each linked to its root id.
+    $accountingSuppressedLine = "  Suppressed steps ($($accountingSuppressed.Count))"
+    if ($accountingSuppressed.Count -gt 0) {
+        $accountingSuppressedLine += ": " + (($accountingSuppressed | ForEach-Object {
+            "$($_.namespace) [step $($_.stepId) root=$($_.rootFailureId)]"
+        }) -join ", ")
+    }
+    Write-Host $accountingSuppressedLine
+
+    # Categories 5-6 — baseline constants, printed once (never summed across namespaces).
+    Write-Host "  Cascades imported from historical fixtures ($accountingCascadeImported)"
+    Write-Host "  Unclassified records ($accountingUnclassified)"
+
+    if ($accountingUnreadable.Count -gt 0) {
+        Write-Warning ("Run accounting could not parse run-accounting.json for: " +
+            ($accountingUnreadable -join ", ") +
+            ". Excluded from the six-category counts above; see the per-namespace failure list for authoritative status.")
+    }
+    Write-Host ""
 
     Write-Host "Output: $consolidatedDir"
     Write-Host "Log:    $logPath"

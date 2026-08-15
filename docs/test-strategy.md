@@ -57,6 +57,21 @@ These live under `mcp-tools/` with old naming conventions and are no longer buil
 | `verify-quantity/index.js` | Node.js script | File existence for annotations, parameters, example-prompts, param-and-annotation, complete-tools across all namespaces |
 | `generated-validated-*` folders | Repo root (23 of ~49 namespaces) | Per-namespace validated output snapshots |
 
+### 1.5 Known pre-existing test failures (not regressions)
+
+Two failures exist in the suite today and are **unrelated to any in-flight work**. They were
+verified byte-for-byte identical at the pristine baseline commit `8d41a9b` (before #813 Step 2), so
+they must not be mistaken for regressions introduced by later changes. Do not "fix" or weaken them
+as a side effect of an unrelated PR — each needs its own scoped investigation.
+
+| Suite | Failing test | Symptom | Count |
+|-------|-------------|---------|-------|
+| xUnit — `DocGeneration.Steps.ToolFamilyCleanup.Tests` | `FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription` | `Assert.Contains() Failure: Sub-string not found` — the expected fallback description is absent from the assembled article (`FamilyMetadataGeneratorTests.cs:40`). | 1 |
+| Pester — `mcp-tools/validation/tests/Scan-McpToolCoverage.Tests.ps1` | Coverage JSON-output-structure & missing-required-parameter blocks | Assertions such as `$vmStart.documented \| Should -Be $false` and `$ns.missing_tools \| Should -Contain "compute vm start"` fail. | 8 (52 passed / 60 total) |
+
+When triaging a red run, subtract these known failures first: a run is clean for your change if the
+only remaining failures are these two exact items in these two exact files.
+
 ---
 
 ## 2. Test Pyramid

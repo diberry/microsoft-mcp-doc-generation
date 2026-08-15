@@ -1,0 +1,284 @@
+================================================================================
+ #813 STEP 2 - GREEN EVIDENCE (xUnit)  -  DocGeneration.PipelineRunner.Tests
+ Author: Morgan (C# Generator Developer)   TDD phase: GREEN (production satisfies Parker's RED tests)
+================================================================================
+
+COMMANDS RUN (verbatim, from repo root):
+  1) dotnet build mcp-doc-generation.sln --configuration Release
+  2) dotnet test  mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj --configuration Release --filter "FullyQualifiedName~DependencySuppressionTests|FullyQualifiedName~RunAccountingTests"
+  3) dotnet test  mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj --configuration Release
+
+  (Section [A] below captures command 1 with --no-incremental so every analyzer re-runs
+   and the full warning set is visible. The plain verbatim command is incremental and
+   prints "0 Warning(s)" when the test project is already up-to-date.)
+
+ENVIRONMENT:
+  commit (git rev-parse HEAD): 8d41a9bad920335b875ebbd4d73b03881a954e18
+  branch                     : squad/813-step2-runtime-orchestration
+  dotnet --version           : 10.0.303
+  pwsh  (PSVersion)          : 7.6.4
+  git   --version            : git version 2.55.0.vfs.0.3
+  OS                         : Microsoft Windows NT 10.0.26200.0
+  captured (UTC)             : 2026-08-15T00:42:22Z
+
+--------------------------------------------------------------------------------
+ GREEN RESULT SUMMARY
+--------------------------------------------------------------------------------
+Command 1 (full-solution Release build): Build succeeded - 0 Error(s), 1 Warning(s).
+  * The ONLY warning is xUnit2013 in Parker's TEST file
+    DependencySuppressionTests.cs(121,9): "Assert.Equal(0, actual.Length)" (redundant
+    with "Assert.Empty(actual)" on line 120). It is PRE-EXISTING since the RED phase
+    (see 813-step2-red-run.txt line 125) and is NOT editable by Morgan (test-file
+    reviewer-lockout). REPORTED to Parker; it is not a Morgan-introduced regression.
+  * Morgan's production projects (DocGeneration.Core.Shared, DocGeneration.PipelineRunner)
+    compile with 0 warnings / 0 errors.
+
+Command 2 (filtered T1-T29): Passed!  Failed: 0, Passed: 29, Skipped: 0, Total: 29.
+Command 3 (full PipelineRunner.Tests): Passed!  Failed: 0, Passed: 664, Skipped: 0, Total: 664.
+  -> No regressions: the project was all-green before; the 29 new tests are additive
+     and the remaining 635 pre-existing tests still pass.
+
+PRODUCTION CHANGES THAT TURN THE RED GREEN (AD-029):
+  A. shared/DocGeneration.Core.Shared/StepResultFile.cs
+       + StepResultFile.Suppressed            (bool?, json "suppressed")
+       + StepResultFile.BlockedByDependency   (property, json "blockedByDependency")
+       + top-level class BlockedByDependency { namespace, failedRootStepId,
+         failedRootStepName, rootFailureId } - top-level to avoid CS0102 vs the property.
+  B. mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs
+       + BuildDependentsOf(IEnumerable<IPipelineStep>) - reverse adjacency from the REAL
+         StepRegistry (never hardcoded).                                    [T1]
+       + SelectedTransitiveDependents(rootId, selectedIds, dependentsOf)
+         - BFS over reverse edges intersect selected, root excluded.        [T2-T7]
+       + namespace step loop rewritten: a Fatal non-success step becomes a single root
+         failure; its selected transitive dependents are suppressed (no execute, no
+         output, no retry, no critical-failure JSON, one suppressed envelope). Independent
+         selected steps still run; later namespaces still run; state resets per namespace.
+                                                                            [T9-T13,T18]
+       + Worse(current, candidate) - worst-exit combiner (fatal 1 dominates human-review 2).
+                                                                            [T17]
+       + WriteSuppressedEnvelope(...) - writes the suppressed step-result.json (Version 4,
+         schemaVersion 1.0, Failure, ValidationStatus Skipped, Suppressed=true,
+         BlockedByDependency).                                              [T12,T14,T20,T25]
+       + WriteRunAccounting(...) - run-accounting.json at CompleteRun with successful /
+         rootFailed / warningOnly / suppressed buckets + baseline reconciliation.  [T21-T29]
+       + BuildBaselineReconciliation()/TryLocateBeta34Manifest() - pure overlay onto the
+         frozen beta34 manifest; cascade from chainRoleCounts(10), diagnostic(1), sum=34;
+         graceful null when the manifest is absent.                        [T27-T29]
+       + BuildStepResultEnvelope Version 3 -> 4.                            [T14]
+       + final exit preserves nonzero on any fatal root (catalog-level).   [T10,T16,T17]
+
+================================================================================
+ [A] RAW OUTPUT - command 1 (dotnet build mcp-doc-generation.sln --configuration Release --no-incremental)
+================================================================================
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  DocGeneration.Core.TextTransformation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TextTransformation\bin\Release\net10.0\DocGeneration.Core.TextTransformation.dll
+  DocGeneration.Steps.Bootstrap.CommandParser -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.CommandParser\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.CommandParser.dll
+  DocGeneration.TestInfrastructure -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.TestInfrastructure\bin\Release\net10.0\DocGeneration.TestInfrastructure.dll
+  DocGeneration.Tools.Fingerprint -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Tools.Fingerprint\bin\Release\net10.0\DocGeneration.Tools.Fingerprint.dll
+  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.dll
+  DocGeneration.Core.Shared -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Shared\bin\Release\net10.0\DocGeneration.Core.Shared.dll
+  DocGeneration.Core.Tracing -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Tracing\bin\Release\net10.0\DocGeneration.Core.Tracing.dll
+  DocGeneration.Steps.Bootstrap.E2eTestPromptParser -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.E2eTestPromptParser\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.E2eTestPromptParser.dll
+  DocGeneration.Core.TemplateEngine -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TemplateEngine\bin\Release\net10.0\DocGeneration.Core.TemplateEngine.dll
+  DocGeneration.E2E.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.E2E.Tests\bin\Release\net10.0\DocGeneration.E2E.Tests.dll
+  DocGeneration.Core.TextTransformation.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TextTransformation.Tests\bin\Release\net10.0\DocGeneration.Core.TextTransformation.Tests.dll
+  DocGeneration.Steps.Bootstrap.CommandParser.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.CommandParser.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.CommandParser.Tests.dll
+  DocGeneration.Baseline.Beta34.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Baseline.Beta34.Tests\bin\Release\net10.0\DocGeneration.Baseline.Beta34.Tests.dll
+  DocGeneration.Core.TemplateEngine.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TemplateEngine.Tests\bin\Release\net10.0\DocGeneration.Core.TemplateEngine.Tests.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.RawTools -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.RawTools\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.RawTools.dll
+  DocGeneration.Steps.ToolGeneration.Composition -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Composition\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Composition.dll
+  DocGeneration.Utilities.ToolMetadataExtractor -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Utilities.ToolMetadataExtractor\bin\Release\net10.0\DocGeneration.Utilities.ToolMetadataExtractor.dll
+  DocGeneration.Steps.SkillsRelevance -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.SkillsRelevance\bin\Release\net10.0\DocGeneration.Steps.SkillsRelevance.dll
+  DocGeneration.Tools.Fingerprint.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Tools.Fingerprint.Tests\bin\Release\net10.0\DocGeneration.Tools.Fingerprint.Tests.dll
+  DocGeneration.Core.Tracing.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Tracing.Tests\bin\Release\net10.0\DocGeneration.Core.Tracing.Tests.dll
+  DocGeneration.Core.GenerativeAI -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.GenerativeAI\bin\Release\net10.0\DocGeneration.Core.GenerativeAI.dll
+  DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests.dll
+  DocGeneration.Steps.ExamplePrompts.Validation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Validation\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Validation.dll
+  DocGeneration.Steps.Bootstrap.BrandMappings -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.BrandMappings\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.BrandMappings.dll
+  DocGeneration.Steps.ToolGeneration.Improvements -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Improvements\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Improvements.dll
+  DocGeneration.Steps.SkillsRelevance.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.SkillsRelevance.Tests\bin\Release\net10.0\DocGeneration.Steps.SkillsRelevance.Tests.dll
+  DocGeneration.Core.Shared.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Shared.Tests\bin\Release\net10.0\DocGeneration.Core.Shared.Tests.dll
+  DocGeneration.Core.GenerativeAI.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.GenerativeAI.Tests\bin\Release\net10.0\DocGeneration.Core.GenerativeAI.Tests.dll
+  DocGeneration.Steps.ExamplePrompts.Generation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Generation.dll
+  DocGeneration.Steps.ToolFamilyCleanup -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup\bin\Release\net10.0\DocGeneration.Steps.ToolFamilyCleanup.dll
+  DocGeneration.Steps.Bootstrap.BrandMappings.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.BrandMappings.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.BrandMappings.Tests.dll
+  DocGeneration.Steps.ExamplePrompts.Validation.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Validation.Tests\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Validation.Tests.dll
+  DocGeneration.Steps.ToolGeneration.Improvements.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Improvements.Tests\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Improvements.Tests.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.dll
+  DocGeneration.Steps.ExamplePrompts.Generation.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation.Tests\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Generation.Tests.dll
+  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests.dll
+  DocGeneration.Steps.HorizontalArticles -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.HorizontalArticles\bin\Release\net10.0\DocGeneration.Steps.HorizontalArticles.dll
+  DocGeneration.Steps.ToolFamilyCleanup.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup.Tests\bin\Release\net10.0\DocGeneration.Steps.ToolFamilyCleanup.Tests.dll
+  DocGeneration.PromptRegression.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PromptRegression.Tests\bin\Release\net10.0\DocGeneration.PromptRegression.Tests.dll
+  DocGeneration.Steps.HorizontalArticles.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.HorizontalArticles.Tests\bin\Release\net10.0\DocGeneration.Steps.HorizontalArticles.Tests.dll
+  DocGeneration.PipelineRunner -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner\bin\Release\net10.0\DocGeneration.PipelineRunner.dll
+  DocGeneration.PipelineRunner.SmokeTests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.SmokeTests\bin\Release\net10.0\DocGeneration.PipelineRunner.SmokeTests.dll
+  McpCliMetadata -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\McpCliMetadata\bin\Release\net10.0\DocGeneration.McpCliMetadata.dll
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(121,9): warning xUnit2013: Do not use Assert.Equal() to check for collection size. Use Assert.Empty instead. (https://xunit.net/xunit.analyzers/rules/xUnit2013) [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+  McpCliMetadata.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\McpCliMetadata.Tests\bin\Release\net10.0\DocGeneration.McpCliMetadata.Tests.dll
+  DocGeneration.PipelineRunner.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\bin\Release\net10.0\DocGeneration.PipelineRunner.Tests.dll
+
+Build succeeded.
+
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(121,9): warning xUnit2013: Do not use Assert.Equal() to check for collection size. Use Assert.Empty instead. (https://xunit.net/xunit.analyzers/rules/xUnit2013) [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:16.40
+
+================================================================================
+ [B] RAW OUTPUT - command 2 (filtered: DependencySuppressionTests + RunAccountingTests)
+================================================================================
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  DocGeneration.Core.Shared -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Shared\bin\Release\net10.0\DocGeneration.Core.Shared.dll
+  DocGeneration.Core.TemplateEngine -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TemplateEngine\bin\Release\net10.0\DocGeneration.Core.TemplateEngine.dll
+  DocGeneration.Core.TextTransformation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TextTransformation\bin\Release\net10.0\DocGeneration.Core.TextTransformation.dll
+  DocGeneration.Core.Tracing -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Tracing\bin\Release\net10.0\DocGeneration.Core.Tracing.dll
+  DocGeneration.Steps.ToolGeneration.Composition -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Composition\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Composition.dll
+  DocGeneration.TestInfrastructure -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.TestInfrastructure\bin\Release\net10.0\DocGeneration.TestInfrastructure.dll
+  DocGeneration.Core.GenerativeAI -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.GenerativeAI\bin\Release\net10.0\DocGeneration.Core.GenerativeAI.dll
+  DocGeneration.Steps.ToolGeneration.Improvements -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Improvements\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Improvements.dll
+  DocGeneration.Steps.ToolFamilyCleanup -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup\bin\Release\net10.0\DocGeneration.Steps.ToolFamilyCleanup.dll
+  DocGeneration.Steps.ExamplePrompts.Generation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Generation.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.dll
+  DocGeneration.Steps.HorizontalArticles -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.HorizontalArticles\bin\Release\net10.0\DocGeneration.Steps.HorizontalArticles.dll
+  DocGeneration.PipelineRunner -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner\bin\Release\net10.0\DocGeneration.PipelineRunner.dll
+  DocGeneration.PipelineRunner.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\bin\Release\net10.0\DocGeneration.PipelineRunner.Tests.dll
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\bin\Release\net10.0\DocGeneration.PipelineRunner.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    29, Skipped:     0, Total:    29, Duration: 2 s - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+
+================================================================================
+ [C] RAW OUTPUT - command 3 (full DocGeneration.PipelineRunner.Tests)
+================================================================================
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  DocGeneration.Core.TextTransformation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TextTransformation\bin\Release\net10.0\DocGeneration.Core.TextTransformation.dll
+  DocGeneration.Core.Shared -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Shared\bin\Release\net10.0\DocGeneration.Core.Shared.dll
+  DocGeneration.Core.TemplateEngine -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TemplateEngine\bin\Release\net10.0\DocGeneration.Core.TemplateEngine.dll
+  DocGeneration.TestInfrastructure -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.TestInfrastructure\bin\Release\net10.0\DocGeneration.TestInfrastructure.dll
+  DocGeneration.Core.Tracing -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Tracing\bin\Release\net10.0\DocGeneration.Core.Tracing.dll
+  DocGeneration.Steps.ToolGeneration.Composition -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Composition\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Composition.dll
+  DocGeneration.Core.GenerativeAI -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.GenerativeAI\bin\Release\net10.0\DocGeneration.Core.GenerativeAI.dll
+  DocGeneration.Steps.ToolGeneration.Improvements -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Improvements\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Improvements.dll
+  DocGeneration.Steps.ToolFamilyCleanup -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup\bin\Release\net10.0\DocGeneration.Steps.ToolFamilyCleanup.dll
+  DocGeneration.Steps.ExamplePrompts.Generation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Generation.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.dll
+  DocGeneration.Steps.HorizontalArticles -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.HorizontalArticles\bin\Release\net10.0\DocGeneration.Steps.HorizontalArticles.dll
+  DocGeneration.PipelineRunner -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner\bin\Release\net10.0\DocGeneration.PipelineRunner.dll
+  DocGeneration.PipelineRunner.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\bin\Release\net10.0\DocGeneration.PipelineRunner.Tests.dll
+Test run for C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\bin\Release\net10.0\DocGeneration.PipelineRunner.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   664, Skipped:     0, Total:   664, Duration: 4 s - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+
+================================================================================
+ #813 STEP 2 - ADDENDUM A GREEN EVIDENCE  -  six-category console summary (S2)
+ Author: Morgan (C# Generator Developer)   TDD phase: GREEN (CompleteRun surfaces the six categories)
+================================================================================
+
+SCOPE (ADDENDUM A of .squad/agents/cameron/813-step2-test-matrix.md, surface S2):
+  Coordinator gap closure: the AD-029 s6 six-category accounting model was emitted to the
+  run-accounting.json ARTIFACT (T21-T29) but NOT to the human-visible PipelineRunner console
+  summary (CompleteRun). This addendum makes Parker's two RUNTIME-RED tests GREEN:
+    T30  RunAccounting_ConsoleSummary_ReportsAllSixCategories_WithLiveIdentifiersAndBaselineConstants
+    T31  RunAccounting_ConsoleSummary_CleanCatalogRun_StillPrintsAllSixLabels_LiveCategoriesZero
+  (S3 / start-with-logs.ps1 P7-P8 is Quinn's surface, out of scope for Morgan.)
+
+COMMANDS RUN (verbatim, from repo root):
+  1) dotnet build mcp-doc-generation.sln --configuration Release
+     (also re-run with --no-incremental so every analyzer re-runs and the full warning set is visible)
+  2) dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj --configuration Release --filter "FullyQualifiedName~RunAccounting_ConsoleSummary"
+  3) dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj --configuration Release
+
+ENVIRONMENT:
+  commit (git rev-parse HEAD): 8d41a9bad920335b875ebbd4d73b03881a954e18
+  branch                     : squad/813-step2-runtime-orchestration
+  dotnet --version           : 10.0.303
+  pwsh  (PSVersion)          : 7.6.4
+  git   --version            : git version 2.55.0.vfs.0.3
+  OS                         : Microsoft Windows NT 10.0.26200.0
+  captured (UTC)             : 2026-08-15T01:42:17Z
+
+  NOTE on HEAD: 8d41a9ba is the frozen-baseline commit; the AD-029 core + this addendum are
+  UNCOMMITTED working-tree changes (see git status below). Same commit as red-addendum evidence.
+
+--------------------------------------------------------------------------------
+ 1. BUILD (command 1) - 0 warnings / 0 errors  (M27-M30 production change compiles clean)
+--------------------------------------------------------------------------------
+  Incremental      : Build succeeded.  0 Warning(s)  0 Error(s)  Time Elapsed 00:00:13.58
+  --no-incremental : Build succeeded.  0 Warning(s)  0 Error(s)  Time Elapsed 00:00:22.65
+  The prior xUnit2013 test-file warning noted in this file's AD-029-core section is no longer
+  reported by the full --no-incremental solution build (solution-level 0 Warning(s)).
+  Morgan's only production edit (PipelineRunner.cs) compiles with 0 warnings / 0 errors.
+
+--------------------------------------------------------------------------------
+ 2. FILTERED XUNIT (command 2) - T30, T31 GREEN
+--------------------------------------------------------------------------------
+Test run for ...\DocGeneration.PipelineRunner.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     2, Skipped:     0, Total:     2, Duration: 984 ms - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+
+  Both console-summary tests pass: T30 (fatal-root scenario, all six categories with live
+  identifiers + baseline constants 10/1) and T31 (clean run, live zeros + non-zero 10/1 constants).
+
+--------------------------------------------------------------------------------
+ 3. FULL PROJECT (command 3) - 666 passed, 0 failed (no regressions; 664 prior + T30 + T31)
+--------------------------------------------------------------------------------
+Test run for ...\DocGeneration.PipelineRunner.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   666, Skipped:     0, Total:   666, Duration: 6 s - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+
+  T21-T29 (run-accounting.json artifact) stay green: the JSON writer emits byte-identical field
+  names; only the computation was refactored to a single source of truth (BuildRunAccounting).
+
+--------------------------------------------------------------------------------
+ 4. PRODUCTION CHANGE THAT TURNS T30/T31 GREEN (single file: PipelineRunner.cs)
+--------------------------------------------------------------------------------
+  CompleteRun: inside the existing `namespaceReports is not null` guard, build the six-category
+  partition ONCE (BuildRunAccounting) and feed BOTH writers - the JSON artifact
+  (WriteRunAccounting) and the NEW console summary (WriteRunAccountingSummary). Single source of
+  truth; live cats 1-4 come from namespaceReports, cats 5-6 from BuildBaselineReconciliation()
+  and are NEVER summed into the live counts.
+  BuildBaselineReconciliation() return type changed object? -> BaselineReconciliationCounts?
+  (typed) so the console can read CascadeImported / UnclassifiedDiagnostic without reflection; the
+  JSON payload is mapped back to the identical anonymous shape (same field names, order, casing).
+  New private records: RunAccountingModel, RunAccountingRootEntry, RunAccountingWarningEntry,
+  RunAccountingSuppressedEntry, BaselineReconciliationCounts.
+
+  SIX EXACT CONSOLE LABEL STRINGS EMITTED (all six always print, even at count 0; header first):
+    Header : "Run accounting (six categories):"
+    Cat 1  : "  Successful namespaces (N): <names>"                                  (live)
+    Cat 2  : "  Root-failed namespaces (N): <ns> [step <id> root=<rootFailureId>]"   (live)
+    Cat 3  : "  Warning-only failures (N): <ns> [step <id>]"                         (live)
+    Cat 4  : "  Suppressed steps (N): <ns> [step <id> root=<rootFailureId>]"         (live)
+    Cat 5  : "  Cascades imported from historical fixtures (N)"                      (baseline)
+    Cat 6  : "  Unclassified records (N)"                                            (baseline)
+  (When a live category's detail list is empty the line collapses to "  <Label> (0)".)
+
+--------------------------------------------------------------------------------
+ 5. git status --short  (Morgan's ONLY production edit is PipelineRunner.cs)
+--------------------------------------------------------------------------------
+  M .squad/casting-registry.json                                         (NOT Morgan - squad metadata)
+  M .squad/team.md                                                       (NOT Morgan - squad metadata)
+  M mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/TestDoubles.cs (NOT Morgan - AD-029 harness)
+  M mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs             (MORGAN: six-category console summary)
+  M mcp-tools/validation/tests/StartWithLogs.Tests.ps1                   (NOT Morgan - Parker P7/P8 + Quinn S3)
+  M shared/DocGeneration.Core.Shared/StepResultFile.cs                   (NOT Morgan - AD-029 envelope)
+  M start-with-logs.ps1                                                  (NOT Morgan - Quinn S3 / AD-029 s7)
+  ?? .squad/agents/cameron/813-step2-test-matrix.md                       (NOT Morgan - Cameron spec)
+  ?? .squad/agents/ellis/                                                 (NOT Morgan)
+  ?? mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/DependencySuppressionTests.cs (NOT Morgan - Parker T1-T20)
+  ?? mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/RunAccountingTests.cs         (NOT Morgan - Parker T21-T31)
+  ?? mcp-tools/DocGeneration.PipelineRunner.Tests/evidence/                          (evidence dir; this append)
+
+  CONFIRMATION: Morgan edited exactly ONE file this session - PipelineRunner.cs. No test .cs file,
+  no .ps1, no .sh, no docs/CHANGELOG/README, no generated* output, and no frozen beta34 fixture was
+  touched. The other modified/untracked entries are teammates' pre-existing working-tree changes.
+================================================================================

@@ -1,0 +1,245 @@
+================================================================================
+ #813 STEP 2 — ADDENDUM B GREEN EVIDENCE (Ellis FAIL remediation — landed)
+ Author: Rowan (guest Remediation Engineer, C# runtime)   Scope: PRODUCTION CODE
+ Companion to: 813-step2-red-addendum-b.txt (Parker, TESTS ONLY)
+ Purpose: prove the D1–D4 runtime fix lands the corrected root predicate
+ (IsFatalRoot / AD-029 §A2), the full-graph traversal (§A3), and the canonical
+ suppressed-envelope write (§A4) so Parker's RED suite (T32–T40 + the one
+ authorized :335 flip) goes GREEN with ZERO weakened validation, ZERO test
+ edits, and ZERO new regressions. Nothing is hidden, skipped, or relaxed.
+================================================================================
+
+ENVIRONMENT
+  worktree HEAD (pre-commit)   : 0d225db0b44128933f593a179f61f46718e49a57
+                                 (Parker's RED tests; my PipelineRunner.cs fix is
+                                  applied in the working tree and is committed
+                                  together with THIS evidence file — see FILES CHANGED)
+  branch                       : squad/813-step2-runtime-orchestration
+  dotnet --version             : 10.0.303
+  pwsh (PSVersion)             : 7.6.4
+  git --version                : git version 2.55.0.vfs.0.3
+  OS                           : Microsoft Windows 10.0.26200 (RuntimeInformation.OSDescription)
+  captured (UTC)               : 2026-08-15T05:07:34Z (env) / build+test runs immediately after
+
+SOURCE OF TRUTH (read in full before touching a line of production code)
+  .squad/agents/ellis/813-step2-evaluation.md
+     VERDICT: FAIL — BLOCKING-1 (0/10 historical cascades suppressed: the runtime
+     recorded a root ONLY when the mapped exit code was nonzero, but 16/17 real
+     Step-2 failures return Success=true + non-empty ArtifactFailures -> mapped
+     exit 0 -> no root -> no suppression), BLOCKING-2 (no real-shape test).
+  .squad/decisions/inbox/riley-ad-029-runtime-dependency-suppression.md  §A0–A8 (AMENDMENT 1)
+     §A2 corrected root predicate keyed on ArtifactFailures (NOT validator results)
+         + the rootExit recompute; §A3 full-graph traversal then filter;
+     §A4 canonical suppressed-envelope write; §A7 the ONE authorized existing-
+     assertion break (PostValidatorTests :335).
+  .squad/agents/cameron/813-step2-test-matrix.md  §B (ADDENDUM B)
+     T32–T40, the mandated internal seam
+       PipelineRunner.IsFatalRoot(FailurePolicy, int, IReadOnlyList<ArtifactFailure>),
+     mutation rows M35–M42, anti-vacuity rules, regression-watch guidance.
+  Parker's RED tests (READ-ONLY for me; I did not edit any test):
+     Unit/DependencySuppressionTests.cs (T32–T40), Fixtures/TestDoubles.cs
+     (StepOutcomes.*, Beta34Corpus), evidence/813-step2-red-addendum-b.txt.
+
+FILES CHANGED (this remediation — PRODUCTION + EVIDENCE only)
+  M mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs   (+77 / -25, 1 file)
+      D1  namespace loop root detection (~lines 253–292) + new seam IsFatalRoot
+          (added right after MapStepFailureExitCode). The continue-guard flips from
+          `stepOutcome.ExitCode == SuccessExitCode` to `!IsFatalRoot(policy, exit,
+          ArtifactFailures)`, and the root record now stores a RECOMPUTED rootExit so
+          a C2-only root (mapped exit 0) still forces a nonzero catalog exit.
+      D3  SelectedTransitiveDependents (~lines 1555–1595): BFS now walks the FULL
+          reverse graph with its own `visited` set (enqueue regardless of selection)
+          and intersects with `selectedIds` ONLY when collecting.
+      D4  WriteSuppressedEnvelope (~lines 1616–1670): the suppressed envelope is now
+          written to BOTH the canonical step workspace (authoritative; read by
+          StepResultReader / UpstreamArtifactResolver / replay) AND the observability
+          directory, each via StepResultWriter.Write (overwrites in place). This erases
+          any stale prior-run SUCCESS envelope for a now-suppressed step. OutputFileCount=0.
+  A mcp-tools/DocGeneration.PipelineRunner.Tests/evidence/813-step2-green-addendum-b.txt (this file)
+
+  NOT touched (belong to Parker / other agents / coordinator — left exactly as found):
+    ANY test file (DependencySuppressionTests.cs, TestDoubles.cs, PipelineRunnerPost-
+    ValidatorTests.cs, PreAiValidationGateTests.cs, NamespaceStepTests.cs, …),
+    shared/DocGeneration.Core.Shared/StepResultFile.cs (already carried every field
+    the envelope needs — Suppressed, BlockedByDependency, Status, ValidationStatus,
+    OutputFileCount, OutputArtifacts — so NO change was required), start*.ps1/sh,
+    docs/**, CHANGELOG.md, README.md, DocGeneration.Baseline.Beta34.Tests/**,
+    generated*/, .squad/**. I `git add` ONLY the two files above; the pre-existing
+    uncommitted .squad/** deltas are NOT mine and are NOT committed.
+
+D2 (evidence/harness gap): satisfied WITHOUT any production or test change from me —
+    Parker's new doubles (StepOutcomes.ValidationAfterRetriesFailure /
+    FailingDependentWithArtifacts / PreAiSkipNonFatalOutcome, Beta34Corpus) already
+    supply the real-shape harness. My job for D2 was solely to make those tests pass
+    HONESTLY (I did not touch them). Confirmed GREEN below (T33–T35, T39, T40).
+
+--------------------------------------------------------------------------------
+ THE MANDATED SEAM (AD-029 §A2 / ADDENDUM B) — as landed, verbatim
+--------------------------------------------------------------------------------
+  internal static bool IsFatalRoot(
+      FailurePolicy policy,
+      int mappedExitCode,
+      IReadOnlyList<ArtifactFailure> artifactFailures)
+      => policy == FailurePolicy.Fatal
+          && (mappedExitCode != SuccessExitCode || artifactFailures.Count > 0);
+
+  C1 = `mappedExitCode != SuccessExitCode` (hard Success=false failure, forced exit
+       override, or fatal envelope-write failure).
+  C2 = `artifactFailures.Count > 0` (the real Step-2 "validation failed after
+       retries" shape: Success=true, mapped exit 0, yet durable per-artifact
+       failures recorded — ExamplePromptsStep.cs:141). THIS is the clause the old
+       exit-code-only trigger missed (16/17 corpus cases).
+  C2 keys on ArtifactFailures, NOT on a failed ValidatorResult — so the intentional
+  pre-AI non-fatal skip (Success=true + failed `pre-ai-validation` validator + EMPTY
+  ArtifactFailures, from TryRunPreAiGateAsync) stays NON-fatal (T40 / PreAiValidation-
+  GateTests green). The FailurePolicy.Fatal guard short-circuits first, so a Warn step
+  is never a root even with artifact failures (T39 green).
+
+  rootExit recompute (loop, D1) — load-bearing companion to the seam:
+      var rootExit = stepOutcome.ExitCode != SuccessExitCode
+          ? stepOutcome.ExitCode
+          : MapStepFailureExitCode(FailurePolicy.Fatal, stepSucceeded: false,
+                                   stepOutcome.Result.ExitCodeOverride);
+  Without it, a C2-only root keeps its mapped exit 0 and worstRootExit = Worse(0,0) = 0,
+  so the catalog would exit 0 despite a fatal root. The recompute yields FatalExitCode(1)
+  (or HumanReviewExitCode(2) when the step forced a review override). This is exactly
+  what the ONE authorized flip (PostValidatorTests :335, SuccessExitCode->FatalExitCode)
+  now asserts GREEN.
+
+================================================================================
+ COMMANDS (verbatim) + RESULTS
+================================================================================
+
+--------------------------------------------------------------------------------
+ COMMAND 1 (Definition of Done #1):
+   dotnet build mcp-doc-generation.sln --configuration Release
+ EXPECTED: Build succeeded, 0 Warning(s), 0 Error(s).
+--------------------------------------------------------------------------------
+[exit code: 0]
+  Build succeeded.
+      0 Warning(s)
+      0 Error(s)
+
+  Time Elapsed 00:00:06.48
+  RESULT: PASS — 0 warnings, 0 errors. (Release treats warnings as errors; clean.)
+
+--------------------------------------------------------------------------------
+ COMMAND 2 (Definition of Done #2):
+   dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj \
+     --configuration Release --filter "FullyQualifiedName~DependencySuppressionTests"
+ EXPECTED: all GREEN — T1–T20 (pre-existing) + T32–T40 (new) = 29 facts, 0 failed.
+--------------------------------------------------------------------------------
+[exit code: 0]
+  Passed!  - Failed:     0, Passed:    29, Skipped:     0, Total:    29,
+            Duration: 3 s - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+  RESULT: PASS — 29/29 GREEN. Covers the compile-RED seam binders (T32 IsFatalRoot
+          truth table @471/475/479/483/489/493, T33 Beta34 corpus @514), the
+          runtime-RED suppress+continue cases (T34–T38), and the two guards
+          (T39 warn-not-root, T40 pre-AI-not-root). The whole test project — which
+          was compile-RED on the missing seam — now compiles and runs.
+
+--------------------------------------------------------------------------------
+ COMMAND 3 (Definition of Done #3):
+   dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj \
+     --configuration Release
+ EXPECTED: 0 failed across the entire PipelineRunner test project.
+--------------------------------------------------------------------------------
+[exit code: 0]
+  Passed!  - Failed:     0, Passed:   675, Skipped:     0, Total:   675,
+            Duration: 6 s - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+  RESULT: PASS — 675/675 GREEN, 0 failed.
+
+  REGRESSION-WATCH SUBSET (Cameron §B — must-stay-green cluster), verbatim:
+    dotnet test …/DocGeneration.PipelineRunner.Tests.csproj --configuration Release \
+      --filter "FullyQualifiedName~PreAiValidationGateTests|\
+                FullyQualifiedName~PipelineRunnerPostValidatorTests|\
+                FullyQualifiedName~NamespaceStepTests"
+  [exit code: 0]
+    Passed!  - Failed:     0, Passed:    34, Skipped:     0, Total:    34,
+              Duration: 941 ms - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+  RESULT: PASS — 34/34 GREEN. Confirms:
+    * the pre-AI gate trio (PreAiValidationGateTests) still returns exit 0 for
+      Success=true + failed pre-ai-validation validator + EMPTY ArtifactFailures
+      (C2 discriminator holds — I did NOT key on validators);
+    * the clean-success controls + the ONE authorized flip (PostValidatorTests :335,
+      now asserting FatalExitCode for the D1 shape) are GREEN;
+    * step-level failure handling (NamespaceStepTests) is unchanged.
+
+--------------------------------------------------------------------------------
+ COMMAND 4 (Definition of Done #4):
+   dotnet test mcp-doc-generation.sln --no-build --configuration Release
+ EXPECTED: exactly ONE failure, the pre-existing/known
+   DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests
+     .GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription
+   and nothing else.
+--------------------------------------------------------------------------------
+[exit code: 1]  (nonzero solely due to the pre-declared known failure below)
+
+  SOLUTION-WIDE AGGREGATE (summed across all 23 test-project result lines):
+    SOLUTION_TOTAL_PASSED  = 3682
+    SOLUTION_TOTAL_FAILED  = 1     <- the one KNOWN pre-existing failure (below)
+    SOLUTION_TOTAL_SKIPPED = 1     <- Baseline.Beta34 intentional [Skip]
+    project result lines   = 23    (no project crashed / failed to discover)
+
+  THE ONLY FAILING TEST (pre-declared in the task DoD #4 as known & NOT mine):
+    DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests
+      .GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription  [FAIL]
+      Assert.Contains() Failure: Sub-string not found
+      at …\DocGeneration.Steps.ToolFamilyCleanup.Tests\FamilyMetadataGeneratorTests.cs:line 40
+    This lives in DocGeneration.Steps.ToolFamilyCleanup — a project I never touched;
+    it is a truncated-AI-response fallback assertion entirely unrelated to dependency
+    suppression. My change is confined to PipelineRunner.cs. Not introduced by me.
+
+  PER-PROJECT BREAKDOWN (verbatim dotnet summary lines):
+    Passed!   36  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests
+    Passed!   29  DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests
+    Passed!  320  DocGeneration.Steps.ExamplePrompts.Generation.Tests
+    Passed!   18  DocGeneration.Core.TemplateEngine.Tests
+    Passed!   36  DocGeneration.Steps.Bootstrap.CommandParser.Tests
+    Passed!   72  DocGeneration.Core.TextTransformation.Tests
+    Passed!  172  DocGeneration.Steps.HorizontalArticles.Tests
+    Passed!   56  DocGeneration.PromptRegression.Tests
+    Passed!  369  DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests
+    Passed!  470  DocGeneration.Core.Shared.Tests
+    Passed!   67  DocGeneration.Tools.Fingerprint.Tests
+    Passed!  105  DocGeneration.Steps.ToolGeneration.Improvements.Tests
+    Failed!    1  DocGeneration.Steps.ToolFamilyCleanup.Tests  (974 passed / 1 KNOWN failure / 975 total)
+    Passed!   11  DocGeneration.PipelineRunner.SmokeTests
+    Passed!   47  DocGeneration.E2E.Tests
+    Passed!   17  DocGeneration.Core.Tracing.Tests
+    Passed!   22  DocGeneration.McpCliMetadata.Tests
+    Passed!   24  DocGeneration.Steps.Bootstrap.BrandMappings.Tests
+    Passed!   31  DocGeneration.Baseline.Beta34.Tests  (+1 Skipped, 32 total — frozen baseline)
+    Passed!   31  DocGeneration.Core.GenerativeAI.Tests
+    Passed!   11  DocGeneration.Steps.ExamplePrompts.Validation.Tests
+    Passed!  675  DocGeneration.PipelineRunner.Tests
+    Passed!   89  DocGeneration.Steps.SkillsRelevance.Tests
+  RESULT: PASS — exactly the one known pre-existing failure; every other project GREEN;
+          PipelineRunner.Tests 675/675. DoD #4 satisfied.
+
+================================================================================
+ GREEN RESULT — Ellis FAIL remediation landed
+   build (sln, Release)      : exit 0 | 0 Warning(s) | 0 Error(s)
+   DependencySuppressionTests: 29/29 GREEN (T1–T20 + T32–T40)
+   PipelineRunner.Tests      : 675/675 GREEN, 0 failed
+   regression-watch cluster  : 34/34 GREEN (pre-AI trio + post-validator + namespace-step)
+   full solution (--no-build): 3682 passed / 1 failed / 1 skipped
+                               the ONE failure = pre-declared known FamilyMetadata-
+                               GeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_
+                               UsesFallbackDescription (NOT mine, unrelated project)
+ INTERPRETATION: the runtime now suppresses the real Step-2 failure shape Ellis flagged
+   (Success=true + non-empty ArtifactFailures via C2), forces a nonzero catalog exit on
+   a C2-only root (rootExit recompute), suppresses selected dependents reachable only
+   THROUGH unselected intermediates (full-graph traversal), and overwrites the canonical
+   step-result.json so a stale prior-run success cannot survive for a suppressed step.
+   No validation was weakened; no test was edited; the one authorized assertion (:335)
+   is GREEN; the pre-AI gate trio and clean-success controls stay GREEN.
+
+ EXISTING TESTS THAT BROKE (other than the one authorized :335 flip Parker already made):
+   NONE. Zero genuine regressions. The only solution-wide failure is the pre-declared,
+   pre-existing FamilyMetadataGeneratorTests failure in an untouched project.
+
+ BYPRODUCTS: none retained. No trx/testResults.xml logger was used; no scratch dirs kept.
+   Per-test temp repos live under %TEMP% via the existing CreateRepoRoot helper and are
+   the test harness's own transient fixtures (not committed).
+================================================================================

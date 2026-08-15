@@ -1,0 +1,288 @@
+================================================================================
+ #813 STEP 2 — ADDENDUM B RED EVIDENCE (Ellis FAIL remediation)
+ Author: Parker (QA / Tester)   Scope: TESTS ONLY — NO PRODUCTION CODE
+ Purpose: bind new RED tests to the corrected root predicate + full-graph
+ traversal + canonical suppressed envelope so the suite finally catches the D1
+ regression Ellis flagged (0 of 10 historical cascades suppressed). NOTHING is
+ hidden, skipped, weakened, or relaxed. Exactly one existing assertion changed,
+ under explicit authorization (called out in ALL-CAPS below).
+================================================================================
+
+ENVIRONMENT
+  worktree HEAD                : 1da15b5ca5db0a15af2d27e7dbdf4a1b0ed77b2f
+  branch                       : squad/813-step2-runtime-orchestration
+  dotnet --version             : 10.0.303
+  pwsh (PSVersion)             : 7.6.4
+  git --version                : git version 2.55.0.vfs.0.3
+  OS                           : Microsoft Windows NT 10.0.26200 (RuntimeInformation.OSDescription)
+  captured (UTC)               : 2026-08-15T04:41:21Z (metadata) / build+test run immediately after
+
+SOURCE OF TRUTH (read in full before writing a line of test)
+  .squad/agents/ellis/813-step2-evaluation.md
+     VERDICT: FAIL — BLOCKING-1 (0/10 cascades: runtime records a root only when the
+     mapped exit code is nonzero, but the real Step-2 failure returns Success=true with
+     non-empty ArtifactFailures -> exit 0 -> no root -> no suppression), BLOCKING-2 (no
+     real-shape test), and confirmation of Parker's own honest finding F1.
+  .squad/decisions/inbox/riley-ad-029-runtime-dependency-suppression.md  §A0–A8 (AMENDMENT 1)
+     §A2 corrected root predicate keyed on ArtifactFailures (NOT validator results);
+     §A3 full-graph traversal then filter; §A4 canonical suppressed-envelope write;
+     §A5 harness upgrades; §A7 the ONE authorized existing-assertion break.
+  .squad/agents/cameron/813-step2-test-matrix.md  §B (ADDENDUM B — my binding spec)
+     T32–T40, mutation rows M35–M42, anti-vacuity rules, RED expectations, commands.
+
+FILES CHANGED (this addendum — TEST/EVIDENCE ONLY)
+  M mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/TestDoubles.cs
+      + internal static class StepOutcomes
+          .ValidationAfterRetriesFailure(toolCommand)   -> THE D1 SHAPE: Success=true,
+             1 failed ValidatorResult, 1 ArtifactFailure. (Reused on a Warn step by T39.)
+          .FailingDependentWithArtifacts(artifactName)   -> Success=false + 1 ArtifactFailure
+             (a dependent that WOULD persist its own step JSON if wrongly executed — retires F1).
+          .PreAiSkipNonFatalOutcome(validatorId)         -> Success=true, failed validator,
+             EMPTY ArtifactFailures (the non-fatal pre-AI skip — C2 discriminator for T40).
+      + internal static class Beta34Corpus (READ-ONLY reader over the frozen baseline fixtures)
+  M mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/DependencySuppressionTests.cs
+      + T32..T40 (9 new [Fact]s) + helpers: SuccessExitCode/FatalExitCode/HumanReviewExitCode
+        const forwarders, CanonicalDir(outputPath,step), CriticalFiles(repoRoot,pattern).
+      * NOTHING in T1..T20 or the existing helpers/factories (Success/Failure/HumanReview,
+        CreateRepoRoot, BuildRunner, Request, ObservabilityDir, Slugify, ClosureOnRealGraph)
+        was modified. Additive only.
+  M mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/PipelineRunnerPostValidatorTests.cs
+      * THE ONE AUTHORIZED EXISTING-ASSERTION CHANGE — see next block.
+  A mcp-tools/DocGeneration.PipelineRunner.Tests/evidence/813-step2-red-addendum-b.txt (this file)
+
+  NOT committed by me (belong to other agents / coordinator; left untouched):
+    .squad/agents/cameron/813-step2-test-matrix.md, .squad/casting-registry.json,
+    .squad/agents/ellis/813-step2-evaluation.md — I `git add` ONLY my 4 files above.
+
+  csproj: NOT modified. The beta.34 fixtures are reached WITHOUT a project reference to the
+  frozen Baseline.Beta34 test project (that would couple two test projects). Beta34Corpus
+  walks up from AppContext.BaseDirectory to the repo root (mcp-doc-generation.sln) — the same
+  strategy production uses — then into
+  mcp-tools/DocGeneration.Baseline.Beta34.Tests/Fixtures. System.Text.Json is already available
+  (SDK + existing `using` in TestDoubles.cs), so no csproj change was required.
+
+********************************************************************************
+ THE ONE AUTHORIZED EXISTING-ASSERTION CHANGE (AD-029 §A7 / Ellis FAIL)
+   File : mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/PipelineRunnerPostValidatorTests.cs
+   Test : RunAsync_ArtifactFailuresWriteRecordsAndSummary  (builds the EXACT D1 shape:
+          Step 2, FailurePolicy.Fatal, success:true, one ArtifactFailure)
+   Line : ~335
+   BEFORE: Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
+   AFTER : Assert.Equal(global::PipelineRunner.PipelineRunner.FatalExitCode,   exitCode);
+   WHY  : the BEFORE assertion literally encodes the D1 bug (a Fatal step returning
+          Success=true with a non-empty ArtifactFailures list is a FATAL ROOT ⇒ exit 1).
+   SCOPE: ONLY the expected-value token changed (SuccessExitCode -> FatalExitCode), plus an
+          inline marker comment on that same line. The other assertions in the test
+          (Assert.Single(failureFiles); the three reportWriter.Messages Assert.Contains
+          checks at ~338–341) are UNCHANGED. No other existing test was touched anywhere.
+   RED  : against CURRENT production code the runtime returns SuccessExitCode here, so this
+          assertion FAILS (RED) until Rowan lands the §A2 fix; it goes GREEN with the fix.
+********************************************************************************
+
+NEW TESTS — RED CLASSIFICATION (exact)
+  Two classes of RED per Cameron §B and the existing class header convention:
+    [C] compile-RED  : binds to the not-yet-existing seam PipelineRunner.IsFatalRoot(...).
+                       These are the ONLY new source of compile error; they make the WHOLE
+                       test project fail to build (so nothing in it can execute yet — the
+                       identical situation the class header already documents for T8–T20).
+    [R] runtime-RED  : compiles clean; would FAIL at runtime against today's buggy behavior;
+                       cannot execute during the RED phase because the project won't compile.
+    [G] guard        : GREEN on the corrected predicate; RED only under a named mutation.
+
+  T32 IsFatalRoot_TruthTable_KeysOnArtifactFailuresNotValidators          [C] compile-RED
+        6 IsFatalRoot calls @ lines 471,475,479,483,489,493. Row (1) is THE D1 discriminator
+        (Fatal + exit 0 + ArtifactFailures ⇒ root via C2). Rows (5)/(6) are negative controls
+        (empty ArtifactFailures ⇒ not root; Warn ⇒ never root). Bound to the seam — predicate
+        NOT hand-rolled.
+  T33 Beta34Corpus_EveryStep2Failure_IsFatalRoot_EvenWhenSuccessTrue      [C] compile-RED
+        1 IsFatalRoot call @ line 514 (inside the IsRoot local fn). Replays the frozen corpus.
+  T34 RunAsync_RealShapeFatalRoot_SuppressesTransitiveDependents_AndContinues  [R] runtime-RED
+  T35 RunAsync_RealShapeRoot_SuppressedFailingDependent_EmitsNoDependentJson    [R] runtime-RED
+        (retires F1: genuinely discriminating — Step 4 would persist a step-04 JSON if run)
+  T36 SelectedTransitiveDependents_TraversesThroughUnselectedIntermediate       [R] runtime-RED
+        (full-graph {2}->{4} through unselected 3; current intersect-at-enqueue returns {})
+  T37 RunAsync_SkipDeps_RealShapeRoot_SuppressesDependentThroughUnselectedIntermediate [R]
+  T38 RunAsync_SuppressedStep_WritesCanonicalEnvelope_OverwritingStaleSuccess    [R] runtime-RED
+        (canonical/observability split D4: canonical read must NOT show Run 1's stale success)
+  T39 RunAsync_WarnStep_RealShapeArtifactFailure_DoesNotSuppressDependents       [G] guard (RED under M38)
+  T40 RunAsync_PreAiNonFatalSkip_EmptyArtifactFailures_IsNotARoot                [G] guard (RED under M36)
+
+  Summary: 9 new [Fact]s = 2 compile-RED (T32,T33) + 5 runtime-RED (T34–T38) + 2 guards
+  (T39,T40); plus 1 authorized existing-assertion flip (PostValidatorTests :335). The whole
+  project is compile-RED right now, so T34–T40 and the flipped assertion cannot EXECUTE in
+  this phase; their validity is realized once Rowan lands IsFatalRoot + §A2/§A3/§A4 (GREEN).
+
+ANTI-VACUITY (Cameron §B)
+  * Exact counts everywhere (Assert.Equal on filtered LINQ Count(predicate) / Sum, Assert.Single,
+    Assert.Empty). No collection-size Assert.Equal on `.Count`/`.Length` (avoids xUnit2013 — the
+    Release build reports 0 warnings, see below). No set-membership shortcuts: T33 resolves every
+    dependency link by COUNTING (== 16), not `Contains`-per-item.
+  * Every "absent" assertion is paired with a positive control:
+      T34: suppressed {3,4,7,8} for storage  ⇕  Step 6/2/1 ran for BOTH namespaces; 1 root JSON.
+      T35: no step-03/04 JSON                ⇕  exactly one step-02 root JSON (recorder works).
+      T36: {4} exact + DoesNotContain 2/3/7/8 ⇕  full selection returns {3,4,7,8}.
+      T37: Step 4 suppressed                  ⇕  sibling run (Step 2 success) runs Step 4, exit 0.
+      T38: canonical Suppressed==true         ⇕  Run 1 baseline canonical Status==Success.
+      T39: Step 8 runs, exit 0                ⇕  the warn step DID record its step-07 JSON.
+      T40: no step-02 JSON, Steps 3/4 run     ⇕  the identical shape WITH one ArtifactFailure is a
+                                                 root in T35 (so emptiness reflects C2, not a break).
+  * T35 is genuinely discriminating (retiring F1): the suppressed dependent is driven by
+    FailingDependentWithArtifacts, which persists its OWN step-04 critical JSON if executed — so
+    "no step-04 JSON" can only hold if Step 4 truly never ran.
+
+BETA.34 CORPUS NUMBERS T33 ASSERTS (independently verified against the frozen fixtures —
+  read-only, never modified; see the two PowerShell probes reproduced at the end)
+  step-2 records                         : 17   (== accounting.step2Records)
+  step-2 with validatorResults (D1 shape): 16   (Success=true; the shape today's runtime misses)
+  step-2 without validatorResults        : 1    -> identity: monitor.02.webtests-get.01 (Success=false)
+  roots via EXIT-ONLY predicate          : 1  of 17   (THE regression — 16 missed)
+  roots via IsFatalRoot                  : 17 of 17   (16 of them via C2 at mapped exit 0)
+  cascade (dependent) records            : 10   (== accounting.chainRoleCounts.cascade == dependentRecords)
+  dependency links                       : 16   (== accounting.dependencyLinks); EVERY link stepId==02
+                                                 and all 16 resolve to one of the 17 step-2 roots
+  total roots                            : 24   (== accounting.chainRoleCounts.root)
+                                                 == 17 step-2 roots (IsFatalRoot) + 7 step-4 roots
+  Path resolution WORKED at the data level: the reader compiles clean (the ONLY compile errors are
+  IsFatalRoot), and the numbers above were confirmed by querying the identical frozen files the
+  reader targets. Runtime execution of T33 occurs at GREEN (it is compile-blocked now, by design).
+
+--------------------------------------------------------------------------------
+ COMMAND 1 (verbatim):
+   dotnet build mcp-doc-generation.sln --configuration Release
+ EXPECTED: Build FAILED — CS0117 'PipelineRunner' does not contain a definition for
+           'IsFatalRoot' (the missing §A2 seam). 0 Warnings. Nothing else.
+--------------------------------------------------------------------------------
+[exit code: 1]
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  DocGeneration.TestInfrastructure -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.TestInfrastructure\bin\Release\net10.0\DocGeneration.TestInfrastructure.dll
+  DocGeneration.Core.TemplateEngine -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TemplateEngine\bin\Release\net10.0\DocGeneration.Core.TemplateEngine.dll
+  DocGeneration.Tools.Fingerprint -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Tools.Fingerprint\bin\Release\net10.0\DocGeneration.Tools.Fingerprint.dll
+  DocGeneration.Baseline.Beta34.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Baseline.Beta34.Tests\bin\Release\net10.0\DocGeneration.Baseline.Beta34.Tests.dll
+  DocGeneration.Core.Tracing -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Tracing\bin\Release\net10.0\DocGeneration.Core.Tracing.dll
+  DocGeneration.Core.TextTransformation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TextTransformation\bin\Release\net10.0\DocGeneration.Core.TextTransformation.dll
+  DocGeneration.Core.Shared -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Shared\bin\Release\net10.0\DocGeneration.Core.Shared.dll
+  DocGeneration.Steps.Bootstrap.E2eTestPromptParser -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.E2eTestPromptParser\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.E2eTestPromptParser.dll
+  DocGeneration.Steps.Bootstrap.CommandParser -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.CommandParser\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.CommandParser.dll
+  DocGeneration.Core.TemplateEngine.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TemplateEngine.Tests\bin\Release\net10.0\DocGeneration.Core.TemplateEngine.Tests.dll
+  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.dll
+  DocGeneration.Tools.Fingerprint.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Tools.Fingerprint.Tests\bin\Release\net10.0\DocGeneration.Tools.Fingerprint.Tests.dll
+  DocGeneration.Steps.ToolGeneration.Composition -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Composition\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Composition.dll
+  DocGeneration.Steps.SkillsRelevance -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.SkillsRelevance\bin\Release\net10.0\DocGeneration.Steps.SkillsRelevance.dll
+  DocGeneration.E2E.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.E2E.Tests\bin\Release\net10.0\DocGeneration.E2E.Tests.dll
+  DocGeneration.Core.TextTransformation.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TextTransformation.Tests\bin\Release\net10.0\DocGeneration.Core.TextTransformation.Tests.dll
+  DocGeneration.Utilities.ToolMetadataExtractor -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Utilities.ToolMetadataExtractor\bin\Release\net10.0\DocGeneration.Utilities.ToolMetadataExtractor.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.RawTools -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.RawTools\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.RawTools.dll
+  DocGeneration.Core.GenerativeAI -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.GenerativeAI\bin\Release\net10.0\DocGeneration.Core.GenerativeAI.dll
+  DocGeneration.Core.Tracing.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Tracing.Tests\bin\Release\net10.0\DocGeneration.Core.Tracing.Tests.dll
+  DocGeneration.Steps.ToolGeneration.Improvements -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Improvements\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Improvements.dll
+  DocGeneration.Steps.Bootstrap.BrandMappings -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.BrandMappings\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.BrandMappings.dll
+  DocGeneration.Steps.Bootstrap.CommandParser.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.CommandParser.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.CommandParser.Tests.dll
+  DocGeneration.Steps.ExamplePrompts.Validation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Validation\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Validation.dll
+  DocGeneration.Steps.ToolFamilyCleanup -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup\bin\Release\net10.0\DocGeneration.Steps.ToolFamilyCleanup.dll
+  DocGeneration.Core.GenerativeAI.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.GenerativeAI.Tests\bin\Release\net10.0\DocGeneration.Core.GenerativeAI.Tests.dll
+  DocGeneration.Core.Shared.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Shared.Tests\bin\Release\net10.0\DocGeneration.Core.Shared.Tests.dll
+  DocGeneration.Steps.ExamplePrompts.Generation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Generation.dll
+  DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests.dll
+  DocGeneration.Steps.ToolGeneration.Improvements.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Improvements.Tests\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Improvements.Tests.dll
+  DocGeneration.Steps.SkillsRelevance.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.SkillsRelevance.Tests\bin\Release\net10.0\DocGeneration.Steps.SkillsRelevance.Tests.dll
+  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests.dll
+  DocGeneration.Steps.ToolFamilyCleanup.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup.Tests\bin\Release\net10.0\DocGeneration.Steps.ToolFamilyCleanup.Tests.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.dll
+  DocGeneration.Steps.Bootstrap.BrandMappings.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.Bootstrap.BrandMappings.Tests\bin\Release\net10.0\DocGeneration.Steps.Bootstrap.BrandMappings.Tests.dll
+  DocGeneration.Steps.ExamplePrompts.Validation.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Validation.Tests\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Validation.Tests.dll
+  DocGeneration.Steps.ExamplePrompts.Generation.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation.Tests\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Generation.Tests.dll
+  DocGeneration.Steps.HorizontalArticles -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.HorizontalArticles\bin\Release\net10.0\DocGeneration.Steps.HorizontalArticles.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.dll
+  DocGeneration.Steps.HorizontalArticles.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.HorizontalArticles.Tests\bin\Release\net10.0\DocGeneration.Steps.HorizontalArticles.Tests.dll
+  DocGeneration.PromptRegression.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PromptRegression.Tests\bin\Release\net10.0\DocGeneration.PromptRegression.Tests.dll
+  DocGeneration.PipelineRunner -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner\bin\Release\net10.0\DocGeneration.PipelineRunner.dll
+  McpCliMetadata -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\McpCliMetadata\bin\Release\net10.0\DocGeneration.McpCliMetadata.dll
+  DocGeneration.PipelineRunner.SmokeTests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.SmokeTests\bin\Release\net10.0\DocGeneration.PipelineRunner.SmokeTests.dll
+  McpCliMetadata.Tests -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\McpCliMetadata.Tests\bin\Release\net10.0\DocGeneration.McpCliMetadata.Tests.dll
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(471,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(475,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(479,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(483,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(489,60): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(493,60): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(514,54): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+
+Build FAILED.
+
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(471,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(475,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(479,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(483,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(489,60): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(493,60): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(514,54): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+    0 Warning(s)
+    7 Error(s)
+
+Time Elapsed 00:00:10.42
+
+--------------------------------------------------------------------------------
+ COMMAND 2 (verbatim):
+   dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj \
+     --configuration Release --filter "FullyQualifiedName~DependencySuppressionTests"
+ EXPECTED: build failure (same 7 CS0117) -> 0 tests discovered / 0 run.
+--------------------------------------------------------------------------------
+[exit code: 1]
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  DocGeneration.Core.TextTransformation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TextTransformation\bin\Release\net10.0\DocGeneration.Core.TextTransformation.dll
+  DocGeneration.Core.TemplateEngine -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.TemplateEngine\bin\Release\net10.0\DocGeneration.Core.TemplateEngine.dll
+  DocGeneration.Core.Shared -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Shared\bin\Release\net10.0\DocGeneration.Core.Shared.dll
+  DocGeneration.Core.Tracing -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.Tracing\bin\Release\net10.0\DocGeneration.Core.Tracing.dll
+  DocGeneration.TestInfrastructure -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.TestInfrastructure\bin\Release\net10.0\DocGeneration.TestInfrastructure.dll
+  DocGeneration.Steps.ToolGeneration.Composition -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Composition\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Composition.dll
+  DocGeneration.Core.GenerativeAI -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\shared\DocGeneration.Core.GenerativeAI\bin\Release\net10.0\DocGeneration.Core.GenerativeAI.dll
+  DocGeneration.Steps.ToolFamilyCleanup -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolFamilyCleanup\bin\Release\net10.0\DocGeneration.Steps.ToolFamilyCleanup.dll
+  DocGeneration.Steps.ToolGeneration.Improvements -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ToolGeneration.Improvements\bin\Release\net10.0\DocGeneration.Steps.ToolGeneration.Improvements.dll
+  DocGeneration.Steps.ExamplePrompts.Generation -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.ExamplePrompts.Generation\bin\Release\net10.0\DocGeneration.Steps.ExamplePrompts.Generation.dll
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.AnnotationsParametersRaw.Annotations\bin\Release\net10.0\DocGeneration.Steps.AnnotationsParametersRaw.Annotations.dll
+  DocGeneration.Steps.HorizontalArticles -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.Steps.HorizontalArticles\bin\Release\net10.0\DocGeneration.Steps.HorizontalArticles.dll
+  DocGeneration.PipelineRunner -> C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner\bin\Release\net10.0\DocGeneration.PipelineRunner.dll
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(471,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(475,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(479,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(483,59): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(489,60): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(493,60): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\Unit\DependencySuppressionTests.cs(514,54): error CS0117: 'PipelineRunner' does not contain a definition for 'IsFatalRoot' [C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj]
+
+================================================================================
+ RED RESULT — as expected
+   dotnet build : exit 1  |  0 Warning(s)  |  7 Error(s), all CS0117 IsFatalRoot
+                  @ DependencySuppressionTests.cs lines 471,475,479,483,489,493 (T32)
+                  and 514 (T33) — and NOWHERE else.
+   dotnet test  : exit 1  |  build failed on the same 7 CS0117  |  0 tests run.
+ INTERPRETATION: the compile-RED seam (IsFatalRoot) is the sole new build error; every other
+ new line (Beta34Corpus, StepOutcomes, T34–T40, helpers, and the authorized :335 flip) compiles
+ clean and reports 0 warnings. This is precisely the RED state ADDENDUM B mandates: the suite can
+ no longer be GREEN while the D1 regression stands. Rowan lands the fix; GREEN + mutation-proof
+ follow.
+
+ PRE-EXISTING FAILURES (NOT touched, NOT hidden, NOT fixed here): FamilyMetadataGeneratorTests
+ (1 xUnit) and Scan-McpToolCoverage.Tests.ps1 (8 Pester) remain as-is.
+
+ BYPRODUCTS: none retained (no testResults.xml/trx logger used; no scratch dirs kept; the
+ per-test temp repos live under %TEMP% via the existing CreateRepoRoot helper only when tests
+ EXECUTE — they do not in this compile-RED phase).
+================================================================================
+
+APPENDIX — corpus probes (verbatim), proving the T33 numbers from the frozen fixtures:
+PROBE A — manifest accounting vs recomputed record counts (frozen beta34-baseline-manifest.json)
+  step2Records        accounting=17  recomputed(stepId==2)=17
+  step4Records        accounting=17  recomputed(stepId==4)=17
+  chainRole=cascade   accounting=10  recomputed=10   dependentRecords=10
+  chainRole=root      accounting=24  recomputed=24   (=17 step2 + 7 step4)
+  dependencyLinks     accounting=16  recomputed(sum upstream)=16
+  upstream links NOT step-02 segment = 0 (expect 0);  upstream resolving to a step2 stableId = 16 (expect 16)
+
+PROBE B — sanitized step-2 fixtures (critical-failures/<stableId>.json): reconstruct runtime Success
+  step-2 files inspected                 = 17
+  with validatorResults (Success=true)   = 16   <- the D1 shape today's runtime misses
+  without validatorResults (Success=false)= 1   -> monitor.02.webtests-get.01
+  files with NO top-level 'success' field = 17 of 17  (the reconstruction discriminator)

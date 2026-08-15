@@ -195,6 +195,16 @@ public sealed class PipelineRunner
             return CompleteRun(context, warnings, criticalFailures, SuccessExitCode);
         }
 
+        // #813 Step 2 (AD-029 §3): precompute the reverse-adjacency (dependents) map once from the
+        // REAL registry, plus the set of SELECTED namespace-scope step ids. When a selected step
+        // fails fatally it becomes a "root"; only its selected transitive dependents are suppressed.
+        // Independent selected steps still execute and later namespaces still run.
+        var dependentsOf = BuildDependentsOf(_stepRegistry.GetAllSteps());
+        var selectedNamespaceIds = namespaceSteps.Select(step => step.Id).ToHashSet();
+        var namespaceReports = new List<NamespaceReport>();
+        var catalogHadFatalRoot = false;
+        var worstRootExit = SuccessExitCode;
+
         foreach (var namespaceName in resolvedNamespaces)
         {
             var namespaceTracer = new PipelineTracer("mcp-pipeline");
@@ -223,15 +233,71 @@ public sealed class PipelineRunner
                     }
                 }
 
+                var state = new NamespaceRuntimeState();
+
                 foreach (var step in namespaceSteps)
                 {
+                    // Suppressed: a selected transitive dependent of a fatal root in THIS namespace.
+                    // It does not execute, produces no outputs, gets no retries, and emits no
+                    // critical-failure JSON — only a suppressed envelope (AD-029 §2, §3).
+                    if (state.SuppressedIds.Contains(step.Id))
+                    {
+                        var blockingRoot = state.Roots[state.SuppressionRootOf[step.Id]];
+                        WriteSuppressedEnvelope(context, step, blockingRoot);
+                        state.Suppressed.Add((step.Id, blockingRoot.RootFailureId));
+                        context.Reports.Warning(
+                            $"  \u2296 Step {step.Id} suppressed: blocked by fatal dependency (root {blockingRoot.RootFailureId}).");
+                        continue;
+                    }
+
                     var stepOutcome = await ExecuteStepAsync(context, step, warnings, cancellationToken);
                     criticalFailures.AddRange(stepOutcome.PersistedFailures);
-                    if (stepOutcome.ExitCode != SuccessExitCode)
+
+                    // AD-029 §A2 (D1): a SELECTED Fatal step is a fatal root when it did not cleanly
+                    // succeed — signalled by a nonzero mapped exit (C1) OR by recording per-artifact
+                    // failures (C2). C2 catches the real Step-2 shape (Success=true + non-empty
+                    // ArtifactFailures + mapped exit 0) that the exit-code-only trigger missed, while
+                    // staying disjoint from the intentional pre-AI non-fatal skip (empty ArtifactFailures).
+                    if (!IsFatalRoot(step.FailurePolicy, stepOutcome.ExitCode, stepOutcome.Result.ArtifactFailures))
                     {
-                        return CompleteRun(context, warnings, criticalFailures, stepOutcome.ExitCode);
+                        // Success, clean Fatal success, or a non-fatal pre-AI-gate skip → dependents
+                        // stay eligible. A Warn-policy step that "failed" maps to exit 0 and never
+                        // suppresses dependents; it is recorded separately for accounting (AD-029 §6).
+                        if (!stepOutcome.Result.Success && step.FailurePolicy == FailurePolicy.Warn)
+                        {
+                            state.WarningOnly.Add((step.Id, step.Name));
+                        }
+
+                        continue;
+                    }
+
+                    // Fatal root → exactly one root failure; suppress its selected dependents. Force a
+                    // nonzero EFFECTIVE exit even when the mapped exit was 0 (the Success=true +
+                    // ArtifactFailures C2 shape), so the catalog still exits nonzero; without this
+                    // recompute worstRootExit would stay 0. A human-review override (2) is preserved.
+                    var rootExit = stepOutcome.ExitCode != SuccessExitCode
+                        ? stepOutcome.ExitCode
+                        : MapStepFailureExitCode(FailurePolicy.Fatal, stepSucceeded: false, stepOutcome.Result.ExitCodeOverride);
+
+                    var rootFailureId = $"{Slugify(namespaceName)}.{step.Id:D2}.root";
+                    state.Roots[step.Id] = new RootFailure(rootFailureId, step.Id, step.Name, rootExit);
+                    catalogHadFatalRoot = true;
+                    worstRootExit = Worse(worstRootExit, rootExit);
+
+                    foreach (var dependent in SelectedTransitiveDependents(step.Id, selectedNamespaceIds, dependentsOf))
+                    {
+                        if (state.SuppressedIds.Add(dependent))
+                        {
+                            state.SuppressionRootOf[dependent] = step.Id; // first-match attribution
+                        }
                     }
                 }
+
+                namespaceReports.Add(new NamespaceReport(
+                    namespaceName,
+                    state.Roots.Values.ToList(),
+                    state.WarningOnly,
+                    state.Suppressed));
             }
             finally
             {
@@ -244,10 +310,13 @@ public sealed class PipelineRunner
         var gatesExitCode = await RunValidationGatesAsync(context, warnings, criticalFailures, cancellationToken);
         if (gatesExitCode != SuccessExitCode)
         {
-            return CompleteRun(context, warnings, criticalFailures, gatesExitCode);
+            return CompleteRun(context, warnings, criticalFailures, gatesExitCode, namespaceReports);
         }
 
-        return CompleteRun(context, warnings, criticalFailures, SuccessExitCode);
+        // #813 Step 2 (AD-029 §3): the catalog exits nonzero if any fatal root occurred. A hard
+        // fatal (1) dominates human-review (2). Gate failures already returned above and win.
+        var finalExitCode = catalogHadFatalRoot ? worstRootExit : SuccessExitCode;
+        return CompleteRun(context, warnings, criticalFailures, finalExitCode, namespaceReports);
     }
 
     private async Task<int> RunInspectAsync(PipelineRequest request, CancellationToken cancellationToken)
@@ -709,6 +778,29 @@ public sealed class PipelineRunner
         };
     }
 
+    /// <summary>
+    /// Decides whether a SELECTED step's outcome is a fatal root that must suppress its transitive
+    /// dependents (AD-029 §A2). A step is a fatal root iff its policy is <see cref="FailurePolicy.Fatal"/>
+    /// AND it did not cleanly succeed, where "did not cleanly succeed" is signalled by EITHER:
+    /// <list type="bullet">
+    /// <item><description><b>C1</b> — a nonzero <paramref name="mappedExitCode"/> (a hard
+    /// <c>Success=false</c> failure, a forced exit-code override, or a fatal envelope-write failure).</description></item>
+    /// <item><description><b>C2</b> — a non-empty <paramref name="artifactFailures"/> list even when the
+    /// mapped exit is <see cref="SuccessExitCode"/> (the real Step-2 "validation failed after retries"
+    /// shape: <c>Success=true</c> yet durable per-artifact failures were recorded).</description></item>
+    /// </list>
+    /// C2 keys on <paramref name="artifactFailures"/> — NOT on a failed <c>ValidatorResult</c> — so the
+    /// intentional pre-AI non-fatal skip (<c>Success=true</c> + a failed <c>pre-ai-validation</c> validator
+    /// + EMPTY ArtifactFailures) stays non-fatal. The <see cref="FailurePolicy.Fatal"/> guard short-circuits
+    /// first, so a Warn-policy step is never a root even when it recorded artifact failures.
+    /// </summary>
+    internal static bool IsFatalRoot(
+        FailurePolicy policy,
+        int mappedExitCode,
+        IReadOnlyList<ArtifactFailure> artifactFailures)
+        => policy == FailurePolicy.Fatal
+            && (mappedExitCode != SuccessExitCode || artifactFailures.Count > 0);
+
     private static async Task<StepResult> RunPostValidatorsAsync(
         PipelineContext context,
         IPipelineStep step,
@@ -916,7 +1008,7 @@ public sealed class PipelineRunner
     {
         return new StepResultFile
         {
-            Version = 3,
+            Version = 4,
             SchemaVersion = "1.0",
             Status = GetStepResultStatus(result),
             Step = step.Name,
@@ -1145,9 +1237,21 @@ public sealed class PipelineRunner
         PipelineContext context,
         IReadOnlyCollection<string> warnings,
         IReadOnlyCollection<CriticalFailureRecordReference> criticalFailures,
-        int exitCode)
+        int exitCode,
+        IReadOnlyList<NamespaceReport>? namespaceReports = null)
     {
         WriteCriticalFailureSummary(context, criticalFailures, exitCode);
+
+        // #813 Step 2 (AD-029 §6): emit the run-accounting summary once the namespace loop has run.
+        // Pre-namespace aborts (global fatal, source gate) pass null and write no accounting.
+        // The six-category partition is computed ONCE here and shared by the machine-readable
+        // artifact (run-accounting.json) and the human-visible console summary so they cannot diverge.
+        if (namespaceReports is not null)
+        {
+            var accounting = BuildRunAccounting(namespaceReports);
+            WriteRunAccounting(context, accounting);
+            WriteRunAccountingSummary(context, accounting);
+        }
 
         if (exitCode == SuccessExitCode)
         {
@@ -1423,6 +1527,411 @@ public sealed class PipelineRunner
 
         return Directory.EnumerateFiles(toolFamilyDir, "*.md", SearchOption.TopDirectoryOnly)
             .Any(f => Path.GetFileNameWithoutExtension(f).Contains(normalized, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // ── #813 Step 2: runtime dependency suppression + accounting (AD-029) ─────────────────────
+
+    /// <summary>
+    /// Builds the full reverse-adjacency (dependents) map from the REAL step registry: for every
+    /// step id, the ids of steps that declare it in <see cref="IPipelineStep.DependsOn"/>. Every
+    /// step id is a key (steps with no dependents map to an empty list). Never a hardcoded list.
+    /// </summary>
+    internal static IReadOnlyDictionary<int, IReadOnlyList<int>> BuildDependentsOf(IEnumerable<IPipelineStep> steps)
+    {
+        var stepList = steps.ToList();
+        var dependents = stepList.ToDictionary(step => step.Id, _ => new List<int>());
+        foreach (var step in stepList)
+        {
+            foreach (var dependency in step.DependsOn)
+            {
+                if (dependents.TryGetValue(dependency, out var list) && !list.Contains(step.Id))
+                {
+                    list.Add(step.Id);
+                }
+            }
+        }
+
+        return dependents.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<int>)pair.Value);
+    }
+
+    /// <summary>
+    /// Computes the transitive dependents of <paramref name="rootId"/> that are also SELECTED. The FULL
+    /// reverse graph is walked (BFS over reverse edges) with its own visited set — every reachable
+    /// dependent is enqueued regardless of selection — and the result is intersected with
+    /// <paramref name="selectedIds"/> only when collecting (AD-029 §A3). Filtering at enqueue time would
+    /// sever the walk at an unselected intermediate, so a fatal step would fail to suppress a selected
+    /// dependent reachable only THROUGH an unselected step (e.g. selected {2,4} with 3 unselected:
+    /// 2 → 3 → 4 must still suppress 4). The root is excluded from the result.
+    /// </summary>
+    internal static IReadOnlyCollection<int> SelectedTransitiveDependents(
+        int rootId,
+        IReadOnlySet<int> selectedIds,
+        IReadOnlyDictionary<int, IReadOnlyList<int>> dependentsOf)
+    {
+        var visited = new HashSet<int>();
+        var queue = new Queue<int>();
+        queue.Enqueue(rootId);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            if (!dependentsOf.TryGetValue(current, out var directDependents))
+            {
+                continue;
+            }
+
+            foreach (var dependent in directDependents)
+            {
+                // Enqueue REGARDLESS of selection so an unselected intermediate does not sever the walk.
+                if (visited.Add(dependent))
+                {
+                    queue.Enqueue(dependent);
+                }
+            }
+        }
+
+        visited.Remove(rootId);
+        visited.IntersectWith(selectedIds); // selection is a pure collection-time filter (AD-029 §A3, §5).
+        return visited;
+    }
+
+    /// <summary>
+    /// Combines two exit codes, keeping the "worst": a hard fatal (1) dominates human-review (2),
+    /// which dominates any other nonzero code, which dominates success (0). Used to preserve the
+    /// nonzero catalog exit across multiple fatal roots (AD-029 §3).
+    /// </summary>
+    private static int Worse(int current, int candidate)
+    {
+        if (current == FatalExitCode || candidate == FatalExitCode)
+        {
+            return FatalExitCode;
+        }
+
+        if (current == HumanReviewExitCode || candidate == HumanReviewExitCode)
+        {
+            return HumanReviewExitCode;
+        }
+
+        return candidate != SuccessExitCode ? candidate : current;
+    }
+
+    /// <summary>
+    /// Writes the suppressed step's envelope (AD-029 §2, §A4): a conservative Failure envelope carrying
+    /// <see cref="StepResultFile.Suppressed"/> = true and the blocking root's identity. The step never
+    /// executed, so no metrics/validation outputs are produced and the critical-failure recorder is never
+    /// invoked. The envelope is written to BOTH the canonical step workspace (the authoritative location
+    /// <see cref="StepResultReader"/> / <c>UpstreamArtifactResolver</c> / replay read) and the
+    /// observability directory (the dashboard copy), each via <see cref="StepResultWriter.Write"/> which
+    /// overwrites in place. Writing the canonical copy erases any stale SUCCESS envelope a prior
+    /// same-workspace run left for this now-suppressed step. Since a suppressed step bypasses
+    /// <see cref="ExecuteStepAsync"/>, this is the sole writer for the step in this run (no double-write).
+    /// </summary>
+    private static void WriteSuppressedEnvelope(PipelineContext context, IPipelineStep step, RootFailure blockingRoot)
+    {
+        var namespaceName = ResolveNamespace(context);
+        var envelope = new StepResultFile
+        {
+            Version = 4,
+            SchemaVersion = "1.0",
+            Status = StepResultStatus.Failure,
+            Step = step.Name,
+            StepName = GetStepIdentifierSlug(step),
+            Namespace = namespaceName,
+            OutputFileCount = 0,
+            Warnings = new List<string>(),
+            Errors = new List<string>
+            {
+                $"Step {step.Id} suppressed: blocked by fatal dependency (root {blockingRoot.RootFailureId}).",
+            },
+            Duration = TimeSpan.Zero.ToString("c"),
+            DurationMs = 0,
+            ValidationStatus = ValidationStatus.Skipped,
+            Timestamp = DateTimeOffset.UtcNow.ToString("O"),
+            Suppressed = true,
+            BlockedByDependency = new BlockedByDependency
+            {
+                Namespace = namespaceName,
+                FailedRootStepId = blockingRoot.RootStepId,
+                FailedRootStepName = blockingRoot.RootStepName,
+                RootFailureId = blockingRoot.RootFailureId,
+            },
+        };
+
+        // Canonical (authoritative) first: this is what StepResultReader / UpstreamArtifactResolver /
+        // replay/inspect actually read. Overwriting in place erases any stale prior-run success envelope
+        // (AD-029 §A4 / D4). OutputFileCount=0 and no OutputArtifacts, so no consumer resolves the
+        // suppressed step's stale prior outputs.
+        var canonicalDirectory = GetStepWorkspaceDirectory(context, step);
+        Directory.CreateDirectory(canonicalDirectory);
+        StepResultWriter.Write(canonicalDirectory, envelope);
+
+        // Observability (dashboard) copy, also overwritten in place.
+        var observabilityDirectory = GetObservabilityDirectory(context.OutputPath, step);
+        Directory.CreateDirectory(observabilityDirectory);
+        StepResultWriter.Write(observabilityDirectory, envelope);
+    }
+
+    private static readonly JsonSerializerOptions RunAccountingJsonOptions = new()
+    {
+        WriteIndented = true,
+    };
+
+    /// <summary>
+    /// Builds the six-category run-accounting partition (AD-029 §6) once from the per-namespace
+    /// reports plus the frozen baseline reconciliation. This is the single source of truth consumed
+    /// by both <see cref="WriteRunAccounting"/> (the run-accounting.json artifact) and
+    /// <see cref="WriteRunAccountingSummary"/> (the human-visible console summary).
+    /// </summary>
+    private static RunAccountingModel BuildRunAccounting(IReadOnlyList<NamespaceReport> namespaceReports)
+        => new(
+            namespaceReports
+                .Where(report => report.Roots.Count == 0)
+                .Select(report => report.Namespace)
+                .ToList(),
+            namespaceReports
+                .SelectMany(report => report.Roots.Select(root => new RunAccountingRootEntry(
+                    report.Namespace, root.RootStepId, root.RootStepName, root.RootFailureId, root.ExitCode)))
+                .ToList(),
+            namespaceReports
+                .SelectMany(report => report.WarningOnly.Select(warning => new RunAccountingWarningEntry(
+                    report.Namespace, warning.StepId, warning.StepName)))
+                .ToList(),
+            namespaceReports
+                .SelectMany(report => report.Suppressed.Select(suppressed => new RunAccountingSuppressedEntry(
+                    report.Namespace, suppressed.StepId, suppressed.RootFailureId)))
+                .ToList(),
+            BuildBaselineReconciliation());
+
+    /// <summary>
+    /// Writes the run-accounting summary (AD-029 §6) to <c>{OutputPath}/run-accounting.json</c>.
+    /// Serializes the mutually exclusive buckets (successful, root-failed, warning-only, suppressed)
+    /// plus the pure baseline reconciliation from the frozen beta34 manifest (null when it cannot be
+    /// located). Field names are pinned by T21–T29 and read by the catalog script summary.
+    /// </summary>
+    private static void WriteRunAccounting(PipelineContext context, RunAccountingModel accounting)
+    {
+        var reconciliationCounts = accounting.Reconciliation;
+        object? reconciliation = reconciliationCounts is null
+            ? null
+            : new
+            {
+                logicalRecordTotal = reconciliationCounts.LogicalRecordTotal,
+                physicalCopyTotal = reconciliationCounts.PhysicalCopyTotal,
+                categoryCounts = new
+                {
+                    successful = reconciliationCounts.Successful,
+                    rootFailed = reconciliationCounts.RootFailed,
+                    warningOnly = reconciliationCounts.WarningOnly,
+                    suppressed = reconciliationCounts.Suppressed,
+                    cascadeImported = reconciliationCounts.CascadeImported,
+                    unclassifiedDiagnostic = reconciliationCounts.UnclassifiedDiagnostic,
+                },
+            };
+
+        var payload = new
+        {
+            schemaVersion = "1.0",
+            successfulNamespaces = accounting.SuccessfulNamespaces,
+            rootFailedNamespaces = accounting.RootFailedNamespaces
+                .Select(root => new
+                {
+                    @namespace = root.Namespace,
+                    rootStepId = root.RootStepId,
+                    rootStepName = root.RootStepName,
+                    rootFailureId = root.RootFailureId,
+                    exitCode = root.ExitCode,
+                })
+                .ToList(),
+            warningOnlyFailures = accounting.WarningOnlyFailures
+                .Select(warning => new
+                {
+                    @namespace = warning.Namespace,
+                    stepId = warning.StepId,
+                    stepName = warning.StepName,
+                })
+                .ToList(),
+            suppressedSteps = accounting.SuppressedSteps
+                .Select(suppressed => new
+                {
+                    @namespace = suppressed.Namespace,
+                    stepId = suppressed.StepId,
+                    rootFailureId = suppressed.RootFailureId,
+                })
+                .ToList(),
+            reconciliation,
+        };
+
+        Directory.CreateDirectory(context.OutputPath);
+        var path = Path.Combine(context.OutputPath, "run-accounting.json");
+        File.WriteAllText(path, JsonSerializer.Serialize(payload, RunAccountingJsonOptions));
+    }
+
+    /// <summary>
+    /// Surfaces the six-category run-accounting partition (AD-029 §6) to the human-visible console
+    /// summary — one labeled line per category. Live categories 1–4 come from the namespace reports;
+    /// categories 5–6 (cascades imported from historical fixtures, unclassified records) come from the
+    /// frozen baseline reconciliation and are NEVER summed into the live counts. Every label always
+    /// prints, even at count 0, so each category is separately reported (the trailing ')' in each
+    /// "(N)" token keeps counts unambiguous). Deterministic and side-effect free beyond console output.
+    /// </summary>
+    private static void WriteRunAccountingSummary(PipelineContext context, RunAccountingModel accounting)
+    {
+        var cascadeImported = accounting.Reconciliation?.CascadeImported ?? 0;
+        var unclassifiedRecords = accounting.Reconciliation?.UnclassifiedDiagnostic ?? 0;
+
+        context.Reports.Info("Run accounting (six categories):");
+
+        // Cat 1 — successful namespaces (every selected step succeeded or warn-failed; zero fatal roots).
+        context.Reports.Info(FormatAccountingLine(
+            "Successful namespaces",
+            accounting.SuccessfulNamespaces.Count,
+            string.Join(", ", accounting.SuccessfulNamespaces)));
+
+        // Cat 2 — root-failed namespaces, each named with its stable root failure id.
+        context.Reports.Info(FormatAccountingLine(
+            "Root-failed namespaces",
+            accounting.RootFailedNamespaces.Count,
+            string.Join(", ", accounting.RootFailedNamespaces.Select(root =>
+                $"{root.Namespace} [step {root.RootStepId} root={root.RootFailureId}]"))));
+
+        // Cat 3 — warning-only failures, reported separately from roots (they never suppress).
+        context.Reports.Info(FormatAccountingLine(
+            "Warning-only failures",
+            accounting.WarningOnlyFailures.Count,
+            string.Join(", ", accounting.WarningOnlyFailures.Select(warning =>
+                $"{warning.Namespace} [step {warning.StepId}]"))));
+
+        // Cat 4 — suppressed steps, each attributed to the root failure that blocked it.
+        context.Reports.Info(FormatAccountingLine(
+            "Suppressed steps",
+            accounting.SuppressedSteps.Count,
+            string.Join(", ", accounting.SuppressedSteps.Select(suppressed =>
+                $"{suppressed.Namespace} [step {suppressed.StepId} root={suppressed.RootFailureId}]"))));
+
+        // Cat 5 & 6 — catalog-constant baseline reconciliation (never summed into the live counts).
+        context.Reports.Info($"  Cascades imported from historical fixtures ({cascadeImported})");
+        context.Reports.Info($"  Unclassified records ({unclassifiedRecords})");
+    }
+
+    private static string FormatAccountingLine(string label, int count, string detail)
+        => detail.Length == 0 ? $"  {label} ({count})" : $"  {label} ({count}): {detail}";
+
+    /// <summary>
+    /// Builds the reconciliation section as a PURE function of the frozen beta34 baseline manifest,
+    /// independent of the live run (AD-029 §6). Maps the historical accounting into the six-category
+    /// partition so it reconciles to the baseline logical total: the diagnostic record is peeled from
+    /// the chain-role root count into its own category, cascades come from chainRoleCounts (not the
+    /// classification counts), and success/warning/suppressed categories are zero in the baseline.
+    /// Returns null (graceful degradation) when the manifest cannot be located.
+    /// </summary>
+    private static BaselineReconciliationCounts? BuildBaselineReconciliation()
+    {
+        if (!TryLocateBeta34Manifest(out var manifestPath))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(File.ReadAllBytes(manifestPath));
+        if (!document.RootElement.TryGetProperty("accounting", out var accounting))
+        {
+            return null;
+        }
+
+        var logicalRecords = accounting.GetProperty("logicalRecords").GetInt32();
+        var physicalCopies = accounting.GetProperty("physicalCopies").GetInt32();
+        var chainRoleRoot = accounting.GetProperty("chainRoleCounts").GetProperty("root").GetInt32();
+        var chainRoleCascade = accounting.GetProperty("chainRoleCounts").GetProperty("cascade").GetInt32();
+        var diagnostic = accounting.GetProperty("classificationCounts").GetProperty("diagnostic").GetInt32();
+
+        return new BaselineReconciliationCounts(
+            LogicalRecordTotal: logicalRecords,
+            PhysicalCopyTotal: physicalCopies,
+            Successful: 0,
+            RootFailed: chainRoleRoot - diagnostic,
+            WarningOnly: 0,
+            Suppressed: 0,
+            CascadeImported: chainRoleCascade,
+            UnclassifiedDiagnostic: diagnostic);
+    }
+
+    /// <summary>
+    /// Locates the frozen beta34 baseline manifest by walking up from <see cref="AppContext.BaseDirectory"/>
+    /// for <c>mcp-doc-generation.sln</c>, then resolving the fixture path under the Baseline.Beta34 tests
+    /// project. Read-only; no project reference. Returns false when the repo root or manifest is absent.
+    /// </summary>
+    private static bool TryLocateBeta34Manifest(out string manifestPath)
+    {
+        manifestPath = string.Empty;
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "mcp-doc-generation.sln")))
+            {
+                var candidate = Path.Combine(
+                    directory.FullName,
+                    "mcp-tools",
+                    "DocGeneration.Baseline.Beta34.Tests",
+                    "Fixtures",
+                    "beta34-baseline-manifest.json");
+                if (File.Exists(candidate))
+                {
+                    manifestPath = candidate;
+                    return true;
+                }
+
+                return false;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return false;
+    }
+
+    /// <summary>A fatal root step failure within a single namespace (AD-029 §2).</summary>
+    private sealed record RootFailure(string RootFailureId, int RootStepId, string RootStepName, int ExitCode);
+
+    /// <summary>Per-namespace accounting snapshot captured at the end of that namespace's step loop.</summary>
+    private sealed record NamespaceReport(
+        string Namespace,
+        IReadOnlyList<RootFailure> Roots,
+        IReadOnlyList<(int StepId, string StepName)> WarningOnly,
+        IReadOnlyList<(int StepId, string RootFailureId)> Suppressed);
+
+    /// <summary>
+    /// The six-category run-accounting partition (AD-029 §6), computed once per completed run and
+    /// consumed by both the run-accounting.json artifact and the console summary so the two surfaces
+    /// cannot diverge. Categories 1–4 are live (from the namespace reports); category 5–6 counts live
+    /// on <see cref="Reconciliation"/> (null when the frozen baseline manifest cannot be located).
+    /// </summary>
+    private sealed record RunAccountingModel(
+        IReadOnlyList<string> SuccessfulNamespaces,
+        IReadOnlyList<RunAccountingRootEntry> RootFailedNamespaces,
+        IReadOnlyList<RunAccountingWarningEntry> WarningOnlyFailures,
+        IReadOnlyList<RunAccountingSuppressedEntry> SuppressedSteps,
+        BaselineReconciliationCounts? Reconciliation);
+
+    private sealed record RunAccountingRootEntry(
+        string Namespace, int RootStepId, string RootStepName, string RootFailureId, int ExitCode);
+
+    private sealed record RunAccountingWarningEntry(string Namespace, int StepId, string StepName);
+
+    private sealed record RunAccountingSuppressedEntry(string Namespace, int StepId, string RootFailureId);
+
+    /// <summary>The frozen-baseline reconciliation counts (AD-029 §6 categories, as mapped from the beta34 manifest).</summary>
+    private sealed record BaselineReconciliationCounts(
+        int LogicalRecordTotal, int PhysicalCopyTotal,
+        int Successful, int RootFailed, int WarningOnly, int Suppressed,
+        int CascadeImported, int UnclassifiedDiagnostic);
+
+    /// <summary>Mutable runtime state for a single namespace; reset before each namespace runs.</summary>
+    private sealed class NamespaceRuntimeState
+    {
+        public Dictionary<int, RootFailure> Roots { get; } = new();
+        public HashSet<int> SuppressedIds { get; } = new();
+        public Dictionary<int, int> SuppressionRootOf { get; } = new();
+        public List<(int StepId, string StepName)> WarningOnly { get; } = new();
+        public List<(int StepId, string RootFailureId)> Suppressed { get; } = new();
     }
 
     private sealed record StepExecutionOutcome(
