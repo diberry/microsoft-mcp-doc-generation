@@ -253,10 +253,16 @@ public sealed class PipelineRunner
                     var stepOutcome = await ExecuteStepAsync(context, step, warnings, cancellationToken);
                     criticalFailures.AddRange(stepOutcome.PersistedFailures);
 
-                    if (stepOutcome.ExitCode == SuccessExitCode)
+                    // AD-029 §A2 (D1): a SELECTED Fatal step is a fatal root when it did not cleanly
+                    // succeed — signalled by a nonzero mapped exit (C1) OR by recording per-artifact
+                    // failures (C2). C2 catches the real Step-2 shape (Success=true + non-empty
+                    // ArtifactFailures + mapped exit 0) that the exit-code-only trigger missed, while
+                    // staying disjoint from the intentional pre-AI non-fatal skip (empty ArtifactFailures).
+                    if (!IsFatalRoot(step.FailurePolicy, stepOutcome.ExitCode, stepOutcome.Result.ArtifactFailures))
                     {
-                        // A Warn-policy step that "failed" maps to exit 0 and never suppresses
-                        // dependents; it is recorded separately for accounting (AD-029 §6).
+                        // Success, clean Fatal success, or a non-fatal pre-AI-gate skip → dependents
+                        // stay eligible. A Warn-policy step that "failed" maps to exit 0 and never
+                        // suppresses dependents; it is recorded separately for accounting (AD-029 §6).
                         if (!stepOutcome.Result.Success && step.FailurePolicy == FailurePolicy.Warn)
                         {
                             state.WarningOnly.Add((step.Id, step.Name));
@@ -265,11 +271,18 @@ public sealed class PipelineRunner
                         continue;
                     }
 
-                    // Fatal non-success → exactly one root failure; suppress its selected dependents.
+                    // Fatal root → exactly one root failure; suppress its selected dependents. Force a
+                    // nonzero EFFECTIVE exit even when the mapped exit was 0 (the Success=true +
+                    // ArtifactFailures C2 shape), so the catalog still exits nonzero; without this
+                    // recompute worstRootExit would stay 0. A human-review override (2) is preserved.
+                    var rootExit = stepOutcome.ExitCode != SuccessExitCode
+                        ? stepOutcome.ExitCode
+                        : MapStepFailureExitCode(FailurePolicy.Fatal, stepSucceeded: false, stepOutcome.Result.ExitCodeOverride);
+
                     var rootFailureId = $"{Slugify(namespaceName)}.{step.Id:D2}.root";
-                    state.Roots[step.Id] = new RootFailure(rootFailureId, step.Id, step.Name, stepOutcome.ExitCode);
+                    state.Roots[step.Id] = new RootFailure(rootFailureId, step.Id, step.Name, rootExit);
                     catalogHadFatalRoot = true;
-                    worstRootExit = Worse(worstRootExit, stepOutcome.ExitCode);
+                    worstRootExit = Worse(worstRootExit, rootExit);
 
                     foreach (var dependent in SelectedTransitiveDependents(step.Id, selectedNamespaceIds, dependentsOf))
                     {
@@ -764,6 +777,29 @@ public sealed class PipelineRunner
             _ => FatalExitCode,
         };
     }
+
+    /// <summary>
+    /// Decides whether a SELECTED step's outcome is a fatal root that must suppress its transitive
+    /// dependents (AD-029 §A2). A step is a fatal root iff its policy is <see cref="FailurePolicy.Fatal"/>
+    /// AND it did not cleanly succeed, where "did not cleanly succeed" is signalled by EITHER:
+    /// <list type="bullet">
+    /// <item><description><b>C1</b> — a nonzero <paramref name="mappedExitCode"/> (a hard
+    /// <c>Success=false</c> failure, a forced exit-code override, or a fatal envelope-write failure).</description></item>
+    /// <item><description><b>C2</b> — a non-empty <paramref name="artifactFailures"/> list even when the
+    /// mapped exit is <see cref="SuccessExitCode"/> (the real Step-2 "validation failed after retries"
+    /// shape: <c>Success=true</c> yet durable per-artifact failures were recorded).</description></item>
+    /// </list>
+    /// C2 keys on <paramref name="artifactFailures"/> — NOT on a failed <c>ValidatorResult</c> — so the
+    /// intentional pre-AI non-fatal skip (<c>Success=true</c> + a failed <c>pre-ai-validation</c> validator
+    /// + EMPTY ArtifactFailures) stays non-fatal. The <see cref="FailurePolicy.Fatal"/> guard short-circuits
+    /// first, so a Warn-policy step is never a root even when it recorded artifact failures.
+    /// </summary>
+    internal static bool IsFatalRoot(
+        FailurePolicy policy,
+        int mappedExitCode,
+        IReadOnlyList<ArtifactFailure> artifactFailures)
+        => policy == FailurePolicy.Fatal
+            && (mappedExitCode != SuccessExitCode || artifactFailures.Count > 0);
 
     private static async Task<StepResult> RunPostValidatorsAsync(
         PipelineContext context,
@@ -1519,16 +1555,20 @@ public sealed class PipelineRunner
     }
 
     /// <summary>
-    /// Computes the transitive dependents of <paramref name="rootId"/> (BFS over reverse edges),
-    /// intersected with the SELECTED step ids. The root is excluded from the result. Only selected
-    /// steps can be suppressed, so a dependent that is not selected does not gate its own dependents.
+    /// Computes the transitive dependents of <paramref name="rootId"/> that are also SELECTED. The FULL
+    /// reverse graph is walked (BFS over reverse edges) with its own visited set — every reachable
+    /// dependent is enqueued regardless of selection — and the result is intersected with
+    /// <paramref name="selectedIds"/> only when collecting (AD-029 §A3). Filtering at enqueue time would
+    /// sever the walk at an unselected intermediate, so a fatal step would fail to suppress a selected
+    /// dependent reachable only THROUGH an unselected step (e.g. selected {2,4} with 3 unselected:
+    /// 2 → 3 → 4 must still suppress 4). The root is excluded from the result.
     /// </summary>
     internal static IReadOnlyCollection<int> SelectedTransitiveDependents(
         int rootId,
         IReadOnlySet<int> selectedIds,
         IReadOnlyDictionary<int, IReadOnlyList<int>> dependentsOf)
     {
-        var suppressed = new HashSet<int>();
+        var visited = new HashSet<int>();
         var queue = new Queue<int>();
         queue.Enqueue(rootId);
 
@@ -1542,17 +1582,17 @@ public sealed class PipelineRunner
 
             foreach (var dependent in directDependents)
             {
-                if (!selectedIds.Contains(dependent) || !suppressed.Add(dependent))
+                // Enqueue REGARDLESS of selection so an unselected intermediate does not sever the walk.
+                if (visited.Add(dependent))
                 {
-                    continue;
+                    queue.Enqueue(dependent);
                 }
-
-                queue.Enqueue(dependent);
             }
         }
 
-        suppressed.Remove(rootId);
-        return suppressed;
+        visited.Remove(rootId);
+        visited.IntersectWith(selectedIds); // selection is a pure collection-time filter (AD-029 §A3, §5).
+        return visited;
     }
 
     /// <summary>
@@ -1576,12 +1616,15 @@ public sealed class PipelineRunner
     }
 
     /// <summary>
-    /// Writes the suppressed step's observability envelope (AD-029 §2): a conservative Failure
-    /// envelope carrying <see cref="StepResultFile.Suppressed"/> = true and the blocking root's
-    /// identity. The step never executed, so no metrics/validation outputs are produced and the
-    /// critical-failure recorder is never invoked. Written via <see cref="StepResultWriter.Write"/>
-    /// (NOT the normal observability writer, which would overwrite this with a non-suppressed
-    /// envelope). Reruns overwrite the file in place.
+    /// Writes the suppressed step's envelope (AD-029 §2, §A4): a conservative Failure envelope carrying
+    /// <see cref="StepResultFile.Suppressed"/> = true and the blocking root's identity. The step never
+    /// executed, so no metrics/validation outputs are produced and the critical-failure recorder is never
+    /// invoked. The envelope is written to BOTH the canonical step workspace (the authoritative location
+    /// <see cref="StepResultReader"/> / <c>UpstreamArtifactResolver</c> / replay read) and the
+    /// observability directory (the dashboard copy), each via <see cref="StepResultWriter.Write"/> which
+    /// overwrites in place. Writing the canonical copy erases any stale SUCCESS envelope a prior
+    /// same-workspace run left for this now-suppressed step. Since a suppressed step bypasses
+    /// <see cref="ExecuteStepAsync"/>, this is the sole writer for the step in this run (no double-write).
     /// </summary>
     private static void WriteSuppressedEnvelope(PipelineContext context, IPipelineStep step, RootFailure blockingRoot)
     {
@@ -1614,9 +1657,18 @@ public sealed class PipelineRunner
             },
         };
 
-        var directory = GetObservabilityDirectory(context.OutputPath, step);
-        Directory.CreateDirectory(directory);
-        StepResultWriter.Write(directory, envelope);
+        // Canonical (authoritative) first: this is what StepResultReader / UpstreamArtifactResolver /
+        // replay/inspect actually read. Overwriting in place erases any stale prior-run success envelope
+        // (AD-029 §A4 / D4). OutputFileCount=0 and no OutputArtifacts, so no consumer resolves the
+        // suppressed step's stale prior outputs.
+        var canonicalDirectory = GetStepWorkspaceDirectory(context, step);
+        Directory.CreateDirectory(canonicalDirectory);
+        StepResultWriter.Write(canonicalDirectory, envelope);
+
+        // Observability (dashboard) copy, also overwritten in place.
+        var observabilityDirectory = GetObservabilityDirectory(context.OutputPath, step);
+        Directory.CreateDirectory(observabilityDirectory);
+        StepResultWriter.Write(observabilityDirectory, envelope);
     }
 
     private static readonly JsonSerializerOptions RunAccountingJsonOptions = new()
