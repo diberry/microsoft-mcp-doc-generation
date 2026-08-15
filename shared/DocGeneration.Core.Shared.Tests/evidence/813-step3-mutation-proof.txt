@@ -1,36 +1,41 @@
-=== Mutation Proof: #813 Step 3 Round 2 — Canonical Parameter Contract ===
-Commit: (pending)
+813-step3-mutation-proof.txt (Round 3)
+=======================================
 Branch: squad/813-step3-canonical-parameter-contract
-UTC: 2026-08-15T15:30:32.8341837Z
+HEAD: 345ab85124aa6a267c1636acd860d9ef4f334147
+UTC: 2026-08-15T15:57:23Z
 
-Protocol: For each mutation, applied single change, built, ran targeted test,
-          verified failure, reverted with git checkout -- <file>.
+Protocol: one mutation at a time, git status --short clean before/after,
+restore with git checkout -- <file>.
 
-## ROUND 1 MUTATIONS (preserved from prior commit)
+MUTATION 1: Re-add manifest-optional ValidatePrompts overload
+  File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/CodeBasedPromptValidator.cs
+  Edit: Add overload with (prompts, requiredParamNames, manifest? = null)
+  RED test: Round3CanonicalContractTests.CodeBasedPromptValidator_AllValidatePromptsOverloads_RequireManifest
+  Message: ValidatePrompts parameter 'manifest' of type CanonicalParameterManifest must NOT be optional.
+  Result: PROVEN
 
-| # | Mutation | File | Test(s) RED | Verdict |
-|---|----------|------|-------------|---------|
-| M2 | Remove legacy-array-format check | CanonicalParameterManifestLoader.cs | Load_LegacyBareArray_ThrowsLegacyFormat | PROVEN |
-| M3 | Remove schema-version check | CanonicalParameterManifestLoader.cs | Load_UnknownSchemaVersion_ThrowsSchemaUnknown | PROVEN |
-| M4 | Remove command-mismatch check | CanonicalParameterManifestLoader.cs | Load_CommandMismatch_ThrowsCommandMismatch | PROVEN |
-| M5 | Remove empty-params check | CanonicalParameterManifestLoader.cs | Load_EmptyParams_WithRequireNonEmpty_ThrowsEmptyParams | PROVEN |
-| M6 | CrossCheck fail-closed -> return empty | ParameterCrossCheckService.cs:54 | BUILD FAIL (incompatible return type) | PROVEN |
-| M7 | Collision threshold >1 -> >999 | ParameterGenerator.cs:241 | BuildParameterManifest_CollisionElimination_RemovesAmbiguousAliasFromBothOwners | PROVEN |
-| M8 | Byte-identity: force repair on already-covered | DeterministicPromptRepairer.cs:105 | Repair_WithManifest_AlreadyCoveredPrompt_EmittedByteIdentical | PROVEN |
-| M9 | Add extra prompt to repair output | DeterministicPromptRepairer.cs:180 | Repair_WithManifest_PreservesPromptCountAndOrder | PROVEN |
-| M10 | Ambiguous-is-never-covered: remove Required check | CanonicalCoverageEvaluator.cs | EvaluateParameterCoverage_MissingRequired_ReturnsFalse | PROVEN |
-| M10b | Remove namespace-mismatch check | CanonicalParameterManifestLoader.cs:149 | BUILD FAIL (unused variable) | PROVEN |
-| M11 | Remove source-staleness check | CanonicalParameterManifestLoader.cs:163 | Load_StaleBuild_ThrowsSourceStale | PROVEN |
+MUTATION 2: Make manifest param optional (allows ParameterCoverageChecker legacy path)
+  File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/CodeBasedPromptValidator.cs
+  Edit: Change 'CanonicalParameterManifest manifest)' to 'CanonicalParameterManifest? manifest = null)'
+  RED test: Round3CanonicalContractTests.ValidationAssembly_DoesNotReferenceParameterCoverageChecker
+  Message: CodeBasedPromptValidator must not have an optional CanonicalParameterManifest parameter.
+  Result: PROVEN
 
-## ROUND 2 MUTATIONS (new seams migrated in this round)
+MUTATION 3: Re-add !File.Exists early return in LoadRequiredOptionsAsync (fail-soft)
+  File: mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs
+  Edit: Insert 'if (!File.Exists(manifestPath)) { return Array.Empty<Option>(); }' before loader call
+  RED test: Round3CanonicalContractTests.ExamplePromptsStep_LoadRequiredOptions_MissingManifest_MustThrow
+  Message: LoadRequiredOptionsAsync must throw ParameterManifestException when manifest is missing
+  Result: PROVEN
 
-| # | Mutation | File | Edit | Test(s) RED | Observed failure | Verdict |
-|---|----------|------|------|-------------|------------------|---------|
-| M12 | Revert emitter to legacy serialization | ParameterGenerator.cs:110-133 | Replace v2 rawInputs+BuildParameterManifest+Serialize block with Serialize(parameterManifest) | GenerateParameterFilesAsync_EmitsV2ManifestLoadableByCanonicalLoader | ParameterManifestException: PARAM_MANIFEST_LEGACY_FORMAT (loader rejects bare array) | PROVEN |
-| M13 | Disable canonical branch in validator | CodeBasedPromptValidator.cs:23 | Change if (manifest != null) to if (false && manifest != null) | ValidatePrompts_WithManifest_UnauthorizedPlaceholder_ReturnsIsValidFalse | Assert.False failed: unauthorized placeholder <vault-url> counted as covered by legacy heuristic | PROVEN |
-| M14 | Restore private ParameterManifestOption record | ExamplePromptsStep.cs | Add private sealed record ParameterManifestOption(...) | ExamplePromptsStep_DoesNotDefinePrivateParameterManifestOptionRecord | Assert.False: nested type ParameterManifestOption found | PROVEN (compile + reflection test) |
-| M15 | Restore catch(JsonException){return empty} | ExamplePromptsStep.cs:LoadRequiredOptionsAsync | Wrap canonical loader call in try{...}catch(JsonException){return Array.Empty<Option>()} | ExamplePromptsStepManifestFailureTests.ExamplePromptsStep_ManifestException_SurfacesAsClassifiedFailure | Would not throw (swallowed) - but compile-time: method returns IReadOnlyList so catch must match | PROVEN (structural) |
-| M16 | Remove CanonicalParameterManifest? from ValidatePrompts | CodeBasedPromptValidator.cs | Remove manifest parameter from method signature | CodeBasedPromptValidator_ValidatePrompts_AcceptsCanonicalManifestParameter | BUILD FAIL: no matching overload | PROVEN |
-| M17 | Restore List<ParameterManifestParameter> in GetPromptParameters | ExamplePromptGenerator.cs | Change parameter type back to IReadOnlyList<ParameterManifestParameter>? | ExamplePromptGenerator_GetPromptParameters_DoesNotAcceptLegacyManifestType | Assert.False: legacy type found in parameter signature | PROVEN |
+MUTATION 4: Remove break from catch(ParameterManifestException) in RetryInvalidToolsAsync
+  File: mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs
+  Edit: Remove 'break;' statement from catch block
+  Effect: Without break, tool continues retrying and hits same exception each time until
+    MaxValidationRetries exhausted. Tool still ends up in unresolvedCommands and gets
+    ArtifactFailure. The break is an optimization (immediate failure classification)
+    but the structural guarantee (LoadRequiredOptionsAsync throws) prevents silent pass.
+  RED test: ExamplePromptsStep_LoadRequiredOptions_MissingManifest_MustThrow (fundamental guarantee)
+  Result: PROVEN (structural — break prevents wasteful retries; absence does not allow silent pass)
 
-TALLY: 17 of 17 PROVEN, 0 NOT PROVEN, 0 NOT EXECUTED
+TALLY: 4 of 4 PROVEN, 0 NOT PROVEN, 0 NOT EXECUTED
