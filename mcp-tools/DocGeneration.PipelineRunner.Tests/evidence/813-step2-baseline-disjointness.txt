@@ -1,0 +1,110 @@
+================================================================================
+ #813 STEP 2 — PRE-EXISTING FAILURE DISJOINTNESS PROOF
+ Author: Squad Coordinator   Purpose: distinguish known unrelated main-branch
+ failures from anything introduced by Step 2. NOTHING IS HIDDEN OR WEAKENED.
+================================================================================
+
+ENVIRONMENT
+  worktree HEAD (pre-commit)   : 8d41a9bad920335b875ebbd4d73b03881a954e18
+  branch                       : squad/813-step2-runtime-orchestration
+  pristine baseline commit     : 8d41a9bad920335b875ebbd4d73b03881a954e18
+                                 ("test(813): Step 1 - freeze beta.34 baseline
+                                  fixtures and classifications (#814)")
+  dotnet --version             : 10.0.303
+  pwsh (PSVersion)             : 7.6.4
+  git --version                : git version 2.55.0.vfs.0.3
+  OS                           : Microsoft Windows NT 10.0.26200.0
+  captured (UTC)               : 2026-08-15T02:11:54Z
+
+METHOD
+  A second, pristine git worktree was created and detached at the exact Step 1
+  merge commit, containing ZERO Step 2 changes:
+
+    git worktree add .baseline-proof 8d41a9bad920335b875ebbd4d73b03881a954e18 --detach
+
+  The same commands were then run in BOTH trees and the results compared. The
+  baseline worktree is local-only (added to .git/info/exclude) and is never
+  committed.
+
+--------------------------------------------------------------------------------
+ FINDING 1 — xUnit: FamilyMetadataGeneratorTests
+--------------------------------------------------------------------------------
+COMMAND (run identically in both trees):
+  dotnet test mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Tests/DocGeneration.Steps.ToolFamilyCleanup.Tests.csproj --configuration Release
+
+  PRISTINE BASELINE 8d41a9b : Failed: 1, Passed: 974, Skipped: 0, Total: 975
+  STEP 2 FEATURE BRANCH     : Failed: 1, Passed: 974, Skipped: 0, Total: 975
+                              ^^^^^^^^^^^^^ IDENTICAL ^^^^^^^^^^^^^
+
+FAILING TEST (identical in both trees):
+  DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests
+    .GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription
+  Assert.Contains() Failure: Sub-string not found
+
+VERDICT: PRE-EXISTING AND UNRELATED. The failure reproduces exactly on a tree
+that contains no Step 2 code. It lives in DocGeneration.Steps.ToolFamilyCleanup
+(an AI fallback-description assertion), which Step 2 does not modify. It was NOT
+fixed, suppressed, skipped, quarantined, or weakened by this change.
+
+NOTE ON THE NAME COLLISION: a same-named class FamilyMetadataGeneratorTests also
+exists inside DocGeneration.PipelineRunner.Tests. That one passes 9/9 in both
+trees. Only the ToolFamilyCleanup.Tests copy fails. Filter by the fully qualified
+name when triaging.
+
+--------------------------------------------------------------------------------
+ FINDING 2 — Pester: Scan-McpToolCoverage.Tests.ps1
+--------------------------------------------------------------------------------
+COMMAND (run identically in both trees):
+  pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests -Output None -PassThru"
+
+  PRISTINE BASELINE 8d41a9b : Passed=112  Failed=8  Skipped=1
+  STEP 2 FEATURE BRANCH     : Passed=118  Failed=8  Skipped=1
+                                    ^^^^^ +6      ^^^^^ IDENTICAL
+
+  All 8 failures in BOTH trees resolve to the same single file:
+    Scan-McpToolCoverage.Tests.ps1   (8 of 8)
+
+  The 8 failing It-blocks (identical set, both trees):
+    Get-DocumentedTools - tool marker detection / finds only one compute tool (compute vm list) in azure-compute.md
+    Get-DocumentedParameters - parameter table parsing / returns empty for an undocumented tool (no marker in content)
+    Annotation parsing - via script JSON output / script detects annotation mismatches for documented tools
+    Annotation parsing - via script JSON output / annotation mismatch is recorded for compute vm list (Open World)
+    Annotation parsing - via script JSON output / undocumented tool (compute vm start) has no annotations checked
+    Annotation parsing - via script JSON output / returns empty hashtable for tool marker absent (Get-DocumentedAnnotations unit)
+    Scan-McpToolCoverage - JSON output structure / compute namespace has one missing tool (compute vm start)
+    Scan-McpToolCoverage - JSON output structure / annotation mismatch detected for compute vm list (Open World)
+
+  The 1 skip in BOTH trees is the pre-existing bash-only MergeNamespaces smoke test.
+
+DELTA ANALYSIS (+6 passed, +0 failed):
+  The +6 is exactly the Step 2 additions in StartWithLogs.Tests.ps1
+  (P2, P3, P4, P5, P7, P8; P1 was updated in place, not added). Step 2 contributes
+  ZERO new Pester failures. StartWithLogs.Tests.ps1 alone: 19 passed / 0 failed.
+
+VERDICT: PRE-EXISTING AND UNRELATED. Step 2 touches no coverage-scanner code and
+no coverage fixture. The failures were NOT fixed, suppressed, skipped,
+quarantined, or weakened. The failure count is byte-for-byte unchanged, which is
+itself the proof that Step 2 neither caused nor masked them.
+
+--------------------------------------------------------------------------------
+ FULL-SOLUTION RESULT ON THE STEP 2 BRANCH (for completeness)
+--------------------------------------------------------------------------------
+  dotnet build mcp-doc-generation.sln --configuration Release
+    -> 0 Warning(s), 0 Error(s)      (baseline was also 0/0 - no regression)
+
+  dotnet test mcp-doc-generation.sln --no-build --configuration Release
+    -> every test project PASSES except the single pre-existing
+       DocGeneration.Steps.ToolFamilyCleanup.Tests failure documented above.
+    -> DocGeneration.PipelineRunner.Tests : Failed 0, Passed 666, Total 666
+    -> DocGeneration.Core.Shared.Tests    : Failed 0, Passed 470, Total 470
+    -> DocGeneration.Baseline.Beta34.Tests: Failed 0, Passed 31, Skipped 1
+       (the 1 skip is the pre-existing opt-in BETA34_VERIFY_SOURCE_RUN test,
+        unchanged from Step 1 - the frozen baseline is untouched by Step 2)
+
+================================================================================
+ BOTTOM LINE
+ Known main-branch failures: 1 xUnit + 8 Pester. Both sets reproduce EXACTLY on a
+ pristine tree at 8d41a9b. Step 2 adds 0 failures, fixes 0 of them, hides 0 of
+ them, and weakens 0 assertions. Any future change to these counts is a real
+ regression and must be investigated, not re-baselined.
+================================================================================

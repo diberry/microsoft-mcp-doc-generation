@@ -1,0 +1,979 @@
+================================================================================
+ #813 STEP 2 - GREEN EVIDENCE (Pester)  -  mcp-tools/validation/tests/StartWithLogs.Tests.ps1
+ Author: Quinn (DevOps / Scripts)   TDD phase: GREEN (smallest script change to satisfy RED)
+ Implements: AD-029 section 7 (start-with-logs.ps1 script contract); honours AD-027.
+================================================================================
+
+PRODUCTION FILE CHANGED (only one, script-side): start-with-logs.ps1
+  - Immediate $namespaceExitCode = $LASTEXITCODE capture on the line right after
+    '& $bashPath @startArguments' (before any Get-ChildItem/Move-Item/Copy-Item).
+  - Replaced 'if ($index -gt 0)' skip-build gate with a confirmed-build flag
+    $sharedBuildConfirmed (set true iff THIS invocation built AND exited 0).
+  - Per-namespace failure decision now reads $namespaceExitCode, not $LASTEXITCODE.
+  No test file, .cs, docs, or generated output touched (see git status section below).
+
+COMMANDS RUN (verbatim, from repo root):
+  1) pwsh -NoProfile -Command "[System.Management.Automation.Language.Parser]::ParseFile('start-with-logs.ps1',[ref]$null,[ref]$null) | Out-Null; 'parse-ok'"
+  2) pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests/StartWithLogs.Tests.ps1 -Output Detailed -CI"
+  3) pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests -Output Detailed -CI"
+  4) pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests/Scan-McpToolCoverage.Tests.ps1 -Output Detailed -CI"   (pre-existing-failure disjointness)
+
+ENVIRONMENT:
+  commit (git rev-parse HEAD): 8d41a9bad920335b875ebbd4d73b03881a954e18
+  branch                     : squad/813-step2-runtime-orchestration
+  working tree               : start-with-logs.ps1 edit applied (uncommitted); other M/?? entries are
+                               pre-existing #813 Step-2 work by Parker/Cameron/Morgan/Scribe, not Quinn.
+  dotnet --version           : 10.0.303
+  pwsh  (PSVersion)          : 7.6.4
+  git   --version            : git version 2.55.0.vfs.0.3
+  OS                         : Microsoft Windows NT 10.0.26200.0
+  captured (UTC)             : 2026-08-15T00:13:12Z
+
+--------------------------------------------------------------------------------
+ GREEN RESULT SUMMARY
+--------------------------------------------------------------------------------
+  [1] Parse check                              : parse-ok
+  [2] StartWithLogs.Tests.ps1 (SCOPED)         : Tests Passed: 17, Failed: 0, Skipped: 0   <= DoD #1 (0 failed)
+  [3] Full suite ./mcp-tools/validation/tests  : Tests Passed: 116, Failed: 8, Skipped: 1
+  [4] Scan-McpToolCoverage.Tests.ps1 (isolated): Tests Passed: 52, Failed: 8, Skipped: 0
+
+  The 4 RED tests (P1-P4) are now GREEN; the AD-027 collision guard (P5) stays GREEN;
+  the 12 pre-existing StartWithLogs tests stay GREEN. Nothing deleted/skipped/relaxed.
+
+PRE-EXISTING vs NEW FAILURE BREAKDOWN (DoD #2):
+  StartWithLogs.Tests.ps1 NEW failures introduced by Quinn : 0
+  Full-suite failures total                                : 8  (ALL in Scan-McpToolCoverage.Tests.ps1)
+  Scan-McpToolCoverage baseline on HEAD (RED evidence)     : Passed=52 Failed=8 Total=60
+  Scan-McpToolCoverage now (isolated re-run)               : Passed=52 Failed=8 Total=60  <= UNCHANGED, untouched
+  1 skipped in full suite = MergeNamespaces.sh bash-only smoke test (pre-existing [!], not Quinn's).
+
+  Full-suite failing It-blocks (all Scan-McpToolCoverage, none StartWithLogs):
+    [-] finds only one compute tool (compute vm list) in azure-compute.md 36ms (35ms|2ms)
+    [-] returns empty for an undocumented tool (no marker in content) 8ms (7ms|1ms)
+    [-] script detects annotation mismatches for documented tools 44ms (40ms|4ms)
+    [-] annotation mismatch is recorded for compute vm list (Open World) 14ms (12ms|2ms)
+    [-] undocumented tool (compute vm start) has no annotations checked 18ms (16ms|1ms)
+    [-] returns empty hashtable for tool marker absent (Get-DocumentedAnnotations unit) 15ms (14ms|1ms)
+    [-] compute namespace has one missing tool (compute vm start) 9ms (8ms|1ms)
+    [-] annotation mismatch detected for compute vm list (Open World) 17ms (16ms|1ms)
+
+  StartWithLogs scoped failing It-blocks: (none)
+
+AD-027 COLLISION TABLE (case-insensitive scan of param() + top-level locals; both new names are LOCALS, no new param):
+  | New name              | Kind  | Collides case-insensitively with existing param/local/auto? | Verdict |
+  |-----------------------|-------|-------------------------------------------------------------|---------|
+  | $namespaceExitCode    | local | No - folds to 'namespaceexitcode'; distinct from $namespace,  | OK      |
+  |                       |       | $namespaces, params NamespaceList/NamespaceFile, auto $LASTEXITCODE |     |
+  | $sharedBuildConfirmed | local | No - folds to 'sharedbuildconfirmed'; no existing name matches | OK      |
+  Verified live by the P5 test 'declares no param or local variable whose name collides case-insensitively (AD-027)' -> GREEN.
+
+================================================================================
+ [A] RAW OUTPUT - command 1 (parse check)
+================================================================================
+parse-ok
+
+================================================================================
+ [B] RAW OUTPUT - command 2  Invoke-Pester StartWithLogs.Tests.ps1 -Output Detailed -CI
+================================================================================
+Pester v5.7.1
+
+Starting discovery in 1 files.
+Discovery found 17 tests in 211ms.
+Running tests.
+
+Running tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\StartWithLogs.Tests.ps1'
+Describing start-with-logs.ps1
+  [+] fails before start.sh when the tracked metadata version is absent 1.37s (1.33s|38ms)
+  [+] fails before start.sh when the tracked metadata is unusable 1.15s (1.15s|3ms)
+  [+] fails before start.sh when the AZD environment file is absent 1.15s (1.15s|2ms)
+  [+] dispatches every mapped namespace to start.sh with steps 1 through 5 1.31s (1.31s|1ms)
+  [+] continues past a namespace failure and reports it in the summary 1.2s (1.2s|1ms)
+  [+] rebuilds the next namespace when the prior namespace built but exited nonzero 942ms (941ms|1ms)
+  [+] captures the namespace exit code immediately after start.sh before any output-move cmdlet 11ms (10ms|1ms)
+  [+] uses the captured namespace exit code rather than $LASTEXITCODE for the failure decision 9ms (8ms|1ms)
+  [+] declares no param or local variable whose name collides case-insensitively (AD-027) 97ms (92ms|4ms)
+  [+] does not call the legacy Generate-ToolFamily script 6ms (5ms|1ms)
+  [+] supports metadata and script paths containing spaces 1.03s (1.03s|1ms)
+  [+] preflights without invoking start.sh 961ms (960ms|1ms)
+  [+] generates only comma-listed namespaces via -NamespaceList 1.01s (1.01s|1ms)
+  [+] generates only file-listed namespaces via -NamespaceFile 1.11s (1.11s|1ms)
+  [+] fails when -NamespaceList contains an unknown namespace 1.12s (1.12s|1ms)
+  [+] fails when -NamespaceFile does not exist 1.07s (1.07s|1ms)
+  [+] fails when both -NamespaceList and -NamespaceFile are provided 675ms (673ms|2ms)
+Tests completed in 15.18s
+Tests Passed: 17, Failed: 0, Skipped: 0, Inconclusive: 0, NotRun: 0
+
+================================================================================
+ [C] RAW OUTPUT - command 3  Invoke-Pester ./mcp-tools/validation/tests -Output Detailed -CI
+================================================================================
+Pester v5.7.1
+
+Starting discovery in 5 files.
+Discovery found 125 tests in 466ms.
+Running tests.
+
+Running tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Count-Tools.Tests.ps1'
+Describing count-tools.ps1 — script presence (#676)
+  [+] exists at the repository-root scripts directory 97ms (60ms|37ms)
+
+Describing Get-ServiceFromCommand — service is the first token of the command
+  [+] returns the first whitespace-delimited token 40ms (36ms|4ms)
+  [+] trims surrounding whitespace before splitting 5ms (4ms|1ms)
+  [+] returns $null for empty or whitespace commands 17ms (15ms|1ms)
+
+Describing Get-ToolCounts — totals and per-service breakdown
+  [+] counts the total number of tools 27ms (24ms|3ms)
+  [+] groups tools by service (first token of command) 16ms (14ms|1ms)
+  [+] orders the breakdown by descending tool count 10ms (8ms|1ms)
+  [+] skips tools with an empty or missing command 9ms (8ms|1ms)
+
+Describing Read-ToolsList — shape handling
+  [+] reads the results array from a results-wrapped tools-list.json 16ms (12ms|4ms)
+  [+] reads a bare top-level array tools-list.json 64ms (63ms|2ms)
+  [+] throws when the file does not exist 33ms (32ms|1ms)
+
+Describing count-tools.ps1 — full invocation
+
+Total tool count: 6
+
+Top 10 services by tool count:
+Service                  Tool Count
+-------                  ----------
+storage                  3
+acr                      2
+monitor                  1
+
+  [+] emits a count object whose Total matches the fixture 63ms (59ms|4ms)
+
+Running tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\MergeNamespaces.Tests.ps1'
+Describing merge-namespaces.sh — shipping multi-namespace merge (AD-011)
+  [+] smoke test file exists 8ms (4ms|4ms)
+  [!] merges canonical + -cli variants per AD-011 (primary header/related, ordered tools, updated tool_count, preserved tab markers) 2ms (0ms|2ms)
+
+Running tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1'
+Describing Get-DocumentedTools — tool marker detection
+  [+] finds tools with plain HTML-comment markers 19ms (16ms|2ms)
+  [+] finds tools with at-mcpcli HTML-comment markers 13ms (12ms|1ms)
+  [+] reports missing tools when no marker exists 10ms (9ms|1ms)
+  [+] handles multi-word commands (e.g., 'storage blob upload') 6ms (5ms|1ms)
+  [+] returns empty array for non-existent file 6ms (5ms|1ms)
+  [+] finds both storage tools in azure-storage.md 7ms (6ms|1ms)
+  [-] finds only one compute tool (compute vm list) in azure-compute.md 36ms (35ms|2ms)
+   at $tools | Should -Not -Contain "compute vm start", C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:108
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:108
+   Expected 'compute vm start' to not be found in collection @('compute vm list', 'compute vm start'), but it was found.
+
+Describing Get-DocumentedParameters — parameter table parsing
+  [+] matches exact param names (account-name → 'Account name') 22ms (19ms|3ms)
+  [+] returns params for a documented tool section 8ms (7ms|1ms)
+  [-] returns empty for an undocumented tool (no marker in content) 8ms (7ms|1ms)
+   at @($params).Count | Should -Be 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:131
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:131
+   Expected 0, but got 3.
+  [+] includes --resource-group param when required:true (blob upload) 6ms (5ms|1ms)
+
+Describing Parameter exclusion logic
+  [+] alwaysExcludeParams contains --learn 6ms (3ms|3ms)
+  [+] alwaysExcludeParams contains --subscription 4ms (3ms|1ms)
+  [+] alwaysExcludeParams contains --tenant 4ms (3ms|1ms)
+  [+] alwaysExcludeParams contains --auth-method 4ms (3ms|1ms)
+  [+] commonParams contains --resource-group 4ms (3ms|1ms)
+
+Describing Annotation parsing — via script JSON output
+  [-] script detects annotation mismatches for documented tools 44ms (40ms|4ms)
+   at $script:annoReport.summary.annotation_mismatches | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:190
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:190
+   Expected the actual value to be greater than 0, but got 0.
+  [+] script records annotation matches for tools with correct annotations 5ms (4ms|1ms)
+  [-] annotation mismatch is recorded for compute vm list (Open World) 14ms (12ms|2ms)
+   at $mismatches.Count | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:201
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:201
+   Expected the actual value to be greater than 0, but got 0.
+  [+] storage account list has no annotation mismatches 8ms (7ms|1ms)
+  [-] undocumented tool (compute vm start) has no annotations checked 18ms (16ms|1ms)
+   at $vmStart.documented | Should -Be $false, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:215
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:215
+   Expected $false, but got $true.
+  [-] returns empty hashtable for tool marker absent (Get-DocumentedAnnotations unit) 15ms (14ms|1ms)
+   at $anno.Count | Should -Be 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:220
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:220
+   Expected 0, but got 4.
+
+Describing Namespace → filename mapping
+  [+] maps 'aks' to 'azure-kubernetes.md' 10ms (6ms|4ms)
+  [+] maps 'storage' to 'azure-storage.md' 5ms (4ms|2ms)
+  [+] maps 'cosmos' to 'azure-cosmos-db.md' 6ms (4ms|1ms)
+  [+] maps 'keyvault' to 'azure-key-vault.md' 5ms (4ms|1ms)
+  [+] maps 'compute' to 'azure-compute.md' 4ms (3ms|1ms)
+  [+] falls back to 'azure-{namespace}.md' for unmapped namespaces 10ms (8ms|1ms)
+
+Describing Scan-McpToolCoverage — JSON output structure
+  [+] produces a JSON output file 9ms (6ms|3ms)
+  [+] JSON contains total_tools_in_json 6ms (5ms|1ms)
+  [+] JSON contains total_namespaces 5ms (4ms|1ms)
+  [+] JSON contains namespaces array 4ms (3ms|1ms)
+  [+] JSON contains summary block with tools_documented 7ms (6ms|1ms)
+  [+] documented + missing tools equals total tools in JSON 7ms (6ms|1ms)
+  [+] storage namespace shows both tools documented 8ms (7ms|1ms)
+  [-] compute namespace has one missing tool (compute vm start) 9ms (8ms|1ms)
+   at $ns.missing_tools | Should -Contain "compute vm start", C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:316
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:316
+   Expected 'compute vm start' to be found in collection $null, but it was not found.
+  [-] annotation mismatch detected for compute vm list (Open World) 17ms (16ms|1ms)
+   at @($vmList.annotations.mismatches).Count | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:323
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:323
+   Expected the actual value to be greater than 0, but got 0.
+  [+] JSON scan_date is populated 8ms (7ms|1ms)
+
+Describing Phantom parameter detection — Issue #742
+  [+] detects phantom param 'Health model name' (should be 'Health model') 20ms (17ms|3ms)
+  [+] does NOT flag correct params as phantom (negative case) 10ms (9ms|1ms)
+  [+] does NOT flag optional common params absent from NL table (convention compliance) 10ms (9ms|1ms)
+
+Describing Required/optional mismatch detection — Issue #742
+  [+] detects req/opt mismatch for Resource group (source=required, doc=optional) 21ms (18ms|3ms)
+  [+] does NOT flag correct required param as mismatch (negative case) 8ms (7ms|1ms)
+
+Describing Edge cases — empty tools-list.json
+  [+] succeeds with 0 tools 5ms (3ms|3ms)
+  [+] reports total_tools_in_json as 0 3ms (3ms|1ms)
+  [+] reports total_namespaces as 0 3ms (3ms|1ms)
+  [+] namespaces array is empty 3ms (3ms|1ms)
+
+Describing Edge cases — article with no tool markers
+  [+] Get-DocumentedTools returns empty for article with no markers 8ms (5ms|3ms)
+
+Describing Edge cases — Namespace filter
+  [+] script exits non-zero for invalid namespace 815ms (813ms|3ms)
+  [+] script scans only storage namespace when -Namespace storage is set 808ms (807ms|1ms)
+
+Describing Scan-McpToolCoverage — missing required parameter reporting
+  [+] produces a report 5ms (2ms|2ms)
+  [+] keyvault secret get is documented (article exists with marker) 4ms (3ms|1ms)
+  [+] summary.params_missing is at least 1 (--secret-name omitted from article) 4ms (3ms|1ms)
+  [+] keyvault secret get tool_details lists --secret-name as missing 6ms (5ms|1ms)
+  [+] keyvault secret get tool_details does NOT list --vault-name as missing 5ms (4ms|1ms)
+
+Describing Namespace mapping — JSON-based configuration
+  [+] loads namespace mapping from config/namespace-mapping.json when file exists 37ms (35ms|3ms)
+  [+] validates real-world namespace mapping structure 7ms (6ms|1ms)
+  [+] falls back to inline mapping when JSON file is missing 7ms (7ms|1ms)
+  [+] falls back to inline mapping when JSON file is invalid 12ms (12ms|1ms)
+  [+] does NOT fall back when JSON is empty but valid 9ms (8ms|1ms)
+
+Running tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\StartWithLogs.Tests.ps1'
+Describing start-with-logs.ps1
+  [+] fails before start.sh when the tracked metadata version is absent 1.18s (1.18s|1ms)
+  [+] fails before start.sh when the tracked metadata is unusable 1.11s (1.11s|1ms)
+  [+] fails before start.sh when the AZD environment file is absent 1.02s (1.01s|1ms)
+  [+] dispatches every mapped namespace to start.sh with steps 1 through 5 1.16s (1.16s|1ms)
+  [+] continues past a namespace failure and reports it in the summary 1.14s (1.14s|1ms)
+  [+] rebuilds the next namespace when the prior namespace built but exited nonzero 1.08s (1.08s|1ms)
+  [+] captures the namespace exit code immediately after start.sh before any output-move cmdlet 7ms (6ms|1ms)
+  [+] uses the captured namespace exit code rather than $LASTEXITCODE for the failure decision 7ms (7ms|0ms)
+  [+] declares no param or local variable whose name collides case-insensitively (AD-027) 101ms (100ms|0ms)
+  [+] does not call the legacy Generate-ToolFamily script 5ms (4ms|0ms)
+  [+] supports metadata and script paths containing spaces 997ms (997ms|0ms)
+  [+] preflights without invoking start.sh 908ms (907ms|1ms)
+  [+] generates only comma-listed namespaces via -NamespaceList 1.06s (1.06s|0ms)
+  [+] generates only file-listed namespaces via -NamespaceFile 1.09s (1.09s|1ms)
+  [+] fails when -NamespaceList contains an unknown namespace 1.11s (1.11s|1ms)
+  [+] fails when -NamespaceFile does not exist 1.08s (1.08s|0ms)
+  [+] fails when both -NamespaceList and -NamespaceFile are provided 676ms (675ms|1ms)
+
+Running tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Test-ArticleHealth.Tests.ps1'
+Describing Article Health smoke fixture selection
+  [+] selects only healthy smoke fixtures and excludes negative and coverage fixtures 1.17s (1.17s|2ms)
+  [+] workflow fallback validates selected files instead of treating null LASTEXITCODE as failure 6ms (5ms|1ms)
+
+Describing Test-ArticleHealth.ps1 — valid-article.md
+  [+] ms.date passes 5ms (3ms|2ms)
+  [+] ms.custom passes 2ms (2ms|0ms)
+  [+] ms.reviewer passes 2ms (2ms|0ms)
+  [+] no blank lines in frontmatter passes 2ms (2ms|0ms)
+  [+] mcp-cli.version passes 2ms (2ms|0ms)
+  [+] no H3 tool sections passes 2ms (2ms|0ms)
+  [+] no duplicate H2 passes 2ms (2ms|0ms)
+  [+] no absolute Learn URLs passes 3ms (2ms|0ms)
+  [+] param bold names passes 2ms (2ms|0ms)
+  [+] no INCLUDE param rows passes 2ms (2ms|0ms)
+  [+] no failed checks 2ms (2ms|0ms)
+
+Describing Test-ArticleHealth.ps1 — bad-frontmatter.md
+  [+] ms.date fails (missing) 4ms (2ms|2ms)
+  [+] ms.custom fails (missing) 2ms (2ms|0ms)
+  [+] ms.reviewer warns (ms.reviewer key absent — not a bare reviewer: line) 2ms (2ms|0ms)
+  [+] blank lines in frontmatter warns 2ms (2ms|0ms)
+  [+] mcp-cli.version warns (missing) 2ms (2ms|0ms)
+  [+] has at least one fail or warn 3ms (3ms|0ms)
+
+Describing Test-ArticleHealth.ps1 — bare-reviewer.md (bare reviewer: with no value)
+  [+] ms.reviewer fails when frontmatter has bare reviewer: with no value 4ms (2ms|2ms)
+  [+] ms.reviewer detail reports bare reviewer: with no value 3ms (2ms|0ms)
+
+Describing Test-ArticleHealth.ps1 — bad-headings.md
+  [+] H3 tool sections fails 5ms (2ms|3ms)
+  [+] Detail mentions count of H3 headings 3ms (2ms|0ms)
+
+Describing Test-ArticleHealth.ps1 — bad-urls.md
+  [+] absolute Learn URLs fails 4ms (2ms|2ms)
+  [+] Detail mentions URL count 2ms (2ms|0ms)
+
+Describing Test-ArticleHealth.ps1 — bad-params.md
+  [+] INCLUDE param rows fails 14ms (2ms|12ms)
+
+Describing Test-ArticleHealth.ps1 — bad-markers.md (malformed HTML comment)
+  [+] markers.well-formed warns when comment has no space after <!-- 7ms (5ms|2ms)
+  [+] markers.well-formed detail reports at least one malformed marker 2ms (2ms|1ms)
+  [+] valid fields still pass in bad-markers.md 3ms (3ms|0ms)
+
+Describing Test-ArticleHealth.ps1 — script integration (exit codes)
+  [+] exits 0 for valid article 623ms (621ms|2ms)
+  [+] exits 1 for article with failures 606ms (605ms|1ms)
+  [+] exits 1 with -Strict on article with warnings 607ms (606ms|1ms)
+  [+] accepts -ArticlesDir and checks all .md files 941ms (940ms|1ms)
+  [+] writes JSON when -OutputJson is specified 663ms (662ms|1ms)
+Tests completed in 27.98s
+Tests Passed: 116, Failed: 8, Skipped: 1, Inconclusive: 0, NotRun: 0
+
+================================================================================
+ [D] RAW OUTPUT - command 4  Invoke-Pester Scan-McpToolCoverage.Tests.ps1 -Output Detailed -CI  (disjointness)
+================================================================================
+Pester v5.7.1
+
+Starting discovery in 1 files.
+Discovery found 60 tests in 296ms.
+Running tests.
+
+Running tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1'
+Describing Get-DocumentedTools — tool marker detection
+  [+] finds tools with plain HTML-comment markers 95ms (62ms|33ms)
+  [+] finds tools with at-mcpcli HTML-comment markers 17ms (16ms|1ms)
+  [+] reports missing tools when no marker exists 56ms (54ms|1ms)
+  [+] handles multi-word commands (e.g., 'storage blob upload') 7ms (6ms|1ms)
+  [+] returns empty array for non-existent file 28ms (27ms|1ms)
+  [+] finds both storage tools in azure-storage.md 7ms (6ms|1ms)
+  [-] finds only one compute tool (compute vm list) in azure-compute.md 43ms (41ms|2ms)
+   at $tools | Should -Not -Contain "compute vm start", C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:108
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:108
+   Expected 'compute vm start' to not be found in collection @('compute vm list', 'compute vm start'), but it was found.
+
+Describing Get-DocumentedParameters — parameter table parsing
+  [+] matches exact param names (account-name → 'Account name') 24ms (21ms|3ms)
+  [+] returns params for a documented tool section 8ms (7ms|1ms)
+  [-] returns empty for an undocumented tool (no marker in content) 9ms (7ms|1ms)
+   at @($params).Count | Should -Be 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:131
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:131
+   Expected 0, but got 3.
+  [+] includes --resource-group param when required:true (blob upload) 10ms (9ms|1ms)
+
+Describing Parameter exclusion logic
+  [+] alwaysExcludeParams contains --learn 8ms (3ms|4ms)
+  [+] alwaysExcludeParams contains --subscription 4ms (3ms|1ms)
+  [+] alwaysExcludeParams contains --tenant 4ms (3ms|1ms)
+  [+] alwaysExcludeParams contains --auth-method 4ms (3ms|1ms)
+  [+] commonParams contains --resource-group 4ms (3ms|1ms)
+
+Describing Annotation parsing — via script JSON output
+  [-] script detects annotation mismatches for documented tools 163ms (23ms|139ms)
+   at $script:annoReport.summary.annotation_mismatches | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:190
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:190
+   Expected the actual value to be greater than 0, but got 0.
+  [+] script records annotation matches for tools with correct annotations 14ms (11ms|3ms)
+  [-] annotation mismatch is recorded for compute vm list (Open World) 25ms (23ms|2ms)
+   at $mismatches.Count | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:201
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:201
+   Expected the actual value to be greater than 0, but got 0.
+  [+] storage account list has no annotation mismatches 17ms (15ms|2ms)
+  [-] undocumented tool (compute vm start) has no annotations checked 29ms (27ms|2ms)
+   at $vmStart.documented | Should -Be $false, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:215
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:215
+   Expected $false, but got $true.
+  [-] returns empty hashtable for tool marker absent (Get-DocumentedAnnotations unit) 21ms (19ms|2ms)
+   at $anno.Count | Should -Be 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:220
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:220
+   Expected 0, but got 4.
+
+Describing Namespace → filename mapping
+  [+] maps 'aks' to 'azure-kubernetes.md' 30ms (14ms|15ms)
+  [+] maps 'storage' to 'azure-storage.md' 8ms (6ms|2ms)
+  [+] maps 'cosmos' to 'azure-cosmos-db.md' 8ms (6ms|2ms)
+  [+] maps 'keyvault' to 'azure-key-vault.md' 9ms (7ms|2ms)
+  [+] maps 'compute' to 'azure-compute.md' 8ms (5ms|2ms)
+  [+] falls back to 'azure-{namespace}.md' for unmapped namespaces 16ms (14ms|2ms)
+
+Describing Scan-McpToolCoverage — JSON output structure
+  [+] produces a JSON output file 11ms (7ms|4ms)
+  [+] JSON contains total_tools_in_json 7ms (6ms|1ms)
+  [+] JSON contains total_namespaces 6ms (4ms|1ms)
+  [+] JSON contains namespaces array 4ms (3ms|1ms)
+  [+] JSON contains summary block with tools_documented 8ms (7ms|1ms)
+  [+] documented + missing tools equals total tools in JSON 44ms (43ms|1ms)
+  [+] storage namespace shows both tools documented 11ms (10ms|1ms)
+  [-] compute namespace has one missing tool (compute vm start) 12ms (10ms|1ms)
+   at $ns.missing_tools | Should -Contain "compute vm start", C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:316
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:316
+   Expected 'compute vm start' to be found in collection $null, but it was not found.
+  [-] annotation mismatch detected for compute vm list (Open World) 15ms (14ms|1ms)
+   at @($vmList.annotations.mismatches).Count | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:323
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:323
+   Expected the actual value to be greater than 0, but got 0.
+  [+] JSON scan_date is populated 9ms (7ms|1ms)
+
+Describing Phantom parameter detection — Issue #742
+  [+] detects phantom param 'Health model name' (should be 'Health model') 21ms (17ms|4ms)
+  [+] does NOT flag correct params as phantom (negative case) 11ms (10ms|1ms)
+  [+] does NOT flag optional common params absent from NL table (convention compliance) 11ms (10ms|1ms)
+
+Describing Required/optional mismatch detection — Issue #742
+  [+] detects req/opt mismatch for Resource group (source=required, doc=optional) 19ms (16ms|3ms)
+  [+] does NOT flag correct required param as mismatch (negative case) 8ms (7ms|1ms)
+
+Describing Edge cases — empty tools-list.json
+  [+] succeeds with 0 tools 6ms (3ms|3ms)
+  [+] reports total_tools_in_json as 0 4ms (3ms|1ms)
+  [+] reports total_namespaces as 0 5ms (4ms|1ms)
+  [+] namespaces array is empty 3ms (2ms|1ms)
+
+Describing Edge cases — article with no tool markers
+  [+] Get-DocumentedTools returns empty for article with no markers 8ms (6ms|3ms)
+
+Describing Edge cases — Namespace filter
+  [+] script exits non-zero for invalid namespace 936ms (933ms|3ms)
+  [+] script scans only storage namespace when -Namespace storage is set 865ms (864ms|1ms)
+
+Describing Scan-McpToolCoverage — missing required parameter reporting
+  [+] produces a report 5ms (2ms|2ms)
+  [+] keyvault secret get is documented (article exists with marker) 4ms (3ms|0ms)
+  [+] summary.params_missing is at least 1 (--secret-name omitted from article) 3ms (3ms|0ms)
+  [+] keyvault secret get tool_details lists --secret-name as missing 5ms (5ms|0ms)
+  [+] keyvault secret get tool_details does NOT list --vault-name as missing 4ms (4ms|1ms)
+
+Describing Namespace mapping — JSON-based configuration
+  [+] loads namespace mapping from config/namespace-mapping.json when file exists 37ms (35ms|3ms)
+  [+] validates real-world namespace mapping structure 8ms (8ms|1ms)
+  [+] falls back to inline mapping when JSON file is missing 9ms (8ms|1ms)
+  [+] falls back to inline mapping when JSON file is invalid 12ms (11ms|1ms)
+  [+] does NOT fall back when JSON is empty but valid 9ms (8ms|1ms)
+Tests completed in 9.3s
+Tests Passed: 52, Failed: 8, Skipped: 0, Inconclusive: 0, NotRun: 0
+
+================================================================================
+ END OF GREEN EVIDENCE
+================================================================================
+
+
+================================================================================
+ #813 STEP 2 - ADDENDUM A GREEN EVIDENCE (Pester)  -  six-category catalog summary (S3)
+ Author: Quinn (DevOps / Scripts)   TDD phase: GREEN (smallest script change to satisfy RED)
+ Implements: AD-029 section 6 accounting model surfaced in start-with-logs.ps1 catalog
+             summary; Cameron ADDENDUM A surface S3; honours AD-027. Turns Parker P7/P8 GREEN.
+================================================================================
+
+PRODUCTION FILE CHANGED (only one, script-side): start-with-logs.ps1
+  - Added a six-category run-accounting catalog summary block after the existing failed-
+    namespace summary and before the 'Output:' line (inside the main try, before Stop-Transcript).
+  - Reads each processed namespace's run-accounting.json at <consolidatedDir>/<namespace>/
+    (relocated there by the existing move block). Live categories 1-4 (Successful namespaces,
+    Root-failed namespaces, Warning-only failures, Suppressed steps) are AGGREGATED across all
+    namespaces. Catalog-constant categories 5-6 (Cascades imported from historical fixtures,
+    Unclassified records) are taken ONCE from reconciliation.categoryCounts and never summed.
+  - All six labels always print, even at count 0. Each label is a separate Write-Host line so the
+    per-line Where-Object filters in P7/P8 can pin same-line identifiers (aaa / bbb.02.root / ccc).
+  - Robustness: a namespace whose run-accounting.json is missing is skipped (the authoritative
+    failure signal remains the independent $failedNamespaces list); a malformed/unparseable file
+    is caught, recorded, surfaced via Write-Warning, and excluded from every count so it can
+    neither crash the run nor mask a failure. Missing-property lists are null-filtered so @($null)
+    cannot inflate a count.
+  - PRESERVED intact from AD-029 section 7: immediate $namespaceExitCode = $LASTEXITCODE capture,
+    $sharedBuildConfirmed gating of --skip-build/--skip-npm-update, explicit failure decision on
+    $namespaceExitCode, the 'Generation Summary: X/Y succeeded, Z failed' line + failed-namespace
+    list, and the nonzero exit when any namespace failed.
+  No test file, .cs, docs, or generated output touched (see git status section below).
+
+COMMANDS RUN (verbatim, from repo root):
+  1) pwsh -NoProfile -Command "[System.Management.Automation.Language.Parser]::ParseFile('start-with-logs.ps1',[ref]$null,[ref]$null) | Out-Null; 'parse-ok'"
+  2) pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests/StartWithLogs.Tests.ps1 -Output Detailed -CI"
+  3) pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests -Output Detailed -CI"
+  4) pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests/Scan-McpToolCoverage.Tests.ps1 -Output Detailed -CI"   (pre-existing-failure disjointness)
+
+ENVIRONMENT:
+  commit (git rev-parse HEAD): 8d41a9bad920335b875ebbd4d73b03881a954e18
+  branch                     : squad/813-step2-runtime-orchestration
+  working tree               : start-with-logs.ps1 six-category block applied (uncommitted); other
+                               M/?? entries are pre-existing #813 Step-2 work by Parker/Cameron/
+                               Morgan/Scribe, not Quinn (Morgan owns the parallel .cs edits).
+  dotnet --version           : 10.0.303
+  pwsh  (PSVersion)          : 7.6.4
+  git   --version            : git version 2.55.0.vfs.0.3
+  OS                         : Microsoft Windows 10.0.26200
+  captured (UTC)             : 2026-08-15T01:40:06Z
+
+--------------------------------------------------------------------------------
+ GREEN RESULT SUMMARY
+--------------------------------------------------------------------------------
+  [1] Parse check                              : parse-ok
+  [2] StartWithLogs.Tests.ps1 (SCOPED)         : Tests Passed: 19, Failed: 0, Skipped: 0   <= DoD #1 (0 failed; 19 = P1-P8 + 11 pre-existing)
+  [3] Full suite ./mcp-tools/validation/tests  : Tests Passed: 118, Failed: 8, Skipped: 1
+  [4] Scan-McpToolCoverage.Tests.ps1 (isolated): Tests Passed: 52, Failed: 8, Skipped: 0
+
+  P7 + P8 (six-category catalog summary) are now GREEN; the AD-027 collision guard (P5) stays
+  GREEN; the 4 AD-029 section-7 tests (P1-P4 predecessors) and all other pre-existing StartWithLogs
+  tests stay GREEN. Nothing deleted/skipped/relaxed.
+
+PRE-EXISTING vs NEW FAILURE BREAKDOWN (DoD #2):
+  StartWithLogs.Tests.ps1 NEW failures introduced by Quinn : 0
+  Full-suite failures total                                : 8  (ALL in Scan-McpToolCoverage.Tests.ps1)
+  Scan-McpToolCoverage baseline on HEAD (RED addendum)     : Passed=52 Failed=8 Total=60
+  Scan-McpToolCoverage now (isolated re-run)               : Passed=52 Failed=8 Total=60  <= UNCHANGED, untouched, unweakened, unhidden
+  Scan-McpToolCoverage.Tests.ps1 references to start-with-logs/run-accounting/accounting : NONE (independent surface)
+  1 skipped in full suite = MergeNamespaces.sh bash-only smoke test (pre-existing [!], not Quinn's).
+
+  Full-suite failing It-blocks (all Scan-McpToolCoverage, none StartWithLogs):
+    [-] finds only one compute tool (compute vm list) in azure-compute.md
+    [-] returns empty for an undocumented tool (no marker in content)
+    [-] script detects annotation mismatches for documented tools
+    [-] annotation mismatch is recorded for compute vm list (Open World)
+    [-] undocumented tool (compute vm start) has no annotations checked
+    [-] returns empty hashtable for tool marker absent (Get-DocumentedAnnotations unit)
+    [-] compute namespace has one missing tool (compute vm start)
+    [-] annotation mismatch detected for compute vm list (Open World)
+
+  StartWithLogs scoped failing It-blocks: (none)
+
+SIX EXACT LABEL STRINGS EMITTED (service-agnostic, always printed incl. count 0):
+  1  Successful namespaces (N)                          [live - aggregated]
+  2  Root-failed namespaces (N)                         [live - aggregated]
+  3  Warning-only failures (N)                          [live - aggregated]
+  4  Suppressed steps (N)                               [live - aggregated]
+  5  Cascades imported from historical fixtures (N)     [baseline constant - once]
+  6  Unclassified records (N)                           [baseline constant - once]
+
+AD-027 COLLISION TABLE (all new names are top-level locals; no new param introduced):
+  Every new name is checked case-insensitively against every existing param/local/foreach var via
+  the same AST scan P5 uses. Collision count on the full top-level declaration set = 0 (verified).
+  All 16 new names share the 'accounting' prefix; no existing name uses it, so none can fold onto
+  an existing name, and no two new names fold onto each other.
+    | New name                     | Kind        | Collides case-insensitively? | Verdict |
+    | accountingSuccessful         | local       | No | OK |
+    | accountingRootFailed         | local       | No | OK |
+    | accountingWarningOnly        | local       | No | OK |
+    | accountingSuppressed         | local       | No | OK |
+    | accountingCascadeImported    | local       | No | OK |
+    | accountingUnclassified       | local       | No | OK |
+    | accountingBaselineCaptured   | local       | No | OK |
+    | accountingUnreadable         | local       | No | OK |
+    | accountingNamespace          | foreach var | No | OK |
+    | accountingPath               | local       | No | OK |
+    | accountingData               | local       | No | OK |
+    | accountingCounts             | local       | No | OK |
+    | accountingSuccessfulLine     | local       | No | OK |
+    | accountingRootFailedLine     | local       | No | OK |
+    | accountingWarningOnlyLine    | local       | No | OK |
+    | accountingSuppressedLine     | local       | No | OK |
+
+MISSING / MALFORMED ARTIFACT BEHAVIOUR (DoD (f)) and why it cannot mask a failure:
+  - Missing run-accounting.json for a namespace  -> Test-Path false -> skipped; contributes nothing
+    to any of the six counts.
+  - Malformed / unparseable JSON                 -> ConvertFrom-Json throws -> caught -> namespace
+    added to $accountingUnreadable -> excluded from all counts -> surfaced via Write-Warning.
+  Why no failure is masked: the six-category block is PURELY ADDITIONAL reporting. The authoritative
+  per-namespace pass/fail signal is $failedNamespaces, built from $namespaceExitCode independently
+  of any run-accounting.json read, and it still drives the 'Generation Summary' line and the script's
+  nonzero exit. A missing/malformed accounting file can only make an ADDITIONAL count conservatively
+  lower or emit a visible warning; it can never flip a failed namespace to success nor suppress the
+  nonzero exit.
+
+--------------------------------------------------------------------------------
+ [2] FULL OUTPUT - StartWithLogs.Tests.ps1 (SCOPED, DoD #1)
+--------------------------------------------------------------------------------
+[95mPester v5.7.1[0m
+[95m
+[95mStarting discovery in 1 files.[0m
+[95mDiscovery found 19 tests in 247ms.[0m
+[95mRunning tests.[0m
+[95m
+[95mRunning tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\StartWithLogs.Tests.ps1'[0m
+[92mDescribing start-with-logs.ps1[0m
+[32m  [+] fails before start.sh when the tracked metadata version is absent[0m[90m 1.63s (1.59s|47ms)[0m
+[32m  [+] fails before start.sh when the tracked metadata is unusable[0m[90m 1.49s (1.49s|3ms)[0m
+[32m  [+] fails before start.sh when the AZD environment file is absent[0m[90m 1.38s (1.34s|41ms)[0m
+[32m  [+] dispatches every mapped namespace to start.sh with steps 1 through 5[0m[90m 2.04s (2.04s|1ms)[0m
+[32m  [+] continues past a namespace failure and reports it in the summary[0m[90m 2.62s (2.62s|1ms)[0m
+[32m  [+] rebuilds the next namespace when the prior namespace built but exited nonzero[0m[90m 3.23s (3.23s|1ms)[0m
+[32m  [+] captures the namespace exit code immediately after start.sh before any output-move cmdlet[0m[90m 13ms (11ms|1ms)[0m
+[32m  [+] uses the captured namespace exit code rather than $LASTEXITCODE for the failure decision[0m[90m 19ms (18ms|1ms)[0m
+[32m  [+] declares no param or local variable whose name collides case-insensitively (AD-027)[0m[90m 184ms (183ms|1ms)[0m
+[32m  [+] does not call the legacy Generate-ToolFamily script[0m[90m 8ms (7ms|1ms)[0m
+[32m  [+] supports metadata and script paths containing spaces[0m[90m 1.59s (1.58s|1ms)[0m
+[32m  [+] preflights without invoking start.sh[0m[90m 2.21s (2.2s|1ms)[0m
+[32m  [+] generates only comma-listed namespaces via -NamespaceList[0m[90m 1.32s (1.31s|1ms)[0m
+[32m  [+] generates only file-listed namespaces via -NamespaceFile[0m[90m 1.51s (1.51s|1ms)[0m
+[32m  [+] fails when -NamespaceList contains an unknown namespace[0m[90m 1.35s (1.35s|1ms)[0m
+[32m  [+] fails when -NamespaceFile does not exist[0m[90m 1.23s (1.23s|1ms)[0m
+[32m  [+] fails when both -NamespaceList and -NamespaceFile are provided[0m[90m 1.19s (1.19s|1ms)[0m
+[32m  [+] reports all six accounting categories in the catalog summary and never sums the baseline constants[0m[90m 1.45s (1.45s|1ms)[0m
+[32m  [+] prints every accounting category label even when all namespaces succeed[0m[90m 1.44s (1.44s|1ms)[0m
+[97mTests completed in 27.1s[0m
+[32mTests Passed: 19, [0m[90mFailed: 0, [0m[90mSkipped: 0, [0m[90mInconclusive: 0, [0m[37m[0m[90mNotRun: 0[0m
+
+--------------------------------------------------------------------------------
+ [3] FULL OUTPUT - ./mcp-tools/validation/tests (FULL SUITE, DoD #2)
+--------------------------------------------------------------------------------
+[95mPester v5.7.1[0m
+[95m
+[95mStarting discovery in 5 files.[0m
+[95mDiscovery found 127 tests in 1.03s.[0m
+[95mRunning tests.[0m
+[95m
+[95mRunning tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Count-Tools.Tests.ps1'[0m
+[92mDescribing count-tools.ps1 — script presence (#676)[0m
+[32m  [+] exists at the repository-root scripts directory[0m[90m 169ms (114ms|55ms)[0m
+[0m
+[92mDescribing Get-ServiceFromCommand — service is the first token of the command[0m
+[32m  [+] returns the first whitespace-delimited token[0m[90m 132ms (68ms|64ms)[0m
+[32m  [+] trims surrounding whitespace before splitting[0m[90m 8ms (6ms|2ms)[0m
+[32m  [+] returns $null for empty or whitespace commands[0m[90m 35ms (33ms|2ms)[0m
+[0m
+[92mDescribing Get-ToolCounts — totals and per-service breakdown[0m
+[32m  [+] counts the total number of tools[0m[90m 417ms (47ms|370ms)[0m
+[32m  [+] groups tools by service (first token of command)[0m[90m 44ms (41ms|2ms)[0m
+[32m  [+] orders the breakdown by descending tool count[0m[90m 11ms (9ms|2ms)[0m
+[32m  [+] skips tools with an empty or missing command[0m[90m 17ms (13ms|3ms)[0m
+[0m
+[92mDescribing Read-ToolsList — shape handling[0m
+[32m  [+] reads the results array from a results-wrapped tools-list.json[0m[90m 109ms (85ms|24ms)[0m
+[32m  [+] reads a bare top-level array tools-list.json[0m[90m 134ms (132ms|2ms)[0m
+[32m  [+] throws when the file does not exist[0m[90m 72ms (70ms|2ms)[0m
+[0m
+[92mDescribing count-tools.ps1 — full invocation[0m
+
+Total tool count: 6
+
+Top 10 services by tool count:
+Service                  Tool Count
+-------                  ----------
+storage                  3
+acr                      2
+monitor                  1
+
+[32m  [+] emits a count object whose Total matches the fixture[0m[90m 115ms (102ms|13ms)[0m
+[95m
+[95mRunning tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\MergeNamespaces.Tests.ps1'[0m
+[92mDescribing merge-namespaces.sh — shipping multi-namespace merge (AD-011)[0m
+[32m  [+] smoke test file exists[0m[90m 118ms (13ms|105ms)[0m
+[93m  [!] merges canonical + -cli variants per AD-011 (primary header/related, ordered tools, updated tool_count, preserved tab markers)[0m[90m 5ms (0ms|5ms)[0m
+[95m
+[95mRunning tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1'[0m
+[92mDescribing Get-DocumentedTools — tool marker detection[0m
+[32m  [+] finds tools with plain HTML-comment markers[0m[90m 38ms (30ms|8ms)[0m
+[32m  [+] finds tools with at-mcpcli HTML-comment markers[0m[90m 50ms (48ms|3ms)[0m
+[32m  [+] reports missing tools when no marker exists[0m[90m 37ms (34ms|3ms)[0m
+[32m  [+] handles multi-word commands (e.g., 'storage blob upload')[0m[90m 17ms (15ms|2ms)[0m
+[32m  [+] returns empty array for non-existent file[0m[90m 41ms (39ms|2ms)[0m
+[32m  [+] finds both storage tools in azure-storage.md[0m[90m 27ms (23ms|4ms)[0m
+  [-] finds only one compute tool (compute vm list) in azure-compute.md 83ms (80ms|3ms)
+   at $tools | Should -Not -Contain "compute vm start", C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:108
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:108
+   Expected 'compute vm start' to not be found in collection @('compute vm list', 'compute vm start'), but it was found.
+[0m
+[92mDescribing Get-DocumentedParameters — parameter table parsing[0m
+[32m  [+] matches exact param names (account-name → 'Account name')[0m[90m 43ms (30ms|12ms)[0m
+[32m  [+] returns params for a documented tool section[0m[90m 17ms (14ms|2ms)[0m
+  [-] returns empty for an undocumented tool (no marker in content) 16ms (14ms|2ms)
+   at @($params).Count | Should -Be 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:131
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:131
+   Expected 0, but got 3.
+[32m  [+] includes --resource-group param when required:true (blob upload)[0m[90m 10ms (8ms|2ms)[0m
+[0m
+[92mDescribing Parameter exclusion logic[0m
+[32m  [+] alwaysExcludeParams contains --learn[0m[90m 9ms (5ms|4ms)[0m
+[32m  [+] alwaysExcludeParams contains --subscription[0m[90m 6ms (4ms|2ms)[0m
+[32m  [+] alwaysExcludeParams contains --tenant[0m[90m 6ms (5ms|2ms)[0m
+[32m  [+] alwaysExcludeParams contains --auth-method[0m[90m 6ms (5ms|2ms)[0m
+[32m  [+] commonParams contains --resource-group[0m[90m 4ms (3ms|1ms)[0m
+[0m
+[92mDescribing Annotation parsing — via script JSON output[0m
+  [-] script detects annotation mismatches for documented tools 55ms (50ms|5ms)
+   at $script:annoReport.summary.annotation_mismatches | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:190
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:190
+   Expected the actual value to be greater than 0, but got 0.
+[32m  [+] script records annotation matches for tools with correct annotations[0m[90m 8ms (6ms|2ms)[0m
+  [-] annotation mismatch is recorded for compute vm list (Open World) 21ms (19ms|2ms)
+   at $mismatches.Count | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:201
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:201
+   Expected the actual value to be greater than 0, but got 0.
+[32m  [+] storage account list has no annotation mismatches[0m[90m 23ms (20ms|3ms)[0m
+  [-] undocumented tool (compute vm start) has no annotations checked 24ms (22ms|2ms)
+   at $vmStart.documented | Should -Be $false, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:215
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:215
+   Expected $false, but got $true.
+  [-] returns empty hashtable for tool marker absent (Get-DocumentedAnnotations unit) 39ms (37ms|2ms)
+   at $anno.Count | Should -Be 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:220
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:220
+   Expected 0, but got 4.
+[0m
+[92mDescribing Namespace → filename mapping[0m
+[32m  [+] maps 'aks' to 'azure-kubernetes.md'[0m[90m 37ms (10ms|27ms)[0m
+[32m  [+] maps 'storage' to 'azure-storage.md'[0m[90m 6ms (4ms|2ms)[0m
+[32m  [+] maps 'cosmos' to 'azure-cosmos-db.md'[0m[90m 6ms (4ms|2ms)[0m
+[32m  [+] maps 'keyvault' to 'azure-key-vault.md'[0m[90m 6ms (4ms|1ms)[0m
+[32m  [+] maps 'compute' to 'azure-compute.md'[0m[90m 6ms (4ms|1ms)[0m
+[32m  [+] falls back to 'azure-{namespace}.md' for unmapped namespaces[0m[90m 13ms (12ms|1ms)[0m
+[0m
+[92mDescribing Scan-McpToolCoverage — JSON output structure[0m
+[32m  [+] produces a JSON output file[0m[90m 16ms (10ms|6ms)[0m
+[32m  [+] JSON contains total_tools_in_json[0m[90m 13ms (10ms|3ms)[0m
+[32m  [+] JSON contains total_namespaces[0m[90m 11ms (9ms|3ms)[0m
+[32m  [+] JSON contains namespaces array[0m[90m 14ms (10ms|4ms)[0m
+[32m  [+] JSON contains summary block with tools_documented[0m[90m 16ms (12ms|4ms)[0m
+[32m  [+] documented + missing tools equals total tools in JSON[0m[90m 36ms (34ms|2ms)[0m
+[32m  [+] storage namespace shows both tools documented[0m[90m 17ms (15ms|2ms)[0m
+  [-] compute namespace has one missing tool (compute vm start) 26ms (22ms|4ms)
+   at $ns.missing_tools | Should -Contain "compute vm start", C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:316
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:316
+   Expected 'compute vm start' to be found in collection $null, but it was not found.
+  [-] annotation mismatch detected for compute vm list (Open World) 20ms (19ms|2ms)
+   at @($vmList.annotations.mismatches).Count | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:323
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:323
+   Expected the actual value to be greater than 0, but got 0.
+[32m  [+] JSON scan_date is populated[0m[90m 18ms (16ms|2ms)[0m
+[0m
+[92mDescribing Phantom parameter detection — Issue #742[0m
+[32m  [+] detects phantom param 'Health model name' (should be 'Health model')[0m[90m 79ms (28ms|51ms)[0m
+[32m  [+] does NOT flag correct params as phantom (negative case)[0m[90m 24ms (23ms|1ms)[0m
+[32m  [+] does NOT flag optional common params absent from NL table (convention compliance)[0m[90m 15ms (14ms|1ms)[0m
+[0m
+[92mDescribing Required/optional mismatch detection — Issue #742[0m
+[32m  [+] detects req/opt mismatch for Resource group (source=required, doc=optional)[0m[90m 26ms (22ms|3ms)[0m
+[32m  [+] does NOT flag correct required param as mismatch (negative case)[0m[90m 12ms (11ms|1ms)[0m
+[0m
+[92mDescribing Edge cases — empty tools-list.json[0m
+[32m  [+] succeeds with 0 tools[0m[90m 6ms (3ms|3ms)[0m
+[32m  [+] reports total_tools_in_json as 0[0m[90m 3ms (2ms|1ms)[0m
+[32m  [+] reports total_namespaces as 0[0m[90m 3ms (3ms|1ms)[0m
+[32m  [+] namespaces array is empty[0m[90m 3ms (3ms|1ms)[0m
+[0m
+[92mDescribing Edge cases — article with no tool markers[0m
+[32m  [+] Get-DocumentedTools returns empty for article with no markers[0m[90m 8ms (5ms|3ms)[0m
+[0m
+[92mDescribing Edge cases — Namespace filter[0m
+[32m  [+] script exits non-zero for invalid namespace[0m[90m 966ms (963ms|2ms)[0m
+[32m  [+] script scans only storage namespace when -Namespace storage is set[0m[90m 872ms (871ms|1ms)[0m
+[0m
+[92mDescribing Scan-McpToolCoverage — missing required parameter reporting[0m
+[32m  [+] produces a report[0m[90m 4ms (2ms|2ms)[0m
+[32m  [+] keyvault secret get is documented (article exists with marker)[0m[90m 11ms (4ms|7ms)[0m
+[32m  [+] summary.params_missing is at least 1 (--secret-name omitted from article)[0m[90m 4ms (3ms|1ms)[0m
+[32m  [+] keyvault secret get tool_details lists --secret-name as missing[0m[90m 5ms (4ms|1ms)[0m
+[32m  [+] keyvault secret get tool_details does NOT list --vault-name as missing[0m[90m 4ms (4ms|0ms)[0m
+[0m
+[92mDescribing Namespace mapping — JSON-based configuration[0m
+[32m  [+] loads namespace mapping from config/namespace-mapping.json when file exists[0m[90m 28ms (26ms|2ms)[0m
+[32m  [+] validates real-world namespace mapping structure[0m[90m 7ms (6ms|1ms)[0m
+[32m  [+] falls back to inline mapping when JSON file is missing[0m[90m 6ms (6ms|1ms)[0m
+[32m  [+] falls back to inline mapping when JSON file is invalid[0m[90m 10ms (10ms|1ms)[0m
+[32m  [+] does NOT fall back when JSON is empty but valid[0m[90m 9ms (8ms|0ms)[0m
+[95m
+[95mRunning tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\StartWithLogs.Tests.ps1'[0m
+[92mDescribing start-with-logs.ps1[0m
+[32m  [+] fails before start.sh when the tracked metadata version is absent[0m[90m 1.74s (1.74s|2ms)[0m
+[32m  [+] fails before start.sh when the tracked metadata is unusable[0m[90m 1.16s (1.16s|1ms)[0m
+[32m  [+] fails before start.sh when the AZD environment file is absent[0m[90m 1.23s (1.23s|1ms)[0m
+[32m  [+] dispatches every mapped namespace to start.sh with steps 1 through 5[0m[90m 1.56s (1.56s|1ms)[0m
+[32m  [+] continues past a namespace failure and reports it in the summary[0m[90m 1.32s (1.32s|1ms)[0m
+[32m  [+] rebuilds the next namespace when the prior namespace built but exited nonzero[0m[90m 1.26s (1.25s|1ms)[0m
+[32m  [+] captures the namespace exit code immediately after start.sh before any output-move cmdlet[0m[90m 7ms (6ms|1ms)[0m
+[32m  [+] uses the captured namespace exit code rather than $LASTEXITCODE for the failure decision[0m[90m 8ms (7ms|1ms)[0m
+[32m  [+] declares no param or local variable whose name collides case-insensitively (AD-027)[0m[90m 125ms (124ms|0ms)[0m
+[32m  [+] does not call the legacy Generate-ToolFamily script[0m[90m 5ms (5ms|0ms)[0m
+[32m  [+] supports metadata and script paths containing spaces[0m[90m 1.09s (1.09s|1ms)[0m
+[32m  [+] preflights without invoking start.sh[0m[90m 1.07s (1.07s|1ms)[0m
+[32m  [+] generates only comma-listed namespaces via -NamespaceList[0m[90m 1.25s (1.25s|1ms)[0m
+[32m  [+] generates only file-listed namespaces via -NamespaceFile[0m[90m 1.67s (1.67s|1ms)[0m
+[32m  [+] fails when -NamespaceList contains an unknown namespace[0m[90m 3.35s (3.35s|1ms)[0m
+[32m  [+] fails when -NamespaceFile does not exist[0m[90m 4.32s (4.32s|1ms)[0m
+[32m  [+] fails when both -NamespaceList and -NamespaceFile are provided[0m[90m 1.64s (1.64s|1ms)[0m
+[32m  [+] reports all six accounting categories in the catalog summary and never sums the baseline constants[0m[90m 2.59s (2.59s|2ms)[0m
+[32m  [+] prints every accounting category label even when all namespaces succeed[0m[90m 1.89s (1.89s|1ms)[0m
+[95m
+[95mRunning tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Test-ArticleHealth.Tests.ps1'[0m
+[92mDescribing Article Health smoke fixture selection[0m
+[32m  [+] selects only healthy smoke fixtures and excludes negative and coverage fixtures[0m[90m 1.35s (1.35s|2ms)[0m
+[32m  [+] workflow fallback validates selected files instead of treating null LASTEXITCODE as failure[0m[90m 6ms (5ms|1ms)[0m
+[0m
+[92mDescribing Test-ArticleHealth.ps1 — valid-article.md[0m
+[32m  [+] ms.date passes[0m[90m 6ms (3ms|2ms)[0m
+[32m  [+] ms.custom passes[0m[90m 3ms (2ms|1ms)[0m
+[32m  [+] ms.reviewer passes[0m[90m 2ms (2ms|0ms)[0m
+[32m  [+] no blank lines in frontmatter passes[0m[90m 2ms (2ms|0ms)[0m
+[32m  [+] mcp-cli.version passes[0m[90m 2ms (2ms|0ms)[0m
+[32m  [+] no H3 tool sections passes[0m[90m 2ms (2ms|0ms)[0m
+[32m  [+] no duplicate H2 passes[0m[90m 2ms (2ms|0ms)[0m
+[32m  [+] no absolute Learn URLs passes[0m[90m 2ms (2ms|0ms)[0m
+[32m  [+] param bold names passes[0m[90m 2ms (2ms|0ms)[0m
+[32m  [+] no INCLUDE param rows passes[0m[90m 2ms (2ms|0ms)[0m
+[32m  [+] no failed checks[0m[90m 3ms (2ms|1ms)[0m
+[0m
+[92mDescribing Test-ArticleHealth.ps1 — bad-frontmatter.md[0m
+[32m  [+] ms.date fails (missing)[0m[90m 5ms (3ms|2ms)[0m
+[32m  [+] ms.custom fails (missing)[0m[90m 3ms (2ms|1ms)[0m
+[32m  [+] ms.reviewer warns (ms.reviewer key absent — not a bare reviewer: line)[0m[90m 3ms (3ms|1ms)[0m
+[32m  [+] blank lines in frontmatter warns[0m[90m 4ms (3ms|1ms)[0m
+[32m  [+] mcp-cli.version warns (missing)[0m[90m 3ms (2ms|1ms)[0m
+[32m  [+] has at least one fail or warn[0m[90m 4ms (3ms|1ms)[0m
+[0m
+[92mDescribing Test-ArticleHealth.ps1 — bare-reviewer.md (bare reviewer: with no value)[0m
+[32m  [+] ms.reviewer fails when frontmatter has bare reviewer: with no value[0m[90m 5ms (2ms|3ms)[0m
+[32m  [+] ms.reviewer detail reports bare reviewer: with no value[0m[90m 4ms (3ms|1ms)[0m
+[0m
+[92mDescribing Test-ArticleHealth.ps1 — bad-headings.md[0m
+[32m  [+] H3 tool sections fails[0m[90m 5ms (3ms|2ms)[0m
+[32m  [+] Detail mentions count of H3 headings[0m[90m 3ms (3ms|1ms)[0m
+[0m
+[92mDescribing Test-ArticleHealth.ps1 — bad-urls.md[0m
+[32m  [+] absolute Learn URLs fails[0m[90m 5ms (3ms|3ms)[0m
+[32m  [+] Detail mentions URL count[0m[90m 3ms (3ms|1ms)[0m
+[0m
+[92mDescribing Test-ArticleHealth.ps1 — bad-params.md[0m
+[32m  [+] INCLUDE param rows fails[0m[90m 5ms (3ms|2ms)[0m
+[0m
+[92mDescribing Test-ArticleHealth.ps1 — bad-markers.md (malformed HTML comment)[0m
+[32m  [+] markers.well-formed warns when comment has no space after <!--[0m[90m 8ms (6ms|3ms)[0m
+[32m  [+] markers.well-formed detail reports at least one malformed marker[0m[90m 3ms (2ms|1ms)[0m
+[32m  [+] valid fields still pass in bad-markers.md[0m[90m 4ms (3ms|1ms)[0m
+[0m
+[92mDescribing Test-ArticleHealth.ps1 — script integration (exit codes)[0m
+[32m  [+] exits 0 for valid article[0m[90m 777ms (775ms|2ms)[0m
+[32m  [+] exits 1 for article with failures[0m[90m 1.05s (1.05s|1ms)[0m
+[32m  [+] exits 1 with -Strict on article with warnings[0m[90m 685ms (684ms|1ms)[0m
+[32m  [+] accepts -ArticlesDir and checks all .md files[0m[90m 898ms (898ms|1ms)[0m
+[32m  [+] writes JSON when -OutputJson is specified[0m[90m 659ms (658ms|1ms)[0m
+[97mTests completed in 52.09s[0m
+[97mTests Passed: 118, [0m[91mFailed: 8, [0m[93mSkipped: 1, [0m[90mInconclusive: 0, [0m[37m[0m[90mNotRun: 0[0m
+
+--------------------------------------------------------------------------------
+ [4] FULL OUTPUT - Scan-McpToolCoverage.Tests.ps1 (ISOLATED, disjointness proof)
+--------------------------------------------------------------------------------
+[95mPester v5.7.1[0m
+[95m
+[95mStarting discovery in 1 files.[0m
+[95mDiscovery found 60 tests in 291ms.[0m
+[95mRunning tests.[0m
+[95m
+[95mRunning tests from 'C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1'[0m
+[92mDescribing Get-DocumentedTools — tool marker detection[0m
+[32m  [+] finds tools with plain HTML-comment markers[0m[90m 120ms (78ms|42ms)[0m
+[32m  [+] finds tools with at-mcpcli HTML-comment markers[0m[90m 21ms (20ms|1ms)[0m
+[32m  [+] reports missing tools when no marker exists[0m[90m 63ms (61ms|2ms)[0m
+[32m  [+] handles multi-word commands (e.g., 'storage blob upload')[0m[90m 7ms (6ms|1ms)[0m
+[32m  [+] returns empty array for non-existent file[0m[90m 30ms (29ms|1ms)[0m
+[32m  [+] finds both storage tools in azure-storage.md[0m[90m 10ms (8ms|1ms)[0m
+  [-] finds only one compute tool (compute vm list) in azure-compute.md 56ms (54ms|2ms)
+   at $tools | Should -Not -Contain "compute vm start", C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:108
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:108
+   Expected 'compute vm start' to not be found in collection @('compute vm list', 'compute vm start'), but it was found.
+[0m
+[92mDescribing Get-DocumentedParameters — parameter table parsing[0m
+[32m  [+] matches exact param names (account-name → 'Account name')[0m[90m 23ms (20ms|3ms)[0m
+[32m  [+] returns params for a documented tool section[0m[90m 12ms (10ms|1ms)[0m
+  [-] returns empty for an undocumented tool (no marker in content) 12ms (11ms|2ms)
+   at @($params).Count | Should -Be 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:131
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:131
+   Expected 0, but got 3.
+[32m  [+] includes --resource-group param when required:true (blob upload)[0m[90m 7ms (6ms|1ms)[0m
+[0m
+[92mDescribing Parameter exclusion logic[0m
+[32m  [+] alwaysExcludeParams contains --learn[0m[90m 8ms (4ms|4ms)[0m
+[32m  [+] alwaysExcludeParams contains --subscription[0m[90m 5ms (4ms|1ms)[0m
+[32m  [+] alwaysExcludeParams contains --tenant[0m[90m 6ms (5ms|1ms)[0m
+[32m  [+] alwaysExcludeParams contains --auth-method[0m[90m 4ms (3ms|1ms)[0m
+[32m  [+] commonParams contains --resource-group[0m[90m 4ms (3ms|1ms)[0m
+[0m
+[92mDescribing Annotation parsing — via script JSON output[0m
+  [-] script detects annotation mismatches for documented tools 17ms (13ms|4ms)
+   at $script:annoReport.summary.annotation_mismatches | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:190
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:190
+   Expected the actual value to be greater than 0, but got 0.
+[32m  [+] script records annotation matches for tools with correct annotations[0m[90m 7ms (5ms|2ms)[0m
+  [-] annotation mismatch is recorded for compute vm list (Open World) 15ms (14ms|1ms)
+   at $mismatches.Count | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:201
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:201
+   Expected the actual value to be greater than 0, but got 0.
+[32m  [+] storage account list has no annotation mismatches[0m[90m 8ms (7ms|1ms)[0m
+  [-] undocumented tool (compute vm start) has no annotations checked 20ms (19ms|1ms)
+   at $vmStart.documented | Should -Be $false, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:215
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:215
+   Expected $false, but got $true.
+  [-] returns empty hashtable for tool marker absent (Get-DocumentedAnnotations unit) 14ms (13ms|2ms)
+   at $anno.Count | Should -Be 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:220
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:220
+   Expected 0, but got 4.
+[0m
+[92mDescribing Namespace → filename mapping[0m
+[32m  [+] maps 'aks' to 'azure-kubernetes.md'[0m[90m 11ms (7ms|4ms)[0m
+[32m  [+] maps 'storage' to 'azure-storage.md'[0m[90m 5ms (4ms|2ms)[0m
+[32m  [+] maps 'cosmos' to 'azure-cosmos-db.md'[0m[90m 5ms (4ms|1ms)[0m
+[32m  [+] maps 'keyvault' to 'azure-key-vault.md'[0m[90m 5ms (4ms|1ms)[0m
+[32m  [+] maps 'compute' to 'azure-compute.md'[0m[90m 5ms (4ms|1ms)[0m
+[32m  [+] falls back to 'azure-{namespace}.md' for unmapped namespaces[0m[90m 10ms (9ms|1ms)[0m
+[0m
+[92mDescribing Scan-McpToolCoverage — JSON output structure[0m
+[32m  [+] produces a JSON output file[0m[90m 11ms (7ms|4ms)[0m
+[32m  [+] JSON contains total_tools_in_json[0m[90m 7ms (6ms|1ms)[0m
+[32m  [+] JSON contains total_namespaces[0m[90m 6ms (5ms|1ms)[0m
+[32m  [+] JSON contains namespaces array[0m[90m 4ms (3ms|1ms)[0m
+[32m  [+] JSON contains summary block with tools_documented[0m[90m 10ms (8ms|2ms)[0m
+[32m  [+] documented + missing tools equals total tools in JSON[0m[90m 45ms (43ms|2ms)[0m
+[32m  [+] storage namespace shows both tools documented[0m[90m 10ms (9ms|2ms)[0m
+  [-] compute namespace has one missing tool (compute vm start) 17ms (15ms|2ms)
+   at $ns.missing_tools | Should -Contain "compute vm start", C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:316
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:316
+   Expected 'compute vm start' to be found in collection $null, but it was not found.
+  [-] annotation mismatch detected for compute vm list (Open World) 17ms (15ms|3ms)
+   at @($vmList.annotations.mismatches).Count | Should -BeGreaterThan 0, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:323
+   at <ScriptBlock>, C:\my-squad-projects\worktrees\microsoft-mcp-doc-generation\813-step2-runtime-orchestration\mcp-tools\validation\tests\Scan-McpToolCoverage.Tests.ps1:323
+   Expected the actual value to be greater than 0, but got 0.
+[32m  [+] JSON scan_date is populated[0m[90m 12ms (10ms|2ms)[0m
+[0m
+[92mDescribing Phantom parameter detection — Issue #742[0m
+[32m  [+] detects phantom param 'Health model name' (should be 'Health model')[0m[90m 27ms (23ms|4ms)[0m
+[32m  [+] does NOT flag correct params as phantom (negative case)[0m[90m 12ms (11ms|1ms)[0m
+[32m  [+] does NOT flag optional common params absent from NL table (convention compliance)[0m[90m 11ms (10ms|1ms)[0m
+[0m
+[92mDescribing Required/optional mismatch detection — Issue #742[0m
+[32m  [+] detects req/opt mismatch for Resource group (source=required, doc=optional)[0m[90m 32ms (29ms|3ms)[0m
+[32m  [+] does NOT flag correct required param as mismatch (negative case)[0m[90m 12ms (11ms|1ms)[0m
+[0m
+[92mDescribing Edge cases — empty tools-list.json[0m
+[32m  [+] succeeds with 0 tools[0m[90m 5ms (2ms|2ms)[0m
+[32m  [+] reports total_tools_in_json as 0[0m[90m 3ms (3ms|1ms)[0m
+[32m  [+] reports total_namespaces as 0[0m[90m 3ms (2ms|1ms)[0m
+[32m  [+] namespaces array is empty[0m[90m 3ms (3ms|1ms)[0m
+[0m
+[92mDescribing Edge cases — article with no tool markers[0m
+[32m  [+] Get-DocumentedTools returns empty for article with no markers[0m[90m 9ms (6ms|3ms)[0m
+[0m
+[92mDescribing Edge cases — Namespace filter[0m
+[32m  [+] script exits non-zero for invalid namespace[0m[90m 2.5s (2.5s|3ms)[0m
+[32m  [+] script scans only storage namespace when -Namespace storage is set[0m[90m 2.56s (2.56s|1ms)[0m
+[0m
+[92mDescribing Scan-McpToolCoverage — missing required parameter reporting[0m
+[32m  [+] produces a report[0m[90m 9ms (7ms|2ms)[0m
+[32m  [+] keyvault secret get is documented (article exists with marker)[0m[90m 6ms (5ms|1ms)[0m
+[32m  [+] summary.params_missing is at least 1 (--secret-name omitted from article)[0m[90m 7ms (6ms|1ms)[0m
+[32m  [+] keyvault secret get tool_details lists --secret-name as missing[0m[90m 28ms (26ms|1ms)[0m
+[32m  [+] keyvault secret get tool_details does NOT list --vault-name as missing[0m[90m 10ms (9ms|1ms)[0m
+[0m
+[92mDescribing Namespace mapping — JSON-based configuration[0m
+[32m  [+] loads namespace mapping from config/namespace-mapping.json when file exists[0m[90m 52ms (48ms|4ms)[0m
+[32m  [+] validates real-world namespace mapping structure[0m[90m 10ms (9ms|1ms)[0m
+[32m  [+] falls back to inline mapping when JSON file is missing[0m[90m 10ms (10ms|1ms)[0m
+[32m  [+] falls back to inline mapping when JSON file is invalid[0m[90m 20ms (17ms|3ms)[0m
+[32m  [+] does NOT fall back when JSON is empty but valid[0m[90m 16ms (15ms|1ms)[0m
+[97mTests completed in 15.41s[0m
+[97mTests Passed: 52, [0m[91mFailed: 8, [0m[90mSkipped: 0, [0m[90mInconclusive: 0, [0m[37m[0m[90mNotRun: 0[0m
+
+================================================================================
+ END OF ADDENDUM A GREEN EVIDENCE
+================================================================================

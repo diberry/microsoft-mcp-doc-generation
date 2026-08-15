@@ -1,0 +1,200 @@
+================================================================================
+ #813 STEP 2 — ADDENDUM A RED EVIDENCE  —  six-category summary surfaces
+ Author: Parker (QA/Tester)   TDD phase: RED (tests only, NO production code)
+================================================================================
+
+SCOPE (ADDENDUM A of .squad/agents/cameron/813-step2-test-matrix.md):
+  +2 xUnit  T30, T31  in RunAccountingTests.cs      → PipelineRunner console summary  (S2 / CompleteRun)
+  +2 Pester P7, P8    in StartWithLogs.Tests.ps1    → start-with-logs.ps1 catalog summary (S3)
+  Closes the coordinator gap: the six AD-029 §6 accounting categories are emitted to the
+  run-accounting.json ARTIFACT (T21-T29) but NOT surfaced to either HUMAN-VISIBLE summary.
+  All four tests are RUNTIME-RED (no new API): they compile/parse clean against the current
+  working tree and fail at runtime on the missing six-category summary block.
+
+COMMANDS RUN (verbatim, from repo root — the three required commands):
+  1) dotnet build mcp-doc-generation.sln --configuration Release
+  2) dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj --configuration Release --filter "FullyQualifiedName~RunAccounting_ConsoleSummary"
+  3) pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests/StartWithLogs.Tests.ps1 -Output Detailed -CI"
+  (supporting no-regression + disjointness commands — see sections 3 and 5)
+
+ENVIRONMENT:
+  commit (git rev-parse HEAD): 8d41a9bad920335b875ebbd4d73b03881a954e18
+  branch                     : squad/813-step2-runtime-orchestration
+  dotnet --version           : 10.0.303
+  pwsh  (PSVersion)          : 7.6.4
+  git   --version            : git version 2.55.0.vfs.0.3
+  OS                         : Microsoft Windows 10.0.26200
+  captured (UTC)             : 2026-08-15T01:20:36Z
+
+TREE-STATE NOTE (why the same commit that 813-step2-red-run.txt recorded as compile-RED now
+builds clean): HEAD 8d41a9ba is the frozen-baseline commit. The AD-029 CORE now exists as
+UNCOMMITTED working-tree changes — PipelineRunner suppression runtime + run-accounting.json,
+StepResultFile.Suppressed/BlockedByDependency, start-with-logs.ps1 §7 ($namespaceExitCode /
+$sharedBuildConfirmed), and the TestDoubles mirrored harness. The remaining GAP that ADDENDUM A
+targets is the SIX-CATEGORY SUMMARY on the two human surfaces (CompleteRun console + the
+start-with-logs.ps1 catalog block). Parker changed NO production code (section 6 confirms only
+the two test files + this evidence dir are Parker's).
+
+--------------------------------------------------------------------------------
+ 1. BUILD (command 1) — 0 warnings / 0 errors
+--------------------------------------------------------------------------------
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:08.51
+
+  The assembly + the StartWithLogs.Tests.ps1 script both compile/parse clean WITH the four new
+  tests present, confirming the RED is RUNTIME, not compile/parse. (StartWithLogs AST parse: OK,
+  19 It blocks = 17 existing + P7 + P8; no syntax errors.)
+
+--------------------------------------------------------------------------------
+ 2. FILTERED XUNIT (command 2) — T30, T31 RUNTIME-RED
+--------------------------------------------------------------------------------
+Result: Failed: 2, Passed: 0, Skipped: 0, Total: 2   (filter isolates exactly T30/T31; T21-T29 excluded)
+
+  Failed PipelineRunner.Tests.Unit.RunAccountingTests.RunAccounting_ConsoleSummary_ReportsAllSixCategories_WithLiveIdentifiersAndBaselineConstants [632 ms]
+    Error Message:
+     Assert.Single() Failure: The collection did not contain any matching items
+    Expected:   (predicate expression)
+    Collection: ["  Step 0: Bootstrap pipeline", "Running 6 step(s) for 2 namespace(s).", "Namespace: compute", "  Step 1: Generate annotations, parameters, and ra"..., "  Step 2: Generate example prompts", ...]
+      at ...RunAccounting_ConsoleSummary_ReportsAllSixCategories_WithLiveIdentifiersAndBaselineConstants()
+         in ...\RunAccountingTests.cs:line 273
+
+  Failed PipelineRunner.Tests.Unit.RunAccountingTests.RunAccounting_ConsoleSummary_CleanCatalogRun_StillPrintsAllSixLabels_LiveCategoriesZero [330 ms]
+    Error Message:
+     Assert.Single() Failure: The collection did not contain any matching items
+    Expected:   (predicate expression)
+    Collection: ["  Step 0: Bootstrap pipeline", "Running 6 step(s) for 2 namespace(s).", "Namespace: compute", "  Step 1: Generate annotations, parameters, and ra"..., "  Step 2: Generate example prompts", ...]
+      at ...RunAccounting_ConsoleSummary_CleanCatalogRun_StillPrintsAllSixLabels_LiveCategoriesZero()
+         in ...\RunAccountingTests.cs:line 319
+
+  Failed!  - Failed: 2, Passed: 0, Skipped: 0, Total: 2, Duration: 959 ms - DocGeneration.PipelineRunner.Tests.dll (net10.0)
+
+PER-TEST RED CLASSIFICATION (xUnit, both RUNTIME-RED):
+  T30  RunAccounting_ConsoleSummary_ReportsAllSixCategories_WithLiveIdentifiersAndBaselineConstants
+       RIGHT REASON: first six-category assertion
+         Assert.Single(messages, m => m.Contains("Successful namespaces (1)"))  (RunAccountingTests.cs:273)
+         → "Assert.Single() Failure: The collection did not contain any matching items".
+       The positive control Assert.Equal(1, exit) PASSED (fatal Step-2 root ⇒ exit 1; the run
+       REACHED CompleteRun). The dumped Collection is only legacy step/progress messages — no
+       "Successful namespaces (N)" line — i.e. CompleteRun does not emit the six-category console block.
+  T31  RunAccounting_ConsoleSummary_CleanCatalogRun_StillPrintsAllSixLabels_LiveCategoriesZero
+       RIGHT REASON: first six-category assertion
+         Assert.Single(messages, m => m.Contains("Successful namespaces (2)"))  (RunAccountingTests.cs:319)
+         → same Assert.Single failure. Positive control Assert.Equal(0, exit) PASSED (clean run).
+       (ADDENDUM A.7 illustratively cited "Root-failed namespaces (0)" as T31's expected RED; the
+        BINDING A.4 assertion list places "Successful namespaces (2)" first, so that is the observed
+        first-fail. Identical RED class: missing six-category console block.)
+
+--------------------------------------------------------------------------------
+ 3. FULL PROJECT (no filter) — no regression / rest of xUnit suite green
+--------------------------------------------------------------------------------
+Command: dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj --configuration Release
+Result:  Failed: 2, Passed: 664, Skipped: 0, Total: 666
+
+  The ONLY two failures are the two new tests:
+    Failed ...RunAccountingTests.RunAccounting_ConsoleSummary_ReportsAllSixCategories_WithLiveIdentifiersAndBaselineConstants
+    Failed ...RunAccountingTests.RunAccounting_ConsoleSummary_CleanCatalogRun_StillPrintsAllSixLabels_LiveCategoriesZero
+  Everything else is green — including T21-T29 (run-accounting.json artifact), T1-T20
+  (DependencySuppressionTests), and the same-named FamilyMetadataGeneratorTests INSIDE this
+  project (9/9, part of the 664). Adding T30/T31 broke nothing.
+
+--------------------------------------------------------------------------------
+ 4. PESTER (command 3) — P7, P8 RUNTIME-RED; P1-P6 + all others green
+--------------------------------------------------------------------------------
+Result: Tests Passed: 17, Failed: 2, Skipped: 0, Inconclusive: 0, NotRun: 0
+        (19 It blocks total = 17 existing green + P7 + P8 red)
+
+  [-] reports all six accounting categories in the catalog summary and never sums the baseline constants 1.27s
+     at $output | Should -Match 'Successful namespaces \(1\)', ...\StartWithLogs.Tests.ps1:461
+     Expected regular expression 'Successful namespaces \(1\)' to match 'Transcript started, output file is ...
+        ... repo with spaces\generated-20260814T182212\generate-all-namespaces.log ...'
+
+  [-] prints every accounting category label even when all namespaces succeed 1.15s
+     at $output | Should -Match 'Successful namespaces \(2\)', ...\StartWithLogs.Tests.ps1:523
+     Expected regular expression 'Successful namespaces \(2\)' to match 'Transcript started, output file is ...
+        ... repo with spaces\generated-20260814T182213\generate-all-namespaces.log ...'
+
+PER-TEST RED CLASSIFICATION (Pester, both RUNTIME-RED):
+  P7  "reports all six accounting categories in the catalog summary and never sums the baseline constants"
+      RIGHT REASON: first six-category assertion  $output | Should -Match 'Successful namespaces \(1\)'
+      (StartWithLogs.Tests.ps1:461) fails — start-with-logs.ps1 prints only "Generation Summary: X/Y ..."
+      and never the six-category catalog block. The positive control $result.ExitCode | Should -Be 0
+      PASSED FIRST, proving the pre-stage + the script's REAL move block ran to completion (the
+      generated-<ns>-fixture stubs relocated cleanly). Matches ADDENDUM A.7 exactly.
+  P8  "prints every accounting category label even when all namespaces succeed"
+      RIGHT REASON: first six-category assertion  $output | Should -Match 'Successful namespaces \(2\)'
+      (StartWithLogs.Tests.ps1:523) fails. ExitCode | Should -Be 0 PASSED first.
+      (A.7 illustratively cited 'Root-failed namespaces \(0\)'; A.5's binding order lists
+       'Successful namespaces \(2\)' first, so that is the observed first-fail — same RED class.)
+
+--------------------------------------------------------------------------------
+ 5. PRE-EXISTING vs NEW FAILURE BREAKDOWN (disjointness — Cameron §5.1; NONE hidden/weakened)
+--------------------------------------------------------------------------------
+NEW (Parker, this addendum) — 4 RED, all intended:
+  xUnit : T30, T31   in RunAccountingTests  (DocGeneration.PipelineRunner.Tests)
+  Pester: P7, P8     in StartWithLogs.Tests.ps1
+
+PRE-EXISTING KNOWN failures (unrelated to #813; NOT touched, NOT fixed, NOT masked):
+  xUnit  — DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests.
+           GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription
+           Command: dotnet test .../DocGeneration.Steps.ToolFamilyCleanup.Tests.csproj -c Release
+                    --filter "FullyQualifiedName~FamilyMetadataGeneratorTests"
+           Result:  Failed: 1, Passed: 1, Total: 2   (DIFFERENT project; unchanged)
+           The identically-named class inside DocGeneration.PipelineRunner.Tests is GREEN (in the 664).
+  Pester — Scan-McpToolCoverage.Tests.ps1
+           Command: Invoke-Pester -Path ./mcp-tools/validation/tests/Scan-McpToolCoverage.Tests.ps1 -Output Detailed -CI
+           Result:  Tests Passed: 52, Failed: 8   (DIFFERENT file; untouched by Parker)
+
+DISJOINTNESS: the full PipelineRunner.Tests project reports EXACTLY 2 failures (T30/T31) of 666;
+the StartWithLogs.Tests.ps1 file reports EXACTLY 2 (P7/P8) of 19. No new red exists outside the
+Step-2 addendum identifiers; the two known-failing sets are unchanged pre/post.
+
+--------------------------------------------------------------------------------
+ 6. git status --short  (Parker touched ONLY the two test files + this evidence dir)
+--------------------------------------------------------------------------------
+ M .squad/casting-registry.json                                         (NOT Parker — squad metadata)
+ M .squad/team.md                                                       (NOT Parker — squad metadata)
+ M mcp-tools/DocGeneration.PipelineRunner.Tests/Fixtures/TestDoubles.cs (NOT Parker — AD-029 harness)
+ M mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs             (NOT Parker — AD-029 core)
+ M mcp-tools/validation/tests/StartWithLogs.Tests.ps1                   (PARKER: +P7 +P8; P1-P6 untouched)
+ M shared/DocGeneration.Core.Shared/StepResultFile.cs                   (NOT Parker — AD-029 envelope)
+ M start-with-logs.ps1                                                  (NOT Parker — AD-029 §7)
+?? .squad/agents/cameron/813-step2-test-matrix.md                       (NOT Parker — Cameron spec)
+?? .squad/agents/ellis/                                                 (NOT Parker)
+?? mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/DependencySuppressionTests.cs (NOT Parker — T1-T20)
+?? mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/RunAccountingTests.cs         (PARKER: +T30 +T31; T21-T29 untouched)
+?? mcp-tools/DocGeneration.PipelineRunner.Tests/evidence/                          (PARKER: this evidence file)
+
+FILES PARKER CREATED/MODIFIED:
+  M  mcp-tools/validation/tests/StartWithLogs.Tests.ps1                              (added P7, P8)
+  ~  mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/RunAccountingTests.cs         (added T30, T31; untracked file)
+  +  mcp-tools/DocGeneration.PipelineRunner.Tests/evidence/813-step2-red-addendum.txt (this file)
+  NO production file (DocGeneration.PipelineRunner/**, shared/**, start-with-logs.ps1, start.sh) edited.
+  Fake start.sh in StartWithLogs.Tests.ps1 kept byte-identical; beta34 fixtures read-only.
+
+--------------------------------------------------------------------------------
+ 7. ANTI-VACUITY & CONFORMANCE (matrix §3 + ADDENDUM A.3/A.4/A.5)
+--------------------------------------------------------------------------------
+- Exact canonical labels + `Label (N)` tokens; trailing ')' disambiguates (1) from (10)/(30).
+- Every count is exact-equality: Assert.Single(msgs, m => m.Contains("Label (N)")) / Should -Match
+  'Label \(N\)'. No >=, no ranges, no Should -BeIn / Assert.Contains set-membership.
+- Every "absent" assertion is paired with a positive control proving the channel works:
+    T30 cats 5/6: DoesNotContain "...(0)" paired with Assert.Single "...(10)" / "...(1)".
+    T31: (0)-trio (Root-failed/Warning-only/Suppressed) paired with non-zero baseline (10)/(1) +
+         DoesNotContain "Root-failed namespaces (1)".
+    P7 anti-sum: Should -Not -Match '...\(30\)' / '...\(3\)' paired with Should -Match '...\(10\)' / '...\(1\)'.
+    P8: (0)-trio paired with '...\(10\)'/'...\(1\)' + Should -Not -Match 'Root-failed namespaces \(1\)'.
+- Same-line identifier pins use Assert.Single(label) → returned line → Contains(id) (and the Pester
+  per-line Where-Object filter). "compute.02.root"/"bbb.02.root" already appear in per-step suppression
+  warnings, so they are only checked as substrings of the label line — never as a standalone Single.
+- Build stays 0 warnings/0 errors: counts use Assert.Single(collection, predicate); no
+  Assert.Equal(n, .Count/.Length) introduced (no xUnit2013-class regression).
+- M27-M34 anchoring: T30 anchors M27/M28/M29/M30; T31 anchors M27/M30; P7 anchors M31/M32/M33;
+  P8 anchors M31/M34. Each mutation, reverted, drops a pinned label/count these tests assert.
+
+ADDENDUM A items NOT implemented: NONE. All four tests (T30, T31, P7, P8) are authored exactly per
+A.4/A.5, are runtime-RED for the right reason, leave every other test in both suites green, and keep
+the Release build warning-free.
+================================================================================
