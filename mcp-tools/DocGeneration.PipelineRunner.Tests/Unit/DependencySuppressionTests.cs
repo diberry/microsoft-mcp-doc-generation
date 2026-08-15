@@ -430,7 +430,383 @@ public class DependencySuppressionTests
     // (Cameron's matrix cited placeholder names "RunAsync_Step4WithoutStep3_*"; per his §1.A note
     // Parker confirmed and uses the real identifiers above.) They remain untouched.
 
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // ADDENDUM B (Ellis FAIL remediation, #813 Step 2). Sources:
+    //   • .squad/agents/cameron/813-step2-test-matrix.md §B (binding spec: T32–T40, M35–M42)
+    //   • .squad/decisions/inbox/riley-ad-029-runtime-dependency-suppression.md §A0–A8 (AMENDMENT 1)
+    //   • .squad/agents/ellis/813-step2-evaluation.md (VERDICT: FAIL — BLOCKING-1/-2, F1 confirmed)
+    //
+    // NEW compile-RED source (ADDITIONAL to the seams in the class header, which have since landed):
+    // the corrected root predicate
+    //   internal static bool PipelineRunner.IsFatalRoot(
+    //       FailurePolicy policy, int mappedExitCode, IReadOnlyList<ArtifactFailure> artifactFailures)
+    // does NOT exist yet (AD-029 §A2). T32/T33 bind to it DIRECTLY — never hand-rolling the predicate —
+    // so the whole test project fails to COMPILE until Rowan lands the seam. That compile failure IS the
+    // RED signal for this addendum. The runtime-RED tests (T34–T38) and the two guard tests (T39/T40)
+    // therefore cannot execute in the RED phase; their RED/guard validity is realized once the file
+    // compiles GREEN, exactly as the class header documents for the earlier runtime-RED tests.
+    //
+    // Root cause under test (D1 / BLOCKING-1): the real Step-2 failure returns Success=true with a
+    // non-empty ArtifactFailures list (ExamplePromptsStep.cs:141) ⇒ mapped exit 0 ⇒ today's runtime
+    // records NO root ⇒ 0 of 10 historical cascades are suppressed. Every prior double injected
+    // Success=false, so the existing suite could not catch this. StepOutcomes.* supply the real shapes.
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+
+    // ── T32: IsFatalRoot truth table — the corrected root predicate keys on ArtifactFailures ─────
+    // [C] compile-RED: PipelineRunner.IsFatalRoot does not exist yet. Bind to the seam; do NOT
+    // reimplement the predicate. Varied Azure services per the Universal Design Principle.
+    [Fact]
+    public void IsFatalRoot_TruthTable_KeysOnArtifactFailuresNotValidators()
+    {
+        var noFailures = Array.Empty<ArtifactFailure>();
+        var oneFailure = new[]
+        {
+            ArtifactFailure.Create(
+                "tool", "keyvault secret get",
+                "Example prompt validation failed for this tool after automatic retries."),
+        };
+
+        // (1) THE D1 SHAPE — Fatal + mapped exit 0 (Success=true) + non-empty ArtifactFailures ⇒ ROOT
+        //     via clause C2. An exit-code-only predicate would (wrongly) return false here.
+        Assert.True(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Fatal, SuccessExitCode, oneFailure));
+
+        // (2) Fatal + FatalExitCode + non-empty ArtifactFailures ⇒ ROOT (C1).
+        Assert.True(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Fatal, FatalExitCode, oneFailure));
+
+        // (3) Fatal + FatalExitCode + EMPTY ArtifactFailures ⇒ ROOT (C1 alone — the classic hard fail).
+        Assert.True(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Fatal, FatalExitCode, noFailures));
+
+        // (4) Fatal + HumanReviewExitCode + EMPTY ArtifactFailures ⇒ ROOT (any non-success exit is C1).
+        Assert.True(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Fatal, HumanReviewExitCode, noFailures));
+
+        // (5) NEGATIVE CONTROL — Fatal + mapped exit 0 + EMPTY ArtifactFailures ⇒ NOT a root.
+        //     This is the pre-AI non-fatal skip (Success=true, failed validator, no artifact failures):
+        //     because C2 keys on ArtifactFailures (not validators), it must stay non-fatal.
+        Assert.False(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Fatal, SuccessExitCode, noFailures));
+
+        // (6) NEGATIVE CONTROL — Warn policy is NEVER a root, even with non-empty ArtifactFailures.
+        Assert.False(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Warn, SuccessExitCode, oneFailure));
+    }
+
+    // ── T33: replay the frozen beta.34 corpus through IsFatalRoot (Ellis BLOCKING-1) ─────────────
+    // [C] compile-RED: binds to PipelineRunner.IsFatalRoot. Proves 16 of 17 real Step-2 roots return
+    // Success=true (mapped exit 0) and are ROOTS only because C2 keys on ArtifactFailures — the exact
+    // 0/10 cascade miss Ellis flagged. Corpus is READ-ONLY (frozen Baseline.Beta34 fixtures).
+    [Fact]
+    public void Beta34Corpus_EveryStep2Failure_IsFatalRoot_EvenWhenSuccessTrue()
+    {
+        var corpus = Beta34Corpus.Load();
+        var step2 = corpus.Records.Where(r => r.StepId == 2).ToList();
+
+        // Reconstruct each record's runtime shape from the sanitized fixture and route it through the
+        // SAME production seams the runtime uses (MapStepFailureExitCode + IsFatalRoot). No hand-rolling.
+        static int MappedExit(Beta34Corpus.Entry r)
+            => global::PipelineRunner.PipelineRunner.MapStepFailureExitCode(
+                FailurePolicy.Fatal, r.HasValidatorResults, null);
+
+        static bool IsRoot(Beta34Corpus.Entry r)
+            => global::PipelineRunner.PipelineRunner.IsFatalRoot(
+                FailurePolicy.Fatal,
+                MappedExit(r),
+                new[] { ArtifactFailure.Create("tool", r.ArtifactName, "beta.34 replay") });
+
+        // (1) Corpus shape pins, cross-checked against the manifest accounting block.
+        Assert.Equal(17, corpus.Records.Count(r => r.StepId == 2));
+        Assert.Equal(17, corpus.Accounting.Step2Records);
+        Assert.Equal(16, step2.Count(r => r.HasValidatorResults));   // the D1 shape (Success=true)
+        Assert.Equal(1, step2.Count(r => !r.HasValidatorResults));   // the lone Success=false generator failure
+
+        // (2) Identity pin: the single Success=false Step-2 record is monitor's webtests-get.
+        var successFalse = step2.Single(r => !r.HasValidatorResults);
+        Assert.Equal("monitor.02.webtests-get.01", successFalse.StableId);
+
+        // (3) THE REGRESSION — an exit-code-only predicate detects only 1 of 17 roots …
+        Assert.Equal(1, step2.Count(r => MappedExit(r) != SuccessExitCode));
+        //     … while the corrected predicate detects ALL 17, 16 of them via C2 at mapped exit 0.
+        Assert.Equal(17, step2.Count(IsRoot));
+        Assert.Equal(16, step2.Count(r => MappedExit(r) == SuccessExitCode && IsRoot(r)));
+
+        // (4) Cascade linkage — 10 dependent (cascade) records, 16 dependency links, EVERY link is a
+        //     Step-2 (stepId==02) upstream that resolves to one of the 17 classified Step-2 roots.
+        var cascades = corpus.Records.Where(r => r.ChainRole == "cascade").ToList();
+        Assert.Equal(10, corpus.Records.Count(r => r.ChainRole == "cascade"));
+        Assert.Equal(10, corpus.Accounting.ChainRoleCascade);
+        Assert.Equal(10, corpus.Accounting.DependentRecords);
+        Assert.Equal(16, cascades.Sum(c => c.UpstreamStableIds.Count));
+        Assert.Equal(16, corpus.Accounting.DependencyLinks);
+
+        var upstreamIds = cascades.SelectMany(c => c.UpstreamStableIds).ToList();
+        Assert.Equal(16, upstreamIds.Count(id => Beta34Corpus.StepIdOf(id) == 2));  // every link is stepId==02
+        var step2StableIds = step2.Select(r => r.StableId).ToHashSet();
+        Assert.Equal(16, upstreamIds.Count(step2StableIds.Contains));               // every link resolves to a root
+
+        // (5) Root accounting cross-check — 24 total roots == 17 Step-2 roots (via IsFatalRoot) + 7
+        //     Step-4 roots. Ties the seam's 17 back to the manifest's authoritative root count.
+        Assert.Equal(24, corpus.Accounting.ChainRoleRoot);
+        Assert.Equal(7, corpus.Records.Count(r => r.StepId == 4 && r.ChainRole == "root"));
+        Assert.Equal(24, step2.Count(IsRoot) + corpus.Records.Count(r => r.StepId == 4 && r.ChainRole == "root"));
+    }
+
+    // ── T34: a REAL-shape fatal root (Success=true + ArtifactFailures) suppresses its transitive
+    //         dependents, records the root, and does NOT abort later namespaces (AD-029 §A2/§A3) ──
+    // [R] runtime-RED: on current code the D1 shape maps to exit 0 ⇒ no root ⇒ Steps 3/4/7/8 execute
+    // for the failing namespace too. storage is the SECOND namespace, so its Step 2 is the fatal root
+    // and its suppressed envelopes are the surviving ones (the harness output path is namespace-shared);
+    // compute (first) fully runs, proving continuation is scoped, not a global abort.
+    [Fact]
+    public async Task RunAsync_RealShapeFatalRoot_SuppressesTransitiveDependents_AndContinues()
+    {
+        var repoRoot = CreateRepoRoot();
+        var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+        Step(doubles, 2).Outcome = ns => ns == "storage"
+            ? StepOutcomes.ValidationAfterRetriesFailure("storage account create")
+            : Success();
+        var (runner, _) = BuildRunner(repoRoot, doubles);
+
+        var exit = await runner.RunAsync(
+            Request(namespaceName: null, new[] { 1, 2, 3, 4, 6, 7, 8 }), CancellationToken.None);
+
+        // closure(2) = {3,4,7,8}: each ran ONLY for compute (suppressed for storage) — 0 storage runs.
+        Assert.Equal(new[] { "compute" }, Step(doubles, 3).ExecutedNamespaces.ToArray());
+        Assert.Equal(new[] { "compute" }, Step(doubles, 4).ExecutedNamespaces.ToArray());
+        Assert.Equal(new[] { "compute" }, Step(doubles, 7).ExecutedNamespaces.ToArray());
+        Assert.Equal(new[] { "compute" }, Step(doubles, 8).ExecutedNamespaces.ToArray());
+
+        // Independent Step 6 and the root Step 2 ran for BOTH namespaces (continuation, not abort).
+        Assert.Equal(new[] { "compute", "storage" }, Step(doubles, 6).ExecutedNamespaces.ToArray());
+        Assert.Equal(new[] { "compute", "storage" }, Step(doubles, 2).ExecutedNamespaces.ToArray());
+        // Positive control: pre-root Step 1 ran for both.
+        Assert.Equal(new[] { "compute", "storage" }, Step(doubles, 1).ExecutedNamespaces.ToArray());
+
+        Assert.Equal(FatalExitCode, exit);
+
+        // The surviving suppressed envelopes (storage ran last) name storage's Step-2 root.
+        foreach (var suppressedStepId in new[] { 3, 4 })
+        {
+            var dir = ObservabilityDir(OutputPathOf(repoRoot), Step(doubles, suppressedStepId));
+            Assert.True(StepResultReader.TryRead(dir, out var env));
+            Assert.NotNull(env);
+            Assert.True(env!.Suppressed);
+            Assert.NotNull(env.BlockedByDependency);
+            Assert.Equal("storage.02.root", env.BlockedByDependency!.RootFailureId);
+        }
+
+        // Positive control: the fatal ROOT recorded exactly one critical-failure JSON (Step 2); the
+        // suppressed dependents recorded none.
+        Assert.Single(CriticalFiles(repoRoot, "*-step-02-*.json"));
+        Assert.Empty(CriticalFiles(repoRoot, "*-step-03-*.json"));
+        Assert.Empty(CriticalFiles(repoRoot, "*-step-04-*.json"));
+    }
+
+    // ── T35: retire F1 — a suppressed dependent that WOULD fail loudly emits no step JSON ────────
+    // [R] runtime-RED, genuinely discriminating: on current code the D1-shape root maps to exit 0 ⇒
+    // Step 4 is NOT suppressed ⇒ it EXECUTES FailingDependentWithArtifacts and persists a step-04
+    // critical JSON. Single namespace so the Executions==0 pins are literal (storage-continuation is
+    // covered by T34); the "no step-04 JSON" assertion can only pass if Step 4 never ran.
+    [Fact]
+    public async Task RunAsync_RealShapeRoot_SuppressedFailingDependent_EmitsNoDependentJson()
+    {
+        var repoRoot = CreateRepoRoot();
+        var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+        Step(doubles, 2).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("cosmos database create");
+        // Step 4 would persist its OWN critical JSON if (incorrectly) executed — the F1 discriminator.
+        Step(doubles, 4).Outcome = _ => StepOutcomes.FailingDependentWithArtifacts("cosmos");
+        var (runner, _) = BuildRunner(repoRoot, doubles);
+
+        var exit = await runner.RunAsync(Request("compute", new[] { 1, 2, 3, 4 }), CancellationToken.None);
+
+        Assert.Equal(1, Step(doubles, 2).Executions);  // positive control: the root ran
+        Assert.Equal(0, Step(doubles, 3).Executions);  // suppressed
+        Assert.Equal(0, Step(doubles, 4).Executions);  // suppressed ⇒ its failing body never runs
+        Assert.Equal(FatalExitCode, exit);
+
+        // Positive control: the ROOT (Step 2) persisted exactly one critical JSON …
+        Assert.Single(CriticalFiles(repoRoot, "*-step-02-*.json"));
+        // … and the suppressed dependent Step 4 persisted NONE (it would be exactly one had it run).
+        Assert.Empty(CriticalFiles(repoRoot, "*-step-03-*.json"));
+        Assert.Empty(CriticalFiles(repoRoot, "*-step-04-*.json"));
+    }
+
+    // ── T36: SelectedTransitiveDependents traverses the FULL graph, then filters (AD-029 §A3) ────
+    // [R] runtime-RED: today's implementation intersects with the selected set at ENQUEUE time, so a
+    // path leaving the selection (2 → 3 → 4 with 3 unselected) is severed and {4} is missed. Compiles
+    // against the existing seam; realized once the traversal is corrected.
+    [Fact]
+    public void SelectedTransitiveDependents_TraversesThroughUnselectedIntermediate()
+    {
+        // Selection {2,4} omits the intermediate Step 3. Full-graph closure(2) = {3,4,7,8}; filtered
+        // to the selection ⇒ {4}. A stop-at-unselected traversal returns {} instead.
+        var suppressed = ClosureOnRealGraph(rootId: 2, selection: new[] { 2, 4 });
+
+        Assert.Equal(new[] { 4 }, suppressed);        // exact — Step 4 IS reached through unselected 3
+        Assert.DoesNotContain(2, suppressed);         // the root itself is never its own dependent
+        Assert.DoesNotContain(3, suppressed);         // unselected intermediate is not emitted
+        Assert.DoesNotContain(7, suppressed);         // unselected leaves are not emitted
+        Assert.DoesNotContain(8, suppressed);
+
+        // Positive control: when the whole chain is selected, the full closure returns — proving the
+        // {4} result above is a real selection filter, not an empty-graph artefact.
+        var full = ClosureOnRealGraph(rootId: 2, selection: new[] { 2, 3, 4, 7, 8 });
+        Assert.Equal(new[] { 3, 4, 7, 8 }, full);
+    }
+
+    // ── T37: --skip-deps {2,4}, real-shape root at Step 2 suppresses Step 4 THROUGH unselected 3 ──
+    // [R] runtime-RED: needs BOTH fixes — real-shape root detection (§A2) AND full-graph traversal
+    // (§A3). On current code Step 2 maps to exit 0 (no root) and the traversal would sever at 3 anyway.
+    [Fact]
+    public async Task RunAsync_SkipDeps_RealShapeRoot_SuppressesDependentThroughUnselectedIntermediate()
+    {
+        var repoRoot = CreateRepoRoot();
+        var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+        Step(doubles, 2).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("speech transcription create");
+        var (runner, _) = BuildRunner(repoRoot, doubles);
+
+        var exit = await runner.RunAsync(Request("compute", new[] { 2, 4 }, skipDeps: true), CancellationToken.None);
+
+        Assert.Equal(1, Step(doubles, 2).Executions);  // positive control: the root ran
+        Assert.Equal(0, Step(doubles, 4).Executions);  // suppressed through the unselected intermediate 3
+        Assert.Equal(FatalExitCode, exit);
+
+        // The suppressed Step-4 envelope names the Step-2 root.
+        var dir = ObservabilityDir(OutputPathOf(repoRoot), Step(doubles, 4));
+        Assert.True(StepResultReader.TryRead(dir, out var env));
+        Assert.NotNull(env);
+        Assert.True(env!.Suppressed);
+        Assert.NotNull(env.BlockedByDependency);
+        Assert.Equal("compute.02.root", env.BlockedByDependency!.RootFailureId);
+
+        // Control: with Step 2 SUCCEEDING under the same {2,4}+skip-deps, Step 4 runs — suppression is
+        // driven by the real-shape failure, not by the selection shape.
+        var okRoot = CreateRepoRoot();
+        var okDoubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(okRoot));
+        var (okRunner, _) = BuildRunner(okRoot, okDoubles);
+        var okExit = await okRunner.RunAsync(Request("compute", new[] { 2, 4 }, skipDeps: true), CancellationToken.None);
+        Assert.Equal(1, Step(okDoubles, 4).Executions);
+        Assert.Equal(SuccessExitCode, okExit);
+    }
+
+    // ── T38: the suppressed envelope is written to the CANONICAL step dir, overwriting a prior
+    //         successful run's envelope (AD-029 §A4 — the D4 canonical/observability split) ─────────
+    // [R] runtime-RED: today the suppressed envelope lands ONLY in the observability dir, so a reader
+    // consulting the canonical step directory still sees the STALE success from Run 1.
+    [Fact]
+    public async Task RunAsync_SuppressedStep_WritesCanonicalEnvelope_OverwritingStaleSuccess()
+    {
+        var repoRoot = CreateRepoRoot();
+
+        // Run 1: Steps 3 and 4 execute successfully and write canonical success envelopes.
+        var firstDoubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+        var (firstRunner, _) = BuildRunner(repoRoot, firstDoubles);
+        await firstRunner.RunAsync(Request("compute", new[] { 3, 4 }, skipDeps: true), CancellationToken.None);
+
+        var canonicalStep4 = CanonicalDir(OutputPathOf(repoRoot), Step(firstDoubles, 4));
+        Assert.True(StepResultReader.TryRead(canonicalStep4, out var afterRun1));
+        Assert.NotNull(afterRun1);
+        Assert.Equal(StepResultStatus.Success, afterRun1!.Status);   // baseline: a real success envelope …
+        Assert.True(afterRun1.Suppressed != true);                   // … not suppressed
+
+        // Run 2: same output path; Step 2 fails with the real shape ⇒ Step 4 is suppressed.
+        var secondDoubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+        Step(secondDoubles, 2).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("monitor workspace create");
+        var (secondRunner, _) = BuildRunner(repoRoot, secondDoubles);
+        await secondRunner.RunAsync(Request("compute", new[] { 2, 4 }, skipDeps: true), CancellationToken.None);
+
+        // The CANONICAL step-4 envelope must now be the suppressed one, not Run 1's stale success.
+        Assert.True(StepResultReader.TryRead(canonicalStep4, out var afterRun2));
+        Assert.NotNull(afterRun2);
+        Assert.True(afterRun2!.Suppressed);                          // overwritten in place
+        Assert.Equal(StepResultStatus.Failure, afterRun2.Status);
+        Assert.Equal(ValidationStatus.Skipped, afterRun2.ValidationStatus);
+        Assert.Equal(4, afterRun2.Version);
+        Assert.Equal("1.0", afterRun2.SchemaVersion);
+        Assert.Equal(0, afterRun2.OutputFileCount);
+        Assert.True(afterRun2.OutputArtifacts is null || afterRun2.OutputArtifacts.Count == 0);
+        Assert.NotNull(afterRun2.BlockedByDependency);
+        Assert.Equal("compute.02.root", afterRun2.BlockedByDependency!.RootFailureId);
+        Assert.Single(Directory.GetFiles(canonicalStep4, "step-result.json"));  // overwrite, not duplicate
+
+        // The observability copy carries the same suppressed signal (parity, not divergence).
+        var observabilityStep4 = ObservabilityDir(OutputPathOf(repoRoot), Step(secondDoubles, 4));
+        Assert.True(StepResultReader.TryRead(observabilityStep4, out var obs));
+        Assert.NotNull(obs);
+        Assert.True(obs!.Suppressed);
+    }
+
+    // ── T39: the real shape under a WARN policy is NOT a root — dependents run, catalog succeeds ──
+    // [R] guard: GREEN on the corrected predicate (Warn is never a root). RED under mutation M38 (drop
+    // the Fatal-policy guard), which would let a warn step with ArtifactFailures suppress Step 8. This
+    // is the real-shape complement to T15 (which drives the warn step with the OLD Success=false shape).
+    [Fact]
+    public async Task RunAsync_WarnStep_RealShapeArtifactFailure_DoesNotSuppressDependents()
+    {
+        var repoRoot = CreateRepoRoot();
+        var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+        // Step 7 is a Warn-policy step in the real graph; drive it with the real Step-2 failure shape.
+        Step(doubles, 7).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("keyvault secret get");
+        var (runner, _) = BuildRunner(repoRoot, doubles);
+
+        var exit = await runner.RunAsync(Request("compute", new[] { 1, 2, 3, 4, 7, 8 }), CancellationToken.None);
+
+        Assert.Equal(1, Step(doubles, 7).Executions);  // positive control: the warn step ran
+        Assert.Equal(1, Step(doubles, 8).Executions);  // dependent of Step 7 is NOT suppressed
+        Assert.Equal(SuccessExitCode, exit);           // a warn-only artifact failure never fails the catalog
+
+        // Positive control: the warn step DID record its artifact failure (so the "no suppression"
+        // result is not because the failure was silently dropped).
+        Assert.Single(CriticalFiles(repoRoot, "*-step-07-*.json"));
+    }
+
+    // ── T40: the pre-AI non-fatal skip (Success=true, EMPTY ArtifactFailures) is NOT a root ──────
+    // [R] guard: GREEN on the corrected predicate because C2 keys on ArtifactFailures. RED under
+    // mutation M36 (re-key C2 onto validator results), which would make this failed-validator/empty-
+    // artifacts shape a root and suppress Steps 3/4.
+    [Fact]
+    public async Task RunAsync_PreAiNonFatalSkip_EmptyArtifactFailures_IsNotARoot()
+    {
+        var repoRoot = CreateRepoRoot();
+        var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+        Step(doubles, 2).Outcome = _ => StepOutcomes.PreAiSkipNonFatalOutcome();
+        var (runner, _) = BuildRunner(repoRoot, doubles);
+
+        var exit = await runner.RunAsync(Request("compute", new[] { 1, 2, 3, 4 }), CancellationToken.None);
+
+        Assert.Equal(1, Step(doubles, 2).Executions);  // the step ran
+        Assert.Equal(1, Step(doubles, 3).Executions);  // dependent NOT suppressed
+        Assert.Equal(1, Step(doubles, 4).Executions);  // transitive dependent NOT suppressed
+        Assert.Equal(SuccessExitCode, exit);
+
+        // Positive control: with EMPTY ArtifactFailures nothing is persisted as a critical failure …
+        Assert.Empty(CriticalFiles(repoRoot, "*-step-02-*.json"));
+        // … but the very same shape WITH one artifact failure is a root (T35) — so the emptiness of the
+        // step-02 assertion above reflects the C2 contract, not a broken recorder.
+    }
+
     // ────────────────────────────── helpers ──────────────────────────────
+
+    // Readability forwarders to the production exit-code constants (ADDENDUM B tests).
+    private const int SuccessExitCode = global::PipelineRunner.PipelineRunner.SuccessExitCode;
+    private const int FatalExitCode = global::PipelineRunner.PipelineRunner.FatalExitCode;
+    private const int HumanReviewExitCode = global::PipelineRunner.PipelineRunner.HumanReviewExitCode;
+
+    // The CANONICAL step workspace directory (mirrors PipelineRunner.GetStepWorkspaceDirectory:
+    // Path.Combine(OutputPath, GetStepIdentifierSlug(step))). Distinct from ObservabilityDir — T38
+    // asserts the suppressed envelope lands HERE, overwriting a prior run's success (AD-029 §A4/D4).
+    private static string CanonicalDir(string outputPath, IPipelineStep step)
+        => Path.Combine(outputPath, global::PipelineRunner.PipelineRunner.GetStepIdentifierSlug(step));
+
+    // Critical-failure JSON files matching a glob, tolerant of the directory not existing (no critical
+    // failures were recorded), so "absent" assertions are exact rather than throwing.
+    private static string[] CriticalFiles(string repoRoot, string pattern)
+    {
+        var dir = Path.Combine(OutputPathOf(repoRoot), "critical-failures");
+        return Directory.Exists(dir) ? Directory.GetFiles(dir, pattern) : Array.Empty<string>();
+    }
 
     private static int[] ClosureOnRealGraph(int rootId, int[] selection)
     {

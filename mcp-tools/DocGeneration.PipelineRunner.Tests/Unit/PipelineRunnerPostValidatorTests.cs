@@ -332,7 +332,7 @@ public class PipelineRunnerPostValidatorTests
             var request = new PipelineRequest("compute", [2], outputRelativePath, SkipBuild: true, SkipValidation: false, DryRun: false);
             var exitCode = await runner.RunAsync(request, CancellationToken.None);
 
-            Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, exitCode);
+            Assert.Equal(global::PipelineRunner.PipelineRunner.FatalExitCode, exitCode); // AUTHORIZED (Ellis FAIL / AD-029 §A7): the D1 shape (Step 2, Fatal, Success=true, non-empty ArtifactFailures) is a fatal root ⇒ exit 1, not 0.
             var failureDirectory = Path.Combine(Path.GetFullPath(Path.Combine(repoRoot, outputRelativePath)), "critical-failures");
             var failureFiles = Directory.GetFiles(failureDirectory, "*.json");
             Assert.Single(failureFiles);
