@@ -1,0 +1,27 @@
+813-step3-red-round3.txt
+========================
+Branch: squad/813-step3-canonical-parameter-contract
+HEAD: 186b9427f4bbd85d43009263edf4dc6abdc441e9
+UTC: 2026-08-15T15:39:57Z
+OS: Windows_NT Microsoft Windows [Version 10.0.26200.9106]
+dotnet --version: 10.0.303
+pwsh --version: 7.6.5
+git --version: git version 2.55.0.vfs.0.3
+
+Commands:
+  dotnet build shared/DocGeneration.Core.Shared.Tests --configuration Release (exit 0)
+  dotnet test shared/DocGeneration.Core.Shared.Tests --no-build --configuration Release --filter 'FullyQualifiedName~Round3CanonicalContractTests' (exit 1)
+
+Failing tests (3 of 4):
+1. Round3CanonicalContractTests.CodeBasedPromptValidator_AllValidatePromptsOverloads_RequireManifest
+   Message: ValidatePrompts parameter 'manifest' of type CanonicalParameterManifest must NOT be optional. The manifest is required — no legacy fallback allowed.
+
+2. Round3CanonicalContractTests.ValidationAssembly_DoesNotReferenceParameterCoverageChecker
+   Message: CodeBasedPromptValidator must not have an optional CanonicalParameterManifest parameter. This would allow the ParameterCoverageChecker legacy path to be reached.
+
+3. Round3CanonicalContractTests.ExamplePromptsStep_LoadRequiredOptions_MissingManifest_MustThrow
+   Message: LoadRequiredOptionsAsync must throw ParameterManifestException when manifest is missing, but it returned a result with 0 items (fail-soft). This is defect D2 — the manifest must be the sole authority.
+
+Passing test (1 of 4):
+4. Round3CanonicalContractTests.ExamplePromptsStep_ManifestError_RecordsArtifactFailure_NotJustWarning
+   (Structural check — deferred to behavioral test above)
