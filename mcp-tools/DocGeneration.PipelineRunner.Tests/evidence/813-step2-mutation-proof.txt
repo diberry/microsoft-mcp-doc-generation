@@ -379,3 +379,250 @@ RESTORE
   git diff --stat HEAD shows nothing for tracked production files; git rev-parse HEAD
   == 061dd05b502f0ccccda963538cd2f8eb2a9afa92. Byproduct testResults.xml deleted.
 ================================================================================
+
+
+================================================================================
+## ADDENDUM B mutation rows (M35-M42) + F1 retirement
+  Appended by Parker (QA / Tester). Does NOT alter the 34-row content above.
+  Proves every AMENDMENT 1 (AD-029 A2-A5) production change maps to a named test
+  that goes RED when that change ALONE is reverted/mutated, confirming Rowan's
+  remediation (D1/D3/D4). F1 (M6/T13) is re-verified and RETIRED by new test T35.
+================================================================================
+
+ENVIRONMENT (Addendum B capture)
+  worktree HEAD (Rowan remediation) : 4dea08614283aacceba4d3f717d642ff324bb393
+  branch                            : squad/813-step2-runtime-orchestration
+  committed base (clean tree)       : 4dea08614283aacceba4d3f717d642ff324bb393
+                                      (production tree clean; mutate -> observe -> restore)
+  dotnet --version                  : 10.0.303
+  pwsh (PSVersion)                  : 7.6.4
+  git --version                     : git version 2.55.0.vfs.0.3
+  OS                                : Microsoft Windows NT 10.0.26200
+  captured (UTC)                    : 2026-08-15T05:41:17Z
+
+SOURCE OF TRUTH (Addendum B)
+  .squad/agents/cameron/813-step2-test-matrix.md
+    ## ADDENDUM B, section B.4 "New mutation rows M35-M42" table -> M35..M42
+  .squad/decisions/inbox/riley-ad-029-runtime-dependency-suppression.md
+    ## AMENDMENT 1: A2 (root predicate C1/C2 + rootExit recompute + policy guard),
+    A3 (full-graph traversal), A4 (canonical + observability envelope contract).
+  Cameron's matrix uses stable T-labels; the tests carry different method names.
+  Label -> method map (verified in DependencySuppressionTests.cs at HEAD 4dea086):
+    T32 IsFatalRoot_TruthTable_KeysOnArtifactFailuresNotValidators                        (:459)
+    T33 Beta34Corpus_EveryStep2Failure_IsFatalRoot_EvenWhenSuccessTrue                    (:502)
+    T34 RunAsync_RealShapeFatalRoot_SuppressesTransitiveDependents_AndContinues           (:563)
+    T35 RunAsync_RealShapeRoot_SuppressedFailingDependent_EmitsNoDependentJson            (:613)
+    T36 SelectedTransitiveDependents_TraversesThroughUnselectedIntermediate               (:641)
+    T37 RunAsync_SkipDeps_RealShapeRoot_SuppressesDependentThroughUnselectedIntermediate  (:663)
+    T38 RunAsync_SuppressedStep_WritesCanonicalEnvelope_OverwritingStaleSuccess           (:699)
+    T39 RunAsync_WarnStep_RealShapeArtifactFailure_DoesNotSuppressDependents              (:746)
+    T40 RunAsync_PreAiNonFatalSkip_EmptyArtifactFailures_IsNotARoot                       (:770)
+  PostValidator335 = PipelineRunnerPostValidatorTests.RunAsync_ArtifactFailuresWriteRecordsAndSummary
+                     (:294; the D1-shape exit assertion at :335, already flipped to FatalExitCode by Rowan/Ellis).
+  PreAiValidationGateTests.{ RunAsync_PreAiGate_SkipsStepOnValidatorFailure (:49),
+    _RecordsValidationStatusFailed (:79), _Failure_IsNonFatal_PipelineContinues (:116) }.
+
+PRODUCTION FILE UNDER MUTATION (Addendum B - every row)
+  mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs   (only this file)
+
+METHOD (unchanged from the 34-row proof; repeated for EVERY row)
+  1. git status --short (excluding .squad/**) clean before each mutation
+  2. apply EXACTLY ONE mutation from the row (verbatim intent from the matrix)
+  3. run the narrowest command exercising the named test(s):
+       dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj \
+         --configuration Release --filter "FullyQualifiedName~<TestName>[|FullyQualifiedName~...]" \
+         --nologo --logger "console;verbosity=detailed"
+  4. record mutation, command, observed result (RED expected), actual failure text
+  5. git checkout -- mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs; confirm clean again
+  A mutation that does NOT turn its named test RED is a FINDING (NOT PROVEN). No production
+  code was changed to make a mutation "work"; no named test was swapped for a friendlier one.
+
+  Baseline (GREEN, at 4dea086, before any mutation), Release:
+    DependencySuppressionTests + PipelineRunnerPostValidatorTests + PreAiValidationGateTests
+    -> Passed 40, Failed 0.   Re-verified GREEN after the final revert -> Passed 40, Failed 0.
+
+  NOTE on the M36 seam (honest disclosure). Rowan's corrected predicate is the internal seam
+  IsFatalRoot(FailurePolicy policy, int mappedExitCode, IReadOnlyList<ArtifactFailure> artifactFailures);
+  it receives ONLY ArtifactFailures, so "re-key C2 onto ValidatorResults" cannot be expressed
+  inside the seam body. The faithful SINGLE mutation inlines the re-keyed predicate at the
+  root-detection CALL SITE (PipelineRunner.cs:261) - exactly the shape AMENDMENT 1 A2's
+  pseudocode `signalledFailure` had before the seam was extracted. C1 and the Fatal-policy
+  guard are preserved; only C2's key changes (ArtifactFailures -> failed ValidatorResults).
+  T32, which unit-tests the seam directly, is therefore untouched by this row and stays GREEN,
+  exactly as the matrix predicts (M36's named RED test is T40, not T32).
+
+================================================================================
+ ROW-BY-ROW TABLE (M35-M42)  (row | production change | mutation applied | test | expected | observed | verdict)
+================================================================================
+Legend: expected = RED for the named test(s). verdict = PROVEN when the named test(s)
+went RED under the single mutation and GREEN again after revert.
+
+M35 | A2 C2 clause: a Fatal step is a root on ArtifactFailures.Count>0 (real Success=true shape)
+    | IsFatalRoot (:801-802): drop `|| artifactFailures.Count > 0` -> exit-only predicate
+    | T33,T34,T35,T37,T38,PostValidator335 | RED | RED (6/6) -> PROVEN
+M36 | A2 C2 discriminator: C2 keys on ArtifactFailures, NOT on failed ValidatorResults
+    | Call site (:261): inline predicate, re-key C2 to `|| Result.ValidatorResults.Any(v => !v.Success)`
+    | T40 (+ PreAiValidationGate :49/:79/:116) | RED | RED (4/4) -> PROVEN
+M37 | A2 rootExit recompute: a C2-only root still exits nonzero
+    | (:278-280): `var rootExit = stepOutcome.ExitCode;` (drop the MapStepFailureExitCode recompute)
+    | T34,T37 | RED | RED (2/2) -> PROVEN
+M38 | A2 Fatal policy guard: a Warn step is never a root
+    | IsFatalRoot (:801): drop `policy == FailurePolicy.Fatal &&`
+    | T39 (T32 collateral) | RED | RED -> PROVEN
+M39 | A3 full-graph traversal: intersect selection at COLLECT, not at enqueue
+    | SelectedTransitiveDependents (:1583-1590): restore intersect-at-enqueue
+    |   `if (!selectedIds.Contains(dependent) || !visited.Add(dependent)) continue;` before enqueue
+    | T36,T37 | RED | RED (2/2) -> PROVEN
+M40 | A4 canonical write: suppressed envelope written to the canonical step workspace
+    | WriteSuppressedEnvelope (:1664-1666): drop the canonical write; keep only observability
+    | T38 | RED | RED -> PROVEN
+M41 | A4 stale overwrite: canonical write overwrites a stale success in place
+    | WriteSuppressedEnvelope: guard the canonical write behind `if (!File.Exists(canonicalPath))`
+    | T38 | RED | RED -> PROVEN
+M42 | A4 empty output on suppressed envelope (OutputFileCount=0, no OutputArtifacts)
+    | WriteSuppressedEnvelope (:1640): `OutputFileCount = 1` (nonzero)
+    | T38 | RED | RED -> PROVEN
+
+================================================================================
+ PER-ROW COMMAND + FAILURE TEXT (actual test-runner output; RED under the single mutation)
+================================================================================
+
+M35 [PROVEN]  Failed 6, Passed 0
+  cmd: dotnet test <testproj> --configuration Release --logger "console;verbosity=detailed" --filter
+       "FullyQualifiedName~Beta34Corpus_EveryStep2Failure_IsFatalRoot_EvenWhenSuccessTrue|
+        FullyQualifiedName~RunAsync_RealShapeFatalRoot_SuppressesTransitiveDependents_AndContinues|
+        FullyQualifiedName~RunAsync_RealShapeRoot_SuppressedFailingDependent_EmitsNoDependentJson|
+        FullyQualifiedName~RunAsync_SkipDeps_RealShapeRoot_SuppressesDependentThroughUnselectedIntermediate|
+        FullyQualifiedName~RunAsync_SuppressedStep_WritesCanonicalEnvelope_OverwritingStaleSuccess|
+        FullyQualifiedName~RunAsync_ArtifactFailuresWriteRecordsAndSummary"
+  T33 Beta34Corpus_...: Assert.Equal() Failure Expected: 17  Actual: 1  (DependencySuppressionTests.cs:532)
+      -> the exit-only predicate roots only the 1 Success=false corpus record; the 16 Success=true
+         validation-after-retries roots are missed. THIS is the BLOCKING-1 catcher (17 -> 1, 16 -> 0).
+  T34 RunAsync_RealShapeFatalRoot_...: Expected: ["compute"]  Actual: ["compute", "storage"] (:576)
+      -> compute is not recorded as a root, so it is wrongly listed among successful namespaces.
+  T35 RunAsync_RealShapeRoot_SuppressedFailingDependent_...: Expected: 0  Actual: 1 (:625)
+      -> Step 3 executes (not suppressed) because the real Success=true+AF shape is not a root.
+  T37 RunAsync_SkipDeps_RealShapeRoot_...: Expected: 0  Actual: 1 (:673) -> Step 4 executes.
+  T38 RunAsync_SuppressedStep_WritesCanonicalEnvelope_...: Expected: True  Actual: null (:723)
+      -> Step 4 not suppressed -> no suppressed envelope -> env.Suppressed is null.
+  PostValidator335 RunAsync_ArtifactFailuresWriteRecordsAndSummary: Expected: 1  Actual: 0
+      (PipelineRunnerPostValidatorTests.cs:335) -> the D1 shape (Fatal, Success=true, AF) exits 0 again;
+      the authorized :335 tightening (FatalExitCode) re-RED's - a 2nd independent guard on C2.
+
+M36 [PROVEN]  Failed 4, Passed 0   (named T40; the PreAiValidationGate trio breaks as the matrix predicts)
+  cmd: ... --filter "FullyQualifiedName~RunAsync_PreAiNonFatalSkip_EmptyArtifactFailures_IsNotARoot|
+        FullyQualifiedName~PreAiValidationGateTests"
+  T40 RunAsync_PreAiNonFatalSkip_EmptyArtifactFailures_IsNotARoot: Expected: 1  Actual: 0
+      (DependencySuppressionTests.cs:780) -> the pre-AI shape (Success=true, EMPTY AF, failed validator)
+      is wrongly rooted -> Step 3 suppressed (Executions 1 -> 0).
+  PreAiValidationGateTests.RunAsync_PreAiGate_SkipsStepOnValidatorFailure: Expected: 0  Actual: 1
+      (PreAiValidationGateTests.cs:69) -> the intentional non-fatal pre-AI skip now exits FatalExitCode.
+  PreAiValidationGateTests.RunAsync_PreAiGate_RecordsValidationStatusFailed: Expected: 0  Actual: 1 (:100).
+  PreAiValidationGateTests.RunAsync_PreAiGate_Failure_IsNonFatal_PipelineContinues: Expected: 0 Actual: 1 (:137).
+      -> confirms C2 MUST key on ArtifactFailures, not on validators (protects the pre-AI gate contract).
+      (T32, the direct seam truth-table, is untouched and stays GREEN - see the M36 seam note above.)
+
+M37 [PROVEN]  Failed 2, Passed 0
+  cmd: ... --filter "FullyQualifiedName~RunAsync_RealShapeFatalRoot_SuppressesTransitiveDependents_AndContinues|
+        FullyQualifiedName~RunAsync_SkipDeps_RealShapeRoot_SuppressesDependentThroughUnselectedIntermediate"
+  T34 ...: Expected: 1  Actual: 0 (DependencySuppressionTests.cs:587) -> exit is 0, not FatalExitCode.
+  T37 ...: Expected: 1  Actual: 0 (:674) -> same: a C2-only root leaves mapped exit 0, so worstRootExit
+      stays 0. Suppression itself still fires (this is a DIFFERENT assertion/line than M35's T34:576) -
+      only the forced-nonzero catalog exit is lost, exactly the load-bearing rootExit recompute.
+
+M38 [PROVEN]  T39 named RED (+ T32 truth-table collateral RED)
+  cmd: ... --filter "FullyQualifiedName~RunAsync_WarnStep_RealShapeArtifactFailure_DoesNotSuppressDependents|
+        FullyQualifiedName~IsFatalRoot_TruthTable_KeysOnArtifactFailuresNotValidators"
+  T39 RunAsync_WarnStep_RealShapeArtifactFailure_...: Expected: 1  Actual: 0 (:757) -> a Warn step with
+      Success=true + AF is wrongly rooted -> its dependent (Step 8) is suppressed (Executions 1 -> 0).
+  T32 (collateral) IsFatalRoot_TruthTable_...: Expected: False  Actual: True (:493) -> the Warn truth-table
+      row flips because the policy guard is gone. Collateral RED strengthens the proof; the NAMED test
+      (T39) went RED and the tree was restored GREEN before the next row.
+
+M39 [PROVEN]  Failed 2, Passed 0
+  cmd: ... --filter "FullyQualifiedName~SelectedTransitiveDependents_TraversesThroughUnselectedIntermediate|
+        FullyQualifiedName~RunAsync_SkipDeps_RealShapeRoot_SuppressesDependentThroughUnselectedIntermediate"
+  T36 SelectedTransitiveDependents_TraversesThroughUnselectedIntermediate:
+      Expected: [4]  Actual: [] (DependencySuppressionTests.cs:647) -> the BFS is severed at unselected 3;
+      Step 4 (reachable only THROUGH the unselected intermediate 3) is never collected.
+  T37 ...: Expected: 0  Actual: 1 (:673) -> integration: Step 4 executes (not suppressed) for select {2,4}.
+
+M40 [PROVEN]  T38 RED
+  cmd: ... --filter "FullyQualifiedName~RunAsync_SuppressedStep_WritesCanonicalEnvelope_OverwritingStaleSuccess"
+  T38 ...: Expected: True  Actual: null (DependencySuppressionTests.cs:723) -> the canonical step workspace
+      is never written on suppression, so the reader returns Run-1's stale SUCCESS (env.Suppressed == null).
+
+M41 [PROVEN]  T38 RED
+  cmd: (same single-test filter as M40)
+  T38 ...: Expected: True  Actual: null (:723) -> the canonical write is guarded behind File.Exists, so
+      Run-2 skips the overwrite and Run-1's stale success survives. Same assertion as M40, DISTINCT
+      mechanism (conditional-write vs no-write) - both violate the overwrite-in-place contract.
+
+M42 [PROVEN]  T38 RED
+  cmd: (same single-test filter as M40)
+  T38 ...: Expected: 0  Actual: 1 (DependencySuppressionTests.cs:728) -> the suppressed envelope carries
+      OutputFileCount=1, so a downstream consumer would wrongly resolve a suppressed step's outputs.
+      DISTINCT assertion line (:728) from M40/M41 (:723) - isolates the empty-output clause specifically.
+
+================================================================================
+ F1 RETIREMENT - re-verification of (M6, T13) with the Addendum B failing-dependent harness
+================================================================================
+Original finding F1 (34-row proof): mutation M6 ("execute suppressed dependents normally instead
+of suppressing them") was PROVEN via T9, but its second named guard T13 stayed GREEN - it was
+non-discriminating. Root cause (Ellis-confirmed HARNESS gap, not a code gap): T13's dependents
+default to a SUCCESS (DryRun) outcome and it asserts ONLY on the ABSENCE of dependent critical JSON;
+an executed-and-succeeded dependent also emits no JSON, so T13 cannot tell "suppressed" from
+"executed."
+
+Addendum B adds T35 (RunAsync_RealShapeRoot_SuppressedFailingDependent_EmitsNoDependentJson), which
+drives Step 4 with StepOutcomes.FailingDependentWithArtifacts (Success=false + >=1 ArtifactFailure).
+If Step 4 is EXECUTED, CriticalFailureRecorder.Persist writes a *-step-04-*.json; T35 also asserts the
+suppressed dependents' Executions == 0. Both make "executed vs suppressed" observable.
+
+RE-RUN of M6 at HEAD 4dea086 (mutation: PipelineRunner.cs:243
+  `if (state.SuppressedIds.Contains(step.Id))` -> `if (false && state.SuppressedIds.Contains(step.Id))`,
+which disables the suppression branch so suppressed dependents fall through to ExecuteStepAsync):
+  cmd: ... --filter "FullyQualifiedName~RunAsync_FatalStep2_SuppressesDependents_RunsIndependentStep6_AndContinues|
+        FullyQualifiedName~RunAsync_SuppressedStep_EmitsNoCriticalFailureJson_ButRootDoes|
+        FullyQualifiedName~RunAsync_RealShapeRoot_SuppressedFailingDependent_EmitsNoDependentJson"
+  Result: Total 3, Passed 1, Failed 2.
+    T9  RunAsync_FatalStep2_SuppressesDependents_...:                 FAILED  Expected: 0  Actual: 1 (:164)
+    T13 RunAsync_SuppressedStep_EmitsNoCriticalFailureJson_ButRootDoes: PASSED (GREEN)
+    T35 RunAsync_RealShapeRoot_SuppressedFailingDependent_...:        FAILED  Expected: 0  Actual: 1 (:625)
+
+VERDICT: T35 DISCRIMINATES M6; T13 does NOT.  F1 is RETIRED.
+  Under identical M6, T35 flips RED while T13 stays GREEN - precisely the property F1 said was missing.
+  T35 trips first at :625 (Step 3 Executions 0 -> 1, an execution-count discriminator that T13 lacks
+  entirely). Its failing-dependent JSON guard at :633 (*-step-04-*.json empty) is the direct answer to
+  F1's JSON-only gap: under M6, Step 4 (FailingDependentWithArtifacts) executes and Persist writes a
+  step-04 record, so :633 would ALSO be RED - it is merely masked here because the earlier :625
+  execution-count assertion fires first. M6 remains PROVEN (via T9, and now additionally via T35). No
+  production or test code was altered to force this; T13's GREEN is preserved and reported honestly.
+
+================================================================================
+ UPDATED OVERALL TALLY (34-row proof + Addendum B = 42 rows)
+================================================================================
+  Rows defined (matrix)      : 42   (M1..M26 + Addendum A M27..M34 + Addendum B M35..M42)
+  PROVEN                     : 42   (34 prior + 8 new: M35..M42)
+  NOT PROVEN                 :  0
+  NOT EXECUTED               :  0
+  Findings                   :  1 -> RETIRED   (F1: (M6,T13) non-discriminating; retired by new test T35)
+
+  Addendum B (M35..M42) sub-tally:
+    PROVEN       : 8   (M35, M36, M37, M38, M39, M40, M41, M42)
+    NOT PROVEN   : 0
+    NOT EXECUTED : 0
+  F1 status: RETIRED (T35 discriminates M6; T13 confirmed non-discriminating and left UNCHANGED).
+
+  Every AMENDMENT 1 (AD-029 A2-A5) production change - the C1/C2 root clauses, the load-bearing
+  rootExit recompute, the Fatal policy guard, the full-graph traversal, and the canonical /
+  overwrite / empty-output envelope contract - maps to at least one named test that goes RED when
+  that change ALONE is reverted, and returns to GREEN when the mutation is reverted.
+
+RESTORE (Addendum B)
+  After the final revert: the production tree is byte-identical to HEAD
+  (git diff --stat HEAD over mcp-tools/ + shared/ + start-with-logs.ps1 = empty);
+  GREEN re-verify = Passed 40, Failed 0; git rev-parse HEAD == 4dea08614283aacceba4d3f717d642ff324bb393.
+  Byproducts (.mutation-logs/ scratch dir, any testResults.xml) deleted; git status --short shows
+  only this evidence file modified. The gitignored .baseline-proof/ dir is untouched (another workflow).
+================================================================================
