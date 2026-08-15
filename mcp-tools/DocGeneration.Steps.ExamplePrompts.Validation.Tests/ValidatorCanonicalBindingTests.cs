@@ -53,9 +53,8 @@ public class ValidatorCanonicalBindingTests
         var manifest = BuildManifest("vault", "Vault name", "vault", "vault-name");
 
         var prompts = new[] { "Get secret from <vault-url> named 'my-secret'" };
-        var requiredParams = new[] { "vault" };
 
-        var result = _validator.ValidatePrompts(prompts, requiredParams, manifest: manifest);
+        var result = _validator.ValidatePrompts(prompts, manifest);
 
         // The unauthorized placeholder must NOT be counted as covered
         Assert.False(result.IsValid,
@@ -74,9 +73,8 @@ public class ValidatorCanonicalBindingTests
         var manifest = BuildManifest("resource-group", "Resource group", "resource-group", "resource_group");
 
         var prompts = new[] { "List VMs in <resource_group> named 'my-rg'" };
-        var requiredParams = new[] { "resource-group" };
 
-        var result = _validator.ValidatePrompts(prompts, requiredParams, manifest: manifest);
+        var result = _validator.ValidatePrompts(prompts, manifest);
 
         Assert.True(result.IsValid);
     }
@@ -90,24 +88,24 @@ public class ValidatorCanonicalBindingTests
         var manifest = BuildManifest("account", "Account name", "account", "account-name", "account_name");
 
         var prompts = new[] { "List key-values for account 'my-appconfig'" };
-        var requiredParams = new[] { "account" };
 
-        var result = _validator.ValidatePrompts(prompts, requiredParams, manifest: manifest);
+        var result = _validator.ValidatePrompts(prompts, manifest);
 
         Assert.True(result.IsValid);
     }
 
     /// <summary>
-    /// Without manifest, the validator falls back to the legacy heuristic (no change to existing behavior).
+    /// After removing the legacy path, all validation requires a manifest.
+    /// This test verifies that with a manifest, an authorized placeholder is still covered.
+    /// (Replaces old test that verified legacy behavior without a manifest.)
     /// </summary>
     [Fact]
-    public void ValidatePrompts_WithoutManifest_PlaceholderDetected_LegacyBehaviorPreserved()
+    public void ValidatePrompts_WithManifest_AuthorizedPlaceholder_LegacyPathRemoved()
     {
+        var manifest = BuildManifest("vault", "Vault name", "vault", "vault-name");
         var prompts = new[] { "Get secret from vault <vault-name>" };
-        var requiredParams = new[] { "vault" };
 
-        // No manifest — uses old behavior (placeholder is treated as covered)
-        var result = _validator.ValidatePrompts(prompts, requiredParams);
+        var result = _validator.ValidatePrompts(prompts, manifest);
 
         Assert.True(result.IsValid);
     }

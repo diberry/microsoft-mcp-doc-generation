@@ -217,11 +217,15 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
                 }
                 catch (ParameterManifestException pme)
                 {
-                    // C6: classified failure — record the error code so it appears in the step
-                    // report and in AD-029 accounting. Do not crash or silently swallow.
+                    // C6: classified failure — record an ArtifactFailure with the stable error code
+                    // so AD-029 root/suppression accounting and the nonzero exit behave correctly.
                     var manifestWarning = $"Parameter manifest error for '{command}' [{pme.ErrorCode}]: {pme.Message}";
                     retryWarnings.Add(manifestWarning);
                     AddToolWarnings(perToolWarnings, command, [manifestWarning]);
+
+                    // Mark this tool as permanently unresolved — no further retries
+                    // The ArtifactFailure will be created in the final unresolvedCommands loop below
+                    break;
                 }
                 var retryMessage = $"Retrying example prompts for '{command}' (attempt {attempt}/{MaxValidationRetries}) because {reason}";
                 context.Reports.Warning($"    {retryMessage}");
@@ -309,6 +313,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         {
             "--generated", outputPath,
             "--example-prompts-dir", Path.Combine(outputPath, "example-prompts"),
+            "--parameter-manifests-dir", Path.Combine(outputPath, "parameters"),
         };
 
         if (!string.IsNullOrWhiteSpace(toolCommand))
@@ -489,20 +494,18 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
     {
         if (!Directory.Exists(parameterManifestDirectory))
         {
-            return Array.Empty<Option>();
+            throw new ParameterManifestException(
+                ParameterManifestErrorCode.PARAM_MANIFEST_NOT_FOUND,
+                parameterManifestDirectory,
+                $"Parameter manifest directory not found: '{parameterManifestDirectory}'. Ensure Step 1 completed.");
         }
 
         var nameContext = await FileNameContext.CreateAsync();
         var manifestPath = Path.Combine(
             parameterManifestDirectory,
             ToolFileNameBuilder.BuildParameterManifestFileName(command, nameContext));
-        if (!File.Exists(manifestPath))
-        {
-            return Array.Empty<Option>();
-        }
 
-        // Fail-closed: if the file exists but is malformed or legacy format,
-        // ParameterManifestException propagates to the caller as a classified failure.
+        // Fail-closed: ParameterManifestException propagates to the caller as a classified failure.
         var manifest = await CanonicalParameterManifestLoader.LoadAsync(
             manifestPath, command, cancellationToken: cancellationToken);
 

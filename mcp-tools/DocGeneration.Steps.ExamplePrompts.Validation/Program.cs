@@ -16,6 +16,7 @@ internal static class Program
         var toolsDir = string.Empty;
         var examplePromptsDir = string.Empty;
         var filterToolCommand = string.Empty;
+        var parameterManifestsDir = string.Empty;
         var useLlmValidation = false;
 
         for (var i = 0; i < args.Length; i++)
@@ -45,6 +46,12 @@ internal static class Program
                 continue;
             }
 
+            if (arg.Equals("--parameter-manifests-dir", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            {
+                parameterManifestsDir = args[++i];
+                continue;
+            }
+
             if (arg.Equals("--use-llm-validation", StringComparison.OrdinalIgnoreCase))
             {
                 useLlmValidation = true;
@@ -67,10 +74,16 @@ internal static class Program
             examplePromptsDir = Path.Combine(generatedDir, "example-prompts");
         }
 
+        if (string.IsNullOrWhiteSpace(parameterManifestsDir))
+        {
+            parameterManifestsDir = Path.Combine(generatedDir, "parameters");
+        }
+
         Console.WriteLine("Example Prompt Validator");
         Console.WriteLine("========================");
         Console.WriteLine($"Generated directory: {generatedDir}");
         Console.WriteLine($"Example prompts directory: {examplePromptsDir}");
+        Console.WriteLine($"Parameter manifests directory: {parameterManifestsDir}");
         Console.WriteLine($"Validation mode: {(useLlmValidation ? "LLM" : "Code-based")}");
         if (!string.IsNullOrWhiteSpace(filterToolCommand))
         {
@@ -116,13 +129,14 @@ internal static class Program
             return await RunLlmValidationAsync(tools, generatedDir, examplePromptsDir, filterToolCommand);
         }
 
-        return await RunCodeBasedValidationAsync(tools, generatedDir, examplePromptsDir);
+        return await RunCodeBasedValidationAsync(tools, generatedDir, examplePromptsDir, parameterManifestsDir);
     }
 
     private static async Task<int> RunCodeBasedValidationAsync(
         List<System.Text.Json.JsonElement> tools,
         string generatedDir,
-        string examplePromptsDir)
+        string examplePromptsDir,
+        string parameterManifestsDir)
     {
         var codeValidator = new CodeBasedPromptValidator();
 
@@ -163,30 +177,32 @@ internal static class Program
                 continue;
             }
 
-            var options = new List<System.Text.Json.JsonElement>();
-            if (toolElement.TryGetProperty("option", out var optionElement) && optionElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+            // Load the canonical parameter manifest (fail-closed)
+            var manifestFileName = ToolFileNameBuilder.BuildParameterManifestFileName(command, nameContext);
+            var manifestPath = Path.Combine(parameterManifestsDir, manifestFileName);
+            CanonicalParameterManifest manifest;
+            try
             {
-                options = optionElement.EnumerateArray().ToList();
+                manifest = CanonicalParameterManifestLoader.Load(manifestPath, command);
             }
-
-            var requiredParams = options
-                .Where(o => o.TryGetProperty("required", out var req) && req.GetBoolean())
-                .ToList();
-
-            if (options.Count == 0)
+            catch (ParameterManifestException pme)
             {
-                validated++;
-                valid++;
-                Console.WriteLine($"   ⏭️  {command} - No parameters to validate");
+                Console.Error.WriteLine($"❌ {command} [{pme.ErrorCode}]: {pme.Message}");
+                Console.Error.WriteLine($"   Action: Rerun Step 1 to regenerate the parameter manifest.");
+                invalid++;
+                invalidTools.Add(command);
                 await WriteValidationFileAsync(validationDir, baseName, new StringBuilder()
                     .AppendLine($"# Example Prompt Validation: {command}")
                     .AppendLine()
-                    .AppendLine("**Status:** Skipped (zero parameters)")
-                    .AppendLine($"**Example Prompts File:** {examplePromptFile}")
+                    .AppendLine($"**Status:** Failed (parameter manifest error)")
+                    .AppendLine($"**Error Code:** {pme.ErrorCode}")
+                    .AppendLine($"**Message:** {pme.Message}")
+                    .AppendLine($"**Action:** Rerun Step 1 to regenerate the parameter manifest.")
                     .ToString());
                 continue;
             }
 
+            var requiredParams = manifest.Parameters.Where(p => p.Required).ToList();
             if (requiredParams.Count == 0)
             {
                 validated++;
@@ -197,7 +213,6 @@ internal static class Program
                     .AppendLine()
                     .AppendLine("**Status:** Skipped (zero required parameters)")
                     .AppendLine($"**Example Prompts File:** {examplePromptFile}")
-                    .AppendLine($"**Optional Parameters:** {options.Count}")
                     .ToString());
                 continue;
             }
@@ -210,33 +225,9 @@ internal static class Program
                 .Where(prompt => !string.IsNullOrWhiteSpace(prompt))
                 .ToList();
 
-            var requiredParamNames = requiredParams
-                .Select(o => o.TryGetProperty("name", out var nameElem) ? nameElem.GetString() ?? string.Empty : string.Empty)
-                .Where(name => !string.IsNullOrWhiteSpace(name))
-                .Select(name => name.TrimStart('-').Trim()) // Strip CLI switch prefix (--name → name)
-                .ToList();
+            var requiredParamNames = requiredParams.Select(p => p.CanonicalName).ToList();
 
-            var descriptionsByParameter = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var o in requiredParams)
-            {
-                if (!o.TryGetProperty("name", out var nameElem))
-                    continue;
-                var pName = nameElem.GetString();
-                if (string.IsNullOrWhiteSpace(pName))
-                    continue;
-                pName = pName.TrimStart('-').Trim();
-
-                if (o.TryGetProperty("description", out var descElem) && descElem.ValueKind == System.Text.Json.JsonValueKind.String)
-                {
-                    var desc = descElem.GetString();
-                    if (!string.IsNullOrWhiteSpace(desc))
-                    {
-                        descriptionsByParameter[pName] = desc;
-                    }
-                }
-            }
-
-            var result = codeValidator.ValidatePrompts(prompts, requiredParamNames, descriptionsByParameter);
+            var result = codeValidator.ValidatePrompts(prompts, manifest);
             validated++;
 
             var reportBuilder = new StringBuilder()

@@ -164,7 +164,12 @@ public class Round3CanonicalContractTests
         }
         catch (TargetInvocationException tie) when (tie.InnerException is ParameterManifestException pme)
         {
-            // This is the CORRECT behavior after the fix
+            // This is the CORRECT behavior after the fix (sync invoke path)
+            Assert.Equal(ParameterManifestErrorCode.PARAM_MANIFEST_NOT_FOUND, pme.ErrorCode);
+        }
+        catch (ParameterManifestException pme)
+        {
+            // This is the CORRECT behavior after the fix (async await path)
             Assert.Equal(ParameterManifestErrorCode.PARAM_MANIFEST_NOT_FOUND, pme.ErrorCode);
         }
         finally
