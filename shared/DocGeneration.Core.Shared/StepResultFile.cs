@@ -208,6 +208,25 @@ public class StepResultFile
     [JsonPropertyName("timestamp")]
     public string? Timestamp { get; set; }
 
+    // ── #813 Step 2: runtime dependency suppression (AD-029 §2) ───────────────
+    // When a selected step is a transitive dependent of a step that failed fatally, the runner
+    // does NOT execute it; instead it writes this envelope with Suppressed=true so downstream
+    // tooling can distinguish "blocked by an upstream failure" from "ran and failed".
+
+    /// <summary>
+    /// True when this step did not execute because a selected transitive dependency failed fatally.
+    /// Null/absent for steps that executed normally (backward compatible).
+    /// </summary>
+    [JsonPropertyName("suppressed")]
+    public bool? Suppressed { get; set; }
+
+    /// <summary>
+    /// Identifies the fatal root dependency that suppressed this step. Populated only when
+    /// <see cref="Suppressed"/> is true; null otherwise.
+    /// </summary>
+    [JsonPropertyName("blockedByDependency")]
+    public BlockedByDependency? BlockedByDependency { get; set; }
+
     /// <summary>
     /// Serialization-friendly record for prompt file metadata.
     /// Maps from <see cref="PromptSnapshot"/> but omits LastModified (not needed in JSON).
@@ -226,4 +245,31 @@ public class StepResultFile
         [JsonPropertyName("sizeBytes")]
         public long SizeBytes { get; set; }
     }
+}
+
+/// <summary>
+/// Identifies the fatal root step whose failure suppressed a dependent step (AD-029 §2).
+/// Emitted inside a suppressed <see cref="StepResultFile"/> via
+/// <see cref="StepResultFile.BlockedByDependency"/>.
+///
+/// Declared top-level (not nested in <see cref="StepResultFile"/>) on purpose: a nested type
+/// named <c>BlockedByDependency</c> would collide with the same-named property (CS0102).
+/// </summary>
+public sealed class BlockedByDependency
+{
+    /// <summary>Namespace in which the fatal root step failed.</summary>
+    [JsonPropertyName("namespace")]
+    public string Namespace { get; set; } = "";
+
+    /// <summary>Numeric id of the failed root step.</summary>
+    [JsonPropertyName("failedRootStepId")]
+    public int FailedRootStepId { get; set; }
+
+    /// <summary>Human-readable name of the failed root step.</summary>
+    [JsonPropertyName("failedRootStepName")]
+    public string FailedRootStepName { get; set; } = "";
+
+    /// <summary>Stable root failure id in the form <c>{namespaceSlug}.{rootStepId:D2}.root</c>.</summary>
+    [JsonPropertyName("rootFailureId")]
+    public string RootFailureId { get; set; } = "";
 }
