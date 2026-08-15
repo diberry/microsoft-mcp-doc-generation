@@ -476,17 +476,71 @@ namespace-scoped step to exit nonzero returned immediately and every remaining n
 skipped. `PipelineRunner` now lets a namespace **survive** a fatal step by suppressing only the
 work that actually depended on it, then continues to the next namespace and finally exits nonzero.
 
-**What happens when a selected `Fatal` step fails in a namespace:**
+**What makes a step a fatal root — `IsFatalRoot` (read this before touching the predicate).** A
+selected step becomes a fatal root when its policy is `FailurePolicy.Fatal` **and** it did not
+*cleanly* succeed. "Did not cleanly succeed" is signalled by **either** condition — a nonzero exit
+is **not** required:
+
+| Signal | Condition | Typical source |
+|--------|-----------|----------------|
+| **C1** | mapped exit code ≠ `SuccessExitCode` | a hard `Success=false` Fatal step, a forced `ExitCodeOverride`, or a fatal envelope-write failure |
+| **C2** | `ArtifactFailures.Count > 0` **even when the step reports `Success=true` and maps to exit 0** | the real Step-2 shape: `ExamplePromptsStep` appends per-tool failures to `ArtifactFailures` after retries but still returns `success: true` |
+
+```csharp
+internal static bool IsFatalRoot(FailurePolicy policy, int mappedExitCode, IReadOnlyList<ArtifactFailure> artifactFailures)
+    => policy == FailurePolicy.Fatal
+        && (mappedExitCode != SuccessExitCode || artifactFailures.Count > 0);
+```
+
+C2 exists because a step's *result* state can say `success` while its *validation* state says
+`failed`. When `ValidateWithRetriesAsync` exhausts its retries, `ExamplePromptsStep` records the
+failures in `ArtifactFailures` (and a failed `ValidatorResult`) but falls through to
+`return BuildResult(..., success: true, ...)` (`ExamplePromptsStep.cs:141`). An exit-code-only
+trigger never fired on that shape: in the frozen beta.34 baseline **16 of 17** Step-2 failures are
+exactly this `Success=true` shape, and those 16 are the upstream links behind **all 10** historical
+cascades — so the exit-code-only trigger would have suppressed **0 of 10**. Keying on
+`ArtifactFailures` catches **17 of 17** and eliminates all 10 cascades.
+
+> ⚠️ **Maintainer trap — C2 keys on `ArtifactFailures`, deliberately NOT on a failed
+> `ValidatorResult` (nor on persisted critical-failure counts).** The pre-AI validation gate
+> (`TryRunPreAiGateAsync`) intentionally returns `Success=true` **+ a failed `pre-ai-validation`
+> `ValidatorResult` + an _empty_ `ArtifactFailures`**, and `ExecuteStepAsync` maps that skip to
+> `SuccessExitCode` so the skipped step stays **non-fatal** and its independent dependents keep
+> running (`PreAiValidationGateTests` pins this). The real Step-2 failure and the pre-AI skip **both**
+> carry `Success=true` and a failed validator; the **only** thing that distinguishes "fatal root" from
+> "intentional non-fatal skip" is whether `ArtifactFailures` is non-empty (validation-after-retries =
+> non-empty; pre-AI skip = empty). A predicate that fired on any failed validator — or on
+> critical-JSON counts — would reclassify the pre-AI skip as a fatal root and break the pre-AI-gate
+> contract. **Do not "simplify" `IsFatalRoot` to look at validator results.** The `FailurePolicy != Fatal`
+> guard short-circuits first, so a Warn step with artifact failures is never a root.
+
+**Forcing a nonzero exit for a C2-only root.** A C2 root maps to exit 0, so `Worse(worstRootExit, 0)`
+would leave the catalog exiting 0 despite a recorded root. Before recording the root the runner
+recomputes `rootExit = MapStepFailureExitCode(Fatal, stepSucceeded: false, override)` (preserving a
+human-review override of `2`), so the invocation still exits nonzero. This recompute is load-bearing:
+without it, a namespace that failed only via artifact failures would silently exit 0. `MapStepFailureExitCode`
+itself is unchanged — the recompute lives entirely in the namespace loop.
+
+**What happens once a step is a fatal root:**
 
 1. The runner records exactly **one root failure** for that step, with a run-independent id
-   `{namespaceSlug}.{stepId:D2}.root` (for example `storage.02.root`).
-2. It computes the step's **selected transitive dependents** — a breadth-first walk over the
-   reverse-adjacency (dependents) map built once from the real `StepRegistry`
-   (`BuildDependentsOf`), intersected with the selected steps (`SelectedTransitiveDependents`).
-   Only selected steps can be suppressed; an unselected step is simply absent from the walk.
-3. Each dependent is **suppressed**: it does not execute, produces no outputs, gets no retries,
-   and emits **no critical-failure JSON**. The runner writes only a step-result envelope with
-   `suppressed: true` and a `blockedByDependency` block naming the root (see below).
+   `{namespaceSlug}.{stepId:D2}.root` (for example `storage.02.root`). A step runs once per
+   namespace, so a namespace with several failing tools still yields **one** Step-2 root that owns
+   all of that namespace's artifact-level critical records.
+2. It computes the step's **selected transitive dependents** (`SelectedTransitiveDependents`): a
+   breadth-first walk over the reverse-adjacency (dependents) map built once from the real
+   `StepRegistry` (`BuildDependentsOf`). The walk traverses the **full** reverse graph with its own
+   visited set — every reachable dependent is enqueued **regardless of whether it is selected** — and
+   the selection filter is applied **only when collecting** the result. Suppression therefore
+   propagates *through* an unselected intermediate to a selected dependent beyond it (see the
+   `--skip-deps` worked example below). An earlier build filtered at enqueue time and stopped at the
+   first unselected step, under-suppressing; the current walk is a pure `∩ selectedIds` at
+   collection time, so an unselected step never blocks propagation to selected steps past it.
+3. Each collected dependent is **suppressed**: it does not execute, produces no outputs, gets no
+   retries, and emits **no critical-failure JSON**. The runner writes a step-result envelope marked
+   `suppressed: true` with a `blockedByDependency` block naming the root, to **both** the canonical
+   step workspace and the observability directory (see *Where the suppressed envelope is written*
+   below).
 4. **Independent** selected steps in the same namespace still run, and **later namespaces** still
    run. Per-namespace runtime state is a fresh instance each iteration, so nothing leaks across
    namespaces.
@@ -501,15 +555,24 @@ the catalog immediately.
 
 **Exit code.** After every namespace has been attempted, the catalog exits nonzero if any fatal
 root occurred. A hard fatal (`1`) dominates human-review (`2`); an explicit validation-gate
-failure still wins over both because the gates run and return first.
+failure still wins over both because the gates run and return first. A root detected only via **C2**
+(artifact failures, mapped exit 0) is forced to a nonzero effective exit by the `rootExit` recompute
+above, so a namespace that failed only through artifact failures never leaves the catalog at exit 0.
 
 **Worked examples** (matching the dependency chain in [Step Details](#dependencies)):
 
-- Select `[1,2,3,4,6]`; Step 4 fails fatally. Its dependents (Steps 7/8) are not selected, so the
-  suppression closure is empty. Step 6 (depends on Step 0, not Step 4) still runs. The namespace
-  exits nonzero.
-- Select `[1,2,3,4,7]`; Step 2 fails fatally. The closure is `{3, 4, 7}` — all suppressed. Later
-  namespaces still run.
+- Select `[1,2,3,4,6]`; Step 4 becomes a fatal root. Its dependents (Steps 7/8) are not selected, so
+  the collected suppression closure is empty. Step 6 (depends on Step 0, not Step 4) still runs. The
+  namespace exits nonzero.
+- Select `[1,2,3,4,7]`; Step 2 becomes a fatal root — including the common **C2** case where Step 2
+  returns `success: true` but recorded `ArtifactFailures` (example-prompt validation failed after
+  retries). The closure is `{3, 4, 7}` — all suppressed — and the catalog is forced to exit nonzero
+  even though Step 2's own mapped exit was `0`. Later namespaces still run.
+- Run `start.sh <ns> 2,4 --skip-deps` (select `{2,4}`; Steps 1/3 unselected) and Step 2 becomes a
+  fatal root. The full reverse-graph walk reaches Step 4 **through** the unselected Step 3
+  (`2 → 3 → 4`), then intersects with the selection, so **Step 4 is suppressed**. This upholds the
+  `--skip-deps` invariant — a selected failed dependency is never silently turned into a success —
+  which an enqueue-time-filtered walk would violate by letting Step 4 run.
 
 **Step-result envelope extension.** `StepResultFile` (in `DocGeneration.Core.Shared`) gains two
 **additive, optional** fields, plus a top-level `BlockedByDependency` type:
@@ -525,6 +588,23 @@ reader deserializes byte-unchanged. The informational integer `version` moves `3
 the new content shape. A suppressed step writes `status: "failure"` with
 `validationStatus: "skipped"`; the **authoritative** signal is `suppressed == true`, and the
 non-success status is a conservative fallback for tooling that ignores the new field.
+
+**Where the suppressed envelope is written (canonical + observability).** A suppressed step writes
+its envelope to **two** locations, each overwritten in place via `StepResultWriter.Write`:
+
+| Location | Path | Read by |
+|----------|------|---------|
+| **Canonical (authoritative)** | `{output-dir}/step-<id>-<slug>/step-result.json` | `StepResultReader`, `UpstreamArtifactResolver` (downstream Steps 3/4/6), replay/inspect |
+| **Observability (dashboard copy)** | `{output-dir}/observability/<id>-<slug>/step-result.json` | dashboards / observability tooling |
+
+Writing the **canonical** copy is what makes suppression correct on a **same-workspace rerun**: it
+overwrites any stale *success* envelope a previous run left for that step, so replay and any partial
+downstream selection read `suppressed: true` instead of a stale success. The envelope carries
+`outputFileCount: 0` and no output artifacts, so `UpstreamArtifactResolver` will not resolve a
+suppressed step's stale prior `.md` outputs. Because a suppressed step bypasses `ExecuteStepAsync`,
+`WriteSuppressedEnvelope` is the sole writer for that step in that run (no double-write, no clobber).
+An earlier build wrote **only** the observability copy — leaving the authoritative canonical envelope
+stale — which is the defect this dual write corrects.
 
 **Run accounting (`run-accounting.json`).** Each completed run writes `run-accounting.json` at the
 output-directory root and prints a matching six-category console summary. The same partition backs
@@ -547,7 +627,10 @@ degradation), and the top-level `successfulNamespaces` / `rootFailedNamespaces` 
 `warningOnlyFailures` / `suppressedSteps` arrays always reflect the live run. The catalog wrapper
 `start-with-logs.ps1` aggregates every namespace's `run-accounting.json` into one catalog summary
 (live categories summed; baseline categories taken once); missing or malformed files are
-skipped/warned and can never mask a failure.
+skipped/warned and can never mask a failure. Because the root predicate now fires on the real Step-2
+`Success=true` + `ArtifactFailures` shape (C2 above), category 4 (live suppressed steps) is non-zero
+on the real corpus and corresponds to the historical cascade count in category 5 — the two are kept
+as distinct *live* vs *baseline* columns so the historical figure is never misread as live evidence.
 
 ## Parameter Taxonomy (3-Tier Model)
 
@@ -595,11 +678,14 @@ Each namespace writes to its own `generated-{namespace}/` directory with no shar
 | 2 | Human review required (brand mapping suggestions) |
 | 64 | Invalid CLI arguments |
 
-Since #813 Step 2, a namespace-scoped fatal step (codes 1/2) no longer stops the run: the runner
-suppresses that step's selected dependents, continues with independent steps and later namespaces,
-and surfaces the **worst** namespace exit code at the end (a hard fatal `1` dominates human-review
-`2`). Global-scope failures still abort immediately. See
-[Runtime Dependency Suppression](#runtime-dependency-suppression-ad-029).
+Since #813 Step 2, a namespace-scoped fatal root no longer stops the run: the runner suppresses that
+step's selected dependents, continues with independent steps and later namespaces, and surfaces the
+**worst** namespace exit code at the end (a hard fatal `1` dominates human-review `2`). A step
+becomes a fatal root when it is `Fatal` **and** did not cleanly succeed — either a nonzero exit **or**
+recorded artifact failures even when its own mapped exit was `0` (see
+[Runtime Dependency Suppression](#runtime-dependency-suppression-ad-029) for the `IsFatalRoot`
+predicate); such an artifact-failure-only root is still forced to a nonzero catalog exit.
+Global-scope failures still abort immediately.
 
 ## AI Configuration
 
