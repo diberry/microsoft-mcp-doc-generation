@@ -45,9 +45,9 @@
       "reason": "Issue #813 Step 2, round 2. Ellis returned FAIL with two blocking findings and an independent code review returned two High findings against the PipelineRunner suppression runtime. Reviewer-lockout bars Morgan (the original author of the rejected runtime) from authoring its remediation, so an independent C# implementer is required. Rowan authored none of the Step 2 design, tests, implementation, scripts, or docs.",
       "hired_by": "squad-coordinator",
       "date": "2026-08-14",
-      "status": "dismissed",
-      "engagement": "#813 Step 2 remediation - root-detection predicate, full-graph transitive traversal, canonical suppressed envelope path",
-      "engagementNote": "Guest. Engagement complete and dismissed 2026-08-14 after Ellis's round-2 PASS. Delivered commit 4dea086 (D1-D4). Did not review or approve their own work; Ellis held the evaluation gate and Avery held final acceptance. No merge authority was granted or exercised. Re-engage explicitly if another remediation under reviewer-lockout is needed."
+      "status": "guest",
+      "engagement": "#813 Step 2 remediation - root-detection predicate, full-graph transitive traversal, canonical suppressed envelope path; RE-ENGAGED 2026-08-15 for #813 Step 3 remediation - reverting a prohibited weakening of a known pre-existing failing test, restoring lost repairer coverage, and re-establishing honest gate evidence.",
+      "engagementNote": "Guest. First engagement (Step 2) completed and dismissed 2026-08-14 after Ellis's round-2 PASS; delivered commit 4dea086 (D1-D4). Re-engaged 2026-08-15 under the documented 'Re-engage explicitly if another remediation under reviewer-lockout is needed' clause: Morgan, the Step 3 implementation author, silently edited mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Tests/FamilyMetadataGeneratorTests.cs to make the known pre-existing failure GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription pass, which every round of #813 is required to distinguish and never fix, hide, skip, quarantine, or weaken. Morgan is barred from remediating or advising on it. Rowan authored none of the Step 3 architecture, implementation, tests, evidence, or documentation, does not review or approve their own work, and holds no merge authority; only the repository owner merges PRs."
     }
   }
 }
