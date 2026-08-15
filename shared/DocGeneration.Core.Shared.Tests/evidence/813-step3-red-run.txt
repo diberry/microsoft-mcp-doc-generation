@@ -1,0 +1,135 @@
+# 813 Step 3 — RED Evidence
+Commit SHA: b58431fef0d1bda4b7544908b86090849041fdaf
+Branch: squad/813-step3-canonical-parameter-contract
+UTC Timestamp: 2026-08-15T13:37:21.9143389Z
+OS: Microsoft Windows 10.0.26200
+dotnet --version: 10.0.303
+pwsh --version: 7.6.5
+git --version: git version 2.55.0.vfs.0.3
+
+## RED Shape: COMPILE-RED
+
+All new tests reference types that do not yet exist in production code:
+- CanonicalParameterManifestLoader (static class in Shared)
+- CanonicalCoverageEvaluator (static class in Shared)
+- CanonicalParameterNormalizer (static class in Shared)
+- ParameterManifestException (sealed class in Shared)
+- ParameterManifestErrorCode (static class with const string fields)
+- CoverageVerdict (enum in Shared)
+- CanonicalParameterManifest (record in Shared)
+- CanonicalParameterEntry (record in Shared)
+- ManifestSourceIdentity (record in Shared)
+- SingleParameterCoverage (record in Shared)
+- CoverageResult (record in Shared)
+- RepairProvenance (record in Shared)
+- ParameterGenerator.BuildParameterManifest (new overload returning CanonicalParameterManifest)
+- RawParameterInput (record for emitter input)
+- DeterministicPromptRepairer.Repair(prompts, manifest) overload
+
+## Command: dotnet build mcp-doc-generation.sln --configuration Release
+## Exit Code: 1
+## Unique Compiler Errors (types not found):
+DocGeneration.Core.Shared.Tests.csproj]
+DocGeneration.PipelineRunner.Tests.csproj]
+DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests.csproj]
+DocGeneration.Steps.ExamplePrompts.Generation.Tests.csproj]
+DocGeneration.Steps.ExamplePrompts.Validation.Tests.csproj]
+DocGeneration.Steps.ToolFamilyCleanup.Tests.csproj]
+
+
+## Compile-RED Tests (cannot compile — reference non-existent types):
+
+### Group 1 (Emitter) — CanonicalManifestEmitterTests.cs:
+- BuildParameterManifest_EmitsV2Envelope_WithSchemaVersion
+- BuildParameterManifest_CanonicalNameIsCliSwitchStripped
+- BuildParameterManifest_AliasDerivedDeterministically_Account
+- BuildParameterManifest_AliasDerivedDeterministically_ResourceGroup
+- BuildParameterManifest_AliasDerivation_CultureInvariant
+- BuildParameterManifest_CollisionElimination_RemovesAmbiguousAliasFromBothOwners
+- BuildParameterManifest_CollisionElimination_AliasShadowsCanonical_RemovedFromOwner
+- BuildParameterManifest_EmitsAllRequiredFields
+
+### Group 2 (Loader) — CanonicalParameterManifestLoaderTests.cs:
+- Load_MissingFile_ThrowsNotFound
+- Load_MalformedJson_ThrowsMalformed
+- Load_UnknownSchemaVersion_ThrowsSchemaUnknown
+- Load_LegacyBareArray_ThrowsLegacyFormat
+- Load_FrozenBeta34LegacyManifest_ThrowsLegacyFormat
+- Load_CommandMismatch_ThrowsCommandMismatch
+- Load_NamespaceMismatch_ThrowsNamespaceMismatch
+- Load_StaleBuild_ThrowsSourceStale
+- Load_NullExpectedNamespace_SkipsNamespaceCheck
+- Load_NullCurrentBuild_SkipsStalenessCheck
+- Load_EmptyParams_WithRequireNonEmpty_ThrowsEmptyParams
+- Load_EmptyParams_WithoutRequireNonEmpty_Succeeds
+- Load_EmptyAlias_ThrowsEmptyAlias
+- Load_DuplicateCanonical_ThrowsDuplicateCanonical
+- Load_AliasCollision_ThrowsAliasCollision
+- Load_AliasShadowsCanonical_ThrowsAliasShadowsCanonical
+- Load_NormalizationCollision_ThrowsNormalizationCollision
+- Load_PlaceholderMultiBind_ThrowsPlaceholderMultiBind
+- Load_ValidManifest_NeverReturnsNull
+
+### Group 3 (Evaluator) — CanonicalCoverageEvaluatorTests.cs:
+- EvaluateSingleParameter_ConcreteValue_ReturnsConcrete
+- EvaluateSingleParameter_AuthorizedPlaceholder_Account_ReturnsAuthorizedPlaceholder
+- EvaluateSingleParameter_AuthorizedPlaceholder_AccountName_ReturnsAuthorizedPlaceholder
+- EvaluateSingleParameter_AppConfigStoreName_ReturnsMissing_NotFalsePositiveCovered
+- EvaluateSingleParameter_GenericSuffix_NeverAuthorizes (6 InlineData cases)
+- EvaluateSingleParameter_ContainsSubstring_NeverAuthorizes
+- EvaluateSingleParameter_NofMWordMatch_NeverAuthorizes
+- EvaluateSingleParameter_PluralVariant_NeverAuthorizes
+- EvaluateSingleParameter_AbbreviationExpansion_NeverAuthorizes
+- EvaluateSingleParameter_SubstringInProse_NeverMatches
+- EvaluateSingleParameter_AliasInsideLongerWord_NeverMatches
+- EvaluateSingleParameter_Ambiguous_NeverTreatedAsCovered
+- EvaluateSingleParameter_UnknownPlaceholder_DoesNotSatisfyCoverage
+- EvaluateParameterCoverage_AllRequiredCovered_ReturnsTrue
+- EvaluateParameterCoverage_MissingRequired_ReturnsFalse
+- Normalize_ProducesExpectedOutput (8 InlineData cases)
+- Normalize_EmptyOrNull_ReturnsEmpty (3 InlineData cases)
+- EvaluateSingleParameter_RealisticIdentity_ExactPlaceholderMatch_Covered (16 InlineData cases)
+
+### Group 4 (Shared evaluator / Architecture) — SharedEvaluatorArchitectureTests.cs + seam tests:
+- SharedTypes_ExistInSharedNamespace
+- ParameterManifestException_HasRequiredProperties
+- ParameterManifestErrorCode_HasAllStableConstants
+- CoverageVerdict_HasAllValues
+- CanonicalParameterManifest_HasRequiredProperties
+- CanonicalParameterEntry_HasRequiredProperties
+- ParameterCrossCheckService_DoesNotDefinePrivateManifestModel
+- CanonicalValidationSeamTests.Evaluator_UnauthorizedPlaceholder_ReturnsMissing_ValidatorMustFlag
+- CanonicalValidationSeamTests.Evaluator_AuthorizedPlaceholder_ReturnsCovered_ValidatorMustPass
+- ParameterCrossCheckCanonicalLoaderTests.LoadValidParameters_MalformedManifest_ThrowsInsteadOfSilentSkip
+- ParameterCrossCheckCanonicalLoaderTests.LoadValidParameters_LegacyFormat_ThrowsInsteadOfSilentSkip
+- ParameterCrossCheckCanonicalLoaderTests.LoadValidParameters_ValidV2Manifest_LoadsSuccessfully
+
+### Group 5 (Repair) — CanonicalRepairTests.cs:
+- Repair_WithManifest_PreservesPromptCountAndOrder
+- Repair_WithManifest_AlreadyCoveredPrompt_EmittedByteIdentical
+- Repair_WithManifest_MissingCoverage_AppendsOneBoundedClause
+- Repair_WithManifest_Idempotent_SecondPassIsByteIdentical
+- Repair_WithManifest_UnknownPlaceholders_Preserved
+- Repair_WithManifest_MissingCoverage_ReturnsRepairProvenance
+- Repair_WithManifest_RegressionFix_DoesNotReportEmptyActionsWhenCoverageAbsent
+- Repair_WithManifest_AppendsInManifestOrder
+
+### Group 6 (PipelineRunner seam) — ExamplePromptsStepManifestFailureTests.cs:
+- LoadRequiredOptions_MissingManifest_ThrowsParameterManifestException_WithErrorCode
+- LoadRequiredOptions_MalformedManifest_ThrowsParameterManifestException_WithErrorCode
+- LoadRequiredOptions_StaleManifest_ThrowsParameterManifestException_WithErrorCode
+- LoadRequiredOptions_WrongCommand_ThrowsParameterManifestException_WithErrorCode
+- ExamplePromptsStep_ManifestException_SurfacesAsClassifiedFailure
+
+### Runtime-RED Tests (compile today but assert currently-broken behavior):
+In CanonicalCoverageRuntimeRedTests.cs:
+- AppConfigStoreName_IsNotCoveredForAccount_CurrentHeuristicFalsePositive (EXPECTED TO FAIL: current heuristic falsely reports covered)
+- AccountPlaceholder_IsDetected_PositiveControl (EXPECTED TO PASS: positive control)
+- ParameterCrossCheckService_PrivateManifestEntry_MustBeRemoved (EXPECTED TO FAIL: private record currently exists)
+
+NOTE: Runtime-RED tests cannot be executed because they share a project with compile-RED tests.
+The compile-RED errors block the entire project from building.
+
+## Pre-existing unrelated failures (not caused by this change):
+- DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription
+- 8 Pester It-blocks in Scan-McpToolCoverage.Tests.ps1

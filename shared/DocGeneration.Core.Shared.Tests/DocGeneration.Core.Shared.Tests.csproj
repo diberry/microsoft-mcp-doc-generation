@@ -10,6 +10,7 @@
     <ProjectReference Include="../DocGeneration.Core.Shared/DocGeneration.Core.Shared.csproj" />
     <ProjectReference Include="../DocGeneration.Core.GenerativeAI/DocGeneration.Core.GenerativeAI.csproj" />
     <ProjectReference Include="../DocGeneration.TestInfrastructure/DocGeneration.TestInfrastructure.csproj" />
+    <ProjectReference Include="../../mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/DocGeneration.Steps.ToolFamilyCleanup.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

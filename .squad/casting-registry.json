@@ -29,6 +29,16 @@
       "engagement": "#813 Step 2 — runtime dependency suppression, accounting, and orchestration",
       "engagementNote": "Standing member. Independence invariant: authors no implementation, tests, fixtures, scripts, or documentation for any work Ellis evaluates. Never granted merge authority; only the repository owner merges PRs."
     },
+    "harper": {
+      "name": "Harper",
+      "role": "Independent Evaluation Reviewer (guest, nondeterministic)",
+      "reason": "Issue #813 Step 3 requires an independent guest evaluator who authored none of the implementation to run the empirical beta.34 semantic-coverage and repair-safety evaluation and an adversarial review of the canonical parameter identity contract. Ellis is now a standing member; the Step 3 mandate explicitly requires a guest seat, and reviewer-lockout bars Riley/Morgan/Quinn/Sage/Cameron/Parker/Reeve because each authors part of Step 3.",
+      "hired_by": "squad-coordinator",
+      "date": "2026-08-15",
+      "status": "guest",
+      "engagement": "#813 Step 3 — versioned canonical parameter identity and coverage contract",
+      "engagementNote": "Guest. Independence invariant: authors no architecture, implementation, tests, fixtures, scripts, or documentation for Step 3. Evaluates semantic identity coverage and repair safety over representative beta.34 prompts, not lexical presence. Never granted merge authority; only the repository owner merges PRs. Dismiss after Step 3 closes unless the need recurs."
+    },
     "rowan": {
       "name": "Rowan",
       "role": "Remediation Engineer (C# runtime)",
