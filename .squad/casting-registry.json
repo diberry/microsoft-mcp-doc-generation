@@ -28,6 +28,16 @@
       "charter": ".squad/agents/ellis/charter.md",
       "engagement": "#813 Step 2 — runtime dependency suppression, accounting, and orchestration",
       "engagementNote": "Standing member. Independence invariant: authors no implementation, tests, fixtures, scripts, or documentation for any work Ellis evaluates. Never granted merge authority; only the repository owner merges PRs."
+    },
+    "rowan": {
+      "name": "Rowan",
+      "role": "Remediation Engineer (C# runtime)",
+      "reason": "Issue #813 Step 2, round 2. Ellis returned FAIL with two blocking findings and an independent code review returned two High findings against the PipelineRunner suppression runtime. Reviewer-lockout bars Morgan (the original author of the rejected runtime) from authoring its remediation, so an independent C# implementer is required. Rowan authored none of the Step 2 design, tests, implementation, scripts, or docs.",
+      "hired_by": "squad-coordinator",
+      "date": "2026-08-14",
+      "status": "guest",
+      "engagement": "#813 Step 2 remediation - root-detection predicate, full-graph transitive traversal, canonical suppressed envelope path",
+      "engagementNote": "Guest. Dismissed after Ellis re-evaluates the remediation. Not permitted to review or approve their own work; Ellis holds the evaluation gate and Avery holds final acceptance. No merge authority."
     }
   }
 }
