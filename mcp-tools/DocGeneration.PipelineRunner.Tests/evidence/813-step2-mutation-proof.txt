@@ -1,0 +1,381 @@
+================================================================================
+ #813 STEP 2 — MUTATION / REVERT PROOF
+ Author: Parker (QA / Tester)   Purpose: prove every Step 2 production change maps
+ to a named test that goes RED when that change ALONE is reverted/mutated.
+ NOTHING IS HIDDEN OR WEAKENED. One mutation per tree state; revert between rows.
+================================================================================
+
+ENVIRONMENT
+  worktree HEAD                : 061dd05b502f0ccccda963538cd2f8eb2a9afa92
+  branch                       : squad/813-step2-runtime-orchestration
+  committed base (clean tree)  : 061dd05b502f0ccccda963538cd2f8eb2a9afa92
+                                 (working tree clean; mutate -> observe -> restore)
+  dotnet --version             : 10.0.303
+  pwsh (PSVersion)             : 7.6.4
+  git --version                : git version 2.55.0.vfs.0.3
+  OS                           : Microsoft Windows NT 10.0.26200.0
+  captured (UTC)               : 2026-08-15T03:05:53Z
+
+SOURCE OF TRUTH
+  .squad/agents/cameron/813-step2-test-matrix.md
+    §2 "Mutation/revert matrix" rows -> M1..M26 (table order maps to M-number)
+    ADDENDUM A.6 table               -> M27..M34 (rows carry literal | M27 | .. labels)
+  Each row states: production change -> named test that must go RED -> exact
+  mutation instruction. Instructions were followed verbatim.
+
+PRODUCTION FILES UNDER MUTATION
+  mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs
+  shared/DocGeneration.Core.Shared/StepResultFile.cs
+  start-with-logs.ps1
+
+TESTS
+  mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/DependencySuppressionTests.cs  (T1..T20)
+  mcp-tools/DocGeneration.PipelineRunner.Tests/Unit/RunAccountingTests.cs          (T21..T31)
+  mcp-tools/validation/tests/StartWithLogs.Tests.ps1                               (P1..P8)
+
+METHOD (repeated for EVERY row)
+  1. git status --short           -> clean before each mutation
+  2. apply EXACTLY ONE mutation from the row (verbatim from the matrix)
+  3. run the narrowest command exercising the named test:
+       C#   : dotnet test mcp-tools/DocGeneration.PipelineRunner.Tests/DocGeneration.PipelineRunner.Tests.csproj \
+                --configuration Release --filter "FullyQualifiedName~<TestName>"
+       PS   : pwsh -NoProfile -Command "Invoke-Pester -Path ./mcp-tools/validation/tests/StartWithLogs.Tests.ps1 -Output Detailed -CI"
+  4. record mutation, command, observed result (RED expected), failure text
+  5. git checkout -- <mutated file>  -> confirm git status --short clean again
+  NOTE: a mutation that does NOT turn its named test RED is a FINDING, recorded
+        honestly as NOT PROVEN. No production code was changed to make a mutation
+        "work"; no test was quietly swapped.
+
+  Multi-edit single mutations: M12 (hoist=2 edits), M18 (fold=2 edits),
+  M31 (if($false) wrap=2 edits), M32 (sum block replace), M34 (3 guard wraps)
+  are each ONE logical mutation applied in ONE tree state. Forbidden case (two
+  DIFFERENT mutations sharing a tree state) never occurred.
+
+  Compile-RED rows (M1, M2): deleting a public API member breaks PRODUCTION
+  consumers in PipelineRunner.cs first (CS0117 at build), so the test project
+  cannot build => the named tests cannot run => RED. This is a valid revert
+  proof: reverting the production member addition makes the guarding tests fail.
+
+BASELINE (GREEN, at 061dd05, before any mutation)
+  dotnet test DocGeneration.PipelineRunner.Tests (Release) : Passed 31, Failed 0
+  Invoke-Pester StartWithLogs.Tests.ps1 (-CI)             : Passed 19, Failed 0
+
+================================================================================
+ ROW-BY-ROW TABLE   (row | production change | mutation applied | test | expected | observed verdict)
+================================================================================
+Legend: expected = RED for the named test in every row. verdict = PROVEN when the
+named test(s) went RED under the single mutation and GREEN again after revert.
+
+M1  | Add Suppressed field to StepResultFile
+    | Delete the Suppressed property
+    | T12,T14 | RED | RED  -> PROVEN
+M2  | Add BlockedByDependency type + property to StepResultFile
+    | Remove the BlockedByDependency type/property
+    | T12,T25 | RED | RED  -> PROVEN
+M3  | schemaVersion stays "1.0" (deliberate no-bump decision)
+    | WriteSuppressedEnvelope SchemaVersion = "2.0"
+    | T14 | RED | RED  -> PROVEN
+M4  | Integer envelope Version bumped 3 -> 4 for suppressed
+    | WriteSuppressedEnvelope Version = 3
+    | T14 | RED | RED  -> PROVEN
+M5  | Suppressed envelope status=failure / validationStatus=skipped / suppressed=true
+    | WriteSuppressedEnvelope Status = Success
+    | T14 | RED | RED  -> PROVEN
+M6  | Suppressed dependents are NOT executed (no ExecuteStepAsync)
+    | Replace suppression branch with normal ExecuteStepAsync
+    | T9,T13 | RED | T9 RED, T13 GREEN -> PROVEN (via T9; see FINDING F1)
+M7  | Early-abort replaced by record-root + continue within namespace
+    | Restore `return CompleteRun(...)` on first nonzero namespace step
+    | T10,T11,T17 | RED | RED  -> PROVEN
+M8  | Suppression uses REVERSE adjacency (dependents), not forward DependsOn
+    | BuildDependentsOf returns forward DependsOn edges
+    | T1,T9 | RED | RED  -> PROVEN
+M9  | Suppression closure intersected with the selected step ids
+    | Remove the intersect-with-selectedIds step
+    | T6,T7 | RED | RED  -> PROVEN
+M10 | Transitive (not just direct) dependents suppressed (full closure)
+    | Suppress only DIRECT dependents (drop queue.Enqueue transitive walk)
+    | T2,T3 | RED | RED  -> PROVEN
+M11 | Suppressed envelope persisted under OutputPath/observability (durable)
+    | Write suppressed envelope only to the transient step workspace
+    | T12,T20 | RED | RED  -> PROVEN
+M12 | Fresh NamespaceRuntimeState per namespace (no cross-namespace leak)
+    | Hoist the runtime-state allocation above the namespace loop
+    | T11 | RED | RED  -> PROVEN
+M13 | Global-scope (Step 0) loop stays ABORT-on-fatal
+    | Route the Step 0 fatal through `continue` instead of abort
+    | T16 | RED | RED  -> PROVEN
+M14 | Worst-exit Worse(fatal=1, human-review=2) = 1 (fatal dominates)
+    | Worse returns 2 when both are present
+    | T17 | RED | RED  -> PROVEN
+M15 | Suppression is INDEPENDENT of --skip-deps (always suppresses)
+    | Gate the suppression branch behind !SkipDependencyValidation
+    | T18 | RED | RED  -> PROVEN
+M16 | --skip-deps changes planning only; never converts a failed dep to success
+    | Under --skip-deps skip the runtime root-record for a failed Step 3
+    | T18 | RED | RED  -> PROVEN
+M17 | run-accounting.json written at CompleteRun
+    | Comment out the WriteRunAccounting emitter
+    | T21 | RED | RED  -> PROVEN
+M18 | Suppressed steps counted in the suppressed bucket, not success
+    | Fold suppressed steps into successfulNamespaces (+empty suppressed bucket)
+    | T25,T26 | RED | RED  -> PROVEN
+M19 | Warning-only failures reported SEPARATELY, not as roots
+    | Emit warning-only into rootFailedNamespaces
+    | T24 | RED | RED  -> PROVEN
+M20 | Cascade category derived from chainRoleCounts.cascade
+    | Compute cascade from classificationCounts.cascade instead
+    | T27 | RED | RED  -> PROVEN
+M21 | First-match partition => buckets are mutually exclusive
+    | Weaken the partition predicate to always-true (Count >= 0)
+    | T26 | RED | RED  -> PROVEN
+M22 | $sharedBuildConfirmed flag replaces positional `$index -gt 0`
+    | Restore `if ($index -gt 0)` skip-flag logic
+    | P1,P2 | RED | RED  -> PROVEN
+M23 | $sharedBuildConfirmed set only when build ran AND exit==0
+    | Set $sharedBuildConfirmed = $true unconditionally (drop the -and gate)
+    | P2 | RED | RED  -> PROVEN (P1 collateral)
+M24 | $LASTEXITCODE captured IMMEDIATELY after the bash call
+    | Insert a Write-Host between the bash call and the capture
+    | P3 | RED | RED  -> PROVEN
+M25 | Failure decision uses the captured $namespaceExitCode
+    | Change the failure `if` back to `$LASTEXITCODE -ne 0`
+    | P4 | RED | RED  -> PROVEN
+M26 | No case-insensitive param/local collision (AD-027 guard)
+    | Rename the local $sharedBuildConfirmed -> $namespacelist
+    | P5 | RED | RED  -> PROVEN (6 collateral RED = the real AD-027 clobber)
+M27 | CompleteRun emits the six-category console block
+    | Delete the six-category emission in CompleteRun
+    | T30,T31 | RED | RED  -> PROVEN
+M28 | Suppressed steps printed under their own label with the LIVE count
+    | Drop the "Suppressed steps" line
+    | T30 | RED | RED  -> PROVEN
+M29 | Warning-only printed as a SEPARATE line, distinct from root
+    | Emit warning-only under the "Root-failed namespaces" line
+    | T30 | RED | RED  -> PROVEN
+M30 | Cats 5/6 sourced from reconciliation; all six always print incl. 0
+    | Hardcode cascades/unclassified lines to (0)
+    | T30,T31 | RED | RED  -> PROVEN
+M31 | start-with-logs.ps1 prints the six-category catalog block
+    | Remove the six-category block (wrap in if ($false) { .. })
+    | P7,P8 | RED | RED  -> PROVEN
+M32 | Cats 5/6 taken ONCE (catalog-constant), never summed across files
+    | Sum cascadeImported/unclassifiedDiagnostic across the N files
+    | P7 | RED | RED  -> PROVEN (P8 collateral)
+M33 | Cats 1-4 aggregated across ALL namespaces
+    | Read only one namespace's file ($namespaces[-1])
+    | P7 | RED | RED  -> PROVEN (P8 collateral)
+M34 | All six labels always print, even at count 0
+    | Skip categories whose count is 0 (guard Cat2/3/4 with Count -gt 0)
+    | P8 | RED | RED  -> PROVEN
+
+================================================================================
+ PER-ROW FAILURE TEXT (actual test-runner output; RED under the single mutation)
+================================================================================
+
+M1  [PROVEN] compile-RED
+  Build FAILED. PipelineRunner.cs(1607,13): error CS0117: 'StepResultFile' does not
+  contain a definition for 'Suppressed'. Test project depends on PipelineRunner, so
+  T12 (DependencySuppressionTests.cs:235) and T14 (:283), which read envelope.Suppressed,
+  cannot build/run.
+
+M2  [PROVEN] compile-RED
+  Build FAILED. PipelineRunner.cs(1608,13): error CS0117: 'StepResultFile' does not
+  contain a definition for 'BlockedByDependency'. T12 (DependencySuppressionTests.cs:236)
+  and T25 (RunAccountingTests.cs:149) reference envelope.BlockedByDependency; project
+  cannot build/run.
+
+M3  [PROVEN] T14 RED
+  Shared.StepResultSchemaException : Unrecognized step-result schemaVersion '2.0'.
+  This reader supports null (legacy v0) and '1.0'. at StepResultReader.ValidateSchemaVersion;
+  DependencySuppressionTests.cs:line 277. Failed:1 Passed:0.
+
+M4  [PROVEN] T14 RED
+  Assert.Equal() Failure: Values differ. Expected: 4  Actual: 3 (T14 Version assert).
+  Failed:1 Passed:0.
+
+M5  [PROVEN] T14 RED
+  Assert.Equal() Failure: Values differ. Expected: Failure  Actual: Success
+  (T14 Status assert). Failed:1 Passed:0.
+
+M6  [PROVEN via T9] T9 RED, T13 GREEN  (see FINDING F1)
+  T9: Assert.Equal() Failure Expected: 0  Actual: 1 at DependencySuppressionTests.cs:164
+  (Step 3 executed instead of being suppressed). T13 PASSED under this mutation because
+  executed dependents take the default DryRun success outcome and emit no step-03/04
+  critical JSON. Row PROVEN by T9; the (M6,T13) pairing is NOT exercised (finding F1).
+
+M7  [PROVEN] T10,T11,T17 RED
+  T17: Expected:1 Actual:2 (compute HumanReview exit 2 returned before storage exit 1).
+  T10 & T11: Expected:1 Actual:0 (later-namespace storage steps never executed after the
+  first fatal namespace early-returned). Failed:3 Passed:0.
+
+M8  [PROVEN] T1,T9 RED
+  T1: Expected: [5, 6, 8]  Actual: [] (dependentsOf[0] empty under forward edges).
+  T9: Expected: 0  Actual: 1 (wrong steps suppressed -> Step 3 executed). Failed:2 Passed:0.
+
+M9  [PROVEN] T6,T7 RED
+  T6: Expected: [3, 4, 7]  Actual: [3, 4, 7, 8] (unselected step 8 wrongly suppressed).
+  T7: FAIL (Step 4 root selection {1,2,3,4,6} should suppress nothing, but {7,8} suppressed).
+  Failed:2 Passed:0.
+
+M10 [PROVEN] T2,T3 RED
+  T3: Expected: [3, 4, 7, 8]  Actual: [3] (transitive closure lost; direct only).
+  T2: Expected: [2, 3, 4, 7, 8]  Actual: [2, 3]. Failed:2 Passed:0.
+
+M11 [PROVEN] T12,T20 RED
+  T12 & T20: Assert.True() Failure Expected: True  Actual: False
+  (StepResultReader.TryRead of OutputPath/observability returned false; envelope went to a
+  transient workspace removed by DeleteAll()). Failed:2 Passed:0.
+
+M12 [PROVEN] T11 RED
+  T11: Expected: 1  Actual: 0 (storage Step 3 Executions==0; compute's SuppressedIds {3,4}
+  leaked through the hoisted, shared runtime state). Failed:1 Passed:0.
+
+M13 [PROVEN] T16 RED
+  T16: Expected: 0  Actual: 1 (namespace Step 1 executed after a global Step 0 fatal because
+  the global loop continued instead of aborting the catalog). Failed:1 Passed:0.
+
+M14 [PROVEN] T17 RED
+  T17: Expected: 1  Actual: 2 (Worse returned HumanReview(2) when both fatal(1) and
+  human-review(2) present). Human-review-only positive control still passes. Failed:1 Passed:0.
+
+M15 [PROVEN] T18 RED
+  T18: Expected: 0  Actual: 1 (Step 4 executed under SkipDependencyValidation:true because the
+  suppression branch was gated behind !SkipDependencyValidation). Failed:1 Passed:0.
+
+M16 [PROVEN] T18 RED
+  T18: Expected: 0  Actual: 1 (under --skip-deps the fatal root-record was skipped, so Step 4
+  was never added to SuppressedIds and executed). Failed:1 Passed:0.
+
+M17 [PROVEN] T21 RED
+  T21: Expected: True  Actual: False (File.Exists(run-accounting.json) false after the emitter
+  was commented out). Failed:1 Passed:0.
+
+M18 [PROVEN] T25,T26 RED
+  T25: Expected: 2  Actual: 0 (SuppressedSteps.Length; suppressed bucket emptied).
+  T26: Expected: ["storage"]  Actual: ["storage", "compute"] (SuccessfulNamespaces absorbed the
+  suppressed steps). Failed:2 Passed:0.
+
+M19 [PROVEN] T24 RED
+  T24: Assert.Empty() Failure: Collection was not empty. Collection: [RootFailedNamespace {
+  Namespace = compute, RootStepId = 7, RootStepName = Validate article health,
+  RootFailureId = compute.07.root, ExitCode = 1 }] (warning-only Step 7 emitted into roots).
+  Failed:1 Passed:0.
+
+M20 [PROVEN] T27 RED
+  T27: Expected: 10  Actual: 9 (Reconciliation.CategoryCounts.CascadeImported sourced from
+  classificationCounts.cascade(9) instead of chainRoleCounts.cascade(10)). Failed:1 Passed:0.
+
+M21 [PROVEN] T26 RED
+  T26: Expected: ["storage"]  Actual: ["compute", "storage"] (root-failed compute also listed in
+  SuccessfulNamespaces after the partition predicate was weakened to always-true). Failed:1 Passed:0.
+
+M22 [PROVEN] P1,P2 RED
+  P1: Expected @(...,'monitor 1,2,3,4,5',...) but got
+      @(...,'monitor 1,2,3,4,5 --skip-build --skip-npm-update',...).
+  P2: Expected @('aaa 1,2,3,4,5','bbb 1,2,3,4,5') but got
+      @('aaa 1,2,3,4,5','bbb 1,2,3,4,5 --skip-build --skip-npm-update'). Passed:17 Failed:2.
+
+M23 [PROVEN] P2 RED (P1 collateral)
+  P2: Expected @('aaa 1,2,3,4,5','bbb 1,2,3,4,5') but got
+      @('aaa 1,2,3,4,5','bbb 1,2,3,4,5 --skip-build --skip-npm-update') (bbb skipped build though
+  aaa failed, because $sharedBuildConfirmed was set true unconditionally). Passed:17 Failed:2.
+
+M24 [PROVEN] P3 RED
+  P3: Expected regular expression
+      '&\s+\$bashPath\s+@startArguments[ \t]*\r?\n[ \t]*\$namespaceExitCode\s*=\s*\$LASTEXITCODE'
+  to match script content (a Write-Host now sits between the bash call and the capture, so the
+  capture is no longer immediate). Passed:18 Failed:1.
+
+M25 [PROVEN] P4 RED
+  P4: Expected regular expression 'if\s*\(\s*\$namespaceExitCode\s+-ne\s+0' to match script content
+  (failure branch reverted to $LASTEXITCODE -ne 0, so the captured-local pattern is absent).
+  Passed:18 Failed:1.
+
+M26 [PROVEN] P5 RED (+6 collateral RED = the real AD-027 clobber)
+  P5: Expected 0, but got 1 (collision counter over the comparison set found the renamed local
+  $namespacelist folding onto param $NamespaceList). PowerShell variable names are case-insensitive,
+  so $namespacelist and $NamespaceList are the SAME variable: P1/P2/dispatch/spaces/NamespaceList/
+  NamespaceFile also RED from the genuine clobber - exactly the hazard AD-027 forbids. Passed:12 Failed:7.
+
+M27 [PROVEN] T30,T31 RED
+  T30: Assert.Single() Failure: The collection did not contain any matching items
+  (RunAccountingTests.cs:273, "Successful namespaces (1)").
+  T31: Assert.Single() at :319 ("Successful namespaces (2)"). Six-category block not emitted.
+  Failed:2 Passed:0.
+
+M28 [PROVEN] T30 RED
+  T30: Assert.Single() Failure: The collection did not contain any matching items
+  (RunAccountingTests.cs:290, "Suppressed steps (2)"). Failed:1 Passed:0.
+
+M29 [PROVEN] T30 RED
+  T30: Assert.Single() Failure: The collection contained 2 matching items (two "Root-failed
+  namespaces (1)" lines after folding warning-only into the root label; RunAccountingTests.cs:278),
+  and "Warning-only failures (1)" absent. Failed:1 Passed:0.
+
+M30 [PROVEN] T30,T31 RED
+  T30: Assert.Single() Failure: The collection did not contain any matching items
+  (:294, "Cascades imported from historical fixtures (10)").
+  T31: Assert.Single() at :330 (the (0) baseline trio). Constants hardcoded to (0). Failed:2 Passed:0.
+
+M31 [PROVEN] P7,P8 RED
+  P7: Expected regular expression 'Successful namespaces \(1\)' to match output (block absent).
+  P8: Expected 'Successful namespaces \(2\)' to match output (block absent). Six-category catalog
+  block wrapped in if ($false). Passed:17 Failed:2.
+
+M32 [PROVEN] P7 RED (P8 collateral)
+  P7: Expected regular expression 'Cascades imported from historical fixtures \(10\)' to match output;
+  the constant was summed across 3 files to (30), so (10) no longer matches. Passed:17 Failed:2.
+
+M33 [PROVEN] P7 RED (P8 collateral)
+  P7: Expected 'Successful namespaces \(1\)' to match; actual "Successful namespaces (0)".
+  P8: Expected '(2)'; actual "(1): bbb". Only the last namespace's file was read, collapsing cats 1-4.
+  Passed:17 Failed:2.
+
+M34 [PROVEN] P8 RED (P7 stays GREEN)
+  P8: Expected regular expression 'Root-failed namespaces \(0\)' to match output; the zero-count
+  Cat2/3/4 labels were suppressed by the Count -gt 0 guard. P7 keeps its labels (nonzero counts),
+  confirming the mutation is a clean single-test flip. Passed:18 Failed:1.
+
+================================================================================
+ FINDINGS
+================================================================================
+F1  (M6, T13) pairing NOT exercised — M6 still PROVEN via T9.
+  Cameron's row M6 names TWO guards (T9 and T13). Under the M6 mutation (execute
+  suppressed dependents normally instead of suppressing them):
+    * T9 went RED (Step 3 Executions 0 -> 1) — the behavior IS guarded, so M6 is PROVEN.
+    * T13 stayed GREEN. Root cause: the test's RecordingNamespaceStep dependents default
+      to a DryRun SUCCESS outcome, so when M6 lets them execute they complete successfully
+      and emit NO step-03/step-04 "critical" JSON. T13 asserts on the presence of that
+      critical JSON, which is absent whether the step is suppressed OR succeeds — so T13
+      cannot distinguish the mutation.
+  Impact: LOW. M6's production change is fully guarded by T9; the revert proof holds. The
+  (M6,T13) coupling is simply redundant/non-discriminating for this mutation. To make T13
+  independently discriminate M6, its dependents would need to be seeded with a failing/critical
+  outcome so that "executed vs suppressed" changes the emitted JSON. Recorded honestly; no
+  production or test code was altered to force it.
+
+  NOTE ON COLLATERAL RED (M23, M26, M32, M33): several rows produce additional RED tests
+  beyond the single named test. This is expected and truthful — e.g. M26's case-insensitive
+  rename genuinely clobbers the parameter (6 collateral RED = the AD-027 hazard itself), and
+  M32/M33 perturb shared aggregation that P8 also observes. In every such row the NAMED test
+  went RED, and the tree was restored to green before the next row. Collateral RED strengthens,
+  not weakens, the proof.
+
+================================================================================
+ FINAL TALLY
+================================================================================
+  Rows defined (matrix)      : 34   (M1..M26 + ADDENDUM A M27..M34)
+  PROVEN                     : 34
+  NOT PROVEN                 :  0
+  NOT EXECUTED               :  0
+  Findings (non-blocking)    :  1   (F1: M6/T13 pairing non-discriminating; M6 PROVEN via T9)
+
+  Every Step 2 production change maps to at least one named test that goes RED when that
+  change alone is reverted/mutated, and returns to GREEN when the mutation is reverted.
+
+RESTORE
+  After the final revert: git status --short shows only this new evidence file;
+  git diff --stat HEAD shows nothing for tracked production files; git rev-parse HEAD
+  == 061dd05b502f0ccccda963538cd2f8eb2a9afa92. Byproduct testResults.xml deleted.
+================================================================================
