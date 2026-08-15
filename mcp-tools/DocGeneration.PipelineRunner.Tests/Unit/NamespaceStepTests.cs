@@ -672,8 +672,8 @@ public class NamespaceStepTests
             Assert.True(result.Success);
             Assert.NotNull(feedbackPath);
             var feedback = await File.ReadAllTextAsync(feedbackPath!);
-            Assert.Contains("Missing required parameters by name", feedback, StringComparison.Ordinal);
-            Assert.Contains("Subscription name", feedback, StringComparison.Ordinal);
+            Assert.Contains("Missing required parameters by canonical name", feedback, StringComparison.Ordinal);
+            Assert.Contains("subscription", feedback, StringComparison.Ordinal);
             Assert.Contains("Prompt #1", feedback, StringComparison.Ordinal);
             Assert.Contains("Rewrite example", feedback, StringComparison.Ordinal);
         }

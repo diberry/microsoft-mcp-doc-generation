@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using ExamplePromptGeneratorStandalone.Generators;
-using ExamplePromptGeneratorStandalone.Models;
 using ExamplePromptGeneratorStandalone.Sanitizers;
 using Shared;
 using Xunit;
@@ -10,16 +9,11 @@ using Xunit;
 namespace DocGeneration.Steps.ExamplePrompts.Generation.Tests;
 
 /// <summary>
-/// Tests for DeterministicPromptRepairer covering all 3 blocking issues from adversarial review
-/// plus key non-blocking issues (param name canonicalization, enum escaping, value safety).
-/// TDD: Tests written BEFORE implementation per AD-007/AD-010.
+/// Tests for DeterministicPromptRepairer after the canonical-manifest migration.
+/// All coverage decisions must flow through CanonicalCoverageEvaluator.
 /// </summary>
 public class DeterministicPromptRepairerTests
 {
-    // ──────────────────────────────────────────────────────────────────────────────
-    // BLOCKING #1: Every non-blank prompt gets ALL missing params (no round-robin)
-    // ──────────────────────────────────────────────────────────────────────────────
-
     [Fact]
     public void Repair_InjectsAllMissingParamsIntoEveryNonBlankPrompt()
     {
@@ -28,32 +22,23 @@ public class DeterministicPromptRepairerTests
             "List all blobs in the specified container.",
             "Show me the metadata for a given blob.",
             "Download files from blob storage.",
-            "", // blank — should be skipped
+            "",
             "Check blob storage metrics."
         };
-        var required = new List<Option>
-        {
-            new() { Name = "account", Required = true, Description = "Storage account name" },
-            new() { Name = "resource-group", Required = true, Description = "Resource group name" }
-        };
+        var manifest = BuildManifest(
+            "azmcp storage blob list",
+            "storage",
+            BuildEntry("account", "Account name", description: "Storage account name"),
+            BuildEntry("resource-group", "Resource group", description: "Resource group name"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
+        var nonBlank = result.RepairedPrompts.Where(prompt => !string.IsNullOrWhiteSpace(prompt)).ToList();
 
-        // Every non-blank prompt must cover BOTH required params after repair
-        var nonBlank = result.RepairedPrompts.Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
         Assert.True(nonBlank.Count >= 4, "Should have at least 4 non-blank prompts");
-
         foreach (var prompt in nonBlank)
         {
-            var accountCoverage = ParameterCoverageChecker.GetConcretePromptCoverage(
-                new[] { prompt }, "account", 2);
-            var rgCoverage = ParameterCoverageChecker.GetConcretePromptCoverage(
-                new[] { prompt }, "resource-group", 2);
-
-            Assert.True(accountCoverage.Covered || accountCoverage.PlaceholderDetected,
-                $"Prompt lacks 'account' coverage: {prompt}");
-            Assert.True(rgCoverage.Covered || rgCoverage.PlaceholderDetected,
-                $"Prompt lacks 'resource-group' coverage: {prompt}");
+            var coverage = CanonicalCoverageEvaluator.EvaluateParameterCoverage([prompt], manifest);
+            Assert.True(coverage.AllRequiredCovered, $"Prompt lacks canonical coverage after repair: {prompt}");
         }
     }
 
@@ -61,45 +46,37 @@ public class DeterministicPromptRepairerTests
     public void Repair_BlankPromptsAreNotModified()
     {
         var prompts = new List<string> { "List accounts.", "", "   " };
-        var required = new List<Option>
-        {
-            new() { Name = "account", Required = true, Description = "Account name" }
-        };
+        var manifest = BuildManifest(
+            "azmcp storage account list",
+            "storage",
+            BuildEntry("account", "Account name", description: "Account name"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
 
         Assert.Equal("", result.RepairedPrompts[1]);
         Assert.Equal("   ", result.RepairedPrompts[2]);
     }
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    // BLOCKING #2: Verification runs AFTER sanitization
-    // ──────────────────────────────────────────────────────────────────────────────
-
     [Fact]
     public void Repair_StillUncovered_DetectedAfterSanitization()
     {
-        // Injected value must survive sanitization for coverage to hold.
-        // "location" is in the ValueBank with safe values like "eastus"
-        var prompts = new List<string>
-        {
-            "Deploy the resources to a specific region."
-        };
-        var required = new List<Option>
-        {
-            new() { Name = "location", Required = true, Description = "Azure region for deployment" }
-        };
+        var prompts = new List<string> { "Deploy the resources to a specific region." };
+        var manifest = BuildManifest(
+            "azmcp deployment create",
+            "resources",
+            BuildEntry("location", "Location", description: "Azure region for deployment"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
 
-        // "eastus" is safe — won't be sanitized — should NOT appear in StillUncovered
         Assert.DoesNotContain("location", result.StillUncovered);
+        Assert.True(CanonicalCoverageEvaluator.EvaluateParameterCoverage(
+            result.RepairedPrompts.Select(CredentialSanitizer.Sanitize).ToList(),
+            manifest).AllRequiredCovered);
     }
 
     [Fact]
     public void Repair_ValueBankExcludesValueKey_CredentialSafe()
     {
-        // "value" key in old ValueBank has credentials. ParameterValueBank must not have it.
         Assert.False(ParameterValueBank.Bank.ContainsKey("value"),
             "ParameterValueBank must not contain 'value' key (credential risk)");
     }
@@ -107,92 +84,89 @@ public class DeterministicPromptRepairerTests
     [Fact]
     public void Repair_InjectedEnumValueSurvivesSanitizer_NotInStillUncovered()
     {
-        // Enum value "standard" should survive sanitization cleanly
         var prompts = new List<string> { "Create a new storage tier." };
-        var required = new List<Option>
-        {
-            new() { Name = "tier", Required = true, Description = "Available options: 'standard', 'premium'" }
-        };
+        var manifest = BuildManifest(
+            "azmcp storage account update",
+            "storage",
+            BuildEntry("tier", "Tier", description: "Available options: 'standard', 'premium'"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
+        var sanitized = result.RepairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
 
         Assert.DoesNotContain("tier", result.StillUncovered);
-        // Verify the sanitized form still has coverage
-        var sanitized = result.RepairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
-        var coverage = ParameterCoverageChecker.GetConcretePromptCoverage(sanitized, "tier", 1, required[0].Description);
-        Assert.True(coverage.Covered || coverage.PlaceholderDetected);
+        Assert.True(CanonicalCoverageEvaluator.EvaluateParameterCoverage(sanitized, manifest).AllRequiredCovered);
     }
 
     [Fact]
-    public void Repair_InjectedValueDestroyedBySanitizer_AppearsInStillUncovered()
+    public void Repair_InjectedFallbackValue_IsSafeAndDoesNotEchoRejectedEnum()
     {
-        // If we somehow inject a value that looks like a JWT, sanitizer kills it
-        // This tests the safety net by using a param with an enum containing a JWT-like string
         var prompts = new List<string> { "Authenticate the user." };
-        var required = new List<Option>
-        {
-            new() { Name = "token-input", Required = true, Description = "Available options: 'eyJhbGciOiJIUzI1NiJ9'" }
-        };
+        var manifest = BuildManifest(
+            "azmcp auth validate",
+            "auth",
+            BuildEntry("token-input", "Token input", description: "Available options: '******'"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
 
-        // The enum value '******' is rejected by IsValidValue (contains special chars),
-        // so the repairer falls back to the contoso heuristic. Verify repair actually happened.
         Assert.Single(result.Actions);
         Assert.Equal("token-input", result.Actions[0].ParameterName);
-        // The fallback value should be safe and survive sanitization
-        Assert.True(DeterministicPromptRepairer.IsValidValue(result.Actions[0].InjectedValue),
-            "Injected fallback value must pass IsValidValue");
+        Assert.True(DeterministicPromptRepairer.IsValidValue(result.Actions[0].InjectedValue));
         Assert.DoesNotContain("******", result.RepairedPrompts[0]);
     }
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    // BLOCKING #3: Effective coverage = Covered OR PlaceholderDetected
-    // ──────────────────────────────────────────────────────────────────────────────
-
     [Fact]
-    public void GetEffectiveCoverage_TrueWhenPlaceholderDetected()
-    {
-        var prompts = new List<string> { "List items for <account>" };
-        var result = DeterministicPromptRepairer.GetEffectiveCoverage(prompts, "account", 1, null);
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void GetEffectiveCoverage_TrueWhenConcreteCovered()
-    {
-        var prompts = new List<string> { "List items for account 'mystorageacct'" };
-        var result = DeterministicPromptRepairer.GetEffectiveCoverage(prompts, "account", 1, null);
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void GetEffectiveCoverage_FalseWhenNeitherCoveredNorPlaceholder()
-    {
-        var prompts = new List<string> { "List all available items" };
-        var result = DeterministicPromptRepairer.GetEffectiveCoverage(prompts, "account", 1, null);
-        Assert.False(result);
-    }
-
-    [Fact]
-    public void Repair_SkipsAlreadyCoveredByPlaceholder()
+    public void Repair_SkipsAlreadyCoveredByAuthorizedPlaceholder()
     {
         var prompts = new List<string> { "List items for <account> in resource group 'rg-prod'" };
-        var required = new List<Option>
-        {
-            new() { Name = "account", Required = true, Description = "Account name" },
-            new() { Name = "resource-group", Required = true, Description = "RG name" }
-        };
+        var manifest = BuildManifest(
+            "azmcp storage account show",
+            "storage",
+            BuildEntry("account", "Account name", description: "Account name"),
+            BuildEntry("resource-group", "Resource group", description: "RG name"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
 
-        // No actions needed — both are already effectively covered
         Assert.Empty(result.Actions);
+        Assert.Empty(result.StillUncovered);
     }
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    // NON-BLOCKING #4: CLI names with '--' prefix are canonicalized
-    // ──────────────────────────────────────────────────────────────────────────────
+    [Fact]
+    public void BuildRetryFeedback_IncludesCanonicalParamNamesPromptIndicesAndRewriteExample()
+    {
+        var prompts = new List<string>
+        {
+            "Scale the deployment.",
+            "Increase the instance count.",
+            "",
+            "Show me the current capacity."
+        };
+        var manifest = BuildManifest(
+            "azmcp compute vmss update",
+            "compute",
+            BuildEntry("resource-group", "Resource group name", description: "Resource group name"));
+
+        var feedback = DeterministicPromptRepairer.BuildRetryFeedback(prompts, manifest);
+
+        Assert.Contains("resource-group", feedback, StringComparison.Ordinal);
+        Assert.Contains("Prompt #1", feedback, StringComparison.Ordinal);
+        Assert.Contains("Prompt #2", feedback, StringComparison.Ordinal);
+        Assert.Contains("Prompt #4", feedback, StringComparison.Ordinal);
+        Assert.Contains("Rewrite example", feedback, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildRetryFeedback_ReturnsEmptyWhenAllRequiredCovered()
+    {
+        var prompts = new List<string> { "Scale the deployment for resource group 'rg-prod'." };
+        var manifest = BuildManifest(
+            "azmcp compute vmss update",
+            "compute",
+            BuildEntry("resource-group", "Resource group name", description: "Resource group name"));
+
+        var feedback = DeterministicPromptRepairer.BuildRetryFeedback(prompts, manifest);
+
+        Assert.Equal(string.Empty, feedback);
+    }
 
     [Fact]
     public void CanonicalizeParamName_StripsLeadingDashes()
@@ -201,27 +175,6 @@ public class DeterministicPromptRepairerTests
         Assert.Equal("resource-group", DeterministicPromptRepairer.CanonicalizeParamName("--resource-group"));
         Assert.Equal("name", DeterministicPromptRepairer.CanonicalizeParamName("name"));
     }
-
-    [Fact]
-    public void Repair_WorksWithCliPrefixedParamNames()
-    {
-        var prompts = new List<string> { "List all storage blobs." };
-        var required = new List<Option>
-        {
-            new() { Name = "--account", Required = true, Description = "Storage account" }
-        };
-
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
-
-        // Should resolve "account" from bank despite "--account" input
-        Assert.Single(result.Actions);
-        Assert.Equal("account", result.Actions[0].ParameterName);
-        Assert.Equal("mystorageacct", result.Actions[0].InjectedValue);
-    }
-
-    // ──────────────────────────────────────────────────────────────────────────────
-    // NON-BLOCKING #5: Value validation (escaping, length, special chars)
-    // ──────────────────────────────────────────────────────────────────────────────
 
     [Theory]
     [InlineData("normal-value", true)]
@@ -250,21 +203,17 @@ public class DeterministicPromptRepairerTests
     }
 
     [Theory]
-    [InlineData("café-resource", true)]     // accented chars are fine
-    [InlineData("value\twith\ttabs", false)] // tabs are control chars
-    [InlineData("value`backtick", true)]     // backticks allowed
-    [InlineData("value;semicolon", true)]    // semicolons allowed
-    [InlineData("DROP TABLE users;--", true)] // not SQL-injecting markdown
-    [InlineData("line1\nline2", false)]       // newlines rejected
-    [InlineData("has'quote", false)]          // single quotes rejected
+    [InlineData("café-resource", true)]
+    [InlineData("value\twith\ttabs", false)]
+    [InlineData("value`backtick", true)]
+    [InlineData("value;semicolon", true)]
+    [InlineData("DROP TABLE users;--", true)]
+    [InlineData("line1\nline2", false)]
+    [InlineData("has'quote", false)]
     public void IsValidValue_EdgeCases(string value, bool expected)
     {
         Assert.Equal(expected, DeterministicPromptRepairer.IsValidValue(value));
     }
-
-    // ──────────────────────────────────────────────────────────────────────────────
-    // Value resolution chain
-    // ──────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     public void ResolveValue_PrefersEnumFromDescription()
@@ -284,7 +233,7 @@ public class DeterministicPromptRepairerTests
     public void ResolveValue_UsesGuidHeuristicForIdSuffix()
     {
         var value = DeterministicPromptRepairer.ResolveValue("subscription-id", null);
-        Assert.Contains("-", value); // GUID format
+        Assert.Contains("-", value);
         Assert.Equal("00000000-0000-0000-0000-000000000001", value);
     }
 
@@ -312,14 +261,9 @@ public class DeterministicPromptRepairerTests
     [Fact]
     public void ResolveValue_ExcludesValueKeyFromBank()
     {
-        // "value" key had credentials — must not resolve from bank
         var value = DeterministicPromptRepairer.ResolveValue("value", null);
-        Assert.Equal("contoso-value-01", value); // fallback, not "P@ssw0rd!2026"
+        Assert.Equal("contoso-value-01", value);
     }
-
-    // ──────────────────────────────────────────────────────────────────────────────
-    // Injection grammar
-    // ──────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     public void InjectParameter_InsertsBeforeFinalPunctuation()
@@ -349,39 +293,26 @@ public class DeterministicPromptRepairerTests
         Assert.Contains("for resource group 'rg-prod'", result);
     }
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    // Edge cases
-    // ──────────────────────────────────────────────────────────────────────────────
-
     [Fact]
     public void Repair_EmptyPrompts_ReturnsUnchanged()
     {
-        var result = DeterministicPromptRepairer.Repair([], [new Option { Name = "x", Required = true }]);
+        var manifest = BuildManifest("azmcp test tool", "test", BuildEntry("x", "X"));
+        var result = DeterministicPromptRepairer.Repair([], manifest);
         Assert.Empty(result.RepairedPrompts);
         Assert.Empty(result.Actions);
     }
 
     [Fact]
-    public void Repair_EmptyRequiredParams_ReturnsUnchanged()
+    public void Repair_EmptyManifest_ReturnsUnchanged()
     {
         var prompts = new List<string> { "Hello world." };
-        var result = DeterministicPromptRepairer.Repair(prompts, []);
+        var manifest = BuildManifest("azmcp test tool", "test");
+
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
+
         Assert.Single(result.RepairedPrompts);
         Assert.Equal("Hello world.", result.RepairedPrompts[0]);
     }
-
-    [Fact]
-    public void Repair_NullParamName_Skipped()
-    {
-        var prompts = new List<string> { "Test prompt." };
-        var required = new List<Option> { new() { Name = null, Required = true } };
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
-        Assert.Empty(result.Actions);
-    }
-
-    // ──────────────────────────────────────────────────────────────────────────────
-    // NON-BLOCKING #9: ValueBank contract — shared keys resolve identically
-    // ──────────────────────────────────────────────────────────────────────────────
 
     [Theory]
     [InlineData("account")]
@@ -390,15 +321,9 @@ public class DeterministicPromptRepairerTests
     [InlineData("vault")]
     public void ValueBank_SharedKeysMatchOriginalGenerator(string key)
     {
-        // Contract: ParameterValueBank and the original DeterministicExamplePromptGenerator
-        // must have the same values for shared keys
         Assert.True(ParameterValueBank.Bank.ContainsKey(key),
             $"ParameterValueBank missing key '{key}'");
     }
-
-    // ──────────────────────────────────────────────────────────────────────────────
-    // Integration: repair → sanitize → checker roundtrip
-    // ──────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     public void Integration_RepairThenSanitizeThenChecker_AllCovered()
@@ -411,42 +336,25 @@ public class DeterministicPromptRepairerTests
             "Upload a new blob.",
             "Delete a blob."
         };
-        var required = new List<Option>
-        {
-            new() { Name = "--account", Required = true, Description = "Storage account name" },
-            new() { Name = "--container-name", Required = true, Description = "Container name" }
-        };
+        var manifest = BuildManifest(
+            "azmcp storage blob list",
+            "storage",
+            BuildEntry("account", "Account name", description: "Storage account name"),
+            BuildEntry("container-name", "Container name", description: "Container name"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
-
-        // Post-repair: sanitize and verify each non-blank prompt covers all params
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
         var sanitized = result.RepairedPrompts
             .Select(CredentialSanitizer.Sanitize)
-            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Where(prompt => !string.IsNullOrWhiteSpace(prompt))
             .ToList();
 
-        foreach (var param in required)
-        {
-            var canonName = DeterministicPromptRepairer.CanonicalizeParamName(param.Name!);
-            var coverage = ParameterCoverageChecker.GetConcretePromptCoverage(
-                sanitized, canonName, required.Count, param.Description);
-            Assert.True(coverage.Covered || coverage.PlaceholderDetected,
-                $"Parameter '{canonName}' not covered after repair+sanitize");
-        }
-
-        // Should have no StillUncovered
+        Assert.True(CanonicalCoverageEvaluator.EvaluateParameterCoverage(sanitized, manifest).AllRequiredCovered);
         Assert.Empty(result.StillUncovered);
     }
-
-    // ──────────────────────────────────────────────────────────────────────────────
-    // INTEGRATION: Full flow — AI response with missing params → repair → sanitize
-    // → coverage checker passes. Uses real E2E failure cases from #781.
-    // ──────────────────────────────────────────────────────────────────────────────
 
     [Fact]
     public void Integration_KeyVault_CertificateData_RepairThenSanitize_Passes()
     {
-        // Simulate AI-generated prompts that miss certificate-data param
         var aiPrompts = new List<string>
         {
             "Import a certificate into my Key Vault named 'contoso-kv-01'.",
@@ -455,30 +363,22 @@ public class DeterministicPromptRepairerTests
             "Import the SSL certificate into Azure Key Vault.",
             "Store a code signing certificate in the vault."
         };
-        var required = new List<Option>
-        {
-            new() { Name = "--certificate-data", Required = true, Description = "Base64-encoded certificate data (PFX/PEM)" }
-        };
+        var manifest = BuildManifest(
+            "azmcp keyvault certificate import",
+            "keyvault",
+            BuildEntry("certificate-data", "Certificate data", description: "Base64-encoded certificate data (PFX/PEM)"));
 
-        var result = DeterministicPromptRepairer.Repair(aiPrompts, required);
-
-        // Verify: all non-blank prompts now mention certificate-data
-        Assert.Empty(result.StillUncovered);
-        Assert.True(result.Actions.Count > 0, "Should have repaired certificate-data");
-        Assert.Equal("certificate-data", result.Actions[0].ParameterName);
-
-        // Full pipeline: sanitize then re-check coverage
+        var result = DeterministicPromptRepairer.Repair(aiPrompts, manifest);
         var sanitized = result.RepairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
-        foreach (var prompt in sanitized.Where(p => !string.IsNullOrWhiteSpace(p)))
-        {
-            Assert.Contains("certificate", prompt, StringComparison.OrdinalIgnoreCase);
-        }
+
+        Assert.Empty(result.StillUncovered);
+        Assert.Contains(result.Actions, action => action.ParameterName == "certificate-data");
+        Assert.True(CanonicalCoverageEvaluator.EvaluateParameterCoverage(sanitized, manifest).AllRequiredCovered);
     }
 
     [Fact]
     public void Integration_Cosmos_OpenAIEndpointAndEmbeddingDeployment_RepairThenSanitize_Passes()
     {
-        // Simulate AI-generated prompts that miss openai-endpoint and embedding-deployment
         var aiPrompts = new List<string>
         {
             "Create a vector index in my Cosmos DB database 'products'.",
@@ -487,194 +387,111 @@ public class DeterministicPromptRepairerTests
             "Initialize vector indexing policy on my database.",
             "Enable vector search capabilities in Cosmos."
         };
-        var required = new List<Option>
-        {
-            new() { Name = "--openai-endpoint", Required = true, Description = "Azure OpenAI endpoint URL" },
-            new() { Name = "--embedding-deployment", Required = true, Description = "Embedding model deployment name" },
-            new() { Name = "--database", Required = true, Description = "Database name" }
-        };
+        var manifest = BuildManifest(
+            "azmcp cosmos vector create",
+            "cosmos",
+            BuildEntry("openai-endpoint", "OpenAI endpoint", description: "Azure OpenAI endpoint URL"),
+            BuildEntry("embedding-deployment", "Embedding deployment", description: "Embedding model deployment name"),
+            BuildEntry("database", "Database name", description: "Database name"));
 
-        var result = DeterministicPromptRepairer.Repair(aiPrompts, required);
+        var result = DeterministicPromptRepairer.Repair(aiPrompts, manifest);
+        var sanitized = result.RepairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
+        var repairedParamNames = result.Actions.Select(action => action.ParameterName).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        // database is likely already covered in prompts; openai-endpoint and embedding-deployment should be repaired
-        var repairedParamNames = result.Actions.Select(a => a.ParameterName).ToHashSet();
         Assert.Contains("openai-endpoint", repairedParamNames);
         Assert.Contains("embedding-deployment", repairedParamNames);
-
-        // Verify post-sanitize coverage
         Assert.Empty(result.StillUncovered);
-
-        var sanitized = result.RepairedPrompts.Select(CredentialSanitizer.Sanitize).ToList();
-        foreach (var prompt in sanitized.Where(p => !string.IsNullOrWhiteSpace(p)))
-        {
-            // openai-endpoint should survive sanitization (heuristic value isn't a real credential)
-            var coverage1 = ParameterCoverageChecker.GetConcretePromptCoverage(
-                new[] { prompt }, "openai-endpoint", required.Count, required[0].Description);
-            var coverage2 = ParameterCoverageChecker.GetConcretePromptCoverage(
-                new[] { prompt }, "embedding-deployment", required.Count, required[1].Description);
-            Assert.True(coverage1.Covered || coverage1.PlaceholderDetected,
-                $"openai-endpoint not covered in: {prompt}");
-            Assert.True(coverage2.Covered || coverage2.PlaceholderDetected,
-                $"embedding-deployment not covered in: {prompt}");
-        }
+        Assert.True(CanonicalCoverageEvaluator.EvaluateParameterCoverage(sanitized, manifest).AllRequiredCovered);
     }
 
     [Fact]
     public void Integration_RepairDoesNotDoubleInjectAlreadyCoveredParams()
     {
-        // Prompts already contain the required param — repair should be a no-op
         var prompts = new List<string>
         {
             "List certificates in vault 'contoso-vault' for resource group 'rg-contoso-01'.",
             "Show certificate details in vault 'test-kv' for resource group 'rg-test'."
         };
-        var required = new List<Option>
-        {
-            new() { Name = "--resource-group", Required = true, Description = "Resource group name" }
-        };
+        var manifest = BuildManifest(
+            "azmcp keyvault certificate list",
+            "keyvault",
+            BuildEntry("resource-group", "Resource group", description: "Resource group name"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
 
         Assert.Empty(result.Actions);
         Assert.Empty(result.StillUncovered);
-        // Prompts unchanged
         Assert.Equal(prompts[0], result.RepairedPrompts[0]);
         Assert.Equal(prompts[1], result.RepairedPrompts[1]);
     }
 
-    // ──────────────────────────────────────────────────────────────────────────────
-    // PHASE 1: Display-name alignment (PR #783 TDD fix plan)
-    // ──────────────────────────────────────────────────────────────────────────────
-
     [Fact]
-    public void Repair_UsesDisplayNameForCoverageCheck_DetectsGapCorrectly()
+    public void Repair_ExposesCanonicalCoverageBeforeAndAfterRepair()
     {
-        // Given: Option.Name = "--app", DisplayName = "App name"
-        //        Prompt contains "<app>" placeholder but NO concrete "app name" value
-        var prompts = new List<string>
-        {
-            "Start the web app <app>.",
-            "Restart the application <app>.",
-        };
-        var required = new List<Option>
-        {
-            new() { Name = "--app", Required = true, Description = "The web app name", DisplayName = "App name" }
-        };
+        var prompts = new List<string> { "Get key-values from App Configuration store <app_config_store_name>" };
+        var manifest = BuildManifest(
+            "azmcp appconfig kv get",
+            "appconfig",
+            BuildEntry("account", "Account name", description: "Account name"));
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        var result = DeterministicPromptRepairer.Repair(prompts, manifest);
 
-        // With display name "App name", the checker should recognize the <app> placeholder
-        // covers the display name (since "app" is the base word when "name" suffix is stripped).
-        // The PlaceholderDetected path should satisfy coverage.
-        Assert.Empty(result.StillUncovered);
+        Assert.Single(result.InitialCoverage);
+        Assert.Equal(CoverageVerdict.Missing, result.InitialCoverage[0].Verdict);
+        Assert.Single(result.FinalCoverage);
+        Assert.True(result.FinalCoverage[0].Verdict is CoverageVerdict.Concrete or CoverageVerdict.AuthorizedPlaceholder);
     }
 
-    [Fact]
-    public void Repair_WithDisplayName_InjectsWhenNoCoverageAtAll()
+    private static CanonicalParameterManifest BuildManifest(
+        string command,
+        string ns,
+        params CanonicalParameterEntry[] parameters)
     {
-        // Given: Option.Name = "--eventhub", DisplayName = "Event Hub name"
-        //        Prompts have NO reference to eventhub at all
-        var prompts = new List<string>
+        var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var parameter in parameters)
         {
-            "Send a message to the queue.",
-            "List all consumer groups.",
-        };
-        var required = new List<Option>
-        {
-            new() { Name = "--eventhub", Required = true, Description = "Event Hub name", DisplayName = "Event Hub name" }
-        };
-
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
-
-        // Should inject because display name "Event Hub name" has no coverage
-        Assert.NotEmpty(result.Actions);
-        Assert.Contains(result.Actions, a => a.ParameterName == "eventhub");
-    }
-
-    [Fact]
-    public void Repair_WithDisplayName_PostRepairVerificationUsesDisplayName()
-    {
-        // Given: Prompts with injected "for app 'my-webapp'"
-        // When: Post-repair verification runs with DisplayName "App name"
-        // Then: ParameterCoverageChecker("App name", ...) returns Covered (because "name" is generic suffix)
-        var prompts = new List<string>
-        {
-            "Start the web app for app 'my-webapp'.",
-        };
-        var required = new List<Option>
-        {
-            new() { Name = "--app", Required = true, Description = "Web app name", DisplayName = "App name" }
-        };
-
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
-
-        // "App name" → base word "app" (since "name" is generic suffix)
-        // Prompt already has " app 'my-webapp'" → covered
-        Assert.Empty(result.StillUncovered);
-    }
-
-    [Fact]
-    public void GetCoverageName_ReturnsDisplayName_WhenPresent()
-    {
-        var option = new Option { Name = "--app", Required = true, DisplayName = "App name" };
-        Assert.Equal("App name", DeterministicPromptRepairer.GetCoverageName(option));
-    }
-
-    [Fact]
-    public void GetCoverageName_FallsBackToCanonicalName_WhenNoDisplayName()
-    {
-        var option = new Option { Name = "--resource-group", Required = true };
-        Assert.Equal("resource-group", DeterministicPromptRepairer.GetCoverageName(option));
-    }
-
-    [Fact]
-    public void BuildRetryFeedback_IncludesMissingParamNamesPromptIndicesAndRewriteExample()
-    {
-        var prompts = new List<string>
-        {
-            "Scale the deployment.",
-            "Increase the instance count.",
-            "",
-            "Show me the current capacity."
-        };
-        var required = new List<Option>
-        {
-            new() { Name = "--resource-group", Required = true, DisplayName = "Resource group name", Description = "Resource group name" }
-        };
-
-        var feedback = DeterministicPromptRepairer.BuildRetryFeedback(prompts, required);
-
-        Assert.Contains("Resource group name", feedback, StringComparison.Ordinal);
-        Assert.Contains("Prompt #1", feedback, StringComparison.Ordinal);
-        Assert.Contains("Prompt #2", feedback, StringComparison.Ordinal);
-        Assert.Contains("Prompt #4", feedback, StringComparison.Ordinal);
-        Assert.Contains("Rewrite example", feedback, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void Repair_WhenDisplayNameCoverageStillMissing_AddsLastResortPromptUsingDisplayName()
-    {
-        var prompts = new List<string>
-        {
-            "Scale the deployment.",
-            "Increase the instance count."
-        };
-        var required = new List<Option>
-        {
-            new()
+            foreach (var alias in parameter.PlaceholderAliases)
             {
-                Name = "--vmss",
-                Required = true,
-                DisplayName = "Virtual machine scale set name",
-                Description = "Virtual machine scale set name"
+                index.TryAdd(alias, parameter.CanonicalName);
             }
-        };
+        }
 
-        var result = DeterministicPromptRepairer.Repair(prompts, required);
+        return new CanonicalParameterManifest(
+            "2.0",
+            command,
+            ns,
+            new ManifestSourceIdentity("1.0.0", "2026-01-01T00:00:00Z"),
+            parameters,
+            index);
+    }
 
-        Assert.Empty(result.StillUncovered);
-        Assert.Contains(
-            result.RepairedPrompts,
-            prompt => prompt.Contains("Virtual machine scale set name", StringComparison.Ordinal));
+    private static CanonicalParameterEntry BuildEntry(
+        string canonical,
+        string displayName,
+        bool required = true,
+        string? description = null,
+        string[]? displayAliases = null,
+        string[]? placeholderAliases = null)
+    {
+        var resolvedDisplayAliases = displayAliases ??
+        [
+            CanonicalParameterNormalizer.Normalize(displayName),
+            canonical
+        ];
+        var resolvedPlaceholderAliases = placeholderAliases ??
+        [
+            canonical,
+            canonical.Replace('-', '_')
+        ];
+
+        return new CanonicalParameterEntry(
+            canonical,
+            displayName,
+            resolvedDisplayAliases.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            resolvedPlaceholderAliases.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            required,
+            required ? "Required" : "Optional",
+            false,
+            description ?? $"The {displayName.ToLowerInvariant()}.");
     }
 }

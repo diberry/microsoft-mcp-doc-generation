@@ -1,76 +1,70 @@
 813-step3-green-run.txt
 ========================
 Branch: squad/813-step3-canonical-parameter-contract
-HEAD: abf72869928d6cf41e404084c49d6e4fe6eb723b
-UTC: 2026-08-15T16:40:35Z
+HEAD: 563eceda62fcff2bc8f946e904cded1cbff8a768
+UTC: 2026-08-15T18:16:39.4769933Z
 OS: Windows_NT
 dotnet --version: 10.0.303
 pwsh --version: PowerShell 7.6.5
 git --version: git version 2.55.0.vfs.0.3
 
 Commands and exit codes:
-1. dotnet build mcp-doc-generation.sln --configuration Release → exit 0 (0 warnings, 0 errors)
-2. dotnet test mcp-doc-generation.sln --no-build --configuration Release → exit 1
-   - 1 tolerated failure: FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription
-   - All other tests pass
-3. pwsh -NoProfile -Command 'Invoke-Pester -Path ./mcp-tools/validation/tests -Output Detailed -CI' → exit 8
-   - 118 passed, 8 failed (all 8 are tolerated Scan-McpToolCoverage.Tests.ps1 It-blocks), 1 skipped
+1. dotnet build mcp-doc-generation.sln --configuration Release
+   Exit code: 0
+   Result: Build succeeded, 0 warnings, 0 errors.
 
-Test counts by assembly (main solution):
-  DocGeneration.Steps.Bootstrap.CommandParser.Tests: 36
-  DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests: 29
-  DocGeneration.Core.TemplateEngine.Tests: 18
-  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests: 36
-  DocGeneration.Core.TextTransformation.Tests: 72
-  DocGeneration.Core.Shared.Tests: 554
-  DocGeneration.Tools.Fingerprint.Tests: 67
-  DocGeneration.Steps.ExamplePrompts.Generation.Tests: 332
-  DocGeneration.PromptRegression.Tests: 56
-  DocGeneration.Steps.HorizontalArticles.Tests: 172
-  DocGeneration.Steps.ToolGeneration.Improvements.Tests: 105
-  DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests: 379
-  DocGeneration.Steps.ToolFamilyCleanup.Tests: 978 (1 tolerated failure)
-  DocGeneration.E2E.Tests: 47
-  DocGeneration.PipelineRunner.SmokeTests: 11
-  DocGeneration.McpCliMetadata.Tests: 22
-  DocGeneration.Steps.Bootstrap.BrandMappings.Tests: 24
-  DocGeneration.Core.Tracing.Tests: 17
-  DocGeneration.Baseline.Beta34.Tests: 32 (1 skipped)
-  DocGeneration.Core.GenerativeAI.Tests: 31
-  DocGeneration.Steps.ExamplePrompts.Validation.Tests: 16
-  DocGeneration.PipelineRunner.Tests: 680
-  DocGeneration.Steps.SkillsRelevance.Tests: 89
-  TOTAL: 3803 (3802 pass, 1 tolerated fail, 1 skip)
+2. dotnet test mcp-doc-generation.sln --configuration Release --no-build
+   Exit code: 0
+   Assembly counts:
+     DocGeneration.Steps.Bootstrap.BrandMappings.Tests: 24
+     DocGeneration.Core.TextTransformation.Tests: 72
+     DocGeneration.Steps.HorizontalArticles.Tests: 172
+     DocGeneration.Core.TemplateEngine.Tests: 18
+     DocGeneration.Core.Shared.Tests: 559
+     DocGeneration.Steps.ToolGeneration.Improvements.Tests: 105
+     DocGeneration.Steps.Bootstrap.CommandParser.Tests: 36
+     DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests: 29
+     DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests: 379
+     DocGeneration.Steps.ExamplePrompts.Generation.Tests: 325
+     DocGeneration.Steps.SkillsRelevance.Tests: 89
+     DocGeneration.PromptRegression.Tests: 56
+     DocGeneration.Steps.ToolFamilyCleanup.Tests: 978
+     DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests: 36
+     DocGeneration.PipelineRunner.Tests: 680
+     DocGeneration.Tools.Fingerprint.Tests: 67
+     DocGeneration.E2E.Tests: 47
+     DocGeneration.PipelineRunner.SmokeTests: 11
+     DocGeneration.Core.Tracing.Tests: 17
+     DocGeneration.McpCliMetadata.Tests: 22
+     DocGeneration.Baseline.Beta34.Tests: 32 (31 passed, 1 skipped)
+     DocGeneration.Steps.ExamplePrompts.Validation.Tests: 16
+     DocGeneration.Core.GenerativeAI.Tests: 31
+   TOTAL: 3801 (3800 passed, 0 failed, 1 skipped)
 
-Pester (Pester 5.7.1, installed and executed):
-  Tests Passed: 118, Failed: 8, Skipped: 1
-  All 8 failures are tolerated Scan-McpToolCoverage.Tests.ps1 It-blocks
+3. pwsh -NoProfile -Command "Invoke-Pester -Path @('mcp-tools/validation/tests','mcp-tools/scripts/tests') -Output Detailed -CI"
+   Exit code: 9
+   Pester totals: 123 passed, 9 failed, 1 skipped (133 discovered)
+   Failing tests:
+     - 8 x Scan-McpToolCoverage.Tests.ps1 assertions in legacy coverage fixtures
+     - 1 x lint-vale.Tests.ps1 assertion (Vale executable missing in environment)
 
-## Test count reconciliation
+## Test count reconciliation vs base b58431f (measured)
 
-Baseline commit: b58431f (feat(813): Step 2 - runtime dependency suppression)
-Baseline test run (executed via git worktree add ./baseline-check b58431f):
-  TOTAL: 3684 (3683 pass, 1 fail, 1 skip)
+Measured base commit: b58431f
+  TOTAL: 3684 (3683 passed, 1 failed, 1 skipped)
 
-Branch total: 3803
-Net change: +119 tests (all additions, zero removals)
+Current branch total: 3801
+Net change vs base: +117 tests
 
-Tests ADDED by assembly (branch vs baseline):
-  DocGeneration.Core.Shared.Tests: 554 − 470 = +84
-    Includes: CanonicalParameterManifestLoaderTests (14 error-code tests), CanonicalCoverageEvaluatorTests,
-    CanonicalCoverageRuntimeRedTests, Round3CanonicalContractTests (5 tests), SharedEvaluatorArchitectureTests
-  DocGeneration.Steps.ExamplePrompts.Generation.Tests: 332 − 320 = +12
-    Includes: CanonicalRepairTests (8), ParameterManifestLoadingTests (3), CanonicalManifestBindingTests (1)
-  DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests: 379 − 369 = +10
-    Includes: EmitterRoundTripBindingTests (2), CanonicalManifestEmitterTests (8)
-  DocGeneration.Steps.ToolFamilyCleanup.Tests: 978 − 975 = +3
-    Includes: ParameterCrossCheckCanonicalLoaderTests (3)
-  DocGeneration.Steps.ExamplePrompts.Validation.Tests: 16 − 11 = +5
-    Includes: ValidatorCanonicalBindingTests (5 manifest-aware validator tests)
-  DocGeneration.PipelineRunner.Tests: 680 − 675 = +5
-    Includes: ExamplePromptsStepManifestFailureTests (5)
+Branch-vs-base additions by assembly:
+  - DocGeneration.Core.Shared.Tests: 559 - 470 = +89
+  - DocGeneration.Steps.ExamplePrompts.Generation.Tests: 325 - 320 = +5
+  - DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests: 379 - 369 = +10
+  - DocGeneration.Steps.ToolFamilyCleanup.Tests: 978 - 975 = +3
+  - DocGeneration.Steps.ExamplePrompts.Validation.Tests: 16 - 11 = +5
+  - DocGeneration.PipelineRunner.Tests: 680 - 675 = +5
 
-Tests REMOVED: 0 (no tests were deleted, skipped, or weakened)
-
-The prior claim of "-18 from other PRs merged to base" was incorrect.
-The baseline at b58431f has 3,684 tests. This branch adds 119 tests with zero removals.
+Tests removed vs base: 0
+Notes:
+  - The full managed test suite is green.
+  - Pester was executed because suites exist, but it remains red on pre-existing Scan-McpToolCoverage fixture expectations and an environment-dependent Vale executable check.

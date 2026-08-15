@@ -331,43 +331,22 @@ internal static class Program
 
             successCount++;
 
-            // Issue #781: Deterministic prompt repair — inject concrete values for missing params
-            // Runs AFTER AI parse, BEFORE sanitization. Verification runs on sanitized text.
-            var requiredOptions = (tool.Option ?? new List<Option>())
-                .Where(o => o.Required && !string.IsNullOrWhiteSpace(o.Name))
-                .ToList();
-
-            // Enrich options with display names from parameter manifest (fixes display-name
-            // mismatch: repairer was checking "app" but Step 4 validates "App name").
+            // Issue #781 / #813 Step 3: canonical repair seam.
+            // Runs AFTER AI parse, BEFORE sanitization. No legacy heuristic fallback is permitted.
             if (parameterManifest != null)
             {
-                foreach (var opt in requiredOptions)
-                {
-                    var manifestParam = parameterManifest.Parameters.FirstOrDefault(p =>
-                        string.Equals(p.CanonicalName, opt.Name, StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(p.DisplayName, opt.DisplayName, StringComparison.OrdinalIgnoreCase));
-                    if (manifestParam != null)
-                    {
-                        opt.DisplayName = manifestParam.DisplayName;
-                    }
-                }
-            }
-
-            if (requiredOptions.Count > 0)
-            {
-                var repairResult = DeterministicPromptRepairer.Repair(promptsResponse.Prompts, requiredOptions);
+                var repairResult = DeterministicPromptRepairer.Repair(promptsResponse.Prompts, parameterManifest);
                 promptsResponse.Prompts = repairResult.RepairedPrompts.ToList();
 
                 if (repairResult.Actions.Count > 0)
                 {
-                    Console.WriteLine($"    🔧 Repaired {repairResult.Actions.Count} param(s): {string.Join(", ", repairResult.Actions.Select(a => a.ParameterName))}");
+                    Console.WriteLine($"    🔧 Repaired {repairResult.Actions.Count} canonical param(s): {string.Join(", ", repairResult.Actions.Select(a => a.ParameterName))}");
                 }
                 if (repairResult.StillUncovered.Count > 0)
                 {
                     Console.WriteLine($"    ⚠️  Still uncovered after repair: {string.Join(", ", repairResult.StillUncovered)}");
                 }
 
-                // Write repair telemetry
                 var telemetryDir = Path.Combine(outputDir, "repair-telemetry");
                 Directory.CreateDirectory(telemetryDir);
                 var telemetryFileName = ToolFileNameBuilder.BuildExamplePromptsFileName(
@@ -376,8 +355,40 @@ internal static class Program
                 {
                     tool = tool.Command,
                     timestamp = DateTime.UtcNow.ToString("o"),
-                    actions = repairResult.Actions.Select(a => new { a.ParameterName, a.InjectedValue, a.ActionType }),
-                    stillUncovered = repairResult.StillUncovered,
+                    repairedCanonicalParameterNames = repairResult.Actions
+                        .Select(static action => action.ParameterName)
+                        .Distinct(StringComparer.OrdinalIgnoreCase),
+                    stillUncoveredCanonicalParameterNames = repairResult.StillUncovered,
+                    canonicalVerdicts = new
+                    {
+                        before = repairResult.InitialCoverage.Select(static coverage => new
+                        {
+                            coverage.CanonicalName,
+                            verdict = coverage.Verdict.ToString(),
+                            coverage.MatchEvidence,
+                            coverage.MatchedPromptIndex
+                        }),
+                        after = repairResult.FinalCoverage.Select(static coverage => new
+                        {
+                            coverage.CanonicalName,
+                            verdict = coverage.Verdict.ToString(),
+                            coverage.MatchEvidence,
+                            coverage.MatchedPromptIndex
+                        })
+                    },
+                    provenance = repairResult.RepairProvenance.Select(static item => new
+                    {
+                        item.PromptSource,
+                        repairedCanonicalParameterNames = item.RepairedParameters,
+                        item.ManifestSchemaVersion,
+                        item.ManifestSourceBuild
+                    }),
+                    actions = repairResult.Actions.Select(static action => new
+                    {
+                        action.ParameterName,
+                        action.InjectedValue,
+                        action.ActionType
+                    }),
                     promptCount = repairResult.RepairedPrompts.Count
                 };
                 var telemetryJson = JsonSerializer.Serialize(telemetry, new JsonSerializerOptions { WriteIndented = true });

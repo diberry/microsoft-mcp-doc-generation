@@ -465,13 +465,8 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             return;
         }
 
-        var requiredOptions = await LoadRequiredOptionsAsync(parameterManifestDirectory, command, cancellationToken);
-        if (requiredOptions.Count == 0)
-        {
-            return;
-        }
-
-        var guidance = DeterministicPromptRepairer.BuildRetryFeedback(prompts, requiredOptions);
+        var manifest = await LoadParameterManifestAsync(parameterManifestDirectory, command, cancellationToken);
+        var guidance = DeterministicPromptRepairer.BuildRetryFeedback(prompts, manifest);
         if (string.IsNullOrWhiteSpace(guidance))
         {
             return;
@@ -487,7 +482,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         await File.WriteAllTextAsync(validationPath, augmentedContent, cancellationToken);
     }
 
-    private static async Task<IReadOnlyList<Option>> LoadRequiredOptionsAsync(
+    private static async Task<CanonicalParameterManifest> LoadParameterManifestAsync(
         string parameterManifestDirectory,
         string command,
         CancellationToken cancellationToken)
@@ -506,8 +501,16 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             ToolFileNameBuilder.BuildParameterManifestFileName(command, nameContext));
 
         // Fail-closed: ParameterManifestException propagates to the caller as a classified failure.
-        var manifest = await CanonicalParameterManifestLoader.LoadAsync(
+        return await CanonicalParameterManifestLoader.LoadAsync(
             manifestPath, command, cancellationToken: cancellationToken);
+    }
+
+    private static async Task<IReadOnlyList<Option>> LoadRequiredOptionsAsync(
+        string parameterManifestDirectory,
+        string command,
+        CancellationToken cancellationToken)
+    {
+        var manifest = await LoadParameterManifestAsync(parameterManifestDirectory, command, cancellationToken);
 
         return manifest.Parameters
             .Where(static param => param.Required || (param.RequiredText?.StartsWith("Required", StringComparison.OrdinalIgnoreCase) ?? false))

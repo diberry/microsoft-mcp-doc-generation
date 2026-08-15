@@ -75,13 +75,15 @@ Step 2: Example Prompts (AI + Deterministic Repair) ─────────�
   │  • DeterministicPromptRepairer replaces placeholder/fabricated
   │    parameter values with realistic deterministic values (runs
   │    AFTER AI parse, BEFORE CredentialSanitizer)
-  │  • Retry feedback now adds actionable repair guidance: missing
-  │    parameter names, prompt-slot suggestions, and a concrete rewrite
-  │    example for the next AI attempt
-  │  • If canonical-name injection still misses a required parameter
-  │    after sanitization, DeterministicPromptRepairer injects a
-  │    display-name-based last-resort fallback prompt
-  │  • Per-tool repair telemetry → repair-telemetry/*.json
+  │  • Retry feedback now loads the same v2 parameter manifest and adds
+  │    actionable canonical repair guidance: missing required canonical
+  │    names, prompt-slot suggestions, and a concrete rewrite example
+  │  • No legacy heuristic fallback is permitted at the repair seam:
+  │    when the manifest is absent, Step 2 skips repair rather than
+  │    reintroducing Option/display-name heuristics
+  │  • Per-tool repair telemetry → repair-telemetry/*.json (pre/post
+  │    canonical verdicts, repaired canonical names, still-uncovered
+  │    canonical names, provenance)
   │  • Validation checks parameter coverage in generated prompts
   │
   ▼
@@ -705,21 +707,21 @@ Every failure throws `ParameterManifestException` with a stable error code (stri
 | `Missing` | No match | ❌ |
 | `Ambiguous` | Placeholder maps to two+ canonical names | ❌ |
 
-Placeholder tokens are extracted via regex (`<…>`, `{…}`, `[…]`, `` `…` ``) and matched only after `Normalize()`.
+Placeholder tokens are extracted via regex (`<…>`, `{…}`, `[…]`, `` `…` ``) and matched only after `Normalize()`. Concrete prose matching also uses tightened boundaries so aliases adjacent to `-` or `_` (for example `account-level` or `per-account_quota`) are NOT treated as standalone concrete coverage.
 
 #### Consumer Seam Map
 
 | Seam | File | Consumes |
 |------|------|----------|
 | Step 2 generation | `ExamplePrompts.Generation/Program.cs` | `LoadAsync` → required params for AI prompt |
-| Step 2 repair | `DeterministicPromptRepairer` | `EvaluateParameterCoverage` post-sanitization |
-| Step 2 retry feedback | `ExamplePromptsStep.LoadRequiredOptionsAsync` | `LoadAsync` (propagates `ParameterManifestException`) |
+| Step 2 repair | `DeterministicPromptRepairer` | `Repair(prompts, manifest)` + canonical pre/post verdicts |
+| Step 2 retry feedback | `ExamplePromptsStep.LoadParameterManifestAsync` | `LoadAsync` + `BuildRetryFeedback(prompts, manifest)` |
 | Step 2 validation | `CodeBasedPromptValidator` | `EvaluateParameterCoverage` for verdict |
 | Step 4 cross-check | `ParameterCrossCheckService` | `LoadAsync` → valid parameter set |
 
 #### Bounded Repair Contract
 
-`DeterministicPromptRepairer` appends **at most one clause per missing required parameter** (` for {displayName} '{value}'`) when `CanonicalCoverageEvaluator` reports `Missing` after sanitization. Prompts with full coverage are emitted byte-identical.
+`DeterministicPromptRepairer` appends **at most one clause per missing required canonical parameter** (` for {canonical name} '{value}'`) when `CanonicalCoverageEvaluator` reports `Missing`. Prompts with full coverage are emitted byte-identical, and the repair telemetry records canonical verdicts before and after repair plus provenance. At the Step 2 generation call site, the manifest seam is authoritative: if the manifest is absent, repair is skipped instead of falling back to any legacy heuristic.
 
 #### Rollback Boundary
 

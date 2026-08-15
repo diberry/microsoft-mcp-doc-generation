@@ -258,3 +258,39 @@ TALLY: 19 of 24 rows PROVEN, 5 NOT PROVEN, 0 NOT EXECUTED
   NOT PROVEN: M5 (defensive guard, no path produces it), M6 (covered by M4k), M8/M9/M10/M11 (pattern
     ambiguity between two Repair overloads), M13/M14 (structurally same as M4), M17 (static class
     limitation), M18 (placeholder test), E2-break (optimization only)
+ROUND 5 SUPPLEMENT (Step 3 seam repairs)
+=======================================
+Working tree based on HEAD: 563eceda62fcff2bc8f946e904cded1cbff8a768
+UTC: 2026-08-15T18:16:39.4769933Z
+
+MUTATION 20: R1 production repair seam regresses away from the authoritative manifest binding
+  Files:
+    - mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/Program.cs
+    - mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/Generators/DeterministicPromptRepairer.cs
+  Temporary edit:
+    - Re-introduce a stub legacy overload Repair(prompts, IReadOnlyList<Option>)
+    - Re-route Program.cs from Repair(promptsResponse.Prompts, parameterManifest)
+      to Repair(promptsResponse.Prompts, requiredOptions)
+  RED test: CanonicalManifestBindingTests.Program_Source_RepairSeam_UsesManifestRepairOverload
+  Message: Assert.Contains() Failure: expected source to contain
+    "DeterministicPromptRepairer.Repair(promptsResponse.Prompts, parameterManifest);"
+  Result: PROVEN
+
+MUTATION 21: R2 restore loose word boundaries in CanonicalCoverageEvaluator
+  File: shared/DocGeneration.Core.Shared/CanonicalCoverageEvaluator.cs
+  Temporary edit:
+    - Pattern 1 reverted to (?<!\w)...
+    - Pattern 2 reverted to (?<!\w)...(?!\w)
+  RED test: CanonicalCoverageEvaluatorTests.EvaluateSingleParameter_HyphenatedAliasFragment_ReturnsMissing
+  Message: Assert.Equal() Failure: Expected Missing, Actual Concrete
+  Result: PROVEN
+
+MUTATION 22: R3 revert the C6 contract test to a tautology
+  File: shared/DocGeneration.Core.Shared.Tests/Round3CanonicalContractTests.cs
+  Temporary edit:
+    - Replace structural source assertions with Assert.True(true, ...)
+  Observed test result: Round3CanonicalContractTests.ExamplePromptsStep_ManifestError_RecordsArtifactFailure_NotJustWarning passes vacuously (exit 0)
+  Interpretation: the tautology removes all discriminating power; the current source-text assertions are the element that makes C6 enforceable.
+  Result: PROVEN AS TEST-HARDENING REGRESSION
+
+Supplement tally: 3 executed, 3 proven, 0 not proven.

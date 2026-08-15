@@ -106,7 +106,7 @@ public static class CanonicalCoverageEvaluator
             var naturalAlias = alias.Replace('-', ' ');
 
             // Pattern 1: alias followed by a quoted value
-            var pattern = $@"(?<!\w){Regex.Escape(naturalAlias)}(?:\s+named|\s+called)?\s+'([^']+)'";
+            var pattern = $@"(?<![\w\-_]){Regex.Escape(naturalAlias)}(?:\s+named|\s+called)?\s+'([^']+)'";
             var match = Regex.Match(prompt, pattern, RegexOptions.IgnoreCase);
             if (match.Success)
             {
@@ -114,7 +114,7 @@ public static class CanonicalCoverageEvaluator
             }
 
             // Pattern 2: word-boundary match in non-placeholder prose (concrete reference)
-            var wordPattern = $@"(?<!\w){Regex.Escape(naturalAlias)}(?!\w)";
+            var wordPattern = $@"(?<![\w\-_]){Regex.Escape(naturalAlias)}(?![\w\-_])";
             match = Regex.Match(strippedPrompt, wordPattern, RegexOptions.IgnoreCase);
             if (match.Success)
             {
