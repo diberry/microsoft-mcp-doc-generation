@@ -157,3 +157,121 @@ The two High findings are: (1) a word-boundary false-positive edge case in `Chec
 **File:** `.squad/agents/sage/813-step3-semantics-review.md`
 
 ↩︎ Responding to: "You are **Sage**, AI / Prompt Engineer. You hold the **semantics / bounded-repair / rubric approval seat** for Step 3 of issue diberry/microsoft-mcp-doc-generation#813..."
+
+---
+
+## FINAL VERDICT — head 253ec84
+
+### H-1 Resolution: Word-Boundary False Positive — **RESOLVED** ✅
+
+The pattern was tightened from `(?<!\w)account(?!\w)` to `(?<![\w\-_])account(?![\w\-_])` in both:
+- `CanonicalCoverageEvaluator.cs:117` (Pattern 2: word-boundary match)
+- `DeterministicPromptRepairer.cs:60` (needsPrepend heuristic)
+
+**Adversarial trace against new pattern:**
+
+| Input | Position | Lookbehind `[\w\-_]` | Lookahead `[\w\-_]` | Match? | Correct? |
+|---|---|---|---|---|---|
+| `"account-level setting"` | before `a`: start → pass; after `t`: `-` ∈ set → FAIL | — | — | NO | ✅ (false-pos eliminated) |
+| `"per-account_quota"` | before `a`: `-` ∈ set → FAIL | — | — | NO | ✅ (false-pos eliminated) |
+| `"account settings"` | before: start → pass; after: ` ` ∉ set → pass | — | — | YES | ✅ (legitimate match) |
+| `"my account"` | before: ` ` ∉ set → pass; after: end → pass | — | — | YES | ✅ |
+| `"account's keys"` | before: start → pass; after: `'` ∉ set → pass | — | — | YES | ✅ |
+| `"for account 'val'"` | before: ` ` → pass; after: ` ` → pass | — | — | YES | ✅ |
+| `"'account'"` (quoted) | before: `'` ∉ set → pass; after: `'` ∉ set → pass | — | — | YES | ✅ |
+| Sentence-final: `"...account."` | before: ` `; after: `.` ∉ set | — | — | YES | ✅ |
+
+**False-negative analysis**: No false negatives introduced. The only characters excluded from word boundaries (`-`, `_`) are joining characters that indicate the token is part of a compound identifier, not a standalone reference. Punctuation (`'`, `.`, `!`, `?`, `,`), quotes, spaces, and string boundaries all correctly allow the match.
+
+### H-2 Resolution: Production Repair on Legacy Heuristic — **RESOLVED** ✅
+
+At `Program.cs:338`, production now calls:
+```csharp
+var repairResult = DeterministicPromptRepairer.Repair(promptsResponse.Prompts, parameterManifest);
+```
+
+The legacy `Option`-based overload and all its helpers (`GetCoverageName`, `GetEffectiveCoverage`, `GetStillUncovered`, `ApplyLastResortFallback`, `BuildRetryFeedback(old)`, `BuildRewriteExample`, `BuildLastResortPrompt`) are **deleted**. Only the manifest-aware path exists. The original defect (heuristic Contains-matching reporting false-positive coverage) is no longer reachable in production.
+
+### Bounded Repair Re-Analysis (Canonical Path Only)
+
+| Adversarial Case | Result | Semantic Guarantee |
+|---|---|---|
+| **Negated prompt**: `"Do NOT delete the store."` | Appends ` for account 'contoso-account-01'` before `.` → `"Do NOT delete the store for account 'contoso-account-01'."` | Negation preserved ✅ |
+| **Scoped prompt**: `"List entries scoped to label 'prod'."` | Appends clause before `.` | Scope preserved ✅ |
+| **Multi-clause**: `"Fetch keys, export to JSON."` | Appends clause before final `.` | Multi-clause intact ✅ |
+| **Already-ending-in-punctuation**: `"Deploy now!"` | `"Deploy now for account 'contoso-account-01'!"` | Punctuation transplant ✅ |
+| **Quoted literals**: `"Show key named 'my-setting'."` | `InjectParameter` appends before `.`; existing quotes untouched | Literals preserved ✅ |
+| **Unknown placeholders**: `"Get <app_config_name> data."` | Not in alias index → stays Missing → repair injects clause | Unknown placeholders preserved in output ✅ |
+| **Byte-identity when covered**: `"List for account 'x'."` | `EvaluateRequiredCoverage` → Concrete → `missingParams.Count == 0` → no modification | Byte-identical ✅ |
+| **Second pass**: Any repaired output | Re-evaluation finds injected value via word-boundary → Concrete → no-op | Idempotent ✅ |
+| **Boundedness**: 2 missing params, 5 prompts | Append mode: 2 clauses × 5 prompts; Prepend mode: all missing in one "For" prefix | ≤ missingCount clauses per prompt ✅ |
+
+### Lost Behavior Verification
+
+15 legacy tests deleted; 10 `[Fact]` methods removed. Semantic guarantees verified:
+
+| Deleted Test | Semantic Guarantee | Covered By (at 253ec84) |
+|---|---|---|
+| `Repair_InjectedValueDestroyedBySanitizer_AppearsInStillUncovered` | Sanitizer-destroyed injected values reported | `Repair_StillUncovered_DetectedAfterSanitization` (line 61) + `Repair_InjectedEnumValueSurvivesSanitizer_NotInStillUncovered` (line 85) — both verify post-sanitization coverage via `CanonicalCoverageEvaluator` |
+| `Repair_SkipsAlreadyCoveredByPlaceholder` | Already-covered-by-authorized-placeholder skipped | `Repair_SkipsAlreadyCoveredByAuthorizedPlaceholder` (line 118) — exact semantic equivalent |
+| `GetEffectiveCoverage_*` (3 tests) | Coverage determination logic | Replaced by `CanonicalCoverageEvaluator` unit tests in `CanonicalValidationSeamTests.cs` |
+| `GetCoverageName_*` (2 tests) | Display name resolution | Obsolete — canonical path uses manifest-derived aliases, no display-name-as-coverage-name indirection |
+| `Repair_WithDisplayName_*` (3 tests) | Display name coverage check | Covered by `CanonicalRepairTests` which uses manifests with displayAliases |
+| `Repair_WhenDisplayNameCoverageStillMissing_AddsLastResortPromptUsingDisplayName` | Last-resort fallback | Eliminated — canonical repair injects directly; `CanonicalRepairTests.Repair_WithManifest_RegressionFix_DoesNotReportEmptyActionsWhenCoverageAbsent` (line 134) verifies no silent empty-actions |
+| `BuildRetryFeedback_*` | Retry feedback content | `BuildRetryFeedback_IncludesCanonicalParamNamesPromptIndicesAndRewriteExample` (line 134 in DeterministicPromptRepairerTests) |
+
+**Conclusion**: No semantic guarantee lost coverage. All critical invariants (sanitizer-destroyed detection, placeholder-skip, coverage accuracy) are covered by canonical-path tests.
+
+### Telemetry Honesty (Canonical Path)
+
+The original defect — telemetry reporting `actions: []` / `stillUncovered: []` while coverage is genuinely absent — **cannot recur** because:
+
+1. `Program.cs:358-361` emits `repairResult.Actions` and `repairResult.StillUncovered` directly from the `RepairResult`.
+2. `RepairResult.StillUncovered` is populated at `DeterministicPromptRepairer.cs:114-117` by re-evaluating via `CanonicalCoverageEvaluator` AFTER repair.
+3. `repairResult.InitialCoverage` and `repairResult.FinalCoverage` (emitted in telemetry at lines 364-377) carry per-parameter verdicts from the canonical evaluator, not the legacy heuristic.
+4. The regression test at `CanonicalRepairTests.cs:134` explicitly asserts this defect cannot occur.
+
+**Verdict**: The telemetry-dishonesty defect is structurally eliminated. ✅
+
+### Rubric Scoring — Final State
+
+| Dimension | Weight | Score | Rationale |
+|---|---|---|---|
+| **Coverage Accuracy** | 30% | 97 | Canonical evaluator uses exact word-boundary + authorized-alias-only matching. No Contains/substring. Tested across appconfig, storage, cosmos, keyvault, auth. |
+| **False-Positive Resistance** | 25% | 95 | H-1 fix eliminates hyphenated-compound false positives. Remaining theoretical edge: bare canonical name in unrelated prose (e.g., prompt about "account balance" matching `account` param). Acceptable — prompt generation context constrains this. |
+| **Repair Preservation** | 20% | 98 | Count, order, verb, negation, scope, non-placeholder literals all preserved. Verified by tests + adversarial trace. |
+| **Idempotence** | 10% | 100 | `Repair_WithManifest_IsIdempotent_SecondPassByteIdentical` test at line 79. Structurally guaranteed: second pass finds injected value → Concrete → no-op. |
+| **Boundedness** | 10% | 100 | Append: ≤1 clause per missing param per prompt. Prepend: 1 prefix for all missing combined. |
+| **Telemetry Honesty** | 5% | 100 | Legacy path deleted. Canonical path emits before/after verdicts with provenance. Regression test guards. |
+
+**Composite**: (0.30 × 97) + (0.25 × 95) + (0.20 × 98) + (0.10 × 100) + (0.10 × 100) + (0.05 × 100) = 29.1 + 23.75 + 19.6 + 10 + 10 + 5 = **97.45**
+
+All dimensions ≥ 70; Coverage Accuracy and False-Positive Resistance ≥ 80. **PASS**.
+
+### Remaining Findings (downgraded from Round 1)
+
+| # | Severity | Finding | Status |
+|---|---|---|---|
+| M-1 | Medium | `needsPrepend` heuristic (line 54-61) can flip format based on already-covered param appearing in prose. Not meaning-altering but format-inconsistent. | Unchanged; acceptable for Step 3 scope |
+| M-2 | Medium | Long placeholder aliases from parenthetical display names add noise to alias index. | Unchanged; non-harmful |
+| L-1 | Low | Redundant raw-token lookup before normalized fallback. | Unchanged; no functional impact |
+| L-2 | Low | Inconsistent append templates (with/without punctuation). | Unchanged; both achieve coverage |
+
+No new findings. H-1 and H-2 promoted to resolved; no longer appear in findings.
+
+### Final Verdict
+
+**APPROVE**
+
+| Severity | Count |
+|---|---|
+| Blocking | 0 |
+| High | 0 |
+| Medium | 2 |
+| Low | 2 |
+
+Both H-1 (word-boundary false positive) and H-2 (production routing through legacy heuristic) are resolved at source. The canonical repair path is semantically sound, bounded, idempotent, and telemetry-honest. Rubric composite: **97.45 / 100** (pass threshold: 90).
+
+---
+
+↩︎ Responding to: "You are **Sage**, AI / Prompt Engineer, holding the **semantics / bounded-repair / rubric seat** for Step 3 of diberry/microsoft-mcp-doc-generation#813. Your round-1 verdict..."

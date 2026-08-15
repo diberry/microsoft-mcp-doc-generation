@@ -161,3 +161,63 @@ Updated Phase 1.5 bullet: `ParameterCrossCheckService` now loads via `CanonicalP
 | Low | 1 |
 
 All required documentation is present, accurate, and consistent with shipped code. The CHANGELOG correctly describes the breaking change. The ARCHITECTURE.md section covers the full contract comprehensively. No contradictions with AD-030 or the source code. The two notes are non-blocking quality improvements.
+
+---
+
+## FINAL VERDICT — head 253ec84
+
+**APPROVE**
+
+### Delta Assessment (ee3ca02 → 253ec84)
+
+The `2b52dd8` commit updated both `CHANGELOG.md` and `docs/ARCHITECTURE.md` to reflect the canonical-only repair seam. Verified:
+
+| Question | Answer |
+|---|---|
+| CHANGELOG describes canonical-only repair? | ✅ "invokes `Repair(prompts, manifest)` only through the v2 canonical manifest seam" |
+| Legacy repair removal stated? | ✅ "rather than falling back to the legacy `Option` heuristic" |
+| Retry-feedback move documented? | ✅ CHANGELOG + ARCHITECTURE consumer seam map both show `ExamplePromptsStep.LoadParameterManifestAsync` + `BuildRetryFeedback(prompts, manifest)` |
+| Repair telemetry described? | ✅ Both files: "pre/post canonical verdicts, repaired canonical names, still-uncovered canonical names, provenance" |
+| Word boundary tightening? | ✅ CHANGELOG names it; ARCHITECTURE.md line 709 explains the boundary rule |
+| ARCHITECTURE.md bounded repair contract updated? | ✅ Line 724: manifest-absent → skip; no legacy fallback |
+| Maintainer trap covers manifest-less repair? | ✅ Line 724 states "repair is skipped instead of falling back to any legacy heuristic"; line 732 covers loader; together they make re-adding either impossible without deliberate circumvention |
+| `RepairSinglePrompt` (AD-030 §7.1 error) absent from docs? | ✅ Not referenced anywhere in CHANGELOG or ARCHITECTURE.md |
+| Method names match code? | ✅ `LoadParameterManifestAsync` (confirmed in `ExamplePromptsStep.cs:485`), `BuildRetryFeedback` (confirmed in `DeterministicPromptRepairer.cs:137`), `Repair(prompts, manifest)` (confirmed in `Program.cs:338`) |
+
+### AD-026 Compliance
+
+| Requirement | Status |
+|---|---|
+| Entry under `## [Unreleased]` | ✅ `### Fixed` section added |
+| Breaking parts covered (v2 required, legacy rejected, regen required) | ✅ In `### Changed` bullet 5 ("Breaking: regeneration required") |
+| Legacy repair API removal stated | ✅ Implicitly ("only through the v2 canonical manifest seam… rather than falling back") |
+| Correct placement/section | ✅ Separate `### Fixed` entry for the hardening; original `### Changed` entry for the contract |
+| PR/issue numbers | ✅ "#813, Step 3" |
+
+### Round-1 Findings Status
+
+| Finding | Status |
+|---|---|
+| **Medium: `DocGeneration.Core.Shared` lacks README** | **Still stands** — `shared/DocGeneration.Core.Shared/README.md` confirmed absent. Pre-existing omission; contract is in ARCHITECTURE.md. Non-blocking; recommend follow-up. |
+| **Low: "14 codes" count implicit** | **Still stands** — No change to that section. Non-blocking. |
+
+### New Findings
+
+**Low: CHANGELOG does not explicitly state the legacy `Repair(prompts, IReadOnlyList<Option>)` overload was deleted (compiler-breaking API removal)**
+
+- **File:** `CHANGELOG.md:27`
+- **Text:** "…rather than falling back to the legacy `Option` heuristic"
+- **Rationale:** The sentence describes behavioral change (skip vs. fallback) but doesn't state the overload was deleted from `DeterministicPromptRepairer`, making it compiler-impossible to call. A downstream consumer adding a reference would get a compile error with no changelog breadcrumb. This is Low because: (a) no external consumers exist, (b) the code is internal, (c) the behavioral description is sufficient for pipeline maintainers.
+
+### Summary
+
+| Severity | Count |
+|---|---|
+| Blocking | 0 |
+| High | 0 |
+| Medium | 1 (carried from round 1) |
+| Low | 2 (1 carried, 1 new) |
+
+The documentation accurately describes the final canonical-only repair behavior, including the manifest-absent skip path, retry-feedback migration, telemetry content, and tightened word boundaries. All method names, file paths, and behavioral claims verified against shipped code at `253ec84`. No contradictions with AD-030, PR description, or source. No blocking findings.
+
+**Final verdict: APPROVE**

@@ -106,3 +106,57 @@ The implementation faithfully delivers AD-030's core guarantees: the Step 1 mani
 | High | 0 |
 | Medium | 1 |
 | Low | 2 |
+
+---
+
+## FINAL VERDICT — head 253ec84
+
+**Date:** 2026-08-15  
+**Delta reviewed:** `ee3ca02..253ec84` (commits `563eced`, `2b52dd8`, `3ad74a9`, `253ec84`)
+
+### Round-1 Finding Resolution
+
+| # | Severity | Status | Evidence |
+|---|----------|--------|----------|
+| 1 | **Medium** | **RESOLVED** | `DeterministicPromptRepairer.cs:282` now calls `CanonicalCoverageEvaluator.EvaluateSingleParameter` exclusively. The legacy `Repair(prompts, requiredOptions)` overload and all `ParameterCoverageChecker` heuristic helpers are **deleted** — grep for `Option<\|RepairWithHeuristics\|RepairLegacy` returns zero hits. Manifest-less repair is now **compiler-impossible** (the only `Repair` overload requires `CanonicalParameterManifest`). |
+| 2 | **Low** | UNCHANGED | `CoverageVerdict.Ambiguous` remains as a forward-compatibility slot — acceptable. |
+| 3 | **Low** | UNCHANGED | Soft fallback at generation; validator remains fail-closed — acceptable. |
+
+### Delta Assessment
+
+1. **Repair seam genuinely on shared evaluator?** YES — `DeterministicPromptRepairer.EvaluateRequiredCoverage` (line 282) delegates to `CanonicalCoverageEvaluator.EvaluateSingleParameter`. No other coverage path exists.
+
+2. **Legacy deletion — orphaned code?** NO — grep confirms zero references to `Option<`, `RepairWithHeuristics`, or the legacy overload signature across all production files.
+
+3. **Prohibited edit fully reverted?** YES — `git diff b58431f..253ec84 -- "mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Tests/FamilyMetadataGeneratorTests.cs"` is empty (zero bytes). No other test file weakened — `FamilyStructureBuilderTests.cs` gained a manifest v2 format update (not weakening), and `ParameterCrossCheckCanonicalLoaderTests.cs` is a net-new file adding strictness.
+
+4. **Manifest remains sole identity authority?** YES — exactly one coverage evaluator (`CanonicalCoverageEvaluator`) in `shared/DocGeneration.Core.Shared/`, used by both validation and repair seams.
+
+5. **Scope containment?** VERIFIED:
+   - `SourceVerificationHelpers` untouched (confirmed).
+   - No `generated*/` edits, no beta.34 fixture edits, no feature flags, no dead code, no service-specific logic, no new pipeline phase.
+
+6. **R2 word-boundary fix?** VERIFIED — `CanonicalCoverageEvaluator.cs:109,117` uses `(?<![\w\-_])…(?![\w\-_])` (tightened negative lookbehind/lookahead).
+
+### AD-030 Amendment Update
+
+Round-1 Amendment 1 is **withdrawn** — no longer needed. AD-030 §4 ("Single coverage evaluator at every seam") is now literally true: both the validation gate and the repair seam use `CanonicalCoverageEvaluator` exclusively.
+
+### New Findings
+
+None.
+
+### Verdict
+
+**APPROVE**
+
+All round-1 findings resolved. The canonical parameter contract is architecturally sound: single identity authority (manifest), single coverage evaluator, fail-closed loader, compiler-enforced repair seam, no orphaned code, no scope leakage, prohibited edit fully reverted.
+
+### Finding Counts (Final)
+
+| Severity | Count |
+|----------|-------|
+| Blocking | 0 |
+| High | 0 |
+| Medium | 0 |
+| Low | 2 (unchanged, acceptable) |

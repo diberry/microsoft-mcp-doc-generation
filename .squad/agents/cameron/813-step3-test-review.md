@@ -125,4 +125,116 @@ The test suite demonstrates genuine TDD discipline with compile-RED → GREEN pr
 
 ---
 
-↩︎ Responding to: "You are **Cameron**, Test Lead. You hold the **deterministic-gate / mutation-adequacy approval seat** for Step 3 of issue diberry/microsoft-mcp-doc-generation#813..."
+## FINAL VERDICT — head 253ec84
+
+**Verdict: APPROVE**
+
+**Findings: 0 Blocking / 0 High / 1 Medium / 1 Low**
+
+---
+
+### 1. Revert Verification (Complete ✓)
+
+`git diff b58431f..253ec84 -- mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Tests/FamilyMetadataGeneratorTests.cs` → **empty diff**. The prohibited edit is fully reverted.
+
+Pre-existing failure runs and fails for its original reason:
+
+```
+Failed DocGeneration.Steps.ToolFamilyCleanup.Tests.FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription [589 ms]
+  Error Message:
+   Assert.Contains() Failure: Sub-string not found
+String:    "---\r\ntitle: Azure MCP Server tools for Az"···
+Not found: "Azure Storage is an Azure service that pr"···
+```
+
+Exit code 1, exactly 1 failure. Clean.
+
+---
+
+### 2. Anti-Gaming Sweep
+
+Searched full diff `b58431f..253ec84` for loosened/tautological/deleted assertions. Found:
+
+- **M18 (mutation-proof line 277)**: `Round3CanonicalContractTests.ExamplePromptsStep_ManifestError_RecordsArtifactFailure_NotJustWarning` — the evidence itself documents this as NOT PROVEN because the test uses source-text scanning (Assert.Contains on source code) rather than runtime behavior. The test *does* have discriminating assertions (it checks for `AddToolWarnings`, `break`, and `BuildValidationFailureDetails` strings in the catch block source). The mutation-proof's characterization of it as "structural placeholder" is slightly misleading but the evidence correctly marks it NOT PROVEN. **No actual tautology remains in the test code** — grep for `Assert.True(true` in Round3CanonicalContractTests.cs returns zero matches.
+- No other loosened, skipped, ignored, or tautological assertions found across the diff.
+
+**Disposition:** Medium — mutation-proof line 277 overstates the weakness. The test has real string assertions but cannot detect runtime suppression of the `break`. Acceptable given the evidence is transparent.
+
+---
+
+### 3. Deleted Test Classification (15 tests)
+
+**4 ALREADY COVERED** — each replacement test confirmed to exist in the current tree:
+| # | Deleted | Replacement (verified at line) |
+|---|---|---|
+| 1 | `Repair_InjectedValueDestroyedBySanitizer_AppearsInStillUncovered` | `Repair_InjectedFallbackValue_IsSafeAndDoesNotEchoRejectedEnum` (line 101) |
+| 5 | `Repair_SkipsAlreadyCoveredByPlaceholder` | `Repair_SkipsAlreadyCoveredByAuthorizedPlaceholder` (line 118) |
+| 7 | `Repair_EmptyRequiredParams_ReturnsUnchanged` | `Repair_EmptyManifest_ReturnsUnchanged` (line 306) |
+| 14 | `BuildRetryFeedback_IncludesMissingParamNames...` | `BuildRetryFeedback_IncludesCanonicalParamNamesPromptIndicesAndRewriteExample` (line 134) |
+
+**11 LEGITIMATELY REMOVED** — the legacy `IReadOnlyList<Option>` overload is confirmed deleted (zero occurrences of `IReadOnlyList<Option>` in DeterministicPromptRepairer.cs). Tests #2-4 test `GetEffectiveCoverage` (deleted), #6 tests `--` prefix handling (eliminated by manifest design), #8-13 test `Option`-based APIs or display-name identity (both eliminated by AD-030), #15 tests display-name injection (eliminated).
+
+**Classification: Correct. No coverage loss.**
+
+---
+
+### 4. R3 Tautology Resolution (✓)
+
+Round-1 finding (Medium): `Assert.True(true, "Structural check deferred...")` in `Round3CanonicalContractTests.cs`.
+
+Current state: grep for `Assert.True(true` returns **zero matches**. The test now contains source-scanning assertions (`Assert.Contains`, `Assert.DoesNotContain`, `Assert.False`) that can fail on real regressions. **Resolved.**
+
+---
+
+### 5. Mutation Matrix Adequacy
+
+**22 PROVEN / 4 NOT PROVEN / 1 NOT EXECUTABLE** → ratio **81.5% proven**.
+
+Physically reproduced:
+| Row | Mutation | My observation | Matches evidence? |
+|---|---|---|---|
+| M21 (R2) | Reverted `(?<![\w\-_])` to `(?<!\w)` | `Assert.Equal() Failure: Expected Missing, Actual Concrete` | ✓ PROVEN |
+| M20 (R1) | Changed manifest call to `requiredOptions` | Build fails (symbol not found); source-text test would detect the string change | ✓ PROVEN (source-scan mechanism confirmed) |
+| M5 (NOT PROVEN) | Changed final `return Missing` to `return Ambiguous` | Test passes (exit 0) — defensive guard only | ✓ NOT PROVEN confirmed |
+
+The 4 NOT PROVEN rows (M5, M6, M8-11 group, M17, M18) and the NOT EXECUTABLE M2 are all transparently documented with clear rationale. The NOT PROVEN items are either defensive guards, pattern-ambiguity in a now-deleted overload, or static-class reflection limitations. None represent exploitable gaps in the contract.
+
+**Adequacy judgment:** 22/27 proven (81.5%) with honest disclosure of limitations is adequate for this PR's scope.
+
+---
+
+### 6. Evidence Honesty (✓)
+
+- GREEN evidence records exit code 1 (nonzero) with exactly one tolerated failure (the pre-existing `FamilyMetadataGeneratorTests` issue). Total: 3801 tests, 3799 passed, 1 failed, 1 skipped.
+- `## Integrity note` present and accurate in both `813-step3-green-run.txt` (lines 11-19) and `813-step3-mutation-proof.txt` (lines 11-16). Correctly identifies commit `2b52dd8`, the nature of the prohibited edit, and that Rowan performed the revert.
+- No evidence overstates results.
+
+---
+
+### 7. Gate-to-Test Mapping
+
+| Gate item | Named test(s) | Non-tautological? |
+|---|---|---|
+| Canonical repair seam (R1) | `Program_Source_RepairSeam_UsesManifestRepairOverload` | ✓ (Assert.Contains on source) |
+| Word boundary (R2) | `EvaluateSingleParameter_HyphenatedAliasFragment_ReturnsMissing` | ✓ (Assert.Equal) |
+| C6 fail-closed (R3) | `ExamplePromptsStep_ManifestError_RecordsArtifactFailure_NotJustWarning` | ✓ (source-scan assertions) |
+| Retry feedback uses manifest | `ExamplePromptsStep_ManifestError_RecordsArtifactFailure_NotJustWarning` + `BuildRetryFeedback_IncludesCanonicalParamNames...` | ✓ |
+| Step 2 manifest loading | `LoadParameterManifestAsync_WithLegacyFormat_ThrowsParameterManifestException` | ✓ (Assert.ThrowsAsync) |
+| Step 4 cross-check | `ParameterCrossCheckService` calls same `CanonicalParameterManifestLoader` (proven by M4a-n) | ✓ |
+| Loader error codes (14) | `CanonicalParameterManifestLoaderTests.Load_*` (14 tests) | ✓ (Assert.Equal on error codes) |
+
+All gates map to named, non-tautological tests. **No gaps.**
+
+---
+
+### Remaining Notes (Low)
+
+- **Low**: M18's mutation-proof description ("Test body is Assert.True(true...)") is stale — it describes the *pre-fix* state. The current test has real assertions. This is a cosmetic inaccuracy in the evidence narrative that does not affect correctness.
+
+---
+
+**Final disposition:** The prohibited edit was fully reverted, the pre-existing failure is failing for its original reason, no gaming artifacts remain in the tree, the R3 tautology is resolved, mutation coverage is adequate at 81.5% with honest disclosure, and all deterministic gate items map to non-tautological tests. **APPROVE.**
+
+---
+
+↩︎ Responding to: "You are **Cameron**, Test Lead, holding the **deterministic-gate / mutation-adequacy seat** for Step 3 of diberry/microsoft-mcp-doc-generation#813. Your round-1 verdict... Issue your **FINAL** verdict at head `253ec84`."

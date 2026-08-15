@@ -243,3 +243,166 @@ The canonical parameter contract delivered in this PR is **semantically sound**:
 ---
 
 ↩︎ Responding to: "You are **Harper**, an **independent guest Evaluation Reviewer** hired specifically for Step 3 of issue diberry/microsoft-mcp-doc-generation#813..."
+
+---
+
+## FINAL EVALUATION — head 253ec84
+
+**Reviewer:** Harper (Guest Evaluation Reviewer, adversarial seat)  
+**Head:** `253ec84` | **Base:** `b58431f` | **Prior head (stale):** `ee3ca02`  
+**Date:** 2026-08-15  
+**Rubric:** Sage's published rubric (adapted per round 1, §1 above)
+
+---
+
+### Nondeterministic Gate: **PASS**
+
+### Review Verdict: **APPROVE**
+
+| Severity | Count |
+|----------|-------|
+| Blocking | 0 |
+| High | 0 |
+| Medium | 1 |
+| Low | 2 |
+
+---
+
+### 1. Empirical Semantic Evaluation (Re-run)
+
+**Sample:** Same 22 identity×prompt pairs from round 1 (covering all 16 named identities + 6 controls). All tests rebuilt and executed at head `253ec84`.
+
+| Test Suite | Result |
+|-----------|--------|
+| `DocGeneration.Core.Shared.Tests` | 559 pass, 0 fail |
+| `DocGeneration.Steps.ExamplePrompts.Generation.Tests` | 325 pass, 0 fail |
+| `DocGeneration.Steps.ToolFamilyCleanup.Tests` | 977 pass, 1 fail (pre-existing, unrelated) |
+| `DocGeneration.Baseline.Beta34.Tests` | 31 pass, 1 skipped |
+
+**Total: 1,892 pass | 0 regression failures | Agreements: 22/22 | Disagreements: 0 | Variance: 0**
+
+The sample table from round 1 (§3) remains valid and unchanged — all 22 pairs produce identical verdicts at this head.
+
+---
+
+### 2. H-1 Closure: **CLOSED** ✅
+
+**Verification method:** Python regex evaluation of the tightened boundary `(?<![\w\-_])account(?![\w\-_])`:
+
+| Input | Matches? | Expected | Result |
+|-------|----------|----------|--------|
+| `account-level` | false | false | ✅ |
+| `per-account_quota` | false | false | ✅ |
+| `subaccount` | false | false | ✅ |
+| `account_id` | false | false | ✅ |
+| `for account here` | true | true | ✅ |
+| `the account named` | true | true | ✅ |
+| `account is required` | true | true | ✅ |
+| `account` (standalone) | true | true | ✅ |
+| `Account.` (sentence-end) | true | true | ✅ |
+| `(account)` (parenthesized) | true | true | ✅ |
+
+The tightened boundary eliminates all round-1 false positives while preserving all legitimate edge matches. No false negatives introduced.
+
+**Code locations:** `CanonicalCoverageEvaluator.cs:109,117` and `DeterministicPromptRepairer.cs:60`.
+
+---
+
+### 3. Repair Safety — Canonical-Only Path
+
+The legacy `Option`-based `Repair` overload is deleted. The sole remaining path is `Repair(IReadOnlyList<string>, CanonicalParameterManifest)`.
+
+**Properties verified:**
+- **Meaning:** Repair appends/prepends bounded clauses; never modifies existing text. Negation, verb, scope preserved.
+- **Count:** Output prompt count == input prompt count.
+- **Order:** Prompts emitted in same order. Missing params injected in manifest order.
+- **Scenario:** Covered-param prompts are byte-identical (no modification when coverage satisfied).
+- **Second-pass byte identity:** `Repair` is idempotent — injected clause `"account 'contoso-account-01'"` satisfies word-boundary match on second evaluation → Concrete → no re-injection.
+- **Boundedness:** Clause count = `missingParams.Count` (finite, manifest-bounded).
+- **Unknown-placeholder preservation:** Placeholders not in the manifest's authorized set are left untouched in prompt text.
+
+All verified via passing test suites (`CanonicalRepairTests`: 9 tests) and code trace.
+
+---
+
+### 4. Integrity Verification
+
+#### 4.1 FamilyMetadataGeneratorTests revert
+```
+git diff b58431f..253ec84 -- mcp-tools/DocGeneration.Steps.ToolFamilyCleanup.Tests/FamilyMetadataGeneratorTests.cs
+```
+**Result: empty.** The file is byte-identical to `main`. The pre-existing failure (`GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription`) fails with its original assertion:
+```
+Assert.Contains() Failure: Sub-string not found
+String:    "---\r\ntitle: Azure MCP Server tools for Az"···
+Not found: "Azure Storage is an Azure service that pr"···
+```
+✅ Revert is genuine and complete.
+
+#### 4.2 "15 deleted tests" disposition
+Independently confirmed: `git diff 563eced..2b52dd8` shows exactly 15 `public void` removals in `DeterministicPromptRepairerTests.cs`. All 15 are tests for the legacy `Repair(prompts, options)` overload which was deleted in the same commit. The overload no longer exists → the tests had no production target → deletion is correct.
+
+#### 4.3 Sweep for weakened assertions
+- No `[Fact(Skip=...)]` introduced in branch diff
+- No `Assert.True(true)` or tautological assertions
+- No `#if`/`#pragma` test suppression
+- 6 new tests added in the same commit (net -9 method count, but coverage is relocated to shared test projects with higher-cardinality parameterized tests)
+
+---
+
+### 5. Adversarial Pass
+
+| # | Attack | Result |
+|---|--------|--------|
+| A1 | Alias authorizes semantically different concept (`<account_settings>` for `account`) | FAIL — not in `PlaceholderAliases` set |
+| A2 | Placeholder binds to wrong identity | FAIL — `ownerCanonical == parameter.CanonicalName` check |
+| A3 | Normalization collision (`test-run-id` vs `testrun-id`) | FAIL — normalizer preserves hyphens, produces distinct outputs |
+| A4 | Reach coverage evaluation without manifest | FAIL — `ValidatePrompts` and `Repair` both require `CanonicalParameterManifest` parameter; loader is fail-closed |
+| A5 | Surviving heuristic manufactures false coverage | FAIL — legacy overload deleted; sole path is canonical |
+| A6 | Test that cannot fail (tautological) | FAIL — no `Assert.True(true)`, complementary test pairs are falsifiable |
+| A7 | Prohibited edit survives revert | FAIL — diff vs main is empty |
+| A8 | Hyphenated-compound false positive (H-1 regression) | FAIL — tightened boundary `(?<![\w\-_])` blocks `account-level` |
+
+All 8 attacks fail. No vulnerability found.
+
+---
+
+### 6. Nondeterminism Statement
+
+**Nothing in this change is nondeterministic.** The canonical evaluator, normalizer, alias deriver, manifest loader, and repair logic are pure deterministic functions. No AI calls, randomness, time-dependency, or external state. Controlled by running full test suite twice with identical results (1,892/1,892 consistent).
+
+---
+
+### 7. Remaining Findings
+
+#### M-1 (Medium) — Prepend/append strategy flip (carried from round 1)
+
+**File:** `DeterministicPromptRepairer.cs:63`  
+Same as round 1 M-1. Format-only inconsistency. Not blocking.
+
+#### L-1 (Low) — Inconsistent injection templates (carried)
+#### L-2 (Low) — Long derived placeholder aliases are noise (carried)
+
+---
+
+### 8. Delta from Round 1
+
+| Round 1 Finding | Status at 253ec84 |
+|----------------|-------------------|
+| H-1 (word-boundary false positive) | **CLOSED** — tightened to `(?<![\w\-_])…(?![\w\-_])` |
+| M-2 (legacy path still live) | **CLOSED** — legacy overload deleted, canonical-only |
+| M-1 (prepend/append flip) | Carried (Medium, not blocking) |
+| L-1, L-2 | Carried |
+
+---
+
+### 9. Summary
+
+At head `253ec84`, the canonical parameter contract is semantically sound, the H-1 false-positive defect is closed, the integrity violation was properly reverted, the legacy heuristic path is eliminated, and all adversarial attacks fail. No blocking findings.
+
+**Nondeterministic Gate: PASS**  
+**Review Verdict: APPROVE**
+
+---
+
+↩︎ Responding to: "You are **Harper**, the **independent guest Evaluation Reviewer** and adversarial reviewer for Step 3…Issue your **FINAL** evaluation at head `253ec84`."
