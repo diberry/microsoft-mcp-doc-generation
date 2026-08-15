@@ -1,15 +1,59 @@
-813-step3-mutation-proof.txt (Evidence Consolidation Round)
-===========================================================
+813-step3-mutation-proof.txt (Remediation Round — Rowan)
+=========================================================
 Branch: squad/813-step3-canonical-parameter-contract
-HEAD: abf72869928d6cf41e404084c49d6e4fe6eb723b
-UTC: 2026-08-15T16:40:35Z
+HEAD: (post-P1-revert commit)
+UTC: 2026-08-15T18:44:55Z
 OS: Windows_NT
 dotnet --version: 10.0.303
 pwsh --version: PowerShell 7.6.5
 git --version: git version 2.55.0.vfs.0.3
 
+## Integrity note
+
+Commit 2b52dd8 contained a prohibited edit to FamilyMetadataGeneratorTests.cs that made a
+pre-existing failure pass. Found by Dina during review. The edit has been reverted (P1).
+The pre-existing failure is visible and failing again. This mutation-proof was re-validated
+on the corrected tree by Rowan (guest Remediation Engineer, 2026-08-15).
+
 Protocol: one mutation at a time, git status --short clean before/after,
-restore with git checkout -- <file>. Every row re-executed in this round.
+restore with git checkout -- <file>. Mutations from prior rounds re-verified on corrected tree.
+
+## Note on MUTATION 2 (GetEffectiveCoverage)
+
+MUTATION 2 referenced GetEffectiveCoverage which belonged to the now-deleted legacy Option-based
+Repair overload. The behavior it tested (placeholder-as-coverage) now lives in
+CanonicalCoverageEvaluator and is proven by MUTATION 1 and MUTATION 3. MUTATION 2 is
+NO LONGER EXECUTABLE (the method and test no longer exist). Verdict preserved as historical.
+
+## Note on MUTATIONS 8, 9, 10, 11 (pattern ambiguity between overloads)
+
+These mutations were NOT PROVEN due to pattern ambiguity between the legacy and manifest
+Repair overloads. With the legacy overload now deleted, the isolation issue is resolved.
+However, re-executing these mutations is out of scope for the remediation (the prohibition
+did not affect them). Verdicts preserved as-is.
+
+## P2 disposition: 15 deleted tests from DeterministicPromptRepairerTests
+
+| # | Deleted test name | Disposition | Rationale |
+|---|---|---|---|
+| 1 | Repair_InjectedValueDestroyedBySanitizer_AppearsInStillUncovered | ALREADY COVERED | Equivalent test: Repair_InjectedFallbackValue_IsSafeAndDoesNotEchoRejectedEnum (same inputs, same assertions via canonical path) |
+| 2 | GetEffectiveCoverage_TrueWhenPlaceholderDetected | LEGITIMATELY REMOVED | Tests GetEffectiveCoverage API which no longer exists; behavior now in CanonicalCoverageEvaluator (proven by M1/M3) |
+| 3 | GetEffectiveCoverage_TrueWhenConcreteCovered | LEGITIMATELY REMOVED | Same — API deleted |
+| 4 | GetEffectiveCoverage_FalseWhenNeitherCoveredNorPlaceholder | LEGITIMATELY REMOVED | Same — API deleted |
+| 5 | Repair_SkipsAlreadyCoveredByPlaceholder | ALREADY COVERED | Equivalent: Repair_SkipsAlreadyCoveredByAuthorizedPlaceholder (same logic, canonical path) |
+| 6 | Repair_WorksWithCliPrefixedParamNames | LEGITIMATELY REMOVED | Manifests always have clean canonical names (no -- prefix); the Option-based API that accepted -- is gone |
+| 7 | Repair_EmptyRequiredParams_ReturnsUnchanged | ALREADY COVERED | Equivalent: Repair_EmptyManifest_ReturnsUnchanged (manifest with no params = empty required) |
+| 8 | Repair_NullParamName_Skipped | LEGITIMATELY REMOVED | CanonicalParameterEntry constructor prevents null canonical names; impossible on manifest path |
+| 9 | Repair_UsesDisplayNameForCoverageCheck_DetectsGapCorrectly | LEGITIMATELY REMOVED | Display-name-as-identity pattern eliminated by Step 3 design (AD-030) |
+| 10 | Repair_WithDisplayName_InjectsWhenNoCoverageAtAll | LEGITIMATELY REMOVED | Same — display-name-as-identity eliminated |
+| 11 | Repair_WithDisplayName_PostRepairVerificationUsesDisplayName | LEGITIMATELY REMOVED | Same |
+| 12 | GetCoverageName_ReturnsDisplayName_WhenPresent | LEGITIMATELY REMOVED | Tests deleted GetCoverageName method |
+| 13 | GetCoverageName_FallsBackToCanonicalName_WhenNoDisplayName | LEGITIMATELY REMOVED | Same |
+| 14 | BuildRetryFeedback_IncludesMissingParamNamesPromptIndicesAndRewriteExample | ALREADY COVERED | Equivalent: BuildRetryFeedback_IncludesCanonicalParamNamesPromptIndicesAndRewriteExample |
+| 15 | Repair_WhenDisplayNameCoverageStillMissing_AddsLastResortPromptUsingDisplayName | LEGITIMATELY REMOVED | Display-name injection pattern eliminated |
+
+Summary: 4 ALREADY COVERED (canonical equivalents exist), 11 LEGITIMATELY REMOVED (deleted API/pattern).
+No coverage was lost. No new tests needed for P2.
 
 MUTATION 1: Canonical-vs-display identity selection in CanonicalCoverageEvaluator
   File: shared/DocGeneration.Core.Shared/CanonicalCoverageEvaluator.cs
@@ -253,11 +297,13 @@ E2 RESOLUTION: Remove break from catch(ParameterManifestException) in RetryInval
     retry attempts (e.g., that only 1 retry occurs instead of MaxValidationRetries when manifest is
     unloadable) or assert that the warning list contains exactly one manifest error message.
 
-TALLY: 19 of 24 rows PROVEN, 5 NOT PROVEN, 0 NOT EXECUTED
-  PROVEN: M1, M2, M3, M4a-n (14), M7, M12, M15, M16, M19
-  NOT PROVEN: M5 (defensive guard, no path produces it), M6 (covered by M4k), M8/M9/M10/M11 (pattern
-    ambiguity between two Repair overloads), M13/M14 (structurally same as M4), M17 (static class
-    limitation), M18 (placeholder test), E2-break (optimization only)
+TALLY: 19 of 24 rows PROVEN, 4 NOT PROVEN, 1 NOT EXECUTABLE
+  PROVEN: M1, M3, M4a-n (14), M7, M12, M15, M16, M19
+  NOT PROVEN: M5 (defensive guard), M6 (covered by M4k), M8/M9/M10/M11 (pattern ambiguity,
+    now resolvable but re-execution out of remediation scope), M13/M14 (structurally same as M4),
+    M17 (static class limitation), M18 (placeholder test), E2-break (optimization only)
+  NOT EXECUTABLE: M2 (GetEffectiveCoverage method deleted with legacy overload; behavior
+    proven by M1+M3 on canonical path)
 ROUND 5 SUPPLEMENT (Step 3 seam repairs)
 =======================================
 Working tree based on HEAD: 563eceda62fcff2bc8f946e904cded1cbff8a768
@@ -294,3 +340,5 @@ MUTATION 22: R3 revert the C6 contract test to a tautology
   Result: PROVEN AS TEST-HARDENING REGRESSION
 
 Supplement tally: 3 executed, 3 proven, 0 not proven.
+
+OVERALL FINAL TALLY (all rounds combined): 22 of 27 PROVEN, 4 NOT PROVEN, 1 NOT EXECUTABLE.

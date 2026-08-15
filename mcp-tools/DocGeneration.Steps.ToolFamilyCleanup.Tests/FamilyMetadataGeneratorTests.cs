@@ -37,8 +37,8 @@ public class FamilyMetadataGeneratorTests
 
         var result = await generator.GenerateAsync(CreateFamilyContent("Azure Storage", familyName: "storage"));
 
-        Assert.Contains("<TBD_Content>", result, StringComparison.Ordinal);
-        Assert.Contains(MetadataConstants.IncludeParameterConsideration, result, StringComparison.Ordinal);
+        Assert.Contains("Azure Storage is an Azure service that provides cloud-based capabilities for your applications.", result);
+        Assert.Contains("[Azure Storage documentation](/azure/storage/).", result);
     }
 
     private static FamilyContent CreateFamilyContent(string displayName, string familyName = "storage") => new()
