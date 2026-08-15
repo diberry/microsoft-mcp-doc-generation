@@ -212,3 +212,109 @@ The 34/34 is a valid statement that **every written line is guarded by a test**.
 **FAIL.** Two independent blocking findings: (1) the runtime would have suppressed **0 of 10** real historical cascades because the real Step‑2 failure mode returns `Success=true`/exit 0 and never triggers suppression; and (2) no test or run in the evidence exercises that real failure shape, so the gate's required examination of *real representative orchestration for missed cascades* has not been performed. The accounting, envelope, over‑suppression avoidance, exit‑code honesty, mutation coverage, disjointness, and scope discipline are all sound in isolation — but the feature is inert against the corpus it exists to handle. Per this gate's standard, that is a FAIL, and the lockout bars the original runtime author from the remediation.
 
 ↩︎ Responding to: "You are **Ellis** … Your gate — issue #813, tracker item 2 … issue **PASS** or **FAIL** … MISSED CASCADES is the core question … Write `.squad/agents/ellis/813-step2-evaluation.md` … Report back your verdict and the findings list."
+
+---
+
+## ROUND 2 (post-remediation re-evaluation)
+
+# VERDICT: PASS
+
+**Re-evaluation of:** my Round‑1 FAIL (above) on issue #813 tracker item 2 — *"Eval Reviewer examines real representative orchestration and accounting for missed cascades."*
+**Reviewer:** Ellis (standing Evaluation Reviewer, nondeterministic). I authored none of the remediation; Morgan (original runtime author) was barred by lockout and the fix was shipped by guest engineer Rowan.
+**HEAD:** `1c4624b` (branch `squad/813-step2-runtime-orchestration`). Remediation range `1da15b5..1c4624b`: Rowan `4dea086` (production fix), Parker `0d225db` + `1ff498e` (RED tests T32–T40, harness, mutation rows M35–M42, F1 retirement), Reeve `982b331` (docs), coordinator `1c4624b` (governance).
+**Date:** 2026‑08‑15. Env: dotnet 10.0.303, pwsh 7.6.4, Windows. Working tree clean before and after (only this verdict file changed).
+
+### Bottom line
+
+Both Round‑1 blocking findings are **RESOLVED** and I verified each against primary sources, not summaries. Re‑walking the real registry graph against every cascade in the frozen beta.34 baseline, the shipped `IsFatalRoot` predicate roots **10 of 10** historical cascades (Round‑1: **0/10**). I proved the delta empirically by transiently reverting the fix (mutation M35): the exit‑only predicate roots only **1 of 17** Step‑2 records live — the test runner printed `Expected: 17  Actual: 1` — which is exactly my Round‑1 "16 of 17 return `Success=true`/exit 0 and are never rooted" shape; the shipped C2 clause roots 17/17. BLOCKING‑2 is now exercised **end‑to‑end through the namespace loop** (T34 drives `RunAsync` with the real `Success=true` + non‑empty `ArtifactFailures` shape; T33 replays the frozen corpus through the production seams), not merely a unit assertion on the predicate.
+
+I raise **one NEW NON‑BLOCKING finding** (a fail‑closed over‑fire on Step 3's un‑gated reducer‑fallback path) and carry the prior NON‑BLOCKING items forward. Nothing blocks the gate, whose subject — *missed cascades against real orchestration* — is affirmatively resolved.
+
+### Method: what I re‑derived myself vs. accepted
+
+**Re‑derived from primary sources (ran the command / read the code myself):**
+- Release build, PipelineRunner test suite, full solution, and Pester — all four executed by me (numbers below).
+- **Four mutations physically re‑run** via transient *mutate → run affected test → `git checkout` revert*, each verified to restore `PipelineRunner.cs` byte‑identical to HEAD (`git diff --stat 1c4624b -- …/PipelineRunner.cs` empty after every revert). This satisfies the "re‑run ≥3 rows incl. one D1 + one D4, plus M6" instruction while leaving the final tree modifying **only** this verdict file. Rows: **M35 (D1)**, **M40 (D4)**, **M39 (D3)**, **M6 (F1)**.
+- The corpus counts (17 Step‑2 records, 16 `Success=true` / 1 `Success=false`, 10 cascades, 16 upstream links all `stepId==02`) — reconfirmed live by M35's `Expected 17 Actual 1` truth‑table read against the frozen fixtures.
+- The production fix, over‑fire paths, D3 traversal, D4 envelope write, the pre‑AI gate ordering, and the Step‑3 reducer path — all read directly in `PipelineRunner.cs`, `ToolGenerationStep.cs`, `ToolFamilyCleanupStep.cs`, `HorizontalArticlesStep.cs`, `Program.cs`, `CriticalFailureRecorder.cs`.
+- The authorized test change, the no‑other‑test‑weakened claim, the scope footprint, fixture byte‑identity (git diff + aggregate SHA256), and Reeve's docs — all diffed/hashed/read myself.
+
+**Accepted (corroborated, not re‑executed), with reason:**
+- The **38 mutation rows I did not physically re‑run** (M1–M34, M36–M38, M41–M42). I re‑ran the task‑mandated set (a D1, a D3, a D4, and M6/F1) and each matched the evidence file's recorded RED text exactly; the remaining rows' recorded assertions are consistent with the code I read. This is a spot‑check, not blind trust.
+- The **9th Pester failure** seen when I additionally included `mcp-tools/scripts/tests` is an environmental `lint-vale` issue (Vale not installed); the canonical `mcp-tools/validation/tests` scope reproduces the claimed 118/8/1 exactly, so I accept the scripts/tests delta as environmental.
+
+### Per‑finding resolution table
+
+| Finding | Round‑1 severity | Round‑2 status | Proof I produced myself |
+|---|---|---|---|
+| **BLOCKING‑1** — 10/10 real cascades unsuppressed (Step‑2 `Success=true` → exit 0 → no root) | BLOCKING | **RESOLVED** | New seam `IsFatalRoot(policy, mappedExit, artifactFailures) => Fatal && (mappedExit != Success \|\| artifactFailures.Count > 0)` (`PipelineRunner.cs:797‑802`), guard flip (`:261`), `rootExit` recompute (`:278‑280`). Empirical: reverting the C2 clause (M35) makes the corpus test print `Expected: 17 Actual: 1` and 6/6 named tests go RED. Linchpin re‑read: `CriticalFailureRecorder.Persist` writes a record iff `ArtifactFailures>0 OR !Success` (`:30‑37,91‑99`); all 34 fixtures are `failurePolicy:"Fatal"` → every one is now a root. 10/10 cascade namespaces' Step‑2 failures now root and suppress closure(2)={3,4,7,8}. |
+| **BLOCKING‑2** — no evidence exercises the real failure shape | BLOCKING | **RESOLVED** | T34 `RunAsync_RealShapeFatalRoot_…` drives `StepOutcomes.ValidationAfterRetriesFailure` (`Success=true` + `ArtifactFailures`) through the full `RunAsync` namespace loop and asserts suppression + `FatalExitCode` + envelope identity; T33 `Beta34Corpus_EveryStep2Failure_IsFatalRoot_…` replays the frozen fixtures through the production predicate (read‑only `Beta34Corpus`, only `File.ReadAllText`). Both GREEN at HEAD (675/675); both go RED under M35. |
+| **D3** — transitive walk must propagate through unselected intermediates | (code review) | **RESOLVED** | `SelectedTransitiveDependents` (`:1566‑1596`) enqueues every reachable dependent regardless of selection and does `visited.IntersectWith(selectedIds)` only at collection. M39 (restore intersect‑at‑enqueue) → T36 `Expected [4] Actual []` and T37 `Expected 0 Actual 1` (2/2 RED); reverted GREEN. |
+| **D4** — suppressed envelope must overwrite stale success in the canonical workspace | (code review) | **RESOLVED** | `WriteSuppressedEnvelope` (`:1629‑1672`) writes to the canonical step workspace **and** observability, `OutputFileCount=0`, via fixed `step-result.json`. M40 (drop canonical write) → T38 `Expected True Actual null` RED; reverted GREEN. Same‑workspace‑rerun overwrite confirmed by T38's stale‑success setup. |
+| **F1** — (M6,T13) non‑discriminating | NON‑BLOCKING | **RESOLVED (retired)** | Re‑ran M6 (`:243` suppression branch disabled): T9 RED (`:164`) **and** T35 RED (`:625`) while **T13 stayed GREEN** — exactly the property F1 said was missing. T35 discriminates M6 via an execution‑count assertion T13 lacks. |
+| NB item 3 — over‑suppression | PASS | **STILL PASS on corpus/selection**, but see NEW‑1 | Steps 5,6 depend only on global Step 0 → survive a namespace root (T39 pre‑checks). The one over‑fire vector is the un‑gated Step‑3 reducer path (NEW‑1). |
+| NB item 4 — attribution first‑match / rootFailureId stability | NON‑BLOCKING | **UNCHANGED (still NON‑BLOCKING, acceptable)** | `PipelineRunner.cs:282,291` still first‑match, collision‑free per stepId; not touched by remediation; defensible. |
+| NB item 5 — accounting cats 5/6 are static constants | NON‑BLOCKING | **PARTIALLY RESOLVED** | Substance addressed: with BLOCKING‑1 fixed, live category 4 is now non‑zero on the real corpus; `ARCHITECTURE.md` now documents cat‑4 (live) vs cat‑5 (baseline) as distinct columns so the historical figure can't be misread as live. The console constant itself is unchanged (RunAccounting code not touched) — acceptable, non‑gating. |
+| NB item 6 — exit‑code honesty | NON‑BLOCKING (holds) | **RESOLVED / STRENGTHENED** | The `rootExit` recompute (`:278‑280`) forces a nonzero effective exit for a C2‑only root (mapped exit 0). M37 (drop recompute) → T34 `Expected 1 Actual 0` and T37 RED (2/2). |
+| NB item 7 — mutation proof 34/34 orthogonal; F1 real | NON‑BLOCKING | **RESOLVED** | Extended to 42/42; I physically reproduced 4 rows (M35/M39/M40/M6) matching the evidence; F1 retired. |
+| NB item 8 / scope | PASS | **STILL PASS** | Only production `.cs` changed across `1da15b5..HEAD` is `PipelineRunner.cs` (+102/‑53); no validators, scripts, `generated*/`, or service‑specific logic. |
+
+### Independently recomputed numbers vs. claimed
+
+| Quantity | Claimed | My independent result | Agree? |
+|---|---|---|---|
+| Release build (`dotnet build mcp-doc-generation.sln -c Release`) | 0 warn / 0 err | **0 Warning(s) / 0 Error(s)** | ✔ |
+| `DocGeneration.PipelineRunner.Tests` | 675/675 | **Passed 675, Failed 0, Skipped 0** | ✔ |
+| Full solution (`dotnet test …sln -c Release`) | 3682 passed / 1 failed / 1 skipped | summed per‑assembly = **3682 / 1 / 1** | ✔ |
+| The 1 xUnit failure | pre‑existing `FamilyMetadataGeneratorTests.GenerateAsync_WhenAiResponseIsTruncated_UsesFallbackDescription` | **exactly that test** (in `ToolFamilyCleanup.Tests`, a project untouched by the remediation) | ✔ |
+| Pester `mcp-tools/validation/tests` | 118 passed / 8 failed / 1 skipped | **Passed 118, Failed 8, Skipped 1** | ✔ |
+| The 8 Pester failures | all pre‑existing `Scan-McpToolCoverage` | **all 8 in `Scan-McpToolCoverage.Tests.ps1`** (enumerated); remediation touched no `.ps1` | ✔ |
+| Mutation proof | 42/42 PROVEN, F1 retired | 4 rows physically re‑run RED‑then‑GREEN (M35 6/6, M40, M39 2/2, M6→T9+T35 RED/T13 GREEN); 38 corroborated | ✔ |
+| Corpus (from fixtures) | old 1/17, new 17/17; 10 cascades; 16 links | reconfirmed live via M35 `Expected 17 Actual 1`; matches my Round‑1 recompute | ✔ |
+| Frozen fixtures | byte‑unchanged | `git diff 061dd05..HEAD -- …/Fixtures/` empty; 36 files, aggregate SHA256 `de1dbf09…` | ✔ |
+
+**No disagreement with any claimed number.**
+
+### Mutation spot‑check (physically re‑run by me; each reverted to byte‑identical HEAD)
+
+| Row | Class | Mutation | Named tests → observed | Verdict |
+|---|---|---|---|---|
+| **M35** | D1 | drop `\|\| artifactFailures.Count > 0` from `IsFatalRoot` | T33 `Exp 17/Act 1`, T34, T35, T37, T38, PostValidator335 → **6/6 RED** | reproduced |
+| **M40** | D4 | drop the canonical write in `WriteSuppressedEnvelope` | T38 `Exp True/Act null` → **RED** | reproduced |
+| **M39** | D3 | intersect at enqueue (sever walk at unselected intermediate) | T36 `Exp [4]/Act []`, T37 `Exp 0/Act 1` → **2/2 RED** | reproduced |
+| **M6** | F1 | disable the suppression branch (`if (false && …)`) | T9 RED (`:164`), **T35 RED (`:625`)**, **T13 GREEN** | reproduced; F1 retired |
+
+### Authorized test change — legitimate
+
+`PipelineRunnerPostValidatorTests.cs:335` flipped `SuccessExitCode` → `FatalExitCode`. I diffed it against `061dd05`: it is the **only** removed assertion line in the entire test tree. The test drives the exact D1 shape (Step 2, Fatal, `Success=true`, non‑empty `ArtifactFailures`); the **old** assertion (`exit 0`) *encoded the D1 bug* (that shape silently exited 0), so flipping it to `FatalExitCode` (1) is a correct **tightening**, not a weakening — and under M35 this same assertion re‑REDs as a second independent C2 guard. `git diff --numstat 061dd05..HEAD` over all test files: `TestDoubles.cs` **+212/‑0**, `DependencySuppressionTests.cs` **+376/‑0** (pure additions), `PipelineRunnerPostValidatorTests.cs` **+1/‑1**. No `Skip=`, no `Ignore`, no deleted `[Fact]`/`[Theory]`, no other relaxed assertion. **No other test was weakened, skipped, deleted, or relaxed.**
+
+### NEW findings introduced by the remediation
+
+**NEW‑1 (NON‑BLOCKING, fail‑closed over‑fire on Step 3's un‑gated reducer‑fallback).** Broadening the root trigger to *any* Fatal step that records `ArtifactFailures` changes the classification of a **production‑reachable, previously non‑fatal** path in `ToolGenerationStep` (Step 3, Fatal, dependents {4,7,8}):
+- `ImproveToolsWithReducerAsync` (`ToolGenerationStep.cs:430‑437`) writes the **composed content as a valid fallback** and sets `anyValidationFailed=true` when a tool's pre‑AI validation fails.
+- Back in `ExecuteAsync`, `if (hadValidationFailure)` adds a `CreateStepLevelFailure` to `artifactFailures` (`:220‑227`, comment *"composed content was used as fallback"*) **without returning**, then — if the produced output is otherwise complete — falls through to `:325` `return BuildResult(…, success: true, …, artifactFailures)`, i.e. **`Success=true` + non‑empty `ArtifactFailures`**.
+- Step 3 is **not** in the external `_preAiRegistry` (Program.cs registers only steps **4 and 6**, `:12,:20`), so — unlike Steps 4/6, whose pre‑AI failures are preempted by `TryRunPreAiGateAsync` with **empty** `ArtifactFailures` (non‑fatal, T40‑guarded) — Step 3's in‑step reducer failure is **not** gated.
+- Under the **old** exit‑only predicate this returned exit 0 → non‑fatal graceful degradation; {4,7,8} ran on the valid fallback output. Under the **shipped** predicate it is a **C2 fatal root** → {4,7,8} suppressed and the namespace exits nonzero.
+
+Why NON‑BLOCKING (not FAIL): (1) it is **fail‑closed** — the opposite direction from the gate's fail‑open subject, and it cannot reintroduce a missed cascade; (2) it is **defensible** and consistent with C2's own intent (a step that persists a critical‑failure record did not cleanly succeed); (3) it is **not demonstrated on the corpus** — beta.34 has zero Step‑3 records, so I have code‑path analysis, not corpus proof (my Round‑1 FAIL, by contrast, had affirmative corpus proof); (4) the gate's subject (missed cascades) is affirmatively resolved. But it is a real, **untested** (`grep hadValidationFailure|"used as fallback"` in tests → 0 hits) and **undocumented** behavioral change. Recommendation for a follow‑up (do not fix under this gate): the team should explicitly decide whether a graceful‑degradation `Success=true` (fallback produced valid output) should root — and either (a) route Step 3's pre‑AI failure through the empty‑`ArtifactFailures` gate shape like Steps 4/6, or (b) add a test + a doc line affirming that any Fatal step recording `ArtifactFailures` is intentionally a root.
+
+**NEW‑2 (NON‑BLOCKING, docs precision).** `ARCHITECTURE.md`'s maintainer‑trap note states the distinguishing rule as "validation‑after‑retries = non‑empty; **pre‑AI skip = empty**" `ArtifactFailures`. That is accurate for the **external** `TryRunPreAiGateAsync` gate (which returns empty AF, `:1360‑1367`), but the **in‑step reducer** pre‑AI failures (`ToolGenerationStep:222`, `ToolFamilyCleanupStep:164`, `HorizontalArticlesStep:97`) return a failed `pre-ai-validation` `ValidatorResult` **with non‑empty** `ArtifactFailures` and therefore root. The clean dichotomy in the doc is incomplete for the un‑gated in‑step paths. Tie this to NEW‑1's doc recommendation.
+
+### Over‑fire verification (task Q3) — detail
+
+- **External pre‑AI gate path:** `TryRunPreAiGateAsync` returns `Success=true` + failed `pre-ai-validation` validator + **empty** `ArtifactFailures`, mapped to `SuccessExitCode` and returned **before** the step body (`ExecuteStepAsync:862‑878`) → `IsFatalRoot` false → non‑fatal. Guarded by T40; M36 (re‑key C2 to validator results) breaks T40 + the `PreAiValidationGate` trio (4/4 RED). **SAFE — preserved.**
+- **Warn‑policy steps (5,7,8):** the `policy == FailurePolicy.Fatal` short‑circuit means a Warn step with non‑empty `ArtifactFailures` is never a root. Guarded by T39; M38 (drop the Fatal guard) → T39 RED. **SAFE.**
+- **Clean success (`Success=true`, empty AF, exit 0):** `IsFatalRoot` false on both clauses. **SAFE.**
+- **The one exposed path:** Step 3's un‑gated reducer fallback (NEW‑1). Steps 4/6 in‑step paths are **not** exposed in production because the external gate preempts them (same validator types → if the gate passes, the in‑step re‑validation passes too).
+
+### Fixtures, scope, docs
+
+- **Fixtures byte‑unchanged:** `git diff 1c4624b -- …/Beta34.Tests/Fixtures/` and `git diff 061dd05..1c4624b -- …/Fixtures/` both empty; 36 files, aggregate SHA256 `de1dbf099c6c308be35aef041404ffc5be42877b6cb6afa02bdeffff7d62ce46`. No `generated*/` edits.
+- **Scope:** only production `.cs` changed is `PipelineRunner.cs`; hunks land exactly at the D1 guard/`rootExit`/`IsFatalRoot`, D3 `SelectedTransitiveDependents`, and D4 `WriteSuppressedEnvelope` sites. `CriticalFailureRecorder.cs` was **not** modified — the fix relies on its pre‑existing persist contract. No validator weakened/downgraded/disabled; nothing from issue items 3–10 leaked in.
+- **Docs (Reeve, `982b331`):** `ARCHITECTURE.md` accurately documents the C1/C2 predicate, the `ArtifactFailures`‑not‑validators rationale and maintainer trap, the `rootExit` recompute, the full‑reverse‑graph‑then‑intersect traversal with a worked `--skip-deps {2,4}` example, and the canonical+observability dual write with the stale‑success‑overwrite rationale — all matching the shipped code. The only gap is NEW‑2 (the in‑step reducer paths are outside the "pre‑AI skip = empty AF" dichotomy).
+
+### Verdict
+
+**PASS.** The two Round‑1 blocking findings are resolved with affirmative primary‑source evidence I reproduced myself: the shipped predicate roots 10/10 historical cascades (proven by transiently reverting it and observing the corpus test collapse to 1/17), and the real `Success=true` + `ArtifactFailures` failure shape is now exercised end‑to‑end through the namespace loop. D3, D4, and F1 are resolved and mutation‑confirmed; the one authorized test change is a correct tightening; no other test was weakened; all four headline numbers reproduce exactly; scope is clean and the frozen fixtures are byte‑unchanged. The single new finding (NEW‑1) is a fail‑closed, defensible, corpus‑absent over‑fire on Step 3's un‑gated reducer‑fallback path — a legitimate follow‑up, but it does not reintroduce missed cascades and does not undermine the gate's subject. That is a PASS, with NEW‑1/NEW‑2 handed to the team as NON‑BLOCKING.
+
+↩︎ Responding to: "You are **Ellis** … Round 2 — re-evaluate your own FAIL … verify every claim yourself … BLOCKING‑1/BLOCKING‑2 resolved? did the fix over‑fire? D3/D4? authorized test change? spot‑check 42/42 mutation … Append a section `## ROUND 2 (post-remediation re-evaluation)` … VERDICT: PASS or FAIL … Report back your verdict and the per‑finding resolution table."
