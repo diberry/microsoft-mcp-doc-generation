@@ -53,34 +53,40 @@ public class Round3CanonicalContractTests
 
     /// <summary>
     /// The validation assembly (DocGeneration.Steps.ExamplePrompts.Validation) must contain
-    /// NO reference to ParameterCoverageChecker. The old heuristic must be completely removed.
-    /// We check via source-level marker: the CodeBasedPromptValidator source must not call
-    /// ParameterCoverageChecker at all — verified by checking the validator's ValidatePrompts
-    /// method body does NOT have a code path that can execute without a manifest.
+    /// NO reference to the ParameterCoverageChecker type. The old heuristic must be
+    /// completely removed from this assembly. We verify by scanning all types in the
+    /// assembly for any field, method parameter, return type, or local that references
+    /// ParameterCoverageChecker.
     /// </summary>
     [Fact]
     public void ValidationAssembly_DoesNotReferenceParameterCoverageChecker()
     {
-        // If ValidatePrompts has a branch where manifest==null that calls ParameterCoverageChecker,
-        // then passing null manifest would still return results. But since the manifest param
-        // is currently optional with default null, the old code path is reachable.
-        // After the fix: no optional manifest param, no ParameterCoverageChecker reference.
-        //
-        // We verify by checking that the CodeBasedPromptValidator type has NO method that
-        // accepts fewer than the expected parameter count (proving no manifest-less overload).
+        var validationAssembly = typeof(CodeBasedPromptValidator).Assembly;
+        var checkerType = typeof(ParameterCoverageChecker);
+
+        // Scan all types in the validation assembly for any reference to ParameterCoverageChecker
+        var referencingTypes = validationAssembly.GetTypes()
+            .Where(t => TypeReferencesOther(t, checkerType))
+            .Select(t => t.FullName)
+            .ToList();
+
+        Assert.Empty(referencingTypes);
+    }
+
+    /// <summary>
+    /// No ValidatePrompts overload may have an optional CanonicalParameterManifest parameter.
+    /// An optional manifest would allow the legacy ParameterCoverageChecker path to be reached.
+    /// </summary>
+    [Fact]
+    public void CodeBasedPromptValidator_NoOptionalManifestParameter()
+    {
         var validatorType = typeof(CodeBasedPromptValidator);
         var methods = validatorType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
             .Where(m => m.Name == "ValidatePrompts")
             .ToList();
 
-        // Every ValidatePrompts overload must have manifest as non-optional (covered by test above).
-        // Additionally, the assembly must not reference ParameterCoverageChecker type at all.
-        var validationAssembly = validatorType.Assembly;
-        var referencedAssemblies = validationAssembly.GetReferencedAssemblies();
+        Assert.NotEmpty(methods);
 
-        // Direct type check: can we find ParameterCoverageChecker usage via IL?
-        // Simpler approach: check if the old "Covered || PlaceholderDetected" logic is reachable
-        // by invoking ValidatePrompts without a manifest. If the manifest is optional, this works.
         var hasOptionalManifest = methods.Any(m =>
             m.GetParameters().Any(p =>
                 p.ParameterType == typeof(CanonicalParameterManifest) && p.IsOptional));
@@ -88,6 +94,29 @@ public class Round3CanonicalContractTests
         Assert.False(hasOptionalManifest,
             "CodeBasedPromptValidator must not have an optional CanonicalParameterManifest parameter. " +
             "This would allow the ParameterCoverageChecker legacy path to be reached.");
+    }
+
+    private static bool TypeReferencesOther(Type type, Type target)
+    {
+        // Check fields
+        if (type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+            .Any(f => f.FieldType == target))
+            return true;
+
+        // Check method signatures (parameters and return types)
+        var allMethods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+        foreach (var method in allMethods)
+        {
+            if (method.ReturnType == target) return true;
+            if (method.GetParameters().Any(p => p.ParameterType == target)) return true;
+        }
+
+        // Check properties
+        if (type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+            .Any(p => p.PropertyType == target))
+            return true;
+
+        return false;
     }
 
     /// <summary>

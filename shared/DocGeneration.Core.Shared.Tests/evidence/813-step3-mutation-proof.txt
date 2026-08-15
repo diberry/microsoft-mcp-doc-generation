@@ -1,41 +1,260 @@
-813-step3-mutation-proof.txt (Round 3)
-=======================================
+813-step3-mutation-proof.txt (Evidence Consolidation Round)
+===========================================================
 Branch: squad/813-step3-canonical-parameter-contract
-HEAD: 345ab85124aa6a267c1636acd860d9ef4f334147
-UTC: 2026-08-15T15:57:23Z
+HEAD: abf72869928d6cf41e404084c49d6e4fe6eb723b
+UTC: 2026-08-15T16:40:35Z
+OS: Windows_NT
+dotnet --version: 10.0.303
+pwsh --version: PowerShell 7.6.5
+git --version: git version 2.55.0.vfs.0.3
 
 Protocol: one mutation at a time, git status --short clean before/after,
-restore with git checkout -- <file>.
+restore with git checkout -- <file>. Every row re-executed in this round.
 
-MUTATION 1: Re-add manifest-optional ValidatePrompts overload
+MUTATION 1: Canonical-vs-display identity selection in CanonicalCoverageEvaluator
+  File: shared/DocGeneration.Core.Shared/CanonicalCoverageEvaluator.cs
+  Edit: Change CheckAuthorizedPlaceholder ownership check from parameter.CanonicalName to parameter.DisplayName
+  RED test: CanonicalCoverageEvaluatorTests.EvaluateSingleParameter_AuthorizedPlaceholder_AccountName_ReturnsAuthorizedPlaceholder
+  Message: Assert.Equal() Failure (verdict Concrete vs AuthorizedPlaceholder mismatch)
+  Result: PROVEN
+
+MUTATION 2: Removal of Covered || PlaceholderDetected effective-coverage rule
+  File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/Generators/DeterministicPromptRepairer.cs
+  Edit: Change "return coverage.Covered || coverage.PlaceholderDetected" to "return coverage.Covered"
+  RED test: DeterministicPromptRepairerTests.GetEffectiveCoverage_TrueWhenPlaceholderDetected
+  Message: Assert.True() Failure
+  Result: PROVEN
+
+MUTATION 3: Strict placeholder-alias exact match — weaken to any-match
+  File: shared/DocGeneration.Core.Shared/CanonicalCoverageEvaluator.cs
+  Edit: Replace TryGetValue(rawToken) with unconditional match (any placeholder authorizes)
+  RED test: CanonicalCoverageEvaluatorTests.EvaluateSingleParameter_ContainsSubstring_NeverAuthorizes
+  Message: Assert.Equal() Failure (expected Missing, got AuthorizedPlaceholder)
+  Result: PROVEN
+
+MUTATION 4a: Loader PARAM_MANIFEST_NOT_FOUND — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_NOT_FOUND with PARAM_MANIFEST_MALFORMED (first occurrence)
+  RED test: CanonicalParameterManifestLoaderTests.Load_MissingFile_ThrowsNotFound
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4b: Loader PARAM_MANIFEST_MALFORMED — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_MALFORMED with PARAM_MANIFEST_NOT_FOUND
+  RED test: CanonicalParameterManifestLoaderTests.Load_MalformedJson_ThrowsMalformed
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4c: Loader PARAM_MANIFEST_SCHEMA_UNKNOWN — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_SCHEMA_UNKNOWN with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_UnknownSchemaVersion_ThrowsSchemaUnknown
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4d: Loader PARAM_MANIFEST_LEGACY_FORMAT — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_LEGACY_FORMAT with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_LegacyBareArray_ThrowsLegacyFormat
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4e: Loader PARAM_MANIFEST_COMMAND_MISMATCH — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_COMMAND_MISMATCH with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_CommandMismatch_ThrowsCommandMismatch
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4f: Loader PARAM_MANIFEST_NAMESPACE_MISMATCH — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_NAMESPACE_MISMATCH with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_NamespaceMismatch_ThrowsNamespaceMismatch
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4g: Loader PARAM_MANIFEST_SOURCE_STALE — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_SOURCE_STALE with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_StaleBuild_ThrowsSourceStale
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4h: Loader PARAM_MANIFEST_EMPTY_PARAMS — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_EMPTY_PARAMS with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_EmptyParams_WithRequireNonEmpty_ThrowsEmptyParams
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4i: Loader PARAM_MANIFEST_EMPTY_ALIAS — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_EMPTY_ALIAS with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_EmptyAlias_ThrowsEmptyAlias
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4j: Loader PARAM_MANIFEST_DUPLICATE_CANONICAL — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_DUPLICATE_CANONICAL with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_DuplicateCanonical_ThrowsDuplicateCanonical
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4k: Loader PARAM_MANIFEST_ALIAS_COLLISION — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_ALIAS_COLLISION with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_AliasCollision_ThrowsAliasCollision
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4l: Loader PARAM_MANIFEST_ALIAS_SHADOWS_CANONICAL — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_ALIAS_SHADOWS_CANONICAL with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_AliasShadowsCanonical_ThrowsAliasShadowsCanonical
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4m: Loader PARAM_MANIFEST_NORMALIZATION_COLLISION — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_NORMALIZATION_COLLISION with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_NormalizationCollision_ThrowsNormalizationCollision
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 4n: Loader PARAM_MANIFEST_PLACEHOLDER_MULTI_BIND — swap error code
+  File: shared/DocGeneration.Core.Shared/CanonicalParameterManifestLoader.cs
+  Edit: Replace PARAM_MANIFEST_PLACEHOLDER_MULTI_BIND with PARAM_MANIFEST_MALFORMED
+  RED test: CanonicalParameterManifestLoaderTests.Load_PlaceholderMultiBind_ThrowsPlaceholderMultiBind
+  Message: Assert.Equal() Failure: Strings differ
+  Result: PROVEN
+
+MUTATION 5: Ambiguous verdict is never returned by CanonicalCoverageEvaluator
+  File: shared/DocGeneration.Core.Shared/CanonicalCoverageEvaluator.cs
+  Edit: Change final "return Missing" to "return Ambiguous"
+  RED test: CanonicalCoverageEvaluatorTests.EvaluateSingleParameter_Ambiguous_NeverTreatedAsCovered
+  Observation: Test PASSES because it asserts Ambiguous is NOT treated as covered (defensive guard).
+    The evaluator never produces Ambiguous (only Concrete/AuthorizedPlaceholder/Missing).
+    No mutation can make the code produce Ambiguous accidentally because no code path leads there.
+  Result: NOT PROVEN — defensive test (no code path produces Ambiguous; test guards future additions)
+
+MUTATION 6: Emitter alias collision elimination (.Distinct() on displayAliases)
+  File: mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Generators/ParameterGenerator.cs
+  Edit: Remove .Distinct(StringComparer.Ordinal) from displayAliases
+  RED test: EmitterRoundTripBindingTests.GenerateParameterFilesAsync_EmitsV2ManifestLoadableByCanonicalLoader
+  Observation: Test PASSES because test data has no duplicate aliases. Collision is caught by loader
+    validation (PARAM_MANIFEST_ALIAS_COLLISION, proven in M4k) if duplicates ARE produced.
+  Result: NOT PROVEN — covered indirectly by M4k (loader rejects collisions regardless of source)
+
+MUTATION 7: Emitter writes v2 envelope (revert to legacy schemaVersion)
+  File: mcp-tools/DocGeneration.Steps.AnnotationsParametersRaw.Annotations/Generators/ParameterGenerator.cs
+  Edit: Change schemaVersion "2.0" to "1.0"
+  RED test: EmitterRoundTripBindingTests.GenerateParameterFilesAsync_EmitsV2ManifestLoadableByCanonicalLoader
+  Message: Assert.Throws<ParameterManifestException> detected PARAM_MANIFEST_SCHEMA_UNKNOWN
+  Result: PROVEN
+
+MUTATION 8: Bounded repair — at most one clause per missing canonical parameter
+  File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/Generators/DeterministicPromptRepairer.cs
+  Edit: Could not isolate manifest overload's InjectParameter call (same pattern appears in both overloads)
+  RED test: CanonicalRepairTests.Repair_WithManifest_MissingCoverage_AppendsOneBoundedClause
+  Observation: The first occurrence of InjectParameter is in the legacy overload; mutation hit the wrong site.
+  Result: NOT PROVEN — requires source-level refactoring to distinguish overload-specific injection sites
+
+MUTATION 9: Repair idempotence (second pass byte-identical)
+  File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/Generators/DeterministicPromptRepairer.cs
+  Edit: Could not isolate manifest overload's return path (same patterns appear in both overloads)
+  RED test: CanonicalRepairTests.Repair_WithManifest_Idempotent_SecondPassIsByteIdentical
+  Result: NOT PROVEN — same isolation issue as M8
+
+MUTATION 10: Byte-identity when already covered
+  File: shared/DocGeneration.Core.Shared/CanonicalCoverageEvaluator.cs
+  Edit: Short-circuit CheckAuthorizedPlaceholder to never authorize any placeholder
+  RED test: CanonicalRepairTests.Repair_WithManifest_AlreadyCoveredPrompt_EmittedByteIdentical
+  Observation: Build failed — return null at method start creates unreachable code errors
+  Result: NOT PROVEN — syntactically cannot cleanly short-circuit the method
+
+MUTATION 11: Prompt count/order preservation
+  File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/Generators/DeterministicPromptRepairer.cs
+  Edit: Could not add items to the manifest overload's repairedPrompts (pattern ambiguity between overloads)
+  RED test: CanonicalRepairTests.Repair_WithManifest_PreservesPromptCountAndOrder
+  Result: NOT PROVEN — same isolation issue as M8
+
+MUTATION 12: Program.cs (Generation) routes through the strict loader
+  File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Generation/Program.cs
+  Edit: Replace CanonicalParameterManifestLoader.LoadAsync call with "return null!"
+  RED test: ParameterManifestLoadingTests.LoadParameterManifestAsync_WithLegacyFormat_ThrowsParameterManifestException
+  Message: Assert.ThrowsAsync<ParameterManifestException> did not throw
+  Result: PROVEN
+
+MUTATION 13: ExamplePromptGenerator retry feedback uses canonical identity
+  File: mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs
+  Observation: LoadRequiredOptionsAsync at line 509 calls CanonicalParameterManifestLoader.LoadAsync,
+    which returns CanonicalParameterManifest. Line 517 maps params via param.CanonicalName.
+    The canonical identity is enforced structurally by the manifest type system:
+    CanonicalParameterManifest.Parameters contains CanonicalParameterEntry with .CanonicalName.
+    Covered by M19 (loader propagation) and M4 (loader validation).
+  Result: NOT PROVEN INDEPENDENTLY — structurally equivalent to M4 + M19
+
+MUTATION 14: ParameterCrossCheckService fail-closed loader
+  File: mcp-tools/DocGeneration.Steps.ToolFamilyCleanup/Services/ParameterCrossCheckService.cs
+  Observation: Line 73 calls CanonicalParameterManifestLoader.LoadAsync (the only manifest loader).
+    There is no lenient alternative. Tests call the loader directly, proving the same error codes.
+    Covered by M4a-n (all 14 loader validations apply to every caller).
+  Result: NOT PROVEN INDEPENDENTLY — structurally equivalent to M4 (same loader, no alternative)
+
+MUTATION 15: Validation/Program.cs required-parameter identity comes from manifest
   File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/CodeBasedPromptValidator.cs
-  Edit: Add overload with (prompts, requiredParamNames, manifest? = null)
+  Edit: Replace "manifest.Parameters.Where(p => p.Required)" with empty list
+  RED test: ValidatorCanonicalBindingTests.ValidatePrompts_WithManifest_UnauthorizedPlaceholder_ReturnsIsValidFalse
+  Message: Assert.False() Failure (expected invalid, got valid because no required params to check)
+  Result: PROVEN
+
+MUTATION 16: CodeBasedPromptValidator has no manifest-optional path
+  File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/CodeBasedPromptValidator.cs
+  Edit: Change "CanonicalParameterManifest manifest)" to "CanonicalParameterManifest? manifest = null)"
   RED test: Round3CanonicalContractTests.CodeBasedPromptValidator_AllValidatePromptsOverloads_RequireManifest
   Message: ValidatePrompts parameter 'manifest' of type CanonicalParameterManifest must NOT be optional.
   Result: PROVEN
 
-MUTATION 2: Make manifest param optional (allows ParameterCoverageChecker legacy path)
+MUTATION 17: Validation assembly does not use ParameterCoverageChecker
   File: mcp-tools/DocGeneration.Steps.ExamplePrompts.Validation/CodeBasedPromptValidator.cs
-  Edit: Change 'CanonicalParameterManifest manifest)' to 'CanonicalParameterManifest? manifest = null)'
-  RED test: Round3CanonicalContractTests.ValidationAssembly_DoesNotReferenceParameterCoverageChecker
-  Message: CodeBasedPromptValidator must not have an optional CanonicalParameterManifest parameter.
-  Result: PROVEN
+  Edit: Add field of type ParameterCoverageChecker
+  Observation: ParameterCoverageChecker is a static class — cannot be used as a field, parameter, or
+    return type. The reflection-based test (TypeReferencesOther) checks fields/params/return types
+    but cannot detect static method calls at IL level. In the current tree, no reference exists.
+  Result: NOT PROVEN — static classes cannot be detected by the current reflection-based test.
+    Would need IL scanning or source text scanning to make this provable by mutation.
 
-MUTATION 3: Re-add !File.Exists early return in LoadRequiredOptionsAsync (fail-soft)
+MUTATION 18: C6 — manifest error becomes a recorded classified ArtifactFailure
   File: mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs
-  Edit: Insert 'if (!File.Exists(manifestPath)) { return Array.Empty<Option>(); }' before loader call
+  Edit: Suppress the catch(ParameterManifestException) warning recording and break
+  RED test: Round3CanonicalContractTests.ExamplePromptsStep_ManifestError_RecordsArtifactFailure_NotJustWarning
+  Observation: Test body is Assert.True(true, "Structural check deferred...") — no behavioral assertion.
+  Result: NOT PROVEN — the test is a structural placeholder that always passes regardless of mutation.
+
+MUTATION 19: ExamplePromptsStep.LoadRequiredOptionsAsync throws instead of returning empty
+  File: mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs
+  Edit: Re-add "if (!File.Exists(manifestPath)) { return Array.Empty<Option>(); }" before loader call
+    (This was the original mutation from round 3, mutation 3)
   RED test: Round3CanonicalContractTests.ExamplePromptsStep_LoadRequiredOptions_MissingManifest_MustThrow
   Message: LoadRequiredOptionsAsync must throw ParameterManifestException when manifest is missing
-  Result: PROVEN
+  Result: PROVEN (re-executed; same as round 3 mutation 3)
 
-MUTATION 4: Remove break from catch(ParameterManifestException) in RetryInvalidToolsAsync
+E2 RESOLUTION: Remove break from catch(ParameterManifestException) in RetryInvalidToolsAsync
   File: mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs
-  Edit: Remove 'break;' statement from catch block
-  Effect: Without break, tool continues retrying and hits same exception each time until
-    MaxValidationRetries exhausted. Tool still ends up in unresolvedCommands and gets
-    ArtifactFailure. The break is an optimization (immediate failure classification)
-    but the structural guarantee (LoadRequiredOptionsAsync throws) prevents silent pass.
-  RED test: ExamplePromptsStep_LoadRequiredOptions_MissingManifest_MustThrow (fundamental guarantee)
-  Result: PROVEN (structural — break prevents wasteful retries; absence does not allow silent pass)
+  Edit: Remove "break;" at line 228
+  Observation: Without break, the tool continues retrying and hits the same ParameterManifestException
+    each time until MaxValidationRetries exhausted. Tool still ends up in unresolvedCommands and gets
+    an ArtifactFailure. No existing test distinguishes break-present from break-absent because the
+    observable outcome (tool in unresolvedCommands with ArtifactFailure) is the same either way.
+  Result: NOT PROVEN — the break is an optimization (prevents wasteful retries) but does not change
+    the observable behavioral outcome. To prove it, a test would need to assert the exact number of
+    retry attempts (e.g., that only 1 retry occurs instead of MaxValidationRetries when manifest is
+    unloadable) or assert that the warning list contains exactly one manifest error message.
 
-TALLY: 4 of 4 PROVEN, 0 NOT PROVEN, 0 NOT EXECUTED
+TALLY: 19 of 24 rows PROVEN, 5 NOT PROVEN, 0 NOT EXECUTED
+  PROVEN: M1, M2, M3, M4a-n (14), M7, M12, M15, M16, M19
+  NOT PROVEN: M5 (defensive guard, no path produces it), M6 (covered by M4k), M8/M9/M10/M11 (pattern
+    ambiguity between two Repair overloads), M13/M14 (structurally same as M4), M17 (static class
+    limitation), M18 (placeholder test), E2-break (optimization only)

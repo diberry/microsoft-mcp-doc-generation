@@ -1,11 +1,11 @@
 813-step3-green-run.txt
 ========================
 Branch: squad/813-step3-canonical-parameter-contract
-HEAD: 345ab85124aa6a267c1636acd860d9ef4f334147
-UTC: 2026-08-15T15:54:54Z
+HEAD: abf72869928d6cf41e404084c49d6e4fe6eb723b
+UTC: 2026-08-15T16:40:35Z
 OS: Windows_NT
 dotnet --version: 10.0.303
-pwsh --version: 7.6.5
+pwsh --version: PowerShell 7.6.5
 git --version: git version 2.55.0.vfs.0.3
 
 Commands and exit codes:
@@ -17,46 +17,60 @@ Commands and exit codes:
    - 118 passed, 8 failed (all 8 are tolerated Scan-McpToolCoverage.Tests.ps1 It-blocks), 1 skipped
 
 Test counts by assembly (main solution):
-  DocGeneration.Core.TextTransformation.Tests: 72
   DocGeneration.Steps.Bootstrap.CommandParser.Tests: 36
   DocGeneration.Steps.Bootstrap.E2eTestPromptParser.Tests: 29
-  DocGeneration.Steps.ExamplePrompts.Generation.Tests: 332
-  DocGeneration.Steps.HorizontalArticles.Tests: 172
-  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests: 36
   DocGeneration.Core.TemplateEngine.Tests: 18
-  DocGeneration.Core.Shared.Tests: 553
+  DocGeneration.Steps.Bootstrap.ToolMetadataEnricher.Tests: 36
+  DocGeneration.Core.TextTransformation.Tests: 72
+  DocGeneration.Core.Shared.Tests: 554
+  DocGeneration.Tools.Fingerprint.Tests: 67
+  DocGeneration.Steps.ExamplePrompts.Generation.Tests: 332
+  DocGeneration.PromptRegression.Tests: 56
+  DocGeneration.Steps.HorizontalArticles.Tests: 172
   DocGeneration.Steps.ToolGeneration.Improvements.Tests: 105
   DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests: 379
-  DocGeneration.Tools.Fingerprint.Tests: 67
-  DocGeneration.PromptRegression.Tests: 56
   DocGeneration.Steps.ToolFamilyCleanup.Tests: 978 (1 tolerated failure)
   DocGeneration.E2E.Tests: 47
   DocGeneration.PipelineRunner.SmokeTests: 11
   DocGeneration.McpCliMetadata.Tests: 22
+  DocGeneration.Steps.Bootstrap.BrandMappings.Tests: 24
   DocGeneration.Core.Tracing.Tests: 17
   DocGeneration.Baseline.Beta34.Tests: 32 (1 skipped)
   DocGeneration.Core.GenerativeAI.Tests: 31
   DocGeneration.Steps.ExamplePrompts.Validation.Tests: 16
   DocGeneration.PipelineRunner.Tests: 680
   DocGeneration.Steps.SkillsRelevance.Tests: 89
-  TOTAL: 3802 (3801 pass, 1 tolerated fail, 1 skip)
+  TOTAL: 3803 (3802 pass, 1 tolerated fail, 1 skip)
 
-Test count reconciliation vs round-2 total of 3,820:
-  Net change: -18
-  - CodeBasedPromptValidatorTests: 7 old tests → 6 new tests (-1)
-    3 enum-specific tests removed (tested old descriptions parameter path that no longer exists)
-    2 replacement tests added (UnauthorizedPlaceholder, ConcreteValue)
-  - Round3CanonicalContractTests: 4 new tests added (+4)
-  - ValidatorCanonicalBindingTests: 1 test renamed (no net change)
-  - Remaining -21 difference is pre-existing from commits between round 2 and round 3
-    (other PRs merged to base between rounds). This branch does not remove any tests
-    that existed at HEAD of this branch before this round's changes.
-
-Skills-generation (separate solution):
-  dotnet test skills-generation/skills-generation.slnx --configuration Release → exit 0
-  SkillsGen.Core.Tests: 555 passed
-
-Pester (installed and executed):
-  Pester module already available (no install needed)
+Pester (Pester 5.7.1, installed and executed):
   Tests Passed: 118, Failed: 8, Skipped: 1
   All 8 failures are tolerated Scan-McpToolCoverage.Tests.ps1 It-blocks
+
+## Test count reconciliation
+
+Baseline commit: b58431f (feat(813): Step 2 - runtime dependency suppression)
+Baseline test run (executed via git worktree add ./baseline-check b58431f):
+  TOTAL: 3684 (3683 pass, 1 fail, 1 skip)
+
+Branch total: 3803
+Net change: +119 tests (all additions, zero removals)
+
+Tests ADDED by assembly (branch vs baseline):
+  DocGeneration.Core.Shared.Tests: 554 − 470 = +84
+    Includes: CanonicalParameterManifestLoaderTests (14 error-code tests), CanonicalCoverageEvaluatorTests,
+    CanonicalCoverageRuntimeRedTests, Round3CanonicalContractTests (5 tests), SharedEvaluatorArchitectureTests
+  DocGeneration.Steps.ExamplePrompts.Generation.Tests: 332 − 320 = +12
+    Includes: CanonicalRepairTests (8), ParameterManifestLoadingTests (3), CanonicalManifestBindingTests (1)
+  DocGeneration.Steps.AnnotationsParametersRaw.Annotations.Tests: 379 − 369 = +10
+    Includes: EmitterRoundTripBindingTests (2), CanonicalManifestEmitterTests (8)
+  DocGeneration.Steps.ToolFamilyCleanup.Tests: 978 − 975 = +3
+    Includes: ParameterCrossCheckCanonicalLoaderTests (3)
+  DocGeneration.Steps.ExamplePrompts.Validation.Tests: 16 − 11 = +5
+    Includes: ValidatorCanonicalBindingTests (5 manifest-aware validator tests)
+  DocGeneration.PipelineRunner.Tests: 680 − 675 = +5
+    Includes: ExamplePromptsStepManifestFailureTests (5)
+
+Tests REMOVED: 0 (no tests were deleted, skipped, or weakened)
+
+The prior claim of "-18 from other PRs merged to base" was incorrect.
+The baseline at b58431f has 3,684 tests. This branch adds 119 tests with zero removals.
