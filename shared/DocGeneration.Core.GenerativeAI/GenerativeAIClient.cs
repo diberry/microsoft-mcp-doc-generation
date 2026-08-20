@@ -1,3 +1,4 @@
+using Azure;
 using System.Diagnostics;
 using Azure.AI.OpenAI;
 using Azure.Identity;
@@ -14,6 +15,32 @@ public class GenerativeAIClient
     private readonly IChatClient _chatClient;
     private readonly IPipelineTracer _tracer;
     private readonly string? _modelName;
+    private readonly Action<string> _statusLogger;
+
+    /// <summary>
+    /// Process environment variable that, when set to a truthy value, disables every further
+    /// Azure OpenAI call made through <see cref="GetChatCompletionAsync"/> — the single,
+    /// service-agnostic choke point all AI-dependent pipeline steps (2, 3, 4, 6) call through.
+    /// Set by PipelineRunner's bootstrap step only after its early live-endpoint probe fails and
+    /// an interactive operator explicitly selects the "partial_explicit" offline continuation.
+    /// Because environment variables are inherited by child processes, setting this once in the
+    /// parent pipeline process also disables AI calls made by every subprocess-based step.
+    /// </summary>
+    public const string OfflineEnvironmentVariable = "PIPELINE_AI_ENDPOINT_OFFLINE";
+
+    /// <summary>
+    /// Returns true when <see cref="OfflineEnvironmentVariable"/> is set to a truthy value
+    /// (1/true/yes/on, case-insensitive) in the current process environment.
+    /// </summary>
+    public static bool IsOfflineModeActive()
+        => IsTruthy(Environment.GetEnvironmentVariable(OfflineEnvironmentVariable));
+
+    private static bool IsTruthy(string? value)
+        => !string.IsNullOrWhiteSpace(value) &&
+           (value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+            value.Equals("on", StringComparison.OrdinalIgnoreCase));
 
     public GenerativeAIClient(GenerativeAIOptions? opts = null, IPipelineTracer? tracer = null)
         : this(CreateConfiguredChatClient(opts), tracer)
@@ -25,11 +52,16 @@ public class GenerativeAIClient
     {
     }
 
-    public GenerativeAIClient(IChatClient chatClient, IPipelineTracer? tracer = null, string? modelName = null)
+    public GenerativeAIClient(
+        IChatClient chatClient,
+        IPipelineTracer? tracer = null,
+        string? modelName = null,
+        Action<string>? statusLogger = null)
     {
         _chatClient = chatClient ?? throw new ArgumentNullException(nameof(chatClient));
         _tracer = tracer ?? NullTracer.Instance;
         _modelName = modelName;
+        _statusLogger = statusLogger ?? Console.WriteLine;
     }
 
     public async Task<string> GetChatCompletionAsync(
@@ -38,8 +70,19 @@ public class GenerativeAIClient
         int maxTokens = 8000,
         CancellationToken ct = default,
         string? toolOrNamespace = null,
-        string? operation = null)
+        string? operation = null,
+        ReasoningEffort? reasoningEffort = null,
+        ChatResponseFormat? responseFormat = null)
     {
+        if (IsOfflineModeActive())
+        {
+            throw new AiEndpointOfflineException(
+                $"Azure OpenAI calls are disabled for this run ({OfflineEnvironmentVariable} is set). " +
+                "An earlier live endpoint probe failed at pipeline bootstrap and the operator explicitly " +
+                "chose partial deterministic/verbatim-only continuation. No further Azure OpenAI calls " +
+                $"are made for the remainder of this run (requested by: {toolOrNamespace ?? "unknown"} / {operation ?? "GetChatCompletion"}).");
+        }
+
         var messages = new[]
         {
             new ChatMessage(ChatRole.System, systemPrompt),
@@ -48,23 +91,43 @@ public class GenerativeAIClient
 
         var options = new ChatOptions
         {
-            MaxOutputTokens = maxTokens
+            MaxOutputTokens = maxTokens,
+            Reasoning = reasoningEffort is null
+                ? null
+                : new ReasoningOptions { Effort = reasoningEffort },
+            ResponseFormat = responseFormat
         };
 
         var sw = Stopwatch.StartNew();
-        var response = await _chatClient.GetResponseAsync(messages, options, ct);
-        sw.Stop();
-
-        if (response.FinishReason == Microsoft.Extensions.AI.ChatFinishReason.Length)
+        ChatResponse response;
+        try
         {
-            throw new InvalidOperationException(
-                $"LLM response was truncated due to token limit. " +
-                $"Used tokens: {response.Usage?.TotalTokenCount ?? 0}, " +
-                $"Max output tokens: {maxTokens}. " +
-                $"Consider increasing maxTokens parameter.");
+            response = await _chatClient.GetResponseAsync(messages, options, ct);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            LogHttpStatus(
+                GetHttpStatusCode(ex)?.ToString() ?? "unavailable",
+                "failure",
+                operation,
+                toolOrNamespace,
+                sw.ElapsedMilliseconds);
+            throw;
         }
 
+        sw.Stop();
+        LogHttpStatus("200", "success", operation, toolOrNamespace, sw.ElapsedMilliseconds);
+
         var responseText = response.Messages.FirstOrDefault()?.Text ?? string.Empty;
+        if (response.FinishReason == Microsoft.Extensions.AI.ChatFinishReason.Length)
+        {
+            throw new AiResponseTruncatedException(
+                responseText,
+                response.Usage?.TotalTokenCount ?? 0,
+                maxTokens);
+        }
+
         _tracer.RecordAiCall(new AiInteractionRecord
         {
             SkillOrToolName = toolOrNamespace ?? "unknown",
@@ -80,6 +143,61 @@ public class GenerativeAIClient
 
         return responseText;
     }
+
+    private void LogHttpStatus(
+        string status,
+        string outcome,
+        string? operation,
+        string? toolOrNamespace,
+        long durationMs)
+        => _statusLogger(
+            $"[Azure OpenAI] status={status} outcome={outcome} " +
+            $"operation={operation ?? "GetChatCompletion"} " +
+            $"target={toolOrNamespace ?? "unknown"} durationMs={durationMs}");
+
+    private static int? GetHttpStatusCode(Exception exception)
+    {
+        if (exception is AggregateException aggregateException)
+        {
+            foreach (var innerException in aggregateException.Flatten().InnerExceptions)
+            {
+                var status = GetHttpStatusCode(innerException);
+                if (status.HasValue)
+                {
+                    return status;
+                }
+            }
+        }
+
+        if (exception is ClientResultException { Status: > 0 } clientResultException)
+        {
+            return clientResultException.Status;
+        }
+
+        if (exception is RequestFailedException { Status: > 0 } requestFailedException)
+        {
+            return requestFailedException.Status;
+        }
+
+        if (exception is HttpRequestException { StatusCode: not null } httpRequestException)
+        {
+            return (int)httpRequestException.StatusCode.Value;
+        }
+
+        return exception.InnerException is null
+            ? null
+            : GetHttpStatusCode(exception.InnerException);
+    }
+
+    /// <summary>
+    /// Public helper that extracts an HTTP status code (if any) from an exception thrown by the
+    /// underlying chat client — <see cref="ClientResultException"/>, <see cref="RequestFailedException"/>,
+    /// <see cref="HttpRequestException"/>, or any of these wrapped in an <see cref="AggregateException"/>.
+    /// Callers (e.g. <c>HorizontalArticleGenerator.IsRetryableAiFailure</c>) use this to distinguish
+    /// non-retryable client errors (400/401) from transient failures worth retrying, without duplicating
+    /// the status-extraction logic.
+    /// </summary>
+    public static int? TryGetHttpStatusCode(Exception exception) => GetHttpStatusCode(exception);
 
     public static int CalculateDynamicMaxTokens(
         string systemPrompt,
@@ -163,4 +281,3 @@ public class GenerativeAIClient
                ex.Message.Contains("quota", StringComparison.OrdinalIgnoreCase);
     }
 }
-

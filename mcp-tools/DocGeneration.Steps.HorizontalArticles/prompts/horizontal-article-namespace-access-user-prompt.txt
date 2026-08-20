@@ -1,0 +1,23 @@
+Generate service-specific prerequisites and required RBAC roles for a how-to article about managing {{serviceBrandName}} with Azure MCP Server.
+
+**Service Information:**
+- Service Brand Name: {{serviceBrandName}}
+- Service Identifier: {{serviceIdentifier}}
+
+**Available MCP Tools for this service (compact list):**
+{{#each tools}}
+- {{command}} — {{description}}
+{{/each}}
+
+## Your Task
+
+1. **genai-serviceSpecificPrerequisites**: List only prerequisites specific to {{serviceBrandName}} that are required before using the tools above. Do NOT include "Azure subscription".
+2. **genai-requiredRoles**: Analyze the tool list's operations (read vs. write vs. delete) and select the minimum-privilege RBAC role(s) verified against https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles. Never invent role names.
+
+## Output Format
+
+Return ONLY valid JSON with exactly these top-level keys:
+- `genai-serviceSpecificPrerequisites`
+- `genai-requiredRoles`
+
+No markdown code blocks, no explanations. The response must begin with `{` and end with `}`.

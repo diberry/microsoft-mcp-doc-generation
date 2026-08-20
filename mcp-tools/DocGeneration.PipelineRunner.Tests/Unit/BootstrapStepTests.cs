@@ -39,6 +39,118 @@ public class BootstrapStepTests
         Assert.Empty(harness.ProcessRunner.Invocations);
     }
 
+    // ── Live Azure OpenAI endpoint probe (requirements 1-3) ──────────────────────────────
+
+    [Fact]
+    public async Task ExecuteAsync_LiveAiProbe_Succeeds_ContinuesNormallyWithoutOfflineMode()
+    {
+        var prompt = new StubPipelineUserPrompt(canPromptInteractively: false, confirmResult: false);
+        using var harness = CreateHarness(
+            requiresAiConfiguration: true,
+            aiConfigured: true,
+            liveCheckSucceeds: true,
+            pipelineUserPrompt: prompt);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, harness.AiCapabilityProbe.LiveCheckCalls);
+        Assert.False(harness.Context.AiOffline);
+        Assert.True(harness.Context.AiConfigured);
+        Assert.Equal(0, prompt.ConfirmCalls);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LiveAiProbe_Fails_NonInteractiveRun_FailsImmediately_NoPrompt()
+    {
+        var prompt = new StubPipelineUserPrompt(canPromptInteractively: false, confirmResult: false);
+        using var harness = CreateHarness(
+            requiresAiConfiguration: true,
+            aiConfigured: true,
+            liveCheckSucceeds: false,
+            liveCheckErrorMessage: "DNS resolution failed for endpoint",
+            pipelineUserPrompt: prompt);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(0, prompt.ConfirmCalls);
+        Assert.False(harness.Context.AiOffline);
+        Assert.Contains(result.Warnings, warning => warning.Contains("non-interactive", StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(Directory.Exists(Path.Combine(harness.Context.OutputPath, "critical-failures"))
+            ? Directory.GetFiles(Path.Combine(harness.Context.OutputPath, "critical-failures"))
+            : Array.Empty<string>());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LiveAiProbe_Fails_InteractiveDecline_FailsWithoutCriticalRecord()
+    {
+        var prompt = new StubPipelineUserPrompt(canPromptInteractively: true, confirmResult: false);
+        using var harness = CreateHarness(
+            requiresAiConfiguration: true,
+            aiConfigured: true,
+            liveCheckSucceeds: false,
+            liveCheckErrorMessage: "401 Unauthorized",
+            pipelineUserPrompt: prompt);
+
+        var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+        Assert.False(result.Success);
+        Assert.Equal(1, prompt.ConfirmCalls);
+        Assert.False(harness.Context.AiOffline);
+        var criticalDir = Path.Combine(harness.Context.OutputPath, "critical-failures");
+        // The runner's generic post-step persist logic may still record the failed Bootstrap step
+        // itself (existing behavior for any failed step), but no offline-specific record with the
+        // "partial_explicit" wording should exist since the operator declined to continue.
+        if (Directory.Exists(criticalDir))
+        {
+            foreach (var file in Directory.GetFiles(criticalDir))
+            {
+                Assert.DoesNotContain("partial_explicit", File.ReadAllText(file), StringComparison.OrdinalIgnoreCase);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_LiveAiProbe_Fails_InteractiveConfirm_ContinuesOffline_PersistsCriticalRecord_DisablesFurtherAiCalls()
+    {
+        var prompt = new StubPipelineUserPrompt(canPromptInteractively: true, confirmResult: true);
+        Environment.SetEnvironmentVariable(GenerativeAI.GenerativeAIClient.OfflineEnvironmentVariable, null);
+        using var harness = CreateHarness(
+            requiresAiConfiguration: true,
+            aiConfigured: true,
+            liveCheckSucceeds: false,
+            liveCheckErrorMessage: "Connection timed out",
+            pipelineUserPrompt: prompt);
+
+        try
+        {
+            var result = await harness.Step.ExecuteAsync(harness.Context, CancellationToken.None);
+
+            Assert.True(result.Success, "Bootstrap must continue running (offline mode), not fail the whole run.");
+            Assert.True(harness.Context.AiOffline);
+            Assert.False(harness.Context.AiConfigured);
+            Assert.Equal(1, prompt.ConfirmCalls);
+
+            Assert.Equal("true", Environment.GetEnvironmentVariable(GenerativeAI.GenerativeAIClient.OfflineEnvironmentVariable));
+            Assert.True(GenerativeAI.GenerativeAIClient.IsOfflineModeActive());
+
+            var criticalDir = Path.Combine(harness.Context.OutputPath, "critical-failures");
+            Assert.True(Directory.Exists(criticalDir), "Expected a critical-failure record directory to be created.");
+            var files = Directory.GetFiles(criticalDir);
+            Assert.Contains(files, file =>
+                File.ReadAllText(file).Contains("partial_explicit", StringComparison.OrdinalIgnoreCase) ||
+                File.ReadAllText(file).Contains("partial deterministic fallback", StringComparison.OrdinalIgnoreCase));
+            var recordContent = string.Join("\n", files.Select(File.ReadAllText));
+            Assert.Contains("Azure OpenAI endpoint access failed", recordContent, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Connection timed out", recordContent, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(GenerativeAI.GenerativeAIClient.OfflineEnvironmentVariable, null);
+        }
+    }
+
     [Fact]
     public async Task ExecuteAsync_CliMetadataValidationPasses()
     {
@@ -531,7 +643,10 @@ public class BootstrapStepTests
         IReadOnlyList<string>? selectedNamespaces = null,
         string? brandMappingJson = null,
         string? mcpToolVersionFileContent = "3.0.0-beta.15",
-        string? alreadyInstalledVersion = null)
+        string? alreadyInstalledVersion = null,
+        bool liveCheckSucceeds = true,
+        string? liveCheckErrorMessage = null,
+        IPipelineUserPrompt? pipelineUserPrompt = null)
     {
         var repoRoot = Path.Combine(Path.GetTempPath(), $"pipeline-runner-bootstrap-tests-{Guid.NewGuid():N}");
         var mcpToolsRoot = Path.Combine(repoRoot, "mcp-tools");
@@ -556,7 +671,8 @@ public class BootstrapStepTests
             NamespaceNames = namespaceNames ?? ["compute"],
         };
         var buildCoordinator = new RecordingBuildCoordinator();
-        var aiCapabilityProbe = new RecordingAiCapabilityProbe(aiConfigured);
+        var aiCapabilityProbe = new RecordingAiCapabilityProbe(aiConfigured, liveCheckSucceeds, liveCheckErrorMessage);
+        var resolvedPrompt = pipelineUserPrompt ?? new StubPipelineUserPrompt(canPromptInteractively: false, confirmResult: false);
         var step = new BootstrapStep(delayAsync: static (_, _) => Task.CompletedTask);
         var plannedSteps = requiresAiConfiguration
             ? new IPipelineStep[] { step, new ExamplePromptsStep() }
@@ -583,6 +699,7 @@ public class BootstrapStepTests
             FilteredCliWriter = new StubFilteredCliWriter(),
             BuildCoordinator = buildCoordinator,
             AiCapabilityProbe = aiCapabilityProbe,
+            PipelineUserPrompt = resolvedPrompt,
             Reports = new BufferedReportWriter(),
             PlannedSteps = plannedSteps,
             SelectedNamespaces = selectedNamespaces ?? Array.Empty<string>(),
@@ -635,14 +752,38 @@ public class BootstrapStepTests
         }
     }
 
-    private sealed class RecordingAiCapabilityProbe(bool isConfigured) : IAiCapabilityProbe
+    private sealed class RecordingAiCapabilityProbe(bool isConfigured, bool liveCheckSucceeds = true, string? liveCheckErrorMessage = null) : IAiCapabilityProbe
     {
         public int ProbeCalls { get; private set; }
+
+        public int LiveCheckCalls { get; private set; }
 
         public ValueTask<AiCapabilityResult> ProbeAsync(string mcpToolsRoot, CancellationToken cancellationToken)
         {
             ProbeCalls++;
             return ValueTask.FromResult(new AiCapabilityResult(isConfigured, isConfigured ? Array.Empty<string>() : ["FOUNDRY_API_KEY"]));
+        }
+
+        public Task<AiEndpointHealthCheckResult> LiveCheckAsync(string mcpToolsRoot, CancellationToken cancellationToken)
+        {
+            LiveCheckCalls++;
+            return Task.FromResult(new AiEndpointHealthCheckResult(
+                liveCheckSucceeds,
+                liveCheckSucceeds ? null : liveCheckErrorMessage ?? "simulated failure"));
+        }
+    }
+
+    /// <summary>Fake interactive prompt: never touches the console; behavior fully scripted.</summary>
+    private sealed class StubPipelineUserPrompt(bool canPromptInteractively, bool confirmResult) : IPipelineUserPrompt
+    {
+        public int ConfirmCalls { get; private set; }
+
+        public bool CanPromptInteractively() => canPromptInteractively;
+
+        public bool Confirm(string message)
+        {
+            ConfirmCalls++;
+            return confirmResult;
         }
     }
 

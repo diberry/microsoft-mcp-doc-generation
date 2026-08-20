@@ -159,7 +159,7 @@ Describe "start-with-logs.ps1" {
         ($result.Output -join "`n") | Should -Match "\.azure[/\\]test-env[/\\]\.env"
     }
 
-    It "dispatches every mapped namespace to start.sh with steps 1 through 5" {
+    It "dispatches every mapped namespace to start.sh with steps 1 through 6" {
         $repository = New-TestRepository
         New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
             -Namespaces @("storage", "keyvault", "extension_cli_generate")
@@ -169,9 +169,9 @@ Describe "start-with-logs.ps1" {
         $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
         # Namespaces dispatched in sorted order; first gets no skip flags
         $result.Invocations | Should -Be @(
-            "extension_cli_generate 1,2,3,4,5",
-            "keyvault 1,2,3,4,5 --skip-build --skip-npm-update",
-            "storage 1,2,3,4,5 --skip-build --skip-npm-update"
+            "extension_cli_generate 1,2,3,4,5,6",
+            "keyvault 1,2,3,4,5,6 --skip-build --skip-npm-update",
+            "storage 1,2,3,4,5,6 --skip-build --skip-npm-update"
         )
     }
 
@@ -193,9 +193,9 @@ Describe "start-with-logs.ps1" {
         # confirms the build — so only storage (idx2) skips. AD-029 §7 $sharedBuildConfirmed gate.
         # (Current code uses "if ($index -gt 0)" and wrongly skip-flags monitor → RED.)
         $result.Invocations | Should -Be @(
-            "keyvault 1,2,3,4,5",
-            "monitor 1,2,3,4,5",
-            "storage 1,2,3,4,5 --skip-build --skip-npm-update"
+            "keyvault 1,2,3,4,5,6",
+            "monitor 1,2,3,4,5,6",
+            "storage 1,2,3,4,5,6 --skip-build --skip-npm-update"
         )
         ($result.Output -join "`n") | Should -Match "START-SH:keyvault"
         ($result.Output -join "`n") | Should -Match "Generation Summary: 2/3 succeeded, 1 failed"
@@ -217,8 +217,8 @@ Describe "start-with-logs.ps1" {
         # aaa (idx0) builds but FAILS → build NOT confirmed → bbb (idx1) must rebuild with NO skip
         # flags. A blanket "if ($index -gt 0)" would wrongly add --skip-build/--skip-npm-update to bbb.
         $result.Invocations | Should -Be @(
-            "aaa 1,2,3,4,5",
-            "bbb 1,2,3,4,5"
+            "aaa 1,2,3,4,5,6",
+            "bbb 1,2,3,4,5,6"
         )
     }
 
@@ -319,7 +319,7 @@ Describe "start-with-logs.ps1" {
         $result = Invoke-Generator $repository
 
         $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
-        $result.Invocations | Should -Be @("speech 1,2,3,4,5")
+        $result.Invocations | Should -Be @("speech 1,2,3,4,5,6")
     }
 
     It "preflights without invoking start.sh" {
@@ -342,8 +342,8 @@ Describe "start-with-logs.ps1" {
 
         $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
         $result.Invocations | Should -Be @(
-            "storage 1,2,3,4,5",
-            "monitor 1,2,3,4,5 --skip-build --skip-npm-update"
+            "storage 1,2,3,4,5,6",
+            "monitor 1,2,3,4,5,6 --skip-build --skip-npm-update"
         )
         ($result.Output -join "`n") | Should -Match "comma list"
     }
@@ -366,8 +366,8 @@ compute
 
         $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
         $result.Invocations | Should -Be @(
-            "keyvault 1,2,3,4,5",
-            "compute 1,2,3,4,5 --skip-build --skip-npm-update"
+            "keyvault 1,2,3,4,5,6",
+            "compute 1,2,3,4,5,6 --skip-build --skip-npm-update"
         )
         ($result.Output -join "`n") | Should -Match "file"
     }

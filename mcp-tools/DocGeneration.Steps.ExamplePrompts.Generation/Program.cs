@@ -287,6 +287,11 @@ internal static class Program
                 userPrompt = VerbatimExamplePromptBuilder.BuildProvenanceNote(referencePrompts!);
                 rawResponse = "{}";
                 verbatimCount++;
+                AiCallStatusReporter.WriteSkipped(
+                    Console.Out,
+                    tool.Command!,
+                    "verbatim",
+                    "source-prompts");
             }
             else if (DeterministicExamplePromptGenerator.IsEligible(tool, hasE2ePrompts))
             {
@@ -294,6 +299,11 @@ internal static class Program
                 userPrompt = $"deterministic — no AI call (#163 Tier 2a)\nVerb: {DeterministicExamplePromptGenerator.ClassifyVerb(tool.Command!)}\nResource: {DeterministicExamplePromptGenerator.ExtractResource(tool.Command!)}";
                 rawResponse = "{}";
                 deterministicCount++;
+                AiCallStatusReporter.WriteSkipped(
+                    Console.Out,
+                    tool.Command!,
+                    "deterministic",
+                    "eligible-command");
             }
             else
             {

@@ -25,8 +25,11 @@ The Horizontal Article Generator is a standalone C# console application that:
 │    ├── AIGeneratedArticleData.cs - AI response model            │
 │    └── HorizontalArticleTemplateData.cs - Combined template data│
 │  prompts/                                                        │
-│    ├── horizontal-article-system-prompt.txt                     │
-│    └── horizontal-article-user-prompt.txt                       │
+│    ├── horizontal-article-tool-{system,user}-prompt.txt          │
+│    ├── horizontal-article-namespace-overview-{system,user}-*.txt │
+│    ├── horizontal-article-namespace-access-{system,user}-*.txt   │
+│    ├── horizontal-article-namespace-best-practices-*.txt         │
+│    └── horizontal-article-namespace-links-{system,user}-*.txt    │
 │  templates/                                                      │
 │    └── horizontal-article-template.hbs                          │
 └─────────────────────────────────────────────────────────────────┘
@@ -87,31 +90,42 @@ Run `./start.sh` first to generate the required CLI output files:
 │   ├── horizontal-article-acr.md
 │   ├── horizontal-article-storage.md
 │   └── ...
-├── horizontal-article-prompts/    # Saved prompts for debugging
-│   ├── horizontal-article-acr-prompt.md
+├── horizontal-article-prompts/    # Saved prompts, responses, and call failures
+│   ├── horizontal-article-acr-tool-00-prompt.md
+│   ├── horizontal-article-acr-namespace-overview-prompt.md
 │   └── ...
 └── logs/
     └── horizontal-articles-*.log  # Generation logs
 ```
 
-## Token Limit Scaling
+## Token limits
 
-The generator dynamically calculates AI token limits based on tool count to optimize response quality:
+The current per-tool + namespace-fragment generation path uses separate output-token budgets per
+AI call type. Step 6 replaced the single broad namespace-summary call (which requested all seven
+namespace-level fields in one response and was prone to truncation on gpt-5-mini) with four small,
+focused namespace-fragment calls, each with a deliberately tiny budget:
 
-| Tools | Token Limit | Example Services |
-|-------|-------------|------------------|
-| 1-2 | 2,500 (min) | Simple services |
-| 5 | 4,000 | acr, appconfig |
-| 10 | 6,000 | keyvault, sql |
-| 15 | 8,000 | storage, monitor |
-| 19 | 9,600 | foundry |
-| 25+ | 12,000 (max) | Large services |
+| Call | Token limit |
+|------|-------------|
+| Per-tool content | 8,000 |
+| Namespace fragment: overview (short description + overview) | 500 |
+| Namespace fragment: access (prerequisites + required roles) | 1,500 |
+| Namespace fragment: best practices | 1,500 |
+| Namespace fragment: links (doc link + additional links) | 750 |
 
-**Formula**: `2000 + (toolCount × 400)` tokens, clamped between 2,500 and 12,000.
+All Step 6 calls request low reasoning effort and JSON response format. This keeps the bounded
+output budget focused on visible structured content; otherwise reasoning models can consume the
+entire budget internally and return `finish_reason=length` with an empty visible response.
 
 This prevents:
-- **Truncated responses** for services with many tools
-- **Unnecessarily verbose output** for simple services
+- **Truncated per-tool responses** when reasoning models consume output tokens internally
+- **Truncated/oversized namespace responses** — each fragment asks for only 1–2 short JSON
+  fields/arrays, never the full seven-field namespace payload that used to overflow a single
+  response's output budget on reasoning models
+
+The four fragment results are deterministically stitched back into the same
+`NamespaceSummaryAIData` shape (`StitchNamespaceSummary`) that the rest of the pipeline
+(`AggregateAIData`, template rendering) already expects, so no downstream data flow changed.
 
 ## Generation Process
 
@@ -121,10 +135,16 @@ This prevents:
 - Applies brand name mappings from `transformation-config.json`
 
 ### Phase 2: Generate AI Content
-- Loads system and user prompts from `./prompts/`
+- Loads system and user prompts from `./prompts/` — one per-tool prompt pair, plus one prompt
+  pair per namespace fragment (overview/access/best-practices/links)
 - Injects static data into user prompt template (Handlebars)
-- Calls Azure OpenAI with scaled token limit
+- Calls Azure OpenAI once per tool and once per namespace fragment (five calls total for a
+  one-tool service), each with its own compact prompt pair and small output-token budget
 - Saves full prompt + response to `./generated/horizontal-article-prompts/`
+  (component filenames, e.g. `horizontal-article-{service}-namespace-overview-prompt.md`)
+- Preserves partial response content and error details in that same component file when a call is
+  truncated; if the endpoint returns no body, the file explicitly records that no response was
+  received. Failure semantics and static/empty fallbacks remain unchanged.
 
 ### Phase 3: Merge and Render
 - Parses JSON response from AI
@@ -134,10 +154,10 @@ This prevents:
 ## Error Handling
 
 ### Truncated JSON Responses
-If AI responses are cut off (JSON parse errors), the generator:
-1. Logs the raw response to `error-{service}-airesponse.txt`
-2. Continues processing remaining services
-3. Shows error count in final summary
+If an AI response is cut off by the output-token limit, the shared client throws a typed
+`AiResponseTruncatedException` containing the partial body and token metadata. Step 6 appends that
+partial body under `## AI Response (truncated)` and the failure details under `## AI Error` in the
+same component prompt file. The generator then preserves its existing fallback/failure behavior.
 
 ### Common Issues
 
@@ -152,20 +172,41 @@ If AI responses are cut off (JSON parse errors), the generator:
 ### Modifying Prompts
 
 Edit files in `./prompts/`:
-- `horizontal-article-system-prompt.txt` - AI behavior and output format
-- `horizontal-article-user-prompt.txt` - Service-specific instructions (Handlebars template)
+- `horizontal-article-tool-{system,user}-prompt.txt` - per-tool AI call
+- `horizontal-article-namespace-overview-{system,user}-prompt.txt` - service short description + overview
+- `horizontal-article-namespace-access-{system,user}-prompt.txt` - prerequisites + required RBAC roles
+- `horizontal-article-namespace-best-practices-{system,user}-prompt.txt` - best practices
+- `horizontal-article-namespace-links-{system,user}-prompt.txt` - doc link + additional links
+
+Each namespace-fragment prompt pair is intentionally small, compact, and service-agnostic — do not
+add service-specific logic/examples concentrated on one service. The legacy
+`horizontal-article-system-prompt.txt` (~33 KB) and `horizontal-article-namespace-user-prompt.txt`
+are still present for the `[Obsolete]` single-call fallback path but are no longer used by the
+per-tool + namespace-fragment path described above.
 
 ### Modifying Template
 
 Edit `./DocGeneration.Steps.HorizontalArticles/templates/horizontal-article-template.hbs` to change article structure.
 
-### Adjusting Token Scaling
+### Adjusting token limits
 
-In `DocGeneration.Steps.HorizontalArticles.cs`, modify:
+Per-tool budget, in `Generators/HorizontalArticleGenerator.cs`:
 
 ```csharp
-var calculatedTokens = 2000 + (toolCount * 400);  // Adjust multiplier
-var maxTokens = Math.Clamp(calculatedTokens, 2500, 12000);  // Adjust bounds
+if (isPerToolCall) return 8000;
+```
+
+Namespace-fragment budgets (`CalculateMaxTokens(NamespaceFragment)`):
+
+```csharp
+internal static int CalculateMaxTokens(NamespaceFragment fragment) => fragment switch
+{
+    NamespaceFragment.Overview => 500,
+    NamespaceFragment.Access => 1500,
+    NamespaceFragment.BestPractices => 1500,
+    NamespaceFragment.Links => 750,
+    _ => throw new ArgumentOutOfRangeException(nameof(fragment), fragment, "Unknown namespace fragment.")
+};
 ```
 
 ## Dependencies

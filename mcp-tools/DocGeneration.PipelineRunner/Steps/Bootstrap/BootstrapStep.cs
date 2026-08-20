@@ -103,6 +103,12 @@ public sealed class BootstrapStep : StepDefinition
                     }
 
                     context.AiConfigured = true;
+
+                    var liveProbeFailure = await RunLiveAiProbeAsync(context, processResults, cancellationToken);
+                    if (liveProbeFailure is not null)
+                    {
+                        return liveProbeFailure;
+                    }
                 }
             }
 
@@ -413,6 +419,103 @@ public sealed class BootstrapStep : StepDefinition
         => context.PlannedSteps
             .OfType<StepDefinition>()
             .Any(step => step.RequiresAiConfiguration);
+
+    /// <summary>
+    /// Makes a very early, live call against the configured Azure OpenAI endpoint (before any
+    /// AI-dependent namespace step runs) to prove it actually works — as opposed to
+    /// <see cref="IAiCapabilityProbe.ProbeAsync"/>, which only checks that configuration values are present.
+    /// </summary>
+    /// <returns>
+    /// <see langword="null"/> when the run should continue normally (probe succeeded, or the
+    /// operator explicitly chose the "partial_explicit" offline continuation). A non-null
+    /// <see cref="StepResult"/> means the caller must return it immediately from
+    /// <see cref="ExecuteAsync"/> (non-interactive run, or the operator declined to continue) —
+    /// this yields a nonzero process exit via the normal <see cref="FailurePolicy.Fatal"/> path.
+    /// </returns>
+    private async Task<StepResult?> RunLiveAiProbeAsync(
+        PipelineContext context,
+        List<ProcessExecutionResult> processResults,
+        CancellationToken cancellationToken)
+    {
+        var liveResult = await context.AiCapabilityProbe.LiveCheckAsync(context.McpToolsRoot, cancellationToken);
+        if (liveResult.Success)
+        {
+            context.Reports.Info("Live Azure OpenAI endpoint probe succeeded: the configured endpoint responded.");
+            return null;
+        }
+
+        context.Reports.Error("❌ CRITICAL: Live Azure OpenAI endpoint probe FAILED. The configured endpoint did not respond successfully to a real request.");
+        context.Reports.Error($"❌ CRITICAL: Probe error detail: {liveResult.ErrorMessage}");
+
+        var prompt = context.PipelineUserPrompt ?? new ConsolePipelineUserPrompt();
+        if (!prompt.CanPromptInteractively())
+        {
+            context.Reports.Error(
+                "❌ CRITICAL: This run is non-interactive (redirected/piped input), so it cannot ask whether to continue. " +
+                "Failing immediately with a nonzero exit code rather than risk silently generating incomplete AI content.");
+            return BuildResult(
+                context,
+                processResults,
+                success: false,
+                [$"Azure OpenAI live endpoint probe failed and this run is non-interactive: {liveResult.ErrorMessage}"]);
+        }
+
+        var shouldContinue = prompt.Confirm(
+            "Azure OpenAI endpoint probe failed. Continue with deterministic/verbatim-only output and mark " +
+            "AI-required artifacts incomplete for the rest of this run? [y/N]: ");
+        if (!shouldContinue)
+        {
+            context.Reports.Error("❌ CRITICAL: Operator declined to continue after Azure OpenAI endpoint probe failure. Aborting run.");
+            return BuildResult(
+                context,
+                processResults,
+                success: false,
+                [$"Azure OpenAI live endpoint probe failed and the operator declined to continue: {liveResult.ErrorMessage}"]);
+        }
+
+        PersistOfflineCriticalFailure(context, liveResult);
+
+        context.AiOffline = true;
+        context.AiConfigured = false;
+        Environment.SetEnvironmentVariable(GenerativeAI.GenerativeAIClient.OfflineEnvironmentVariable, "true");
+
+        context.Reports.Warning(
+            "⚠️ Continuing in PARTIAL DETERMINISTIC FALLBACK mode (partial_explicit): all further Azure OpenAI " +
+            "calls are disabled for this run. Deterministic/verbatim work will proceed; AI-required artifacts " +
+            "and steps will be marked INCOMPLETE and must never be reported as fully successful.");
+
+        return null;
+    }
+
+    /// <summary>
+    /// Records a loud, explicit critical-failure JSON entry for the operator's "Continue" choice,
+    /// reusing the existing <see cref="CriticalFailureRecorder"/> facility (same JSON shape used by
+    /// every other step failure) rather than inventing a new one. This is recorded even though
+    /// Bootstrap itself does not fail the run — the pipeline continues in offline mode — because
+    /// the operator explicitly acknowledged a critical, artifact-affecting condition.
+    /// </summary>
+    private void PersistOfflineCriticalFailure(PipelineContext context, AiEndpointHealthCheckResult liveResult)
+    {
+        var failure = ArtifactFailure.Create(
+            "azure-openai-endpoint",
+            "live-endpoint-probe",
+            "CRITICAL: Azure OpenAI endpoint access failed at pipeline bootstrap. The operator explicitly " +
+            "selected the partial_explicit deterministic fallback: all further AI endpoint calls are disabled " +
+            "for this run, deterministic/verbatim work will proceed, and every AI-required artifact or step " +
+            "for the remainder of this run must be marked incomplete — never reported as fully successful.",
+            [liveResult.ErrorMessage ?? "(no error detail returned by the health check)"]);
+
+        var offlineResult = new StepResult(
+            Success: false,
+            Warnings: [failure.Summary],
+            Duration: TimeSpan.Zero,
+            Outputs: Array.Empty<string>(),
+            ProcessInvocations: Array.Empty<string>(),
+            ValidatorResults: Array.Empty<ValidatorResult>(),
+            ArtifactFailures: [failure]);
+
+        CriticalFailureRecorder.Persist(context, this, offlineResult);
+    }
 
     /// <summary>
     /// Returns true when all six namespace steps (1–6) are planned, indicating a full pipeline run.

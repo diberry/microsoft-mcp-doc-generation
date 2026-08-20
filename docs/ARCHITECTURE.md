@@ -127,6 +127,25 @@ Step 6: Horizontal Articles (AI) ───────────────�
   │  • tools/ + cli-output.json → horizontal-articles/*.md
   │  • One overview article per namespace: capabilities, scenarios,
   │    prerequisites, RBAC roles, best practices
+  │  • AI generation = one bounded per-tool call per tool, plus four
+  │    small, focused namespace-fragment calls (overview / access
+  │    [prerequisites+RBAC] / best practices / links), deterministically
+  │    stitched into the same NamespaceSummaryAIData shape — replaces
+  │    the former single broad namespace-summary call, which requested
+  │    all seven namespace fields in one response and was prone to
+  │    truncation on reasoning models like gpt-5-mini
+  │  • Every per-tool and namespace-fragment prompt artifact appends the
+  │    corresponding AI response. Truncated calls retain their partial
+  │    response and failure details; calls with no response record that
+  │    explicitly, so failed calls remain diagnosable from the same file.
+  │  • Step 6 requests low reasoning effort and JSON response format so
+  │    bounded fragment budgets are spent on visible structured output
+  │    instead of being exhausted by hidden reasoning.
+  │  • Only transient network/time-out, HTTP 429, and HTTP 5xx failures
+  │    retry; truncation, malformed JSON, cancellation, and client errors
+  │    fail immediately instead of repeating the same expensive request
+  │  • Missing focused prompt pairs fail before any AI request; Step 6
+  │    never falls back to the obsolete monolithic generation path
   │  • ArticleContentProcessor validates and transforms AI output
   │  • Prompt/template paths are resolved via HorizontalArticleGenerator(
   │    mcpToolsRoot: context.McpToolsRoot) — always anchored to mcp-tools/
@@ -632,6 +651,76 @@ skipped/warned and can never mask a failure. Because the root predicate now fire
 on the real corpus and corresponds to the historical cascade count in category 5 — the two are kept
 as distinct *live* vs *baseline* columns so the historical figure is never misread as live evidence.
 
+### Live AI Endpoint Probe & `partial_explicit` Offline Continuation (AD-042)
+
+Before AD-042, the pipeline discovered a misconfigured or unreachable Azure OpenAI endpoint only
+when the first AI-dependent step actually called it — potentially deep into a long, expensive
+full-namespace run (Step 2, 3, 4, or 6). `BootstrapStep` now makes one **very early live call** to
+the configured endpoint, immediately after configuration presence is confirmed, to prove the
+endpoint actually works before any generation step runs.
+
+Every call through the shared `GenerativeAIClient` writes a concise transport-status line to the
+console and generation log. A successful chat completion reports `status=200`; HTTP failures
+report the SDK status such as `400`, `401`, or `429` before the original exception is rethrown.
+The line also identifies the operation, target tool or namespace, outcome, and duration. Failures
+that never receive an HTTP response, such as DNS or socket errors, report `status=unavailable`.
+When Step 2 intentionally uses verbatim source prompts or deterministic generation instead of the
+LLM, it writes `status=skipped outcome=not-called` with the tool command, selected mode, and reason.
+Its raw-response artifact remains `{}` by design.
+
+**Non-interactive / redirected-input runs fail immediately.** If the probe fails and stdin is
+redirected or otherwise non-interactive (CI, scripted runs), the pipeline fails fast with a nonzero
+exit — there is no prompt and no silent continuation.
+
+**Interactive runs prompt the operator.** If the probe fails and the session is interactive,
+`IPipelineUserPrompt` asks whether to continue:
+- **Decline** → the pipeline fails with the same nonzero exit as the non-interactive case; no
+  critical-failure record is created (the operator aborted before any offline work happened).
+- **Continue (`partial_explicit`)** → the pipeline:
+  1. Persists one loud, explicit critical-failure JSON record via the existing
+     `CriticalFailureRecorder.Persist` facility — no new JSON shape is invented — stating that
+     Azure OpenAI endpoint access failed and a partial deterministic fallback was explicitly
+     selected.
+  2. Sets `PipelineContext.AiOffline = true` and exports `PIPELINE_AI_ENDPOINT_OFFLINE=true` so
+     child subprocesses (which inherit the parent's environment) also see the offline state.
+  3. Disables **all further AI endpoint calls**, universally and for the rest of the run, via a
+     call-time guard inside `GenerativeAIClient.GetChatCompletionAsync` (throws
+     `AiEndpointOfflineException` — a subclass of `InvalidOperationException` whose message never
+     contains "truncated", so it always falls through each step's specific retry/truncation
+     handling into that step's existing generic-failure fallback).
+  4. Continues with deterministic/verbatim work only. Every AI-required artifact or step is
+     explicitly marked **incomplete** — never presented as fully successful, per requirement 3.
+
+**Why call-time gating, not construction-time.** The guard lives inside
+`GetChatCompletionAsync` rather than in `GenerativeAIClient`'s constructor or
+`CreateChatClient` factory, because a direct `(IChatClient, tracer, modelName)` constructor exists
+and bypasses the options-based factory entirely (see `GenerativeAIClientTracingTests`). Call-time
+gating is the only placement that catches every construction path uniformly.
+
+#### Observed AI behavior (pre-AD-042 baseline run)
+
+| Step | Uses Azure OpenAI? | Observed behavior on AI failure |
+|------|--------------------|----------------------------------|
+| 1 — Bootstrap/setup | No | Fully deterministic; no OpenAI call at all. |
+| 2 — Example prompts | Verbatim tier: no. AI tier: yes. | Verbatim/deterministic tier uses source prompts unchanged; raw output `{}` is produced **by design** for that tier. The AI-required tier has no endpoint-failure-specific handling before AD-042. |
+| 3 — Tool improvements | Yes | Caught the AI failure and saved the original **composed** file **byte-identically** as a fallback. |
+| 4 — Tool-family cleanup | Yes | Caught the AI failure and inserted the literal placeholder `<TBD_Content>` in place of the AI-generated service description. |
+| 5 — Skills relevance | No | Does not use Azure OpenAI at all; relevance is computed from skills data only. |
+| 6 — Horizontal articles | Yes | Required complete AI output with no failure handling for this case, and **failed fatally** when AI was unavailable. |
+
+#### Designed AI behavior (AD-042)
+
+| Step | Behavior when `AiOffline` is true (post-AD-042) |
+|------|--------------------------------------------------|
+| 1 — Bootstrap/setup | Unchanged — runs the live probe itself; not gated by its own result. |
+| 2 — Example prompts | Verbatim/deterministic tier unaffected (still produces `{}` by design). The AI-required tier's call now throws `AiEndpointOfflineException` before any network attempt; that tool's example prompts are marked incomplete rather than silently absent. |
+| 3 — Tool improvements | `GenerativeAIClient` throws before any network attempt; `ImprovedToolGeneratorService` falls through to its existing composed-content fallback and saves the original content byte-identically — the same observed fallback, now proven to trigger with zero network calls and still reported as an incomplete/fallback result, never as success. |
+| 4 — Tool-family cleanup | Same call-time throw; `FamilyMetadataGenerator` falls through to `BuildFallbackServiceDescription()`, inserting `<TBD_Content>` — the same observed placeholder, now proven to trigger with zero network calls and never reported as a fully successful description. |
+| 5 — Skills relevance | Unaffected — still does not use Azure OpenAI. |
+| 6 — Horizontal articles | `HorizontalArticlesStep` short-circuits **before** constructing the reducer/generator at all: it returns an explicit incomplete failure with zero AI endpoint calls (no subprocess retry, no repeated failing call). When online, the reducer path now uses the current per-tool + namespace-fragment AI generation path (`GeneratePerToolAiDataAsync`, shared with the standalone generator) instead of the obsolete monolithic `GenerateAIContent`. The former single broad namespace-summary call is replaced by four small, focused fragment calls (overview/access/best-practices/links), deterministically stitched via `StitchNamespaceSummary` — see the Step 6 bullet above. |
+
+See [AD-042 in `.squad/decisions.md`](../.squad/decisions.md) for the full design record.
+
 ## Parameter Taxonomy (3-Tier Model)
 
 Parameters in Azure MCP tools fall into three categories:
@@ -687,6 +776,11 @@ recorded artifact failures even when its own mapped exit was `0` (see
 predicate); such an artifact-failure-only root is still forced to a nonzero catalog exit.
 Global-scope failures still abort immediately.
 
+A failed live Azure OpenAI probe (AD-042) is one such global-scope failure: a non-interactive or
+redirected-input run fails immediately with a nonzero exit, and an interactive run that declines to
+continue exits the same way. Only an interactive **explicit** Continue keeps the run going, and only
+in the reduced `AiOffline` mode described above.
+
 ## AI Configuration
 
 Steps 2, 3, 4, and 6 require Azure OpenAI. Configure in `mcp-tools/.env`:
@@ -699,6 +793,14 @@ Steps 2, 3, 4, and 6 require Azure OpenAI. Configure in `mcp-tools/.env`:
 | `TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME` | Step 4 model (e.g., `gpt-4o`) — higher quality for article assembly |
 
 Step 0 validates these variables before any AI steps run (unless `--skip-env-validation`).
+
+**Live endpoint probe (AD-042).** Configuration presence alone does not prove the endpoint is
+reachable. Immediately after Step 0/Bootstrap confirms configuration is present, the pipeline makes
+one live Azure OpenAI call to prove it actually works, **before** Steps 2–6 run. See
+[Live AI Endpoint Probe & `partial_explicit` Offline Continuation](#live-ai-endpoint-probe--partial_explicit-offline-continuation-ad-042)
+for full behavior, the observed-vs-designed table, and the `PIPELINE_AI_ENDPOINT_OFFLINE`
+environment variable that a confirmed interactive "Continue" sets for the rest of the run
+(including inherited child subprocesses).
 
 ## Project Layout
 

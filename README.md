@@ -50,7 +50,7 @@ pwsh -File ./start-with-logs.ps1 -NamespaceFile ./my-namespaces.txt
 
 The same command works from PowerShell or Git Bash. Store AI settings in `.azure/<environment>/.env`. The script uses the environment named by `defaultEnvironment`; if no default resolves, it accepts one unambiguous nested environment. A root `.azure/.env` is the fallback when no nested environment file exists.
 
-Before generation, the script fails if the tracked metadata snapshot is absent or unusable, then validates the required keyless settings: `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME`, `FOUNDRY_MODEL_API_VERSION`, and `FOUNDRY_USE_DEFAULT_CREDENTIAL=true`. It reads the namespace list from the selected JSON and calls `start.sh <namespace> 1,2,3,4,5` for each entry. Later namespaces reuse the first run's build and CLI installation, output goes to `generated-<namespace>/`, and `start.sh` progress streams directly.
+Before generation, the script fails if the tracked metadata snapshot is absent or unusable, then validates the required keyless settings: `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME`, `FOUNDRY_MODEL_API_VERSION`, and `FOUNDRY_USE_DEFAULT_CREDENTIAL=true`. It reads the namespace list from the selected JSON and calls `start.sh <namespace> 1,2,3,4,5,6` for each entry. Later namespaces reuse the first run's build and CLI installation, output goes to `generated-<namespace>/`, and `start.sh` progress streams directly.
 
 To validate the real metadata and resolved environment without creating or changing `generated/`, run:
 
@@ -103,6 +103,8 @@ wait
 | 6 | Generate horizontal articles | `horizontal-articles/horizontal-article-{namespace}.md` | Yes |
 
 **Note**: Steps 2, 3, 4, and 6 require Azure AI Services (Foundry-compatible) keyless configuration in `mcp-tools/.env`. Use `FOUNDRY_USE_DEFAULT_CREDENTIAL=true` with endpoint, model name, and API version. `FOUNDRY_API_KEY` is not required or supported for repo generation workflows. See [mcp-tools/scripts/README.md](mcp-tools/scripts/README.md) for details.
+
+**Live endpoint probe**: Phase 0/Bootstrap also makes one live Azure OpenAI call right after config presence is confirmed, to prove the configured endpoint actually works before Steps 2–6 run. A non-interactive or redirected-input run fails immediately (nonzero exit) if the probe fails. An interactive run is prompted to continue; declining fails the same way, while confirming Continue records a loud critical-failure entry, disables all further AI calls for the run, and proceeds with deterministic/verbatim work only — AI-required artifacts are marked incomplete, never reported as successful. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#live-ai-endpoint-probe--partial_explicit-offline-continuation-ad-042) for details.
 
 ### Verify keyless AI configuration
 
@@ -495,4 +497,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
 
 **Last Updated**: March 2026  
 **Maintained By**: @diberry
-

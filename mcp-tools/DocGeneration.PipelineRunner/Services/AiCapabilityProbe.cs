@@ -39,4 +39,44 @@ public sealed class AiCapabilityProbe : IAiCapabilityProbe
 
         return ValueTask.FromResult(new AiCapabilityResult(missing.Count == 0, missing));
     }
+
+    /// <summary>
+    /// Makes one small, real chat-completion call against the configured endpoint to prove it
+    /// responds. Uses the same <see cref="GenerativeAIOptions"/> load path as
+    /// <see cref="ProbeAsync"/> (process env overrides <c>.env</c>), so it stays consistent with
+    /// the runtime AI client.
+    /// </summary>
+    public async Task<AiEndpointHealthCheckResult> LiveCheckAsync(string mcpToolsRoot, CancellationToken cancellationToken)
+    {
+        var options = GenerativeAIOptions.LoadFromEnvironmentOrDotEnv(mcpToolsRoot);
+        var client = new GenerativeAIClient(options);
+        return await LiveCheckAsync(client, cancellationToken);
+    }
+
+    internal static async Task<AiEndpointHealthCheckResult> LiveCheckAsync(
+        GenerativeAIClient client,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await client.GetChatCompletionAsync(
+                "You are a non-user-facing health-check probe used once at pipeline startup. Reply with exactly one word.",
+                "Reply with the single word: ok",
+                ct: cancellationToken,
+                toolOrNamespace: "bootstrap-live-probe",
+                operation: "AiEndpointHealthCheck");
+
+            return string.IsNullOrWhiteSpace(response)
+                ? new AiEndpointHealthCheckResult(false, "The Azure OpenAI endpoint returned an empty response to the live probe call.")
+                : new AiEndpointHealthCheckResult(true, null);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            return new AiEndpointHealthCheckResult(false, ex.Message);
+        }
+    }
 }

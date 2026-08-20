@@ -11,7 +11,7 @@
     2. Comma-separated list — via -NamespaceList parameter
     3. Text file — via -NamespaceFile parameter (one namespace per line)
 
-    Each namespace runs steps 1-5 via start.sh. After each namespace completes
+    Each namespace runs steps 1-6 via start.sh. After each namespace completes
     (or fails), its output is moved from the repo root into a consolidated
     run directory:
 
@@ -397,7 +397,7 @@ try {
 
         # AD-029 §7: skip the shared build/npm update only after an earlier invocation
         # actually built and exited 0 ($sharedBuildConfirmed). Loop position never gates this.
-        $startArguments = @($startPath, $namespace, "1,2,3,4,5")
+        $startArguments = @($startPath, $namespace, "1,2,3,4,5,6")
         if ($sharedBuildConfirmed) {
             $startArguments += @("--skip-build", "--skip-npm-update")
         }

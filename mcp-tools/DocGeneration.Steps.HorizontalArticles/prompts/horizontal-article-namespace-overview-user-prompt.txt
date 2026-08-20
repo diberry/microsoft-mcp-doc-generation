@@ -1,0 +1,20 @@
+Generate the service short description and overview for a how-to article about managing {{serviceBrandName}} with Azure MCP Server.
+
+**Service Information:**
+- Service Brand Name: {{serviceBrandName}}
+- Service Identifier: {{serviceIdentifier}}
+
+## Your Task
+
+Search official Azure documentation for {{serviceBrandName}} and produce:
+
+1. **genai-serviceShortDescription**: A noun phrase describing what users manage via MCP tools for {{serviceBrandName}}. MUST NOT end with a period. Must read naturally after "Manage". Keep under 8 words.
+2. **genai-serviceOverview**: A 2-3 sentence description of {{serviceBrandName}}. Do NOT start with the service name. Start with "is a..." or "provides...". Ground it in official Azure documentation.
+
+## Output Format
+
+Return ONLY valid JSON with exactly these top-level keys:
+- `genai-serviceShortDescription`
+- `genai-serviceOverview`
+
+No markdown code blocks, no explanations. The response must begin with `{` and end with `}`.

@@ -1,0 +1,21 @@
+Generate best practices for a how-to article about managing {{serviceBrandName}} with Azure MCP Server.
+
+**Service Information:**
+- Service Brand Name: {{serviceBrandName}}
+- Service Identifier: {{serviceIdentifier}}
+
+**Available MCP Tools for this service (compact list):**
+{{#each tools}}
+- {{command}} — {{description}}
+{{/each}}
+
+## Your Task
+
+**genai-bestPractices**: 2-5 best practices scoped to using the tools above effectively. Reference specific tool commands when giving advice. Priority: security first, then safe usage, then efficiency.
+
+## Output Format
+
+Return ONLY valid JSON with exactly this top-level key:
+- `genai-bestPractices`
+
+No markdown code blocks, no explanations. The response must begin with `{` and end with `}`.

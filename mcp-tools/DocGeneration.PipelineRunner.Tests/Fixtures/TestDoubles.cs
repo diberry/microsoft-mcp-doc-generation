@@ -72,6 +72,9 @@ internal sealed class StubAiCapabilityProbe : IAiCapabilityProbe
 {
     public ValueTask<AiCapabilityResult> ProbeAsync(string mcpToolsRoot, CancellationToken cancellationToken)
         => ValueTask.FromResult(new AiCapabilityResult(true, Array.Empty<string>()));
+
+    public Task<AiEndpointHealthCheckResult> LiveCheckAsync(string mcpToolsRoot, CancellationToken cancellationToken)
+        => Task.FromResult(new AiEndpointHealthCheckResult(true, null));
 }
 
 internal sealed class StubFilteredCliWriter : IFilteredCliWriter

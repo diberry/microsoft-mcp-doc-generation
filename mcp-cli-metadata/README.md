@@ -32,3 +32,16 @@ and `namespace-mapping.json`. It also updates `tracked-version.txt` with the
 release version without the build SHA suffix (for example,
 `3.0.0-beta.35`). The command fails instead of replacing an existing version
 snapshot.
+
+## Test the Azure OpenAI endpoint
+
+Use the standalone Node.js utility to load `mcp-tools/.env`, resolve the
+configured endpoint, authenticate, and send one minimal chat-completion request:
+
+```bash
+cd test-openai-endpoint
+npm install
+npm start
+```
+
+To use a different environment file, run `npm start -- --env <path>`.

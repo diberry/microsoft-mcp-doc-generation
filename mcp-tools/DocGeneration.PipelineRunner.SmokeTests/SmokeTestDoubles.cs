@@ -72,6 +72,9 @@ internal sealed class SmokeStubAiCapabilityProbe : IAiCapabilityProbe
 {
     public ValueTask<AiCapabilityResult> ProbeAsync(string mcpToolsRoot, CancellationToken cancellationToken)
         => ValueTask.FromResult(new AiCapabilityResult(true, Array.Empty<string>()));
+
+    public Task<AiEndpointHealthCheckResult> LiveCheckAsync(string mcpToolsRoot, CancellationToken cancellationToken)
+        => Task.FromResult(new AiEndpointHealthCheckResult(true, null));
 }
 
 /// <summary>Isolated duplicate of <c>SmokeStubFilteredCliWriter</c> from PipelineRunner.Tests — smoke tests must not take a test-project dependency.</summary>

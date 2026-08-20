@@ -54,14 +54,24 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
     public override async ValueTask<StepResult> ExecuteAsync(PipelineContext context, CancellationToken cancellationToken)
     {
         var (currentNamespace, cliOutput, _, matchingTools) = ResolveTarget(context);
-        var useReducerPath = Reducers.HasReducer(Id);
-        var hasOverride = context.Items.ContainsKey(ArticleOutlineOverrideKey);
 
         _ = await CreateFilteredCliFileAsync(context, cliOutput, matchingTools, "pipeline-runner-step6", cancellationToken);
 
         var processResults = new List<ProcessExecutionResult>();
         var warnings = new List<string>();
         var artifactFailures = new List<ArtifactFailure>();
+
+        if (context.AiOffline)
+        {
+            warnings.Add(
+                "Azure OpenAI is offline for this run (partial_explicit continuation after the bootstrap live " +
+                "endpoint probe failed and the operator chose to continue). Step 6 requires complete per-tool " +
+                "and namespace-summary AI content, so no further AI calls are attempted and this namespace's " +
+                "horizontal article is marked INCOMPLETE rather than reported as successful.");
+            artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
+            return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
+        }
+
         var bootstrapEnvelope = UpstreamArtifacts.TryReadUpstream(context.OutputPath, 0, "bootstrap-pipeline");
         var cliVersionPath = ResolveUpstreamFile(
             context.OutputPath,
@@ -75,102 +85,60 @@ public sealed class HorizontalArticlesStep : NamespaceStepBase
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
-        if (useReducerPath)
+        var reducer = Reducers.GetReducer(6);
+        if (reducer is null)
         {
-            try
-            {
-                var reducer = Reducers.GetReducer(6);
-                if (reducer is null)
-                {
-                    throw new InvalidOperationException("Reducer path was selected for step 6, but no reducer is registered.");
-                }
-
-                var outline = (ArticleOutlineContext)await reducer(
-                    new ArticleOutlineReducerInput(context.OutputPath, currentNamespace),
-                    cancellationToken);
-
-                var validationResult = await ReducerRegistry.AggregateAsync(Reducers.GetValidators<ArticleOutlineContext>(), outline, cancellationToken);
-                if (!validationResult.IsValid)
-                {
-                    var errorMessages = validationResult.Errors.Select(static e => e.Message).ToArray();
-                    warnings.AddRange(errorMessages);
-                    artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
-                    return BuildResult(
-                        context,
-                        processResults,
-                        true,
-                        warnings,
-                        [new ValidatorResult("pre-ai-validation", false, errorMessages)],
-                        artifactFailures);
-                }
-
-                var renderArticleAsync = await ResolveArticleRendererAsync(context, cancellationToken);
-                var articleContent = await renderArticleAsync(outline, cancellationToken);
-                var reducerArticleDirectory = Path.Combine(context.OutputPath, "horizontal-articles");
-                Directory.CreateDirectory(reducerArticleDirectory);
-                File.WriteAllText(
-                    Path.Combine(reducerArticleDirectory, $"horizontal-article-{currentNamespace}.md"),
-                    articleContent);
-                RemoveStaleFile(Path.Combine(reducerArticleDirectory, $"error-{currentNamespace}.txt"));
-                RemoveStaleFile(Path.Combine(reducerArticleDirectory, $"error-{currentNamespace}-airesponse.txt"));
-
-                return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                if (hasOverride)
-                {
-                    warnings.Add($"Horizontal article generation failed: {ex.Message}");
-                    artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
-                    return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
-                }
-
-                Console.WriteLine($"Reducer path failed for namespace '{currentNamespace}', falling back to subprocess: {ex.Message}");
-            }
-        }
-
-        var processResult = await context.ProcessRunner.RunDotNetProjectAsync(
-            GetProjectPath(context, "DocGeneration.Steps.HorizontalArticles"),
-            ["--single-service", currentNamespace, "--output-path", context.OutputPath, "--transform"],
-            context.Request.SkipBuild,
-            context.McpToolsRoot,
-            cancellationToken);
-        processResults.Add(processResult);
-        if (!processResult.Succeeded)
-        {
-            AddProcessIssue(processResult, warnings, "Horizontal article generation failed");
+            warnings.Add("No reducer is registered for step 6 (horizontal articles); cannot render the article.");
             artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
             return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
 
-        var articleDirectory = Path.Combine(context.OutputPath, "horizontal-articles");
-        var articlePath = Path.Combine(articleDirectory, $"horizontal-article-{currentNamespace}.md");
-        var errorPath = Path.Combine(articleDirectory, $"error-{currentNamespace}.txt");
-        var aiErrorPath = Path.Combine(articleDirectory, $"error-{currentNamespace}-airesponse.txt");
-
-        var success = true;
-        if (File.Exists(errorPath) || File.Exists(aiErrorPath))
+        try
         {
-            success = false;
-            warnings.Add($"Horizontal article generation produced an error artifact for '{currentNamespace}'.");
+            var outline = (ArticleOutlineContext)await reducer(
+                new ArticleOutlineReducerInput(context.OutputPath, currentNamespace),
+                cancellationToken);
+
+            var validationResult = await ReducerRegistry.AggregateAsync(Reducers.GetValidators<ArticleOutlineContext>(), outline, cancellationToken);
+            if (!validationResult.IsValid)
+            {
+                var errorMessages = validationResult.Errors.Select(static e => e.Message).ToArray();
+                warnings.AddRange(errorMessages);
+                artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
+                return BuildResult(
+                    context,
+                    processResults,
+                    true,
+                    warnings,
+                    [new ValidatorResult("pre-ai-validation", false, errorMessages)],
+                    artifactFailures);
+            }
+
+            var renderArticleAsync = await ResolveArticleRendererAsync(context, cancellationToken);
+            var articleContent = await renderArticleAsync(outline, cancellationToken);
+            var reducerArticleDirectory = Path.Combine(context.OutputPath, "horizontal-articles");
+            Directory.CreateDirectory(reducerArticleDirectory);
+            File.WriteAllText(
+                Path.Combine(reducerArticleDirectory, $"horizontal-article-{currentNamespace}.md"),
+                articleContent);
+            RemoveStaleFile(Path.Combine(reducerArticleDirectory, $"error-{currentNamespace}.txt"));
+            RemoveStaleFile(Path.Combine(reducerArticleDirectory, $"error-{currentNamespace}-airesponse.txt"));
+
+            return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
         }
-
-        if (!File.Exists(articlePath))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            warnings.Add($"Expected horizontal article output at '{articlePath}'.");
-            success = false;
+            throw;
         }
-
-        if (!success)
+        catch (Exception ex)
         {
+            // No fallback to the obsolete subprocess: a subprocess would repeat the exact same
+            // AI-dependent work through the same GenerativeAIClient choke point and fail the same
+            // way, so retrying it is meaningless. Fail this namespace's article directly instead.
+            warnings.Add($"Horizontal article generation failed: {ex.Message}");
             artifactFailures.Add(CreateHorizontalFailure(context, currentNamespace, warnings));
+            return BuildResult(context, processResults, false, warnings, artifactFailures: artifactFailures);
         }
-
-        return BuildResult(context, processResults, success, warnings, artifactFailures: artifactFailures);
     }
 
     private static async Task<Func<ArticleOutlineContext, CancellationToken, Task<string>>> ResolveArticleRendererAsync(

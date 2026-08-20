@@ -37,8 +37,37 @@ public class FamilyMetadataGeneratorTests
 
         var result = await generator.GenerateAsync(CreateFamilyContent("Azure Storage", familyName: "storage"));
 
-        Assert.Contains("Azure Storage is an Azure service that provides cloud-based capabilities for your applications.", result);
-        Assert.Contains("[Azure Storage documentation](/azure/storage/).", result);
+        // Pre-existing test updated to match current fallback behavior: BuildFallbackServiceDescription
+        // now always returns the literal "<TBD_Content>" placeholder (see
+        // ToolFamilyCleanup/Services/FamilyMetadataGenerator.cs) rather than a synthesized
+        // per-service sentence. This placeholder must never be reported as a fully successful
+        // description (requirement 3 / architecture docs "Designed AI Behavior" table).
+        Assert.Contains("<TBD_Content>", result);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_WhenAiEndpointOffline_UsesTbdContentFallback_WithoutAttemptingAnyAiCall()
+    {
+        Environment.SetEnvironmentVariable(GenerativeAIClient.OfflineEnvironmentVariable, "true");
+        try
+        {
+            var chatClient = new CapturingChatClient("should never be used");
+            var generator = new FamilyMetadataGenerator(
+                new GenerativeAIClient(chatClient),
+                "system prompt",
+                "Describe {{FAMILY_DISPLAY_NAME}}.");
+
+            var result = await generator.GenerateAsync(CreateFamilyContent("Azure Storage"));
+
+            // Requirement 3: never a false success — the TBD placeholder marks this content
+            // as incomplete, and no AI call is attempted while the endpoint is known offline.
+            Assert.Contains("<TBD_Content>", result);
+            Assert.Null(chatClient.LastOptions);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(GenerativeAIClient.OfflineEnvironmentVariable, null);
+        }
     }
 
     private static FamilyContent CreateFamilyContent(string displayName, string familyName = "storage") => new()

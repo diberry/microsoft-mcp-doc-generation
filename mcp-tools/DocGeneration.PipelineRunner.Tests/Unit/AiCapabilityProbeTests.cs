@@ -1,5 +1,6 @@
 using PipelineRunner.Services;
 using GenerativeAI;
+using Microsoft.Extensions.AI;
 using Xunit;
 
 namespace PipelineRunner.Tests.Unit;
@@ -145,8 +146,51 @@ public sealed class AiCapabilityProbeTests
         Assert.True(probeResult.IsConfigured);
     }
 
+    [Fact]
+    public async Task LiveCheckAsync_UsesGenerativeAiClientDefaultTokenBudget()
+    {
+        var chatClient = new RecordingChatClient();
+        var client = new GenerativeAIClient(chatClient);
+
+        var result = await AiCapabilityProbe.LiveCheckAsync(client, CancellationToken.None);
+
+        Assert.True(result.Success);
+        Assert.Equal(8000, chatClient.MaxOutputTokens);
+    }
+
     private static async Task<AiCapabilityResult> Probe(TempEnvFile env)
         => await new AiCapabilityProbe().ProbeAsync(env.McpToolsRoot, CancellationToken.None);
+
+    private sealed class RecordingChatClient : IChatClient
+    {
+        public int? MaxOutputTokens { get; private set; }
+
+        public ChatClientMetadata Metadata => new("test");
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> chatMessages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            MaxOutputTokens = options?.MaxOutputTokens;
+            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "ok"))
+            {
+                FinishReason = ChatFinishReason.Stop
+            });
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> chatMessages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose()
+        {
+        }
+    }
 
     /// <summary>
     /// Creates an isolated temp directory containing a <c>.env</c> file and clears the FOUNDRY_*

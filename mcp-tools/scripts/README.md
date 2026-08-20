@@ -66,6 +66,12 @@ dotnet run --project mcp-tools/DocGeneration.PipelineRunner/DocGeneration.Pipeli
 | `--skip-env-validation` | Skip Azure OpenAI environment validation during `BootstrapStep`. |
 | `--dry-run` | Print the resolved plan, including step names, scopes, failure policies, and implementation type, without running bootstrap or generators. |
 
+`BootstrapStep` also makes one live Azure OpenAI call right after environment validation to prove
+the configured endpoint actually works (AD-042). Non-interactive/redirected-input runs fail
+immediately and nonzero on probe failure; interactive runs are prompted and, on confirmed
+"Continue", the run proceeds with AI disabled for every remaining step — see
+[ARCHITECTURE.md → Live AI Endpoint Probe & `partial_explicit` Offline Continuation (AD-042)](../../docs/ARCHITECTURE.md#live-ai-endpoint-probe--partial_explicit-offline-continuation-ad-042).
+
 ### Example commands
 
 ```bash

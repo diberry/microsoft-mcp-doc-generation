@@ -46,7 +46,7 @@ The script:
 1. Validates the required keyless `FOUNDRY_*` settings.
 1. Reads the complete namespace list from the snapshot's `namespace-mapping.json`.
 1. Filters to the requested namespaces (if `-NamespaceList` or `-NamespaceFile` was provided), validating each exists in the metadata.
-1. Calls `start.sh <namespace> 1,2,3,4,5` for every namespace, so the typed pipeline remains the only generation entry point.
+1. Calls `start.sh <namespace> 1,2,3,4,5,6` for every namespace, so the typed pipeline remains the only generation entry point.
 1. Reuses the shared build and CLI installation (`--skip-build --skip-npm-update`) only after an earlier namespace **actually built and exited 0** — a confirmed successful build, not loop position. If a namespace built but exited nonzero (for example from a suppressed fatal root), the build stays unconfirmed and the next namespace rebuilds.
 1. Writes each namespace to the normal `generated-<namespace>/` directory and streams `start.sh` output to the console.
 
@@ -277,3 +277,18 @@ A single namespace's fatal step no longer stops the run. `start.sh` (one namespa
 namespace's worst code; `start-with-logs.ps1` (catalog) continues past a failed namespace and exits
 `1` if any namespace failed. A hard fatal (`1`) dominates human-review (`2`).
 
+## Live Azure OpenAI Endpoint Probe
+
+Configuration presence (`FOUNDRY_*` settings) does not prove the endpoint is reachable. Right after
+Bootstrap confirms configuration is present, the pipeline makes one live Azure OpenAI call to prove
+the endpoint actually works, before Steps 2–6 run.
+
+- **Non-interactive / redirected-input runs** (including `start-with-logs.ps1`, which pipes namespace
+  runs non-interactively) **fail immediately with a nonzero exit** on probe failure — no prompt.
+- **Interactive `start.sh <namespace>` runs** are prompted to continue on probe failure. Declining
+  fails the same way. Confirming Continue persists a loud critical-failure record, disables all
+  further Azure OpenAI calls for the rest of that run, and proceeds with deterministic/verbatim work
+  only — every AI-required artifact is marked incomplete, never reported as fully successful.
+
+See [ARCHITECTURE.md → Live AI Endpoint Probe & `partial_explicit` Offline Continuation (AD-042)](ARCHITECTURE.md#live-ai-endpoint-probe--partial_explicit-offline-continuation-ad-042)
+for the full design and the observed-vs-designed AI behavior table for Steps 1–6.

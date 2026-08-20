@@ -45,6 +45,22 @@ public sealed class PipelineContext
 
     public bool AiConfigured { get; set; }
 
+    /// <summary>
+    /// True once the run has entered the "partial_explicit" offline continuation mode: the early
+    /// bootstrap live Azure OpenAI probe failed and an interactive operator explicitly chose to
+    /// continue with deterministic/verbatim-only output. When true, AI-dependent namespace steps
+    /// (2, 3, 4, 6) must not attempt further AI calls and must mark AI-required artifacts/steps
+    /// incomplete rather than reporting them as fully successful.
+    /// </summary>
+    public bool AiOffline { get; set; }
+
+    /// <summary>
+    /// Optional override for the interactive continue/abort prompt used by Bootstrap when the
+    /// live probe fails. Null in production (a real <see cref="ConsolePipelineUserPrompt"/> is
+    /// used); tests inject a fake to avoid depending on console I/O.
+    /// </summary>
+    public IPipelineUserPrompt? PipelineUserPrompt { get; init; }
+
     public IReadOnlyList<IPipelineStep> PlannedSteps { get; set; } = Array.Empty<IPipelineStep>();
 
     public IReadOnlyList<string> SelectedNamespaces { get; set; } = Array.Empty<string>();

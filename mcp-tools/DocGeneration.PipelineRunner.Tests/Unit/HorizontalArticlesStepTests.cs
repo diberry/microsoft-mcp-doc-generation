@@ -76,6 +76,95 @@ public sealed class HorizontalArticlesStepTests
             DeleteTestRoot(testRoot);
         }
     }
+    [Fact]
+    public async Task Step6_AiOffline_ShortCircuits_MarksIncomplete_NoAiCallAttempted()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new RecordingProcessRunner();
+            var context = CreateContext(testRoot, processRunner, skipValidation: false, toolCommands: ["compute vm create", "compute vm list"]);
+            context.Items["Namespace"] = "compute";
+            context.AiOffline = true;
+
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "cli"));
+            await File.WriteAllTextAsync(
+                Path.Combine(context.OutputPath, "cli", "cli-version.json"),
+                "{\"version\":\"1.2.3\"}");
+
+            var rendererCalled = false;
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] =
+                (Func<ArticleOutlineContext, CancellationToken, Task<string>>)((_, _) =>
+                {
+                    rendererCalled = true;
+                    return Task.FromResult("# Should never be reached");
+                });
+
+            var step = new HorizontalArticlesStep();
+
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.False(rendererCalled, "No AI-dependent renderer should be invoked while AiOffline is true.");
+            Assert.Empty(processRunner.Invocations);
+            Assert.NotEmpty(result.ArtifactFailures);
+            Assert.Contains(result.Warnings, w => w.Contains("offline", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(result.Warnings, w => w.Contains("INCOMPLETE", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step6_ReducerPathThrows_FailsDirectly_NeverInvokesSubprocess()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new RecordingProcessRunner();
+            var context = CreateContext(testRoot, processRunner, skipValidation: false, toolCommands: ["compute vm create", "compute vm list"]);
+            context.Items["Namespace"] = "compute";
+
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "cli"));
+            await File.WriteAllTextAsync(
+                Path.Combine(context.OutputPath, "cli", "cli-version.json"),
+                "{\"version\":\"1.2.3\"}");
+            await File.WriteAllTextAsync(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                JsonSerializer.Serialize(new
+                {
+                    results = new object[]
+                    {
+                        new
+                        {
+                            command = "compute vm create",
+                            name = "compute vm create",
+                            description = "Create virtual machines.",
+                            option = new object[] { new { name = "name" } }
+                        },
+                    }
+                }));
+
+            // Overriding the renderer to throw simulates an AI failure with no fallback prompt files.
+            context.Items[HorizontalArticlesStep.ArticleOutlineOverrideKey] =
+                (Func<ArticleOutlineContext, CancellationToken, Task<string>>)((_, _) =>
+                    throw new InvalidOperationException("simulated AI-dependent renderer failure"));
+
+            var step = new HorizontalArticlesStep();
+
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Empty(processRunner.Invocations); // no meaningless subprocess retry of a known failure
+            Assert.Contains(result.Warnings, w => w.Contains("simulated AI-dependent renderer failure", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
 
     private static string CreateTestRoot()
     {

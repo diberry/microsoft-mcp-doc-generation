@@ -1,0 +1,19 @@
+Generate the primary documentation link and additional links for a how-to article about managing {{serviceBrandName}} with Azure MCP Server.
+
+**Service Information:**
+- Service Brand Name: {{serviceBrandName}}
+- Service Identifier: {{serviceIdentifier}}
+- Tools Reference Link: {{toolsReferenceLink}}
+
+## Your Task
+
+1. **genai-serviceDocLink**: Path to the official Azure documentation overview page for {{serviceBrandName}}. Remove the `https://learn.microsoft.com/en-us` prefix. Leave empty if unsure.
+2. **genai-additionalLinks**: 2-4 additional documentation links relevant to {{serviceBrandName}} (quickstarts, tutorials, security best practices). Leave any uncertain URL empty rather than fabricating one.
+
+## Output Format
+
+Return ONLY valid JSON with exactly these top-level keys:
+- `genai-serviceDocLink`
+- `genai-additionalLinks`
+
+No markdown code blocks, no explanations. The response must begin with `{` and end with `}`.

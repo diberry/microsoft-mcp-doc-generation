@@ -1,3 +1,4 @@
+using Azure;
 using DocGeneration.Core.Tracing;
 using Microsoft.Extensions.AI;
 using Xunit;
@@ -44,7 +45,68 @@ public class GenerativeAIClientTracingTests
         Assert.Equal("unknown", record.Model);
     }
 
-    private sealed class StubChatClient(string responseText) : IChatClient
+    [Fact]
+    public async Task GetChatCompletionAsync_Success_LogsHttpStatusAndCallContext()
+    {
+        var statusLines = new List<string>();
+        var client = new GenerativeAI.GenerativeAIClient(
+            new StubChatClient("ok"),
+            statusLogger: statusLines.Add);
+
+        await client.GetChatCompletionAsync(
+            "system",
+            "user",
+            toolOrNamespace: "containerapps",
+            operation: "AiEndpointHealthCheck");
+
+        var line = Assert.Single(statusLines);
+        Assert.Contains("status=200", line);
+        Assert.Contains("outcome=success", line);
+        Assert.Contains("operation=AiEndpointHealthCheck", line);
+        Assert.Contains("target=containerapps", line);
+    }
+
+    [Fact]
+    public async Task GetChatCompletionAsync_HttpFailure_LogsStatusBeforeRethrowing()
+    {
+        var statusLines = new List<string>();
+        var expected = new RequestFailedException(401, "Unauthorized");
+        var client = new GenerativeAI.GenerativeAIClient(
+            new ThrowingChatClient(expected),
+            statusLogger: statusLines.Add);
+
+        var actual = await Assert.ThrowsAsync<RequestFailedException>(
+            () => client.GetChatCompletionAsync(
+                "system",
+                "user",
+                toolOrNamespace: "storage",
+                operation: "GenerateTool"));
+
+        Assert.Same(expected, actual);
+        var line = Assert.Single(statusLines);
+        Assert.Contains("status=401", line);
+        Assert.Contains("outcome=failure", line);
+        Assert.Contains("operation=GenerateTool", line);
+        Assert.Contains("target=storage", line);
+    }
+
+    [Fact]
+    public async Task GetChatCompletionAsync_TruncatedResponse_ThrowsWithPartialResponseContent()
+    {
+        const string partialResponse = """{"genai-serviceOverview":"partial""";
+        var client = new GenerativeAI.GenerativeAIClient(
+            new StubChatClient(partialResponse, ChatFinishReason.Length));
+
+        var exception = await Assert.ThrowsAsync<AiResponseTruncatedException>(
+            () => client.GetChatCompletionAsync("system", "user", maxTokens: 500));
+
+        Assert.Equal(partialResponse, exception.ResponseContent);
+        Assert.Equal(500, exception.MaxOutputTokens);
+    }
+
+    private sealed class StubChatClient(
+        string responseText,
+        ChatFinishReason? finishReason = null) : IChatClient
     {
         public ChatClientMetadata Metadata => new("test");
 
@@ -55,11 +117,34 @@ public class GenerativeAIClientTracingTests
         {
             var response = new ChatResponse(new ChatMessage(ChatRole.Assistant, responseText))
             {
-                FinishReason = ChatFinishReason.Stop
+                FinishReason = finishReason ?? ChatFinishReason.Stop
             };
 
             return Task.FromResult(response);
         }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> chatMessages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class ThrowingChatClient(Exception exception) : IChatClient
+    {
+        public ChatClientMetadata Metadata => new("test");
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> chatMessages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+            => Task.FromException<ChatResponse>(exception);
 
         public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
             IEnumerable<ChatMessage> chatMessages,

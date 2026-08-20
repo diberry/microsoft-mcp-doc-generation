@@ -37,4 +37,12 @@ public class CalculateMaxTokensTests
             Assert.True(ArticleGenerator.CalculateMaxTokens(i) <= 24000);
         }
     }
+
+    [Fact]
+    public void CalculateMaxTokens_PerToolCall_UsesEightThousandTokenBudget()
+    {
+        var result = ArticleGenerator.CalculateMaxTokens(1, isPerToolCall: true);
+
+        Assert.Equal(8000, result);
+    }
 }

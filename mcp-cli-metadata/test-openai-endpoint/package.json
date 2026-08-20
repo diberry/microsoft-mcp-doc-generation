@@ -1,0 +1,17 @@
+{
+  "name": "test-openai-endpoint",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node test-endpoint.js",
+    "test": "node --test test-endpoint.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@azure/identity": "^4.7.0",
+    "dotenv": "^16.4.7"
+  }
+}

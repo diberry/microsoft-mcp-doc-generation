@@ -10,6 +10,7 @@ using TemplateEngine;
 using Shared;
 using Azure.Mcp.TextTransformation.Models;
 using Azure.Mcp.TextTransformation.Services;
+using Microsoft.Extensions.AI;
 using System.Text;
 
 namespace HorizontalArticleGenerator.Generators;
@@ -34,16 +35,48 @@ public class HorizontalArticleGenerator
 
     /// <summary>
     /// Calculates the maximum token budget for per-tool AI calls or namespace summary calls.
-    /// Per-tool calls are small and bounded (~2000 tokens each).
+    /// Per-tool calls use the shared client's 8000-token default to accommodate reasoning tokens.
     /// Namespace summary calls use a compact tool list (command + description only), so a lower cap applies.
     /// </summary>
     internal static int CalculateMaxTokens(int toolCount, bool isPerToolCall)
     {
-        if (isPerToolCall) return 2000;
+        if (isPerToolCall) return 8000;
         // Namespace summary: compact list only; lower base and per-tool factor than full article
         var calculatedTokens = 2000 + (toolCount * 150);
         return Math.Clamp(calculatedTokens, 3000, 8000);
     }
+
+    /// <summary>
+    /// Identifies one of the four small, focused namespace-fragment AI calls that replaced the
+    /// single broad namespace-summary call (which was truncated on gpt-5-mini and then blindly
+    /// retried 3× by <see cref="WithRetry{T}"/>). Each fragment has its own compact prompt files
+    /// and output token budget — see <see cref="CalculateMaxTokens(NamespaceFragment)"/>.
+    /// </summary>
+    internal enum NamespaceFragment
+    {
+        /// <summary>ServiceShortDescription + ServiceOverview.</summary>
+        Overview,
+        /// <summary>ServiceSpecificPrerequisites + RequiredRoles.</summary>
+        Access,
+        /// <summary>BestPractices.</summary>
+        BestPractices,
+        /// <summary>ServiceDocLink + AdditionalLinks.</summary>
+        Links
+    }
+
+    /// <summary>
+    /// Output token budget for each small namespace-fragment call. These are deliberately tiny —
+    /// each fragment returns 1-2 short JSON fields/arrays, never the full seven-field namespace
+    /// payload that used to overflow the output budget on reasoning models.
+    /// </summary>
+    internal static int CalculateMaxTokens(NamespaceFragment fragment) => fragment switch
+    {
+        NamespaceFragment.Overview => 500,
+        NamespaceFragment.Access => 1500,
+        NamespaceFragment.BestPractices => 1500,
+        NamespaceFragment.Links => 750,
+        _ => throw new ArgumentOutOfRangeException(nameof(fragment), fragment, "Unknown namespace fragment.")
+    };
 
     // Extracted method for generating a single article
     private async Task<bool> GenerateSingleArticleAsync(StaticArticleData staticData, string outputDir, string progress)
@@ -52,59 +85,17 @@ public class HorizontalArticleGenerator
         {
             Console.WriteLine($"{progress} Processing {staticData.ServiceBrandName}...");
 
-            AIGeneratedArticleData? aiData = null;
-
-            // Use per-tool + namespace-summary approach when new prompt files are present.
-            // Fall back to legacy single-call if Sage's prompt files haven't landed yet.
-            var toolSystemPromptPath = GetPromptPath(TOOL_SYSTEM_PROMPT_FILE);
-            var toolUserPromptPath   = GetPromptPath(TOOL_USER_PROMPT_FILE);
-            var namespaceUserPromptPath = GetPromptPath(NAMESPACE_USER_PROMPT_FILE);
-
-            if (!File.Exists(toolSystemPromptPath) || !File.Exists(toolUserPromptPath) || !File.Exists(namespaceUserPromptPath))
+            if (!AreCorePromptFilesPresent())
             {
-                Console.WriteLine($"{progress} ⚠️  Per-tool prompt files not found — using legacy single-call AI generation.");
-                string aiResponse;
-#pragma warning disable CS0618
-                aiResponse = await GenerateAIContent(staticData);
-#pragma warning restore CS0618
-                try
-                {
-                    aiData = ParseAIResponse(aiResponse);
-                }
-                catch (Exception jsonEx)
-                {
-                    Console.WriteLine($"{progress} ✗ Failed to parse AI response for {staticData.ServiceBrandName}: {jsonEx.Message}");
-                    var errorLog = Path.Combine(outputDir, $"error-{staticData.ServiceIdentifier}-airesponse.txt");
-                    await File.WriteAllTextAsync(errorLog, $"Raw AI response:\n{aiResponse}\n\nError: {jsonEx.Message}\n{jsonEx.StackTrace}", Encoding.UTF8);
-                    Console.WriteLine($"Raw AI response logged to: {errorLog}");
-                    Console.WriteLine();
-                    return false;
-                }
+                Console.WriteLine($"{progress} ✗ Required per-tool or namespace-fragment prompt files are missing; obsolete monolithic generation is disabled.");
+                return false;
             }
-            else
+
+            var (aiData, failureReason) = await GeneratePerToolAiDataAsync(staticData, progress);
+            if (aiData is null)
             {
-                // Per-tool AI calls: one per tool, bounded token budget (~2000 tokens each)
-                Console.WriteLine($"{progress} Generating per-tool AI content ({staticData.Tools.Count} tools)...");
-                var perToolResults = new List<PerToolAIData>();
-                for (int i = 0; i < staticData.Tools.Count; i++)
-                {
-                    var tool = staticData.Tools[i];
-                    Console.WriteLine($"{progress} ({i + 1}/{staticData.Tools.Count}) Tool: {tool.Command}");
-                    var perToolData = await GenerateAIContentForTool(tool, staticData.ServiceBrandName, staticData.ServiceIdentifier, i);
-                    perToolResults.Add(perToolData);
-                }
-
-                // Namespace summary AI call: one call after all per-tool calls, compact tool list
-                Console.WriteLine($"{progress} Generating namespace summary...");
-                var summaryData = await GenerateNamespaceSummaryAIContent(staticData, perToolResults);
-                aiData = AggregateAIData(staticData, perToolResults, summaryData);
-
-                // Fail fast if namespace summary returned empty required fields (indicates failed AI call)
-                if (string.IsNullOrWhiteSpace(aiData.ServiceShortDescription) || string.IsNullOrWhiteSpace(aiData.ServiceOverview))
-                {
-                    Console.WriteLine($"{progress} ✗ Namespace summary returned empty required fields for {staticData.ServiceBrandName} — article generation failed.");
-                    return false;
-                }
+                Console.WriteLine($"{progress} ✗ {failureReason}");
+                return false;
             }
 
             if (aiData == null) return false;
@@ -172,6 +163,19 @@ public class HorizontalArticleGenerator
     private const string TOOL_USER_PROMPT_FILE = "horizontal-article-tool-user-prompt.txt";
     private const string NAMESPACE_USER_PROMPT_FILE = "horizontal-article-namespace-user-prompt.txt";
 
+    // Step 6 surgical refactor: the single broad namespace-summary call (33 KB legacy system
+    // prompt + namespace-user-prompt, seven fields) was truncated on gpt-5-mini and then retried
+    // 3× for a guaranteed-identical failure. It is replaced by four small, focused fragment calls,
+    // each with its own compact, service-agnostic prompt pair — never the legacy SYSTEM_PROMPT_FILE.
+    private const string NAMESPACE_OVERVIEW_SYSTEM_PROMPT_FILE = "horizontal-article-namespace-overview-system-prompt.txt";
+    private const string NAMESPACE_OVERVIEW_USER_PROMPT_FILE = "horizontal-article-namespace-overview-user-prompt.txt";
+    private const string NAMESPACE_ACCESS_SYSTEM_PROMPT_FILE = "horizontal-article-namespace-access-system-prompt.txt";
+    private const string NAMESPACE_ACCESS_USER_PROMPT_FILE = "horizontal-article-namespace-access-user-prompt.txt";
+    private const string NAMESPACE_BEST_PRACTICES_SYSTEM_PROMPT_FILE = "horizontal-article-namespace-best-practices-system-prompt.txt";
+    private const string NAMESPACE_BEST_PRACTICES_USER_PROMPT_FILE = "horizontal-article-namespace-best-practices-user-prompt.txt";
+    private const string NAMESPACE_LINKS_SYSTEM_PROMPT_FILE = "horizontal-article-namespace-links-system-prompt.txt";
+    private const string NAMESPACE_LINKS_USER_PROMPT_FILE = "horizontal-article-namespace-links-user-prompt.txt";
+
     private readonly string _cliOutputPath;
     private readonly string _outputDir;
     private readonly string _promptOutputDir;
@@ -196,16 +200,27 @@ public class HorizontalArticleGenerator
     /// Retries <paramref name="operation"/> up to <paramref name="maxAttempts"/> times, awaiting
     /// <paramref name="delay"/> between attempts. The final attempt is not caught, so its exception
     /// propagates to the caller (which then applies its static fallback). Fixes #661.
+    /// <paramref name="shouldRetry"/> optionally classifies whether a given failure is worth
+    /// retrying at all — when it returns <c>false</c> the exception propagates immediately (no
+    /// delay, no further attempts), instead of being retried up to <paramref name="maxAttempts"/>
+    /// times. Defaults to "retry everything" when omitted, preserving pre-existing behavior for
+    /// any caller that does not pass a classifier.
     /// </summary>
-    internal static async Task<T> WithRetry<T>(Func<Task<T>> operation, int maxAttempts, Func<int, TimeSpan> delay)
+    internal static async Task<T> WithRetry<T>(
+        Func<Task<T>> operation,
+        int maxAttempts,
+        Func<int, TimeSpan> delay,
+        Func<Exception, bool>? shouldRetry = null)
     {
+        shouldRetry ??= static _ => true;
+
         for (int attempt = 1; attempt < maxAttempts; attempt++)
         {
             try
             {
                 return await operation();
             }
-            catch
+            catch (Exception ex) when (shouldRetry(ex))
             {
                 await Task.Delay(delay(attempt));
             }
@@ -217,13 +232,59 @@ public class HorizontalArticleGenerator
     /// <summary>
     /// Invokes the AI chat completion with transient-failure retry/backoff (#661). Callers wrap this
     /// in their own try/catch so that, once all retries are exhausted, they fall back to static content.
+    /// <paramref name="operation"/> and <paramref name="toolOrNamespace"/> are forwarded to
+    /// <see cref="GenerativeAIClient.GetChatCompletionAsync"/> for status-log and tracing context —
+    /// every call site must pass meaningful values so log lines never show <c>target=unknown</c>.
+    /// Only genuinely transient failures are retried; see <see cref="IsRetryableAiFailure"/>.
     /// </summary>
-    internal Task<string> CallAiWithRetryAsync(string systemPrompt, string userPrompt, int maxTokens)
+    internal Task<string> CallAiWithRetryAsync(
+        string systemPrompt,
+        string userPrompt,
+        int maxTokens,
+        string? operation = null,
+        string? toolOrNamespace = null)
         => WithRetry(
-            () => _aiClient.GetChatCompletionAsync(systemPrompt, userPrompt, maxTokens),
+            () => _aiClient.GetChatCompletionAsync(
+                systemPrompt, userPrompt, maxTokens,
+                toolOrNamespace: toolOrNamespace,
+                operation: operation,
+                reasoningEffort: ReasoningEffort.Low,
+                responseFormat: ChatResponseFormat.Json),
             _aiMaxAttempts,
-            _aiRetryDelay);
+            _aiRetryDelay,
+            IsRetryableAiFailure);
 
+    /// <summary>
+    /// Positively identifies transient failures worth retrying: timeouts, network failures without
+    /// an HTTP response, HTTP 429, and HTTP 5xx. All other errors are deterministic or require
+    /// operator/configuration changes and are not retried.
+    /// </summary>
+    internal static bool IsRetryableAiFailure(Exception ex)
+    {
+        // Token truncation: GenerativeAIClient.GetChatCompletionAsync throws this specific
+        // InvalidOperationException when FinishReason == Length. Retrying with the same maxTokens
+        // budget produces the same truncation every time.
+        if (ex is InvalidOperationException ioe &&
+            ioe.Message.Contains("truncated due to token limit", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        // Malformed JSON / schema errors are deterministic parsing failures, not transient.
+        if (ex is JsonException)
+        {
+            return false;
+        }
+
+        var statusCode = GenerativeAIClient.TryGetHttpStatusCode(ex);
+        if (statusCode.HasValue)
+        {
+            return statusCode == 429 || statusCode >= 500;
+        }
+
+        return ex is TimeoutException ||
+               ex is HttpRequestException;
+    }
     /// <summary>
     /// Resolves a prompt file path.  When <c>mcpToolsRoot</c> was supplied to the constructor
     /// the path is anchored to that directory; otherwise it resolves from the current working
@@ -241,6 +302,22 @@ public class HorizontalArticleGenerator
         _mcpToolsRoot is not null
             ? Path.Combine(_mcpToolsRoot, PROJECT_SUBDIR, "templates", fileName)
             : Path.GetFullPath(Path.Combine(".", PROJECT_SUBDIR, "templates", fileName));
+
+    /// <summary>
+    /// True when the per-tool prompt pair and all four namespace-fragment prompt pairs are present.
+    /// Missing prompts fail generation before any AI request; the obsolete monolithic path is never used.
+    /// </summary>
+    private bool AreCorePromptFilesPresent() =>
+        File.Exists(GetPromptPath(TOOL_SYSTEM_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(TOOL_USER_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(NAMESPACE_OVERVIEW_SYSTEM_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(NAMESPACE_OVERVIEW_USER_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(NAMESPACE_ACCESS_SYSTEM_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(NAMESPACE_ACCESS_USER_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(NAMESPACE_BEST_PRACTICES_SYSTEM_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(NAMESPACE_BEST_PRACTICES_USER_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(NAMESPACE_LINKS_SYSTEM_PROMPT_FILE)) &&
+        File.Exists(GetPromptPath(NAMESPACE_LINKS_USER_PROMPT_FILE));
 
     public HorizontalArticleGenerator(GenerativeAIOptions options, bool useTextTransformation = false, bool generateAllArticles = false, TransformationEngine? transformationEngine = null, string? outputBasePath = null, string? mcpToolsRoot = null)
     {
@@ -364,10 +441,29 @@ public class HorizontalArticleGenerator
     {
         cancellationToken.ThrowIfCancellationRequested();
         var staticData = await BuildStaticArticleDataAsync(outlineContext, cancellationToken);
-#pragma warning disable CS0618
-        var aiResponse = await GenerateAIContent(staticData);
-#pragma warning restore CS0618
-        var aiData = ParseAIResponse(aiResponse);
+
+        // Current per-tool + namespace-fragment AI generation path — the same one used by the
+        // standalone console generator (GenerateSingleArticleAsync). Intentionally does NOT fall
+        // back to the obsolete monolithic GenerateAIContent call: that method causes token
+        // overflow on large namespaces and is no longer part of the supported pipeline path.
+        if (!AreCorePromptFilesPresent())
+        {
+            throw new InvalidOperationException(
+                "Horizontal article generation requires the per-tool AI prompt files and the four namespace-fragment " +
+                $"AI prompt files ({TOOL_SYSTEM_PROMPT_FILE}, {TOOL_USER_PROMPT_FILE}, {NAMESPACE_OVERVIEW_USER_PROMPT_FILE}, " +
+                $"{NAMESPACE_ACCESS_USER_PROMPT_FILE}, {NAMESPACE_BEST_PRACTICES_USER_PROMPT_FILE}, {NAMESPACE_LINKS_USER_PROMPT_FILE}), " +
+                "not all of which " +
+                "were found. The obsolete monolithic single-call AI generation path is not used by the pipeline " +
+                "reducer and has no fallback here.");
+        }
+
+        var (aiData, failureReason) = await GeneratePerToolAiDataAsync(staticData, "[reducer]");
+        if (aiData is null)
+        {
+            throw new InvalidOperationException(
+                failureReason ?? "Per-tool + namespace-fragment AI generation failed for an unknown reason.");
+        }
+
         var processor = new ArticleContentProcessor(_transformationEngine);
         var validationResult = processor.Process(aiData, staticData.ServiceBrandName, staticData.ServiceIdentifier);
         if (validationResult.HasCriticalErrors)
@@ -378,6 +474,88 @@ public class HorizontalArticleGenerator
         var templateData = MergeData(staticData, aiData);
         templateData.Skills = SkillsRelevanceReader.LoadRelevantSkills(_outputBasePath, staticData.ServiceIdentifier);
         return await RenderArticleAsync(templateData);
+    }
+
+    /// <summary>
+    /// Generates AI content for a single article using the current, supported path: one bounded
+    /// per-tool AI call per tool (<see cref="GenerateAIContentForTool"/>), followed by a single
+    /// namespace-summary result, aggregated via <see cref="AggregateAIData"/>.
+    ///
+    /// UPDATED (Step 6 surgical refactor): the single broad namespace-summary call is replaced by
+    /// four small, focused fragment calls — <see cref="GenerateNamespaceOverviewAIContent"/>,
+    /// <see cref="GenerateNamespaceAccessAIContent"/>, <see cref="GenerateNamespaceBestPracticesAIContent"/>,
+    /// and <see cref="GenerateNamespaceLinksAIContent"/> — deterministically stitched back together
+    /// by <see cref="StitchNamespaceSummary"/> before aggregation. Shared by both the console-mode generator
+    /// (<see cref="GenerateSingleArticleAsync(StaticArticleData, string, string)"/>) and the
+    /// PipelineRunner reducer path (<see cref="GenerateArticleMarkdownAsync"/>) so both use
+    /// identical, service-agnostic AI generation logic. Each per-tool/summary call already catches
+    /// its own AI failures internally (including the universal offline gate in
+    /// <see cref="GenerativeAIClient"/>) and returns empty/static data rather than throwing; this
+    /// method's only failure signal is an empty required overview-fragment field, which is
+    /// reported back to the caller as a non-null <c>FailureReason</c> rather than thrown, so callers
+    /// decide how to surface "AI-required work is incomplete" (never as a false success).
+    /// </summary>
+    private async Task<(AIGeneratedArticleData? Data, string? FailureReason)> GeneratePerToolAiDataAsync(
+        StaticArticleData staticData,
+        string progress)
+    {
+        // Per-tool AI calls: one per tool with enough output budget for reasoning models.
+        Console.WriteLine($"{progress} Generating per-tool AI content ({staticData.Tools.Count} tools)...");
+        var perToolResults = new List<PerToolAIData>();
+        for (int i = 0; i < staticData.Tools.Count; i++)
+        {
+            var tool = staticData.Tools[i];
+            Console.WriteLine($"{progress} ({i + 1}/{staticData.Tools.Count}) Tool: {tool.Command}");
+            var perToolData = await GenerateAIContentForTool(tool, staticData.ServiceBrandName, staticData.ServiceIdentifier, i);
+            perToolResults.Add(perToolData);
+        }
+
+        // Namespace-fragment AI calls: four small, focused calls after all per-tool calls complete,
+        // replacing the single broad namespace-summary call that used to overflow its output budget
+        // and then get retried 3× for a guaranteed-identical truncation failure.
+        Console.WriteLine($"{progress} Generating namespace overview...");
+        var overview = await GenerateNamespaceOverviewAIContent(staticData);
+        Console.WriteLine($"{progress} Generating namespace access (prerequisites + RBAC)...");
+        var access = await GenerateNamespaceAccessAIContent(staticData);
+        Console.WriteLine($"{progress} Generating namespace best practices...");
+        var bestPractices = await GenerateNamespaceBestPracticesAIContent(staticData);
+        Console.WriteLine($"{progress} Generating namespace links...");
+        var links = await GenerateNamespaceLinksAIContent(staticData);
+
+        var summaryData = StitchNamespaceSummary(overview, access, bestPractices, links);
+        var aggregated = AggregateAIData(staticData, perToolResults, summaryData);
+
+        // Fail fast if namespace summary returned empty required fields (indicates failed AI call)
+        if (string.IsNullOrWhiteSpace(aggregated.ServiceShortDescription) || string.IsNullOrWhiteSpace(aggregated.ServiceOverview))
+        {
+            return (null, $"Namespace overview fragment returned empty required fields for {staticData.ServiceBrandName} — article generation failed.");
+        }
+
+        return (aggregated, null);
+    }
+
+    /// <summary>
+    /// Deterministically stitches the four small namespace-fragment results into a single
+    /// <see cref="NamespaceSummaryAIData"/> — a pure, no-AI, no-I/O mapping so the rest of the
+    /// pipeline (<see cref="AggregateAIData"/>, <c>ArticleContentProcessor</c>, template rendering)
+    /// is unaffected by the fragment-call refactor.
+    /// </summary>
+    internal static NamespaceSummaryAIData StitchNamespaceSummary(
+        NamespaceOverviewFragment overview,
+        NamespaceAccessFragment access,
+        NamespaceBestPracticesFragment bestPractices,
+        NamespaceLinksFragment links)
+    {
+        return new NamespaceSummaryAIData
+        {
+            ServiceShortDescription = overview.ServiceShortDescription,
+            ServiceOverview = overview.ServiceOverview,
+            ServiceSpecificPrerequisites = access.ServiceSpecificPrerequisites,
+            RequiredRoles = access.RequiredRoles,
+            BestPractices = bestPractices.BestPractices,
+            ServiceDocLink = links.ServiceDocLink,
+            AdditionalLinks = links.AdditionalLinks
+        };
     }
 
     /// <summary>
@@ -658,6 +836,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             return new PerToolAIData { Command = tool.Command, ShortDescription = tool.Description };
         }
 
+        string? promptFilePath = null;
         try
         {
             var systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
@@ -690,7 +869,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             // Save prompt for debugging
             Directory.CreateDirectory(_promptOutputDir);
             var promptFileName = $"horizontal-article-{serviceIdentifier}-tool-{toolIndex:D2}-prompt.md";
-            var promptFilePath = Path.Combine(_promptOutputDir, promptFileName);
+            promptFilePath = Path.Combine(_promptOutputDir, promptFileName);
             var promptContent = $"""
 # Per-Tool Prompt: {tool.Command} ({serviceBrandName})
 
@@ -707,7 +886,9 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             await File.WriteAllTextAsync(promptFilePath, promptContent, Encoding.UTF8);
 
             var maxTokens = CalculateMaxTokens(1, isPerToolCall: true);
-            var response = await CallAiWithRetryAsync(systemPrompt, userPrompt, maxTokens);
+            var response = await CallAiWithRetryAsync(
+                systemPrompt, userPrompt, maxTokens,
+                operation: "per-tool", toolOrNamespace: tool.Command);
 
             await File.AppendAllTextAsync(promptFilePath, $"""
 
@@ -728,29 +909,100 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
         }
         catch (Exception ex)
         {
+            await AppendAiFailureToPromptArtifactAsync(promptFilePath, ex);
             Console.WriteLine($"    ⚠️  AI call failed for tool {tool.Command}: {ex.Message} — using static fallback.");
             return new PerToolAIData { Command = tool.Command, ShortDescription = tool.Description };
         }
     }
 
     /// <summary>
-    /// Calls AI once for the namespace-level summary after all per-tool calls complete.
-    /// Input is a compact list (command + description only) to keep the token count low.
-    /// Returns an empty summary if the namespace user prompt file is not present.
+    /// Calls AI once for the namespace "overview" fragment (service short description + overview
+    /// paragraph). Required — see <see cref="GeneratePerToolAiDataAsync"/>, which treats an empty
+    /// result from this fragment as fatal.
     /// </summary>
-    private async Task<NamespaceSummaryAIData> GenerateNamespaceSummaryAIContent(
-        StaticArticleData staticData,
-        IReadOnlyList<PerToolAIData> perToolResults)
-    {
-        var systemPromptPath = GetPromptPath(SYSTEM_PROMPT_FILE);
-        var userPromptPath   = GetPromptPath(NAMESPACE_USER_PROMPT_FILE);
+    internal Task<NamespaceOverviewFragment> GenerateNamespaceOverviewAIContent(StaticArticleData staticData) =>
+        GenerateNamespaceFragmentAsync<NamespaceOverviewFragment>(
+            staticData,
+            NAMESPACE_OVERVIEW_SYSTEM_PROMPT_FILE,
+            NAMESPACE_OVERVIEW_USER_PROMPT_FILE,
+            fragmentSlug: "overview",
+            fragmentLabel: "overview",
+            fragmentBudget: NamespaceFragment.Overview,
+            includeToolList: false);
 
-        if (!File.Exists(userPromptPath))
+    /// <summary>
+    /// Calls AI once for the namespace "access" fragment (service-specific prerequisites + required
+    /// RBAC roles), grounded to the compact tool list so role selection matches minimum privilege.
+    /// </summary>
+    internal Task<NamespaceAccessFragment> GenerateNamespaceAccessAIContent(StaticArticleData staticData) =>
+        GenerateNamespaceFragmentAsync<NamespaceAccessFragment>(
+            staticData,
+            NAMESPACE_ACCESS_SYSTEM_PROMPT_FILE,
+            NAMESPACE_ACCESS_USER_PROMPT_FILE,
+            fragmentSlug: "access",
+            fragmentLabel: "access",
+            fragmentBudget: NamespaceFragment.Access,
+            includeToolList: true);
+
+    /// <summary>
+    /// Calls AI once for the namespace "best practices" fragment, grounded to the compact tool list.
+    /// </summary>
+    internal Task<NamespaceBestPracticesFragment> GenerateNamespaceBestPracticesAIContent(StaticArticleData staticData) =>
+        GenerateNamespaceFragmentAsync<NamespaceBestPracticesFragment>(
+            staticData,
+            NAMESPACE_BEST_PRACTICES_SYSTEM_PROMPT_FILE,
+            NAMESPACE_BEST_PRACTICES_USER_PROMPT_FILE,
+            fragmentSlug: "best-practices",
+            fragmentLabel: "best practices",
+            fragmentBudget: NamespaceFragment.BestPractices,
+            includeToolList: true);
+
+    /// <summary>
+    /// Calls AI once for the namespace "links" fragment (primary service doc link + additional links).
+    /// Does not need the tool list — link selection is service-level, not tool-grounded.
+    /// </summary>
+    internal Task<NamespaceLinksFragment> GenerateNamespaceLinksAIContent(StaticArticleData staticData) =>
+        GenerateNamespaceFragmentAsync<NamespaceLinksFragment>(
+            staticData,
+            NAMESPACE_LINKS_SYSTEM_PROMPT_FILE,
+            NAMESPACE_LINKS_USER_PROMPT_FILE,
+            fragmentSlug: "links",
+            fragmentLabel: "links",
+            fragmentBudget: NamespaceFragment.Links,
+            includeToolList: false);
+
+    /// <summary>
+    /// Shared implementation behind the four small namespace-fragment AI calls (overview, access,
+    /// best practices, links) that replaced the single broad namespace-summary call. Each fragment
+    /// uses its own compact, universal/service-agnostic prompt pair — never the 33 KB legacy
+    /// <see cref="SYSTEM_PROMPT_FILE"/> — and a small output token budget (see
+    /// <see cref="CalculateMaxTokens(NamespaceFragment)"/>) so reasoning-model output is never
+    /// truncated for a single short field/array. Missing prompt files degrade gracefully to an
+    /// empty fragment (mirrors <see cref="GenerateAIContentForTool"/>); the same is true for any AI
+    /// call failure that survives retry, so exactly one fragment failing never blocks the other
+    /// three from contributing their content — only the required overview fragment is fatal (see
+    /// <see cref="GeneratePerToolAiDataAsync"/>).
+    /// </summary>
+    private async Task<TFragment> GenerateNamespaceFragmentAsync<TFragment>(
+        StaticArticleData staticData,
+        string systemPromptFile,
+        string userPromptFile,
+        string fragmentSlug,
+        string fragmentLabel,
+        NamespaceFragment fragmentBudget,
+        bool includeToolList)
+        where TFragment : new()
+    {
+        var systemPromptPath = GetPromptPath(systemPromptFile);
+        var userPromptPath = GetPromptPath(userPromptFile);
+
+        if (!File.Exists(systemPromptPath) || !File.Exists(userPromptPath))
         {
-            Console.WriteLine($"    ⚠️  Namespace summary user prompt not found; using empty summary for: {staticData.ServiceBrandName}");
-            return new NamespaceSummaryAIData();
+            Console.WriteLine($"    ⚠️  Namespace {fragmentLabel} prompt files not found; using empty {fragmentLabel} fragment for: {staticData.ServiceBrandName}");
+            return new TFragment();
         }
 
+        string? promptFilePath = null;
         try
         {
             var systemPrompt = await File.ReadAllTextAsync(systemPromptPath);
@@ -760,23 +1012,31 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             var handlebars = HandlebarsDotNet.Handlebars.Create();
             var userPromptCompiled = handlebars.Compile(userPromptTemplate);
 
-            // Compact tool list: only command + description to stay within token budget
-            var promptContext = new
-            {
-                serviceBrandName   = staticData.ServiceBrandName,
-                serviceIdentifier  = staticData.ServiceIdentifier,
-                toolsReferenceLink = staticData.ToolsReferenceLink,
-                tools = staticData.Tools.Select(t => new { command = t.Command, description = t.Description })
-            };
+            // Access and best-practices fragments ground their content to the tool list (RBAC
+            // minimum privilege, tool-specific advice); overview and links are service-level only.
+            object promptContext = includeToolList
+                ? new
+                {
+                    serviceBrandName = staticData.ServiceBrandName,
+                    serviceIdentifier = staticData.ServiceIdentifier,
+                    toolsReferenceLink = staticData.ToolsReferenceLink,
+                    tools = staticData.Tools.Select(t => new { command = t.Command, description = t.Description })
+                }
+                : new
+                {
+                    serviceBrandName = staticData.ServiceBrandName,
+                    serviceIdentifier = staticData.ServiceIdentifier,
+                    toolsReferenceLink = staticData.ToolsReferenceLink
+                };
 
             var userPrompt = userPromptCompiled(promptContext);
 
-            // Save prompt for debugging
+            // Save prompt for debugging — clear, component-specific filename per fragment.
             Directory.CreateDirectory(_promptOutputDir);
-            var promptFileName = $"horizontal-article-{staticData.ServiceIdentifier}-namespace-prompt.md";
-            var promptFilePath = Path.Combine(_promptOutputDir, promptFileName);
+            var promptFileName = $"horizontal-article-{staticData.ServiceIdentifier}-namespace-{fragmentSlug}-prompt.md";
+            promptFilePath = Path.Combine(_promptOutputDir, promptFileName);
             var promptContent = $"""
-# Namespace Summary Prompt: {staticData.ServiceBrandName}
+# Namespace {fragmentLabel} Prompt: {staticData.ServiceBrandName}
 
 Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 
@@ -790,8 +1050,10 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
 """;
             await File.WriteAllTextAsync(promptFilePath, promptContent, Encoding.UTF8);
 
-            var maxTokens = CalculateMaxTokens(staticData.Tools.Count, isPerToolCall: false);
-            var response = await CallAiWithRetryAsync(systemPrompt, userPrompt, maxTokens);
+            var maxTokens = CalculateMaxTokens(fragmentBudget);
+            var response = await CallAiWithRetryAsync(
+                systemPrompt, userPrompt, maxTokens,
+                operation: $"namespace-{fragmentSlug}", toolOrNamespace: staticData.ServiceIdentifier);
 
             await File.AppendAllTextAsync(promptFilePath, $"""
 
@@ -809,14 +1071,51 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
                 PropertyNameCaseInsensitive = true,
                 DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
             };
-            return JsonSerializer.Deserialize<NamespaceSummaryAIData>(jsonContent, options)
-                ?? new NamespaceSummaryAIData();
+            return JsonSerializer.Deserialize<TFragment>(jsonContent, options) ?? new TFragment();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"    ⚠️  Namespace summary AI call failed for {staticData.ServiceBrandName}: {ex.Message} — using empty summary.");
-            return new NamespaceSummaryAIData();
+            await AppendAiFailureToPromptArtifactAsync(promptFilePath, ex);
+            Console.WriteLine($"    ⚠️  Namespace {fragmentLabel} AI call failed for {staticData.ServiceBrandName}: {ex.Message} — using empty {fragmentLabel} fragment.");
+            return new TFragment();
         }
+    }
+
+    private static Task AppendAiFailureToPromptArtifactAsync(string? promptFilePath, Exception exception)
+    {
+        if (string.IsNullOrWhiteSpace(promptFilePath) || !File.Exists(promptFilePath))
+        {
+            return Task.CompletedTask;
+        }
+
+        var responseSection = exception is AiResponseTruncatedException truncated
+            ? $"""
+
+
+## AI Response (truncated)
+
+```json
+{truncated.ResponseContent}
+```
+"""
+            : """
+
+
+## AI Response
+
+_No response was received._
+""";
+
+        return File.AppendAllTextAsync(
+            promptFilePath,
+            $"""
+{responseSection}
+
+## AI Error
+
+{exception.Message}
+""",
+            Encoding.UTF8);
     }
 
     /// <summary>

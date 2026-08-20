@@ -153,6 +153,38 @@ public class AiTimeoutFallbackTests : IDisposable
         Assert.Equal(TimeSpan.FromMinutes(5), ImprovedToolGeneratorService.DefaultPerToolTimeout);
     }
 
+    // ── AI endpoint offline (partial_explicit continuation) falls back to original ──
+
+    [Fact]
+    public async Task AiOffline_SavesOriginalContentByteIdentical_WithoutAttemptingAnyAiCall()
+    {
+        var originalContent = CreateToolContent("offline-tool");
+        await File.WriteAllTextAsync(Path.Combine(_inputDir, "offline-tool.md"), originalContent);
+
+        Environment.SetEnvironmentVariable(GenerativeAIClient.OfflineEnvironmentVariable, "true");
+        try
+        {
+            var countingClient = new CountingChatClient();
+            var offlineAiClient = new GenerativeAIClient(countingClient);
+            var service = new ImprovedToolGeneratorService(offlineAiClient, "system", "{0}");
+
+            var result = await service.GenerateImprovedToolFilesAsync(_inputDir, _outputDir, maxTokens: 1000);
+
+            var outputPath = Path.Combine(_outputDir, "offline-tool.md");
+            Assert.True(File.Exists(outputPath), "Output file should exist (deterministic fallback) even when AI is offline");
+
+            var savedContent = await File.ReadAllTextAsync(outputPath);
+            // Requirement 3: composed content saved byte-identically — never a placeholder
+            // reported as fully successful.
+            Assert.Equal(originalContent, savedContent);
+            Assert.Equal(0, countingClient.CallCount);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(GenerativeAIClient.OfflineEnvironmentVariable, null);
+        }
+    }
+
     // ── Stub chat clients ──
 
     /// <summary>Chat client that never returns (simulates Azure OpenAI hang).</summary>
@@ -215,6 +247,31 @@ public class AiTimeoutFallbackTests : IDisposable
         public Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> chatMessages, ChatOptions? options = null, CancellationToken cancellationToken = default)
             => throw new HttpRequestException("502 Bad Gateway");
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> chatMessages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+        public void Dispose() { }
+    }
+
+    /// <summary>Chat client that records how many times it was invoked — used to prove the
+    /// offline gate short-circuits before any network call is attempted.</summary>
+    private sealed class CountingChatClient : IChatClient
+    {
+        public int CallCount { get; private set; }
+        public ChatClientMetadata Metadata => new("test-counting");
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> chatMessages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "should never be reached"))
+            {
+                FinishReason = ChatFinishReason.Stop
+            });
+        }
 
         public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
             IEnumerable<ChatMessage> chatMessages, ChatOptions? options = null, CancellationToken cancellationToken = default)
