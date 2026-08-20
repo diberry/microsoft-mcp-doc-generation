@@ -6,6 +6,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+- **Local CLI metadata snapshot command** — Added `npm run snapshot` in `mcp-cli-metadata/` to invoke the authoritative .NET extractor, create a version-named directory containing the four standard CLI metadata artifacts, and update `tracked-version.txt` with the release version without its build SHA. Existing version snapshots are never overwritten.
+
 ### Fixed
 
 - **Pipeline generation hardening for Step 2, Step 4, and Step 5 failures (#791)** — Three pipeline fixes now prevent the 2026-08-02 catalog run regressions from recurring:

@@ -16,12 +16,12 @@ Generate Azure MCP documentation in 5 minutes.
    cd microsoft-mcp-doc-generation
    ```
 
-2. **Configure AI credentials** (create `mcp-tools/.env`):
+2. **Generate resources** (create `mcp-tools/.env`):
    ```env
-   FOUNDRY_API_KEY=your-key-here
-   FOUNDRY_ENDPOINT=https://your-endpoint.openai.azure.com/
-   FOUNDRY_MODEL_NAME=gpt-4.1-mini
-   TOOL_FAMILY_CLEANUP_FOUNDRY_MODEL_NAME=gpt-4o
+   azd up
+   cd mcp-tools
+   azd env get-values > .env
+
    ```
 
 3. **Generate for one namespace:**
