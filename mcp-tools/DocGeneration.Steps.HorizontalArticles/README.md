@@ -103,19 +103,23 @@ Run `./start.sh` first to generate the required CLI output files:
 The current per-tool + namespace-fragment generation path uses separate output-token budgets per
 AI call type. Step 6 replaced the single broad namespace-summary call (which requested all seven
 namespace-level fields in one response and was prone to truncation on gpt-5-mini) with four small,
-focused namespace-fragment calls, each with a deliberately tiny budget:
+focused namespace-fragment calls, each with a bounded budget:
 
 | Call | Token limit |
 |------|-------------|
 | Per-tool content | 8,000 |
-| Namespace fragment: overview (short description + overview) | 500 |
+| Namespace fragment: overview (short description + overview) | 1,500 |
 | Namespace fragment: access (prerequisites + required roles) | 1,500 |
 | Namespace fragment: best practices | 1,500 |
-| Namespace fragment: links (doc link + additional links) | 750 |
+| Namespace fragment: links (doc link + additional links) | 1,500 |
 
 All Step 6 calls request low reasoning effort and JSON response format. This keeps the bounded
 output budget focused on visible structured content; otherwise reasoning models can consume the
 entire budget internally and return `finish_reason=length` with an empty visible response.
+If a namespace-fragment call is still truncated with an empty or whitespace-only visible response,
+Step 6 records the failed attempt in the component prompt artifact and retries that fragment once
+with a 3,000-token ceiling. It doesn't adaptively retry truncated responses that contain partial
+content, and it doesn't escalate more than once.
 
 This prevents:
 - **Truncated per-tool responses** when reasoning models consume output tokens internally
@@ -142,6 +146,8 @@ The four fragment results are deterministically stitched back into the same
   one-tool service), each with its own compact prompt pair and small output-token budget
 - Saves full prompt + response to `./generated/horizontal-article-prompts/`
   (component filenames, e.g. `horizontal-article-{service}-namespace-overview-prompt.md`)
+- Renders per-tool values from the nested `tool` prompt context, including command, description,
+  parameter count, and destructive/read-only/secret metadata
 - Preserves partial response content and error details in that same component file when a call is
   truncated; if the endpoint returns no body, the file explicitly records that no response was
   received. Failure semantics and static/empty fallbacks remain unchanged.
@@ -158,6 +164,10 @@ If an AI response is cut off by the output-token limit, the shared client throws
 `AiResponseTruncatedException` containing the partial body and token metadata. Step 6 appends that
 partial body under `## AI Response (truncated)` and the failure details under `## AI Error` in the
 same component prompt file. The generator then preserves its existing fallback/failure behavior.
+For namespace fragments only, an empty or whitespace-only truncated response triggers one adaptive
+budget escalation from 1,500 to 3,000 output tokens. Both attempts remain visible in the same
+artifact. A partial truncated response and a second truncation preserve the normal failure semantics
+without another adaptive attempt.
 
 ### Common Issues
 
@@ -201,13 +211,26 @@ Namespace-fragment budgets (`CalculateMaxTokens(NamespaceFragment)`):
 ```csharp
 internal static int CalculateMaxTokens(NamespaceFragment fragment) => fragment switch
 {
-    NamespaceFragment.Overview => 500,
+    NamespaceFragment.Overview => 1500,
     NamespaceFragment.Access => 1500,
     NamespaceFragment.BestPractices => 1500,
-    NamespaceFragment.Links => 750,
+    NamespaceFragment.Links => 1500,
     _ => throw new ArgumentOutOfRangeException(nameof(fragment), fragment, "Unknown namespace fragment.")
 };
 ```
+
+## Deferred hardening
+
+The following improvements remain intentionally outside this restoration slice:
+
+- **Operation-based semantic grounding:** validate RBAC and best-practice claims against the
+  namespace's read-only, write-capable, and destructive tool surface by reusing existing operation
+  classification helpers.
+- **Authoritative URL grounding:** source service documentation links from verified metadata or
+  official excerpts, validate generated URL paths, and allow optional links to remain empty when no
+  authoritative source is available.
+- **Expanded token diagnostics:** distinguish input, visible output, reasoning (when exposed), and
+  total token usage from the configured output-token ceiling in component artifacts and errors.
 
 ## Dependencies
 

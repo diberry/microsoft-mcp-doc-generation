@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text.Json;
+using CSharpGenerator.Models;
 using GenerativeAI;
 using HorizontalArticleGenerator.Models;
 using Microsoft.Extensions.AI;
@@ -102,14 +103,14 @@ public sealed class NamespaceFragmentsTests : IDisposable
         Assert.Empty(stitched.AdditionalLinks);
     }
 
-    // --- Per-fragment output token budgets (user spec: 500/1500/1500/750) ---
+    // --- Per-fragment output token budgets ---
 
     [Fact]
-    public void CalculateMaxTokens_NamespaceFragment_Overview_Returns500()
+    public void CalculateMaxTokens_NamespaceFragment_Overview_Returns1500()
     {
         // NamespaceFragment is internal, so the enum value is resolved inside the test body rather
         // than passed as a public [Theory] parameter (which would require a public parameter type).
-        Assert.Equal(500, ArticleGenerator.CalculateMaxTokens(NamespaceFragment.Overview));
+        Assert.Equal(1500, ArticleGenerator.CalculateMaxTokens(NamespaceFragment.Overview));
     }
 
     [Fact]
@@ -125,9 +126,9 @@ public sealed class NamespaceFragmentsTests : IDisposable
     }
 
     [Fact]
-    public void CalculateMaxTokens_NamespaceFragment_Links_Returns750()
+    public void CalculateMaxTokens_NamespaceFragment_Links_Returns1500()
     {
-        Assert.Equal(750, ArticleGenerator.CalculateMaxTokens(NamespaceFragment.Links));
+        Assert.Equal(1500, ArticleGenerator.CalculateMaxTokens(NamespaceFragment.Links));
     }
 
     // --- IsRetryableAiFailure classification ---
@@ -297,10 +298,50 @@ public sealed class NamespaceFragmentsTests : IDisposable
         Assert.Equal(1, chatClient.CallCount);
         // The compact overview system prompt was actually used (not some other/legacy content).
         Assert.Contains("Microsoft Learn documentation assistant", chatClient.LastSystemPrompt, StringComparison.Ordinal);
-        // Output budget forwarded matches the user's overview spec (~500).
-        Assert.Equal(500, chatClient.LastMaxOutputTokens);
+        Assert.Equal(1500, chatClient.LastMaxOutputTokens);
         Assert.Equal(ReasoningEffort.Low, chatClient.LastReasoningEffort);
         Assert.Same(ChatResponseFormat.Json, chatClient.LastResponseFormat);
+    }
+
+    [Fact]
+    public async Task GenerateNamespaceOverviewAIContent_EmptyTruncation_RetriesOnceWithEscalatedBudget()
+    {
+        File.WriteAllText(
+            Path.Combine(_promptDir, "horizontal-article-namespace-overview-system-prompt.txt"),
+            "Return JSON only.");
+        File.WriteAllText(
+            Path.Combine(_promptDir, "horizontal-article-namespace-overview-user-prompt.txt"),
+            "Summarize {{serviceBrandName}}.");
+
+        const string completeResponse =
+            """{"genai-serviceShortDescription":"Manage widgets.","genai-serviceOverview":"Widgets overview."}""";
+        var chatClient = new SequencedRecordingChatClient(
+            [
+                new ResponseSpec(string.Empty, ChatFinishReason.Length),
+                new ResponseSpec(completeResponse, ChatFinishReason.Stop)
+            ]);
+        var generator = new ArticleGenerator(
+            new GenerativeAIClient(chatClient),
+            _outputBasePath,
+            _mcpToolsRoot,
+            aiMaxAttempts: 1,
+            aiRetryDelay: NoDelay);
+
+        var fragment = await generator.GenerateNamespaceOverviewAIContent(CreateStaticData());
+
+        Assert.Equal("Manage widgets.", fragment.ServiceShortDescription);
+        Assert.Equal("Widgets overview.", fragment.ServiceOverview);
+        Assert.Equal(2, chatClient.CallCount);
+        Assert.Equal([1500, 3000], chatClient.MaxOutputTokens);
+
+        var artifactPath = Path.Combine(
+            _outputBasePath,
+            "horizontal-article-prompts",
+            "horizontal-article-widgets-namespace-overview-prompt.md");
+        var artifact = await File.ReadAllTextAsync(artifactPath);
+        Assert.Contains("## AI Response (truncated)", artifact, StringComparison.Ordinal);
+        Assert.Contains("## AI Response", artifact, StringComparison.Ordinal);
+        Assert.Contains(completeResponse, artifact, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -324,6 +365,7 @@ public sealed class NamespaceFragmentsTests : IDisposable
 
         await generator.GenerateNamespaceOverviewAIContent(CreateStaticData());
 
+        Assert.Equal(1, chatClient.CallCount);
         var artifactPath = Path.Combine(
             _outputBasePath,
             "horizontal-article-prompts",
@@ -403,6 +445,56 @@ public sealed class NamespaceFragmentsTests : IDisposable
         Assert.DoesNotContain("target=unknown", logLines[0], StringComparison.Ordinal);
         Assert.Contains("target=widgets", logLines[0], StringComparison.Ordinal);
         Assert.Contains("operation=namespace-links", logLines[0], StringComparison.Ordinal);
+        Assert.Equal(1500, chatClient.LastMaxOutputTokens);
+    }
+
+    [Fact]
+    public async Task GenerateAIContentForTool_RealPromptBindsNestedToolContext()
+    {
+        File.WriteAllText(
+            Path.Combine(_promptDir, "horizontal-article-tool-system-prompt.txt"),
+            "Return JSON only.");
+        File.Copy(
+            Path.Combine(
+                FindRepositoryRoot(),
+                "mcp-tools",
+                ProjectSubdir,
+                "prompts",
+                "horizontal-article-tool-user-prompt.txt"),
+            Path.Combine(_promptDir, "horizontal-article-tool-user-prompt.txt"));
+
+        var chatClient = new RecordingChatClient(
+            """{"genai-shortDescription":"Deletes a secret.","genai-capability":"Delete stored secrets"}""");
+        var generator = new ArticleGenerator(
+            new GenerativeAIClient(chatClient),
+            _outputBasePath,
+            _mcpToolsRoot,
+            aiMaxAttempts: 1,
+            aiRetryDelay: NoDelay);
+        var tool = new HorizontalToolSummary
+        {
+            Command = "keyvault secret delete",
+            Description = "Deletes a secret from an Azure key vault.",
+            ParameterCount = 3,
+            Metadata = new Dictionary<string, MetadataValue>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["destructive"] = new MetadataValue { Value = true },
+                ["readOnly"] = new MetadataValue { Value = false },
+                ["secret"] = new MetadataValue { Value = true }
+            }
+        };
+
+        await generator.GenerateAIContentForTool(tool, "Azure Key Vault", "keyvault", toolIndex: 0);
+
+        Assert.Contains("- Command: keyvault secret delete", chatClient.LastUserPrompt, StringComparison.Ordinal);
+        Assert.Contains(
+            "- Description: Deletes a secret from an Azure key vault.",
+            chatClient.LastUserPrompt,
+            StringComparison.Ordinal);
+        Assert.Contains("- Parameter Count (non-common): 3", chatClient.LastUserPrompt, StringComparison.Ordinal);
+        Assert.Contains("- Destructive: True", chatClient.LastUserPrompt, StringComparison.Ordinal);
+        Assert.Contains("- Read-only: False", chatClient.LastUserPrompt, StringComparison.Ordinal);
+        Assert.Contains("- Requires secrets: True", chatClient.LastUserPrompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -475,6 +567,23 @@ public sealed class NamespaceFragmentsTests : IDisposable
         Tools = [new HorizontalToolSummary { Command = "widget create", Description = "Creates a widget.", ParameterCount = 1, Metadata = new() }]
     };
 
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "mcp-doc-generation.sln")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new InvalidOperationException(
+            $"Could not locate repository root above '{AppContext.BaseDirectory}'.");
+    }
+
     /// <summary>Fake <see cref="IChatClient"/> that records the last request and returns a canned response.</summary>
     private sealed class RecordingChatClient(
         string responseText,
@@ -482,6 +591,7 @@ public sealed class NamespaceFragmentsTests : IDisposable
     {
         public int CallCount { get; private set; }
         public string LastSystemPrompt { get; private set; } = string.Empty;
+        public string LastUserPrompt { get; private set; } = string.Empty;
         public int? LastMaxOutputTokens { get; private set; }
         public ReasoningEffort? LastReasoningEffort { get; private set; }
         public ChatResponseFormat? LastResponseFormat { get; private set; }
@@ -491,6 +601,7 @@ public sealed class NamespaceFragmentsTests : IDisposable
         {
             CallCount++;
             LastSystemPrompt = chatMessages.FirstOrDefault(m => m.Role == ChatRole.System)?.Text ?? string.Empty;
+            LastUserPrompt = chatMessages.FirstOrDefault(m => m.Role == ChatRole.User)?.Text ?? string.Empty;
             LastMaxOutputTokens = options?.MaxOutputTokens;
             LastReasoningEffort = options?.Reasoning?.Effort;
             LastResponseFormat = options?.ResponseFormat;
@@ -506,6 +617,39 @@ public sealed class NamespaceFragmentsTests : IDisposable
             => throw new NotImplementedException();
 
         public object? GetService(Type serviceType, object? serviceKey = null) => null;
+        public void Dispose() { }
+    }
+
+    private sealed record ResponseSpec(string Text, ChatFinishReason FinishReason);
+
+    private sealed class SequencedRecordingChatClient(IReadOnlyList<ResponseSpec> responses) : IChatClient
+    {
+        public int CallCount { get; private set; }
+        public List<int?> MaxOutputTokens { get; } = [];
+
+        public Task<ChatResponse> GetResponseAsync(
+            IEnumerable<ChatMessage> chatMessages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            var responseSpec = responses[Math.Min(CallCount, responses.Count - 1)];
+            CallCount++;
+            MaxOutputTokens.Add(options?.MaxOutputTokens);
+            return Task.FromResult(
+                new ChatResponse(new ChatMessage(ChatRole.Assistant, responseSpec.Text))
+                {
+                    FinishReason = responseSpec.FinishReason
+                });
+        }
+
+        public IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(
+            IEnumerable<ChatMessage> chatMessages,
+            ChatOptions? options = null,
+            CancellationToken cancellationToken = default) =>
+            throw new NotImplementedException();
+
+        public object? GetService(Type serviceType, object? serviceKey = null) => null;
+
         public void Dispose() { }
     }
 

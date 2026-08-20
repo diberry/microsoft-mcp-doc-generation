@@ -65,16 +65,16 @@ public class HorizontalArticleGenerator
     }
 
     /// <summary>
-    /// Output token budget for each small namespace-fragment call. These are deliberately tiny —
-    /// each fragment returns 1-2 short JSON fields/arrays, never the full seven-field namespace
-    /// payload that used to overflow the output budget on reasoning models.
+    /// Output token budget for each small namespace-fragment call. Each fragment returns 1-2 short
+    /// JSON fields/arrays, never the full seven-field namespace payload that used to overflow the
+    /// output budget on reasoning models.
     /// </summary>
     internal static int CalculateMaxTokens(NamespaceFragment fragment) => fragment switch
     {
-        NamespaceFragment.Overview => 500,
+        NamespaceFragment.Overview => 1500,
         NamespaceFragment.Access => 1500,
         NamespaceFragment.BestPractices => 1500,
-        NamespaceFragment.Links => 750,
+        NamespaceFragment.Links => 1500,
         _ => throw new ArgumentOutOfRangeException(nameof(fragment), fragment, "Unknown namespace fragment.")
     };
 
@@ -976,11 +976,12 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
     /// best practices, links) that replaced the single broad namespace-summary call. Each fragment
     /// uses its own compact, universal/service-agnostic prompt pair — never the 33 KB legacy
     /// <see cref="SYSTEM_PROMPT_FILE"/> — and a small output token budget (see
-    /// <see cref="CalculateMaxTokens(NamespaceFragment)"/>) so reasoning-model output is never
-    /// truncated for a single short field/array. Missing prompt files degrade gracefully to an
-    /// empty fragment (mirrors <see cref="GenerateAIContentForTool"/>); the same is true for any AI
-    /// call failure that survives retry, so exactly one fragment failing never blocks the other
-    /// three from contributing their content — only the required overview fragment is fatal (see
+    /// <see cref="CalculateMaxTokens(NamespaceFragment)"/>). An empty token-truncated response gets
+    /// one adaptive retry with a larger, capped budget; partial responses are not retried. Missing
+    /// prompt files degrade gracefully to an empty fragment (mirrors
+    /// <see cref="GenerateAIContentForTool"/>); the same is true for any AI call failure that
+    /// survives retry, so exactly one fragment failing never blocks the other three from
+    /// contributing their content — only the required overview fragment is fatal (see
     /// <see cref="GeneratePerToolAiDataAsync"/>).
     /// </summary>
     private async Task<TFragment> GenerateNamespaceFragmentAsync<TFragment>(
@@ -1051,9 +1052,27 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             await File.WriteAllTextAsync(promptFilePath, promptContent, Encoding.UTF8);
 
             var maxTokens = CalculateMaxTokens(fragmentBudget);
-            var response = await CallAiWithRetryAsync(
-                systemPrompt, userPrompt, maxTokens,
-                operation: $"namespace-{fragmentSlug}", toolOrNamespace: staticData.ServiceIdentifier);
+            string response;
+            try
+            {
+                response = await CallAiWithRetryAsync(
+                    systemPrompt, userPrompt, maxTokens,
+                    operation: $"namespace-{fragmentSlug}", toolOrNamespace: staticData.ServiceIdentifier);
+            }
+            catch (AiResponseTruncatedException ex) when (string.IsNullOrWhiteSpace(ex.ResponseContent))
+            {
+                await AppendAiFailureToPromptArtifactAsync(promptFilePath, ex);
+
+                const int adaptiveRetryCeiling = 3000;
+                var adaptiveMaxTokens = Math.Min(maxTokens * 2, adaptiveRetryCeiling);
+                Console.WriteLine(
+                    $"    ↻ Namespace {fragmentLabel} response was empty after truncation; " +
+                    $"adaptive budget escalation from {maxTokens} to {adaptiveMaxTokens} output tokens.");
+
+                response = await CallAiWithRetryAsync(
+                    systemPrompt, userPrompt, adaptiveMaxTokens,
+                    operation: $"namespace-{fragmentSlug}", toolOrNamespace: staticData.ServiceIdentifier);
+            }
 
             await File.AppendAllTextAsync(promptFilePath, $"""
 

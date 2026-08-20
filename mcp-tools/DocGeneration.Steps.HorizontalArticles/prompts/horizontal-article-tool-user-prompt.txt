@@ -7,13 +7,13 @@ Generate JSON data for a single Azure MCP Server tool used with {{serviceBrandNa
 - Service Identifier: {{serviceIdentifier}}
 
 **Tool:**
-- Command: {{toolCommand}}
-- Description: {{toolDescription}}
-- Parameter Count (non-common): {{parameterCount}}
+- Command: {{tool.command}}
+- Description: {{tool.description}}
+- Parameter Count (non-common): {{tool.parameterCount}}
 - Characteristics:
-  - Destructive: {{isDestructive}}
-  - Read-only: {{isReadOnly}}
-  - Requires secrets: {{requiresSecret}}
+  - Destructive: {{tool.metadata.destructive.value}}
+  - Read-only: {{tool.metadata.readOnly.value}}
+  - Requires secrets: {{tool.metadata.secret.value}}
 
 ## Your Task
 

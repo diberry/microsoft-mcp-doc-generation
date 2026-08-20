@@ -141,9 +141,15 @@ Step 6: Horizontal Articles (AI) ───────────────�
   │  • Step 6 requests low reasoning effort and JSON response format so
   │    bounded fragment budgets are spent on visible structured output
   │    instead of being exhausted by hidden reasoning.
+  │  • All four namespace fragments start with a 1,500-output-token
+  │    ceiling. An empty/whitespace token-truncated fragment gets exactly
+  │    one adaptive retry at 3,000 tokens; partial truncations don't retry,
+  │    and both attempts remain in the same component prompt artifact.
+  │  • Per-tool prompts bind command, description, parameter count, and
+  │    metadata from the nested tool context used by the generator.
   │  • Only transient network/time-out, HTTP 429, and HTTP 5xx failures
   │    retry; truncation, malformed JSON, cancellation, and client errors
-  │    fail immediately instead of repeating the same expensive request
+  │    fail immediately instead of repeating the same-budget request
   │  • Missing focused prompt pairs fail before any AI request; Step 6
   │    never falls back to the obsolete monolithic generation path
   │  • ArticleContentProcessor validates and transforms AI output
