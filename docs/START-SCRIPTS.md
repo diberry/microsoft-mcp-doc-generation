@@ -14,9 +14,11 @@ Use the root `start-with-logs.ps1` script when you need to generate namespace fa
 
 It supports three namespace selection modes:
 
-- **Full list** (default) — all namespaces from `namespace-mapping.json`
-- **Comma list** — via `-NamespaceList "advisor,appservice,compute"`
-- **Text file** — via `-NamespaceFile ./my-namespaces.txt` (one namespace per line, `#` comments and blank lines ignored)
+- **Full list** (default) — all concrete metadata namespaces from `cli-namespace.json`
+- **Comma list** — concrete metadata namespaces or command-family roots via `-NamespaceList "advisor,appservice,compute"`
+- **Text file** — one concrete metadata namespace or command-family root per line via `-NamespaceFile ./my-namespaces.txt` (`#` comments and blank lines are ignored)
+
+Explicit selectors can name either a concrete namespace in `cli-namespace.json` or a command-family root discovered from the first token of a command in `cli-output.json`. The default all-namespace mode intentionally dispatches only the concrete namespaces from `cli-namespace.json`; command-family roots are available only when explicitly selected.
 
 Before running the script, ensure:
 
@@ -32,10 +34,10 @@ Run the script from PowerShell or Git Bash:
 # All namespaces
 pwsh -File ./start-with-logs.ps1
 
-# Specific namespaces
+# Specific metadata namespaces or command-family roots
 pwsh -File ./start-with-logs.ps1 -NamespaceList "advisor,appservice,compute"
 
-# From a text file
+# Selectors from a text file
 pwsh -File ./start-with-logs.ps1 -NamespaceFile ./my-namespaces.txt
 ```
 
@@ -44,9 +46,9 @@ The script:
 1. Resolves the version named by `mcp-cli-metadata/tracked-version.txt` and validates its required JSON artifacts, failing before generation if the snapshot is absent, ambiguous, or unusable.
 1. Resolves and loads the AZD environment file.
 1. Validates the required keyless `FOUNDRY_*` settings.
-1. Reads the complete namespace list from the snapshot's `namespace-mapping.json`.
-1. Filters to the requested namespaces (if `-NamespaceList` or `-NamespaceFile` was provided), validating each exists in the metadata.
-1. Calls `start.sh <namespace> 1,2,3,4,5,6` for every namespace, so the typed pipeline remains the only generation entry point.
+1. Reads concrete namespace names from the snapshot's `cli-namespace.json` and command-family roots from `cli-output.json`.
+1. Uses all concrete namespaces by default. If `-NamespaceList` or `-NamespaceFile` was provided, it validates each explicit selector against the combined concrete-namespace and command-root metadata.
+1. Calls `start.sh <selector> 1,2,3,4,5,6` for every selected entry, so the typed pipeline remains the only generation entry point.
 1. Reuses the shared build and CLI installation (`--skip-build --skip-npm-update`) only after an earlier namespace **actually built and exited 0** — a confirmed successful build, not loop position. If a namespace built but exited nonzero (for example from a suppressed fatal root), the build stays unconfirmed and the next namespace rebuilds.
 1. Writes each namespace to the normal `generated-<namespace>/` directory and streams `start.sh` output to the console.
 

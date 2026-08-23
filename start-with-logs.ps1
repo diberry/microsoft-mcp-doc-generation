@@ -7,9 +7,12 @@
     Orchestrates the documentation generation pipeline for namespaces with full
     transcript logging. Supports three namespace selection modes:
 
-    1. Full list (default) — all namespaces from namespace-mapping.json
-    2. Comma-separated list — via -NamespaceList parameter
-    3. Text file — via -NamespaceFile parameter (one namespace per line)
+    1. Full list (default) — all concrete namespaces from cli-namespace.json
+    2. Comma-separated selectors — via -NamespaceList parameter
+    3. Text file — via -NamespaceFile parameter (one selector per line)
+
+    Explicit selectors can be concrete namespace names or command roots discovered
+    from cli-output.json.
 
     Each namespace runs steps 1-6 via start.sh. After each namespace completes
     (or fails), its output is moved from the repo root into a consolidated
@@ -18,10 +21,11 @@
         ./generated-<run-datetime>/<namespace>/
 
 .PARAMETER NamespaceList
-    Comma-separated list of namespaces to generate (e.g., "advisor,appservice,compute").
+    Comma-separated list of namespace names or command-root selectors to generate
+    (e.g., "advisor,appservice,compute").
 
 .PARAMETER NamespaceFile
-    Path to a text file with one namespace per line. Blank lines and lines
+    Path to a text file with one namespace name or command-root selector per line. Blank lines and lines
     starting with # are ignored.
 
 .PARAMETER PreflightOnly
@@ -294,10 +298,24 @@ try {
         throw "cli-namespace.json has no results — cannot determine namespace list: $(Join-Path $selectedDirectory 'cli-namespace.json')"
     }
 
-    $allKnownNamespaces = @($cliNamespaceData.results | ForEach-Object { $_.name } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object)
-    if ($allKnownNamespaces.Count -eq 0) {
+    $concreteNamespaceNames = @($cliNamespaceData.results | ForEach-Object { $_.name } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Sort-Object)
+    if ($concreteNamespaceNames.Count -eq 0) {
         throw "cli-namespace.json produced no valid namespace names: $(Join-Path $selectedDirectory 'cli-namespace.json')"
     }
+
+    $cliOutputData = $artifacts["cli-output.json"]
+    $commandRootSelectors = @(
+        $cliOutputData.results |
+            ForEach-Object {
+                $commandText = [string]$_.command
+                if (-not [string]::IsNullOrWhiteSpace($commandText)) {
+                    ($commandText.Trim() -split '\s+', 2)[0]
+                }
+            } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            Sort-Object -Unique
+    )
+    $validExplicitSelectors = @($concreteNamespaceNames + $commandRootSelectors | Sort-Object -Unique)
 
     # Resolve namespace list from the three input modes
     if (-not [string]::IsNullOrWhiteSpace($NamespaceFile)) {
@@ -324,12 +342,12 @@ try {
         }
         $inputMode = "comma list ($($namespaces.Count) namespace(s))"
     } else {
-        $namespaces = $allKnownNamespaces
+        $namespaces = $concreteNamespaceNames
         $inputMode = "full list ($($namespaces.Count) namespace(s))"
     }
 
-    # Validate requested namespaces exist in metadata
-    $unknownNamespaces = @($namespaces | Where-Object { $_ -notin $allKnownNamespaces })
+    # Explicit selectors may be concrete namespace names or parent/root commands.
+    $unknownNamespaces = @($namespaces | Where-Object { $_ -notin $validExplicitSelectors })
     if ($unknownNamespaces.Count -gt 0) {
         throw "Unknown namespace(s) not in metadata: $($unknownNamespaces -join ', ')"
     }

@@ -175,6 +175,21 @@ Describe "start-with-logs.ps1" {
         )
     }
 
+    It "dispatches only concrete namespaces by default when command roots are present" {
+        $repository = New-TestRepository
+        New-MetadataVersion -Repository $repository -Version "3.0.0-beta.37+19951cae" `
+            -Namespaces @("extension_azqr")
+        @{
+            results = @(@{ name = "azqr"; command = "extension azqr" })
+        } | ConvertTo-Json -Depth 4 |
+            Set-Content (Join-Path $repository "mcp-cli-metadata\3.0.0-beta.37+19951cae\cli-output.json")
+
+        $result = Invoke-Generator $repository
+
+        $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
+        $result.Invocations | Should -Be @("extension_azqr 1,2,3,4,5,6")
+    }
+
     It "continues past a namespace failure and reports it in the summary" {
         $repository = New-TestRepository
         New-MetadataVersion -Repository $repository -Version "3.0.0-beta.10+aaaaaaaa" `
@@ -346,6 +361,21 @@ Describe "start-with-logs.ps1" {
             "monitor 1,2,3,4,5,6 --skip-build --skip-npm-update"
         )
         ($result.Output -join "`n") | Should -Match "comma list"
+    }
+
+    It "accepts a command-root namespace discovered from cli-output.json" {
+        $repository = New-TestRepository
+        New-MetadataVersion -Repository $repository -Version "3.0.0-beta.37+19951cae" `
+            -Namespaces @("extension_azqr")
+        @{
+            results = @(@{ name = "azqr"; command = "extension azqr" })
+        } | ConvertTo-Json -Depth 4 |
+            Set-Content (Join-Path $repository "mcp-cli-metadata\3.0.0-beta.37+19951cae\cli-output.json")
+
+        $result = Invoke-Generator $repository -Arguments @("-NamespaceList", "extension")
+
+        $result.ExitCode | Should -Be 0 -Because ($result.Output -join "`n")
+        $result.Invocations | Should -Be @("extension 1,2,3,4,5,6")
     }
 
     It "generates only file-listed namespaces via -NamespaceFile" {

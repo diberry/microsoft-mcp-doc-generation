@@ -41,16 +41,16 @@ Use `start.sh` as the primary, general-purpose entry point for the typed pipelin
 # All namespaces (default)
 pwsh -File ./start-with-logs.ps1
 
-# Specific namespaces (comma list)
+# Specific metadata namespaces or command-family roots (comma list)
 pwsh -File ./start-with-logs.ps1 -NamespaceList "advisor,appservice,compute"
 
-# Namespaces from a text file (one per line, # comments supported)
+# Selectors from a text file (one per line, # comments supported)
 pwsh -File ./start-with-logs.ps1 -NamespaceFile ./my-namespaces.txt
 ```
 
 The same command works from PowerShell or Git Bash. Store AI settings in `.azure/<environment>/.env`. The script uses the environment named by `defaultEnvironment`; if no default resolves, it accepts one unambiguous nested environment. A root `.azure/.env` is the fallback when no nested environment file exists.
 
-Before generation, the script fails if the tracked metadata snapshot is absent or unusable, then validates the required keyless settings: `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME`, `FOUNDRY_MODEL_API_VERSION`, and `FOUNDRY_USE_DEFAULT_CREDENTIAL=true`. It reads the namespace list from the selected JSON and calls `start.sh <namespace> 1,2,3,4,5,6` for each entry. Later namespaces reuse the first run's build and CLI installation, output goes to `generated-<namespace>/`, and `start.sh` progress streams directly.
+Before generation, the script fails if the tracked metadata snapshot is absent or unusable, then validates the required keyless settings: `FOUNDRY_ENDPOINT`, `FOUNDRY_MODEL_NAME`, `FOUNDRY_MODEL_API_VERSION`, and `FOUNDRY_USE_DEFAULT_CREDENTIAL=true`. Explicit `-NamespaceList` and `-NamespaceFile` selectors can be concrete metadata namespaces from `cli-namespace.json` or command-family roots discovered from `cli-output.json`. Without an explicit selector, the script dispatches every concrete namespace from `cli-namespace.json`. It calls `start.sh <selector> 1,2,3,4,5,6` for each selected entry. Later entries reuse the first run's build and CLI installation, output goes to `generated-<selector>/`, and `start.sh` progress streams directly.
 
 To validate the real metadata and resolved environment without creating or changing `generated/`, run:
 

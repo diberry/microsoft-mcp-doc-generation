@@ -52,6 +52,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **Explicit namespace selectors recognize command-family roots** — `start-with-logs.ps1` now accepts either concrete metadata namespaces from `cli-namespace.json` or command-family roots discovered from `cli-output.json` when `-NamespaceList` or `-NamespaceFile` is provided. Default all-namespace generation continues to dispatch only concrete namespaces.
+
 - **Pipeline generation hardening for Step 2, Step 4, and Step 5 failures (#791)** — Three pipeline fixes now prevent the 2026-08-02 catalog run regressions from recurring:
   - **Step 2: Actionable example-prompt retry feedback + deterministic last resort** — retry feedback now appends an actionable section that names the missing required parameters, identifies prompt slots that can absorb them, and shows a concrete rewrite example. `DeterministicPromptRepairer` also adds a last-resort display-name-based fallback prompt when canonical-name injection still leaves coverage gaps after sanitization.
   - **Step 4: Pre-assembly phantom-parameter stripping** — `FamilyStructureBuilder` now runs a `ParameterCrossCheckService` against Step 1 parameter manifest JSON before assembly and removes parameter-table rows that are not present in the CLI source manifest, logging each stripped hallucinated parameter instead of letting the post-assembly validator fail later.
