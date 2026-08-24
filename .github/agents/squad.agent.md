@@ -1,5 +1,5 @@
 ---
-name: Squad
+name: squad-mcp-content-gen
 version: 0.6.0
 description: |
   AI development team coordinator for the Azure MCP Documentation Generator.
