@@ -552,8 +552,13 @@ public class DependencySuppressionTests
     // [C] compile-RED: binds to PipelineRunner.IsFatalRoot. Proves 16 of 17 real Step-2 roots return
     // Success=true (mapped exit 0) and are ROOTS only because C2 keys on ArtifactFailures — the exact
     // 0/10 cascade miss Ellis flagged. Corpus is READ-ONLY (frozen Baseline.Beta34 fixtures).
+    //
+    // #817/AD-044 UPDATE: C2 now keys on BLOCKING artifact failures. The corpus fixtures predate
+    // IsBlocking and do not carry it, so the replay below states the polarity EXPLICITLY rather than
+    // relying on the ArtifactFailure.Create default, and section (6) pins the AD-044 half of the
+    // contract: replayed as non-blocking, the same 16 Success=true records are NOT roots.
     [Fact]
-    public void Beta34Corpus_EveryStep2Failure_IsFatalRoot_EvenWhenSuccessTrue()
+    public void Beta34Corpus_EveryStep2Failure_IsFatalRoot_WhenArtifactFailuresAreBlocking()
     {
         var corpus = Beta34Corpus.Load();
         var step2 = corpus.Records.Where(r => r.StepId == 2).ToList();
@@ -568,7 +573,15 @@ public class DependencySuppressionTests
             => global::PipelineRunner.PipelineRunner.IsFatalRoot(
                 FailurePolicy.Fatal,
                 MappedExit(r),
-                new[] { ArtifactFailure.Create("tool", r.ArtifactName, "beta.34 replay") });
+                new[] { ArtifactFailure.Create("tool", r.ArtifactName, "beta.34 replay", isBlocking: true) });
+
+        // AD-044 counterpart: the identical record replayed as an explicitly parsed (non-blocking)
+        // example-prompt content issue.
+        static bool IsRootWhenNonBlocking(Beta34Corpus.Entry r)
+            => global::PipelineRunner.PipelineRunner.IsFatalRoot(
+                FailurePolicy.Fatal,
+                MappedExit(r),
+                new[] { ArtifactFailure.Create("tool", r.ArtifactName, "beta.34 replay", isBlocking: false) });
 
         // (1) Corpus shape pins, cross-checked against the manifest accounting block.
         Assert.Equal(17, corpus.Records.Count(r => r.StepId == 2));
@@ -605,6 +618,99 @@ public class DependencySuppressionTests
         Assert.Equal(24, corpus.Accounting.ChainRoleRoot);
         Assert.Equal(7, corpus.Records.Count(r => r.StepId == 4 && r.ChainRole == "root"));
         Assert.Equal(24, step2.Count(IsRoot) + corpus.Records.Count(r => r.StepId == 4 && r.ChainRole == "root"));
+
+        // (6) AD-044 (#817) — the other half of the contract. Replayed as NON-blocking (an explicitly
+        //     parsed example-prompt content issue), the 16 Success=true records stop being roots, so
+        //     their 10 cascade dependents are no longer suppressed. The lone Success=false record stays
+        //     a root via C1, proving IsBlocking narrows C2 ONLY and never weakens genuine failures.
+        Assert.Equal(1, step2.Count(IsRootWhenNonBlocking));
+        Assert.Equal(0, step2.Count(r => MappedExit(r) == SuccessExitCode && IsRootWhenNonBlocking(r)));
+        Assert.Equal(successFalse.StableId, step2.Single(IsRootWhenNonBlocking).StableId);
+    }
+
+    // ── T60 (#817): BEHAVIORAL REGRESSION — the real azurebackup Step-2 shape must NOT suppress
+    //         Steps 3-6, and the run must exit 0 while keeping the issue visible (AD-044) ─────────
+    // [R] runtime-RED against PR #817 as committed: `StepOutcomes.ValidationAfterRetriesFailure` is
+    // the suite's canonical "real Step-2 example-prompts shape", but it still builds a BLOCKING
+    // ArtifactFailure, so clause C2 fires, Step 2 becomes a fatal root, Steps 3/4/7/8 are suppressed
+    // and the catalog exits 1 — exactly the symptom reported for `azurebackup governance soft-delete`.
+    //
+    // This is the end-to-end companion to
+    // NamespaceStepTests.Step2_ExamplePrompts_RealMultiToolNamespaceShape_ProducesNonFatalSuccessStepResult:
+    // that test pins the StepResult the real step PRODUCES; this one pins what the orchestrator DOES
+    // with it. Both are required — the unit-level fix in #817 was never proven at this layer, which is
+    // why the stale blocking contract survived in the doubles.
+    [Fact]
+    public async Task RunAsync_ExamplePromptValidationWarning_DoesNotSuppressSteps3To6_AndExitsSuccess()
+    {
+        var repoRoot = CreateRepoRoot();
+        var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+
+        // The reported shape, service-agnostically expressed through the canonical double: validation
+        // issues survived the automatic retries, were EXPLICITLY parsed (so they are warnings, not an
+        // unparseable fallback), and the generator itself succeeded.
+        Step(doubles, 2).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("governance soft-delete");
+        var (runner, _) = BuildRunner(repoRoot, doubles);
+
+        var exit = await runner.RunAsync(
+            Request("compute", new[] { 1, 2, 3, 4, 5, 6, 7, 8 }), CancellationToken.None);
+
+        // (1) THE CONTRACT: every downstream step runs. Steps 3-6 are the ones the user observes; 7
+        //     and 8 complete the transitive closure of Step 2 ({3,4,7,8}) and must also survive.
+        foreach (var downstreamStepId in new[] { 3, 4, 5, 6, 7, 8 })
+        {
+            Assert.Equal(
+                new[] { "compute" },
+                Step(doubles, downstreamStepId).ExecutedNamespaces.ToArray());
+        }
+
+        // (2) Nothing was suppressed: no dependent wrote a suppressed envelope.
+        foreach (var downstreamStepId in new[] { 3, 4, 7, 8 })
+        {
+            var dir = ObservabilityDir(OutputPathOf(repoRoot), Step(doubles, downstreamStepId));
+            if (StepResultReader.TryRead(dir, out var envelope) && envelope is not null)
+            {
+                // A step that really executed writes suppressed:null (not false) — matching the real
+                // azurebackup step-result.json envelope.
+                Assert.True(envelope.Suppressed != true);
+                Assert.Null(envelope.BlockedByDependency);
+            }
+        }
+
+        // (3) The run itself succeeds — a parsed example-prompt validation issue is not fatal.
+        Assert.Equal(SuccessExitCode, exit);
+
+        // (4) NOT A SILENT PASS: the issue is still recorded as an artifact/critical-failure record so
+        //     it stays auditable. Warnings must not become invisible.
+        Assert.Single(CriticalFiles(repoRoot, "*-step-02-*.json"));
+    }
+
+    // ── T61 (#817): the non-blocking narrowing must NOT leak into genuine Step-2 infrastructure
+    //         failures — those still root and still suppress (guards against over-fixing) ─────────
+    [Fact]
+    public async Task RunAsync_ExamplePromptGeneratorFailure_StillSuppressesTransitiveDependents()
+    {
+        var repoRoot = CreateRepoRoot();
+        var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
+
+        // A generator/process/infrastructure failure — Success=false — is untouched by AD-044.
+        Step(doubles, 2).Outcome = _ => Failure();
+        var (runner, _) = BuildRunner(repoRoot, doubles);
+
+        var exit = await runner.RunAsync(
+            Request("compute", new[] { 1, 2, 3, 4, 5, 6, 7, 8 }), CancellationToken.None);
+
+        Assert.Equal(FatalExitCode, exit);
+
+        // closure(2) = {3,4,7,8} suppressed …
+        foreach (var suppressedStepId in new[] { 3, 4, 7, 8 })
+        {
+            Assert.Equal(0, Step(doubles, suppressedStepId).Executions);
+        }
+
+        // … while the steps that do NOT depend on Step 2 still run (scoped suppression, not an abort).
+        Assert.Equal(new[] { "compute" }, Step(doubles, 5).ExecutedNamespaces.ToArray());
+        Assert.Equal(new[] { "compute" }, Step(doubles, 6).ExecutedNamespaces.ToArray());
     }
 
     // ── T34: a REAL-shape fatal root (Success=true + ArtifactFailures) suppresses its transitive
@@ -619,7 +725,7 @@ public class DependencySuppressionTests
         var repoRoot = CreateRepoRoot();
         var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
         Step(doubles, 2).Outcome = ns => ns == "storage"
-            ? StepOutcomes.ValidationAfterRetriesFailure("storage account create")
+            ? StepOutcomes.FallbackValidationAfterRetriesFailure("storage account create")
             : Success();
         var (runner, _) = BuildRunner(repoRoot, doubles);
 
@@ -668,7 +774,7 @@ public class DependencySuppressionTests
     {
         var repoRoot = CreateRepoRoot();
         var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
-        Step(doubles, 2).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("cosmos database create");
+        Step(doubles, 2).Outcome = _ => StepOutcomes.FallbackValidationAfterRetriesFailure("cosmos database create");
         // Step 4 would persist its OWN critical JSON if (incorrectly) executed — the F1 discriminator.
         Step(doubles, 4).Outcome = _ => StepOutcomes.FailingDependentWithArtifacts("cosmos");
         var (runner, _) = BuildRunner(repoRoot, doubles);
@@ -718,7 +824,7 @@ public class DependencySuppressionTests
     {
         var repoRoot = CreateRepoRoot();
         var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
-        Step(doubles, 2).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("speech transcription create");
+        Step(doubles, 2).Outcome = _ => StepOutcomes.FallbackValidationAfterRetriesFailure("speech transcription create");
         var (runner, _) = BuildRunner(repoRoot, doubles);
 
         var exit = await runner.RunAsync(Request("compute", new[] { 2, 4 }, skipDeps: true), CancellationToken.None);
@@ -767,7 +873,7 @@ public class DependencySuppressionTests
 
         // Run 2: same output path; Step 2 fails with the real shape ⇒ Step 4 is suppressed.
         var secondDoubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
-        Step(secondDoubles, 2).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("monitor workspace create");
+        Step(secondDoubles, 2).Outcome = _ => StepOutcomes.FallbackValidationAfterRetriesFailure("monitor workspace create");
         var (secondRunner, _) = BuildRunner(repoRoot, secondDoubles);
         await secondRunner.RunAsync(Request("compute", new[] { 2, 4 }, skipDeps: true), CancellationToken.None);
 
@@ -801,8 +907,10 @@ public class DependencySuppressionTests
     {
         var repoRoot = CreateRepoRoot();
         var doubles = MirroredRegistry.CreateDoublesMatchingDefault(ScriptsRoot(repoRoot));
-        // Step 7 is a Warn-policy step in the real graph; drive it with the real Step-2 failure shape.
-        Step(doubles, 7).Outcome = _ => StepOutcomes.ValidationAfterRetriesFailure("keyvault secret get");
+        // Step 7 is a Warn-policy step in the real graph; drive it with the BLOCKING Step-2 failure
+        // shape so the "Warn never roots" pin is discriminating rather than vacuously satisfied by
+        // IsBlocking=false (AD-044 narrows C2; the Fatal-policy guard must hold independently).
+        Step(doubles, 7).Outcome = _ => StepOutcomes.FallbackValidationAfterRetriesFailure("keyvault secret get");
         var (runner, _) = BuildRunner(repoRoot, doubles);
 
         var exit = await runner.RunAsync(Request("compute", new[] { 1, 2, 3, 4, 7, 8 }), CancellationToken.None);

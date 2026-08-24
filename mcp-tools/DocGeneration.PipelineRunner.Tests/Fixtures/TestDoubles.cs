@@ -272,20 +272,30 @@ internal sealed class StaticCliMetadataLoader : ICliMetadataLoader
 ///
 /// These reproduce the REAL runtime failure shapes proven out by the frozen beta.34 corpus — shapes the
 /// pre-existing <see cref="DependencySuppressionTests"/> doubles could NOT express because every test
-/// there only ever injected <c>Success=false</c>. In particular <see cref="ValidationAfterRetriesFailure"/>
-/// is the D1 shape (Ellis BLOCKING-1): a Fatal step that returns <c>Success=true</c> yet carries a
-/// non-empty <see cref="StepResult.ArtifactFailures"/> list. Varied Azure services are used across call
-/// sites per the Universal Design Principle; the neutral defaults below are overridable.
+/// there only ever injected <c>Success=false</c>. In particular
+/// <see cref="FallbackValidationAfterRetriesFailure"/> is the BLOCKING D1 shape (Ellis BLOCKING-1): a
+/// Fatal step that returns <c>Success=true</c> yet carries a non-empty, BLOCKING
+/// <see cref="StepResult.ArtifactFailures"/> list. Its sibling
+/// <see cref="ValidationAfterRetriesFailure"/> is the non-blocking counterpart added by AD-044 —
+/// an explicitly parsed example-prompt content issue, which stays a warning. Varied Azure services are
+/// used across call sites per the Universal Design Principle; the neutral defaults below are overridable.
 /// </summary>
 internal static class StepOutcomes
 {
     /// <summary>
-    /// The real Step-2 (example-prompts) failure shape: validation failed after automatic retries, so
-    /// the generator returns <c>Success=true</c> (it DID produce output) but surfaces the failure as one
-    /// <see cref="ArtifactFailure"/> plus one failed <see cref="ValidatorResult"/>. Under the corrected
-    /// root predicate (AD-029 §A2, clause C2) the non-empty ArtifactFailures makes this a fatal root even
-    /// though its mapped exit code is <c>SuccessExitCode</c>. Reused on a Warn-policy step by T39 to prove
-    /// the same shape is NON-fatal under a warning policy.
+    /// The real Step-2 (example-prompts) validation-issue shape: the generator DID produce output
+    /// (<c>Success=true</c>) and the validator returned an EXPLICIT, successfully parsed issue for one
+    /// tool, which survived the automatic retries. It is surfaced as one non-blocking
+    /// <see cref="ArtifactFailure"/> plus one failed <see cref="ValidatorResult"/>.
+    ///
+    /// Mirrors production exactly (<c>ExamplePromptsStep.ValidateWithRetriesAsync</c> passes
+    /// <c>isBlocking: retryValidation.IsFallback</c>, which is <c>false</c> whenever the validator's
+    /// "Invalid tools:" report parsed cleanly). Per AD-044 this is therefore NOT a fatal root: clause C2
+    /// keys on <see cref="ArtifactFailure.IsBlocking"/>, so the issue stays a visible warning/artifact
+    /// record while Steps 3-6 continue to run.
+    ///
+    /// For the shapes that MUST still root and suppress, use
+    /// <see cref="FallbackValidationAfterRetriesFailure"/>.
     /// </summary>
     internal static StepResult ValidationAfterRetriesFailure(string toolCommand = "storage account create")
         => new(
@@ -307,7 +317,42 @@ internal static class StepOutcomes
                     "tool",
                     toolCommand,
                     "Example prompt validation failed for this tool after automatic retries.",
-                    new[] { $"Required-parameter coverage divergence for '{toolCommand}'." }),
+                    new[] { $"Required-parameter coverage divergence for '{toolCommand}'." },
+                    isBlocking: false),
+            });
+
+    /// <summary>
+    /// The BLOCKING D1 shape: a Fatal step returning <c>Success=true</c> whose
+    /// <see cref="StepResult.ArtifactFailures"/> are blocking, so clause C2 makes it a fatal root even
+    /// though its mapped exit code is <c>SuccessExitCode</c>.
+    ///
+    /// In production this is what <c>ExamplePromptsStep</c> emits when the failure is NOT an explicitly
+    /// parsed content issue — the validator produced unparseable output and the step fell back to
+    /// blaming every candidate tool (<c>IsFallback == true</c>), the retry generator process itself
+    /// failed, or the retry produced no output artifacts. AD-044 deliberately leaves all of these
+    /// blocking, so this shape still suppresses transitive dependents.
+    /// </summary>
+    internal static StepResult FallbackValidationAfterRetriesFailure(string toolCommand = "storage account create")
+        => new(
+            Success: true,
+            Warnings: new[] { $"Example prompt validation failed for '{toolCommand}' after automatic retries." },
+            Duration: TimeSpan.Zero,
+            Outputs: Array.Empty<string>(),
+            ProcessInvocations: Array.Empty<string>(),
+            ValidatorResults: new[]
+            {
+                new ValidatorResult(
+                    "Validate-ExamplePrompts-RequiredParams",
+                    false,
+                    new[] { $"Validator output could not be parsed for '{toolCommand}'." }),
+            },
+            ArtifactFailures: new[]
+            {
+                ArtifactFailure.Create(
+                    "tool",
+                    toolCommand,
+                    "Example prompt validation failed for this tool after automatic retries.",
+                    new[] { $"Validator output could not be parsed for '{toolCommand}'." }),
             });
 
     /// <summary>
