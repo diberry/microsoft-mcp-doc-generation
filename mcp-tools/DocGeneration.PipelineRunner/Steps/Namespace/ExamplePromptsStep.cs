@@ -160,6 +160,16 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         var unresolvedCommands = new HashSet<string>(initialValidation.InvalidCommands, StringComparer.OrdinalIgnoreCase);
         if (unresolvedCommands.Count > 0)
         {
+            // Seed each unresolved command's blocking status from the initial validator run. A genuine,
+            // explicit "Invalid tools:" parse (IsFallback=false) is a real content/parameter-validation
+            // result — non-blocking. A fallback "assume all invalid" result (IsFallback=true, meaning the
+            // validator process itself couldn't be parsed) is a hard/process failure — blocking.
+            var isBlockingByCommand = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+            foreach (var command in unresolvedCommands)
+            {
+                isBlockingByCommand[command] = initialValidation.IsFallback;
+            }
+
             var retryOutcome = await RetryInvalidToolsAsync(
                 context,
                 matchingTools,
@@ -168,6 +178,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
                 generatorArguments,
                 validatorProject,
                 unresolvedCommands,
+                isBlockingByCommand,
                 processResults,
                 cancellationToken);
 
@@ -194,6 +205,7 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
         IReadOnlyList<string> generatorArguments,
         string validatorProject,
         HashSet<string> invalidCommands,
+        Dictionary<string, bool> isBlockingByCommand,
         ICollection<ProcessExecutionResult> processResults,
         CancellationToken cancellationToken)
     {
@@ -236,6 +248,9 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
                     AddProcessIssue(retryGeneratorResult, generationWarnings, $"Example prompt regeneration failed for '{command}'");
                     retryWarnings.AddRange(generationWarnings);
                     AddToolWarnings(perToolWarnings, command, generationWarnings);
+                    // A regeneration PROCESS failure is a hard/process-launch failure, regardless of the
+                    // prior validation shape — always blocking.
+                    isBlockingByCommand[command] = true;
                     continue;
                 }
 
@@ -244,6 +259,8 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
                 {
                     retryWarnings.AddRange(outputIssues);
                     AddToolWarnings(perToolWarnings, command, outputIssues);
+                    // Missing required regenerated output artifacts is a hard failure — always blocking.
+                    isBlockingByCommand[command] = true;
                     continue;
                 }
 
@@ -251,6 +268,11 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
                 processResults.Add(retryValidation.ProcessResult);
                 retryWarnings.AddRange(retryValidation.Warnings);
                 AddToolWarnings(perToolWarnings, command, retryValidation.Warnings);
+
+                // Reflect the LATEST validator run's shape: a genuine content/parameter-validation
+                // result (IsFallback=false) is non-blocking; a fallback "assume invalid" result
+                // (IsFallback=true, i.e. the validator process/output couldn't be parsed) is blocking.
+                isBlockingByCommand[command] = retryValidation.IsFallback;
 
                 if (!retryValidation.InvalidCommands.Contains(command))
                 {
@@ -265,12 +287,16 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             {
                 var artifact = toolArtifacts[command];
                 perToolWarnings.TryGetValue(command, out var toolWarnings);
+                // Conservative default: if we somehow have no recorded blocking status for this command
+                // (should not happen — every unresolved command was seeded above), treat it as blocking.
+                var isBlocking = !isBlockingByCommand.TryGetValue(command, out var blocking) || blocking;
                 return CreateArtifactFailure(
                     "tool",
                     command,
                     "Example prompt validation failed for this tool after automatic retries.",
                     BuildValidationFailureDetails(artifact, toolWarnings),
-                    [artifact.ValidationPath, artifact.ExamplePromptPath, artifact.RawOutputPath]);
+                    [artifact.ValidationPath, artifact.ExamplePromptPath, artifact.RawOutputPath],
+                    isBlocking: isBlocking);
             })
             .ToArray();
 
@@ -332,6 +358,13 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             cancellationToken);
 
         var invalidCommands = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // isFallback is true only when the validator process itself failed to report an explicit,
+        // parseable "Invalid tools:" section (a process/output-parsing problem), forcing us to assume
+        // ALL candidate commands are invalid. That "assumed invalid" shape is a hard/process failure and
+        // must stay BLOCKING. When ParseInvalidTools finds a genuine, explicit list, the validator ran
+        // successfully and told us exactly which tool(s) failed content/parameter validation — that is
+        // the non-blocking, warn-only shape (post-#813 follow-up).
+        var isFallback = false;
         if (!validatorResult.Succeeded)
         {
             var summary = string.IsNullOrWhiteSpace(toolCommand)
@@ -342,13 +375,14 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
             invalidCommands = ParseInvalidTools(validatorResult.StandardOutput, matchingTools);
             if (invalidCommands.Count == 0)
             {
+                isFallback = true;
                 invalidCommands = string.IsNullOrWhiteSpace(toolCommand)
                     ? matchingTools.Select(tool => tool.Command).ToHashSet(StringComparer.OrdinalIgnoreCase)
                     : [toolCommand];
             }
         }
 
-        return new ValidationRun(validatorResult, invalidCommands, validatorWarnings);
+        return new ValidationRun(validatorResult, invalidCommands, validatorWarnings, isFallback);
     }
 
     private static void AddToolWarnings(Dictionary<string, List<string>> perToolWarnings, string command, IEnumerable<string> warnings)
@@ -665,7 +699,8 @@ public sealed class ExamplePromptsStep : NamespaceStepBase
     private sealed record ValidationRun(
         ProcessExecutionResult ProcessResult,
         HashSet<string> InvalidCommands,
-        IReadOnlyList<string> Warnings);
+        IReadOnlyList<string> Warnings,
+        bool IsFallback);
 
     private sealed record RetryOutcome(
         HashSet<string> UnresolvedCommands,

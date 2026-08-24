@@ -131,6 +131,9 @@ public class NamespaceStepTests
             Assert.Single(result.ArtifactFailures);
             Assert.Equal("compute show", result.ArtifactFailures[0].ArtifactName);
             Assert.Contains("incomplete", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+            // Missing required output artifacts remain a HARD (blocking) failure — unaffected by the
+            // Step-2 required-parameter-validation warning change.
+            Assert.True(result.ArtifactFailures[0].IsBlocking);
         }
         finally
         {
@@ -158,6 +161,49 @@ public class NamespaceStepTests
             Assert.Single(result.ArtifactFailures);
             Assert.Equal("compute list", result.ArtifactFailures[0].ArtifactName);
             Assert.Contains("after automatic retries", result.ArtifactFailures[0].Summary, StringComparison.OrdinalIgnoreCase);
+            // A required-parameter validation failure (genuinely parsed "Invalid tools:" report, not a
+            // process/infra failure) must be NON-blocking: it stays visible as a warning/ArtifactFailure
+            // record but must not make this step a fatal root that suppresses Steps 3-6.
+            Assert.False(result.ArtifactFailures[0].IsBlocking);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_RequiredParameterValidationFailure_IsNonBlockingButVisibleAsWarning()
+    {
+        // Mirrors the exact user-reported log shape: validator exit code 1 after
+        // "Required parameters missing from example prompts: soft-delete" must remain a visible
+        // warning/ArtifactFailure but must NOT be a blocking (pipeline-suppressing) failure.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new ExamplePromptRetryRunner("storage account delete", validationFailuresBeforeSuccess: 3);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["storage account delete"]);
+            context.Items["Namespace"] = "storage account delete";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "storage account delete");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            // Visible as a warning: the step still reports success and the retry/final-failure
+            // messages remain in the warnings collection (surfaced to console/observability).
+            Assert.True(result.Success);
+            Assert.Contains(result.Warnings, w => w.Contains("Retrying example prompts for 'storage account delete'", StringComparison.Ordinal));
+
+            // Visible as a recorded artifact failure, but explicitly non-blocking.
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("storage account delete", failure.ArtifactName);
+            Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.False(failure.IsBlocking);
+
+            // Not suppressing the pipeline is proven at the orchestration level by
+            // DependencySuppressionTests.IsFatalRoot_NonBlockingArtifactFailures_AreNotARoot.
         }
         finally
         {
@@ -229,6 +275,9 @@ public class NamespaceStepTests
             Assert.Equal("compute list", failure.ArtifactName);
             Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(result.Warnings, warning => warning.Contains("Example prompt regeneration failed for 'compute list'", StringComparison.Ordinal));
+            // A retry-generation PROCESS failure (never reached re-validation) is a hard/process-launch
+            // failure, not a content parameter-validation warning — it must stay blocking.
+            Assert.True(failure.IsBlocking);
         }
         finally
         {
@@ -260,6 +309,9 @@ public class NamespaceStepTests
             Assert.Equal("compute list", failure.ArtifactName);
             Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(result.Warnings, warning => warning.Contains("Missing example prompts markdown", StringComparison.Ordinal));
+            // Missing required output artifacts after a retry is a hard failure (missing required
+            // artifacts) — it must stay blocking even though it surfaced through the retry path.
+            Assert.True(failure.IsBlocking);
         }
         finally
         {
@@ -288,6 +340,8 @@ public class NamespaceStepTests
             Assert.Equal("compute list", failure.ArtifactName);
             Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(result.Warnings, warning => warning.Contains("attempt 2/2", StringComparison.Ordinal));
+            // Genuine, exhausted-retries parameter-validation failure — non-blocking.
+            Assert.False(failure.IsBlocking);
         }
         finally
         {
@@ -313,6 +367,8 @@ public class NamespaceStepTests
             var failure = Assert.Single(result.ArtifactFailures);
             Assert.Equal("tool", failure.ArtifactType);
             Assert.Equal("compute list", failure.ArtifactName);
+            // Generator process failure — a hard/process-launch failure — must stay blocking.
+            Assert.True(failure.IsBlocking);
         }
         finally
         {
@@ -339,6 +395,76 @@ public class NamespaceStepTests
             Assert.Equal("pipeline step", failure.ArtifactType);
             Assert.Equal("DocGeneration.Steps.ExamplePrompts.Generation", failure.ArtifactName);
             Assert.Contains("before specific tools could be identified", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            // Generator crash before any tool identification — a hard/process-launch failure.
+            Assert.True(failure.IsBlocking);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_ValidatorFallbackAfterRetriesStaysBlocking()
+    {
+        // The validator process/output could never be parsed into an explicit "Invalid tools:"
+        // report (initial run AND both retries), forcing the pre-existing "assume ALL matching
+        // tools invalid" fallback on every attempt (IsFallback=true throughout). That is a hard,
+        // process-level uncertainty — not a genuine content/parameter-validation result — and must
+        // stay BLOCKING even after retries are exhausted.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new FallbackThenGenuineParseRunner("compute list", genuineParseAfterAttempt: null);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute list", failure.ArtifactName);
+            Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.True(failure.IsBlocking);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step2_ExamplePrompts_LatestValidatorObservationDeterminesFinalBlockingStatus()
+    {
+        // Pins the intentional "latest validator observation wins" semantic: the INITIAL validation
+        // is a hard fallback failure (validator output unparseable -> IsFallback=true, blocking),
+        // but every subsequent retry validation genuinely parses an explicit "Invalid tools:" report
+        // for the same still-invalid command (IsFallback=false). The final, exhausted-retries
+        // ArtifactFailure must reflect the LATEST (genuine, non-fallback) observation and be
+        // non-blocking — an earlier hard/process-level uncertainty about a since-regenerated file
+        // must not permanently pin a command as blocking.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var runner = new FallbackThenGenuineParseRunner("compute list", genuineParseAfterAttempt: 1);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: ["compute list"]);
+            context.Items["Namespace"] = "compute list";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, "compute list");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success);
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("compute list", failure.ArtifactName);
+            Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.False(failure.IsBlocking);
         }
         finally
         {
@@ -1021,6 +1147,97 @@ public class NamespaceStepTests
                 artifacts.ValidationPath,
                 $"# Example Prompt Validation: {command}{Environment.NewLine}{Environment.NewLine}**Status:** Invalid{Environment.NewLine}**Summary:** Attempt {validationAttempt} missing required parameters or quoting issues{Environment.NewLine}- Missing params: subscription{Environment.NewLine}- Issue: Use quoted placeholders");
         }
+    }
+
+    /// <summary>
+    /// Validator test double dedicated to pinning the fallback-vs-genuine-parse blocking distinction
+    /// across the initial validation plus both retries (<c>MaxValidationRetries = 2</c>). The
+    /// validator process always exits nonzero for <paramref name="_invalidTool"/>; whether its stdout
+    /// contains an explicit, parseable "Invalid tools:" report (genuine parse, <c>IsFallback=false</c>)
+    /// or not (fallback "assume all invalid", <c>IsFallback=true</c>) is controlled per validation call
+    /// via <c>genuineParseAfterAttempt</c>: <c>null</c> means every call is a fallback; <c>1</c> means
+    /// the initial call (call #1) is a fallback but every retry call (#2, #3, ...) is a genuine parse.
+    /// Generator calls (initial and retries) always succeed and never touch the pre-seeded outputs.
+    /// </summary>
+    private sealed class FallbackThenGenuineParseRunner : IProcessRunner
+    {
+        private readonly string _invalidTool;
+        private readonly int? _genuineParseAfterAttempt;
+        private int _validationAttempts;
+
+        public FallbackThenGenuineParseRunner(string invalidTool, int? genuineParseAfterAttempt)
+        {
+            _invalidTool = invalidTool;
+            _genuineParseAfterAttempt = genuineParseAfterAttempt;
+        }
+
+        public List<ProcessSpec> Invocations { get; } = new();
+
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
+        {
+            Invocations.Add(spec);
+
+            var projectPath = GetArgumentValue(spec.Arguments, "--project");
+            if (projectPath?.EndsWith("DocGeneration.Steps.ExamplePrompts.Validation.csproj", StringComparison.Ordinal) == true)
+            {
+                _validationAttempts++;
+                var generatedPath = GetArgumentValue(spec.Arguments, "--generated")!;
+                var artifacts = GetExamplePromptArtifactsAsync(generatedPath, _invalidTool).GetAwaiter().GetResult();
+                Directory.CreateDirectory(Path.GetDirectoryName(artifacts.ValidationPath)!);
+                File.WriteAllText(
+                    artifacts.ValidationPath,
+                    $"# Example Prompt Validation: {_invalidTool}{Environment.NewLine}{Environment.NewLine}**Status:** Invalid{Environment.NewLine}**Summary:** Attempt {_validationAttempts} missing required parameters{Environment.NewLine}- Missing params: subscription");
+
+                var isGenuineParse = _genuineParseAfterAttempt.HasValue && _validationAttempts > _genuineParseAfterAttempt.Value;
+                if (!isGenuineParse)
+                {
+                    // Fallback shape: the validator "crashed" before producing any structured,
+                    // parseable "Invalid tools:" section — ParseInvalidTools finds nothing, forcing
+                    // the hard/process-level "assume all matching tools invalid" fallback.
+                    const string stdout = "Validator crashed unexpectedly before producing a structured report.";
+                    return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, stdout, "unhandled exception", TimeSpan.Zero));
+                }
+
+                var genuineStdout = $"Validation Summary{Environment.NewLine}------------------{Environment.NewLine}Invalid tools:{Environment.NewLine}  - {_invalidTool}";
+                return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 1, genuineStdout, string.Empty, TimeSpan.Zero));
+            }
+
+            // Generator calls (initial and retries) always succeed; the pre-seeded outputs are left
+            // untouched, so "missing regenerated output" never fires in this runner.
+            return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero));
+        }
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)
+            => RunAsync(
+                new ProcessSpec(
+                    "dotnet",
+                    ["build", solutionPath, "--configuration", "Release", "--verbosity", "quiet"],
+                    Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory),
+                cancellationToken);
+
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string projectPath, IEnumerable<string> arguments, bool noBuild, string workingDirectory, CancellationToken cancellationToken)
+        {
+            var invocation = new List<string>
+            {
+                "run",
+                "--project",
+                projectPath,
+                "--configuration",
+                "Release",
+            };
+
+            if (noBuild)
+            {
+                invocation.Add("--no-build");
+            }
+
+            invocation.Add("--");
+            invocation.AddRange(arguments);
+            return RunAsync(new ProcessSpec("dotnet", invocation, workingDirectory), cancellationToken);
+        }
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
+            => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
     }
 
     private sealed class SkillsRelevanceOutputRunner : IProcessRunner

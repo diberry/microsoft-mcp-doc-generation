@@ -1,0 +1,249 @@
+================================================================================
+ #813 STEP 2 — ADDENDUM C (post-follow-up): required-parameter validation
+ warnings must not block Steps 3-6
+ Author: Squad Coordinator (direct, TDD)   Scope: TESTS + PRODUCTION (paired)
+ Companion to: 813-step2-red-addendum-b.txt / 813-step2-green-addendum-b.txt
+ Trigger: user-reported log — validator exit code 1 after "Required parameters
+ missing from example prompts: soft-delete" suppressed Steps 3-6 for the whole
+ namespace, even though Step 2 itself reported Success=true.
+================================================================================
+
+ENVIRONMENT
+  worktree HEAD (base)         : 525bfa5995c34ae3388c7a7ebf08ba657a0c7486 (main, clean)
+  branch                       : squad/step2-warn-not-block-813-followup
+  dotnet --version             : 10.0.303
+  pwsh (PSVersion)             : 7.6.5
+  git --version                : git version 2.55.0.vfs.0.3
+  OS                           : Microsoft Windows 10.0.26200
+  captured (UTC)               : 2026-08-24T15:35:38Z
+
+SOURCE OF TRUTH (read before touching a line of code)
+  .squad/agents/avery/813-step2-acceptance.md
+  .squad/agents/cameron/813-step2-test-matrix.md
+  docs/ARCHITECTURE.md  (IsFatalRoot / C1-C2 contract, ~lines 500-600, 636-658, 770-784)
+  mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs  IsFatalRoot (~line 797)
+     PRIOR contract (AD-029 §A2, Addendum B): C2 = "artifactFailures.Count > 0".
+     This addendum NARROWS C2 to "any artifactFailures[i].IsBlocking" — additive,
+     backward compatible (IsBlocking defaults true everywhere else).
+
+WHY THIS IS NOT A REVERSAL OF AD-029/ADDENDUM B
+  Addendum B fixed a bug where non-empty ArtifactFailures with mapped exit 0 were
+  NOT treated as a root (0/10 cascades caught). That fix — "any non-empty
+  ArtifactFailures IS a root" — stands for every failure shape except ONE: a
+  content/parameter-validation failure in ExamplePromptsStep that a) genuinely
+  parsed an explicit "Invalid tools:" report from the validator (i.e. the
+  validator process ran fine and told us exactly which tool(s) are missing a
+  required parameter), and b) survived MaxValidationRetries retries. All other
+  ArtifactFailure-producing paths (generator process failure/crash, missing
+  per-tool output files, retry-generation process failure, missing regenerated
+  output, and the validator "fallback" case where ParseInvalidTools finds
+  nothing and we must assume ALL matching tools are invalid because the
+  validator's own output/process could not be trusted) remain IsBlocking=true
+  and continue to root exactly as Addendum B intended.
+
+--------------------------------------------------------------------------------
+ STEP 1 — RED (tests only; production reverted to base 525bfa5 via `git stash`)
+--------------------------------------------------------------------------------
+COMMAND
+  git stash push -- \
+    mcp-tools/DocGeneration.PipelineRunner/Contracts/ArtifactFailure.cs \
+    mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs \
+    mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs \
+    mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/NamespaceStepBase.cs
+  dotnet build mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj --configuration Release
+
+RESULT: Build FAILED — 10 compile errors, all in the new/modified assertions,
+confirming the test file changes require the (not-yet-restored) production
+change and prove no prior code accidentally already satisfied the new contract:
+
+  NamespaceStepTests.cs(136,52): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  NamespaceStepTests.cs(167,53): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  NamespaceStepTests.cs(203,34): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  NamespaceStepTests.cs(280,33): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  NamespaceStepTests.cs(314,33): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  NamespaceStepTests.cs(344,34): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  NamespaceStepTests.cs(371,33): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  NamespaceStepTests.cs(399,33): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  DependencySuppressionTests.cs(521,17): CS1739 'Create' has no 'isBlocking' param
+  DependencySuppressionTests.cs(548,83): CS1061 'ArtifactFailure' has no 'IsBlocking'
+  10 Error(s)
+
+This is the RED proof: a behavioral requirement (IsBlocking distinguishing
+warn-only content-validation failures from hard failures) is expressed in
+tests and fails (here, at compile time — the contract literally does not
+exist yet) before any production code implements it.
+
+  git stash pop   (restores the 4 production files; working tree returns to the
+                    exact paired RED+implementation state)
+
+--------------------------------------------------------------------------------
+ STEP 2 — GREEN (production implemented; paired with the RED tests above)
+--------------------------------------------------------------------------------
+FILES CHANGED (production)
+  M mcp-tools/DocGeneration.PipelineRunner/Contracts/ArtifactFailure.cs
+      + bool IsBlocking = true on the record and .Create(...) factory (additive
+        default parameter — no existing call site is affected).
+  M mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/NamespaceStepBase.cs
+      CreateArtifactFailure(...) gains an optional isBlocking = true parameter,
+      forwarded to ArtifactFailure.Create.
+  M mcp-tools/DocGeneration.PipelineRunner/Steps/Namespace/ExamplePromptsStep.cs
+      ValidationRun gains `bool IsFallback` (true only when the validator process
+      failed AND ParseInvalidTools found no explicit "Invalid tools:" list, i.e.
+      we fell back to "assume all matching/targeted tools invalid" — a hard,
+      process-level uncertainty, NOT a genuine parsed content failure).
+      ValidateWithRetriesAsync / RetryInvalidToolsAsync now track a per-command
+      `Dictionary<string, bool> isBlockingByCommand`, seeded from the initial
+      validation run's IsFallback and updated on every subsequent validator run
+      for that command. A retry-generation PROCESS failure or missing
+      regenerated output FORCES isBlocking=true for that command (these are
+      unrelated hard failures that happen to surface mid-retry-loop; they must
+      never be masked just because the command was originally a content
+      failure). The final per-command ArtifactFailure for any still-unresolved
+      command after retries are exhausted is created with
+      isBlocking: isBlockingByCommand[command] (conservative default true if
+      somehow absent).
+  M mcp-tools/DocGeneration.PipelineRunner/PipelineRunner.cs
+      IsFatalRoot's C2 clause changed from `artifactFailures.Count > 0` to
+      `artifactFailures.Any(f => f.IsBlocking)`. C1 (nonzero mapped exit) is
+      untouched. XML doc comment updated to describe the narrowing and why it
+      does not affect any other step/scenario.
+
+COMMAND
+  dotnet build mcp-doc-generation.sln --configuration Release
+RESULT: Build succeeded. 0 Warning(s). 0 Error(s).  (~11-20s)
+
+COMMAND
+  dotnet test mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj \
+    --configuration Release --filter "FullyQualifiedName~NamespaceStepTests|FullyQualifiedName~DependencySuppressionTests" --no-build
+RESULT: Passed! Failed: 0, Passed: 54, Skipped: 0, Total: 54  (targeted GREEN)
+
+COMMAND
+  dotnet test mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj \
+    --configuration Release --no-build
+RESULT: Passed! Failed: 0, Passed: 684, Skipped: 0, Total: 684  (full project, zero regressions,
+  including the pinned Addendum B tests T32-T40 and the Beta34 corpus replay, which are
+  unaffected by design because their ArtifactFailure.Create(...) calls never pass
+  isBlocking and therefore keep the default true/blocking value).
+
+NEW/MODIFIED TESTS (this addendum)
+  Unit/DependencySuppressionTests.cs
+    + IsFatalRoot_NonBlockingArtifactFailures_AreNotARoot ("T32b")
+        (1) Fatal + exit 0 + ONLY non-blocking ArtifactFailures => NOT a root
+            (the exact user-reported shape).
+        (2) Mixed one non-blocking + one blocking => STILL a root (a hard
+            failure is never masked by a co-occurring soft warning).
+        (3) C1 (nonzero mapped exit) still roots even with only non-blocking
+            ArtifactFailures — IsBlocking narrows C2 only, never C1.
+        (4) Default ArtifactFailure.Create(...) (no isBlocking arg) is still
+            IsBlocking=true.
+  Unit/NamespaceStepTests.cs
+    ~ Step2_ExamplePrompts_ValidatorFailureCreatesArtifactFailureWithoutBlockingStep
+        + Assert.False(...IsBlocking)  (genuine parsed content failure)
+    ~ Step2_ExamplePrompts_ValidatorFailureAfterRetriesCreatesArtifactFailure
+        + Assert.False(...IsBlocking)  (genuine parsed content failure, retries exhausted)
+    ~ Step2_ExamplePrompts_RetryGenerationFailureCreatesArtifactFailure
+        + Assert.True(...IsBlocking)   (regeneration PROCESS failure — hard, unaffected)
+    ~ Step2_ExamplePrompts_RetryMissingRegeneratedOutputCreatesArtifactFailure
+        + Assert.True(...IsBlocking)   (missing required artifact — hard, unaffected)
+    ~ Step2_ExamplePrompts_MissingToolOutputCreatesArtifactFailure
+        + Assert.True(...IsBlocking)   (missing required artifact — hard, unaffected)
+    ~ Step2_ExamplePrompts_TextFailureMarkersCreateToolArtifactFailure
+        + Assert.True(...IsBlocking)   (generator process failure — hard, unaffected)
+    ~ Step2_ExamplePrompts_GeneratorCrashCreatesStepLevelArtifactFailure
+        + Assert.True(...IsBlocking)   (generator process crash — hard, unaffected)
+    + Step2_ExamplePrompts_RequiredParameterValidationFailure_IsNonBlockingButVisibleAsWarning
+        New dedicated test mirroring the user's literal log shape: asserts the
+        warning text is still present in result.Warnings (retry attempts) AND
+        the final ArtifactFailure is recorded (visible) AND IsBlocking=false.
+
+RETRIES PRESERVED
+  MaxValidationRetries (=2) and the entire ValidateWithRetriesAsync /
+  RetryInvalidToolsAsync retry loop are UNCHANGED — only the final blocking
+  classification of an unresolved command's ArtifactFailure was added. No
+  retry behavior, count, or generator re-invocation logic was touched.
+
+WARNING OUTPUT PRESERVED
+  All existing warning strings (`Retrying example prompts for '{command}' ...`,
+  `Example prompt regeneration failed for '{command}' ...`, per-tool validation
+  detail lines) are emitted exactly as before via context.Reports.Warning and
+  result.Warnings — the new dedicated test explicitly asserts on this.
+
+NOT WEAKENED
+  - Missing prerequisites / missing required output artifacts: still IsBlocking=true
+    (Step2_ExamplePrompts_MissingToolOutputCreatesArtifactFailure,
+     Step2_ExamplePrompts_RetryMissingRegeneratedOutputCreatesArtifactFailure).
+  - Process launch / generator crash failures: still IsBlocking=true
+    (Step2_ExamplePrompts_TextFailureMarkersCreateToolArtifactFailure,
+     Step2_ExamplePrompts_GeneratorCrashCreatesStepLevelArtifactFailure,
+     Step2_ExamplePrompts_RetryGenerationFailureCreatesArtifactFailure).
+  - Validator "fallback" (process/output could not be parsed, so we assumed ALL
+    matching tools invalid): still IsBlocking=true by construction (IsFallback=true
+    forces isBlockingByCommand[command]=true) — now directly pinned by
+    Step2_ExamplePrompts_ValidatorFallbackAfterRetriesStaysBlocking (see Addendum
+    C-2 below).
+  - Every OTHER step's ArtifactFailure.Create(...) call site in the codebase
+    (BootstrapStep, ArticleHealthValidatorStep, CoverageAuditStep,
+    HorizontalArticlesStep, SkillsRelevanceStep, ToolFamilyCleanupStep,
+    ToolGenerationStep, ValidationStepBase) is untouched and keeps the implicit
+    isBlocking=true default — confirmed via `grep ArtifactFailure` across
+    mcp-tools/DocGeneration.PipelineRunner and a full project test run (684/684
+    passed, 0 regressions).
+
+--------------------------------------------------------------------------------
+ ADDENDUM C-2 — squad review follow-up (Riley + Cameron must-fix findings)
+--------------------------------------------------------------------------------
+Independent squad review (reviewer-lockout: Riley/architecture, Cameron/test
+strategy, Reeve/docs, all reviewing a change the Coordinator authored directly)
+flagged that the ORIGINAL Addendum C left two behaviorally-important shapes
+unpinned by a dedicated test, even though the production code already handled
+them correctly by construction:
+
+  1. Riley (APPROVE WITH COMMENTS) + Cameron (REQUEST CHANGES, must-fix): no
+     test proved the intentional "latest validator observation wins" semantic
+     for a command whose blocking status CHANGES across the retry loop (e.g.
+     starts as a hard fallback failure, ends as a genuine non-blocking parse,
+     or vice versa) — i.e. that isBlockingByCommand[command] is NOT sticky
+     once set to true by an earlier hard/process failure.
+  2. Cameron (must-fix): no test proved the validator "fallback" case (no
+     parseable "Invalid tools:" report on ANY attempt) still ends up
+     IsBlocking=true after retries are exhausted — this was previously only
+     asserted "by construction" in prose, not by a running test.
+
+FIX (tests only — no production code changed in this addendum)
+  Added a new validator test double, FallbackThenGenuineParseRunner, to
+  Unit/NamespaceStepTests.cs, and two new tests:
+
+  + Step2_ExamplePrompts_ValidatorFallbackAfterRetriesStaysBlocking
+      Validator returns a non-parseable ("fallback") failure on the initial
+      call AND both retries (3 validator invocations total, all IsFallback=
+      true). Asserts the step still reports Success=true, still records
+      exactly one ArtifactFailure ("after automatic retries"), and that
+      failure's IsBlocking is True — the hard/process-uncertainty shape
+      remains fully blocking even after exhausting retries, exactly as
+      Addendum C intended and AD-029/Addendum B originally required.
+
+  + Step2_ExamplePrompts_LatestValidatorObservationDeterminesFinalBlockingStatus
+      Validator returns a non-parseable ("fallback") failure on the INITIAL
+      call only (IsFallback=true, seeding isBlockingByCommand=true), then a
+      genuine, explicit "Invalid tools:" parse on BOTH retries (IsFallback=
+      false on retries #1 and #2, still reporting the same command invalid).
+      Asserts the final (and only) ArtifactFailure has IsBlocking=False —
+      proving the LATEST validator observation about the command's current,
+      already-regenerated content determines the final blocking status, and
+      an earlier, since-superseded hard/process uncertainty does not
+      permanently pin the command as blocking. This is the mixed-sequence
+      case Riley and Cameron asked to have explicitly pinned.
+
+COMMAND
+  dotnet build mcp-doc-generation.sln --configuration Release
+RESULT: Build succeeded. 0 Warning(s). 0 Error(s).
+
+COMMAND
+  dotnet test mcp-tools\DocGeneration.PipelineRunner.Tests\DocGeneration.PipelineRunner.Tests.csproj \
+    --configuration Release --no-build --filter "FullyQualifiedName~NamespaceStepTests|FullyQualifiedName~DependencySuppressionTests"
+RESULT: Passed! Failed: 0, Passed: 56, Skipped: 0, Total: 56  (54 + 2 new tests, all green;
+  no production code changed for this addendum, so this is a direct GREEN-on-GREEN
+  confirmation that the already-implemented behavior matches the newly pinned contract —
+  not a fresh RED/GREEN cycle, since the underlying isBlockingByCommand logic in
+  ExamplePromptsStep.cs was unchanged.)
+================================================================================

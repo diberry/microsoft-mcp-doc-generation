@@ -509,12 +509,12 @@ is **not** required:
 | Signal | Condition | Typical source |
 |--------|-----------|----------------|
 | **C1** | mapped exit code ≠ `SuccessExitCode` | a hard `Success=false` Fatal step, a forced `ExitCodeOverride`, or a fatal envelope-write failure |
-| **C2** | `ArtifactFailures.Count > 0` **even when the step reports `Success=true` and maps to exit 0** | the real Step-2 shape: `ExamplePromptsStep` appends per-tool failures to `ArtifactFailures` after retries but still returns `success: true` |
+| **C2** | at least one **blocking** entry in `ArtifactFailures` (`ArtifactFailure.IsBlocking`) **even when the step reports `Success=true` and maps to exit 0** | the real Step-2 shape: `ExamplePromptsStep` appends per-tool failures to `ArtifactFailures` after retries but still returns `success: true` |
 
 ```csharp
 internal static bool IsFatalRoot(FailurePolicy policy, int mappedExitCode, IReadOnlyList<ArtifactFailure> artifactFailures)
     => policy == FailurePolicy.Fatal
-        && (mappedExitCode != SuccessExitCode || artifactFailures.Count > 0);
+        && (mappedExitCode != SuccessExitCode || artifactFailures.Any(f => f.IsBlocking));
 ```
 
 C2 exists because a step's *result* state can say `success` while its *validation* state says
@@ -533,18 +533,42 @@ cascades — so the exit-code-only trigger would have suppressed **0 of 10**. Ke
 > `SuccessExitCode` so the skipped step stays **non-fatal** and its independent dependents keep
 > running (`PreAiValidationGateTests` pins this). The real Step-2 failure and the pre-AI skip **both**
 > carry `Success=true` and a failed validator; the **only** thing that distinguishes "fatal root" from
-> "intentional non-fatal skip" is whether `ArtifactFailures` is non-empty (validation-after-retries =
-> non-empty; pre-AI skip = empty). A predicate that fired on any failed validator — or on
-> critical-JSON counts — would reclassify the pre-AI skip as a fatal root and break the pre-AI-gate
-> contract. **Do not "simplify" `IsFatalRoot` to look at validator results.** The `FailurePolicy != Fatal`
-> guard short-circuits first, so a Warn step with artifact failures is never a root.
+> "intentional non-fatal skip" is whether `ArtifactFailures` contains a **blocking** entry
+> (validation-after-retries = non-empty and, as of the amendment below, blocking only when it is NOT
+> a genuine exhausted-retries content/parameter-validation failure; pre-AI skip = empty). A predicate
+> that fired on any failed validator — or on critical-JSON counts — would reclassify the pre-AI skip
+> as a fatal root and break the pre-AI-gate contract. **Do not "simplify" `IsFatalRoot` to look at
+> validator results.** The `FailurePolicy != Fatal` guard short-circuits first, so a Warn step with
+> artifact failures is never a root.
+
+**Amendment — `ArtifactFailure.IsBlocking` narrows C2 for required-parameter validation warnings
+(post-#813 follow-up).** A user-reported log showed Step 2 exiting with "Required parameters missing
+from example prompts: soft-delete" after automatic retries — a genuine content/parameter-validation
+result, not a process or infrastructure failure — and that single warning was suppressing Steps 3-6
+for the entire namespace. `ArtifactFailure` now carries `IsBlocking` (default `true`, so every
+pre-existing call site across every step is unaffected). `IsFatalRoot`'s C2 clause was narrowed from
+"any `ArtifactFailures`" to "any **blocking** `ArtifactFailures`". `ExamplePromptsStep` sets
+`IsBlocking=false` **only** when the *last* validator run for an unresolved command genuinely parsed
+an explicit `Invalid tools:` report (the validator process ran fine and told us exactly which tool(s)
+are missing a required parameter) — never when the validator's own output/process could not be
+parsed (the pre-existing "fallback: assume all matching tools invalid" branch, which remains a hard,
+`IsBlocking=true` failure), and never when a retry's generator process failed or a regenerated output
+was missing (also hard, process/artifact failures forced to `IsBlocking=true` regardless of the
+command's prior validation status). The failure is still recorded (visible in `ArtifactFailures`) and
+still surfaced through the existing retry/warning messages — only its ability to suppress Steps 3-6
+is removed. C1 is untouched by this amendment: a nonzero mapped exit code still always roots,
+regardless of any artifact failure's blocking status.
 
 **Forcing a nonzero exit for a C2-only root.** A C2 root maps to exit 0, so `Worse(worstRootExit, 0)`
 would leave the catalog exiting 0 despite a recorded root. Before recording the root the runner
 recomputes `rootExit = MapStepFailureExitCode(Fatal, stepSucceeded: false, override)` (preserving a
 human-review override of `2`), so the invocation still exits nonzero. This recompute is load-bearing:
 without it, a namespace that failed only via artifact failures would silently exit 0. `MapStepFailureExitCode`
-itself is unchanged — the recompute lives entirely in the namespace loop.
+itself is unchanged — the recompute lives entirely in the namespace loop. This recompute still fires
+for a C2-only root under the amendment above (a root requires at least one *blocking* artifact
+failure, and that check happens before the recompute); a namespace whose only recorded failures are
+all non-blocking (the required-parameter-validation-warning shape) is, by definition, no longer a
+root at all, so no recompute is needed or performed for it.
 
 **What happens once a step is a fatal root:**
 
@@ -590,9 +614,16 @@ above, so a namespace that failed only through artifact failures never leaves th
   the collected suppression closure is empty. Step 6 (depends on Step 0, not Step 4) still runs. The
   namespace exits nonzero.
 - Select `[1,2,3,4,7]`; Step 2 becomes a fatal root — including the common **C2** case where Step 2
-  returns `success: true` but recorded `ArtifactFailures` (example-prompt validation failed after
-  retries). The closure is `{3, 4, 7}` — all suppressed — and the catalog is forced to exit nonzero
+  returns `success: true` but recorded a **blocking** `ArtifactFailure` (for example, the validator
+  process itself could not be parsed after retries, so we fell back to assuming every matching tool
+  is invalid). The closure is `{3, 4, 7}` — all suppressed — and the catalog is forced to exit nonzero
   even though Step 2's own mapped exit was `0`. Later namespaces still run.
+- Select `[1,2,3,4,7]`; Step 2 returns `success: true` and recorded ONLY **non-blocking**
+  `ArtifactFailures` (a required-parameter/example-prompt content-validation failure that genuinely
+  parsed the validator's `Invalid tools:` report and survived automatic retries — for example,
+  "Required parameters missing from example prompts: soft-delete"). Step 2 is **not** a fatal root
+  (post-#813 follow-up amendment above): the failure stays visible as a warning and an
+  `ArtifactFailure` record, but Steps 3, 4, and 7 all run normally.
 - Run `start.sh <ns> 2,4 --skip-deps` (select `{2,4}`; Steps 1/3 unselected) and Step 2 becomes a
   fatal root. The full reverse-graph walk reaches Step 4 **through** the unselected Step 3
   (`2 → 3 → 4`), then intersects with the selection, so **Step 4 is suppressed**. This upholds the
@@ -777,9 +808,12 @@ Since #813 Step 2, a namespace-scoped fatal root no longer stops the run: the ru
 step's selected dependents, continues with independent steps and later namespaces, and surfaces the
 **worst** namespace exit code at the end (a hard fatal `1` dominates human-review `2`). A step
 becomes a fatal root when it is `Fatal` **and** did not cleanly succeed — either a nonzero exit **or**
-recorded artifact failures even when its own mapped exit was `0` (see
+a recorded **blocking** artifact failure even when its own mapped exit was `0` (see
 [Runtime Dependency Suppression](#runtime-dependency-suppression-ad-029) for the `IsFatalRoot`
-predicate); such an artifact-failure-only root is still forced to a nonzero catalog exit.
+predicate and its AD-044 amendment); such an artifact-failure-only root is still forced to a nonzero
+catalog exit. An exhausted-retries Step 2 required-parameter/content-validation failure is recorded
+as a **non-blocking** artifact failure (AD-044): it stays visible as a warning but does not, by
+itself, make Step 2 a fatal root.
 Global-scope failures still abort immediately.
 
 A failed live Azure OpenAI probe (AD-042) is one such global-scope failure: a non-interactive or

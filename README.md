@@ -207,7 +207,7 @@ Cross-cutting "how-to" guides for service-level scenarios:
 - `run-accounting.json` - per-run six-category summary (successful/root-failed/warning-only/suppressed namespaces plus frozen-baseline reconciliation); see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#runtime-dependency-suppression-ad-029)
 - `logs/` - run logs and diagnostics
 
-> When a `Fatal` step does not cleanly succeed — a nonzero exit, **or** recorded validation/artifact failures even when the step itself reports success — the steps that transitively depend on it are **suppressed** (skipped) rather than aborting the whole run. A suppressed step writes a `step-result.json` marked `suppressed: true` and produces no other output; independent steps and later namespaces still run. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#runtime-dependency-suppression-ad-029).
+> When a `Fatal` step does not cleanly succeed — a nonzero exit, **or** a recorded *blocking* artifact failure even when the step itself reports success — the steps that transitively depend on it are **suppressed** (skipped) rather than aborting the whole run. A suppressed step writes a `step-result.json` marked `suppressed: true` and produces no other output; independent steps and later namespaces still run. A Step 2 required-parameter/example-prompt validation failure that survives automatic retries is recorded and still shown as a warning, but is non-blocking and does **not** trigger suppression on its own. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#runtime-dependency-suppression-ad-029).
 
 ## Folder Organization
 
