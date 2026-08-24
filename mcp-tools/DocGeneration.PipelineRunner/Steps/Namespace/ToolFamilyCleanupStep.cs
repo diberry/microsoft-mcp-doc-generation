@@ -172,7 +172,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 
                 WriteFamilyArtifacts(context.OutputPath, outputFileName, artifacts!);
                 RemoveStaleFamilyFiles(context.OutputPath, familyName, outputFileName);
-                await ApplyCliTabWrappingAsync(
+                var cliTabWrappingSucceeded = await ApplyCliTabWrappingAsync(
                     context,
                     currentNamespace,
                     cliTabConfigPath,
@@ -184,7 +184,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     warnings,
                     cancellationToken);
 
-                return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
+                return BuildResult(context, processResults, cliTabWrappingSucceeded, warnings, artifactFailures: artifactFailures);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -338,7 +338,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 
             // Apply CLI tab wrapping — emits canonical (plain) {name}.md + {name}-cli.md variant.
             var familyArticlePath = Path.Combine(context.OutputPath, "tool-family", $"{outputFileName}.md");
-            await ApplyCliTabWrappingAsync(
+            var cliTabWrappingSucceeded = await ApplyCliTabWrappingAsync(
                 context,
                 currentNamespace,
                 cliTabConfigPath,
@@ -350,7 +350,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 warnings,
                 cancellationToken);
 
-            return BuildResult(context, processResults, true, warnings, artifactFailures: artifactFailures);
+            return BuildResult(context, processResults, cliTabWrappingSucceeded, warnings, artifactFailures: artifactFailures);
         }
         finally
         {
@@ -669,7 +669,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         RemoveStaleFile(Path.Combine(outputPath, "tool-family-related", $"{familyName}-related.md"));
     }
 
-    private static async Task ApplyCliTabWrappingAsync(
+    private static async Task<bool> ApplyCliTabWrappingAsync(
         PipelineContext context,
         string currentNamespace,
         string cliTabConfigPath,
@@ -683,11 +683,12 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
     {
         if (!File.Exists(familyArticlePath))
         {
-            return;
+            return true;
         }
 
         var cliTabConfig = CliTabConfig.LoadFromFile(cliTabConfigPath);
         var namespaceAllowed = cliTabConfig.IsNamespaceAllowed(currentNamespace);
+        var cliTabWrappingSucceeded = true;
 
         IReadOnlyDictionary<string, string>? assembledContent = null;
 
@@ -704,15 +705,23 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     var cliJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
                     var allCliTools = CliJsonMapper.MapFromCliOutput(cliJson);
                     var nameContext = await FileNameContext.CreateAsync();
+                    var normalizedNamespace = context.TargetMatcher.Normalize(currentNamespace);
 
                     var cliTools = new Dictionary<string, CliToolInfo>(StringComparer.OrdinalIgnoreCase);
                     foreach (var (key, tool) in allCliTools)
                     {
-                        if (key.StartsWith(currentNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
-                            key.Equals(currentNamespace, StringComparison.OrdinalIgnoreCase))
+                        if (key.StartsWith(normalizedNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
+                            key.Equals(normalizedNamespace, StringComparison.OrdinalIgnoreCase))
                         {
                             cliTools[key] = tool;
                         }
+                    }
+
+                    if (cliTools.Count == 0)
+                    {
+                        warnings.Add(
+                            $"CLI tab wrapping failed: namespace '{currentNamespace}' is enabled but no CLI commands matched normalized namespace '{normalizedNamespace}'.");
+                        cliTabWrappingSucceeded = false;
                     }
 
                     var nlpDescriptions = await NlpDescriptionExtractor.ExtractNlpDescriptionsAsync(
@@ -729,6 +738,13 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     assembledContent = await CliContentAssembler.AssembleAllCliContentAsync(
                         cliTools, parameterCliDir, exampleCommandsDir, nameContext);
 
+                    if (cliTools.Count > 0
+                        && !assembledContent.Values.Any(content => !string.IsNullOrWhiteSpace(content)))
+                    {
+                        warnings.Add(
+                            $"CLI tab wrapping failed: namespace '{currentNamespace}' matched {cliTools.Count} CLI command(s), but no CLI content was assembled.");
+                        cliTabWrappingSucceeded = false;
+                    }
                     if (nlpDescriptions.Count > 0)
                     {
                         var cliDescriptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -775,5 +791,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         {
             warnings.Add($"CLI variant write failed (non-fatal): {ex.Message}");
         }
+
+        return cliTabWrappingSucceeded;
     }
 }

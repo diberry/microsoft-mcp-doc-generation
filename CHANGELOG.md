@@ -67,6 +67,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **CLI tabs for decomposed namespaces** — CLI-tab allowlist matching now treats
+  underscore-delimited namespace IDs such as `extension_cli_generate` and
+  space-delimited CLI command namespaces as equivalent. Enabled namespaces with no
+  CLI command match now fail with a diagnostic instead of silently emitting MCP-only
+  variants.
+
 - **Explicit namespace selectors recognize command-family roots** — `start-with-logs.ps1` now accepts either concrete metadata namespaces from `cli-namespace.json` or command-family roots discovered from `cli-output.json` when `-NamespaceList` or `-NamespaceFile` is provided. Default all-namespace generation continues to dispatch only concrete namespaces.
 
 - **Pipeline generation hardening for Step 2, Step 4, and Step 5 failures (#791)** — Three pipeline fixes now prevent the 2026-08-02 catalog run regressions from recurring:

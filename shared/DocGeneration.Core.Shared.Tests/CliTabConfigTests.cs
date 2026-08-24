@@ -45,6 +45,14 @@ public class CliTabConfigTests
     }
 
     [Fact]
+    public void IsNamespaceAllowed_UnderscoreIdentifierMatchesSpaceDelimitedCommandNamespace()
+    {
+        var config = CliTabConfig.ForNamespaces("extension_cli_generate");
+
+        Assert.True(config.IsNamespaceAllowed("extension cli generate"));
+    }
+
+    [Fact]
     public void IsNamespaceAllowed_DisabledConfig_ReturnsFalse()
     {
         var config = new CliTabConfig();
