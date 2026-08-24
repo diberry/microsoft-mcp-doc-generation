@@ -405,6 +405,93 @@ public class NamespaceStepTests
     }
 
     [Fact]
+    public async Task Step2_ExamplePrompts_RealMultiToolNamespaceShape_ProducesNonFatalSuccessStepResult()
+    {
+        // ── BEHAVIORAL REGRESSION (user-reported azurebackup run, #817) ──────────────────────────
+        // Reproduces the EXACT reported runtime shape end-to-end through the real ExamplePromptsStep:
+        //   • a MULTI-tool namespace, so the initial validation runs namespace-wide with NO
+        //     --tool-command (the reported generic warning "Example prompt validation completed with
+        //     issues (exit code 1)."), which the single-tool tests above could never exercise;
+        //   • the REAL validator console contract (Program.WriteValidationSummary) on every run —
+        //     an explicit, parseable "Invalid tools:" report — for the initial namespace-wide run AND
+        //     for both per-tool retry validations (the reported per-tool warnings);
+        //   • the validator process exiting 1 every time, with retries exhausted.
+        //
+        // Unlike the assertions above (which only inspect ArtifactFailure.IsBlocking), this test pins
+        // the REAL StepResult exit code and the downstream Steps 3-6 continuation contract by routing
+        // the produced StepResult through the SAME production seams the runtime uses —
+        // MapStepFailureExitCode (C1) and IsFatalRoot (C1+C2) — so a regression in EITHER clause fails
+        // here rather than silently reappearing only in a live pipeline run.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            const string invalidTool = "azurebackup governance soft-delete";
+            string[] namespaceTools = ["azurebackup backup list", invalidTool, "azurebackup vault list"];
+
+            var runner = new RealValidatorConsoleShapeRunner(invalidTool, namespaceTools);
+            var context = CreateContext(testRoot, runner, skipValidation: false, toolCommands: namespaceTools);
+            context.Items["Namespace"] = "azurebackup";
+
+            await SeedExamplePromptOutputsAsync(context.OutputPath, namespaceTools);
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameters"));
+
+            var step = new ExamplePromptsStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            // (1) Multi-tool precondition: the initial validation really did run namespace-wide (no
+            //     --tool-command), exactly as the reported log shows. Guards the test from silently
+            //     degrading into the already-covered single-tool path.
+            Assert.True(runner.InitialValidationRanNamespaceWide);
+            Assert.Contains(
+                result.Warnings,
+                w => w.Equals("Example prompt validation completed with issues (exit code 1).", StringComparison.Ordinal));
+            Assert.Contains(
+                result.Warnings,
+                w => w.Equals($"Example prompt validation completed with issues for '{invalidTool}' (exit code 1).", StringComparison.Ordinal));
+
+            // (2) Retries were genuinely exhausted (both reported retry warnings present).
+            Assert.Contains(result.Warnings, w => w.Contains($"Retrying example prompts for '{invalidTool}' (attempt 1/2)", StringComparison.Ordinal));
+            Assert.Contains(result.Warnings, w => w.Contains($"Retrying example prompts for '{invalidTool}' (attempt 2/2)", StringComparison.Ordinal));
+
+            // (3) The issue stays VISIBLE: recorded as an ArtifactFailure for the offending tool only.
+            var failure = Assert.Single(result.ArtifactFailures);
+            Assert.Equal("tool", failure.ArtifactType);
+            Assert.Equal(invalidTool, failure.ArtifactName);
+            Assert.Contains("after automatic retries", failure.Summary, StringComparison.OrdinalIgnoreCase);
+            Assert.False(failure.IsBlocking);
+
+            // (4) THE STEP RESULT ITSELF is a success -> the REAL mapped exit code is 0 (C1 clean).
+            Assert.True(result.Success);
+            Assert.Null(result.ExitCodeOverride);
+            var mappedExitCode = global::PipelineRunner.PipelineRunner.MapStepFailureExitCode(
+                FailurePolicy.Fatal, result.Success, result.ExitCodeOverride);
+            Assert.Equal(global::PipelineRunner.PipelineRunner.SuccessExitCode, mappedExitCode);
+
+            // (5) DOWNSTREAM CONTRACT: neither C1 nor C2 fires, so Step 2 is NOT a fatal root and its
+            //     transitive dependents (Steps 3, 4, 7, 8) are never suppressed.
+            Assert.False(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+                FailurePolicy.Fatal, mappedExitCode, result.ArtifactFailures));
+
+            // (6) ANTI-DRIFT: the orchestration suite proves the Steps 3-6 continuation contract through
+            //     the canonical `StepOutcomes` fixtures rather than the real step. #817 regressed because
+            //     production changed to non-blocking while that fixture still modelled the old blocking
+            //     contract, so no test covered the end-to-end behavior. Pin the fixture's blocking
+            //     polarity against what the REAL step just produced, so the two cannot diverge silently.
+            Assert.Equal(
+                failure.IsBlocking,
+                Assert.Single(StepOutcomes.ValidationAfterRetriesFailure(invalidTool).ArtifactFailures).IsBlocking);
+            //     …and its sibling, used for the shapes AD-044 deliberately leaves blocking, must stay
+            //     the opposite polarity or the suppression-mechanics tests would pass vacuously.
+            Assert.True(
+                Assert.Single(StepOutcomes.FallbackValidationAfterRetriesFailure(invalidTool).ArtifactFailures).IsBlocking);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
     public async Task Step2_ExamplePrompts_ValidatorFallbackAfterRetriesStaysBlocking()
     {
         // The validator process/output could never be parsed into an explicit "Invalid tools:"
@@ -1147,6 +1234,157 @@ public class NamespaceStepTests
                 artifacts.ValidationPath,
                 $"# Example Prompt Validation: {command}{Environment.NewLine}{Environment.NewLine}**Status:** Invalid{Environment.NewLine}**Summary:** Attempt {validationAttempt} missing required parameters or quoting issues{Environment.NewLine}- Missing params: subscription{Environment.NewLine}- Issue: Use quoted placeholders");
         }
+    }
+
+    /// <summary>
+    /// Reproduces the REAL validator console contract (<c>Program.WriteValidationSummary</c> in
+    /// <c>DocGeneration.Steps.ExamplePrompts.Validation</c>) for a MULTI-tool namespace, mirroring the
+    /// user-reported azurebackup run. Every validator invocation — the initial namespace-wide run (no
+    /// <c>--tool-command</c>) and each per-tool retry run — exits 1 and prints the real summary block
+    /// terminated by an explicit, parseable "Invalid tools:" section naming only
+    /// <paramref name="_invalidTool"/>. Generator invocations always succeed and leave the pre-seeded
+    /// outputs in place, so the only failure shape reaching the step is a genuine, successfully parsed
+    /// required-parameter validation issue.
+    /// </summary>
+    private sealed class RealValidatorConsoleShapeRunner : IProcessRunner
+    {
+        private readonly string _invalidTool;
+        private readonly IReadOnlyList<string> _namespaceTools;
+        private int _validationAttempts;
+
+        public RealValidatorConsoleShapeRunner(string invalidTool, IReadOnlyList<string> namespaceTools)
+        {
+            _invalidTool = invalidTool;
+            _namespaceTools = namespaceTools;
+        }
+
+        public List<ProcessSpec> Invocations { get; } = new();
+
+        /// <summary>
+        /// True when the FIRST validator invocation carried no <c>--tool-command</c> filter, i.e. the
+        /// step really took the namespace-wide initial-validation path under test.
+        /// </summary>
+        public bool InitialValidationRanNamespaceWide { get; private set; }
+
+        public ValueTask<ProcessExecutionResult> RunAsync(ProcessSpec spec, CancellationToken cancellationToken)
+        {
+            Invocations.Add(spec);
+
+            var projectPath = GetArgumentValue(spec.Arguments, "--project");
+            if (projectPath?.EndsWith("DocGeneration.Steps.ExamplePrompts.Validation.csproj", StringComparison.Ordinal) != true)
+            {
+                // Generator (initial + retry): always succeeds, pre-seeded outputs untouched.
+                return ValueTask.FromResult(new ProcessExecutionResult(spec.FileName, spec.Arguments, spec.WorkingDirectory, 0, string.Empty, string.Empty, TimeSpan.Zero));
+            }
+
+            _validationAttempts++;
+            var filterToolCommand = GetArgumentValue(spec.Arguments, "--tool-command");
+            if (_validationAttempts == 1)
+            {
+                InitialValidationRanNamespaceWide = string.IsNullOrWhiteSpace(filterToolCommand);
+            }
+
+            var generatedPath = GetArgumentValue(spec.Arguments, "--generated")!;
+            WriteRealValidationReport(generatedPath, _invalidTool);
+
+            var validatedTools = string.IsNullOrWhiteSpace(filterToolCommand)
+                ? _namespaceTools
+                : [filterToolCommand];
+
+            return ValueTask.FromResult(new ProcessExecutionResult(
+                spec.FileName,
+                spec.Arguments,
+                spec.WorkingDirectory,
+                1,
+                BuildRealValidatorStdout(validatedTools, _invalidTool, filterToolCommand),
+                string.Empty,
+                TimeSpan.Zero));
+        }
+
+        /// <summary>
+        /// Byte-for-byte shape of the real validator's stdout for a failing run: banner, per-tool
+        /// result lines, the "Validation Summary" block, then the explicit "Invalid tools:" list.
+        /// </summary>
+        private static string BuildRealValidatorStdout(
+            IReadOnlyList<string> validatedTools,
+            string invalidTool,
+            string? filterToolCommand)
+        {
+            var builder = new System.Text.StringBuilder();
+            builder.AppendLine("Example Prompt Validator");
+            builder.AppendLine("========================");
+            builder.AppendLine("Validation mode: Code-based");
+            if (!string.IsNullOrWhiteSpace(filterToolCommand))
+            {
+                builder.AppendLine($"Filtering to tool: {filterToolCommand}");
+            }
+
+            builder.AppendLine();
+            foreach (var tool in validatedTools)
+            {
+                builder.AppendLine(tool.Equals(invalidTool, StringComparison.OrdinalIgnoreCase)
+                    ? $"   \u274c {tool} (missing: soft-delete)"
+                    : $"   \u2705 {tool}");
+            }
+
+            builder.AppendLine();
+            builder.AppendLine("Validation Summary");
+            builder.AppendLine("------------------");
+            builder.AppendLine($"Total tools: {validatedTools.Count}");
+            builder.AppendLine($"Validated: {validatedTools.Count}");
+            builder.AppendLine($"Valid: {validatedTools.Count - 1}");
+            builder.AppendLine("Invalid: 1");
+            builder.AppendLine("Skipped: 0");
+            builder.AppendLine();
+            builder.AppendLine("Invalid tools:");
+            builder.AppendLine($"  - {invalidTool}");
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// Writes the real per-tool validation markdown the step reads back for its retry reason and
+        /// failure details, including the reported "Required parameters missing" summary line.
+        /// </summary>
+        private static void WriteRealValidationReport(string generatedPath, string command)
+        {
+            var artifacts = GetExamplePromptArtifactsAsync(generatedPath, command).GetAwaiter().GetResult();
+            Directory.CreateDirectory(Path.GetDirectoryName(artifacts.ValidationPath)!);
+            File.WriteAllText(
+                artifacts.ValidationPath,
+                $"# Example Prompt Validation: {command}{Environment.NewLine}{Environment.NewLine}**Status:** Invalid{Environment.NewLine}**Summary:** Required parameters missing from example prompts: soft-delete{Environment.NewLine}- Missing params: soft-delete");
+        }
+
+        public ValueTask<ProcessExecutionResult> RunDotNetBuildAsync(string solutionPath, CancellationToken cancellationToken)
+            => RunAsync(
+                new ProcessSpec(
+                    "dotnet",
+                    ["build", solutionPath, "--configuration", "Release", "--verbosity", "quiet"],
+                    Path.GetDirectoryName(solutionPath) ?? Environment.CurrentDirectory),
+                cancellationToken);
+
+        public ValueTask<ProcessExecutionResult> RunDotNetProjectAsync(string projectPath, IEnumerable<string> arguments, bool noBuild, string workingDirectory, CancellationToken cancellationToken)
+        {
+            var invocation = new List<string>
+            {
+                "run",
+                "--project",
+                projectPath,
+                "--configuration",
+                "Release",
+            };
+
+            if (noBuild)
+            {
+                invocation.Add("--no-build");
+            }
+
+            invocation.Add("--");
+            invocation.AddRange(arguments);
+            return RunAsync(new ProcessSpec("dotnet", invocation, workingDirectory), cancellationToken);
+        }
+
+        public ValueTask<ProcessExecutionResult> RunPowerShellScriptAsync(string scriptPath, IEnumerable<string> arguments, string workingDirectory, CancellationToken cancellationToken)
+            => RunAsync(new ProcessSpec("pwsh", ["-File", scriptPath, .. arguments], workingDirectory), cancellationToken);
     }
 
     /// <summary>
