@@ -23,9 +23,28 @@ public class CliTabConfig
 
     /// <summary>
     /// Returns true if the given namespace should generate CLI tab content.
+    /// Treats underscore-delimited namespace identifiers and their space-delimited
+    /// CLI command forms as equivalent.
     /// </summary>
     public bool IsNamespaceAllowed(string namespaceName)
-        => IsEnabled && AllowedNamespaces.Contains(namespaceName);
+    {
+        if (!IsEnabled)
+        {
+            return false;
+        }
+
+        if (AllowedNamespaces.Contains(namespaceName))
+        {
+            return true;
+        }
+
+        var normalizedNamespace = NormalizeNamespace(namespaceName);
+        return AllowedNamespaces.Any(allowedNamespace =>
+            string.Equals(
+                NormalizeNamespace(allowedNamespace),
+                normalizedNamespace,
+                StringComparison.OrdinalIgnoreCase));
+    }
 
     /// <summary>
     /// Loads config from a JSON file. Returns default (disabled) config if file doesn't exist.
@@ -53,4 +72,9 @@ public class CliTabConfig
     /// </summary>
     public static CliTabConfig ForNamespaces(params string[] namespaces)
         => new() { AllowedNamespaces = new HashSet<string>(namespaces, StringComparer.OrdinalIgnoreCase) };
+
+    private static string NormalizeNamespace(string namespaceName)
+        => string.IsNullOrWhiteSpace(namespaceName)
+            ? string.Empty
+            : namespaceName.Trim().Replace('_', ' ');
 }

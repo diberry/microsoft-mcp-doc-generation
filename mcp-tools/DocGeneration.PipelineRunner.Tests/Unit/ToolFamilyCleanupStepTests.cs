@@ -473,7 +473,9 @@ public class ToolFamilyCleanupStepTests
         };
     }
 
-    private static CliMetadataSnapshot CreateSnapshot(IReadOnlyList<string> toolCommands)
+    private static CliMetadataSnapshot CreateSnapshot(
+        IReadOnlyList<string> toolCommands,
+        bool includeCliParameter = false)
     {
         var json = JsonSerializer.Serialize(new
         {
@@ -483,6 +485,18 @@ public class ToolFamilyCleanupStepTests
                 command,
                 name = command,
                 description = $"Description for {command}",
+                option = includeCliParameter
+                    ? new[]
+                    {
+                        new
+                        {
+                            name = "--query",
+                            description = "The query to process.",
+                            type = "string",
+                            required = false,
+                        },
+                    }
+                    : [],
             }),
         });
 
@@ -889,6 +903,162 @@ public class ToolFamilyCleanupStepTests
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
             Assert.True(result.Success, $"Step should succeed for decomposed namespace 'extension_azqr'. Warnings: {string.Join(", ", result.Warnings)}");
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step4_DecomposedNamespace_WritesCliTabsForItsCommandOnly()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var mcpToolsRoot = Path.Combine(testRoot, "mcp-tools");
+            var outputPath = Path.Combine(testRoot, "generated-extension_cli_generate");
+            Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
+            Directory.CreateDirectory(outputPath);
+
+            File.WriteAllText(
+                Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"),
+                """
+                [
+                  {
+                    "mcpServerName": "extension_cli_generate",
+                    "brandName": "Azure CLI Extension",
+                    "shortName": "CLI Extension",
+                    "fileName": "azure-cli-extension-generate"
+                  }
+                ]
+                """);
+
+            var cliOutput = CreateSnapshot(
+                ["extension cli generate", "extension cli install"],
+                includeCliParameter: true);
+            var context = new PipelineContext
+            {
+                Request = new PipelineRequest("extension_cli_generate", [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
+                RepoRoot = testRoot,
+                McpToolsRoot = mcpToolsRoot,
+                OutputPath = outputPath,
+                ProcessRunner = processRunner,
+                Workspaces = new WorkspaceManager(),
+                CliMetadataLoader = new StubCliMetadataLoader(),
+                TargetMatcher = new TargetMatcher(),
+                FilteredCliWriter = new StubFilteredCliWriter(),
+                BuildCoordinator = new StubBuildCoordinator(),
+                AiCapabilityProbe = new StubAiCapabilityProbe(),
+                Reports = new BufferedReportWriter(),
+                CliVersion = "1.2.3",
+                CliOutput = cliOutput,
+                SelectedNamespaces = ["extension_cli_generate"],
+            };
+            context.Items["Namespace"] = "extension_cli_generate";
+            context.Items[ToolFamilyCleanupStep.FamilyCleanupOverrideKey] =
+                static (FamilyStructureContext _, CancellationToken _) => Task.FromResult(
+                    new ToolFamilyCleanupStep.FamilyCleanupArtifacts(
+                        "metadata",
+                        "related",
+                        """
+                        # Azure CLI Extension tools
+
+                        ## Generate an Azure CLI command
+
+                        Generates an Azure CLI command.
+
+                        <!-- @mcpcli extension cli generate -->
+
+                        Example prompts include:
+
+                        - "Generate a command."
+
+                        ## Related content
+
+                        related
+                        """));
+
+            SeedToolFile(
+                Path.Combine(outputPath, "tools", "azure-cli-extension-generate.md"),
+                "extension cli generate");
+            SeedToolFile(
+                Path.Combine(outputPath, "tools-raw", "azure-cli-extension-generate.md"),
+                "extension cli generate");
+            SeedFile(Path.Combine(outputPath, "cli", "cli-version.json"), """{"version":"1.2.3"}""");
+            SeedFile(Path.Combine(outputPath, "cli", "cli-output.json"), cliOutput.RawRoot.GetRawText());
+            SeedFile(
+                Path.Combine(outputPath, "cli-tab-config.json"),
+                """{"AllowedNamespaces":["extension_cli_generate"]}""");
+
+            var nameContext = await FileNameContext.CreateAsync();
+            SeedFile(
+                Path.Combine(
+                    outputPath,
+                    "example-commands",
+                    ToolFileNameBuilder.BuildExampleCommandsFileName("extension cli generate", nameContext)),
+                """
+                ```console
+                azmcp extension cli generate
+                ```
+                """);
+            Directory.CreateDirectory(Path.Combine(outputPath, "parameter-cli"));
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+            var cliVariant = File.ReadAllText(
+                Path.Combine(outputPath, "tool-family", "azure-cli-extension-generate-cli.md"));
+
+            Assert.True(result.Success, string.Join(Environment.NewLine, result.Warnings));
+            Assert.True(
+                cliVariant.Contains("#### [Azure MCP CLI](#tab/azure-mcp-cli)", StringComparison.Ordinal),
+                cliVariant);
+            Assert.Contains("azmcp extension cli generate", cliVariant);
+            Assert.DoesNotContain("extension cli install", cliVariant);
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step4_EnabledNamespaceWithNoCliCommandMatch_FailsWithDiagnostic()
+    {
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            context.Items[ToolFamilyCleanupStep.FamilyCleanupOverrideKey] =
+                static (FamilyStructureContext _, CancellationToken _) => Task.FromResult(
+                    new ToolFamilyCleanupStep.FamilyCleanupArtifacts(
+                        "metadata",
+                        "related",
+                        "# Compute tools\n\n## List resources\n\n<!-- @mcpcli compute list -->\n"));
+
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), """{"version":"1.2.3"}""");
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                CreateSnapshot(["storage list"]).RawRoot.GetRawText());
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli-tab-config.json"),
+                """{"AllowedNamespaces":["compute"]}""");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameter-cli"));
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "example-commands"));
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(
+                result.Warnings,
+                warning => warning.Contains(
+                    "namespace 'compute' is enabled but no CLI commands matched",
+                    StringComparison.Ordinal));
         }
         finally
         {
