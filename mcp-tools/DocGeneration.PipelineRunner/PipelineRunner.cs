@@ -785,21 +785,27 @@ public sealed class PipelineRunner
     /// <list type="bullet">
     /// <item><description><b>C1</b> — a nonzero <paramref name="mappedExitCode"/> (a hard
     /// <c>Success=false</c> failure, a forced exit-code override, or a fatal envelope-write failure).</description></item>
-    /// <item><description><b>C2</b> — a non-empty <paramref name="artifactFailures"/> list even when the
-    /// mapped exit is <see cref="SuccessExitCode"/> (the real Step-2 "validation failed after retries"
-    /// shape: <c>Success=true</c> yet durable per-artifact failures were recorded).</description></item>
+    /// <item><description><b>C2</b> — at least one BLOCKING entry in <paramref name="artifactFailures"/>
+    /// (<see cref="ArtifactFailure.IsBlocking"/>) even when the mapped exit is
+    /// <see cref="SuccessExitCode"/> (the real Step-2 "validation failed after retries" shape:
+    /// <c>Success=true</c> yet a durable per-artifact failure was recorded).</description></item>
     /// </list>
-    /// C2 keys on <paramref name="artifactFailures"/> — NOT on a failed <c>ValidatorResult</c> — so the
-    /// intentional pre-AI non-fatal skip (<c>Success=true</c> + a failed <c>pre-ai-validation</c> validator
-    /// + EMPTY ArtifactFailures) stays non-fatal. The <see cref="FailurePolicy.Fatal"/> guard short-circuits
-    /// first, so a Warn-policy step is never a root even when it recorded artifact failures.
+    /// C2 keys on BLOCKING <paramref name="artifactFailures"/> — NOT on a failed <c>ValidatorResult</c>,
+    /// and NOT merely on the list being non-empty — so the intentional pre-AI non-fatal skip
+    /// (<c>Success=true</c> + a failed <c>pre-ai-validation</c> validator + EMPTY ArtifactFailures) stays
+    /// non-fatal, AND a Step-2 required-parameter/example-prompt content-validation warning (recorded
+    /// with <c>IsBlocking=false</c> after retries are exhausted — see <c>ExamplePromptsStep</c>) stays
+    /// visible without suppressing Steps 3-6 (post-#813 follow-up; every OTHER artifact failure — missing
+    /// prerequisites, process/launch failures, missing required artifacts — still defaults to
+    /// <c>IsBlocking=true</c> and roots exactly as before). The <see cref="FailurePolicy.Fatal"/> guard
+    /// short-circuits first, so a Warn-policy step is never a root even when it recorded artifact failures.
     /// </summary>
     internal static bool IsFatalRoot(
         FailurePolicy policy,
         int mappedExitCode,
         IReadOnlyList<ArtifactFailure> artifactFailures)
         => policy == FailurePolicy.Fatal
-            && (mappedExitCode != SuccessExitCode || artifactFailures.Count > 0);
+            && (mappedExitCode != SuccessExitCode || artifactFailures.Any(failure => failure.IsBlocking));
 
     private static async Task<StepResult> RunPostValidatorsAsync(
         PipelineContext context,

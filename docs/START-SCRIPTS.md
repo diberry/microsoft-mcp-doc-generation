@@ -244,16 +244,18 @@ Output: total tool count, a per-service breakdown table (descending by count), a
 
 Since #813 Step 2, every pipeline run writes a machine-readable `run-accounting.json` at the root
 of its output directory and prints a six-category summary. When a selected `Fatal` step does **not
-cleanly succeed** — a nonzero exit, **or** recorded per-artifact failures even when the step reports
-`success` and maps to exit `0` — the runner suppresses that step's selected downstream dependents
-(following the full transitive dependency graph, so suppression propagates through unselected
-intermediate steps), keeps running the independent steps and later namespaces, and reports the
-outcome across these categories:
+cleanly succeed** — a nonzero exit, **or** a recorded **blocking** artifact failure even when the step
+reports `success` and maps to exit `0` — the runner suppresses that step's selected downstream
+dependents (following the full transitive dependency graph, so suppression propagates through
+unselected intermediate steps), keeps running the independent steps and later namespaces, and reports
+the outcome across these categories. (Since AD-044, an exhausted-retries Step 2 required-parameter/
+content-validation failure is recorded as **non-blocking**: it is still surfaced as a warning, but does
+not by itself make Step 2 a root-failed namespace.)
 
 | # | Category | Meaning |
 |---|----------|---------|
 | 1 | Successful namespaces | All selected steps succeeded (or warn-failed) with zero fatal roots. |
-| 2 | Root-failed namespaces | A selected `Fatal` step did not cleanly succeed (nonzero exit **or** recorded artifact failures); named with its stable `rootFailureId`. |
+| 2 | Root-failed namespaces | A selected `Fatal` step did not cleanly succeed (nonzero exit **or** recorded **blocking** artifact failures); named with its stable `rootFailureId`. |
 | 3 | Warning-only failures | A selected `Warn` step (for example Step 5) that did not succeed. Never suppresses anything. |
 | 4 | Suppressed steps | Downstream dependents skipped because a fatal root blocked them; each linked to its `rootFailureId`. |
 | 5 | Cascades imported from historical fixtures | Constant, read once from the frozen beta.34 baseline manifest. |

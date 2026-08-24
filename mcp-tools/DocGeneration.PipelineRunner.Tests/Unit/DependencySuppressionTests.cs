@@ -494,6 +494,60 @@ public class DependencySuppressionTests
             FailurePolicy.Warn, SuccessExitCode, oneFailure));
     }
 
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+    // ADDENDUM C (post-#813 follow-up — Step 2 example-prompt PARAMETER-VALIDATION warnings must
+    // not block Steps 3-6). Source: user report — validator exit 1 on "Required parameters missing
+    // from example prompts: soft-delete" suppressed the rest of the namespace's pipeline.
+    //
+    // AD-029 §A2's C2 clause ("any non-empty ArtifactFailures ⇒ root") is deliberately narrowed here:
+    // an <see cref="ArtifactFailure"/> now carries <c>IsBlocking</c> (default true — every existing
+    // call site is unaffected). <see cref="global::PipelineRunner.PipelineRunner.IsFatalRoot"/> keys on
+    // "any BLOCKING artifact failure" rather than "any artifact failure". This is additive/narrowing:
+    // C1 (nonzero mapped exit) is untouched, and every other step's ArtifactFailure.Create(...) call
+    // keeps the implicit isBlocking:true default, so T32/T33/T34/T35 above are unaffected (verified —
+    // none of them pass isBlocking explicitly). Only ExamplePromptsStep's specific "required parameter
+    // missing after retries exhausted" shape sets isBlocking:false (see NamespaceStepTests.cs).
+    // ══════════════════════════════════════════════════════════════════════════════════════════
+
+    // ── T32b: IsFatalRoot ignores NON-blocking artifact failures (the Step-2 warn-only shape) ────
+    [Fact]
+    public void IsFatalRoot_NonBlockingArtifactFailures_AreNotARoot()
+    {
+        var allNonBlocking = new[]
+        {
+            ArtifactFailure.Create(
+                "tool", "storage account create",
+                "Example prompt validation failed for this tool after automatic retries.",
+                isBlocking: false),
+        };
+
+        // (1) Fatal + mapped exit 0 (Success=true) + ONLY non-blocking ArtifactFailures ⇒ NOT a root.
+        //     This is the exact user-reported shape: a required-parameter validation warning must not
+        //     suppress Steps 3-6.
+        Assert.False(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Fatal, SuccessExitCode, allNonBlocking));
+
+        // (2) POSITIVE CONTROL — a mix of one non-blocking + one blocking failure is STILL a root; a
+        //     hard failure (missing prerequisites/process launch/missing artifacts) is never masked by
+        //     a co-occurring soft parameter-validation warning.
+        var mixed = new[]
+        {
+            allNonBlocking[0],
+            ArtifactFailure.Create("tool", "storage account delete", "Example prompt generation failed for this tool."),
+        };
+        Assert.True(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Fatal, SuccessExitCode, mixed));
+
+        // (3) POSITIVE CONTROL — C1 (nonzero mapped exit) still roots even with only non-blocking
+        //     ArtifactFailures; IsBlocking narrows C2 only, never C1.
+        Assert.True(global::PipelineRunner.PipelineRunner.IsFatalRoot(
+            FailurePolicy.Fatal, FatalExitCode, allNonBlocking));
+
+        // (4) Default `ArtifactFailure.Create(...)` (no isBlocking argument) is still blocking:true —
+        //     every pre-existing call site (this file's T32/T33/T34/T35 included) is unaffected.
+        Assert.True(ArtifactFailure.Create("tool", "storage account create", "x").IsBlocking);
+    }
+
     // ── T33: replay the frozen beta.34 corpus through IsFatalRoot (Ellis BLOCKING-1) ─────────────
     // [C] compile-RED: binds to PipelineRunner.IsFatalRoot. Proves 16 of 17 real Step-2 roots return
     // Success=true (mapped exit 0) and are ROOTS only because C2 keys on ArtifactFailures — the exact

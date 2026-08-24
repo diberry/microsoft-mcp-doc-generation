@@ -116,6 +116,7 @@ public abstract class NamespaceStepBase : StepDefinition
         string artifactName,
         string summary,
         IEnumerable<string>? details = null,
-        IEnumerable<string>? relatedPaths = null)
-        => ArtifactFailure.Create(artifactType, artifactName, summary, details, relatedPaths);
+        IEnumerable<string>? relatedPaths = null,
+        bool isBlocking = true)
+        => ArtifactFailure.Create(artifactType, artifactName, summary, details, relatedPaths, isBlocking);
 }
