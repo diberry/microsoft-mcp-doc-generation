@@ -66,6 +66,10 @@ pwsh ./GenerateDocGeneration.Steps.ToolFamilyCleanup-multifile.ps1
 3. **Phase 2**: Generates metadata (frontmatter + H1 + intro) using AI per family
 4. **Phase 3**: Generates deterministic related content per family
 5. **Phase 4**: Stitches sections together with metadata/related content (no AI)
+6. **CLI variants**: Treats decomposed namespace IDs (for example,
+   `extension_cli_generate`) and their space-delimited CLI command forms as
+   equivalent when applying the CLI-tab allowlist. An enabled namespace with no
+   matching CLI commands fails rather than silently producing an MCP-only CLI variant.
 
 **Advantages:**
 - ✓ No 16K token limit (processes tools individually)

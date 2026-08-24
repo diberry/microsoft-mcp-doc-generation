@@ -111,6 +111,11 @@ Step 4: Tool Family Assembly (AI + Retry + Validation) ────────�
   │    per-namespace files — canonical `tool-family/{namespace}.md`
   │    (plain MCP, no CLI tabs) and `tool-family/{namespace}-cli.md`
   │    (CLI tabs when available, else an exact copy of the canonical)
+  │  • CLI-tab allowlist matching treats decomposed namespace IDs and CLI
+  │    command forms as equivalent (for example, `extension_cli_generate`
+  │    matches `extension cli generate`)
+  │  • An enabled namespace with no matching CLI commands fails Step 4
+  │    instead of silently emitting an MCP-only CLI variant
   │  Runs in isolated temp workspace for parallel safety
   │
   ▼
