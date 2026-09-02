@@ -744,6 +744,10 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Migrate all of your long-standing business-critical on-premises VMware virtual machines into Azure.")]
     [InlineData("Existing business-critical application workloads can be migrated into Azure.")]
     [InlineData("Plan the phased migration of all currently hosted business-critical database application workloads.")]
+    [InlineData("Migrate: application workloads into Azure.")]
+    [InlineData("Move; VMware servers to Azure.")]
+    [InlineData("Migrate — all existing business-critical application workloads into Azure.")]
+    [InlineData("Move: the currently hosted VMware virtual machines to Azure.")]
     public void Validate_AzureMigrate_RejectsDirectWorkloadMigrationClaims(string claim)
     {
         var data = CreateMinimalData();
@@ -777,6 +781,9 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Review platform landing zone migration readiness. Application workloads are outside these tools.")]
     [InlineData("Use an Azure Migrate project to generate guidance; inventory application workloads separately.")]
     [InlineData("Provision a deployable platform landing zone for migration workloads in an Azure Migrate project.")]
+    [InlineData("Use an Azure Migrate project: application workloads remain outside these tools.")]
+    [InlineData("Review platform landing zone migration readiness; application workloads remain separate.")]
+    [InlineData("Azure Migrate helps configure cloud environments for platform landing zones.")]
     public void Validate_AzureMigrate_AllowsProjectAndLandingZoneReadinessContext(string claim)
     {
         var data = CreateMinimalData();
@@ -793,6 +800,10 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Run azuremigrate platformlandingzone delete before changing parameters.")]
     [InlineData("Run azuremigrate platformlandingzone deploy after confirming parameters.")]
     [InlineData("Run azuremigrate platformlandingzone migrate for the project.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance/delete.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance\\delete.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance /delete.")]
+    [InlineData("Run azuremigrate platformlandingzone request: update.")]
     public void Validate_AzureMigrate_RejectsAnyCommandOutsideExactAllowlist(string description)
     {
         var data = CreateMinimalData();
@@ -853,6 +864,12 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Run azuremigrate platformlandingzone request --action=\"\".")]
     [InlineData("Run azuremigrate platformlandingzone request --action=\"destroy now\".")]
     [InlineData("Run azuremigrate platformlandingzone request --action check, then request --action.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action check update.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action \"check\" \"update\".")]
+    [InlineData("Run azuremigrate platformlandingzone request --action=check update.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action check --action update.")]
+    [InlineData("Run azuremigrate platformlandingzone request. Then run azuremigrate platformlandingzone getguidance --action check.")]
+    [InlineData("Run azuremigrate platformlandingzone request; then use --action check.")]
     public void Validate_AzureMigrate_RejectsMissingMalformedOrUnsupportedActionValues(string description)
     {
         var data = CreateMinimalData();
@@ -894,6 +911,10 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Run azuremigrate platformlandingzone request --action='download'.")]
     [InlineData("Run azuremigrate platformlandingzone request --action=\"status\".")]
     [InlineData("Run azuremigrate platformlandingzone request --action=check.")]
+    [InlineData("Run `azuremigrate platformlandingzone request --action \"check\"`, then continue.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action=check; then continue.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action check --subscription contoso.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance before making configuration changes.")]
     [InlineData("Run azuremigrate platformlandingzone request")]
     public void Validate_AzureMigrate_AllowsExactCommandsAndGroundedActions(string description)
     {
