@@ -730,9 +730,40 @@ public class ArticleContentProcessorValidationTests
     }
 
     [Theory]
-    [InlineData("Run azuremigrate platformlandingzone status before changing parameters.")]
-    [InlineData("Run azuremigrate platformlandingzone request update after confirming parameters.")]
-    public void Validate_AzureMigrate_RejectsInventedActionSubcommands(string description)
+    [InlineData("Use the tools to migrate virtual machines into Azure.")]
+    [InlineData("Move workloads to Azure before generating the landing zone.")]
+    [InlineData("Plan the server migration with these tools.")]
+    public void Validate_AzureMigrate_RejectsDirectWorkloadMigrationClaims(string claim)
+    {
+        var data = CreateMinimalData();
+        data.ServiceOverview = claim;
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.Contains(
+            result.CriticalErrors,
+            error => error.Contains("OUT-OF-SCOPE CAPABILITY", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Validate_AzureMigrate_AllowsAzureMigrateProjectContext()
+    {
+        var data = CreateMinimalData();
+        data.ServiceOverview =
+            "provides platform landing zone guidance and generation for an Azure Migrate project.";
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.DoesNotContain(
+            result.CriticalErrors,
+            error => error.Contains("OUT-OF-SCOPE CAPABILITY", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Run azuremigrate platformlandingzone delete before changing parameters.")]
+    [InlineData("Run azuremigrate platformlandingzone deploy after confirming parameters.")]
+    [InlineData("Run azuremigrate platformlandingzone migrate for the project.")]
+    public void Validate_AzureMigrate_RejectsAnyCommandOutsideExactAllowlist(string description)
     {
         var data = CreateMinimalData();
         data.BestPractices =
@@ -749,6 +780,77 @@ public class ArticleContentProcessorValidationTests
         Assert.Contains(
             result.CriticalErrors,
             error => error.Contains("INVENTED TOOL COMMAND", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Run azuremigrate platformlandingzone request update after confirming parameters.")]
+    [InlineData("Run azuremigrate platformlandingzone request status before generation.")]
+    public void Validate_AzureMigrate_RejectsBareRequestActions(string description)
+    {
+        var data = CreateMinimalData();
+        data.BestPractices = [new() { Title = "Use an action", Description = description }];
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.Contains(
+            result.CriticalErrors,
+            error => error.Contains("INVALID TOOL ACTION", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Validate_AzureMigrate_RejectsActionOptionOnGetGuidance()
+    {
+        var data = CreateMinimalData();
+        data.BestPractices =
+        [
+            new()
+            {
+                Title = "Use a supported command",
+                Description = "Run azuremigrate platformlandingzone getguidance --action check."
+            }
+        ];
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.Contains(
+            result.CriticalErrors,
+            error => error.Contains("INVALID TOOL ACTION", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Run azuremigrate platformlandingzone getguidance --scenario ddos.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action createmigrateproject.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action check.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action update.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action generate.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action download.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action status.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action=check.")]
+    public void Validate_AzureMigrate_AllowsExactCommandsAndGroundedActions(string description)
+    {
+        var data = CreateMinimalData();
+        data.BestPractices = [new() { Title = "Use a supported command", Description = description }];
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.DoesNotContain(
+            result.CriticalErrors,
+            error => error.Contains("TOOL COMMAND", StringComparison.Ordinal)
+                || error.Contains("TOOL ACTION", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Validate_AzureMigrate_UsesConfiguredPlatformLandingZoneDocLink()
+    {
+        var data = CreateMinimalData();
+        data.ServiceDocLink = "/azure/migrate/";
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.Equal("/azure/migrate/platform-landing-zone", data.ServiceDocLink);
+        Assert.Contains(
+            result.Corrections,
+            correction => correction.Contains("Applied configured serviceDocLink", StringComparison.Ordinal));
     }
 
     private static AIGeneratedArticleData CreateMinimalData()

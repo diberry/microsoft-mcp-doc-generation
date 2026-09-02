@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.Mcp.TextTransformation.Services;
 using HorizontalArticleGenerator.Models;
+using Shared;
 
 namespace HorizontalArticleGenerator.Generators;
 
@@ -28,6 +30,26 @@ public class ArticleContentProcessor
                 "cutover", "cut-over", "cut over"
             ]
         };
+
+    private static readonly Regex[] UnsupportedAzureMigrateWorkloadPatterns =
+    [
+        new(@"\bmigrat(?:e|es|ed|ing)\s+(?:virtual machines?|vms?|servers?|databases?|applications?|workloads?)\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled),
+        new(@"\bmov(?:e|es|ed|ing)\s+(?:virtual machines?|vms?|servers?|databases?|applications?|workloads?)\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled),
+        new(@"\b(?:virtual machine|vm|server|database|application|workload)\s+migration\b",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled)
+    ];
+
+    private static readonly HashSet<string> AllowedAzureMigrateCommands =
+        new(["getguidance", "request"], StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> AzureMigrateRequestActions =
+        new(["createmigrateproject", "check", "update", "generate", "download", "status"],
+            StringComparer.OrdinalIgnoreCase);
+
+    private static readonly Lazy<IReadOnlyDictionary<string, string>> ConfiguredServiceDocLinks =
+        new(LoadConfiguredServiceDocLinks);
 
     private readonly TransformationEngine? _transformationEngine;
 
@@ -58,6 +80,7 @@ public class ArticleContentProcessor
         StripTrailingPeriods(aiData, result);
         FixBrokenSentences(aiData, result);
         FixRedundantWords(aiData, result);
+        ApplyConfiguredServiceDocLink(aiData, result, serviceIdentifier);
         ValidateLinkUrls(aiData, result, serviceIdentifier);
         DeduplicateAdditionalLinks(aiData, result);
         ValidateRbacRoles(aiData, result, serviceName);
@@ -535,6 +558,16 @@ public class ArticleContentProcessor
                     $"OUT-OF-SCOPE CAPABILITY for '{serviceIdentifier}': generated content contains '{term}'.");
             }
         }
+
+        foreach (var pattern in UnsupportedAzureMigrateWorkloadPatterns)
+        {
+            var match = pattern.Match(generatedContent);
+            if (match.Success)
+            {
+                result.CriticalErrors.Add(
+                    $"OUT-OF-SCOPE CAPABILITY for '{serviceIdentifier}': generated content contains '{match.Value}'.");
+            }
+        }
     }
 
     private static void ValidateNamespaceToolCommands(
@@ -547,15 +580,86 @@ public class ArticleContentProcessor
             return;
         }
 
-        var generatedContent = System.Text.Json.JsonSerializer.Serialize(aiData);
-        var inventedCommand = Regex.Match(
+        var generatedContent = JsonSerializer.Serialize(aiData);
+        var commandMatches = Regex.Matches(
             generatedContent,
-            @"\bazuremigrate\s+platformlandingzone\s+(?:(?:createmigrateproject|check|update|generate|download|status)|request\s+(?:createmigrateproject|check|update|generate|download|status))\b",
+            @"\bazuremigrate\s+platformlandingzone\s+(?<command>[a-z0-9_-]+)\b",
             RegexOptions.IgnoreCase);
-        if (inventedCommand.Success)
+        foreach (Match commandMatch in commandMatches)
+        {
+            var command = commandMatch.Groups["command"].Value;
+            if (!AllowedAzureMigrateCommands.Contains(command))
+            {
+                result.CriticalErrors.Add(
+                    $"INVENTED TOOL COMMAND for '{serviceIdentifier}': '{commandMatch.Value}'.");
+                return;
+            }
+        }
+
+        var bareActionMatch = Regex.Match(
+            generatedContent,
+            @"\bazuremigrate\s+platformlandingzone\s+request\s+(?<action>[a-z0-9_-]+)\b",
+            RegexOptions.IgnoreCase);
+        if (bareActionMatch.Success
+            && AzureMigrateRequestActions.Contains(bareActionMatch.Groups["action"].Value))
         {
             result.CriticalErrors.Add(
-                $"INVENTED TOOL COMMAND for '{serviceIdentifier}': '{inventedCommand.Value}'.");
+                $"INVALID TOOL ACTION for '{serviceIdentifier}': use 'azuremigrate platformlandingzone request --action {bareActionMatch.Groups["action"].Value}'.");
+        }
+
+        if (Regex.IsMatch(
+                generatedContent,
+                @"\bazuremigrate\s+platformlandingzone\s+getguidance\b[^""\r\n]*\s--action(?:=|\s)",
+                RegexOptions.IgnoreCase))
+        {
+            result.CriticalErrors.Add(
+                $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' is only valid with 'azuremigrate platformlandingzone request'.");
+        }
+    }
+
+    private static void ApplyConfiguredServiceDocLink(
+        AIGeneratedArticleData aiData,
+        ValidationResult result,
+        string? serviceIdentifier)
+    {
+        if (!string.Equals(serviceIdentifier, "azuremigrate", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!ConfiguredServiceDocLinks.Value.TryGetValue("azuremigrate", out var configuredUrl)
+            || string.IsNullOrWhiteSpace(configuredUrl))
+        {
+            result.CriticalErrors.Add(
+                $"MISSING SERVICE DOC LINK for '{serviceIdentifier}' in service-doc-links.json.");
+            return;
+        }
+
+        if (!string.Equals(aiData.ServiceDocLink, configuredUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            aiData.ServiceDocLink = configuredUrl;
+            result.Corrections.Add(
+                $"Applied configured serviceDocLink for '{serviceIdentifier}': '{configuredUrl}'");
+        }
+    }
+
+    private static IReadOnlyDictionary<string, string> LoadConfiguredServiceDocLinks()
+    {
+        try
+        {
+            var path = Path.Combine(DataFileLoader.GetDataDirectoryPath(), "service-doc-links.json");
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            return document.RootElement.EnumerateObject()
+                .Where(property => property.Value.TryGetProperty("url", out var url)
+                    && !string.IsNullOrWhiteSpace(url.GetString()))
+                .ToDictionary(
+                    property => property.Name,
+                    property => property.Value.GetProperty("url").GetString()!,
+                    StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
     }
 
