@@ -53,13 +53,22 @@ public class ArticleContentProcessor
         new(["createmigrateproject", "check", "update", "generate", "download", "status"],
             StringComparer.OrdinalIgnoreCase);
 
-    private static readonly HashSet<string> InlineCommandProseBoundaries =
+    private static readonly HashSet<string> AzureMigrateGetGuidanceOptions =
+        new(["scenario", "policyname", "listpolicies", "learn"], StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> AzureMigrateRequestOptions =
         new(
             [
-                "after", "and", "because", "before", "for", "now", "or", "so", "that", "then", "to",
-                "when", "where", "which", "while", "with", "without"
+                "action", "regiontype", "firewalltype", "networkarchitecture",
+                "identitysubscriptionid", "managementsubscriptionid",
+                "connectivitysubscriptionid", "regions", "environmentname",
+                "versioncontrolsystem", "organizationname", "migrateprojectname",
+                "location", "resourcegroup", "subscription", "tenant", "learn"
             ],
             StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> GetGuidancePostCommandProse =
+        new(["before", "first", "again"], StringComparer.OrdinalIgnoreCase);
 
     private static readonly Lazy<IReadOnlyDictionary<string, string>> ConfiguredServiceDocLinks =
         new(LoadConfiguredServiceDocLinks);
@@ -594,7 +603,7 @@ public class ArticleContentProcessor
         var actionPositions = new HashSet<int>();
         foreach (Match commandPrefixMatch in Regex.Matches(
                     generatedContent,
-                    @"\bazuremigrate\s+platformlandingzone\b",
+                    @"\bazuremigrate[^\S\r\n]+platformlandingzone\b",
                     RegexOptions.IgnoreCase))
         {
             ValidateAzureMigrateInvocation(
@@ -658,8 +667,9 @@ public class ArticleContentProcessor
         if (tokenIndex < tokens.Count
             && tokens[tokenIndex].Kind is InlineTokenKind.Word or InlineTokenKind.QuotedValue)
         {
-            if (tokens[tokenIndex].Kind == InlineTokenKind.Word
-                && InlineCommandProseBoundaries.Contains(tokens[tokenIndex].Value))
+            if (string.Equals(command, "getguidance", StringComparison.OrdinalIgnoreCase)
+                && tokens[tokenIndex].Kind == InlineTokenKind.Word
+                && GetGuidancePostCommandProse.Contains(tokens[tokenIndex].Value))
             {
                 return;
             }
@@ -669,25 +679,32 @@ public class ArticleContentProcessor
             return;
         }
 
+        var knownOptions = string.Equals(command, "request", StringComparison.OrdinalIgnoreCase)
+            ? AzureMigrateRequestOptions
+            : AzureMigrateGetGuidanceOptions;
         var actionCount = 0;
         while (tokenIndex < tokens.Count)
         {
             var token = tokens[tokenIndex];
-            if (token.Kind == InlineTokenKind.Boundary
-                || token.Kind == InlineTokenKind.Word
-                    && InlineCommandProseBoundaries.Contains(token.Value))
+            if (token.Kind == InlineTokenKind.Boundary)
             {
                 break;
             }
 
             if (token.Kind != InlineTokenKind.Option)
             {
+                break;
+            }
+
+            var normalizedOption = NormalizeAzureMigrateOption(token.Value);
+            if (!knownOptions.Contains(normalizedOption))
+            {
                 result.CriticalErrors.Add(
-                    $"INVENTED TOOL COMMAND for '{serviceIdentifier}': invalid token '{token.Value}' follows 'azuremigrate platformlandingzone {command}'.");
+                    $"INVENTED TOOL COMMAND for '{serviceIdentifier}': unsupported option '{token.Value}' follows 'azuremigrate platformlandingzone {command}'.");
                 return;
             }
 
-            var isAction = string.Equals(token.Value, "--action", StringComparison.OrdinalIgnoreCase);
+            var isAction = string.Equals(normalizedOption, "action", StringComparison.OrdinalIgnoreCase);
             if (isAction)
             {
                 actionPositions.Add(token.Start);
@@ -706,9 +723,7 @@ public class ArticleContentProcessor
             }
 
             if (tokenIndex >= tokens.Count
-                || tokens[tokenIndex].Kind is not (InlineTokenKind.Word or InlineTokenKind.QuotedValue)
-                || tokens[tokenIndex].Kind == InlineTokenKind.Word
-                    && InlineCommandProseBoundaries.Contains(tokens[tokenIndex].Value))
+                || tokens[tokenIndex].Kind is not (InlineTokenKind.Word or InlineTokenKind.QuotedValue))
             {
                 if (isAction)
                 {
@@ -726,15 +741,20 @@ public class ArticleContentProcessor
                     $"INVALID TOOL ACTION for '{serviceIdentifier}': unsupported '--action' value '{valueToken.Value}'.");
             }
 
-            if (isAction
-                && tokenIndex < tokens.Count
-                && tokens[tokenIndex].Kind is InlineTokenKind.Word or InlineTokenKind.QuotedValue
+            if (isAction && tokenIndex < tokens.Count
                 && (tokens[tokenIndex].Kind == InlineTokenKind.QuotedValue
-                    || !InlineCommandProseBoundaries.Contains(tokens[tokenIndex].Value)))
+                    || tokens[tokenIndex].Kind == InlineTokenKind.Word
+                    && AzureMigrateRequestActions.Contains(tokens[tokenIndex].Value)))
             {
                 result.CriticalErrors.Add(
                     $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' has more than one value.");
                 return;
+            }
+
+            if (tokenIndex < tokens.Count
+                && tokens[tokenIndex].Kind is InlineTokenKind.Word or InlineTokenKind.QuotedValue)
+            {
+                break;
             }
         }
 
@@ -850,6 +870,9 @@ public class ArticleContentProcessor
 
     private static bool IsInlineWordCharacter(char character)
         => char.IsLetterOrDigit(character) || character is '_' or '-';
+
+    private static string NormalizeAzureMigrateOption(string option)
+        => Regex.Replace(option, @"[^a-z0-9]", "", RegexOptions.IgnoreCase);
 
     private enum InlineTokenKind
     {

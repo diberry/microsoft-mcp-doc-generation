@@ -827,7 +827,8 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Run azuremigrate platformlandingzone request update after confirming parameters.")]
     [InlineData("Run azuremigrate platformlandingzone request status before generation.")]
     [InlineData("Run azuremigrate platformlandingzone request destroy.")]
-    public void Validate_AzureMigrate_RejectsEveryBareTokenAfterRequest(string description)
+    [InlineData("Run azuremigrate platformlandingzone getguidance delete.")]
+    public void Validate_AzureMigrate_RejectsBareTokensImmediatelyAfterAllowedCommands(string description)
     {
         var data = CreateMinimalData();
         data.BestPractices = [new() { Title = "Use an action", Description = description }];
@@ -914,12 +915,39 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Run `azuremigrate platformlandingzone request --action \"check\"`, then continue.")]
     [InlineData("Run azuremigrate platformlandingzone request --action=check; then continue.")]
     [InlineData("Run azuremigrate platformlandingzone request --action check --subscription contoso.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action update --regionType single.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action update --migrateProjectName contoso.")]
     [InlineData("Run azuremigrate platformlandingzone getguidance before making configuration changes.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action download once generation completes.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action check first.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action check as a first step.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action status in production.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance --scenario bastion in your subscription.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance --scenario ddos during planning.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance --scenario bastion if you need details.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance first.")]
+    [InlineData("Run azuremigrate platformlandingzone getguidance again.")]
     [InlineData("Run azuremigrate platformlandingzone request")]
     public void Validate_AzureMigrate_AllowsExactCommandsAndGroundedActions(string description)
     {
         var data = CreateMinimalData();
         data.BestPractices = [new() { Title = "Use a supported command", Description = description }];
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.DoesNotContain(
+            result.CriticalErrors,
+            error => error.Contains("TOOL COMMAND", StringComparison.Ordinal)
+                || error.Contains("TOOL ACTION", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Azure Migrate documentation might wrap azuremigrate\nplatformlandingzone prose across lines.")]
+    [InlineData("Azure Migrate documentation might wrap azuremigrate\r\nplatformlandingzone prose across lines.")]
+    public void Validate_AzureMigrate_IgnoresNamespaceWordsSplitAcrossLines(string description)
+    {
+        var data = CreateMinimalData();
+        data.BestPractices = [new() { Title = "Describe the namespace", Description = description }];
 
         var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
 
