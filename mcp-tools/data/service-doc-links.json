@@ -35,8 +35,8 @@
     "seoDescription": "Use Azure MCP Server tools to manage web apps, APIs, and mobile back ends with natural language prompts from your IDE."
   },
   "azuremigrate": {
-    "title": "Azure Migrate documentation",
-    "url": "/azure/migrate/",
+    "title": "Azure Platform Landing Zone documentation",
+    "url": "/azure/migrate/platform-landing-zone",
     "seoDescription": "Use Azure MCP Server tools to manage Azure Platform Landing Zone configurations and Terraform-ready generation with natural language prompts from your IDE."
   },
   "azureterraformbestpractices": {

@@ -17,7 +17,7 @@ Return a JSON object with EXACTLY this key:
 ## Rules (CRITICAL)
 
 - **Two grounding requirements**:
-  1. **Tool grounding**: Every best practice must directly relate to how a user should use the tools provided below. Reference the specific tool command when it makes the advice actionable. If no tool exists for an operation (scaling, monitoring, backup, disaster recovery), do NOT generate a best practice for it.
+  1. **Tool grounding**: Every best practice must directly relate to how a user should use the tools provided below. Reference only exact tool commands from the input when it makes the advice actionable. Never turn an option or action value into a new subcommand; include the option name (for example, `command --action update`, never `command update`). If no tool exists for an operation (scaling, monitoring, backup, disaster recovery), do NOT generate a best practice for it.
   2. **Practical scope**: Advice must be about using the MCP tools effectively, not general Azure service administration.
 - **Count**: Generate 2-5 best practices. For single-tool services, 2-3 focused practices are better than padding.
 - **Priority order**: Security (Entra ID / RBAC for tool access) first, then safe usage (read before write, confirm destructive operations), then efficiency (filtering, batching).

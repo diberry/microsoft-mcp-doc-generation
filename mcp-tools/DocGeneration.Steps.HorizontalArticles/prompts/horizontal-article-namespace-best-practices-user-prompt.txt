@@ -11,7 +11,7 @@ Generate best practices for a how-to article about managing {{serviceBrandName}}
 
 ## Your Task
 
-**genai-bestPractices**: 2-5 best practices scoped to using the tools above effectively. Reference specific tool commands when giving advice. Priority: security first, then safe usage, then efficiency.
+**genai-bestPractices**: 2-5 best practices scoped to using the tools above effectively. Reference only exact tool commands from the list when giving advice. Never turn a parameter or action value into a subcommand; include its `--option-name` on the exact listed command (for example, `command --action update`, never `command update`). Priority: security first, then safe usage, then efficiency.
 
 ## Output Format
 

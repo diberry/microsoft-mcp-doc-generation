@@ -18,6 +18,17 @@ public class ArticleContentProcessor
         "extension"
     };
 
+    private static readonly IReadOnlyDictionary<string, string[]> UnsupportedCapabilityTermsByNamespace =
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["azuremigrate"] =
+            [
+                "assess", "assessed", "assesses", "assessing", "assessment", "assessments",
+                "replicate", "replicated", "replicates", "replicating", "replication", "replications",
+                "cutover", "cut-over", "cut over"
+            ]
+        };
+
     private readonly TransformationEngine? _transformationEngine;
 
     public ArticleContentProcessor(TransformationEngine? transformationEngine = null)
@@ -53,6 +64,8 @@ public class ArticleContentProcessor
         ValidateToolDescriptions(aiData, result);
         ValidateBestPracticeCount(aiData, result);
         ValidateCapabilityToolRatio(aiData, result);
+        ValidateNamespaceScopeClaims(aiData, result, serviceIdentifier);
+        ValidateNamespaceToolCommands(aiData, result, serviceIdentifier);
 
         return result;
     }
@@ -499,6 +512,50 @@ public class ArticleContentProcessor
         {
             result.Warnings.Add($"Capabilities ({capCount}) exceed tool count ({toolCount}). " +
                 $"Each capability should map 1:1 to a tool description. Some capabilities might be fabricated.");
+        }
+    }
+
+    private static void ValidateNamespaceScopeClaims(
+        AIGeneratedArticleData aiData,
+        ValidationResult result,
+        string? serviceIdentifier)
+    {
+        if (string.IsNullOrWhiteSpace(serviceIdentifier)
+            || !UnsupportedCapabilityTermsByNamespace.TryGetValue(serviceIdentifier, out var unsupportedTerms))
+        {
+            return;
+        }
+
+        var generatedContent = System.Text.Json.JsonSerializer.Serialize(aiData);
+        foreach (var term in unsupportedTerms)
+        {
+            if (Regex.IsMatch(generatedContent, $@"\b{Regex.Escape(term)}\b", RegexOptions.IgnoreCase))
+            {
+                result.CriticalErrors.Add(
+                    $"OUT-OF-SCOPE CAPABILITY for '{serviceIdentifier}': generated content contains '{term}'.");
+            }
+        }
+    }
+
+    private static void ValidateNamespaceToolCommands(
+        AIGeneratedArticleData aiData,
+        ValidationResult result,
+        string? serviceIdentifier)
+    {
+        if (!string.Equals(serviceIdentifier, "azuremigrate", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var generatedContent = System.Text.Json.JsonSerializer.Serialize(aiData);
+        var inventedCommand = Regex.Match(
+            generatedContent,
+            @"\bazuremigrate\s+platformlandingzone\s+(?:(?:createmigrateproject|check|update|generate|download|status)|request\s+(?:createmigrateproject|check|update|generate|download|status))\b",
+            RegexOptions.IgnoreCase);
+        if (inventedCommand.Success)
+        {
+            result.CriticalErrors.Add(
+                $"INVENTED TOOL COMMAND for '{serviceIdentifier}': '{inventedCommand.Value}'.");
         }
     }
 

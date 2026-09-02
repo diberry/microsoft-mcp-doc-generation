@@ -698,6 +698,59 @@ public class ArticleContentProcessorValidationTests
 
     // ===== Helper =====
 
+    [Theory]
+    [InlineData("Run a migration assessment before generating the landing zone")]
+    [InlineData("Configure replication for the selected workloads")]
+    [InlineData("Plan the final cutover")]
+    public void Validate_AzureMigrate_RejectsUnsupportedWorkloadMigrationClaims(string unsupportedClaim)
+    {
+        var data = CreateMinimalData();
+        data.ServiceOverview = $"provides platform landing zone guidance. {unsupportedClaim}.";
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.True(result.HasCriticalErrors);
+        Assert.Contains(
+            result.CriticalErrors,
+            error => error.Contains("OUT-OF-SCOPE CAPABILITY", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Validate_AzureMigrate_AllowsGroundedPlatformLandingZoneContent()
+    {
+        var data = CreateMinimalData();
+        data.ServiceShortDescription = "platform landing zone configurations";
+        data.ServiceOverview = "provides guidance for generating and downloading Azure Platform Landing Zone configurations.";
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.DoesNotContain(
+            result.CriticalErrors,
+            error => error.Contains("OUT-OF-SCOPE CAPABILITY", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Run azuremigrate platformlandingzone status before changing parameters.")]
+    [InlineData("Run azuremigrate platformlandingzone request update after confirming parameters.")]
+    public void Validate_AzureMigrate_RejectsInventedActionSubcommands(string description)
+    {
+        var data = CreateMinimalData();
+        data.BestPractices =
+        [
+            new()
+            {
+                Title = "Check current state",
+                Description = description
+            }
+        ];
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.Contains(
+            result.CriticalErrors,
+            error => error.Contains("INVENTED TOOL COMMAND", StringComparison.Ordinal));
+    }
+
     private static AIGeneratedArticleData CreateMinimalData()
     {
         return new AIGeneratedArticleData
