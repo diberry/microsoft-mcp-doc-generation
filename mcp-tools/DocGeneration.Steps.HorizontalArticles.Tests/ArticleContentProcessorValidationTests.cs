@@ -730,9 +730,15 @@ public class ArticleContentProcessorValidationTests
     }
 
     [Theory]
+    [InlineData("Use the tools to migrate on-premises servers into Azure.")]
+    [InlineData("Use the tools to migrate VMware environments into Azure.")]
+    [InlineData("Plan the migration of application workloads with these tools.")]
     [InlineData("Use the tools to migrate virtual machines into Azure.")]
     [InlineData("Move workloads to Azure before generating the landing zone.")]
     [InlineData("Plan the server migration with these tools.")]
+    [InlineData("Migrate the existing on-premises Windows servers into Azure.")]
+    [InlineData("Migration of critical database workloads is supported.")]
+    [InlineData("Move existing VMware application environments into Azure.")]
     public void Validate_AzureMigrate_RejectsDirectWorkloadMigrationClaims(string claim)
     {
         var data = CreateMinimalData();
@@ -751,6 +757,22 @@ public class ArticleContentProcessorValidationTests
         var data = CreateMinimalData();
         data.ServiceOverview =
             "provides platform landing zone guidance and generation for an Azure Migrate project.";
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.DoesNotContain(
+            result.CriticalErrors,
+            error => error.Contains("OUT-OF-SCOPE CAPABILITY", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Use an Azure Migrate project to generate a platform landing zone.")]
+    [InlineData("Improve platform landing zone migration-readiness with guided configuration.")]
+    [InlineData("Review migration readiness for a Platform Landing Zone in an Azure Migrate project.")]
+    public void Validate_AzureMigrate_AllowsProjectAndLandingZoneReadinessContext(string claim)
+    {
+        var data = CreateMinimalData();
+        data.ServiceOverview = claim;
 
         var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
 
@@ -785,7 +807,8 @@ public class ArticleContentProcessorValidationTests
     [Theory]
     [InlineData("Run azuremigrate platformlandingzone request update after confirming parameters.")]
     [InlineData("Run azuremigrate platformlandingzone request status before generation.")]
-    public void Validate_AzureMigrate_RejectsBareRequestActions(string description)
+    [InlineData("Run azuremigrate platformlandingzone request destroy.")]
+    public void Validate_AzureMigrate_RejectsEveryBareTokenAfterRequest(string description)
     {
         var data = CreateMinimalData();
         data.BestPractices = [new() { Title = "Use an action", Description = description }];
@@ -795,6 +818,26 @@ public class ArticleContentProcessorValidationTests
         Assert.Contains(
             result.CriticalErrors,
             error => error.Contains("INVALID TOOL ACTION", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Validate_AzureMigrate_RejectsUnknownActionValue()
+    {
+        var data = CreateMinimalData();
+        data.BestPractices =
+        [
+            new()
+            {
+                Title = "Use a supported action",
+                Description = "Run azuremigrate platformlandingzone request --action delete."
+            }
+        ];
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.Contains(
+            result.CriticalErrors,
+            error => error.Contains("unsupported '--action' value 'delete'", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -819,13 +862,14 @@ public class ArticleContentProcessorValidationTests
 
     [Theory]
     [InlineData("Run azuremigrate platformlandingzone getguidance --scenario ddos.")]
-    [InlineData("Run azuremigrate platformlandingzone request --action createmigrateproject.")]
-    [InlineData("Run azuremigrate platformlandingzone request --action check.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action 'createmigrateproject'.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action \"check\".")]
     [InlineData("Run azuremigrate platformlandingzone request --action update.")]
-    [InlineData("Run azuremigrate platformlandingzone request --action generate.")]
-    [InlineData("Run azuremigrate platformlandingzone request --action download.")]
-    [InlineData("Run azuremigrate platformlandingzone request --action status.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action=generate.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action='download'.")]
+    [InlineData("Run azuremigrate platformlandingzone request --action=\"status\".")]
     [InlineData("Run azuremigrate platformlandingzone request --action=check.")]
+    [InlineData("Run azuremigrate platformlandingzone request")]
     public void Validate_AzureMigrate_AllowsExactCommandsAndGroundedActions(string description)
     {
         var data = CreateMinimalData();

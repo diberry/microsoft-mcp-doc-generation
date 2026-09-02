@@ -31,15 +31,20 @@ public class ArticleContentProcessor
             ]
         };
 
-    private static readonly Regex[] UnsupportedAzureMigrateWorkloadPatterns =
-    [
-        new(@"\bmigrat(?:e|es|ed|ing)\s+(?:virtual machines?|vms?|servers?|databases?|applications?|workloads?)\b",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled),
-        new(@"\bmov(?:e|es|ed|ing)\s+(?:virtual machines?|vms?|servers?|databases?|applications?|workloads?)\b",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled),
-        new(@"\b(?:virtual machine|vm|server|database|application|workload)\s+migration\b",
-            RegexOptions.IgnoreCase | RegexOptions.Compiled)
-    ];
+    private static readonly HashSet<string> WorkloadMigrationVerbs =
+        new(["migrate", "migrates", "migrated", "migrating", "move", "moves", "moved", "moving"],
+            StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> WorkloadMigrationNouns =
+        new(["migration", "migrations"], StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> WorkloadTargetTerms =
+        new(
+            [
+                "application", "applications", "database", "databases", "environment", "environments",
+                "server", "servers", "vm", "vms", "workload", "workloads"
+            ],
+            StringComparer.OrdinalIgnoreCase);
 
     private static readonly HashSet<string> AllowedAzureMigrateCommands =
         new(["getguidance", "request"], StringComparer.OrdinalIgnoreCase);
@@ -549,7 +554,7 @@ public class ArticleContentProcessor
             return;
         }
 
-        var generatedContent = System.Text.Json.JsonSerializer.Serialize(aiData);
+        var generatedContent = GetGeneratedText(aiData);
         foreach (var term in unsupportedTerms)
         {
             if (Regex.IsMatch(generatedContent, $@"\b{Regex.Escape(term)}\b", RegexOptions.IgnoreCase))
@@ -559,14 +564,11 @@ public class ArticleContentProcessor
             }
         }
 
-        foreach (var pattern in UnsupportedAzureMigrateWorkloadPatterns)
+        var unsupportedWorkloadClaim = FindUnsupportedWorkloadMigrationClaim(generatedContent);
+        if (unsupportedWorkloadClaim is not null)
         {
-            var match = pattern.Match(generatedContent);
-            if (match.Success)
-            {
-                result.CriticalErrors.Add(
-                    $"OUT-OF-SCOPE CAPABILITY for '{serviceIdentifier}': generated content contains '{match.Value}'.");
-            }
+            result.CriticalErrors.Add(
+                $"OUT-OF-SCOPE CAPABILITY for '{serviceIdentifier}': generated content contains '{unsupportedWorkloadClaim}'.");
         }
     }
 
@@ -580,7 +582,7 @@ public class ArticleContentProcessor
             return;
         }
 
-        var generatedContent = JsonSerializer.Serialize(aiData);
+        var generatedContent = GetGeneratedText(aiData);
         var commandMatches = Regex.Matches(
             generatedContent,
             @"\bazuremigrate\s+platformlandingzone\s+(?<command>[a-z0-9_-]+)\b",
@@ -596,24 +598,150 @@ public class ArticleContentProcessor
             }
         }
 
-        var bareActionMatch = Regex.Match(
-            generatedContent,
-            @"\bazuremigrate\s+platformlandingzone\s+request\s+(?<action>[a-z0-9_-]+)\b",
-            RegexOptions.IgnoreCase);
-        if (bareActionMatch.Success
-            && AzureMigrateRequestActions.Contains(bareActionMatch.Groups["action"].Value))
+        foreach (Match requestMatch in Regex.Matches(
+                     generatedContent,
+                     @"\bazuremigrate\s+platformlandingzone\s+request\b",
+                     RegexOptions.IgnoreCase))
         {
-            result.CriticalErrors.Add(
-                $"INVALID TOOL ACTION for '{serviceIdentifier}': use 'azuremigrate platformlandingzone request --action {bareActionMatch.Groups["action"].Value}'.");
+            var trailingText = generatedContent[(requestMatch.Index + requestMatch.Length)..];
+            var lineBreakIndex = trailingText.IndexOfAny(['\r', '\n']);
+            if (lineBreakIndex >= 0)
+            {
+                trailingText = trailingText[..lineBreakIndex];
+            }
+
+            var trimmedTrailingText = trailingText.TrimStart(' ', '\t');
+            if (trimmedTrailingText.StartsWith("--", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var bareToken = Regex.Match(trimmedTrailingText, @"^(?<token>[""']?[a-z0-9_]+)", RegexOptions.IgnoreCase);
+            if (bareToken.Success)
+            {
+                result.CriticalErrors.Add(
+                    $"INVALID TOOL ACTION for '{serviceIdentifier}': bare token '{bareToken.Groups["token"].Value}' follows 'azuremigrate platformlandingzone request'; use an option such as '--action'.");
+                return;
+            }
+        }
+
+        foreach (Match actionMatch in Regex.Matches(
+                     generatedContent,
+                     @"--action\s*(?:=\s*)?(?<quote>[""']?)(?<action>[a-z0-9_-]+)\k<quote>",
+                     RegexOptions.IgnoreCase))
+        {
+            var action = actionMatch.Groups["action"].Value;
+            if (!AzureMigrateRequestActions.Contains(action))
+            {
+                result.CriticalErrors.Add(
+                    $"INVALID TOOL ACTION for '{serviceIdentifier}': unsupported '--action' value '{action}'.");
+                return;
+            }
         }
 
         if (Regex.IsMatch(
                 generatedContent,
-                @"\bazuremigrate\s+platformlandingzone\s+getguidance\b[^""\r\n]*\s--action(?:=|\s)",
+                @"\bazuremigrate\s+platformlandingzone\s+getguidance\b[^\r\n]*\s--action(?:=|\s)",
                 RegexOptions.IgnoreCase))
         {
             result.CriticalErrors.Add(
                 $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' is only valid with 'azuremigrate platformlandingzone request'.");
+        }
+    }
+
+    private static string? FindUnsupportedWorkloadMigrationClaim(string generatedContent)
+    {
+        var normalized = Regex.Replace(generatedContent.ToLowerInvariant(), @"[^a-z0-9]+", " ");
+        var tokens = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        const int boundedWindow = 6;
+
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            if (WorkloadMigrationVerbs.Contains(tokens[index])
+                && !IsAzureMigrateProjectBrand(tokens, index)
+                && FindWorkloadTarget(tokens, index + 1, Math.Min(tokens.Length, index + boundedWindow + 1)) is { } verbTarget)
+            {
+                return string.Join(' ', tokens[index..(verbTarget + 1)]);
+            }
+
+            if (!WorkloadMigrationNouns.Contains(tokens[index])
+                || IsMigrationReadinessContext(tokens, index))
+            {
+                continue;
+            }
+
+            if (FindWorkloadTarget(tokens, index + 1, Math.Min(tokens.Length, index + boundedWindow + 1)) is { } forwardTarget)
+            {
+                return string.Join(' ', tokens[index..(forwardTarget + 1)]);
+            }
+
+            if (FindWorkloadTarget(tokens, Math.Max(0, index - boundedWindow), index) is { } backwardTarget)
+            {
+                return string.Join(' ', tokens[backwardTarget..(index + 1)]);
+            }
+        }
+
+        return null;
+    }
+
+    private static int? FindWorkloadTarget(string[] tokens, int start, int end)
+    {
+        for (var index = start; index < end; index++)
+        {
+            if (WorkloadTargetTerms.Contains(tokens[index]))
+            {
+                return index;
+            }
+
+            if (tokens[index] is "machine" or "machines"
+                && index > start
+                && tokens[index - 1] == "virtual")
+            {
+                return index;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsAzureMigrateProjectBrand(string[] tokens, int index)
+        => tokens[index] == "migrate"
+            && index > 0
+            && tokens[index - 1] == "azure"
+            && index + 1 < tokens.Length
+            && tokens[index + 1] is "project" or "projects";
+
+    private static bool IsMigrationReadinessContext(string[] tokens, int index)
+        => index + 1 < tokens.Length
+            && tokens[index + 1] is "readiness" or "ready";
+
+    private static string GetGeneratedText(AIGeneratedArticleData aiData)
+    {
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(aiData));
+        var values = new List<string>();
+        CollectStringValues(document.RootElement, values);
+        return string.Join('\n', values);
+    }
+
+    private static void CollectStringValues(JsonElement element, List<string> values)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                values.Add(element.GetString() ?? string.Empty);
+                break;
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                {
+                    CollectStringValues(property.Value, values);
+                }
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    CollectStringValues(item, values);
+                }
+                break;
         }
     }
 
