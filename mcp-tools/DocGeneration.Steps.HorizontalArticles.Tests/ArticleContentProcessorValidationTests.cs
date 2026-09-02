@@ -739,6 +739,11 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Migrate the existing on-premises Windows servers into Azure.")]
     [InlineData("Migration of critical database workloads is supported.")]
     [InlineData("Move existing VMware application environments into Azure.")]
+    [InlineData("Migrate your existing on-premises VMware virtual machine workloads into Azure.")]
+    [InlineData("Plan the migration of all your existing business-critical application workloads.")]
+    [InlineData("Migrate all of your long-standing business-critical on-premises VMware virtual machines into Azure.")]
+    [InlineData("Existing business-critical application workloads can be migrated into Azure.")]
+    [InlineData("Plan the phased migration of all currently hosted business-critical database application workloads.")]
     public void Validate_AzureMigrate_RejectsDirectWorkloadMigrationClaims(string claim)
     {
         var data = CreateMinimalData();
@@ -769,6 +774,9 @@ public class ArticleContentProcessorValidationTests
     [InlineData("Use an Azure Migrate project to generate a platform landing zone.")]
     [InlineData("Improve platform landing zone migration-readiness with guided configuration.")]
     [InlineData("Review migration readiness for a Platform Landing Zone in an Azure Migrate project.")]
+    [InlineData("Review platform landing zone migration readiness. Application workloads are outside these tools.")]
+    [InlineData("Use an Azure Migrate project to generate guidance; inventory application workloads separately.")]
+    [InlineData("Provision a deployable platform landing zone for migration workloads in an Azure Migrate project.")]
     public void Validate_AzureMigrate_AllowsProjectAndLandingZoneReadinessContext(string claim)
     {
         var data = CreateMinimalData();
@@ -838,6 +846,23 @@ public class ArticleContentProcessorValidationTests
         Assert.Contains(
             result.CriticalErrors,
             error => error.Contains("unsupported '--action' value 'delete'", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("Run azuremigrate platformlandingzone request --action")]
+    [InlineData("Run azuremigrate platformlandingzone request --action=\"\".")]
+    [InlineData("Run azuremigrate platformlandingzone request --action=\"destroy now\".")]
+    [InlineData("Run azuremigrate platformlandingzone request --action check, then request --action.")]
+    public void Validate_AzureMigrate_RejectsMissingMalformedOrUnsupportedActionValues(string description)
+    {
+        var data = CreateMinimalData();
+        data.BestPractices = [new() { Title = "Use a supported action", Description = description }];
+
+        var result = _processor.Validate(data, "Azure Platform Landing Zone", "azuremigrate");
+
+        Assert.Contains(
+            result.CriticalErrors,
+            error => error.Contains("INVALID TOOL ACTION", StringComparison.Ordinal));
     }
 
     [Fact]

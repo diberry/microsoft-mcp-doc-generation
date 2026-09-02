@@ -625,63 +625,114 @@ public class ArticleContentProcessor
             }
         }
 
-        foreach (Match actionMatch in Regex.Matches(
+        foreach (Match actionOptionMatch in Regex.Matches(
                      generatedContent,
-                     @"--action\s*(?:=\s*)?(?<quote>[""']?)(?<action>[a-z0-9_-]+)\k<quote>",
+                     @"(?<![a-z0-9_-])--action\b",
                      RegexOptions.IgnoreCase))
         {
-            var action = actionMatch.Groups["action"].Value;
+            var lineStart = generatedContent[..actionOptionMatch.Index].LastIndexOfAny(['\r', '\n']);
+            lineStart = lineStart < 0 ? 0 : lineStart + 1;
+            var commandPrefix = generatedContent[lineStart..actionOptionMatch.Index];
+            if (!Regex.IsMatch(
+                    commandPrefix,
+                    @"\bazuremigrate\s+platformlandingzone\s+request\b",
+                    RegexOptions.IgnoreCase))
+            {
+                result.CriticalErrors.Add(
+                    $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' is only valid with 'azuremigrate platformlandingzone request'.");
+                continue;
+            }
+
+            var trailingText = generatedContent[(actionOptionMatch.Index + actionOptionMatch.Length)..];
+            var lineBreakIndex = trailingText.IndexOfAny(['\r', '\n']);
+            if (lineBreakIndex >= 0)
+            {
+                trailingText = trailingText[..lineBreakIndex];
+            }
+
+            var actionValueMatch = Regex.Match(
+                trailingText,
+                @"^\s*(?:=\s*)?(?:(?<quote>[""'])(?<quotedAction>[^""'\r\n]*)\k<quote>|(?<action>[a-z0-9_-]+))(?=$|[\s.,;:!?\)\}\]])",
+                RegexOptions.IgnoreCase);
+            if (!actionValueMatch.Success)
+            {
+                result.CriticalErrors.Add(
+                    $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' is missing a valid value.");
+                continue;
+            }
+
+            var action = actionValueMatch.Groups["quote"].Success
+                ? actionValueMatch.Groups["quotedAction"].Value
+                : actionValueMatch.Groups["action"].Value;
             if (!AzureMigrateRequestActions.Contains(action))
             {
                 result.CriticalErrors.Add(
                     $"INVALID TOOL ACTION for '{serviceIdentifier}': unsupported '--action' value '{action}'.");
-                return;
             }
-        }
-
-        if (Regex.IsMatch(
-                generatedContent,
-                @"\bazuremigrate\s+platformlandingzone\s+getguidance\b[^\r\n]*\s--action(?:=|\s)",
-                RegexOptions.IgnoreCase))
-        {
-            result.CriticalErrors.Add(
-                $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' is only valid with 'azuremigrate platformlandingzone request'.");
         }
     }
 
     private static string? FindUnsupportedWorkloadMigrationClaim(string generatedContent)
     {
-        var normalized = Regex.Replace(generatedContent.ToLowerInvariant(), @"[^a-z0-9]+", " ");
-        var tokens = normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        const int boundedWindow = 6;
-
-        for (var index = 0; index < tokens.Length; index++)
+        foreach (Match clauseMatch in Regex.Matches(
+                     generatedContent,
+                     @"[^\r\n.!?;:]+",
+                     RegexOptions.IgnoreCase))
         {
-            if (WorkloadMigrationVerbs.Contains(tokens[index])
-                && !IsAzureMigrateProjectBrand(tokens, index)
-                && FindWorkloadTarget(tokens, index + 1, Math.Min(tokens.Length, index + boundedWindow + 1)) is { } verbTarget)
-            {
-                return string.Join(' ', tokens[index..(verbTarget + 1)]);
-            }
-
-            if (!WorkloadMigrationNouns.Contains(tokens[index])
-                || IsMigrationReadinessContext(tokens, index))
+            var normalizedClause = Regex.Replace(clauseMatch.Value.ToLowerInvariant(), @"[^a-z0-9]+", " ");
+            var tokens = normalizedClause.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length == 0)
             {
                 continue;
             }
 
-            if (FindWorkloadTarget(tokens, index + 1, Math.Min(tokens.Length, index + boundedWindow + 1)) is { } forwardTarget)
+            if (FindWorkloadTarget(tokens, 0, tokens.Length) is null)
             {
-                return string.Join(' ', tokens[index..(forwardTarget + 1)]);
+                continue;
             }
 
-            if (FindWorkloadTarget(tokens, Math.Max(0, index - boundedWindow), index) is { } backwardTarget)
+            for (var index = 0; index < tokens.Length; index++)
             {
-                return string.Join(' ', tokens[backwardTarget..(index + 1)]);
+                if (WorkloadMigrationVerbs.Contains(tokens[index])
+                    && !IsAzureMigrateProjectBrand(tokens, index))
+                {
+                    return normalizedClause.Trim();
+                }
+
+                if (WorkloadMigrationNouns.Contains(tokens[index])
+                    && !IsMigrationReadinessContext(tokens, index)
+                    && HasDirectMigrationNounTarget(tokens, index))
+                {
+                    return normalizedClause.Trim();
+                }
             }
         }
 
         return null;
+    }
+
+    private static bool HasDirectMigrationNounTarget(string[] tokens, int migrationIndex)
+    {
+        if (FindWorkloadTarget(tokens, 0, migrationIndex) is not null)
+        {
+            return true;
+        }
+
+        for (var index = migrationIndex + 1; index < tokens.Length; index++)
+        {
+            if (!WorkloadTargetTerms.Contains(tokens[index])
+                && !(tokens[index] is "machine" or "machines"
+                    && index > 0
+                    && tokens[index - 1] == "virtual"))
+            {
+                continue;
+            }
+
+            return tokens[(migrationIndex + 1)..index]
+                .Any(token => token is "of" or "for" or "from" or "to" or "into" or "between" or "across");
+        }
+
+        return false;
     }
 
     private static int? FindWorkloadTarget(string[] tokens, int start, int end)
