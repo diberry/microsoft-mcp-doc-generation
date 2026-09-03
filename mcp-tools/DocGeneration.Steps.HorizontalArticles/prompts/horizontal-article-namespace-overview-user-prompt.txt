@@ -4,12 +4,19 @@ Generate the service short description and overview for a how-to article about m
 - Service Brand Name: {{serviceBrandName}}
 - Service Identifier: {{serviceIdentifier}}
 
+**Available MCP Tools for this service (complete capability boundary):**
+{{#each tools}}
+- {{command}} — {{description}}
+{{/each}}
+
 ## Your Task
 
-Search official Azure documentation for {{serviceBrandName}} and produce:
+Use the commands and descriptions above as the complete supported capability boundary. Search official Azure documentation only to explain that exact feature area. Do not infer or add operations from the broader Azure service or namespace.
 
 1. **genai-serviceShortDescription**: A noun phrase describing what users manage via MCP tools for {{serviceBrandName}}. MUST NOT end with a period. Must read naturally after "Manage". Keep under 8 words.
-2. **genai-serviceOverview**: A 2-3 sentence description of {{serviceBrandName}}. Do NOT start with the service name. Start with "is a..." or "provides...". Ground it in official Azure documentation.
+2. **genai-serviceOverview**: A 2-3 sentence description of {{serviceBrandName}} and only the capabilities represented by the listed tools. Do NOT start with the service name. Start with "is a..." or "provides...". Ground it in official Azure documentation.
+
+Do not mention assessment, replication, cutover, or any other migration phase unless a listed command explicitly supports it.
 
 ## Output Format
 

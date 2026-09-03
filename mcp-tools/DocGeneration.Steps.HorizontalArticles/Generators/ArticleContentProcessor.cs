@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.Mcp.TextTransformation.Services;
 using HorizontalArticleGenerator.Models;
+using Shared;
 
 namespace HorizontalArticleGenerator.Generators;
 
@@ -17,6 +19,59 @@ public class ArticleContentProcessor
     {
         "extension"
     };
+
+    private static readonly IReadOnlyDictionary<string, string[]> UnsupportedCapabilityTermsByNamespace =
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["azuremigrate"] =
+            [
+                "assess", "assessed", "assesses", "assessing", "assessment", "assessments",
+                "replicate", "replicated", "replicates", "replicating", "replication", "replications",
+                "cutover", "cut-over", "cut over"
+            ]
+        };
+
+    private static readonly HashSet<string> WorkloadMigrationVerbs =
+        new(["migrate", "migrates", "migrated", "migrating", "move", "moves", "moved", "moving"],
+            StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> WorkloadMigrationNouns =
+        new(["migration", "migrations"], StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> WorkloadTargetTerms =
+        new(
+            [
+                "application", "applications", "database", "databases", "environment", "environments",
+                "server", "servers", "vm", "vms", "workload", "workloads"
+            ],
+            StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> AllowedAzureMigrateCommands =
+        new(["getguidance", "request"], StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> AzureMigrateRequestActions =
+        new(["createmigrateproject", "check", "update", "generate", "download", "status"],
+            StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> AzureMigrateGetGuidanceOptions =
+        new(["scenario", "policyname", "listpolicies", "learn"], StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> AzureMigrateRequestOptions =
+        new(
+            [
+                "action", "regiontype", "firewalltype", "networkarchitecture",
+                "identitysubscriptionid", "managementsubscriptionid",
+                "connectivitysubscriptionid", "regions", "environmentname",
+                "versioncontrolsystem", "organizationname", "migrateprojectname",
+                "location", "resourcegroup", "subscription", "tenant", "learn"
+            ],
+            StringComparer.OrdinalIgnoreCase);
+
+    private static readonly HashSet<string> GetGuidancePostCommandProse =
+        new(["before", "first", "again"], StringComparer.OrdinalIgnoreCase);
+
+    private static readonly Lazy<IReadOnlyDictionary<string, string>> ConfiguredServiceDocLinks =
+        new(LoadConfiguredServiceDocLinks);
 
     private readonly TransformationEngine? _transformationEngine;
 
@@ -47,12 +102,15 @@ public class ArticleContentProcessor
         StripTrailingPeriods(aiData, result);
         FixBrokenSentences(aiData, result);
         FixRedundantWords(aiData, result);
+        ApplyConfiguredServiceDocLink(aiData, result, serviceIdentifier);
         ValidateLinkUrls(aiData, result, serviceIdentifier);
         DeduplicateAdditionalLinks(aiData, result);
         ValidateRbacRoles(aiData, result, serviceName);
         ValidateToolDescriptions(aiData, result);
         ValidateBestPracticeCount(aiData, result);
         ValidateCapabilityToolRatio(aiData, result);
+        ValidateNamespaceScopeClaims(aiData, result, serviceIdentifier);
+        ValidateNamespaceToolCommands(aiData, result, serviceIdentifier);
 
         return result;
     }
@@ -499,6 +557,501 @@ public class ArticleContentProcessor
         {
             result.Warnings.Add($"Capabilities ({capCount}) exceed tool count ({toolCount}). " +
                 $"Each capability should map 1:1 to a tool description. Some capabilities might be fabricated.");
+        }
+    }
+
+    private static void ValidateNamespaceScopeClaims(
+        AIGeneratedArticleData aiData,
+        ValidationResult result,
+        string? serviceIdentifier)
+    {
+        if (string.IsNullOrWhiteSpace(serviceIdentifier)
+            || !UnsupportedCapabilityTermsByNamespace.TryGetValue(serviceIdentifier, out var unsupportedTerms))
+        {
+            return;
+        }
+
+        var generatedContent = GetGeneratedText(aiData);
+        foreach (var term in unsupportedTerms)
+        {
+            if (Regex.IsMatch(generatedContent, $@"\b{Regex.Escape(term)}\b", RegexOptions.IgnoreCase))
+            {
+                result.CriticalErrors.Add(
+                    $"OUT-OF-SCOPE CAPABILITY for '{serviceIdentifier}': generated content contains '{term}'.");
+            }
+        }
+
+        var unsupportedWorkloadClaim = FindUnsupportedWorkloadMigrationClaim(generatedContent);
+        if (unsupportedWorkloadClaim is not null)
+        {
+            result.CriticalErrors.Add(
+                $"OUT-OF-SCOPE CAPABILITY for '{serviceIdentifier}': generated content contains '{unsupportedWorkloadClaim}'.");
+        }
+    }
+
+    private static void ValidateNamespaceToolCommands(
+        AIGeneratedArticleData aiData,
+        ValidationResult result,
+        string? serviceIdentifier)
+    {
+        if (!string.Equals(serviceIdentifier, "azuremigrate", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var generatedContent = GetGeneratedText(aiData);
+        var actionPositions = new HashSet<int>();
+        foreach (Match commandPrefixMatch in Regex.Matches(
+                    generatedContent,
+                    @"\bazuremigrate[^\S\r\n]+platformlandingzone\b",
+                    RegexOptions.IgnoreCase))
+        {
+            ValidateAzureMigrateInvocation(
+                generatedContent,
+                commandPrefixMatch,
+                actionPositions,
+                result,
+                serviceIdentifier!);
+        }
+
+        foreach (Match actionOptionMatch in Regex.Matches(
+                    generatedContent,
+                    @"(?<![a-z0-9_-])--action\b",
+                    RegexOptions.IgnoreCase))
+        {
+            if (!actionPositions.Contains(actionOptionMatch.Index))
+            {
+                result.CriticalErrors.Add(
+                    $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' is not part of the immediately preceding 'azuremigrate platformlandingzone request' invocation.");
+            }
+        }
+    }
+
+    private static void ValidateAzureMigrateInvocation(
+        string generatedContent,
+        Match commandPrefixMatch,
+        HashSet<int> actionPositions,
+        ValidationResult result,
+        string serviceIdentifier)
+    {
+        var invocationEnd = FindInlineInvocationEnd(generatedContent, commandPrefixMatch.Index);
+        var tokens = TokenizeInlineInvocation(
+            generatedContent,
+            commandPrefixMatch.Index + commandPrefixMatch.Length,
+            invocationEnd);
+        if (tokens.Count == 0 || tokens[0].Kind != InlineTokenKind.Word)
+        {
+            result.CriticalErrors.Add(
+                $"INVENTED TOOL COMMAND for '{serviceIdentifier}': incomplete 'azuremigrate platformlandingzone' invocation.");
+            return;
+        }
+
+        var commandToken = tokens[0];
+        var command = commandToken.Value;
+        if (!AllowedAzureMigrateCommands.Contains(command))
+        {
+            result.CriticalErrors.Add(
+                $"INVENTED TOOL COMMAND for '{serviceIdentifier}': 'azuremigrate platformlandingzone {command}'.");
+            return;
+        }
+
+        var tokenIndex = 1;
+        if (tokenIndex < tokens.Count
+            && tokens[tokenIndex].Kind is InlineTokenKind.PathSeparator or InlineTokenKind.Colon)
+        {
+            result.CriticalErrors.Add(
+                $"INVENTED TOOL COMMAND for '{serviceIdentifier}': invalid path suffix follows 'azuremigrate platformlandingzone {command}'.");
+            return;
+        }
+
+        if (tokenIndex < tokens.Count
+            && tokens[tokenIndex].Kind is InlineTokenKind.Word or InlineTokenKind.QuotedValue)
+        {
+            if (string.Equals(command, "getguidance", StringComparison.OrdinalIgnoreCase)
+                && tokens[tokenIndex].Kind == InlineTokenKind.Word
+                && GetGuidancePostCommandProse.Contains(tokens[tokenIndex].Value))
+            {
+                return;
+            }
+
+            result.CriticalErrors.Add(
+                $"INVALID TOOL ACTION for '{serviceIdentifier}': bare token '{tokens[tokenIndex].Value}' follows 'azuremigrate platformlandingzone {command}'; use an option.");
+            return;
+        }
+
+        var knownOptions = string.Equals(command, "request", StringComparison.OrdinalIgnoreCase)
+            ? AzureMigrateRequestOptions
+            : AzureMigrateGetGuidanceOptions;
+        var actionCount = 0;
+        while (tokenIndex < tokens.Count)
+        {
+            var token = tokens[tokenIndex];
+            if (token.Kind == InlineTokenKind.Boundary)
+            {
+                break;
+            }
+
+            if (token.Kind != InlineTokenKind.Option)
+            {
+                break;
+            }
+
+            var normalizedOption = NormalizeAzureMigrateOption(token.Value);
+            if (!knownOptions.Contains(normalizedOption))
+            {
+                result.CriticalErrors.Add(
+                    $"INVENTED TOOL COMMAND for '{serviceIdentifier}': unsupported option '{token.Value}' follows 'azuremigrate platformlandingzone {command}'.");
+                return;
+            }
+
+            var isAction = string.Equals(normalizedOption, "action", StringComparison.OrdinalIgnoreCase);
+            if (isAction)
+            {
+                actionPositions.Add(token.Start);
+                actionCount++;
+                if (!string.Equals(command, "request", StringComparison.OrdinalIgnoreCase))
+                {
+                    result.CriticalErrors.Add(
+                       $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' is only valid with 'azuremigrate platformlandingzone request'.");
+                }
+            }
+
+            tokenIndex++;
+            if (tokenIndex < tokens.Count && tokens[tokenIndex].Kind == InlineTokenKind.Equals)
+            {
+                tokenIndex++;
+            }
+
+            if (tokenIndex >= tokens.Count
+                || tokens[tokenIndex].Kind is not (InlineTokenKind.Word or InlineTokenKind.QuotedValue))
+            {
+                if (isAction)
+                {
+                    result.CriticalErrors.Add(
+                       $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' is missing a valid value.");
+                }
+
+                continue;
+            }
+
+            var valueToken = tokens[tokenIndex++];
+            if (isAction && !AzureMigrateRequestActions.Contains(valueToken.Value))
+            {
+                result.CriticalErrors.Add(
+                    $"INVALID TOOL ACTION for '{serviceIdentifier}': unsupported '--action' value '{valueToken.Value}'.");
+            }
+
+            if (isAction && tokenIndex < tokens.Count
+                && (tokens[tokenIndex].Kind == InlineTokenKind.QuotedValue
+                    || tokens[tokenIndex].Kind == InlineTokenKind.Word
+                    && AzureMigrateRequestActions.Contains(tokens[tokenIndex].Value)))
+            {
+                result.CriticalErrors.Add(
+                    $"INVALID TOOL ACTION for '{serviceIdentifier}': '--action' has more than one value.");
+                return;
+            }
+
+            if (tokenIndex < tokens.Count
+                && tokens[tokenIndex].Kind is InlineTokenKind.Word or InlineTokenKind.QuotedValue)
+            {
+                break;
+            }
+        }
+
+        if (actionCount > 1)
+        {
+            result.CriticalErrors.Add(
+                $"INVALID TOOL ACTION for '{serviceIdentifier}': a request invocation can contain at most one '--action' value.");
+        }
+    }
+
+    private static int FindInlineInvocationEnd(string content, int invocationStart)
+    {
+        var lineStart = content.LastIndexOfAny(['\r', '\n'], Math.Max(0, invocationStart - 1));
+        lineStart = lineStart < 0 ? 0 : lineStart + 1;
+        var lineEnd = content.IndexOfAny(['\r', '\n'], invocationStart);
+        lineEnd = lineEnd < 0 ? content.Length : lineEnd;
+
+        var openingBackticks = content[lineStart..invocationStart].Count(character => character == '`');
+        if (openingBackticks % 2 == 1)
+        {
+            var closingBacktick = content.IndexOf('`', invocationStart);
+            if (closingBacktick >= 0 && closingBacktick < lineEnd)
+            {
+                return closingBacktick;
+            }
+        }
+
+        var punctuationBoundary = content.IndexOfAny(['.', ',', ';', '!', '?', '|'], invocationStart);
+        return punctuationBoundary >= 0 && punctuationBoundary < lineEnd
+            ? punctuationBoundary
+            : lineEnd;
+    }
+
+    private static List<InlineToken> TokenizeInlineInvocation(string content, int start, int end)
+    {
+        var tokens = new List<InlineToken>();
+        for (var index = start; index < end;)
+        {
+            if (char.IsWhiteSpace(content[index]) || content[index] == '`')
+            {
+                index++;
+                continue;
+            }
+
+            var tokenStart = index;
+            if (content[index] is '"' or '\'')
+            {
+                var quote = content[index++];
+                var valueStart = index;
+                while (index < end && content[index] != quote)
+                {
+                   index++;
+                }
+
+                tokens.Add(new InlineToken(
+                   InlineTokenKind.QuotedValue,
+                   content[valueStart..index],
+                   tokenStart));
+                if (index < end)
+                {
+                   index++;
+                }
+
+                continue;
+            }
+
+            if (content[index] == '-'
+                && index + 2 < end
+                && content[index + 1] == '-'
+                && IsInlineWordCharacter(content[index + 2]))
+            {
+                index += 2;
+                while (index < end && IsInlineWordCharacter(content[index]))
+                {
+                    index++;
+                }
+
+                tokens.Add(new InlineToken(
+                    InlineTokenKind.Option,
+                    content[tokenStart..index],
+                    tokenStart));
+                continue;
+            }
+
+            if (IsInlineWordCharacter(content[index]))
+            {
+                index++;
+                while (index < end && IsInlineWordCharacter(content[index]))
+                {
+                   index++;
+                }
+
+                tokens.Add(new InlineToken(
+                   InlineTokenKind.Word,
+                   content[tokenStart..index],
+                   tokenStart));
+                continue;
+            }
+
+            var kind = content[index] switch
+            {
+                '=' => InlineTokenKind.Equals,
+                ':' => InlineTokenKind.Colon,
+                '/' or '\\' => InlineTokenKind.PathSeparator,
+                _ => InlineTokenKind.Boundary
+            };
+            tokens.Add(new InlineToken(kind, content[index].ToString(), tokenStart));
+            index++;
+        }
+
+        return tokens;
+    }
+
+    private static bool IsInlineWordCharacter(char character)
+        => char.IsLetterOrDigit(character) || character is '_' or '-';
+
+    private static string NormalizeAzureMigrateOption(string option)
+        => Regex.Replace(option, @"[^a-z0-9]", "", RegexOptions.IgnoreCase);
+
+    private enum InlineTokenKind
+    {
+        Word,
+        Option,
+        QuotedValue,
+        Equals,
+        Colon,
+        PathSeparator,
+        Boundary
+    }
+
+    private readonly record struct InlineToken(InlineTokenKind Kind, string Value, int Start);
+
+    private static string? FindUnsupportedWorkloadMigrationClaim(string generatedContent)
+    {
+        foreach (Match clauseMatch in Regex.Matches(
+                     generatedContent,
+                    @"[^\r\n.!?]+",
+                    RegexOptions.IgnoreCase))
+        {
+            var normalizedClause = Regex.Replace(clauseMatch.Value.ToLowerInvariant(), @"[^a-z0-9]+", " ");
+            var tokens = normalizedClause.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length == 0)
+            {
+                continue;
+            }
+
+            if (FindWorkloadTarget(tokens, 0, tokens.Length) is null)
+            {
+                continue;
+            }
+
+            for (var index = 0; index < tokens.Length; index++)
+            {
+                if (WorkloadMigrationVerbs.Contains(tokens[index])
+                    && !IsAzureMigrateBrand(tokens, index))
+                {
+                    return normalizedClause.Trim();
+                }
+
+                if (WorkloadMigrationNouns.Contains(tokens[index])
+                    && !IsMigrationReadinessContext(tokens, index)
+                    && HasDirectMigrationNounTarget(tokens, index))
+                {
+                    return normalizedClause.Trim();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static bool HasDirectMigrationNounTarget(string[] tokens, int migrationIndex)
+    {
+        if (FindWorkloadTarget(tokens, 0, migrationIndex) is not null)
+        {
+            return true;
+        }
+
+        for (var index = migrationIndex + 1; index < tokens.Length; index++)
+        {
+            if (!WorkloadTargetTerms.Contains(tokens[index])
+                && !(tokens[index] is "machine" or "machines"
+                    && index > 0
+                    && tokens[index - 1] == "virtual"))
+            {
+                continue;
+            }
+
+            return tokens[(migrationIndex + 1)..index]
+                .Any(token => token is "of" or "for" or "from" or "to" or "into" or "between" or "across");
+        }
+
+        return false;
+    }
+
+    private static int? FindWorkloadTarget(string[] tokens, int start, int end)
+    {
+        for (var index = start; index < end; index++)
+        {
+            if (WorkloadTargetTerms.Contains(tokens[index]))
+            {
+                return index;
+            }
+
+            if (tokens[index] is "machine" or "machines"
+                && index > start
+                && tokens[index - 1] == "virtual")
+            {
+                return index;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsAzureMigrateBrand(string[] tokens, int index)
+        => tokens[index] == "migrate"
+            && index > 0
+            && tokens[index - 1] == "azure";
+
+    private static bool IsMigrationReadinessContext(string[] tokens, int index)
+        => index + 1 < tokens.Length
+            && tokens[index + 1] is "readiness" or "ready";
+
+    private static string GetGeneratedText(AIGeneratedArticleData aiData)
+    {
+        using var document = JsonDocument.Parse(JsonSerializer.Serialize(aiData));
+        var values = new List<string>();
+        CollectStringValues(document.RootElement, values);
+        return string.Join('\n', values);
+    }
+
+    private static void CollectStringValues(JsonElement element, List<string> values)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                values.Add(element.GetString() ?? string.Empty);
+                break;
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                {
+                    CollectStringValues(property.Value, values);
+                }
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    CollectStringValues(item, values);
+                }
+                break;
+        }
+    }
+
+    private static void ApplyConfiguredServiceDocLink(
+        AIGeneratedArticleData aiData,
+        ValidationResult result,
+        string? serviceIdentifier)
+    {
+        if (!string.Equals(serviceIdentifier, "azuremigrate", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!ConfiguredServiceDocLinks.Value.TryGetValue("azuremigrate", out var configuredUrl)
+            || string.IsNullOrWhiteSpace(configuredUrl))
+        {
+            result.CriticalErrors.Add(
+                $"MISSING SERVICE DOC LINK for '{serviceIdentifier}' in service-doc-links.json.");
+            return;
+        }
+
+        if (!string.Equals(aiData.ServiceDocLink, configuredUrl, StringComparison.OrdinalIgnoreCase))
+        {
+            aiData.ServiceDocLink = configuredUrl;
+            result.Corrections.Add(
+                $"Applied configured serviceDocLink for '{serviceIdentifier}': '{configuredUrl}'");
+        }
+    }
+
+    private static IReadOnlyDictionary<string, string> LoadConfiguredServiceDocLinks()
+    {
+        try
+        {
+            var path = Path.Combine(DataFileLoader.GetDataDirectoryPath(), "service-doc-links.json");
+            using var document = JsonDocument.Parse(File.ReadAllText(path));
+            return document.RootElement.EnumerateObject()
+                .Where(property => property.Value.TryGetProperty("url", out var url)
+                    && !string.IsNullOrWhiteSpace(url.GetString()))
+                .ToDictionary(
+                    property => property.Name,
+                    property => property.Value.GetProperty("url").GetString()!,
+                    StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
     }
 

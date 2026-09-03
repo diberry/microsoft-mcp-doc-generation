@@ -70,9 +70,9 @@
     "composition": "standalone"
   },
   {
-    "brandName": "Azure Migrate",
+    "brandName": "Azure Platform Landing Zone",
     "mcpServerName": "azuremigrate",
-    "shortName": "Migrate",
+    "shortName": "Platform Landing Zone",
     "fileName": "azure-migrate",
     "composition": "standalone"
   },

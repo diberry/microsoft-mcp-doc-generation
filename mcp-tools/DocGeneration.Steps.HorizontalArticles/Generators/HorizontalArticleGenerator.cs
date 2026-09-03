@@ -928,7 +928,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             fragmentSlug: "overview",
             fragmentLabel: "overview",
             fragmentBudget: NamespaceFragment.Overview,
-            includeToolList: false);
+            includeToolList: true);
 
     /// <summary>
     /// Calls AI once for the namespace "access" fragment (service-specific prerequisites + required
@@ -958,8 +958,8 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             includeToolList: true);
 
     /// <summary>
-    /// Calls AI once for the namespace "links" fragment (primary service doc link + additional links).
-    /// Does not need the tool list — link selection is service-level, not tool-grounded.
+    /// Calls AI once for the namespace "links" fragment (primary service doc link + additional links),
+    /// grounded to the tool list so broad namespace brands do not pull in unrelated documentation.
     /// </summary>
     internal Task<NamespaceLinksFragment> GenerateNamespaceLinksAIContent(StaticArticleData staticData) =>
         GenerateNamespaceFragmentAsync<NamespaceLinksFragment>(
@@ -969,7 +969,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             fragmentSlug: "links",
             fragmentLabel: "links",
             fragmentBudget: NamespaceFragment.Links,
-            includeToolList: false);
+            includeToolList: true);
 
     /// <summary>
     /// Shared implementation behind the four small namespace-fragment AI calls (overview, access,
@@ -1013,8 +1013,7 @@ Generated: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC
             var handlebars = HandlebarsDotNet.Handlebars.Create();
             var userPromptCompiled = handlebars.Compile(userPromptTemplate);
 
-            // Access and best-practices fragments ground their content to the tool list (RBAC
-            // minimum privilege, tool-specific advice); overview and links are service-level only.
+            // Tool-grounded fragments receive the compact command surface as their capability boundary.
             object promptContext = includeToolList
                 ? new
                 {
