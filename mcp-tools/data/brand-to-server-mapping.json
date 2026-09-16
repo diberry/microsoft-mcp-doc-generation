@@ -21,6 +21,20 @@
     "composition": "standalone"
   },
   {
+    "brandName": "Azure Data Manager for Energy",
+    "mcpServerName": "adme",
+    "shortName": "Data Manager for Energy",
+    "fileName": "azure-data-manager-for-energy",
+    "composition": "standalone"
+  },
+  {
+    "brandName": "Azure Optimization",
+    "mcpServerName": "optimization",
+    "shortName": "Optimization",
+    "fileName": "azure-optimization",
+    "composition": "standalone"
+  },
+  {
     "brandName": "Azure Kubernetes Service",
     "mcpServerName": "aks",
     "shortName": "AKS",
@@ -53,6 +67,13 @@
     "mcpServerName": "iothub",
     "shortName": "IoT Hub",
     "fileName": "azure-iot-hub",
+    "composition": "standalone"
+  },
+  {
+    "brandName": "Azure IoT Operations",
+    "mcpServerName": "iotoperations",
+    "shortName": "IoT Operations",
+    "fileName": "azure-iot-operations",
     "composition": "standalone"
   },
   {
