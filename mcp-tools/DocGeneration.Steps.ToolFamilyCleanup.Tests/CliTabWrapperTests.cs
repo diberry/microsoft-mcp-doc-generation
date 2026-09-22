@@ -669,6 +669,137 @@ public class CliTabWrapperTests
         Assert.True(cliIdx < mcpIdx, "CLI tab must appear before MCP Server tab");
     }
 
+    // ── ADME regression (issue: CLI tabs omitted for every tool) ──
+    //
+    // Reproduces the 8-tool Azure Data Manager for Energy (adme) family article using the
+    // exact CLI command identifiers committed in
+    // mcp-cli-metadata/3.0.0-beta.44+.../cli-output.json, and proves that when CLI content is
+    // assembled for every eligible tool, every tool section receives a paired Azure MCP CLI /
+    // MCP Server tab group with no malformed/unterminated groups (see ADO 633623,
+    // MicrosoftDocs/azure-dev-docs-pr#9827).
+    private const string AdmeFamilyArticle = """
+        ---
+        ms.topic: include
+        ---
+
+        # Azure Data Manager for Energy tools
+
+        ## Health check
+        <!-- @mcpcli adme health check -->
+
+        Check an ADME/OSDU endpoint's health, authentication and connectivity.
+
+        ---
+
+        ## Get a schema
+        <!-- @mcpcli adme schema get -->
+
+        Get one ADME/OSDU schema by exact kind.
+
+        ---
+
+        ## List schemas
+        <!-- @mcpcli adme schema list -->
+
+        List multiple ADME/OSDU schema descriptors.
+
+        ---
+
+        ## Search records
+        <!-- @mcpcli adme search -->
+
+        Search ADME/OSDU records across one or more exact or wildcard kinds.
+
+        ---
+
+        ## Fetch records
+        <!-- @mcpcli adme storage record fetch -->
+
+        Fetch multiple ADME/OSDU records in one batch using known record IDs.
+
+        ---
+
+        ## Get a record
+        <!-- @mcpcli adme storage record get -->
+
+        Get one ADME/OSDU record by known record ID.
+
+        ---
+
+        ## List records
+        <!-- @mcpcli adme storage record list -->
+
+        List multiple ADME/OSDU record IDs for one kind.
+
+        ---
+
+        ## List record versions
+        <!-- @mcpcli adme storage record version list -->
+
+        List only the versions of one ADME/OSDU record by known record ID.
+
+        ---
+        """;
+
+    private static readonly string[] AdmeCliCommands =
+    [
+        "adme health check",
+        "adme schema get",
+        "adme schema list",
+        "adme search",
+        "adme storage record fetch",
+        "adme storage record get",
+        "adme storage record list",
+        "adme storage record version list",
+    ];
+
+    [Fact]
+    public void ApplyTabsToFamilyArticle_AdmeEightTools_AllToolsGetPairedCliAndMcpTabs()
+    {
+        var cliContent = AdmeCliCommands.ToDictionary(
+            command => command,
+            command => $"```bash\nazmcp {command.Replace(' ', '-')}\n```");
+
+        var result = CliTabWrapper.ApplyTabsToFamilyArticle(AdmeFamilyArticle, cliContent);
+
+        // 8 tool H2 sections, all preserved.
+        var toolHeadingCount = CountOccurrences(result, "\n## ");
+        Assert.Equal(8, toolHeadingCount);
+
+        // 8 CLI tabs and 8 MCP Server tabs — one pair per eligible tool.
+        var cliTabCount = CountOccurrences(result, "#### [Azure MCP CLI](#tab/azure-mcp-cli)");
+        var mcpTabCount = CountOccurrences(result, "#### [MCP Server](#tab/mcp-server)");
+        Assert.Equal(8, cliTabCount);
+        Assert.Equal(8, mcpTabCount);
+        AssertCliTabBeforeMcpTab(result);
+
+        // No malformed/unterminated/nested tab groups — validated by the same logic the
+        // pipeline should apply as a defense-in-depth check on assembled family articles.
+        var validation = CliTabValidator.Validate(result);
+        Assert.True(validation.IsValid, string.Join(" | ", validation.Errors));
+        Assert.Empty(validation.Errors);
+        Assert.DoesNotContain(validation.Warnings, w => w.Contains("No CLI tabs found", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ApplyTabsToFamilyArticle_AdmeEightTools_NoCliContentAssembled_LeavesMarkersButNoTabs()
+    {
+        // Historical regression reproduction: when CLI content assembly yields nothing for a
+        // CLI-eligible namespace (the actual ADME incident), @mcpcli markers survive but zero
+        // tab pairs are emitted. CliTabValidator currently treats this as a Warning rather than
+        // an Error; this test documents that behavior so any future change to that severity is
+        // an intentional, reviewed decision rather than an accidental regression.
+        var result = CliTabWrapper.ApplyTabsToFamilyArticle(AdmeFamilyArticle, new Dictionary<string, string>());
+
+        Assert.Equal(AdmeFamilyArticle.ReplaceLineEndings(), result.ReplaceLineEndings());
+        Assert.DoesNotContain("#### [Azure MCP CLI](#tab/azure-mcp-cli)", result);
+        Assert.DoesNotContain("#### [MCP Server](#tab/mcp-server)", result);
+
+        var validation = CliTabValidator.Validate(result);
+        Assert.True(validation.IsValid);
+        Assert.Contains(validation.Warnings, w => w.Contains("No CLI tabs found", StringComparison.Ordinal));
+    }
+
     private static void AssertCliTabBeforeMcpTab(string text)
     {
         Assert.True(
