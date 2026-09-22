@@ -694,7 +694,32 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 
         if (!namespaceAllowed)
         {
-            Console.WriteLine($"  ⊘ CLI tab generation disabled for namespace '{currentNamespace}'");
+            // The namespace is excluded from cli-tab-config.json's allowlist (built from
+            // brand-to-server-mapping.json). Being excluded is only safe when the namespace
+            // genuinely has no CLI content to wrap. If cli-output.json actually has matching
+            // commands, this is a config-drift defect (e.g. a missing brand-mapping entry)
+            // that would otherwise silently suppress every CLI tab for an eligible namespace —
+            // surface it loudly instead of papering over the omission (issue: CLI tabs omitted
+            // for every tool in the Azure Data Manager for Energy article).
+            var eligibleCliCommandCount = await CountMatchingCliCommandsAsync(
+                cliOutputPath, currentNamespace, context.TargetMatcher, warnings, cancellationToken);
+
+            if (eligibleCliCommandCount is null)
+            {
+                cliTabWrappingSucceeded = false;
+            }
+            else if (eligibleCliCommandCount > 0)
+            {
+                warnings.Add(
+                    $"CLI tab wrapping failed: namespace '{currentNamespace}' has {eligibleCliCommandCount} matching CLI command(s) in cli-output.json, " +
+                    "but the namespace is not present in cli-tab-config.json's allowlist (derived from brand-to-server-mapping.json). " +
+                    "No CLI tabs were generated for this namespace.");
+                cliTabWrappingSucceeded = false;
+            }
+            else
+            {
+                Console.WriteLine($"  ⊘ CLI tab generation disabled for namespace '{currentNamespace}'");
+            }
         }
         else
         {
@@ -710,8 +735,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     var cliTools = new Dictionary<string, CliToolInfo>(StringComparer.OrdinalIgnoreCase);
                     foreach (var (key, tool) in allCliTools)
                     {
-                        if (key.StartsWith(normalizedNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
-                            key.Equals(normalizedNamespace, StringComparison.OrdinalIgnoreCase))
+                        if (MatchesNamespace(key, normalizedNamespace))
                         {
                             cliTools[key] = tool;
                         }
@@ -794,4 +818,43 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
 
         return cliTabWrappingSucceeded;
     }
+
+    /// <summary>
+    /// Best-effort eligibility probe used only when a namespace is excluded from the CLI tab
+    /// allowlist. Counts how many commands in cli-output.json match the namespace so the caller
+    /// can distinguish "genuinely has no CLI content" (safe to skip silently) from "has CLI
+    /// content but is disabled" (a config-drift defect that must be surfaced).
+    /// </summary>
+    private static async Task<int?> CountMatchingCliCommandsAsync(
+        string cliOutputPath,
+        string currentNamespace,
+        TargetMatcher targetMatcher,
+        List<string> warnings,
+        CancellationToken cancellationToken)
+    {
+        if (!File.Exists(cliOutputPath))
+        {
+            return 0;
+        }
+
+        try
+        {
+            var cliJson = await File.ReadAllTextAsync(cliOutputPath, cancellationToken);
+            var allCliTools = CliJsonMapper.MapFromCliOutput(cliJson);
+            var normalizedNamespace = targetMatcher.Normalize(currentNamespace);
+
+            return allCliTools.Keys.Count(key => MatchesNamespace(key, normalizedNamespace));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            warnings.Add(
+                $"CLI tab eligibility probe failed to read or parse '{cliOutputPath}' for namespace '{currentNamespace}': {ex.Message}. " +
+                "Eligibility could not be determined, so CLI tab generation is treated as a failure for this namespace.");
+            return null;
+        }
+    }
+
+    private static bool MatchesNamespace(string cliCommandKey, string normalizedNamespace) =>
+        cliCommandKey.StartsWith(normalizedNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
+        cliCommandKey.Equals(normalizedNamespace, StringComparison.OrdinalIgnoreCase);
 }

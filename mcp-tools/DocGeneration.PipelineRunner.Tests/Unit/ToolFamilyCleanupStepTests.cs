@@ -1070,6 +1070,200 @@ public class ToolFamilyCleanupStepTests
     // END NEW TESTS FOR ISSUES #602 AND #603
     // ========================================
 
+    // ========================================
+    // NEW TESTS: CLI tabs omitted for every tool (ADO 633623 /
+    // MicrosoftDocs/azure-dev-docs-pr#9827) — a namespace excluded from
+    // cli-tab-config.json's allowlist must not silently suppress CLI tabs when
+    // cli-output.json actually has matching commands for it.
+    // ========================================
+
+    [Fact]
+    public async Task Step4_DisabledNamespaceWithMatchingCliCommands_FailsWithDiagnostic_Adme()
+    {
+        // Reproduces the Azure Data Manager for Energy (adme) incident: cli-output.json has 8
+        // real, authoritative commands (from mcp-cli-metadata beta.44) for 'adme', the family
+        // article has all 8 corresponding @mcpcli markers, but cli-tab-config.json's allowlist
+        // does not include 'adme' (e.g. because brand-to-server-mapping.json was missing the
+        // entry at generation time). Previously this was a fully silent skip (only a
+        // Console.WriteLine, no warning, step still reported success) — the fix must surface it
+        // as an explicit, blocking failure instead of publishing an article with zero CLI tabs.
+        var admeCommands = new[]
+        {
+            "adme health check",
+            "adme schema get",
+            "adme schema list",
+            "adme search",
+            "adme storage record fetch",
+            "adme storage record get",
+            "adme storage record list",
+            "adme storage record version list",
+        };
+
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var mcpToolsRoot = Path.Combine(testRoot, "mcp-tools");
+            var outputPath = Path.Combine(testRoot, "generated-adme");
+            Directory.CreateDirectory(Path.Combine(mcpToolsRoot, "data"));
+            Directory.CreateDirectory(outputPath);
+
+            // brand-to-server-mapping.json intentionally has NO 'adme' entry, mirroring the
+            // pre-fix state that produced the incident.
+            File.WriteAllText(Path.Combine(mcpToolsRoot, "data", "brand-to-server-mapping.json"), "[]");
+
+            var cliOutput = CreateSnapshot(admeCommands);
+            var context = new PipelineContext
+            {
+                Request = new PipelineRequest("adme", [4], outputPath, SkipBuild: true, SkipValidation: false, DryRun: false),
+                RepoRoot = testRoot,
+                McpToolsRoot = mcpToolsRoot,
+                OutputPath = outputPath,
+                ProcessRunner = processRunner,
+                Workspaces = new WorkspaceManager(),
+                CliMetadataLoader = new StubCliMetadataLoader(),
+                TargetMatcher = new TargetMatcher(),
+                FilteredCliWriter = new StubFilteredCliWriter(),
+                BuildCoordinator = new StubBuildCoordinator(),
+                AiCapabilityProbe = new StubAiCapabilityProbe(),
+                Reports = new BufferedReportWriter(),
+                CliVersion = "1.2.3",
+                CliOutput = cliOutput,
+                SelectedNamespaces = ["adme"],
+            };
+            context.Items["Namespace"] = "adme";
+            context.Items[ToolFamilyCleanupStep.FamilyCleanupOverrideKey] =
+                static (FamilyStructureContext structure, CancellationToken _) => Task.FromResult(
+                    new ToolFamilyCleanupStep.FamilyCleanupArtifacts(
+                        "metadata",
+                        "related",
+                        $"# Azure Data Manager for Energy tools{Environment.NewLine}{Environment.NewLine}" +
+                        string.Join(
+                            Environment.NewLine + Environment.NewLine,
+                            structure.Sections.Select(section => section.SourceContent))));
+
+            foreach (var command in admeCommands)
+            {
+                var slug = command.Replace(' ', '-');
+                SeedToolFile(Path.Combine(outputPath, "tools", $"adme-{slug}.md"), command);
+            }
+
+            SeedFile(Path.Combine(outputPath, "cli", "cli-version.json"), """{"version":"1.2.3"}""");
+            SeedFile(Path.Combine(outputPath, "cli", "cli-output.json"), cliOutput.RawRoot.GetRawText());
+
+            // Simulates cli-tab-config.json built from a brand mapping that predates the
+            // 'adme' entry: the allowlist is populated (feature enabled overall) but 'adme'
+            // itself is absent.
+            SeedFile(
+                Path.Combine(outputPath, "cli-tab-config.json"),
+                """{"AllowedNamespaces":["storage","compute"]}""");
+            Directory.CreateDirectory(Path.Combine(outputPath, "parameter-cli"));
+            Directory.CreateDirectory(Path.Combine(outputPath, "example-commands"));
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.Contains(
+                result.Warnings,
+                warning => warning.Contains(
+                    "namespace 'adme' has 8 matching CLI command(s) in cli-output.json",
+                    StringComparison.Ordinal)
+                    && warning.Contains("not present in cli-tab-config.json's allowlist", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step4_DisabledNamespaceWithNoCliCommands_StillSucceeds()
+    {
+        // Preserve existing behavior: a namespace that is both excluded from the CLI tab
+        // allowlist AND genuinely has no matching CLI commands must continue to succeed with a
+        // silent (non-fatal) skip, exactly as before this fix.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            context.Items[ToolFamilyCleanupStep.FamilyCleanupOverrideKey] =
+                static (FamilyStructureContext _, CancellationToken _) => Task.FromResult(
+                    new ToolFamilyCleanupStep.FamilyCleanupArtifacts(
+                        "metadata",
+                        "related",
+                        "# Compute tools\n\n## List resources\n\n<!-- @mcpcli compute list -->\n"));
+
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), """{"version":"1.2.3"}""");
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli", "cli-output.json"),
+                CreateSnapshot(["storage list"]).RawRoot.GetRawText());
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli-tab-config.json"),
+                """{"AllowedNamespaces":["storage"]}""");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameter-cli"));
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "example-commands"));
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success, string.Join(" | ", result.Warnings));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
+    [Fact]
+    public async Task Step4_DisabledNamespaceWithCorruptCliOutput_FailsWithDiagnostic()
+    {
+        // Guards against regressing back into a silent skip via a different path: for a
+        // namespace excluded from the CLI tab allowlist, nothing else in this branch reads
+        // cli-output.json, so a corrupt/unparseable file must not be swallowed invisibly.
+        // Eligibility is unknown, so the step must fail loudly instead of assuming there are
+        // zero matching commands.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            context.Items[ToolFamilyCleanupStep.FamilyCleanupOverrideKey] =
+                static (FamilyStructureContext _, CancellationToken _) => Task.FromResult(
+                    new ToolFamilyCleanupStep.FamilyCleanupArtifacts(
+                        "metadata",
+                        "related",
+                        "# Compute tools\n\n## List resources\n\n<!-- @mcpcli compute list -->\n"));
+
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), """{"version":"1.2.3"}""");
+            // Deliberately corrupt/unparseable JSON to exercise the catch path.
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-output.json"), "{ not valid json");
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli-tab-config.json"),
+                """{"AllowedNamespaces":["storage"]}""");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameter-cli"));
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "example-commands"));
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.False(result.Success, string.Join(" | ", result.Warnings));
+            Assert.Contains(
+                result.Warnings,
+                warning => warning.Contains("Eligibility could not be determined", StringComparison.Ordinal)
+                    && warning.Contains("'compute'", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
     private sealed class CallbackProcessRunner : IProcessRunner
     {
         public List<ProcessSpec> Invocations { get; } = new();
