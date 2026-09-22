@@ -1219,14 +1219,13 @@ public class ToolFamilyCleanupStepTests
     }
 
     [Fact]
-    public async Task Step4_DisabledNamespaceWithCorruptCliOutput_SucceedsButSurfacesWarning()
+    public async Task Step4_DisabledNamespaceWithCorruptCliOutput_FailsWithDiagnostic()
     {
         // Guards against regressing back into a silent skip via a different path: for a
         // namespace excluded from the CLI tab allowlist, nothing else in this branch reads
         // cli-output.json, so a corrupt/unparseable file must not be swallowed invisibly.
-        // The probe still falls back to "no matching commands" (non-fatal, preserves the
-        // pre-fix behavior of not blocking the pipeline on a best-effort eligibility check),
-        // but the parse failure itself must be surfaced as an explicit warning.
+        // Eligibility is unknown, so the step must fail loudly instead of assuming there are
+        // zero matching commands.
         var testRoot = CreateTestRoot();
         try
         {
@@ -1253,10 +1252,10 @@ public class ToolFamilyCleanupStepTests
             var step = new ToolFamilyCleanupStep();
             var result = await step.ExecuteAsync(context, CancellationToken.None);
 
-            Assert.True(result.Success, string.Join(" | ", result.Warnings));
+            Assert.False(result.Success, string.Join(" | ", result.Warnings));
             Assert.Contains(
                 result.Warnings,
-                warning => warning.Contains("CLI tab eligibility probe failed to read or parse", StringComparison.Ordinal)
+                warning => warning.Contains("Eligibility could not be determined", StringComparison.Ordinal)
                     && warning.Contains("'compute'", StringComparison.Ordinal));
         }
         finally

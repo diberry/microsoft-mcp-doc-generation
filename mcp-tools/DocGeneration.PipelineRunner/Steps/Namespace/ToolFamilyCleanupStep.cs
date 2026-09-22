@@ -704,7 +704,11 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             var eligibleCliCommandCount = await CountMatchingCliCommandsAsync(
                 cliOutputPath, currentNamespace, context.TargetMatcher, warnings, cancellationToken);
 
-            if (eligibleCliCommandCount > 0)
+            if (eligibleCliCommandCount is null)
+            {
+                cliTabWrappingSucceeded = false;
+            }
+            else if (eligibleCliCommandCount > 0)
             {
                 warnings.Add(
                     $"CLI tab wrapping failed: namespace '{currentNamespace}' has {eligibleCliCommandCount} matching CLI command(s) in cli-output.json, " +
@@ -731,8 +735,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                     var cliTools = new Dictionary<string, CliToolInfo>(StringComparer.OrdinalIgnoreCase);
                     foreach (var (key, tool) in allCliTools)
                     {
-                        if (key.StartsWith(normalizedNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
-                            key.Equals(normalizedNamespace, StringComparison.OrdinalIgnoreCase))
+                        if (MatchesNamespace(key, normalizedNamespace))
                         {
                             cliTools[key] = tool;
                         }
@@ -822,7 +825,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
     /// can distinguish "genuinely has no CLI content" (safe to skip silently) from "has CLI
     /// content but is disabled" (a config-drift defect that must be surfaced).
     /// </summary>
-    private static async Task<int> CountMatchingCliCommandsAsync(
+    private static async Task<int?> CountMatchingCliCommandsAsync(
         string cliOutputPath,
         string currentNamespace,
         TargetMatcher targetMatcher,
@@ -840,22 +843,18 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             var allCliTools = CliJsonMapper.MapFromCliOutput(cliJson);
             var normalizedNamespace = targetMatcher.Normalize(currentNamespace);
 
-            return allCliTools.Keys.Count(key =>
-                key.StartsWith(normalizedNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
-                key.Equals(normalizedNamespace, StringComparison.OrdinalIgnoreCase));
+            return allCliTools.Keys.Count(key => MatchesNamespace(key, normalizedNamespace));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // This is a best-effort eligibility probe, so a parsing failure here must not block
-            // the pipeline on its own (falls back to 0, preserving the original silent-skip
-            // behavior for this namespace). But for a namespace excluded from the allowlist,
-            // nothing else in this branch reads cli-output.json, so silently swallowing the
-            // exception would hide a corrupt file behind an innocuous "no CLI content" skip.
-            // Surface it as a non-fatal warning instead.
             warnings.Add(
                 $"CLI tab eligibility probe failed to read or parse '{cliOutputPath}' for namespace '{currentNamespace}': {ex.Message}. " +
-                "Assuming no matching CLI commands for this namespace; verify cli-output.json is valid if this namespace was expected to have CLI content.");
-            return 0;
+                "Eligibility could not be determined, so CLI tab generation is treated as a failure for this namespace.");
+            return null;
         }
     }
+
+    private static bool MatchesNamespace(string cliCommandKey, string normalizedNamespace) =>
+        cliCommandKey.StartsWith(normalizedNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
+        cliCommandKey.Equals(normalizedNamespace, StringComparison.OrdinalIgnoreCase);
 }
