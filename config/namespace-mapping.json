@@ -10,6 +10,7 @@
   "functionapp": "azure-functions.md",
   "get_azure_bestpractices": "azure-best-practices.md",
   "acr": "azure-container-registry.md",
+  "adme": "azure-data-manager-for-energy.md",
   "advisor": "azure-advisor.md",
   "aks": "azure-kubernetes.md",
   "applens": "azure-app-lens.md",
