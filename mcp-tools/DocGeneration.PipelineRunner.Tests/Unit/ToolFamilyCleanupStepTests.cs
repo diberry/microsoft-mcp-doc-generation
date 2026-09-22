@@ -1218,6 +1218,53 @@ public class ToolFamilyCleanupStepTests
         }
     }
 
+    [Fact]
+    public async Task Step4_DisabledNamespaceWithCorruptCliOutput_SucceedsButSurfacesWarning()
+    {
+        // Guards against regressing back into a silent skip via a different path: for a
+        // namespace excluded from the CLI tab allowlist, nothing else in this branch reads
+        // cli-output.json, so a corrupt/unparseable file must not be swallowed invisibly.
+        // The probe still falls back to "no matching commands" (non-fatal, preserves the
+        // pre-fix behavior of not blocking the pipeline on a best-effort eligibility check),
+        // but the parse failure itself must be surfaced as an explicit warning.
+        var testRoot = CreateTestRoot();
+        try
+        {
+            var processRunner = new CallbackProcessRunner();
+            var context = CreateContext(testRoot, processRunner);
+            context.Items["Namespace"] = "compute";
+            context.Items[ToolFamilyCleanupStep.FamilyCleanupOverrideKey] =
+                static (FamilyStructureContext _, CancellationToken _) => Task.FromResult(
+                    new ToolFamilyCleanupStep.FamilyCleanupArtifacts(
+                        "metadata",
+                        "related",
+                        "# Compute tools\n\n## List resources\n\n<!-- @mcpcli compute list -->\n"));
+
+            SeedToolFile(Path.Combine(context.OutputPath, "tools", "compute-list.md"), "compute list");
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-version.json"), """{"version":"1.2.3"}""");
+            // Deliberately corrupt/unparseable JSON to exercise the catch path.
+            SeedFile(Path.Combine(context.OutputPath, "cli", "cli-output.json"), "{ not valid json");
+            SeedFile(
+                Path.Combine(context.OutputPath, "cli-tab-config.json"),
+                """{"AllowedNamespaces":["storage"]}""");
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "parameter-cli"));
+            Directory.CreateDirectory(Path.Combine(context.OutputPath, "example-commands"));
+
+            var step = new ToolFamilyCleanupStep();
+            var result = await step.ExecuteAsync(context, CancellationToken.None);
+
+            Assert.True(result.Success, string.Join(" | ", result.Warnings));
+            Assert.Contains(
+                result.Warnings,
+                warning => warning.Contains("CLI tab eligibility probe failed to read or parse", StringComparison.Ordinal)
+                    && warning.Contains("'compute'", StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteTestRoot(testRoot);
+        }
+    }
+
     private sealed class CallbackProcessRunner : IProcessRunner
     {
         public List<ProcessSpec> Invocations { get; } = new();

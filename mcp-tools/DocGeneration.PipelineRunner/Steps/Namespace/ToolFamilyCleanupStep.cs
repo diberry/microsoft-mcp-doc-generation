@@ -702,7 +702,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
             // surface it loudly instead of papering over the omission (issue: CLI tabs omitted
             // for every tool in the Azure Data Manager for Energy article).
             var eligibleCliCommandCount = await CountMatchingCliCommandsAsync(
-                cliOutputPath, currentNamespace, context.TargetMatcher, cancellationToken);
+                cliOutputPath, currentNamespace, context.TargetMatcher, warnings, cancellationToken);
 
             if (eligibleCliCommandCount > 0)
             {
@@ -826,6 +826,7 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
         string cliOutputPath,
         string currentNamespace,
         TargetMatcher targetMatcher,
+        List<string> warnings,
         CancellationToken cancellationToken)
     {
         if (!File.Exists(cliOutputPath))
@@ -843,10 +844,17 @@ public sealed class ToolFamilyCleanupStep : NamespaceStepBase
                 key.StartsWith(normalizedNamespace + " ", StringComparison.OrdinalIgnoreCase) ||
                 key.Equals(normalizedNamespace, StringComparison.OrdinalIgnoreCase));
         }
-        catch
+        catch (Exception ex)
         {
-            // Best-effort eligibility probe only; parsing failures here should not mask
-            // whatever the primary code path already reports.
+            // This is a best-effort eligibility probe, so a parsing failure here must not block
+            // the pipeline on its own (falls back to 0, preserving the original silent-skip
+            // behavior for this namespace). But for a namespace excluded from the allowlist,
+            // nothing else in this branch reads cli-output.json, so silently swallowing the
+            // exception would hide a corrupt file behind an innocuous "no CLI content" skip.
+            // Surface it as a non-fatal warning instead.
+            warnings.Add(
+                $"CLI tab eligibility probe failed to read or parse '{cliOutputPath}' for namespace '{currentNamespace}': {ex.Message}. " +
+                "Assuming no matching CLI commands for this namespace; verify cli-output.json is valid if this namespace was expected to have CLI content.");
             return 0;
         }
     }
