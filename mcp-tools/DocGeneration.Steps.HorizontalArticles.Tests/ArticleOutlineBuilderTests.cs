@@ -194,6 +194,32 @@ public sealed class ArticleOutlineBuilderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_AzureMigrate_UsesPlatformLandingZoneBrand()
+    {
+        await WriteCliOutputAsync(new CliOutput
+        {
+            Results =
+            [
+                new Tool
+                {
+                    Command = "azuremigrate platformlandingzone getguidance",
+                    Name = "azuremigrate platformlandingzone getguidance",
+                    Description = "Fetch Azure Platform Landing Zone guidance."
+                }
+            ]
+        });
+
+        var builder = new ArticleOutlineBuilder();
+
+        var result = await builder.BuildAsync(_testRoot, "azuremigrate", CancellationToken.None);
+
+        Assert.Equal("Azure Platform Landing Zone", result.ArticleTitle);
+        Assert.Contains(
+            "xref:../tool-family/azure-migrate.md",
+            result.Sections.Single(section => section.Heading == "Introduction").EvidenceItems);
+    }
+
+    [Fact]
     public async Task BuildAsync_FiltersCanonicalCommonParameters_FromParameterCount()
     {
         // Real CLI output uses "--"-prefixed option names. Common parameters must be filtered

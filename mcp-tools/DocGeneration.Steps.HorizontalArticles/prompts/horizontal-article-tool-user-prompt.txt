@@ -17,6 +17,8 @@ Generate JSON data for a single Azure MCP Server tool used with {{serviceBrandNa
 
 ## Your Task
 
+Treat the command and description above as the complete supported capability boundary. Do not infer operations from the broader service brand or namespace.
+
 **FIRST**: Analyze the tool to determine data plane vs management plane focus:
 - **Data plane tools**: Work with data or functionality in existing resources (get, list, query, read, upload, execute, write)
 - **Management plane tools**: Manage resource lifecycle (create, delete, update, provision, configure resources)

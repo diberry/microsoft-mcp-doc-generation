@@ -284,7 +284,7 @@ public sealed class NamespaceFragmentsTests : IDisposable
             "You are a Microsoft Learn documentation assistant. Return JSON only.");
         File.WriteAllText(
             Path.Combine(_promptDir, "horizontal-article-namespace-overview-user-prompt.txt"),
-            "Summarize {{serviceBrandName}} in one short description and one overview paragraph.");
+            "Summarize {{serviceBrandName}} from these tools: {{#each tools}}{{command}} — {{description}}{{/each}}");
 
         var chatClient = new RecordingChatClient("""{"genai-serviceShortDescription":"Manage widgets.","genai-serviceOverview":"Widgets overview."}""");
         var aiClient = new GenerativeAIClient(chatClient);
@@ -301,6 +301,7 @@ public sealed class NamespaceFragmentsTests : IDisposable
         Assert.Equal(1500, chatClient.LastMaxOutputTokens);
         Assert.Equal(ReasoningEffort.Low, chatClient.LastReasoningEffort);
         Assert.Same(ChatResponseFormat.Json, chatClient.LastResponseFormat);
+        Assert.Contains("widget create — Creates a widget.", chatClient.LastUserPrompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -431,7 +432,7 @@ public sealed class NamespaceFragmentsTests : IDisposable
             "You are a Microsoft Learn documentation assistant. Return JSON only.");
         File.WriteAllText(
             Path.Combine(_promptDir, "horizontal-article-namespace-links-user-prompt.txt"),
-            "Provide documentation links for {{serviceBrandName}}.");
+            "Provide documentation links for {{serviceBrandName}} from these tools: {{#each tools}}{{command}} — {{description}}{{/each}}");
 
         var logLines = new List<string>();
         var chatClient = new RecordingChatClient("""{"genai-serviceDocLink":"https://learn.microsoft.com/azure/widgets/","genai-additionalLinks":[]}""");
@@ -446,6 +447,7 @@ public sealed class NamespaceFragmentsTests : IDisposable
         Assert.Contains("target=widgets", logLines[0], StringComparison.Ordinal);
         Assert.Contains("operation=namespace-links", logLines[0], StringComparison.Ordinal);
         Assert.Equal(1500, chatClient.LastMaxOutputTokens);
+        Assert.Contains("widget create — Creates a widget.", chatClient.LastUserPrompt, StringComparison.Ordinal);
     }
 
     [Fact]
